@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-r2inspect - Advanced Malware Analysis Tool using Radare2 and r2pipe
-Main CLI entry point
+r2inspect - Advanced malware analysis tool using radare2 and r2pipe
+
+Usage:
+    python r2inspect.py <file>
+    python r2inspect.py -j <file>
+    python r2inspect.py --batch <directory>
 """
 
 import sys
-import os
-
-# Add the current directory to Python path to find r2inspect module
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from r2inspect.cli import main
 
-if __name__ == '__main__':
-    main() 
+if __name__ == "__main__":
+    # Call the main CLI function
+    main()

@@ -4,7 +4,12 @@ from setuptools import setup, find_packages
 import pathlib
 
 HERE = pathlib.Path(__file__).parent
-README = (HERE / "README.md").read_text()
+
+# Handle README.md that might not exist in Docker build
+try:
+    README = (HERE / "README.md").read_text()
+except FileNotFoundError:
+    README = "Advanced malware analysis tool using radare2 and r2pipe"
 
 setup(
     name="r2inspect",
@@ -27,7 +32,7 @@ setup(
         "Topic :: Security",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.13",
+    python_requires=">=3.8",
     install_requires=[
         "r2pipe>=1.8.0",
         "colorama>=0.4.6",
