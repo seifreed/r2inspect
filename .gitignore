@@ -321,8 +321,6 @@ rules/custom/
 *.ovf
 
 # Docker
-.dockerignore
-Dockerfile.local
 docker-compose.override.yml
 
 # Terraform

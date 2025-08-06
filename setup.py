@@ -18,8 +18,8 @@ setup(
     description="Advanced malware analysis tool using radare2 and r2pipe",
     long_description=README,
     long_description_content_type="text/markdown",
-    author="Marc Rivero (@seifreed)",
-    author_email="",
+    author="Marc Rivero",
+    author_email="mriverolopez@gmail.com",
     url="https://github.com/seifreed/r2inspect",
     packages=find_packages(),
     classifiers=[

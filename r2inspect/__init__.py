@@ -7,12 +7,20 @@ Author: Marc Rivero (@seifreed)
 License: GPL-3.0
 """
 
-__version__ = "1.0.0"
-__author__ = "Marc Rivero (@seifreed)"
+from .__version__ import __author__, __author_email__, __license__, __url__, __version__
+
 __description__ = "Advanced malware analysis tool using radare2 and r2pipe"
 
 from .core import R2Inspector
 from .modules import *
 from .utils import *
 
-__all__ = ["R2Inspector", "__version__", "__author__", "__description__"]
+__all__ = [
+    "R2Inspector",
+    "__version__",
+    "__author__",
+    "__author_email__",
+    "__license__",
+    "__url__",
+    "__description__",
+]
