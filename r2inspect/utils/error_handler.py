@@ -7,7 +7,7 @@ import functools
 import threading
 from collections import defaultdict, deque
 from enum import Enum
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Tuple
 
 from .logger import get_logger
 
@@ -254,7 +254,7 @@ class ErrorRecoveryManager:
         """Register a recovery strategy for an error category"""
         self.recovery_strategies[category] = strategy
 
-    def handle_error(self, error_info: ErrorInfo) -> tuple[bool, Any]:
+    def handle_error(self, error_info: ErrorInfo) -> Tuple[bool, Any]:
         """
         Handle an error with appropriate recovery strategy
 
