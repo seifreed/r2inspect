@@ -10,9 +10,7 @@ TLSH is particularly useful for malware clustering and similarity detection
 as it's resistant to small modifications like compiler changes, padding, etc.
 """
 
-import logging
-import hashlib
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 # Try to import TLSH library
 try:
@@ -43,9 +41,7 @@ class TLSHAnalyzer:
 
             return True
         except ImportError:
-            logger.warning(
-                "TLSH library not available. Install with: pip install python-tlsh"
-            )
+            logger.warning("TLSH library not available. Install with: pip install python-tlsh")
             return False
 
     def analyze(self) -> Dict[str, Any]:
@@ -143,18 +139,14 @@ class TLSHAnalyzer:
             for section in sections:
                 # Skip if section is not a dictionary (malformed data)
                 if not isinstance(section, dict):
-                    logger.debug(
-                        f"Skipping malformed section data: {type(section)} - {section}"
-                    )
+                    logger.debug(f"Skipping malformed section data: {type(section)} - {section}")
                     continue
 
                 section_name = section.get("name", "unknown")
                 vaddr = section.get("vaddr", 0)
                 size = section.get("size", 0)
 
-                if (
-                    size == 0 or size > 50 * 1024 * 1024
-                ):  # Skip empty or very large sections
+                if size == 0 or size > 50 * 1024 * 1024:  # Skip empty or very large sections
                     section_hashes[section_name] = None
                     continue
 
@@ -175,9 +167,7 @@ class TLSHAnalyzer:
                     section_hashes[section_name] = tlsh.hash(data)
 
                 except Exception as e:
-                    logger.debug(
-                        f"Error calculating TLSH for section {section_name}: {e}"
-                    )
+                    logger.debug(f"Error calculating TLSH for section {section_name}: {e}")
                     section_hashes[section_name] = None
 
         except Exception as e:
@@ -205,18 +195,14 @@ class TLSHAnalyzer:
             for func in functions_to_analyze:
                 # Skip if function is not a dictionary (malformed data)
                 if not isinstance(func, dict):
-                    logger.debug(
-                        f"Skipping malformed function data: {type(func)} - {func}"
-                    )
+                    logger.debug(f"Skipping malformed function data: {type(func)} - {func}")
                     continue
 
                 func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
                 func_addr = func.get("addr")
                 func_size = func.get("size", 0)
 
-                if (
-                    not func_addr or func_size == 0 or func_size > 100000
-                ):  # Skip large functions
+                if not func_addr or func_size == 0 or func_size > 100000:  # Skip large functions
                     function_hashes[func_name] = None
                     continue
 
@@ -236,9 +222,7 @@ class TLSHAnalyzer:
                     function_hashes[func_name] = tlsh.hash(data)
 
                 except Exception as e:
-                    logger.debug(
-                        f"Error calculating TLSH for function {func_name}: {e}"
-                    )
+                    logger.debug(f"Error calculating TLSH for function {func_name}: {e}")
                     function_hashes[func_name] = None
 
         except Exception as e:

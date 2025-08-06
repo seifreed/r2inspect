@@ -12,10 +12,11 @@ Based on the Binlex approach for lexical analysis of binary functions.
 """
 
 import hashlib
-from typing import Dict, List, Any, Optional
 from collections import Counter, defaultdict
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
+from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -149,9 +150,7 @@ class BinlexAnalyzer:
             results["similar_functions"] = similar_functions
 
             # Calculate binary-wide signature
-            binary_signature = self._calculate_binary_signature(
-                function_signatures, ngram_sizes
-            )
+            binary_signature = self._calculate_binary_signature(function_signatures, ngram_sizes)
             results["binary_signature"] = binary_signature
 
             # Get top n-grams for each size
@@ -287,17 +286,15 @@ class BinlexAnalyzer:
                             # Clean and normalize mnemonic
                             clean_mnemonic = mnemonic.strip().lower()
                             # Remove any HTML entities or special characters
-                            clean_mnemonic = clean_mnemonic.replace(
-                                HTML_NBSP, " "
-                            ).replace(HTML_AMP, "&")
+                            clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(
+                                HTML_AMP, "&"
+                            )
                             # Only add if it looks like a valid instruction
                             if clean_mnemonic and not clean_mnemonic.startswith("&"):
                                 tokens.append(clean_mnemonic)
 
                 if tokens:
-                    logger.debug(
-                        f"Extracted {len(tokens)} tokens from {func_name} using pdfj"
-                    )
+                    logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdfj")
                     return tokens
 
             # Method 2: Try pdj with instruction limit
@@ -316,17 +313,15 @@ class BinlexAnalyzer:
                             # Clean and normalize mnemonic
                             clean_mnemonic = mnemonic.strip().lower()
                             # Remove any HTML entities or special characters
-                            clean_mnemonic = clean_mnemonic.replace(
-                                HTML_NBSP, " "
-                            ).replace(HTML_AMP, "&")
+                            clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(
+                                HTML_AMP, "&"
+                            )
                             # Only add if it looks like a valid instruction
                             if clean_mnemonic and not clean_mnemonic.startswith("&"):
                                 tokens.append(clean_mnemonic)
 
                 if tokens:
-                    logger.debug(
-                        f"Extracted {len(tokens)} tokens from {func_name} using pdj"
-                    )
+                    logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdj")
                     return tokens
 
             # Method 3: Fallback to text-based extraction
@@ -342,17 +337,15 @@ class BinlexAnalyzer:
                             # Clean and normalize mnemonic
                             clean_mnemonic = mnemonic.strip().lower()
                             # Remove any HTML entities or special characters
-                            clean_mnemonic = clean_mnemonic.replace(
-                                HTML_NBSP, " "
-                            ).replace(HTML_AMP, "&")
+                            clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(
+                                HTML_AMP, "&"
+                            )
                             # Only add if it looks like a valid instruction
                             if clean_mnemonic and not clean_mnemonic.startswith("&"):
                                 tokens.append(clean_mnemonic)
 
                 if tokens:
-                    logger.debug(
-                        f"Extracted {len(tokens)} tokens from {func_name} using pi"
-                    )
+                    logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pi")
                     return tokens
 
         except Exception as e:

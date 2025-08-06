@@ -11,7 +11,7 @@ Telfhash is particularly useful for:
 - Grouping binaries compiled with different compilers but same source
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 # Try to import telfhash library
 try:
@@ -22,7 +22,7 @@ except ImportError:
     TELFHASH_AVAILABLE = False
 
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
+from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -205,9 +205,7 @@ class TelfhashAnalyzer:
             logger.error(f"Failed to extract symbols: {e}")
             return []
 
-    def _filter_symbols_for_telfhash(
-        self, symbols: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _filter_symbols_for_telfhash(self, symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Filter symbols suitable for telfhash calculation.
 

@@ -3,10 +3,10 @@
 r2inspect Utilities
 """
 
+from .hashing import calculate_hashes
 from .logger import get_logger, setup_logger
 from .output import OutputFormatter
-from .hashing import calculate_hashes
-from .r2_helpers import safe_cmdj, safe_cmd_list, safe_cmd_dict, safe_cmd
+from .r2_helpers import safe_cmd, safe_cmd_dict, safe_cmd_list, safe_cmdj
 
 __all__ = [
     "get_logger",

@@ -4,51 +4,44 @@ r2inspect Core - Main analysis engine using r2pipe
 """
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-import r2pipe
+from typing import Any, Dict, List, Optional
+
 import magic
+import r2pipe
 from rich.console import Console
 
+from .config import Config
 from .modules import (
-    PEAnalyzer,
-    ELFAnalyzer,
-    MachOAnalyzer,
-    StringAnalyzer,
-    CryptoAnalyzer,
-    PackerDetector,
     AntiAnalysisDetector,
-    SectionAnalyzer,
-    ImportAnalyzer,
-    ExportAnalyzer,
-    YaraAnalyzer,
-    CompilerDetector,
-    SSDeepAnalyzer,
-    TLSHAnalyzer,
-    TelfhashAnalyzer,
-    RichHeaderAnalyzer,
-    ImpfuzzyAnalyzer,
-    CCBHashAnalyzer,
-    BinlexAnalyzer,
     BinbloomAnalyzer,
-    SimHashAnalyzer,
     BinDiffAnalyzer,
+    BinlexAnalyzer,
+    CCBHashAnalyzer,
+    CompilerDetector,
+    CryptoAnalyzer,
+    ELFAnalyzer,
+    ExportAnalyzer,
+    ImpfuzzyAnalyzer,
+    ImportAnalyzer,
+    MachOAnalyzer,
+    PackerDetector,
+    PEAnalyzer,
+    RichHeaderAnalyzer,
+    SectionAnalyzer,
+    SimHashAnalyzer,
+    SSDeepAnalyzer,
+    StringAnalyzer,
+    TelfhashAnalyzer,
+    TLSHAnalyzer,
+    YaraAnalyzer,
 )
 from .modules.function_analyzer import FunctionAnalyzer
-from .utils.logger import get_logger
+from .utils.error_handler import ErrorCategory, ErrorSeverity, error_handler
 from .utils.hashing import calculate_hashes
-from .utils.r2_helpers import safe_cmdj
-from .utils.memory_manager import (
-    global_memory_monitor,
-    check_memory_limits,
-    MemoryAwareAnalyzer,
-)
-from .utils.error_handler import (
-    error_handler,
-    ErrorCategory,
-    ErrorSeverity,
-)
+from .utils.logger import get_logger
 from .utils.magic_detector import detect_file_type
-from .config import Config
+from .utils.memory_manager import MemoryAwareAnalyzer, check_memory_limits, global_memory_monitor
+from .utils.r2_helpers import safe_cmdj
 
 console = Console()
 logger = get_logger(__name__)
@@ -101,16 +94,12 @@ class R2Inspector(MemoryAwareAnalyzer):
 
             # Check for extremely small files that are likely corrupted
             if file_size < 32:  # Minimum size for any executable format
-                logger.error(
-                    f"File too small for analysis ({file_size} bytes): {self.filename}"
-                )
+                logger.error(f"File too small for analysis ({file_size} bytes): {self.filename}")
                 return False
 
             # Check memory limits
             if not check_memory_limits(file_size_bytes=file_size):
-                logger.error(
-                    f"File exceeds memory limits: {file_size / 1024 / 1024:.1f}MB"
-                )
+                logger.error(f"File exceeds memory limits: {file_size / 1024 / 1024:.1f}MB")
                 return False
 
             # Basic file readability check
@@ -121,7 +110,7 @@ class R2Inspector(MemoryAwareAnalyzer):
                     if len(header) < 4:
                         logger.error(f"Cannot read file header: {self.filename}")
                         return False
-            except (IOError, OSError) as e:
+            except OSError as e:
                 logger.error(f"File access error: {self.filename} - {e}")
                 return False
 
@@ -147,9 +136,7 @@ class R2Inspector(MemoryAwareAnalyzer):
             file_size_mb = self.file_path.stat().st_size / (1024 * 1024)
             if file_size_mb > 2:  # For files larger than 2MB
                 flags = ["-2"]  # No stderr, will control analysis manually
-                logger.debug(
-                    f"Large file ({file_size_mb:.1f}MB), using lighter r2 flags"
-                )
+                logger.debug(f"Large file ({file_size_mb:.1f}MB), using lighter r2 flags")
             else:
                 flags = ["-2"]  # Standard flags
 
@@ -172,20 +159,14 @@ class R2Inspector(MemoryAwareAnalyzer):
             file_size_mb = self.file_path.stat().st_size / (1024 * 1024)
             try:
                 if file_size_mb > 50:  # For very large files (>50MB)
-                    logger.debug(
-                        "Very large file detected, skipping automatic analysis..."
-                    )
+                    logger.debug("Very large file detected, skipping automatic analysis...")
                     # Skip automatic analysis for very large files
                 elif file_size_mb > 10:  # For files larger than 10MB
-                    logger.debug(
-                        "Large file detected, using minimal analysis (aa command)..."
-                    )
+                    logger.debug("Large file detected, using minimal analysis (aa command)...")
                     self.r2.cmd("aa")  # Lighter analysis
                     logger.debug("Light analysis (aa) completed")
                 elif file_size_mb > 2:  # For moderately large files
-                    logger.debug(
-                        "Moderate file size, using standard analysis (aa command)..."
-                    )
+                    logger.debug("Moderate file size, using standard analysis (aa command)...")
                     self.r2.cmd("aa")  # Standard analysis
                     logger.debug("Standard analysis (aa) completed")
                 else:
@@ -193,9 +174,7 @@ class R2Inspector(MemoryAwareAnalyzer):
                     self.r2.cmd("aaa")  # Analyze all
                     logger.debug("Full analysis (aaa) completed")
             except Exception as e:
-                logger.warning(
-                    f"Analysis command failed, continuing with basic r2 setup: {e}"
-                )
+                logger.warning(f"Analysis command failed, continuing with basic r2 setup: {e}")
                 # Continue without analysis if it fails - some modules may still work
 
         except Exception as e:
@@ -291,8 +270,8 @@ class R2Inspector(MemoryAwareAnalyzer):
 
         try:
             if show_progress:
-                from rich.progress import Progress, SpinnerColumn, TextColumn
                 from rich.console import Console
+                from rich.progress import Progress, SpinnerColumn, TextColumn
 
                 console = Console()
 
@@ -440,9 +419,7 @@ class R2Inspector(MemoryAwareAnalyzer):
         progress.remove_task(task)
 
         # Binlex analysis
-        task = progress.add_task(
-            "Calculating Binlex (N-gram signatures)...", total=None
-        )
+        task = progress.add_task("Calculating Binlex (N-gram signatures)...", total=None)
         results["binlex"] = self.analyze_binlex()
         progress.remove_task(task)
 
@@ -452,9 +429,7 @@ class R2Inspector(MemoryAwareAnalyzer):
         progress.remove_task(task)
 
         # SimHash analysis
-        task = progress.add_task(
-            "Calculating SimHash (similarity hashing)...", total=None
-        )
+        task = progress.add_task("Calculating SimHash (similarity hashing)...", total=None)
         results["simhash"] = self.analyze_simhash()
         progress.remove_task(task)
 
@@ -601,9 +576,7 @@ class R2Inspector(MemoryAwareAnalyzer):
             if enhanced_detection["confidence"] > 0.7:
                 info["precise_format"] = enhanced_detection["file_format"]
                 info["format_category"] = enhanced_detection["format_category"]
-                info["threat_level"] = (
-                    "High" if enhanced_detection["potential_threat"] else "Low"
-                )
+                info["threat_level"] = "High" if enhanced_detection["potential_threat"] else "Low"
                 if enhanced_detection["architecture"] != "Unknown":
                     info["detected_architecture"] = enhanced_detection["architecture"]
                 if enhanced_detection["bits"] != "Unknown":
@@ -773,9 +746,7 @@ class R2Inspector(MemoryAwareAnalyzer):
         """Detect compiler information"""
         return self.compiler_detector.detect_compiler()
 
-    def run_yara_rules(
-        self, custom_rules_path: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def run_yara_rules(self, custom_rules_path: Optional[str] = None) -> List[Dict[str, Any]]:
         """Run YARA rules against the file"""
         return self.yara_analyzer.scan(custom_rules_path)
 
@@ -783,9 +754,7 @@ class R2Inspector(MemoryAwareAnalyzer):
         """Search for XOR'd strings"""
         return self.string_analyzer.search_xor(search_string)
 
-    def generate_indicators(
-        self, analysis_results: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def generate_indicators(self, analysis_results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate suspicious indicators based on analysis results"""
         indicators = []
 
@@ -894,9 +863,7 @@ class R2Inspector(MemoryAwareAnalyzer):
         """Perform BinDiff (comparison features) analysis"""
         return self.bindiff_analyzer.analyze()
 
-    def generate_executive_summary(
-        self, analysis_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def generate_executive_summary(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
         """Generate executive summary for quick consumption"""
         try:
             summary = {
@@ -939,9 +906,7 @@ class R2Inspector(MemoryAwareAnalyzer):
             summary["security_assessment"] = {
                 "is_signed": security.get("authenticode", False),
                 "is_packed": packer.get("is_packed", False),
-                "packer_type": packer.get("packer_type")
-                if packer.get("is_packed")
-                else None,
+                "packer_type": packer.get("packer_type") if packer.get("is_packed") else None,
                 "security_features": {
                     "aslr": security.get("aslr", False),
                     "dep": security.get("dep", False),
@@ -956,9 +921,7 @@ class R2Inspector(MemoryAwareAnalyzer):
             imports = analysis_results.get("imports", [])
 
             # Count high-risk imports
-            high_risk_imports = [
-                imp for imp in imports if imp.get("risk_score", 0) >= 80
-            ]
+            high_risk_imports = [imp for imp in imports if imp.get("risk_score", 0) >= 80]
 
             summary["threat_indicators"] = {
                 "anti_debug": anti_analysis.get("anti_debug", False),
@@ -988,14 +951,10 @@ class R2Inspector(MemoryAwareAnalyzer):
             if "impfuzzy" in analysis_results:
                 impfuzzy = analysis_results["impfuzzy"]
                 if impfuzzy.get("available"):
-                    summary["technical_details"]["impfuzzy"] = impfuzzy.get(
-                        "impfuzzy_hash"
-                    )
+                    summary["technical_details"]["impfuzzy"] = impfuzzy.get("impfuzzy_hash")
 
             # Recommendations
-            summary["recommendations"] = self._generate_recommendations(
-                analysis_results
-            )
+            summary["recommendations"] = self._generate_recommendations(analysis_results)
 
             return summary
 
@@ -1019,9 +978,7 @@ class R2Inspector(MemoryAwareAnalyzer):
             # Security features recommendations
             security = analysis_results.get("security", {})
             if not security.get("aslr"):
-                recommendations.append(
-                    "Enable ASLR (Address Space Layout Randomization)"
-                )
+                recommendations.append("Enable ASLR (Address Space Layout Randomization)")
             if not security.get("dep"):
                 recommendations.append("Enable DEP/NX (Data Execution Prevention)")
             if not security.get("guard_cf"):
@@ -1041,15 +998,11 @@ class R2Inspector(MemoryAwareAnalyzer):
                 or anti_analysis.get("anti_vm")
                 or anti_analysis.get("anti_sandbox")
             ):
-                recommendations.append(
-                    "Anti-analysis techniques detected - handle with caution"
-                )
+                recommendations.append("Anti-analysis techniques detected - handle with caution")
 
             # High-risk imports
             imports = analysis_results.get("imports", [])
-            critical_imports = [
-                imp for imp in imports if imp.get("risk_score", 0) >= 90
-            ]
+            critical_imports = [imp for imp in imports if imp.get("risk_score", 0) >= 90]
             if critical_imports:
                 recommendations.append(
                     f"Found {len(critical_imports)} critical-risk API calls - review functionality"
@@ -1058,15 +1011,11 @@ class R2Inspector(MemoryAwareAnalyzer):
             # Crypto detection
             crypto = analysis_results.get("crypto", {})
             if crypto.get("algorithms"):
-                recommendations.append(
-                    "Cryptographic functions detected - verify legitimate use"
-                )
+                recommendations.append("Cryptographic functions detected - verify legitimate use")
 
             # Code signing
             if not analysis_results.get("security", {}).get("authenticode"):
-                recommendations.append(
-                    "Binary is not digitally signed - verify authenticity"
-                )
+                recommendations.append("Binary is not digitally signed - verify authenticity")
 
         except Exception as e:
             logger.debug(f"Error generating recommendations: {e}")

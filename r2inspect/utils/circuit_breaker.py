@@ -3,12 +3,12 @@
 Circuit breaker pattern implementation for r2inspect
 """
 
-import time
-import threading
-from typing import Any, Callable, Dict
-from enum import Enum
-from collections import deque, defaultdict
 import functools
+import threading
+import time
+from collections import defaultdict, deque
+from enum import Enum
+from typing import Any, Callable, Dict
 
 
 class CircuitState(Enum):
@@ -251,9 +251,7 @@ class R2CommandCircuitBreaker:
             # For JSON commands, return None; for text commands, return empty string
             return None if command.endswith("j") else ""
 
-    def _record_command_stats(
-        self, command_type: str, success: bool, execution_time: float
-    ):
+    def _record_command_stats(self, command_type: str, success: bool, execution_time: float):
         """Record command execution statistics"""
         with self.lock:
             stats = self.command_stats[command_type]
@@ -269,9 +267,7 @@ class R2CommandCircuitBreaker:
             else:
                 # Exponential moving average
                 alpha = 0.1
-                stats["avg_time"] = (
-                    alpha * execution_time + (1 - alpha) * stats["avg_time"]
-                )
+                stats["avg_time"] = alpha * execution_time + (1 - alpha) * stats["avg_time"]
 
     def get_stats(self) -> Dict[str, Any]:
         """Get comprehensive statistics"""
@@ -289,8 +285,7 @@ class R2CommandCircuitBreaker:
                 )  # Last 5 minutes
 
                 success_rate = (
-                    (cmd_stats["calls"] - cmd_stats["failures"])
-                    / max(1, cmd_stats["calls"])
+                    (cmd_stats["calls"] - cmd_stats["failures"]) / max(1, cmd_stats["calls"])
                 ) * 100
 
                 stats[f"command_{cmd_type}"] = {

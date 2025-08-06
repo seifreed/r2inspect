@@ -6,7 +6,7 @@ r2inspect Configuration Management
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 class Config:
@@ -57,7 +57,7 @@ class Config:
     def load_config(self):
         """Load configuration from file"""
         try:
-            with open(self.config_path, "r") as f:
+            with open(self.config_path) as f:
                 user_config = json.load(f)
                 self._merge_config(user_config)
         except Exception as e:

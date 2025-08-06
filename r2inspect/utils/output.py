@@ -3,12 +3,13 @@
 Output formatting utilities for r2inspect
 """
 
-import json
 import csv
 import io
-from typing import Dict, List, Any
-from rich.table import Table
+import json
+from typing import Any, Dict, List
+
 from rich.console import Console
+from rich.table import Table
 
 
 class OutputFormatter:
@@ -157,22 +158,16 @@ class OutputFormatter:
             # Rich Header for PE files
             rich_header_info = data.get("rich_header", {})
             csv_row["rich_header_xor_key"] = (
-                hex(rich_header_info.get("xor_key", 0))
-                if rich_header_info.get("xor_key")
-                else ""
+                hex(rich_header_info.get("xor_key", 0)) if rich_header_info.get("xor_key") else ""
             )
             csv_row["rich_header_checksum"] = (
-                hex(rich_header_info.get("checksum", 0))
-                if rich_header_info.get("checksum")
-                else ""
+                hex(rich_header_info.get("checksum", 0)) if rich_header_info.get("checksum") else ""
             )
             csv_row["richpe_hash"] = rich_header_info.get("richpe_hash", "")
 
             # Rich Header compilers (comma-separated)
             compilers_list = []
-            if "compilers" in rich_header_info and isinstance(
-                rich_header_info["compilers"], list
-            ):
+            if "compilers" in rich_header_info and isinstance(rich_header_info["compilers"], list):
                 for compiler in rich_header_info["compilers"]:
                     if isinstance(compiler, dict):
                         compiler_name = compiler.get("compiler_name", "")
@@ -248,9 +243,7 @@ class OutputFormatter:
 
             # MACHOC hash information
             machoc_hashes = functions_info.get("machoc_hashes", {})
-            csv_row["num_unique_machoc"] = (
-                len(set(machoc_hashes.values())) if machoc_hashes else 0
-            )
+            csv_row["num_unique_machoc"] = len(set(machoc_hashes.values())) if machoc_hashes else 0
 
             # Calculate duplicate functions (functions with same MACHOC hash)
             num_duplicate_functions = 0
@@ -315,9 +308,7 @@ class OutputFormatter:
         except Exception:
             return file_type
 
-    def _flatten_results(
-        self, data: Dict[str, Any], prefix: str = ""
-    ) -> List[Dict[str, Any]]:
+    def _flatten_results(self, data: Dict[str, Any], prefix: str = "") -> List[Dict[str, Any]]:
         """Flatten nested dictionary for CSV export (legacy method, kept for compatibility)"""
         rows = []
 
@@ -348,9 +339,7 @@ class OutputFormatter:
             rows.extend(self._flatten_value(item, item_prefix))
         return rows
 
-    def format_table(
-        self, data: Dict[str, Any], title: str = "Analysis Results"
-    ) -> Table:
+    def format_table(self, data: Dict[str, Any], title: str = "Analysis Results") -> Table:
         """Format data as a Rich table"""
         table = Table(title=title, show_header=True)
         table.add_column("Property", style="cyan")
@@ -397,9 +386,7 @@ class OutputFormatter:
         table.add_column("Risk Tags", style="bright_red", width=30)
 
         # Sort by risk score (highest first)
-        sorted_imports = sorted(
-            imports, key=lambda x: x.get("risk_score", 0), reverse=True
-        )
+        sorted_imports = sorted(imports, key=lambda x: x.get("risk_score", 0), reverse=True)
 
         for imp in sorted_imports:
             risk_score = imp.get("risk_score", 0)
@@ -433,9 +420,11 @@ class OutputFormatter:
                 imp.get("library", "Unknown"),
                 imp.get("category", "Unknown"),
                 f"[{score_color}]{risk_score}/100[/{score_color}]",
-                f"[{risk_color}]{tags_display}[/{risk_color}]"
-                if tags_display
-                else "[dim]None[/dim]",
+                (
+                    f"[{risk_color}]{tags_display}[/{risk_color}]"
+                    if tags_display
+                    else "[dim]None[/dim]"
+                ),
             )
 
         return table
@@ -473,12 +462,8 @@ class OutputFormatter:
             if "packer" in self.results:
                 packer = self.results["packer"]
                 if packer.get("is_packed"):
-                    summary_lines.append(
-                        f"Packer Detected: {packer.get('packer_type', 'Unknown')}"
-                    )
-                    summary_lines.append(
-                        f"Confidence: {packer.get('confidence', 0):.2f}"
-                    )
+                    summary_lines.append(f"Packer Detected: {packer.get('packer_type', 'Unknown')}")
+                    summary_lines.append(f"Confidence: {packer.get('confidence', 0):.2f}")
                     summary_lines.append("")
 
             # YARA matches

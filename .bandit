@@ -1,0 +1,42 @@
+[bandit]
+# Exclude test files and virtual environments
+exclude: /tests,/venv,/env,/.venv,/.qlty
+
+# Skip specific tests that generate false positives for malware analysis tools
+skips: B101,B601,B602,B603,B607,B324,B110
+
+# B101: assert_used - needed for tests and validation
+# B601: paramiko_calls - false positives
+# B602: subprocess_popen_with_shell_equals_true - needed for r2pipe
+# B603: subprocess_without_shell_equals_true - needed for r2pipe
+# B607: start_process_with_partial_path - needed for tool integration
+# B324: hashlib - MD5/SHA1 used for file identification, not security
+# B110: try_except_pass - needed for optional feature detection
+
+# Set minimum severity level
+level: MEDIUM
+
+# Test IDs to run
+tests:
+
+# Test IDs to skip
+skips:
+  - B101  # assert_used
+  - B601  # paramiko_calls
+  - B602  # subprocess_popen_with_shell_equals_true
+  - B603  # subprocess_without_shell_equals_true
+  - B607  # start_process_with_partial_path
+  - B324  # hashlib_insecure_functions
+  - B110  # try_except_pass
+  - B301  # pickle - needed for caching
+  - B403  # import_pickle - needed for caching
+
+# Paths to exclude
+exclude_dirs:
+  - '/tests'
+  - '/venv'
+  - '/env'
+  - '/.venv'
+  - '/.qlty'
+  - '/build'
+  - '/dist'

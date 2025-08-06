@@ -4,8 +4,9 @@ Enhanced file type detection using precise magic bytes
 """
 
 import struct
-from typing import Dict
 from pathlib import Path
+from typing import Dict
+
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -225,9 +226,7 @@ class MagicByteDetector:
 
                         # Update result with highest confidence match
                         if confidence > result["confidence"]:
-                            result.update(
-                                self._get_format_details(format_name, header, f)
-                            )
+                            result.update(self._get_format_details(format_name, header, f))
                             result["confidence"] = confidence
                             result["extensions"] = format_info.get("extensions", [])
 
@@ -243,9 +242,7 @@ class MagicByteDetector:
         self.cache[cache_key] = result
         return result
 
-    def _check_magic_pattern(
-        self, header: bytes, format_info: Dict, file_handle
-    ) -> float:
+    def _check_magic_pattern(self, header: bytes, format_info: Dict, file_handle) -> float:
         """Check if header matches magic pattern"""
         signatures = format_info.get("signatures", [])
 
@@ -487,9 +484,7 @@ class MagicByteDetector:
 
         # CPU type is at offset 4
         if len(header) >= 8:
-            cpu_type = struct.unpack("<I" if endian == "Little" else ">I", header[4:8])[
-                0
-            ]
+            cpu_type = struct.unpack("<I" if endian == "Little" else ">I", header[4:8])[0]
 
             cpu_map = {
                 7: "x86",
@@ -562,8 +557,7 @@ class MagicByteDetector:
         if header:
             # Check for common executable patterns
             if (
-                b"\x4d\x5a" in header[:10]  # MZ signature
-                or b"\x7f\x45\x4c\x46" in header[:10]
+                b"\x4d\x5a" in header[:10] or b"\x7f\x45\x4c\x46" in header[:10]  # MZ signature
             ):  # ELF signature
                 result["potential_threat"] = True
 

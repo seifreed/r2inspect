@@ -3,9 +3,10 @@
 Anti-Analysis Detection Module using r2pipe
 """
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd
+from ..utils.r2_helpers import safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -91,23 +92,17 @@ class AntiAnalysisDetector:
             # Check for anti-debug techniques with details
             debug_result = self._detect_anti_debug_detailed()
             anti_analysis["anti_debug"] = debug_result["detected"]
-            anti_analysis["detection_details"]["anti_debug_evidence"] = debug_result[
-                "evidence"
-            ]
+            anti_analysis["detection_details"]["anti_debug_evidence"] = debug_result["evidence"]
 
             # Check for anti-VM techniques with details
             vm_result = self._detect_anti_vm_detailed()
             anti_analysis["anti_vm"] = vm_result["detected"]
-            anti_analysis["detection_details"]["anti_vm_evidence"] = vm_result[
-                "evidence"
-            ]
+            anti_analysis["detection_details"]["anti_vm_evidence"] = vm_result["evidence"]
 
             # Check for sandbox evasion with details
             sandbox_result = self._detect_anti_sandbox_detailed()
             anti_analysis["anti_sandbox"] = sandbox_result["detected"]
-            anti_analysis["detection_details"]["anti_sandbox_evidence"] = (
-                sandbox_result["evidence"]
-            )
+            anti_analysis["detection_details"]["anti_sandbox_evidence"] = sandbox_result["evidence"]
 
             # Detect evasion techniques
             anti_analysis["evasion_techniques"] = self._detect_evasion_techniques()
@@ -118,9 +113,7 @@ class AntiAnalysisDetector:
             # Check for timing-based evasion with details
             timing_result = self._detect_timing_checks_detailed()
             anti_analysis["timing_checks"] = timing_result["detected"]
-            anti_analysis["detection_details"]["timing_evidence"] = timing_result[
-                "evidence"
-            ]
+            anti_analysis["detection_details"]["timing_evidence"] = timing_result["evidence"]
 
             # Environment checks
             anti_analysis["environment_checks"] = self._detect_environment_checks()
@@ -195,9 +188,7 @@ class AntiAnalysisDetector:
 
         except Exception as e:
             logger.error(f"Error detecting anti-debug: {e}")
-            result["evidence"].append(
-                {"type": "Error", "detail": f"Detection error: {str(e)}"}
-            )
+            result["evidence"].append({"type": "Error", "detail": f"Detection error: {str(e)}"})
 
         return result
 
@@ -259,9 +250,7 @@ class AntiAnalysisDetector:
                 )
 
             # Check registry queries for VM detection
-            reg_vm_checks = safe_cmd(
-                self.r2, "iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX"
-            )
+            reg_vm_checks = safe_cmd(self.r2, "iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX")
             if reg_vm_checks and reg_vm_checks.strip():
                 result["detected"] = True
                 result["evidence"].append(
@@ -274,9 +263,7 @@ class AntiAnalysisDetector:
 
         except Exception as e:
             logger.error(f"Error detecting anti-VM: {e}")
-            result["evidence"].append(
-                {"type": "Error", "detail": f"Detection error: {str(e)}"}
-            )
+            result["evidence"].append({"type": "Error", "detail": f"Detection error: {str(e)}"})
 
         return result
 
@@ -338,9 +325,7 @@ class AntiAnalysisDetector:
 
         except Exception as e:
             logger.error(f"Error detecting anti-sandbox: {e}")
-            result["evidence"].append(
-                {"type": "Error", "detail": f"Detection error: {str(e)}"}
-            )
+            result["evidence"].append({"type": "Error", "detail": f"Detection error: {str(e)}"})
 
         return result
 
@@ -536,9 +521,7 @@ class AntiAnalysisDetector:
 
         except Exception as e:
             logger.error(f"Error detecting timing checks: {e}")
-            result["evidence"].append(
-                {"type": "Error", "detail": f"Detection error: {str(e)}"}
-            )
+            result["evidence"].append({"type": "Error", "detail": f"Detection error: {str(e)}"})
 
         return result
 

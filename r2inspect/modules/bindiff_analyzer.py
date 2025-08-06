@@ -22,9 +22,9 @@ Based on BinDiff and similar binary comparison tools.
 """
 
 import hashlib
-from typing import Dict, List, Any, Optional, Tuple, Set
-from collections import Counter, defaultdict
 from pathlib import Path
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
 
@@ -76,9 +76,7 @@ class BinDiffAnalyzer:
             # Get our own analysis results first
             our_results = self.analyze()
 
-            if not our_results.get("comparison_ready") or not other_results.get(
-                "comparison_ready"
-            ):
+            if not our_results.get("comparison_ready") or not other_results.get("comparison_ready"):
                 return {
                     "error": "One or both binaries are not ready for comparison",
                     "similarity_score": 0.0,
@@ -87,17 +85,11 @@ class BinDiffAnalyzer:
             comparison = {
                 "binary_a": our_results["filename"],
                 "binary_b": other_results["filename"],
-                "structural_similarity": self._compare_structural(
-                    our_results, other_results
-                ),
-                "function_similarity": self._compare_functions(
-                    our_results, other_results
-                ),
+                "structural_similarity": self._compare_structural(our_results, other_results),
+                "function_similarity": self._compare_functions(our_results, other_results),
                 "string_similarity": self._compare_strings(our_results, other_results),
                 "byte_similarity": self._compare_bytes(our_results, other_results),
-                "behavioral_similarity": self._compare_behavioral(
-                    our_results, other_results
-                ),
+                "behavioral_similarity": self._compare_behavioral(our_results, other_results),
             }
 
             # Calculate overall similarity score
@@ -160,13 +152,7 @@ class BinDiffAnalyzer:
             if imports:
                 features["import_count"] = len(imports)
                 features["imported_dlls"] = list(
-                    set(
-                        [
-                            imp.get("libname", "")
-                            for imp in imports
-                            if imp.get("libname")
-                        ]
-                    )
+                    {imp.get("libname", "") for imp in imports if imp.get("libname")}
                 )
                 features["imported_functions"] = [
                     imp.get("name", "") for imp in imports if imp.get("name")
@@ -198,9 +184,7 @@ class BinDiffAnalyzer:
             if functions:
                 features["function_count"] = len(functions)
                 features["function_sizes"] = [f.get("size", 0) for f in functions]
-                features["function_names"] = [
-                    f.get("name", "") for f in functions if f.get("name")
-                ]
+                features["function_names"] = [f.get("name", "") for f in functions if f.get("name")]
 
                 # Analyze a subset of functions for CFG similarity
                 cfg_features = []
@@ -218,9 +202,7 @@ class BinDiffAnalyzer:
                                 {
                                     "nodes": len(cfg_data.get("blocks", [])),
                                     "edges": len(cfg_data.get("edges", [])),
-                                    "complexity": self._calculate_cyclomatic_complexity(
-                                        cfg_data
-                                    ),
+                                    "complexity": self._calculate_cyclomatic_complexity(cfg_data),
                                 }
                             )
 
@@ -239,13 +221,9 @@ class BinDiffAnalyzer:
             # Get strings
             strings = safe_cmdj(self.r2, "izj", [])
             if strings:
-                string_values = [
-                    s.get("string", "") for s in strings if s.get("string")
-                ]
+                string_values = [s.get("string", "") for s in strings if s.get("string")]
                 features["total_strings"] = len(string_values)
-                features["string_count"] = len(
-                    string_values
-                )  # Keep for backward compatibility
+                features["string_count"] = len(string_values)  # Keep for backward compatibility
                 features["unique_strings"] = len(set(string_values))
                 features["string_lengths"] = [len(s) for s in string_values]
 
@@ -253,9 +231,7 @@ class BinDiffAnalyzer:
                 api_strings = [s for s in string_values if self._is_api_string(s)]
                 path_strings = [s for s in string_values if self._is_path_string(s)]
                 url_strings = [s for s in string_values if self._is_url_string(s)]
-                registry_strings = [
-                    s for s in string_values if self._is_registry_string(s)
-                ]
+                registry_strings = [s for s in string_values if self._is_registry_string(s)]
 
                 features["api_strings"] = api_strings
                 features["path_strings"] = path_strings
@@ -318,9 +294,7 @@ class BinDiffAnalyzer:
             imports = safe_cmdj(self.r2, "iij", [])
 
             if strings:
-                string_values = [
-                    s.get("string", "") for s in strings if s.get("string")
-                ]
+                string_values = [s.get("string", "") for s in strings if s.get("string")]
                 features["crypto_indicators"] = len(
                     [s for s in string_values if self._has_crypto_indicators(s)]
                 )
@@ -332,9 +306,7 @@ class BinDiffAnalyzer:
                 )
 
             if imports:
-                import_names = [
-                    imp.get("name", "") for imp in imports if imp.get("name")
-                ]
+                import_names = [imp.get("name", "") for imp in imports if imp.get("name")]
                 features["suspicious_apis"] = len(
                     [api for api in import_names if self._is_suspicious_api(api)]
                 )
@@ -350,9 +322,7 @@ class BinDiffAnalyzer:
 
         return features
 
-    def _generate_comparison_signatures(
-        self, results: Dict[str, Any]
-    ) -> Dict[str, str]:
+    def _generate_comparison_signatures(self, results: Dict[str, Any]) -> Dict[str, str]:
         """Generate signatures for quick comparison"""
         signatures = {}
 
@@ -461,9 +431,7 @@ class BinDiffAnalyzer:
             b_names = set(b_func.get("function_names", []))
             if a_names or b_names:
                 name_jaccard = (
-                    len(a_names & b_names) / len(a_names | b_names)
-                    if (a_names | b_names)
-                    else 0
+                    len(a_names & b_names) / len(a_names | b_names) if (a_names | b_names) else 0
                 )
                 score += name_jaccard * 0.6
             total_weight += 0.6
@@ -492,9 +460,7 @@ class BinDiffAnalyzer:
             b_apis = set(b_str.get("api_strings", []))
             if a_apis or b_apis:
                 api_jaccard = (
-                    len(a_apis & b_apis) / len(a_apis | b_apis)
-                    if (a_apis | b_apis)
-                    else 0
+                    len(a_apis & b_apis) / len(a_apis | b_apis) if (a_apis | b_apis) else 0
                 )
                 score += api_jaccard * 0.4
             total_weight += 0.4
@@ -504,9 +470,7 @@ class BinDiffAnalyzer:
             b_paths = set(b_str.get("path_strings", []))
             if a_paths or b_paths:
                 path_jaccard = (
-                    len(a_paths & b_paths) / len(a_paths | b_paths)
-                    if (a_paths | b_paths)
-                    else 0
+                    len(a_paths & b_paths) / len(a_paths | b_paths) if (a_paths | b_paths) else 0
                 )
                 score += path_jaccard * 0.3
             total_weight += 0.3
@@ -515,9 +479,7 @@ class BinDiffAnalyzer:
             a_reg = set(a_str.get("registry_strings", []))
             b_reg = set(b_str.get("registry_strings", []))
             if a_reg or b_reg:
-                reg_jaccard = (
-                    len(a_reg & b_reg) / len(a_reg | b_reg) if (a_reg | b_reg) else 0
-                )
+                reg_jaccard = len(a_reg & b_reg) / len(a_reg | b_reg) if (a_reg | b_reg) else 0
                 score += reg_jaccard * 0.3
             total_weight += 0.3
 
@@ -601,9 +563,7 @@ class BinDiffAnalyzer:
             hashes.append(hash(window) & 0xFFFFFFFF)
         return hashes[:100]  # Limit to first 100 hashes
 
-    def _compare_rolling_hashes(
-        self, a_hashes: List[int], b_hashes: List[int]
-    ) -> float:
+    def _compare_rolling_hashes(self, a_hashes: List[int], b_hashes: List[int]) -> float:
         """Compare rolling hashes for similarity"""
         if not a_hashes or not b_hashes:
             return 0.0

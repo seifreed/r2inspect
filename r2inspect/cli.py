@@ -3,24 +3,23 @@
 r2inspect CLI - Command Line Interface
 """
 
-import sys
-import json
 import csv
-import glob
+import json
+import sys
 from pathlib import Path
+
 import click
 import magic
+import pyfiglet
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text
-import pyfiglet
 
-from .core import R2Inspector
-from .utils.output import OutputFormatter
-from .utils.logger import setup_logger
-from .utils.error_handler import get_error_stats, reset_error_stats
-from .utils.r2_helpers import get_retry_stats, get_circuit_breaker_stats
 from .config import Config
+from .core import R2Inspector
+from .utils.error_handler import get_error_stats, reset_error_stats
+from .utils.logger import setup_logger
+from .utils.output import OutputFormatter
+from .utils.r2_helpers import get_circuit_breaker_stats, get_retry_stats
 
 console = Console()
 # Initialize logger without thread_safe flag initially
@@ -222,26 +221,18 @@ def display_yara_rules_table(available_rules, rules_path):
         )
 
     console.print(table)
-    console.print(
-        f"\n[green]Total: {len(available_rules)} YARA rule file(s) found[/green]"
-    )
-    console.print(
-        "[blue]All these files will be automatically loaded when running analysis[/blue]"
-    )
+    console.print(f"\n[green]Total: {len(available_rules)} YARA rule file(s) found[/green]")
+    console.print("[blue]All these files will be automatically loaded when running analysis[/blue]")
 
 
 def validate_input_mode(filename, batch):
     """Validate that either filename or batch mode is provided"""
     if not filename and not batch:
-        console.print(
-            "[red]Error: Must provide either a filename or --batch directory[/red]"
-        )
+        console.print("[red]Error: Must provide either a filename or --batch directory[/red]")
         sys.exit(1)
 
     if filename and batch:
-        console.print(
-            "[red]Error: Cannot use both filename and --batch mode simultaneously[/red]"
-        )
+        console.print("[red]Error: Cannot use both filename and --batch mode simultaneously[/red]")
         sys.exit(1)
 
     if filename:
@@ -278,9 +269,7 @@ def sanitize_xor_string(xor_input):
         return None
 
     # Remove potentially dangerous characters
-    safe_chars = set(
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-."
-    )
+    safe_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-.")
     sanitized = "".join(c for c in xor_input if c in safe_chars)
 
     # Limit length
@@ -302,9 +291,7 @@ def sanitize_xor_string(xor_input):
     is_flag=True,
     help="Full output analysis in JSON format",
 )
-@click.option(
-    "-c", "--csv", "output_csv", is_flag=True, help="Output analysis in CSV format"
-)
+@click.option("-c", "--csv", "output_csv", is_flag=True, help="Output analysis in CSV format")
 @click.option("-o", "--output", help="Output file path or directory for batch mode")
 @click.option("-x", "--xor", help="Search XORed string")
 @click.option("-v", "--verbose", is_flag=True, help="Verbose output")
@@ -320,9 +307,7 @@ def sanitize_xor_string(xor_input):
     "--extensions",
     help="File extensions to process in batch mode (comma-separated). Default: auto-detect executable files",
 )
-@click.option(
-    "--list-yara", is_flag=True, help="List all available YARA rules and exit"
-)
+@click.option("--list-yara", is_flag=True, help="List all available YARA rules and exit")
 @click.option(
     "--threads",
     default=10,
@@ -407,9 +392,7 @@ def main(
                         run_interactive_mode(inspector, analysis_options)
                     else:
                         # Setup output file for single file mode
-                        output = setup_single_file_output(
-                            output_json, output_csv, output, filename
-                        )
+                        output = setup_single_file_output(output_json, output_csv, output, filename)
 
                         run_analysis(
                             inspector,
@@ -430,9 +413,7 @@ def main(
         handle_main_error(e, verbose)
 
 
-def run_analysis(
-    inspector, options, output_json, output_csv, output_file, verbose=False
-):
+def run_analysis(inspector, options, output_json, output_csv, output_file, verbose=False):
     """Run complete analysis and display results"""
     reset_error_stats()
 
@@ -450,9 +431,7 @@ def run_analysis(
 
 def print_status_if_appropriate(output_json, output_csv, output_file):
     """Print status message if appropriate based on output options"""
-    if not output_json and not output_csv:
-        console.print("[bold green]Starting analysis...[/bold green]")
-    elif (output_json or output_csv) and output_file:
+    if not output_json and not output_csv or (output_json or output_csv) and output_file:
         console.print("[bold green]Starting analysis...[/bold green]")
 
 
@@ -603,9 +582,7 @@ def _display_retry_statistics(retry_stats):
 
     retry_table.add_row("Total Retries", str(retry_stats["total_retries"]))
     retry_table.add_row("Successful Retries", str(retry_stats["successful_retries"]))
-    retry_table.add_row(
-        "Failed After Retries", str(retry_stats["failed_after_retries"])
-    )
+    retry_table.add_row("Failed After Retries", str(retry_stats["failed_after_retries"]))
     retry_table.add_row("Success Rate", f"{retry_stats['success_rate']:.1f}%")
 
     console.print(retry_table)
@@ -770,9 +747,7 @@ def display_results(results):
     # TLSH Information
     if "tlsh" in results:
         tlsh_info = results["tlsh"]
-        table = Table(
-            title="TLSH Locality Sensitive Hash", show_header=True, expand=True
-        )
+        table = Table(title="TLSH Locality Sensitive Hash", show_header=True, expand=True)
         table.add_column("Property", style="cyan", width=21, no_wrap=True)
         table.add_column("Value", style="yellow", min_width=70, overflow="fold")
 
@@ -794,9 +769,7 @@ def display_results(results):
             # Function statistics
             stats = tlsh_info.get("stats", {})
             table.add_row("Functions Analyzed", str(stats.get("functions_analyzed", 0)))
-            table.add_row(
-                "Functions with TLSH", str(stats.get("functions_with_tlsh", 0))
-            )
+            table.add_row("Functions with TLSH", str(stats.get("functions_with_tlsh", 0)))
 
             table.add_row("Status", "[green]✓ Available[/green]")
         else:
@@ -824,12 +797,8 @@ def display_results(results):
                     table.add_row("Telfhash", "[red]Not Available[/red]")
 
                 # Symbol statistics
-                table.add_row(
-                    "Total Symbols", str(telfhash_info.get("symbol_count", 0))
-                )
-                table.add_row(
-                    "Filtered Symbols", str(telfhash_info.get("filtered_symbols", 0))
-                )
+                table.add_row("Total Symbols", str(telfhash_info.get("symbol_count", 0)))
+                table.add_row("Filtered Symbols", str(telfhash_info.get("filtered_symbols", 0)))
 
                 # Show some symbols used
                 symbols_used = telfhash_info.get("symbols_used", [])
@@ -905,9 +874,7 @@ def display_results(results):
     # Impfuzzy Information (PE only)
     if "impfuzzy" in results:
         impfuzzy_info = results["impfuzzy"]
-        table = Table(
-            title="Impfuzzy (PE Import Fuzzy Hash)", show_header=True, expand=True
-        )
+        table = Table(title="Impfuzzy (PE Import Fuzzy Hash)", show_header=True, expand=True)
         table.add_column("Property", style="cyan", width=16, no_wrap=True)
         table.add_column("Value", style="yellow", min_width=80, overflow="fold")
 
@@ -946,9 +913,7 @@ def display_results(results):
     # CCBHash Information (Control Flow Graph Hash)
     if "ccbhash" in results:
         ccbhash_info = results["ccbhash"]
-        table = Table(
-            title="CCBHash (Control Flow Graph Hash)", show_header=True, expand=True
-        )
+        table = Table(title="CCBHash (Control Flow Graph Hash)", show_header=True, expand=True)
         table.add_column("Property", style="cyan", width=25, no_wrap=True)
         table.add_column("Value", style="yellow", min_width=50, overflow="fold")
 
@@ -956,9 +921,7 @@ def display_results(results):
             # Binary CCBHash
             binary_hash = ccbhash_info.get("binary_ccbhash")
             if binary_hash:
-                table.add_row(
-                    "Binary CCBHash", format_hash_display(binary_hash, max_length=64)
-                )
+                table.add_row("Binary CCBHash", format_hash_display(binary_hash, max_length=64))
 
             # Function statistics
             total_functions = ccbhash_info.get("total_functions", 0)
@@ -977,9 +940,7 @@ def display_results(results):
                 # Show the largest group
                 largest_group = similar_functions[0] if similar_functions else None
                 if largest_group:
-                    table.add_row(
-                        "Largest Similar Group", f"{largest_group['count']} functions"
-                    )
+                    table.add_row("Largest Similar Group", f"{largest_group['count']} functions")
                     # Show sample function names from the largest group
                     sample_funcs = largest_group["functions"][:3].copy()
                     # Clean HTML entities and corrupted patterns from function names
@@ -1007,9 +968,7 @@ def display_results(results):
     # Binlex Information (N-gram Lexical Analysis)
     if "binlex" in results:
         binlex_info = results["binlex"]
-        table = Table(
-            title="Binlex (N-gram Lexical Analysis)", show_header=True, expand=True
-        )
+        table = Table(title="Binlex (N-gram Lexical Analysis)", show_header=True, expand=True)
         table.add_column("Property", style="cyan", width=26, no_wrap=True)
         table.add_column("Value", style="yellow", min_width=40, overflow="fold")
 
@@ -1029,9 +988,7 @@ def display_results(results):
             unique_signatures = binlex_info.get("unique_signatures", {})
             for n in ngram_sizes:
                 if n in unique_signatures:
-                    table.add_row(
-                        f"Unique {n}-gram Signatures", str(unique_signatures[n])
-                    )
+                    table.add_row(f"Unique {n}-gram Signatures", str(unique_signatures[n]))
 
             # Similar functions
             similar_functions = binlex_info.get("similar_functions", {})
@@ -1066,9 +1023,7 @@ def display_results(results):
                     ngram_strs = []
                     for ngram, count in top_3:
                         # Clean up any HTML entities and normalize whitespace
-                        clean_ngram = (
-                            ngram.replace("&nbsp;", " ").replace(HTML_AMP, "&").strip()
-                        )
+                        clean_ngram = ngram.replace("&nbsp;", " ").replace(HTML_AMP, "&").strip()
                         # Limit length to avoid very long display
                         if len(clean_ngram) > 50:
                             clean_ngram = clean_ngram[:47] + "..."
@@ -1087,9 +1042,7 @@ def display_results(results):
     # Binbloom Information (Bloom Filter Analysis)
     if "binbloom" in results:
         binbloom_info = results["binbloom"]
-        table = Table(
-            title="Binbloom (Bloom Filter Analysis)", show_header=True, width=120
-        )
+        table = Table(title="Binbloom (Bloom Filter Analysis)", show_header=True, width=120)
         table.add_column("Property", style="cyan", width=25)
         table.add_column("Value", style="yellow", width=90, overflow="fold")
 
@@ -1105,16 +1058,12 @@ def display_results(results):
             capacity = binbloom_info.get("capacity", 0)
             error_rate = binbloom_info.get("error_rate", 0.0)
             table.add_row("Bloom Filter Capacity", str(capacity))
-            table.add_row(
-                "False Positive Rate", f"{error_rate:.4f} ({error_rate * 100:.2f}%)"
-            )
+            table.add_row("False Positive Rate", f"{error_rate:.4f} ({error_rate * 100:.2f}%)")
 
             # Unique signatures
             unique_signatures = binbloom_info.get("unique_signatures", 0)
             diversity_ratio = (
-                (unique_signatures / analyzed_functions * 100)
-                if analyzed_functions > 0
-                else 0
+                (unique_signatures / analyzed_functions * 100) if analyzed_functions > 0 else 0
             )
             table.add_row(
                 "Unique Function Signatures",
@@ -1126,23 +1075,17 @@ def display_results(results):
             if function_signatures:
                 # Calculate instruction statistics
                 total_instructions = sum(
-                    sig.get("instruction_count", 0)
-                    for sig in function_signatures.values()
+                    sig.get("instruction_count", 0) for sig in function_signatures.values()
                 )
                 avg_instructions = (
-                    total_instructions / len(function_signatures)
-                    if function_signatures
-                    else 0
+                    total_instructions / len(function_signatures) if function_signatures else 0
                 )
 
                 unique_instructions = sum(
-                    sig.get("unique_instructions", 0)
-                    for sig in function_signatures.values()
+                    sig.get("unique_instructions", 0) for sig in function_signatures.values()
                 )
                 avg_unique = (
-                    unique_instructions / len(function_signatures)
-                    if function_signatures
-                    else 0
+                    unique_instructions / len(function_signatures) if function_signatures else 0
                 )
 
                 table.add_row("Avg Instructions/Function", f"{avg_instructions:.1f}")
@@ -1177,13 +1120,9 @@ def display_results(results):
                             func_display.append(f"• {func_name}")
 
                         if len(group["functions"]) > 5:
-                            func_display.append(
-                                f"• ... and {len(group['functions']) - 5} more"
-                            )
+                            func_display.append(f"• ... and {len(group['functions']) - 5} more")
 
-                        table.add_row(
-                            f"Group {i + 1} Functions", "\n".join(func_display)
-                        )
+                        table.add_row(f"Group {i + 1} Functions", "\n".join(func_display))
 
                 if len(similar_functions) > 3:
                     table.add_row(
@@ -1225,10 +1164,7 @@ def display_results(results):
         console.print(table)
 
         # Show additional details if there are unique signatures
-        if (
-            binbloom_info.get("available")
-            and binbloom_info.get("unique_signatures", 0) > 1
-        ):
+        if binbloom_info.get("available") and binbloom_info.get("unique_signatures", 0) > 1:
             # Create signature details table
             sig_table = Table(
                 title="Binbloom Signature Details",
@@ -1239,9 +1175,7 @@ def display_results(results):
             )
             sig_table.add_column("Signature #", style="yellow", no_wrap=True, width=13)
             sig_table.add_column("Hash", style="green", min_width=50, overflow="fold")
-            sig_table.add_column(
-                "Functions", style="blue", min_width=45, overflow="fold"
-            )
+            sig_table.add_column("Functions", style="blue", min_width=45, overflow="fold")
 
             # Show top unique function signatures
             function_signatures = binbloom_info.get("function_signatures", {})
@@ -1261,8 +1195,7 @@ def display_results(results):
                 import re
 
                 clean_funcs = [
-                    re.sub(r"&nbsp;?", " ", func).replace(HTML_AMP, "&")
-                    for func in funcs[:3]
+                    re.sub(r"&nbsp;?", " ", func).replace(HTML_AMP, "&") for func in funcs[:3]
                 ]
                 func_list = ", ".join(clean_funcs) + ("..." if len(funcs) > 3 else "")
                 sig_table.add_row(
@@ -1308,9 +1241,7 @@ def display_results(results):
                 else:
                     hash_display = hash_hex
                 table.add_row("Binary SimHash", hash_display)
-                table.add_row(
-                    "Combined Features", str(combined_simhash.get("feature_count", 0))
-                )
+                table.add_row("Combined Features", str(combined_simhash.get("feature_count", 0)))
 
             # Strings-only SimHash
             strings_simhash = simhash_info.get("strings_simhash")
@@ -1344,9 +1275,7 @@ def display_results(results):
                 # Similar function groups
                 similarity_groups = simhash_info.get("similarity_groups", [])
                 if similarity_groups:
-                    table.add_row(
-                        "Similar Function Groups", str(len(similarity_groups))
-                    )
+                    table.add_row("Similar Function Groups", str(len(similarity_groups)))
 
                     # Show details for largest groups
                     for i, group in enumerate(similarity_groups[:3]):
@@ -1366,19 +1295,13 @@ def display_results(results):
                             sample_funcs = group["functions"][:5]
                             func_display = []
                             for func in sample_funcs:
-                                func_name = (
-                                    func if len(func) <= 30 else func[:27] + "..."
-                                )
+                                func_name = func if len(func) <= 30 else func[:27] + "..."
                                 func_display.append(f"• {func_name}")
 
                             if len(group["functions"]) > 5:
-                                func_display.append(
-                                    f"• ... and {len(group['functions']) - 5} more"
-                                )
+                                func_display.append(f"• ... and {len(group['functions']) - 5} more")
 
-                            table.add_row(
-                                f"Group {i + 1} Functions", "\n".join(func_display)
-                            )
+                            table.add_row(f"Group {i + 1} Functions", "\n".join(func_display))
 
                     if len(similarity_groups) > 3:
                         table.add_row(
@@ -1395,9 +1318,7 @@ def display_results(results):
                 for feature, count in most_common[:5]:
                     # Clean feature name for display
                     clean_feature = (
-                        feature.replace("STR:", "")
-                        .replace("OP:", "")
-                        .replace("OPTYPE:", "")
+                        feature.replace("STR:", "").replace("OP:", "").replace("OPTYPE:", "")
                     )
                     if len(clean_feature) > 40:
                         clean_feature = clean_feature[:37] + "..."
@@ -1453,9 +1374,7 @@ def display_results(results):
             # Function features
             function_features = bindiff_info.get("function_features", {})
             if function_features:
-                table.add_row(
-                    "Functions", str(function_features.get("function_count", 0))
-                )
+                table.add_row("Functions", str(function_features.get("function_count", 0)))
                 if function_features.get("cfg_features"):
                     cfg_count = len(function_features["cfg_features"])
                     table.add_row("CFG Analysis", f"{cfg_count} functions analyzed")
@@ -1648,10 +1567,7 @@ def find_executable_files_by_magic(directory, recursive=False, verbose=False):
     ]
 
     # Get all files
-    if recursive:
-        all_files = directory.rglob("*")
-    else:
-        all_files = directory.glob("*")
+    all_files = directory.rglob("*") if recursive else directory.glob("*")
 
     # Filter to regular files only
     regular_files = [f for f in all_files if f.is_file()]
@@ -1681,9 +1597,7 @@ def find_executable_files_by_magic(directory, recursive=False, verbose=False):
                 is_executable = True
 
             # Check description
-            if any(
-                desc.lower() in description.lower() for desc in executable_descriptions
-            ):
+            if any(desc.lower() in description.lower() for desc in executable_descriptions):
                 is_executable = True
 
             # Additional checks for specific executable formats
@@ -1801,8 +1715,8 @@ def process_single_file(
     file_path, batch_path, config_obj, options, output_json, output_path, rate_limiter
 ):
     """Process a single file with rate limiting"""
-    from .output_formatter import OutputFormatter
     from .inspector import R2Inspector
+    from .output_formatter import OutputFormatter
 
     if not rate_limiter.acquire(timeout=30.0):
         return file_path, None, "Rate limit timeout - system overloaded"
@@ -1847,13 +1761,14 @@ def process_files_parallel(
     rate_limiter,
 ):
     """Process files in parallel with progress tracking"""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
     import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     from rich.progress import (
-        Progress,
-        TextColumn,
         BarColumn,
+        Progress,
         TaskProgressColumn,
+        TextColumn,
         TimeRemainingColumn,
     )
 
@@ -1984,12 +1899,8 @@ def display_rate_limiter_stats(rate_stats):
     """Display rate limiter statistics"""
     console.print("[dim]Rate limiter stats:[/dim]")
     console.print(f"[dim]  Success rate: {rate_stats.get('success_rate', 0):.1%}[/dim]")
-    console.print(
-        f"[dim]  Avg wait time: {rate_stats.get('avg_wait_time', 0):.2f}s[/dim]"
-    )
-    console.print(
-        f"[dim]  Final rate: {rate_stats.get('current_rate', 0):.1f} files/sec[/dim]"
-    )
+    console.print(f"[dim]  Avg wait time: {rate_stats.get('avg_wait_time', 0):.2f}s[/dim]")
+    console.print(f"[dim]  Final rate: {rate_stats.get('current_rate', 0):.1f} files/sec[/dim]")
 
 
 def display_memory_stats():
@@ -1999,9 +1910,7 @@ def display_memory_stats():
     memory_stats = get_memory_stats()
     if memory_stats.get("status") != "error":
         console.print("[dim]Memory stats:[/dim]")
-        console.print(
-            f"[dim]  Peak usage: {memory_stats.get('peak_memory_mb', 0):.1f}MB[/dim]"
-        )
+        console.print(f"[dim]  Peak usage: {memory_stats.get('peak_memory_mb', 0):.1f}MB[/dim]")
         console.print(
             f"[dim]  Current usage: {memory_stats.get('process_memory_mb', 0):.1f}MB[/dim]"
         )
@@ -2135,9 +2044,7 @@ def update_file_type_stats(stats, result):
         stats["file_types"][file_type] = stats["file_types"].get(file_type, 0) + 1
 
         architecture = result["file_info"].get("architecture", "Unknown")
-        stats["architectures"][architecture] = (
-            stats["architectures"].get(architecture, 0) + 1
-        )
+        stats["architectures"][architecture] = stats["architectures"].get(architecture, 0) + 1
 
 
 def update_compiler_stats(stats, result):
@@ -2146,9 +2053,7 @@ def update_compiler_stats(stats, result):
         compiler_info = result["compiler"]
         compiler_name = compiler_info.get("compiler", "Unknown")
         if compiler_info.get("detected", False):
-            stats["compilers"][compiler_name] = (
-                stats["compilers"].get(compiler_name, 0) + 1
-            )
+            stats["compilers"][compiler_name] = stats["compilers"].get(compiler_name, 0) + 1
 
 
 def collect_batch_statistics(all_results):
@@ -2204,12 +2109,8 @@ def find_files_to_process(batch_path, auto_detect, extensions, recursive, verbos
     files_to_process = []
 
     if auto_detect:
-        console.print(
-            "[blue]Auto-detecting executable files (default behavior)...[/blue]"
-        )
-        files_to_process = find_executable_files_by_magic(
-            batch_path, recursive, verbose
-        )
+        console.print("[blue]Auto-detecting executable files (default behavior)...[/blue]")
+        files_to_process = find_executable_files_by_magic(batch_path, recursive, verbose)
     else:
         console.print(f"[blue]Searching for files with extensions: {extensions}[/blue]")
         files_to_process = find_files_by_extensions(batch_path, extensions, recursive)
@@ -2233,9 +2134,7 @@ def display_no_files_message(auto_detect, extensions):
     """Display appropriate message when no files are found"""
     if auto_detect:
         console.print("[yellow]No executable files detected in the directory[/yellow]")
-        console.print(
-            "[dim]Tip: Files might not be executable format or may be corrupted[/dim]"
-        )
+        console.print("[dim]Tip: Files might not be executable format or may be corrupted[/dim]")
     else:
         console.print(f"[yellow]No files found with extensions: {extensions}[/yellow]")
         console.print("[dim]Tip: Use without --extensions for auto-detection[/dim]")
@@ -2293,9 +2192,7 @@ def run_batch_analysis(
         display_no_files_message(auto_detect, extensions)
         return
 
-    console.print(
-        f"[bold green]Found {len(files_to_process)} files to process[/bold green]"
-    )
+    console.print(f"[bold green]Found {len(files_to_process)} files to process[/bold green]")
     console.print(f"[blue]Using {threads} parallel threads[/blue]")
 
     # Configure logging for batch processing
@@ -2351,9 +2248,7 @@ def run_batch_analysis(
     )
 
 
-def create_batch_summary(
-    all_results, failed_files, output_path, output_json, output_csv
-):
+def create_batch_summary(all_results, failed_files, output_path, output_json, output_csv):
     """Create summary report for batch analysis with custom output behavior"""
     from datetime import datetime
 
@@ -2390,8 +2285,9 @@ def create_batch_summary(
 
 def _show_summary_table(all_results):
     """Show a summary table of all analyzed files"""
-    from rich.table import Table
     import re
+
+    from rich.table import Table
 
     # If more than 10 files, show simplified table with max 10 entries
     if len(all_results) > 10:
@@ -2515,9 +2411,7 @@ def _show_summary_table(all_results):
 
                 # YARA matches - show rule names
                 yara_matches = []
-                if "yara_matches" in result and isinstance(
-                    result["yara_matches"], list
-                ):
+                if "yara_matches" in result and isinstance(result["yara_matches"], list):
                     for match in result["yara_matches"]:
                         if isinstance(match, dict) and "rule" in match:
                             yara_matches.append(match["rule"])

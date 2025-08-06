@@ -13,11 +13,12 @@ Based on research from:
 - https://forensicitguy.github.io/rich-header-hashes-with-pefile/
 """
 
-import struct
 import hashlib
-from typing import Dict, List, Any, Optional
+import struct
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
+from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -355,9 +356,7 @@ class RichHeaderAnalyzer:
             logger.debug(f"pefile calculated Rich Header hash: {rich_hash}")
 
             # Extract Rich Header details
-            xor_key = (
-                pe.RICH_HEADER.checksum if hasattr(pe.RICH_HEADER, "checksum") else None
-            )
+            xor_key = pe.RICH_HEADER.checksum if hasattr(pe.RICH_HEADER, "checksum") else None
 
             # Parse entries from Rich Header
             entries = []
@@ -374,9 +373,7 @@ class RichHeaderAnalyzer:
                                 "product_id": entry.product_id,
                                 "build_number": entry.build_version,
                                 "count": entry.count,
-                                "prodid": (
-                                    entry.product_id | (entry.build_version << 16)
-                                ),
+                                "prodid": (entry.product_id | (entry.build_version << 16)),
                             }
                         )
 
@@ -393,13 +390,15 @@ class RichHeaderAnalyzer:
                 "checksum": xor_key,
                 "entries": entries,
                 "richpe_hash": rich_hash,
-                "clear_data": pe.RICH_HEADER.clear_data.hex()
-                if hasattr(pe.RICH_HEADER, "clear_data")
-                else None,
+                "clear_data": (
+                    pe.RICH_HEADER.clear_data.hex()
+                    if hasattr(pe.RICH_HEADER, "clear_data")
+                    else None
+                ),
                 "method": "pefile",
-                "clear_data_bytes": pe.RICH_HEADER.clear_data
-                if hasattr(pe.RICH_HEADER, "clear_data")
-                else None,
+                "clear_data_bytes": (
+                    pe.RICH_HEADER.clear_data if hasattr(pe.RICH_HEADER, "clear_data") else None
+                ),
             }
 
         except Exception as e:
@@ -566,9 +565,7 @@ class RichHeaderAnalyzer:
                     results = safe_cmd_list(self.r2, f"/xj {pattern}")
                     if results:
                         rich_results.extend(results)
-                        logger.debug(
-                            f"Found Rich pattern {pattern} at {len(results)} locations"
-                        )
+                        logger.debug(f"Found Rich pattern {pattern} at {len(results)} locations")
                 except Exception:
                     continue
 
@@ -577,17 +574,13 @@ class RichHeaderAnalyzer:
                     results = safe_cmd_list(self.r2, f"/xj {pattern}")
                     if results:
                         dans_results.extend(results)
-                        logger.debug(
-                            f"Found DanS pattern {pattern} at {len(results)} locations"
-                        )
+                        logger.debug(f"Found DanS pattern {pattern} at {len(results)} locations")
                 except Exception:
                     continue
 
             # Strategy 3: If no patterns found, try manual search in DOS stub area
             if not rich_results or not dans_results:
-                logger.debug(
-                    "r2pipe patterns not found, trying manual search in DOS stub area"
-                )
+                logger.debug("r2pipe patterns not found, trying manual search in DOS stub area")
                 return self._manual_rich_search()
 
             # Strategy 4: Try all combinations of Rich and DanS offsets
@@ -604,9 +597,7 @@ class RichHeaderAnalyzer:
                         continue
 
                     # Try to extract and validate this Rich Header
-                    rich_data = self._try_extract_rich_at_offsets(
-                        dans_offset, rich_offset
-                    )
+                    rich_data = self._try_extract_rich_at_offsets(dans_offset, rich_offset)
                     if rich_data:
                         logger.debug(
                             f"Successfully extracted Rich Header at DanS:{dans_offset}, Rich:{rich_offset}"
@@ -657,9 +648,7 @@ class RichHeaderAnalyzer:
                 return None
 
             rich_absolute_pos = dos_stub_start + rich_pos
-            logger.debug(
-                f"Found Rich signature at absolute position 0x{rich_absolute_pos:x}"
-            )
+            logger.debug(f"Found Rich signature at absolute position 0x{rich_absolute_pos:x}")
 
             # Extract XOR key (4 bytes after Rich)
             if rich_pos + 8 > len(dos_stub):
@@ -678,9 +667,7 @@ class RichHeaderAnalyzer:
             if dans_pos == -1:
                 # Sometimes DanS is not present or encoded differently
                 # Try to find the start of encoded data by looking for patterns
-                logger.debug(
-                    "DanS signature not found, trying to find encoded data start"
-                )
+                logger.debug("DanS signature not found, trying to find encoded data start")
 
                 # Look for the start of the Rich Header by finding repeated XOR patterns
                 # Rich Headers typically start with encoded entries
@@ -703,9 +690,7 @@ class RichHeaderAnalyzer:
                 logger.debug(f"Found DanS signature at DOS stub offset 0x{dans_pos:x}")
 
             # Extract encoded data between DanS/start and Rich
-            encoded_data = dos_stub[
-                dans_pos + 4 : rich_pos
-            ]  # +4 to skip DanS signature
+            encoded_data = dos_stub[dans_pos + 4 : rich_pos]  # +4 to skip DanS signature
 
             if len(encoded_data) == 0 or len(encoded_data) % 8 != 0:
                 logger.debug(f"Invalid encoded data length: {len(encoded_data)}")
@@ -723,9 +708,7 @@ class RichHeaderAnalyzer:
             logger.debug(f"Successfully decoded {len(entries)} Rich Header entries")
 
             # Calculate checksum (should match XOR key)
-            calculated_checksum = self._calculate_rich_checksum(
-                data, pe_offset, entries
-            )
+            calculated_checksum = self._calculate_rich_checksum(data, pe_offset, entries)
 
             return {
                 "xor_key": xor_key,
@@ -831,13 +814,8 @@ class RichHeaderAnalyzer:
                 # Try combinations for this signature pair
                 for dans_offset in dans_offsets:
                     for rich_offset in rich_offsets:
-                        if (
-                            dans_offset < rich_offset
-                            and (rich_offset - dans_offset) <= 512
-                        ):
-                            rich_data = self._try_extract_rich_at_offsets(
-                                dans_offset, rich_offset
-                            )
+                        if dans_offset < rich_offset and (rich_offset - dans_offset) <= 512:
+                            rich_data = self._try_extract_rich_at_offsets(dans_offset, rich_offset)
                             if rich_data:
                                 logger.debug(
                                     f"Found valid Rich Header with signature pair {rich_sig}/{dans_sig}"
@@ -946,9 +924,7 @@ class RichHeaderAnalyzer:
         xor_key = struct.unpack("<I", bytes(xor_key_bytes))[0]
         return xor_key if xor_key != 0 else None
 
-    def _extract_encoded_data(
-        self, dans_offset: int, rich_size: int
-    ) -> Optional[bytes]:
+    def _extract_encoded_data(self, dans_offset: int, rich_size: int) -> Optional[bytes]:
         """Extract encoded Rich Header data"""
         self.r2.cmd(f"s {dans_offset}")
         encoded_data = safe_cmd_list(self.r2, f"p8j {rich_size}")
@@ -992,9 +968,7 @@ class RichHeaderAnalyzer:
             "entries": decoded_entries,
         }
 
-    def _decode_rich_header(
-        self, encoded_data: bytes, xor_key: int
-    ) -> List[Dict[str, Any]]:
+    def _decode_rich_header(self, encoded_data: bytes, xor_key: int) -> List[Dict[str, Any]]:
         """
         Decode Rich Header entries by XORing with the key.
 
@@ -1010,9 +984,7 @@ class RichHeaderAnalyzer:
         try:
             # Skip the DanS signature (first 4 bytes) and process in 8-byte chunks
             # Each entry is 8 bytes: 4 bytes prodid + 4 bytes count
-            for i in range(
-                4, len(encoded_data) - 4, 8
-            ):  # -4 to skip Rich signature at end
+            for i in range(4, len(encoded_data) - 4, 8):  # -4 to skip Rich signature at end
                 if i + 8 > len(encoded_data):
                     break
 
@@ -1044,9 +1016,7 @@ class RichHeaderAnalyzer:
 
         return entries
 
-    def _parse_compiler_entries(
-        self, entries: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _parse_compiler_entries(self, entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Parse Rich Header entries into human-readable compiler information.
 
@@ -1068,9 +1038,7 @@ class RichHeaderAnalyzer:
             build_number = (prodid >> 16) & 0xFFFF
 
             # Look up compiler name
-            compiler_name = self.compiler_products.get(
-                product_id, f"Unknown_0x{product_id:04X}"
-            )
+            compiler_name = self.compiler_products.get(product_id, f"Unknown_0x{product_id:04X}")
 
             compilers.append(
                 {
@@ -1079,9 +1047,7 @@ class RichHeaderAnalyzer:
                     "count": count,
                     "compiler_name": compiler_name,
                     "full_prodid": prodid,
-                    "description": self._get_compiler_description(
-                        compiler_name, build_number
-                    ),
+                    "description": self._get_compiler_description(compiler_name, build_number),
                 }
             )
 
@@ -1136,7 +1102,7 @@ class RichHeaderAnalyzer:
             # If we have clear_data_bytes from pefile, use them directly (most accurate)
             if "clear_data_bytes" in rich_data and rich_data["clear_data_bytes"]:
                 clear_bytes = rich_data["clear_data_bytes"]
-                richpe_hash = hashlib.md5(clear_bytes).hexdigest()
+                richpe_hash = hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
                 logger.debug(
                     f"RichPE hash calculated from pefile clear_data_bytes ({len(clear_bytes)} bytes)"
                 )
@@ -1165,7 +1131,7 @@ class RichHeaderAnalyzer:
                 clear_bytes.extend(struct.pack("<I", count))
 
             # Calculate MD5 hash of clear bytes (this matches VirusTotal standard)
-            richpe_hash = hashlib.md5(clear_bytes).hexdigest()
+            richpe_hash = hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
 
             logger.debug(
                 f"RichPE hash calculated from reconstructed entries ({len(clear_bytes)} clear bytes)"
@@ -1223,13 +1189,9 @@ class RichHeaderAnalyzer:
                             dans_pos = stub_data.find(b"DanS")
 
                             if rich_pos != -1:
-                                logger.debug(
-                                    f"Found 'Rich' at DOS stub offset: {rich_pos + 64}"
-                                )
+                                logger.debug(f"Found 'Rich' at DOS stub offset: {rich_pos + 64}")
                             if dans_pos != -1:
-                                logger.debug(
-                                    f"Found 'DanS' at DOS stub offset: {dans_pos + 64}"
-                                )
+                                logger.debug(f"Found 'DanS' at DOS stub offset: {dans_pos + 64}")
 
                             # Show hex dump of suspicious areas
                             if rich_pos != -1 or dans_pos != -1:
@@ -1240,9 +1202,7 @@ class RichHeaderAnalyzer:
                                 else:
                                     start = dans_pos - 16
                                 if dans_pos != -1 and rich_pos != -1:
-                                    end = min(
-                                        len(stub_data), max(rich_pos, dans_pos) + 32
-                                    )
+                                    end = min(len(stub_data), max(rich_pos, dans_pos) + 32)
                                 elif rich_pos != -1:
                                     end = rich_pos + 32
                                 else:

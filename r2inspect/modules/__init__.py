@@ -3,28 +3,28 @@
 r2inspect Analysis Modules
 """
 
-from .pe_analyzer import PEAnalyzer
-from .elf_analyzer import ELFAnalyzer
-from .macho_analyzer import MachOAnalyzer
-from .string_analyzer import StringAnalyzer
-from .crypto_analyzer import CryptoAnalyzer
-from .packer_detector import PackerDetector
 from .anti_analysis import AntiAnalysisDetector
-from .section_analyzer import SectionAnalyzer
-from .import_analyzer import ImportAnalyzer
-from .export_analyzer import ExportAnalyzer
-from .yara_analyzer import YaraAnalyzer
-from .compiler_detector import CompilerDetector
-from .ssdeep_analyzer import SSDeepAnalyzer
-from .tlsh_analyzer import TLSHAnalyzer
-from .telfhash_analyzer import TelfhashAnalyzer
-from .rich_header_analyzer import RichHeaderAnalyzer
-from .impfuzzy_analyzer import ImpfuzzyAnalyzer
-from .ccbhash_analyzer import CCBHashAnalyzer
-from .binlex_analyzer import BinlexAnalyzer
 from .binbloom_analyzer import BinbloomAnalyzer
-from .simhash_analyzer import SimHashAnalyzer
 from .bindiff_analyzer import BinDiffAnalyzer
+from .binlex_analyzer import BinlexAnalyzer
+from .ccbhash_analyzer import CCBHashAnalyzer
+from .compiler_detector import CompilerDetector
+from .crypto_analyzer import CryptoAnalyzer
+from .elf_analyzer import ELFAnalyzer
+from .export_analyzer import ExportAnalyzer
+from .impfuzzy_analyzer import ImpfuzzyAnalyzer
+from .import_analyzer import ImportAnalyzer
+from .macho_analyzer import MachOAnalyzer
+from .packer_detector import PackerDetector
+from .pe_analyzer import PEAnalyzer
+from .rich_header_analyzer import RichHeaderAnalyzer
+from .section_analyzer import SectionAnalyzer
+from .simhash_analyzer import SimHashAnalyzer
+from .ssdeep_analyzer import SSDeepAnalyzer
+from .string_analyzer import StringAnalyzer
+from .telfhash_analyzer import TelfhashAnalyzer
+from .tlsh_analyzer import TLSHAnalyzer
+from .yara_analyzer import YaraAnalyzer
 
 __all__ = [
     "PEAnalyzer",

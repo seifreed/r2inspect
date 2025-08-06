@@ -5,11 +5,13 @@ Memory management utilities for r2inspect
 
 import gc
 import os
-import time
 import threading
-import psutil
-from typing import Dict, Any, Optional, Callable
+import time
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, Optional
+
+import psutil
+
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -251,9 +253,7 @@ class MemoryMonitor:
 
         return True
 
-    def limit_collection_size(
-        self, collection, max_size: int, name: str = "collection"
-    ):
+    def limit_collection_size(self, collection, max_size: int, name: str = "collection"):
         """
         Limit collection size and log if truncated
 
@@ -266,16 +266,12 @@ class MemoryMonitor:
             Limited collection
         """
         if len(collection) > max_size:
-            logger.debug(
-                f"Truncating {name} from {len(collection)} to {max_size} items"
-            )
+            logger.debug(f"Truncating {name} from {len(collection)} to {max_size} items")
             return collection[:max_size]
 
         return collection
 
-    def set_callbacks(
-        self, warning_callback: Callable = None, critical_callback: Callable = None
-    ):
+    def set_callbacks(self, warning_callback: Callable = None, critical_callback: Callable = None):
         """Set memory threshold callbacks"""
         self.warning_callback = warning_callback
         self.critical_callback = critical_callback
@@ -343,13 +339,9 @@ class MemoryAwareAnalyzer:
 
             # Check memory after operation
             end_stats = self.memory_monitor.check_memory(force=True)
-            actual_used = (
-                end_stats["process_memory_mb"] - start_stats["process_memory_mb"]
-            )
+            actual_used = end_stats["process_memory_mb"] - start_stats["process_memory_mb"]
 
-            logger.debug(
-                f"Completed {operation_name} (actual memory used: {actual_used:.1f}MB)"
-            )
+            logger.debug(f"Completed {operation_name} (actual memory used: {actual_used:.1f}MB)")
 
             return result
 
@@ -372,9 +364,7 @@ def get_memory_stats() -> Dict[str, Any]:
     return global_memory_monitor.check_memory()
 
 
-def check_memory_limits(
-    file_size_bytes: int = 0, estimated_analysis_mb: float = 0
-) -> bool:
+def check_memory_limits(file_size_bytes: int = 0, estimated_analysis_mb: float = 0) -> bool:
     """
     Check if operation is within memory limits
 
@@ -385,9 +375,7 @@ def check_memory_limits(
     Returns:
         True if within limits
     """
-    if file_size_bytes > 0 and not global_memory_monitor.validate_file_size(
-        file_size_bytes
-    ):
+    if file_size_bytes > 0 and not global_memory_monitor.validate_file_size(file_size_bytes):
         return False
 
     if estimated_analysis_mb > 0 and not global_memory_monitor.is_memory_available(

@@ -4,9 +4,11 @@ YARA Analysis Module
 """
 
 import os
-import yara
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
+import yara
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
 
@@ -67,7 +69,7 @@ class YaraAnalyzer:
             if os.path.isfile(rules_path):
                 # Single rule file
                 logger.info(f"Loading single YARA file: {rules_path}")
-                with open(rules_path, "r", encoding="utf-8", errors="ignore") as f:
+                with open(rules_path, encoding="utf-8", errors="ignore") as f:
                     rules_dict["single_rule"] = f.read()
             elif os.path.isdir(rules_path):
                 # Directory of rule files - scan for ALL YARA extensions
@@ -84,16 +86,12 @@ class YaraAnalyzer:
                         if rule_file not in rules_found:
                             rules_found.append(rule_file)
 
-                logger.debug(
-                    f"Found {len(rules_found)} YARA rule files in {rules_path}"
-                )
+                logger.debug(f"Found {len(rules_found)} YARA rule files in {rules_path}")
 
                 for rule_file in rules_found:
                     try:
                         logger.debug(f"Loading YARA file: {rule_file.name}")
-                        with open(
-                            rule_file, "r", encoding="utf-8", errors="ignore"
-                        ) as f:
+                        with open(rule_file, encoding="utf-8", errors="ignore") as f:
                             content = f.read().strip()
                             if content:  # Only add non-empty files
                                 # Use relative path as key to handle nested directories
@@ -105,9 +103,7 @@ class YaraAnalyzer:
                         logger.warning(f"Failed to read YARA file {rule_file}: {e}")
                         continue
             else:
-                logger.error(
-                    f"YARA rules path is neither file nor directory: {rules_path}"
-                )
+                logger.error(f"YARA rules path is neither file nor directory: {rules_path}")
                 return None
 
             if not rules_dict:
@@ -145,9 +141,7 @@ class YaraAnalyzer:
                     for instance in string_match.instances:
                         instance_info = {
                             "offset": instance.offset,
-                            "matched_data": instance.matched_data.decode(
-                                "utf-8", errors="ignore"
-                            ),
+                            "matched_data": instance.matched_data.decode("utf-8", errors="ignore"),
                         }
 
                         # Handle different YARA versions - some have length attribute, some don't
@@ -271,9 +265,7 @@ rule Crypto_Constants
 
         return validation_result
 
-    def list_available_rules(
-        self, rules_path: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def list_available_rules(self, rules_path: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all available YARA rules in the rules directory"""
         rules_path = rules_path or self.rules_path
         available_rules = []
@@ -316,9 +308,7 @@ rule Crypto_Constants
                                 }
                             )
                         except Exception as e:
-                            logger.warning(
-                                f"Error reading file info for {rule_file}: {e}"
-                            )
+                            logger.warning(f"Error reading file info for {rule_file}: {e}")
                             continue
 
             logger.info(f"Found {len(available_rules)} YARA rule files total")

@@ -9,7 +9,8 @@ This module provides function-level analysis capabilities including:
 
 import hashlib
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = logging.getLogger(__name__)
@@ -81,9 +82,7 @@ class FunctionAnalyzer:
             logger.error(f"Error getting functions: {str(e)}")
             return []
 
-    def _generate_machoc_hashes(
-        self, functions: List[Dict[str, Any]]
-    ) -> Dict[str, str]:
+    def _generate_machoc_hashes(self, functions: List[Dict[str, Any]]) -> Dict[str, str]:
         """
         Generate MACHOC hashes for all functions
 
@@ -147,9 +146,7 @@ class FunctionAnalyzer:
         mnemonics = self._extract_function_mnemonics(func_name, func_size)
 
         if not mnemonics:
-            logger.warning(
-                f"No mnemonics found for function {func_name} (size: {func_size})"
-            )
+            logger.warning(f"No mnemonics found for function {func_name} (size: {func_size})")
             return None
 
         # Generate MACHOC hash
@@ -202,9 +199,7 @@ class FunctionAnalyzer:
             max_instructions = min(func_size // 4, 1000)
             disasm_list = safe_cmd_list(self.r2, f"pdj {max_instructions}")
             if isinstance(disasm_list, list):
-                logger.debug(
-                    f"pdj succeeded for {func_name}, got {len(disasm_list)} instructions"
-                )
+                logger.debug(f"pdj succeeded for {func_name}, got {len(disasm_list)} instructions")
                 return self._extract_mnemonics_from_ops(disasm_list)
         except Exception as e:
             logger.debug(f"pdj failed for {func_name}: {str(e)}")
@@ -229,9 +224,7 @@ class FunctionAnalyzer:
             instructions_text = self.r2.cmd("pi 100")
             if instructions_text and instructions_text.strip():
                 lines = instructions_text.strip().split("\n")
-                logger.debug(
-                    f"pi succeeded for {func_name}, got {len(lines)} instruction lines"
-                )
+                logger.debug(f"pi succeeded for {func_name}, got {len(lines)} instruction lines")
                 mnemonics = []
                 for line in lines:
                     line = line.strip()
@@ -256,9 +249,7 @@ class FunctionAnalyzer:
                         mnemonics.append(mnemonic)
         return mnemonics
 
-    def _generate_function_stats(
-        self, functions: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _generate_function_stats(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Generate statistics about functions"""
         try:
             if not functions:
@@ -307,9 +298,7 @@ class FunctionAnalyzer:
             logger.error(f"Error generating function stats: {str(e)}")
             return {"error": f"Stats generation failed: {str(e)}"}
 
-    def get_function_similarity(
-        self, machoc_hashes: Dict[str, str]
-    ) -> Dict[str, List[str]]:
+    def get_function_similarity(self, machoc_hashes: Dict[str, str]) -> Dict[str, List[str]]:
         """
         Find functions with identical MACHOC hashes (potential duplicates or similar functions)
 
@@ -328,9 +317,7 @@ class FunctionAnalyzer:
                 hash_to_functions[machoc_hash].append(func_name)
 
             # Only return hashes that have multiple functions (similarities)
-            similarities = {
-                h: funcs for h, funcs in hash_to_functions.items() if len(funcs) > 1
-            }
+            similarities = {h: funcs for h, funcs in hash_to_functions.items() if len(funcs) > 1}
 
             if similarities:
                 logger.debug(
@@ -343,9 +330,7 @@ class FunctionAnalyzer:
             logger.error(f"Error calculating function similarity: {str(e)}")
             return {}
 
-    def generate_machoc_summary(
-        self, analysis_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def generate_machoc_summary(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a summary of MACHOC analysis results"""
         try:
             machoc_hashes = analysis_results.get("machoc_hashes", {})
@@ -361,9 +346,7 @@ class FunctionAnalyzer:
                 "total_functions_hashed": len(machoc_hashes),
                 "unique_machoc_hashes": len(set(machoc_hashes.values())),
                 "duplicate_function_groups": len(similarities),
-                "total_duplicate_functions": sum(
-                    len(funcs) for funcs in similarities.values()
-                ),
+                "total_duplicate_functions": sum(len(funcs) for funcs in similarities.values()),
             }
 
             # Add similarity details if found
@@ -372,8 +355,7 @@ class FunctionAnalyzer:
 
                 # Most common patterns
                 pattern_counts = [
-                    (len(funcs), hash_val[:16])
-                    for hash_val, funcs in similarities.items()
+                    (len(funcs), hash_val[:16]) for hash_val, funcs in similarities.items()
                 ]
                 pattern_counts.sort(reverse=True)
                 summary["most_common_patterns"] = pattern_counts[:5]  # Top 5
@@ -428,10 +410,7 @@ class FunctionAnalyzer:
             name = func_name.lower()
 
             # Library functions
-            if any(
-                prefix in name
-                for prefix in ["lib", "msvcrt", "kernel32", "ntdll", "user32"]
-            ):
+            if any(prefix in name for prefix in ["lib", "msvcrt", "kernel32", "ntdll", "user32"]):
                 return "library"
 
             # Thunk functions
@@ -460,9 +439,7 @@ class FunctionAnalyzer:
         except Exception:
             return 0.0
 
-    def _analyze_function_coverage(
-        self, functions: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _analyze_function_coverage(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze function coverage and detection quality"""
         try:
             coverage = {

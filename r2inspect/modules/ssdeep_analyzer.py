@@ -8,7 +8,7 @@ system binary as fallback.
 
 import os
 import subprocess
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 # Try to import ssdeep library, fallback to system binary if not available
 try:
@@ -158,9 +158,7 @@ class SSDeepAnalyzer:
             True if ssdeep binary is available, False otherwise
         """
         try:
-            result = subprocess.run(
-                ["ssdeep", "-V"], capture_output=True, text=True, timeout=5
-            )
+            result = subprocess.run(["ssdeep", "-V"], capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
@@ -192,15 +190,11 @@ class SSDeepAnalyzer:
             # Create temporary files for comparison
             import tempfile
 
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as f1:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f1:
                 f1.write(f"{hash1},file1\n")
                 f1.flush()
 
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".txt", delete=False
-                ) as f2:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f2:
                     f2.write(f"{hash2},file2\n")
                     f2.flush()
 
@@ -244,9 +238,7 @@ class SSDeepAnalyzer:
 
         # Check system binary
         try:
-            result = subprocess.run(
-                ["ssdeep", "-V"], capture_output=True, text=True, timeout=5
-            )
+            result = subprocess.run(["ssdeep", "-V"], capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
             return False

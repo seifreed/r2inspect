@@ -5,9 +5,10 @@ Unified error handling strategy for r2inspect
 
 import functools
 import threading
-from typing import Any, Callable, Dict
-from enum import Enum
 from collections import defaultdict, deque
+from enum import Enum
+from typing import Any, Callable, Dict
+
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -96,9 +97,7 @@ class ErrorClassifier:
     }
 
     @classmethod
-    def classify(
-        cls, exception: Exception, context: Dict[str, Any] = None
-    ) -> ErrorInfo:
+    def classify(cls, exception: Exception, context: Dict[str, Any] = None) -> ErrorInfo:
         """
         Classify an exception
 
@@ -120,9 +119,7 @@ class ErrorClassifier:
             category, severity = cls._classify_by_inheritance(exception)
 
         # Adjust based on context
-        category, severity = cls._adjust_classification(
-            exception, category, severity, context
-        )
+        category, severity = cls._adjust_classification(exception, category, severity, context)
 
         # Determine recoverability
         recoverable = cls._is_recoverable(exception, severity, context)
@@ -147,10 +144,7 @@ class ErrorClassifier:
                 return category, severity
 
         # Special checks for r2pipe related errors
-        if (
-            "r2pipe" in str(type(exception)).lower()
-            or "r2pipe" in str(exception).lower()
-        ):
+        if "r2pipe" in str(type(exception)).lower() or "r2pipe" in str(exception).lower():
             return ErrorCategory.R2PIPE, ErrorSeverity.MEDIUM
 
         # Default classification
@@ -184,10 +178,7 @@ class ErrorClassifier:
             severity = ErrorSeverity.HIGH  # Expected for large files
 
         # R2pipe errors during initial analysis
-        if (
-            category == ErrorCategory.R2PIPE
-            and context.get("phase") == "initialization"
-        ):
+        if category == ErrorCategory.R2PIPE and context.get("phase") == "initialization":
             severity = ErrorSeverity.CRITICAL
 
         return category, severity
@@ -282,16 +273,11 @@ class ErrorRecoveryManager:
             self._log_error(error_info)
 
             # Check if we have a recovery strategy
-            if (
-                error_info.category in self.recovery_strategies
-                and error_info.recoverable
-            ):
+            if error_info.category in self.recovery_strategies and error_info.recoverable:
                 try:
                     strategy = self.recovery_strategies[error_info.category]
                     result = strategy(error_info)
-                    logger.info(
-                        f"Successfully recovered from {error_info.category.value} error"
-                    )
+                    logger.info(f"Successfully recovered from {error_info.category.value} error")
                     return True, result
 
                 except Exception as recovery_error:
@@ -459,15 +445,9 @@ def register_recovery_strategies():
         return None  # Skip the operation
 
     # Register strategies
-    global_error_manager.register_recovery_strategy(
-        ErrorCategory.MEMORY, memory_recovery
-    )
-    global_error_manager.register_recovery_strategy(
-        ErrorCategory.R2PIPE, r2pipe_recovery
-    )
-    global_error_manager.register_recovery_strategy(
-        ErrorCategory.FILE_ACCESS, file_access_recovery
-    )
+    global_error_manager.register_recovery_strategy(ErrorCategory.MEMORY, memory_recovery)
+    global_error_manager.register_recovery_strategy(ErrorCategory.R2PIPE, r2pipe_recovery)
+    global_error_manager.register_recovery_strategy(ErrorCategory.FILE_ACCESS, file_access_recovery)
 
 
 # Initialize default recovery strategies

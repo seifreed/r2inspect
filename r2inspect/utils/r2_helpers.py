@@ -3,13 +3,11 @@
 R2pipe Helper Functions
 """
 
-import sys
-import io
-from contextlib import redirect_stderr
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
+
+from .circuit_breaker import CircuitBreakerError, r2_circuit_breaker
 from .logger import get_logger
-from .circuit_breaker import r2_circuit_breaker, CircuitBreakerError
-from .retry_manager import global_retry_manager, RetryConfig
+from .retry_manager import RetryConfig, global_retry_manager
 
 logger = get_logger(__name__)
 
@@ -69,9 +67,7 @@ def _clean_html_entities(item):
         item["name"] = item["name"].replace("&nbsp;", " ").replace("&amp;", "&")
 
 
-def safe_cmdj(
-    r2_instance, command: str, default: Optional[Any] = None
-) -> Optional[Any]:
+def safe_cmdj(r2_instance, command: str, default: Optional[Any] = None) -> Optional[Any]:
     """
     Safely execute a radare2 JSON command with circuit breaker protection and retry logic.
 
@@ -88,9 +84,7 @@ def safe_cmdj(
     def _execute_command():
         """Execute the command with circuit breaker protection"""
         try:
-            result = r2_circuit_breaker.execute_command(
-                r2_instance, command, command_type
-            )
+            result = r2_circuit_breaker.execute_command(r2_instance, command, command_type)
             return result if result is not None else default
         except CircuitBreakerError:
             logger.debug(
@@ -116,25 +110,17 @@ def _handle_command_error(e: Exception, command: str, default: Any) -> Any:
     error_type = type(e).__name__
 
     if _is_common_json_error(error_msg):
-        logger.debug(
-            f"Common r2pipe JSON parsing issue for command '{command}': {error_type}"
-        )
+        logger.debug(f"Common r2pipe JSON parsing issue for command '{command}': {error_type}")
     else:
-        logger.warning(
-            f"Unexpected error executing command '{command}': {error_type}: {error_msg}"
-        )
+        logger.warning(f"Unexpected error executing command '{command}': {error_type}: {error_msg}")
 
     return default
 
 
-def _execute_with_retry(
-    execute_func, command_type: str, command: str, default: Any
-) -> Any:
+def _execute_with_retry(execute_func, command_type: str, command: str, default: Any) -> Any:
     """Execute function with retry logic"""
     try:
-        return global_retry_manager.retry_operation(
-            execute_func, command_type=command_type
-        )
+        return global_retry_manager.retry_operation(execute_func, command_type=command_type)
     except Exception as e:
         logger.debug(f"Command '{command}' failed after retries: {e}")
         return default
@@ -203,9 +189,7 @@ def safe_cmd(r2_instance, command: str, default: str = "") -> str:
         """Inner function for retry execution"""
         try:
             # Use circuit breaker to execute command
-            result = r2_circuit_breaker.execute_command(
-                r2_instance, command, command_type
-            )
+            result = r2_circuit_breaker.execute_command(r2_instance, command, command_type)
             return result if result is not None else default
 
         except CircuitBreakerError:
@@ -220,9 +204,7 @@ def safe_cmd(r2_instance, command: str, default: str = "") -> str:
                 # Re-raise for retry logic to handle
                 raise
 
-            logger.debug(
-                f"Error executing command '{command}': {type(e).__name__}: {str(e)}"
-            )
+            logger.debug(f"Error executing command '{command}': {type(e).__name__}: {str(e)}")
             return default
 
     # Check if command should be retried
@@ -320,9 +302,7 @@ def configure_retry_for_command_type(
         base_delay: Base delay between retries
         max_delay: Maximum delay between retries
     """
-    config = RetryConfig(
-        max_attempts=max_attempts, base_delay=base_delay, max_delay=max_delay
-    )
+    config = RetryConfig(max_attempts=max_attempts, base_delay=base_delay, max_delay=max_delay)
     global_retry_manager.DEFAULT_CONFIGS[command_type] = config
     logger.info(
         f"Updated retry configuration for {command_type}: {max_attempts} attempts, {base_delay}s base delay"
