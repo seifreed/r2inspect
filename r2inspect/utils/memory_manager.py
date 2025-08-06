@@ -206,10 +206,7 @@ class MemoryMonitor:
 
         # Check system memory availability
         system_available = stats.get("system_memory_available_mb", 0)
-        if required_mb > system_available * 0.8:  # Leave 20% buffer
-            return False
-
-        return True
+        return required_mb <= system_available * 0.8  # Leave 20% buffer
 
     def validate_file_size(self, file_size_bytes: int) -> bool:
         """
@@ -378,12 +375,9 @@ def check_memory_limits(file_size_bytes: int = 0, estimated_analysis_mb: float =
     if file_size_bytes > 0 and not global_memory_monitor.validate_file_size(file_size_bytes):
         return False
 
-    if estimated_analysis_mb > 0 and not global_memory_monitor.is_memory_available(
+    return estimated_analysis_mb <= 0 or global_memory_monitor.is_memory_available(
         estimated_analysis_mb
-    ):
-        return False
-
-    return True
+    )
 
 
 def configure_memory_limits(**kwargs):

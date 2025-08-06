@@ -1663,7 +1663,7 @@ def is_pe_executable(header, file_handle):
             pe_signature = file_handle.read(4)
             if pe_signature == b"PE\x00\x00":
                 return True
-        except Exception:  # noqa: B110
+        except (OSError, ValueError):
             # Failed to read PE header - not a valid PE file
             pass
     return True  # MZ header is good enough indication
