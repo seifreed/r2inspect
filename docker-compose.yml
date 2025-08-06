@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # Production r2inspect service
+  r2inspect:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_TYPE=production
+        - BUILDKIT_INLINE_CACHE=1
+    image: r2inspect:latest
+    container_name: r2inspect
+    volumes:
+      # Mount samples directory
+      - ./samples:/home/analyst/samples:ro
+      # Mount output directory
+      - ./output:/home/analyst/output:rw
+      # Mount config directory for YARA rules
+      - ./config:/home/analyst/config:ro
+      # Optional: Mount current directory for analysis
+      - ./:/workspace:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - R2_NOPLUGINS=1
+      - R2PIPE_SPAWN=1
+      # Limit memory for safety when analyzing malware
+      - R2_MAXCORES=4
+      - R2_MAXMEM=2048M
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined  # Required for r2 debugging features
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_PTRACE  # Required for debugging
+      - DAC_READ_SEARCH  # Required for file access
+    read_only: false  # Need write access for output
+    tmpfs:
+      - /tmp:size=512M,noexec,nosuid,nodev
+    networks:
+      - r2inspect_net
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Development r2inspect service
+  r2inspect-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_TYPE=development
+        - BUILDKIT_INLINE_CACHE=1
+    image: r2inspect:dev
+    container_name: r2inspect-dev
+    volumes:
+      # Mount samples directory
+      - ./samples:/home/analyst/samples:ro
+      # Mount output directory
+      - ./output:/home/analyst/output:rw
+      # Mount config directory for YARA rules
+      - ./config:/home/analyst/config:ro
+      # Mount source code for development
+      - ./r2inspect:/app/r2inspect:rw
+      - ./tests:/app/tests:rw
+      # Mount workspace
+      - ./:/workspace:rw
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - R2_NOPLUGINS=1
+      - R2PIPE_SPAWN=1
+      - R2_MAXCORES=4
+      - R2_MAXMEM=2048M
+    # Security options (slightly relaxed for development)
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_PTRACE
+      - DAC_READ_SEARCH
+    read_only: false
+    tmpfs:
+      - /tmp:size=512M,noexec,nosuid,nodev
+    networks:
+      - r2inspect_net
+    ports:
+      - "5000:5000"  # For potential web interface
+      - "8888:8888"  # For Jupyter Lab
+    profiles:
+      - dev
+    # Resource limits (more generous for development)
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+networks:
+  r2inspect_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

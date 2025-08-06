@@ -1,0 +1,33 @@
+include README.md
+include LICENSE
+include requirements.txt
+include requirements-docker.txt
+include pyproject.toml
+
+# Include all YARA rules
+recursive-include r2inspect/rules *.yar *.yara
+
+# Include Docker files for reference
+include Dockerfile
+include docker-compose.yml
+include DOCKER.md
+include docker-run.sh
+include docker-run.bat
+include test-docker.sh
+
+# Include Makefile
+include Makefile
+
+# Exclude unnecessary files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.swp
+global-exclude .DS_Store
+global-exclude __pycache__
+recursive-exclude tests *
+recursive-exclude venv *
+recursive-exclude .git *
+recursive-exclude .qlty *
+recursive-exclude samples *
+recursive-exclude output *
+recursive-exclude config *
