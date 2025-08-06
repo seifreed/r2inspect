@@ -1715,8 +1715,8 @@ def process_single_file(
     file_path, batch_path, config_obj, options, output_json, output_path, rate_limiter
 ):
     """Process a single file with rate limiting"""
-    from .inspector import R2Inspector
-    from .output_formatter import OutputFormatter
+    from .core import R2Inspector
+    from .utils.output import OutputFormatter
 
     if not rate_limiter.acquire(timeout=30.0):
         return file_path, None, "Rate limit timeout - system overloaded"
@@ -1986,7 +1986,7 @@ def get_csv_fieldnames():
 
 def write_csv_results(csv_file, all_results):
     """Write analysis results to CSV file"""
-    from .output_formatter import OutputFormatter
+    from .utils.output import OutputFormatter
 
     with open(csv_file, "w", newline="", encoding="utf-8") as f:
         fieldnames = get_csv_fieldnames()
