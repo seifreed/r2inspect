@@ -151,7 +151,7 @@ class R2Inspector(MemoryAwareAnalyzer):
             # Use lighter flags for large files
             file_size_mb = self.file_path.stat().st_size / (1024 * 1024)
             if file_size_mb > 2:  # For files larger than 2MB
-                flags = ["-2", "-A"]  # No stderr, no auto-analysis
+                flags = ["-2"]  # No stderr, will control analysis manually
                 logger.debug(
                     f"Large file ({file_size_mb:.1f}MB), using lighter r2 flags"
                 )
@@ -176,16 +176,27 @@ class R2Inspector(MemoryAwareAnalyzer):
             # Basic analysis - use lighter analysis for large files
             file_size_mb = self.file_path.stat().st_size / (1024 * 1024)
             try:
-                if file_size_mb > 10:  # For files larger than 10MB
+                if file_size_mb > 50:  # For very large files (>50MB)
                     logger.debug(
-                        "Large file detected, using lighter analysis (aa command)..."
+                        "Very large file detected, skipping automatic analysis..."
+                    )
+                    # Skip automatic analysis for very large files
+                elif file_size_mb > 10:  # For files larger than 10MB
+                    logger.debug(
+                        "Large file detected, using minimal analysis (aa command)..."
                     )
                     self.r2.cmd("aa")  # Lighter analysis
                     logger.debug("Light analysis (aa) completed")
+                elif file_size_mb > 2:  # For moderately large files
+                    logger.debug(
+                        "Moderate file size, using standard analysis (aa command)..."
+                    )
+                    self.r2.cmd("aa")  # Standard analysis  
+                    logger.debug("Standard analysis (aa) completed")
                 else:
-                    logger.debug("Running basic analysis (aaa command)...")
+                    logger.debug("Running full analysis (aaa command)...")
                     self.r2.cmd("aaa")  # Analyze all
-                    logger.debug("Basic analysis (aaa) completed")
+                    logger.debug("Full analysis (aaa) completed")
             except Exception as e:
                 logger.warning(
                     f"Analysis command failed, continuing with basic r2 setup: {e}"

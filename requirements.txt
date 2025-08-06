@@ -14,6 +14,7 @@ prettytable>=3.9.0
 ssdeep>=3.4
 py-tlsh>=4.7.0
 telfhash>=0.9.8
-pyimpfuzzy>=0.6
+pyimpfuzzy==0.5
 pybloom-live>=4.0.0
 simhash>=2.1.2
+psutil
