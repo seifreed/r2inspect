@@ -382,6 +382,34 @@ class CompilerDetector:
                 rich_header = self._analyze_rich_header()
                 results["rich_header_info"] = rich_header
 
+                # Check if Rich Header contains MSVC compiler entries
+                if rich_header.get("available") and rich_header.get("compilers"):
+                    for compiler_entry in rich_header["compilers"]:
+                        compiler_name = compiler_entry.get("compiler_name", "")
+                        if "MSVC" in compiler_name or "Utc" in compiler_name:
+                            # Found MSVC compiler in Rich Header
+                            results["detected"] = True
+                            results["compiler"] = "MSVC"
+                            results["confidence"] = 0.95  # High confidence from Rich Header
+
+                            # Determine version from compiler name
+                            if "2019" in compiler_name:
+                                results["version"] = "Visual Studio 2019"
+                            elif "2022" in compiler_name:
+                                results["version"] = "Visual Studio 2022"
+                            elif "1900" in compiler_name:
+                                results["version"] = "Visual Studio 2015"
+                            elif "1910" in compiler_name:
+                                results["version"] = "Visual Studio 2017"
+                            else:
+                                results["version"] = "Visual Studio (version from Rich Header)"
+
+                            results["details"] = {"detection_method": "Rich Header Analysis"}
+                            logger.debug(
+                                f"Detected {results['compiler']} {results['version']} from Rich Header"
+                            )
+                            return results  # Return early with Rich Header detection
+
             # Score each compiler
             compiler_scores = {}
 
@@ -520,19 +548,21 @@ class CompilerDetector:
     def _analyze_rich_header(self) -> Dict[str, Any]:
         """Analyze Rich Header for PE files (MSVC specific)"""
         try:
-            # Try to get Rich Header information
-            rich_info = {}
+            # Use the RichHeaderAnalyzer module for proper analysis
+            from .rich_header_analyzer import RichHeaderAnalyzer
 
-            # Use r2 to look for Rich header
-            # Use ih command to get headers info
-            rich_output = self.r2.cmd("ih")  # Headers info
+            # Get the file path from r2
+            file_info = self.r2.cmdj("ij")
+            if not file_info or "core" not in file_info:
+                return {}
 
-            # Parse Rich header data if available
-            if rich_output and "Rich" in rich_output:
-                # Rich header found in text output
-                # Try to extract Rich header details from text
-                rich_info["has_rich_header"] = True
-                # Could parse specific Rich header values from text if needed
+            filepath = file_info["core"].get("file", "")
+            if not filepath:
+                return {}
+
+            # Analyze Rich Header
+            rich_analyzer = RichHeaderAnalyzer(self.r2, filepath)
+            rich_info = rich_analyzer.analyze()
 
             return rich_info
         except Exception as e:

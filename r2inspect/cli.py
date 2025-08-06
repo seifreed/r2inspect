@@ -2369,6 +2369,7 @@ def _show_summary_table(all_results):
         table = Table(title="Analysis Summary")
         table.add_column("MD5", style="cyan")
         table.add_column("Type", style="yellow")
+        table.add_column("Compiler", style="magenta")
         table.add_column("Compile Time", style="green")
         table.add_column("YARA Matches", style="red")
 
@@ -2422,11 +2423,20 @@ def _show_summary_table(all_results):
 
                 yara_str = ", ".join(yara_matches) if yara_matches else "None"
 
-                table.add_row(md5, file_type, compile_time, yara_str)
+                # Compiler information
+                compiler_info = result.get("compiler", {})
+                compiler_name = "Unknown"
+                if compiler_info.get("detected", False):
+                    compiler_name = compiler_info.get("compiler", "Unknown")
+                    version = compiler_info.get("version", "")
+                    if version and version != "Unknown":
+                        compiler_name = f"{compiler_name} {version}"
+
+                table.add_row(md5, file_type, compiler_name, compile_time, yara_str)
 
             except Exception:
                 # If there's an error with any file, show minimal info
-                table.add_row("Error", "Error", "Error", "Error")
+                table.add_row("Error", "Error", "Error", "Error", "Error")
 
         console.print(table)
 

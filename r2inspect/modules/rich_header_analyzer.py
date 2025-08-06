@@ -246,6 +246,21 @@ class RichHeaderAnalyzer:
             0x00C3: "Implib1300",
             0x00C4: "Cvtres1300",
             0x00C5: "Masm1300",
+            # Visual Studio 2015 (14.0)
+            0x00C6: "Utc1900_C",
+            0x00C7: "Utc1900_CPP",
+            # Visual Studio 2017 (14.1)
+            0x00C8: "Utc1910_C",
+            0x00C9: "Utc1910_CPP",
+            # Visual Studio 2019 (14.2)
+            0x9CB4: "MSVC_2019_CPP",  # 40116 in decimal
+            0x9CB5: "MSVC_2019_C",  # 40117 in decimal
+            # Visual Studio 2022 (14.3)
+            0x9E37: "MSVC_2022_CPP",  # 40503 in decimal
+            0x9E38: "MSVC_2022_C",  # 40504 in decimal
+            # Common newer Visual Studio tools
+            0xA09E: "MSVC_Linker_14x",  # 41118 in decimal
+            0x5E3B: "MSVC_Resource_14x",  # 24123 in decimal
         }
 
     def analyze(self) -> Dict[str, Any]:

@@ -228,9 +228,18 @@ $RECYCLE.BIN/
 output/
 results/
 analysis_results/
+r2inspect_batch_results/
 *.json
 *.csv
 !example_output.json
+
+# Ruff cache
+.ruff_cache/
+
+# Output files
+file.csv
+test_output.csv
+r2inspect_*.csv
 
 # Sample files (malware samples should not be committed)
 samples/
