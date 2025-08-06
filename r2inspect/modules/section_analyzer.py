@@ -4,7 +4,7 @@ Section Analysis Module using r2pipe
 """
 
 import math
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj, safe_cmd
 

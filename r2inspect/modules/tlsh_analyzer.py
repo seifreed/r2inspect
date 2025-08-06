@@ -10,7 +10,6 @@ TLSH is particularly useful for malware clustering and similarity detection
 as it's resistant to small modifications like compiler changes, padding, etc.
 """
 
-import os
 import logging
 import hashlib
 from typing import Dict, List, Any, Optional
@@ -55,8 +54,6 @@ class TLSHAnalyzer:
             return {"available": False, "error": "TLSH library not installed"}
 
         try:
-            import tlsh
-
             result = {
                 "available": True,
                 "binary_tlsh": None,

@@ -6,7 +6,7 @@ Output formatting utilities for r2inspect
 import json
 import csv
 import io
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from rich.table import Table
 from rich.console import Console
 

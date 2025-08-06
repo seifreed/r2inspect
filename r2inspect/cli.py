@@ -4,7 +4,6 @@ r2inspect CLI - Command Line Interface
 """
 
 import sys
-import os
 import json
 import csv
 import glob
@@ -13,7 +12,6 @@ import click
 import magic
 from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
 from rich.text import Text
 import pyfiglet
 
@@ -1923,7 +1921,7 @@ def display_batch_results(
     success_count = len(all_results)
     total_count = len(files_to_process)
 
-    console.print(f"\n[bold green]Analysis Complete![/bold green]")
+    console.print("\n[bold green]Analysis Complete![/bold green]")
     console.print(f"[green]Processed: {success_count}/{total_count} files[/green]")
     console.print(f"[blue]Time: {elapsed_time:.1f}s[/blue]")
     console.print(f"[cyan]Rate: {success_count / elapsed_time:.1f} files/sec[/cyan]")
@@ -2457,7 +2455,7 @@ def _show_summary_table(all_results):
                 table.add_row(filename, file_type, compiler_name, compile_time)
                 files_shown += 1
 
-            except Exception as e:
+            except Exception:
                 # If there's an error with any file, show minimal info
                 table.add_row(file_key, "Error", "Error", "Error")
                 files_shown += 1

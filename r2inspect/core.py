@@ -3,16 +3,11 @@
 r2inspect Core - Main analysis engine using r2pipe
 """
 
-import os
-import sys
-import json
-import hashlib
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import r2pipe
 import magic
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .modules import (
     PEAnalyzer,
@@ -191,7 +186,7 @@ class R2Inspector(MemoryAwareAnalyzer):
                     logger.debug(
                         "Moderate file size, using standard analysis (aa command)..."
                     )
-                    self.r2.cmd("aa")  # Standard analysis  
+                    self.r2.cmd("aa")  # Standard analysis
                     logger.debug("Standard analysis (aa) completed")
                 else:
                     logger.debug("Running full analysis (aaa command)...")
@@ -645,50 +640,80 @@ class R2Inspector(MemoryAwareAnalyzer):
         """Detect the binary file format using enhanced detection"""
         try:
             # First try radare2's detection
-            info_cmd = safe_cmdj(self.r2, "ij", {})
-            if info_cmd and "bin" in info_cmd:
-                bin_format = info_cmd["bin"].get("format", "").upper()
-                if "PE" in bin_format:
-                    return "PE"
-                elif "ELF" in bin_format:
-                    return "ELF"
-                elif "MACH" in bin_format:
-                    return "Mach-O"
+            format_result = self._detect_format_via_r2()
+            if format_result:
+                return format_result
 
             # Use enhanced magic byte detection as primary method
-            enhanced_detection = detect_file_type(self.filename)
-            if enhanced_detection["confidence"] > 0.7:
-                format_name = enhanced_detection["file_format"]
-
-                # Map enhanced format names to simplified names
-                if format_name.startswith("PE"):
-                    return "PE"
-                elif format_name.startswith("ELF"):
-                    return "ELF"
-                elif format_name.startswith("MACHO"):
-                    return "Mach-O"
-                elif format_name == "JAVA_CLASS":
-                    return "Java"
-                elif format_name == "DEX":
-                    return "Android"
-                elif format_name in ["ZIP", "RAR", "7ZIP"]:
-                    return "Archive"
-                elif format_name in ["PDF", "DOC", "DOCX", "RTF"]:
-                    return "Document"
+            format_result = self._detect_format_via_enhanced_magic()
+            if format_result:
+                return format_result
 
             # Fallback to basic magic detection
-            file_type = magic.from_file(self.filename).lower()
-            if "pe32" in file_type or "ms-dos" in file_type:
-                return "PE"
-            elif "elf" in file_type:
-                return "ELF"
-            elif "mach-o" in file_type:
-                return "Mach-O"
+            format_result = self._detect_format_via_basic_magic()
+            if format_result:
+                return format_result
 
         except Exception as e:
             logger.error(f"Error detecting file format: {e}")
 
         return "Unknown"
+
+    def _detect_format_via_r2(self) -> Optional[str]:
+        """Detect format using radare2"""
+        info_cmd = safe_cmdj(self.r2, "ij", {})
+        if not info_cmd or "bin" not in info_cmd:
+            return None
+
+        bin_format = info_cmd["bin"].get("format", "").upper()
+        format_map = {"PE": "PE", "ELF": "ELF", "MACH": "Mach-O"}
+
+        for key, value in format_map.items():
+            if key in bin_format:
+                return value
+        return None
+
+    def _detect_format_via_enhanced_magic(self) -> Optional[str]:
+        """Detect format using enhanced magic detection"""
+        enhanced_detection = detect_file_type(self.filename)
+        if enhanced_detection["confidence"] <= 0.7:
+            return None
+
+        format_name = enhanced_detection["file_format"]
+
+        # Map enhanced format names to simplified names
+        format_map = {
+            "PE": "PE",
+            "ELF": "ELF",
+            "MACHO": "Mach-O",
+            "JAVA_CLASS": "Java",
+            "DEX": "Android",
+        }
+
+        for prefix, result in format_map.items():
+            if format_name.startswith(prefix) or format_name == prefix:
+                return result
+
+        # Check archive and document formats
+        if format_name in ["ZIP", "RAR", "7ZIP"]:
+            return "Archive"
+        if format_name in ["PDF", "DOC", "DOCX", "RTF"]:
+            return "Document"
+
+        return None
+
+    def _detect_format_via_basic_magic(self) -> Optional[str]:
+        """Detect format using basic magic library"""
+        file_type = magic.from_file(self.filename).lower()
+
+        if "pe32" in file_type or "ms-dos" in file_type:
+            return "PE"
+        elif "elf" in file_type:
+            return "ELF"
+        elif "mach-o" in file_type:
+            return "Mach-O"
+
+        return None
 
     def get_pe_info(self) -> Dict[str, Any]:
         """Get PE-specific information"""
@@ -1052,9 +1077,3 @@ class R2Inspector(MemoryAwareAnalyzer):
         """Close r2pipe connection"""
         if self.r2:
             self.r2.quit()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()

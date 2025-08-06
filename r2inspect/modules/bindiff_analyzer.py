@@ -22,7 +22,6 @@ Based on BinDiff and similar binary comparison tools.
 """
 
 import hashlib
-import json
 from typing import Dict, List, Any, Optional, Tuple, Set
 from collections import Counter, defaultdict
 from pathlib import Path

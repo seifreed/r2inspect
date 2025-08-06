@@ -21,7 +21,7 @@ import hashlib
 import pickle
 import base64
 from typing import Dict, List, Any, Optional, Set, Tuple
-from collections import Counter, defaultdict
+from collections import defaultdict
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
 

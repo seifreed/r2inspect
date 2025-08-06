@@ -3,7 +3,6 @@
 PE Analysis Module using r2pipe
 """
 
-import struct
 import hashlib
 from typing import Dict, List, Any, Optional
 from datetime import datetime

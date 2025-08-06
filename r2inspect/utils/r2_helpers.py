@@ -3,11 +3,10 @@
 R2pipe Helper Functions
 """
 
-import json
 import sys
 import io
 from contextlib import redirect_stderr
-from typing import Any, Optional, Union, List, Dict
+from typing import Any, Optional, List, Dict
 from .logger import get_logger
 from .circuit_breaker import r2_circuit_breaker, CircuitBreakerError
 from .retry_manager import global_retry_manager, RetryConfig

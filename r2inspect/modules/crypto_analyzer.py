@@ -4,7 +4,6 @@ Cryptography Detection Module using r2pipe
 """
 
 import re
-import struct
 import math
 from typing import Dict, List, Any, Optional
 from ..utils.logger import get_logger

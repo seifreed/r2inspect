@@ -15,9 +15,4 @@ from .core import R2Inspector
 from .utils import *
 from .modules import *
 
-__all__ = [
-    'R2Inspector',
-    '__version__',
-    '__author__',
-    '__description__'
-] 
+__all__ = ["R2Inspector", "__version__", "__author__", "__description__"]

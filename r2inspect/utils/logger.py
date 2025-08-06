@@ -8,7 +8,6 @@ import logging.handlers
 import sys
 import threading
 from pathlib import Path
-from typing import Optional
 
 # Global lock for thread-safe logger setup
 _logger_lock = threading.Lock()

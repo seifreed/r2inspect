@@ -4,7 +4,6 @@ Compiler Detection Module - Identifies compilers used to build binaries
 """
 
 import re
-import json
 from typing import Dict, List, Any, Optional, Tuple
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj

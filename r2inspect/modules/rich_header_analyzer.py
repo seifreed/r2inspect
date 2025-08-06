@@ -15,7 +15,7 @@ Based on research from:
 
 import struct
 import hashlib
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
 

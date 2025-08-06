@@ -5,7 +5,6 @@ ELF Analysis Module using r2pipe
 
 import re
 from typing import Dict, List, Any, Optional
-from datetime import datetime
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj, safe_cmd_list, get_elf_headers
 
