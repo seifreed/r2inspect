@@ -145,10 +145,7 @@ class RetryManager:
             return True
 
         # Check error message patterns
-        if any(pattern in error_message for pattern in self.RETRYABLE_ERROR_MESSAGES):
-            return True
-
-        return False
+        return any(pattern in error_message for pattern in self.RETRYABLE_ERROR_MESSAGES)
 
     def calculate_delay(self, attempt: int, config: RetryConfig) -> float:
         """Calculate delay for given attempt using configured strategy"""
