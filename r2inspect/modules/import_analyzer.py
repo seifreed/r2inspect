@@ -3,11 +3,12 @@
 Import Analysis Module using r2pipe
 """
 
-from typing import Dict, List, Any
-from collections import Counter
-from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd
 import re
+from collections import Counter
+from typing import Any, Dict, List
+
+from ..utils.logger import get_logger
+from ..utils.r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -380,9 +381,7 @@ class ImportAnalyzer:
 
         return stats
 
-    def _find_suspicious_patterns(
-        self, imports: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _find_suspicious_patterns(self, imports: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Find suspicious import patterns"""
         patterns = []
 
@@ -550,24 +549,15 @@ class ImportAnalyzer:
             risk_score = 0
 
             # High-risk combinations
-            if (
-                "Anti-Analysis" in categories
-                and categories["Anti-Analysis"]["count"] >= 2
-            ):
+            if "Anti-Analysis" in categories and categories["Anti-Analysis"]["count"] >= 2:
                 suspicious_apis.append("Multiple anti-debug APIs detected")
                 risk_score += 20
 
-            if (
-                "DLL Injection" in categories
-                and categories["DLL Injection"]["count"] >= 3
-            ):
+            if "DLL Injection" in categories and categories["DLL Injection"]["count"] >= 3:
                 suspicious_apis.append("DLL injection pattern detected")
                 risk_score += 30
 
-            if (
-                "Process/Thread Management" in categories
-                and "Memory Management" in categories
-            ):
+            if "Process/Thread Management" in categories and "Memory Management" in categories:
                 if (
                     categories["Process/Thread Management"]["count"] >= 3
                     and categories["Memory Management"]["count"] >= 3
@@ -579,10 +569,7 @@ class ImportAnalyzer:
                 suspicious_apis.append("Extensive registry manipulation")
                 risk_score += 15
 
-            if (
-                "Network/Internet" in categories
-                and categories["Network/Internet"]["count"] >= 3
-            ):
+            if "Network/Internet" in categories and categories["Network/Internet"]["count"] >= 3:
                 suspicious_apis.append("Network communication capabilities")
                 risk_score += 10
 
@@ -602,9 +589,7 @@ class ImportAnalyzer:
             obfuscation_indicators = []
 
             # Check for GetProcAddress usage (dynamic API loading)
-            getproc_count = sum(
-                1 for imp in imports if "GetProcAddress" in imp.get("name", "")
-            )
+            getproc_count = sum(1 for imp in imports if "GetProcAddress" in imp.get("name", ""))
             if getproc_count > 0:
                 obfuscation_indicators.append(
                     {
@@ -615,9 +600,7 @@ class ImportAnalyzer:
                 )
 
             # Check for LoadLibrary usage
-            loadlib_count = sum(
-                1 for imp in imports if "LoadLibrary" in imp.get("name", "")
-            )
+            loadlib_count = sum(1 for imp in imports if "LoadLibrary" in imp.get("name", ""))
             if loadlib_count > 0:
                 obfuscation_indicators.append(
                     {
@@ -639,9 +622,7 @@ class ImportAnalyzer:
 
             # Check for ordinal-only imports
             ordinal_only = sum(
-                1
-                for imp in imports
-                if not imp.get("name") and imp.get("ordinal", 0) > 0
+                1 for imp in imports if not imp.get("name") and imp.get("ordinal", 0) > 0
             )
             if ordinal_only > 0:
                 obfuscation_indicators.append(
@@ -715,7 +696,7 @@ class ImportAnalyzer:
                 "total_dlls": len(dlls),
                 "common_ratio": len(common_found) / len(dlls) if dlls else 0,
                 "suspicious_ratio": len(suspicious_found) / len(dlls) if dlls else 0,
-                "unique_dlls": len(set(dll.lower() for dll in dlls)),
+                "unique_dlls": len({dll.lower() for dll in dlls}),
             }
 
             return {
@@ -746,9 +727,7 @@ class ImportAnalyzer:
 
             # Check for duplicate imports
             import_names = [imp.get("name", "") for imp in imports if imp.get("name")]
-            duplicates = [
-                name for name, count in Counter(import_names).items() if count > 1
-            ]
+            duplicates = [name for name, count in Counter(import_names).items() if count > 1]
 
             if duplicates:
                 anomalies.append(
@@ -860,11 +839,9 @@ class ImportAnalyzer:
                 "forwarding": forwarding_analysis,
                 "summary": {
                     "total_risk_score": min(total_risk, 100),
-                    "risk_level": "HIGH"
-                    if total_risk >= 70
-                    else "MEDIUM"
-                    if total_risk >= 40
-                    else "LOW",
+                    "risk_level": (
+                        "HIGH" if total_risk >= 70 else "MEDIUM" if total_risk >= 40 else "LOW"
+                    ),
                     "total_imports": len(imports),
                     "total_dlls": len(dlls),
                     "suspicious_indicators": (

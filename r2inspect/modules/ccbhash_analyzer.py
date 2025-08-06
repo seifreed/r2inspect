@@ -13,7 +13,8 @@ Based on research from NICS Lab:
 """
 
 import hashlib
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
 
@@ -71,9 +72,7 @@ class CCBHashAnalyzer:
 
             for func in functions:
                 func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-                func_offset = func.get(
-                    "addr"
-                )  # Use 'addr' field like function_analyzer
+                func_offset = func.get("addr")  # Use 'addr' field like function_analyzer
 
                 if func_offset is None:
                     continue
@@ -98,7 +97,7 @@ class CCBHashAnalyzer:
             results["analyzed_functions"] = analyzed_count
 
             # Calculate unique hashes
-            unique_hashes = set(f["ccbhash"] for f in function_hashes.values())
+            unique_hashes = {f["ccbhash"] for f in function_hashes.values()}
             results["unique_hashes"] = len(unique_hashes)
 
             # Find similar functions (same CCBHash)
@@ -148,9 +147,7 @@ class CCBHashAnalyzer:
                 if func.get("addr") is not None and func.get("size", 0) > 0:
                     # Clean HTML entities from function names
                     if "name" in func and func["name"]:
-                        func["name"] = (
-                            func["name"].replace("&nbsp;", " ").replace("&amp;", "&")
-                        )
+                        func["name"] = func["name"].replace("&nbsp;", " ").replace("&amp;", "&")
                     valid_functions.append(func)
 
             logger.debug(f"Extracted {len(valid_functions)} valid functions")
@@ -160,9 +157,7 @@ class CCBHashAnalyzer:
             logger.error(f"Error extracting functions: {e}")
             return []
 
-    def _calculate_function_ccbhash(
-        self, func_offset: int, func_name: str
-    ) -> Optional[str]:
+    def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> Optional[str]:
         """
         Calculate CCBHash for a specific function using its Control Flow Graph.
 
@@ -288,9 +283,7 @@ class CCBHashAnalyzer:
                 return None
 
             # Extract all function hashes and sort them for canonical representation
-            all_hashes = sorted(
-                [func_data["ccbhash"] for func_data in function_hashes.values()]
-            )
+            all_hashes = sorted([func_data["ccbhash"] for func_data in function_hashes.values()])
 
             # Combine all hashes
             combined = "|".join(all_hashes)

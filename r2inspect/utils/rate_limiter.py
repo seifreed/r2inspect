@@ -3,13 +3,14 @@
 Rate limiting utilities for r2inspect batch processing
 """
 
-import time
-import threading
-from typing import Optional, Dict, Any
-from collections import deque
 import gc
-import psutil
 import os
+import threading
+import time
+from collections import deque
+from typing import Any, Dict, Optional
+
+import psutil
 
 
 class TokenBucket:
@@ -154,10 +155,7 @@ class AdaptiveRateLimiter:
 
             with self.lock:
                 # Reduce rate if system is under stress
-                if (
-                    memory_percent > self.memory_threshold
-                    or cpu_percent > self.cpu_threshold
-                ):
+                if memory_percent > self.memory_threshold or cpu_percent > self.cpu_threshold:
                     self.current_rate = max(self.min_rate, self.current_rate * 0.7)
                 elif memory_percent < 0.6 and cpu_percent < 0.7:
                     # Increase rate if system has capacity
@@ -175,9 +173,7 @@ class AdaptiveRateLimiter:
 
         # Count recent errors and successes
         recent_errors = sum(1 for t in self.error_window if now - t < recent_window)
-        recent_successes = sum(
-            1 for t in self.success_window if now - t < recent_window
-        )
+        recent_successes = sum(1 for t in self.success_window if now - t < recent_window)
 
         total_recent = recent_errors + recent_successes
 
@@ -201,9 +197,7 @@ class AdaptiveRateLimiter:
             recent_window = 60.0
 
             recent_errors = sum(1 for t in self.error_window if now - t < recent_window)
-            recent_successes = sum(
-                1 for t in self.success_window if now - t < recent_window
-            )
+            recent_successes = sum(1 for t in self.success_window if now - t < recent_window)
             total_recent = recent_errors + recent_successes
 
             return {
@@ -237,9 +231,7 @@ class BatchRateLimiter:
                 min_rate=rate_per_second * 0.1,
             )
         else:
-            self.rate_limiter = TokenBucket(
-                capacity=burst_size, refill_rate=rate_per_second
-            )
+            self.rate_limiter = TokenBucket(capacity=burst_size, refill_rate=rate_per_second)
 
         self.adaptive = enable_adaptive
 
@@ -285,9 +277,7 @@ class BatchRateLimiter:
                 wait_time = time.time() - start_time
                 with self.stats_lock:
                     self.stats["total_wait_time"] += wait_time
-                    self.stats["max_wait_time"] = max(
-                        self.stats["max_wait_time"], wait_time
-                    )
+                    self.stats["max_wait_time"] = max(self.stats["max_wait_time"], wait_time)
 
                 return True
             else:

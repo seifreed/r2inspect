@@ -12,7 +12,7 @@ __author__ = "Marc Rivero (@seifreed)"
 __description__ = "Advanced malware analysis tool using radare2 and r2pipe"
 
 from .core import R2Inspector
-from .utils import *
 from .modules import *
+from .utils import *
 
 __all__ = ["R2Inspector", "__version__", "__author__", "__description__"]

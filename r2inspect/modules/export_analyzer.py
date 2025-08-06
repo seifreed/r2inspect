@@ -3,7 +3,8 @@
 Export Analysis Module using r2pipe
 """
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
@@ -29,9 +30,7 @@ class ExportAnalyzer:
                 for exp in exports:
                     # Skip if export is not a dictionary (malformed data)
                     if not isinstance(exp, dict):
-                        logger.debug(
-                            f"Skipping malformed export data: {type(exp)} - {exp}"
-                        )
+                        logger.debug(f"Skipping malformed export data: {type(exp)} - {exp}")
                         continue
                     export_analysis = self._analyze_export(exp)
                     exports_info.append(export_analysis)
@@ -105,14 +104,10 @@ class ExportAnalyzer:
                     # Validate that func is a dictionary before using .get()
                     if isinstance(func, dict):
                         characteristics["function_size"] = func.get("size", 0)
-                        characteristics["complexity"] = func.get(
-                            "cc", 0
-                        )  # Cyclomatic complexity
+                        characteristics["complexity"] = func.get("cc", 0)  # Cyclomatic complexity
                         characteristics["is_function"] = True
                     else:
-                        logger.debug(
-                            f"Function info returned non-dict: {type(func)} - {func}"
-                        )
+                        logger.debug(f"Function info returned non-dict: {type(func)} - {func}")
                         characteristics["is_function"] = False
                 else:
                     characteristics["is_function"] = False

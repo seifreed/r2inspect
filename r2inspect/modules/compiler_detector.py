@@ -4,7 +4,8 @@ Compiler Detection Module - Identifies compilers used to build binaries
 """
 
 import re
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
 
@@ -415,9 +416,7 @@ class CompilerDetector:
                     results["details"] = {
                         "all_scores": compiler_scores,
                         "file_format": file_format,
-                        "detection_method": self._get_detection_method(
-                            best_compiler, best_score
-                        ),
+                        "detection_method": self._get_detection_method(best_compiler, best_score),
                     }
 
             logger.debug(
@@ -555,18 +554,10 @@ class CompilerDetector:
         max_score = 0.0
 
         # Check each signature type
-        string_score, string_max = self._check_string_signatures(
-            signatures, strings_data
-        )
-        import_score, import_max = self._check_import_signatures(
-            signatures, imports_data
-        )
-        section_score, section_max = self._check_section_signatures(
-            signatures, sections_data
-        )
-        symbol_score, symbol_max = self._check_symbol_signatures(
-            signatures, symbols_data
-        )
+        string_score, string_max = self._check_string_signatures(signatures, strings_data)
+        import_score, import_max = self._check_import_signatures(signatures, imports_data)
+        section_score, section_max = self._check_section_signatures(signatures, sections_data)
+        symbol_score, symbol_max = self._check_symbol_signatures(signatures, symbols_data)
 
         score = string_score + import_score + section_score + symbol_score
         max_score = string_max + import_max + section_max + symbol_max
@@ -577,9 +568,7 @@ class CompilerDetector:
 
         return 0.0
 
-    def _check_string_signatures(
-        self, signatures: Dict, strings_data: List[str]
-    ) -> tuple:
+    def _check_string_signatures(self, signatures: Dict, strings_data: List[str]) -> tuple:
         """Check string pattern signatures"""
         if "strings" not in signatures:
             return 0.0, 0.0
@@ -595,9 +584,7 @@ class CompilerDetector:
 
         return score, max_score
 
-    def _check_import_signatures(
-        self, signatures: Dict, imports_data: List[str]
-    ) -> tuple:
+    def _check_import_signatures(self, signatures: Dict, imports_data: List[str]) -> tuple:
         """Check import signatures"""
         if "imports" not in signatures:
             return 0.0, 0.0
@@ -611,9 +598,7 @@ class CompilerDetector:
 
         return score, max_score
 
-    def _check_section_signatures(
-        self, signatures: Dict, sections_data: List[str]
-    ) -> tuple:
+    def _check_section_signatures(self, signatures: Dict, sections_data: List[str]) -> tuple:
         """Check section signatures"""
         if "sections" not in signatures:
             return 0.0, 0.0
@@ -627,9 +612,7 @@ class CompilerDetector:
 
         return score, max_score
 
-    def _check_symbol_signatures(
-        self, signatures: Dict, symbols_data: List[str]
-    ) -> tuple:
+    def _check_symbol_signatures(self, signatures: Dict, symbols_data: List[str]) -> tuple:
         """Check symbol signatures"""
         if "symbols" not in signatures:
             return 0.0, 0.0
@@ -666,9 +649,7 @@ class CompilerDetector:
 
         return "Unknown"
 
-    def _detect_msvc_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_msvc_version(self, strings_data: List[str], imports_data: List[str]) -> str:
         """Detect MSVC version"""
         # Check runtime libraries for MSVC version
         for import_name in imports_data:
@@ -677,17 +658,13 @@ class CompilerDetector:
 
         # Check version strings
         for string in strings_data:
-            match = re.search(
-                r"Microsoft.*Visual.*C\+\+.*(\d+\.\d+)", string, re.IGNORECASE
-            )
+            match = re.search(r"Microsoft.*Visual.*C\+\+.*(\d+\.\d+)", string, re.IGNORECASE)
             if match:
                 return f"Visual Studio {match.group(1)}"
 
         return "Unknown"
 
-    def _detect_gcc_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_gcc_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect GCC version"""
         for string in strings_data:
             match = re.search(r"GCC.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -698,9 +675,7 @@ class CompilerDetector:
                 return f"GCC {match.group(1)}"
         return "Unknown"
 
-    def _detect_clang_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_clang_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect Clang version"""
         for string in strings_data:
             match = re.search(r"clang.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -711,27 +686,19 @@ class CompilerDetector:
                 return f"Apple Clang {match.group(1)}"
         return "Unknown"
 
-    def _detect_intel_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_intel_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect Intel version"""
         return "Unknown"
 
-    def _detect_borland_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_borland_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect Borland version"""
         return "Unknown"
 
-    def _detect_mingw_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_mingw_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect MinGW version"""
         return "Unknown"
 
-    def _detect_go_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_go_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect Go version"""
         for string in strings_data:
             match = re.search(r"go(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -739,9 +706,7 @@ class CompilerDetector:
                 return f"Go {match.group(1)}"
         return "Unknown"
 
-    def _detect_rust_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_rust_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect Rust version"""
         for string in strings_data:
             match = re.search(r"rustc.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -749,9 +714,7 @@ class CompilerDetector:
                 return f"Rust {match.group(1)}"
         return "Unknown"
 
-    def _detect_delphi_version(
-        self, strings_data: List[str], imports_data: List[str]
-    ) -> str:
+    def _detect_delphi_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
         """Detect Delphi version"""
         return "Unknown"
 

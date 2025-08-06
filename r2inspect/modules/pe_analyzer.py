@@ -4,10 +4,10 @@ PE Analysis Module using r2pipe
 """
 
 import hashlib
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd, get_pe_headers
+from ..utils.r2_helpers import get_pe_headers, safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -189,9 +189,7 @@ class PEAnalyzer:
 
                         # Check specific PE characteristics
                         if isinstance(characteristics_flags, int):
-                            is_dll = bool(
-                                characteristics_flags & 0x2000
-                            )  # IMAGE_FILE_DLL
+                            is_dll = bool(characteristics_flags & 0x2000)  # IMAGE_FILE_DLL
                             is_executable = bool(
                                 characteristics_flags & 0x0002
                             )  # IMAGE_FILE_EXECUTABLE_IMAGE
@@ -294,10 +292,7 @@ class PEAnalyzer:
 
                 if security_info:
                     # Check for ASLR
-                    if (
-                        "DLL can move" in security_info
-                        or "DYNAMIC_BASE" in security_info
-                    ):
+                    if "DLL can move" in security_info or "DYNAMIC_BASE" in security_info:
                         features["aslr"] = True
 
                     # Check for DEP/NX
@@ -326,10 +321,7 @@ class PEAnalyzer:
                         data_dirs = opt_header.get("DataDirectory", [])
                         if len(data_dirs) > 4:  # Certificate table is at index 4
                             cert_dir = data_dirs[4]
-                            if (
-                                isinstance(cert_dir, dict)
-                                and cert_dir.get("Size", 0) > 0
-                            ):
+                            if isinstance(cert_dir, dict) and cert_dir.get("Size", 0) > 0:
                                 features["authenticode"] = True
                 except:
                     pass
@@ -484,9 +476,7 @@ class PEAnalyzer:
 
             # Join with commas and calculate MD5 hash (pefile algorithm)
             imphash_string = ",".join(impstrs)
-            imphash = hashlib.md5(
-                imphash_string.encode("utf-8"), usedforsecurity=False
-            ).hexdigest()
+            imphash = hashlib.md5(imphash_string.encode("utf-8"), usedforsecurity=False).hexdigest()
 
             logger.debug(f"Imphash calculated: {imphash} (from {len(impstrs)} imports)")
             return imphash

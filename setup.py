@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from setuptools import setup, find_packages
 import pathlib
+
+from setuptools import find_packages, setup
 
 HERE = pathlib.Path(__file__).parent
 
@@ -54,4 +55,4 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-) 
+)

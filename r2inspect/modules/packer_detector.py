@@ -4,9 +4,10 @@ Packer Detection Module using r2pipe
 """
 
 import math
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd
+from ..utils.r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -71,20 +72,14 @@ class PackerDetector:
             # Evidence 1: Signature found
             if signature_results:
                 evidence_score += 40
-                evidence_reasons.append(
-                    f"Packer signature: {signature_results['type']}"
-                )
+                evidence_reasons.append(f"Packer signature: {signature_results['type']}")
                 packer_info["packer_type"] = signature_results["type"]
 
             # Evidence 2: High entropy sections
-            high_entropy_count = entropy_results.get("summary", {}).get(
-                "high_entropy_sections", 0
-            )
+            high_entropy_count = entropy_results.get("summary", {}).get("high_entropy_sections", 0)
             if high_entropy_count > 0:
                 evidence_score += min(high_entropy_count * 15, 30)
-                evidence_reasons.append(
-                    f"{high_entropy_count} high entropy sections (>7.0)"
-                )
+                evidence_reasons.append(f"{high_entropy_count} high entropy sections (>7.0)")
 
             # Evidence 3: Suspicious section characteristics
             suspicious_sections = len(section_results.get("suspicious_sections", []))
@@ -110,9 +105,7 @@ class PackerDetector:
                 packer_info["is_packed"] = False
                 packer_info["confidence"] = evidence_score / 100.0
                 packer_info["indicators"] = (
-                    evidence_reasons
-                    if evidence_reasons
-                    else ["No packing indicators found"]
+                    evidence_reasons if evidence_reasons else ["No packing indicators found"]
                 )
 
         except Exception as e:
@@ -144,7 +137,7 @@ class PackerDetector:
                 for string_info in strings_result:
                     string_val = string_info.get("string", "").lower()
 
-                    for packer_name in self.packer_signatures.keys():
+                    for packer_name in self.packer_signatures:
                         if packer_name.lower() in string_val:
                             return {"type": packer_name, "signature": string_val}
 
@@ -180,9 +173,9 @@ class PackerDetector:
                 entropy_info["summary"] = {
                     "high_entropy_sections": high_entropy_sections,
                     "total_sections": total_sections,
-                    "high_entropy_ratio": high_entropy_sections / total_sections
-                    if total_sections > 0
-                    else 0,
+                    "high_entropy_ratio": (
+                        high_entropy_sections / total_sections if total_sections > 0 else 0
+                    ),
                 }
 
         except Exception as e:
@@ -200,9 +193,7 @@ class PackerDetector:
                 return 0.0
 
             # Read section data
-            data_cmd = (
-                f"p8 {min(size, 65536)} @ {vaddr}"  # Limit to 64KB for performance
-            )
+            data_cmd = f"p8 {min(size, 65536)} @ {vaddr}"  # Limit to 64KB for performance
             hex_data = self.r2.cmd(data_cmd)
 
             if not hex_data or not hex_data.strip():
@@ -313,9 +304,7 @@ class PackerDetector:
 
         return section_info
 
-    def _calculate_heuristic_score(
-        self, entropy_results: Dict, section_results: Dict
-    ) -> float:
+    def _calculate_heuristic_score(self, entropy_results: Dict, section_results: Dict) -> float:
         """Calculate heuristic score for packer detection"""
         score = 0.0
 
@@ -372,9 +361,7 @@ class PackerDetector:
                     overlay_info = {
                         "has_overlay": overlay_size > 0,
                         "overlay_size": overlay_size,
-                        "overlay_ratio": overlay_size / file_size
-                        if file_size > 0
-                        else 0,
+                        "overlay_ratio": overlay_size / file_size if file_size > 0 else 0,
                     }
 
         except Exception as e:

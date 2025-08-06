@@ -3,11 +3,12 @@
 Cryptography Detection Module using r2pipe
 """
 
-import re
 import math
-from typing import Dict, List, Any, Optional
+import re
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd
+from ..utils.r2_helpers import safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -221,9 +222,9 @@ class CryptoAnalyzer:
                             "evidence_type": "Crypto Constant",
                             "evidence": f"{const_info['type']}: {const_info['value']}",
                             "confidence": 0.8,
-                            "address": const_info["addresses"][0]
-                            if const_info["addresses"]
-                            else "N/A",
+                            "address": (
+                                const_info["addresses"][0] if const_info["addresses"] else "N/A"
+                            ),
                         }
                     )
 
@@ -283,8 +284,7 @@ class CryptoAnalyzer:
                     # Skip noise strings
                     try:
                         if any(
-                            re.search(noise, string_val, re.IGNORECASE)
-                            for noise in noise_patterns
+                            re.search(noise, string_val, re.IGNORECASE) for noise in noise_patterns
                         ):
                             continue
                     except re.error as regex_error:
@@ -311,16 +311,14 @@ class CryptoAnalyzer:
                                     )
                                     break
                             except re.error as regex_error:
-                                logger.error(
-                                    f"Regex error with pattern '{pattern}': {regex_error}"
-                                )
+                                logger.error(f"Regex error with pattern '{pattern}': {regex_error}")
                                 continue
 
             # Consolidate results with confidence scoring
             for algo_name, evidences in detected_algos.items():
                 # Calculate overall confidence based on evidence types
                 max_confidence = max(e["confidence"] for e in evidences)
-                evidence_types = set(e["evidence_type"] for e in evidences)
+                evidence_types = {e["evidence_type"] for e in evidences}
 
                 # Boost confidence if multiple evidence types
                 if len(evidence_types) > 1:

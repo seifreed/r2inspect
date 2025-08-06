@@ -17,13 +17,14 @@ Based on Burton Howard Bloom's 1970 paper on space-efficient probabilistic data 
 Reference: https://en.wikipedia.org/wiki/Bloom_filter
 """
 
+import base64
 import hashlib
 import pickle
-import base64
-from typing import Dict, List, Any, Optional, Set, Tuple
 from collections import defaultdict
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
+from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -153,7 +154,7 @@ class BinbloomAnalyzer:
             results["analyzed_functions"] = analyzed_count
 
             # Calculate unique signatures
-            signatures = set(sig["signature"] for sig in function_signatures.values())
+            signatures = {sig["signature"] for sig in function_signatures.values()}
             results["unique_signatures"] = len(signatures)
 
             # Find similar functions (same signature)
@@ -162,20 +163,14 @@ class BinbloomAnalyzer:
 
             # Create binary-wide Bloom filter
             if all_instructions:
-                binary_bloom = self._create_binary_bloom(
-                    all_instructions, capacity * 2, error_rate
-                )
+                binary_bloom = self._create_binary_bloom(all_instructions, capacity * 2, error_rate)
                 if binary_bloom:
-                    binary_signature = self._bloom_to_signature(
-                        sorted(all_instructions)
-                    )
+                    binary_signature = self._bloom_to_signature(sorted(all_instructions))
                     results["binary_bloom"] = self._serialize_bloom(binary_bloom)
                     results["binary_signature"] = binary_signature
 
             # Calculate Bloom filter statistics
-            bloom_stats = self._calculate_bloom_stats(
-                function_blooms, capacity, error_rate
-            )
+            bloom_stats = self._calculate_bloom_stats(function_blooms, capacity, error_rate)
             results["bloom_stats"] = bloom_stats
 
             logger.debug(
@@ -396,9 +391,7 @@ class BinbloomAnalyzer:
                 "UNIQ:" + "|".join(unique_instructions),
                 "FREQ:" + "|".join(freq_patterns),
                 "BIGR:"
-                + "|".join(
-                    unique_bigrams[:20]
-                ),  # Limit bigrams to avoid very long signatures
+                + "|".join(unique_bigrams[:20]),  # Limit bigrams to avoid very long signatures
             ]
 
             combined = "||".join(signature_components)
@@ -437,9 +430,7 @@ class BinbloomAnalyzer:
             logger.error(f"Error creating binary Bloom filter: {e}")
             return None
 
-    def _serialize_blooms(
-        self, function_blooms: Dict[str, BloomFilter]
-    ) -> Dict[str, str]:
+    def _serialize_blooms(self, function_blooms: Dict[str, BloomFilter]) -> Dict[str, str]:
         """
         Serialize Bloom filters to base64 strings for storage/transport.
 
@@ -507,9 +498,9 @@ class BinbloomAnalyzer:
                 if len(func_names) > 1:
                     similar_groups.append(
                         {
-                            "signature": signature[:16] + "..."
-                            if len(signature) > 16
-                            else signature,
+                            "signature": (
+                                signature[:16] + "..." if len(signature) > 16 else signature
+                            ),
                             "functions": func_names,
                             "count": len(func_names),
                         }
@@ -557,9 +548,9 @@ class BinbloomAnalyzer:
                 "total_filters": len(function_blooms),
                 "configured_capacity": capacity,
                 "configured_error_rate": error_rate,
-                "average_fill_rate": (total_bits_set / total_capacity)
-                if total_capacity > 0
-                else 0.0,
+                "average_fill_rate": (
+                    (total_bits_set / total_capacity) if total_capacity > 0 else 0.0
+                ),
             }
 
             return stats
@@ -584,8 +575,8 @@ class BinbloomAnalyzer:
                 return 0.0
 
             # Calculate Jaccard similarity on bit arrays
-            bits1 = set(i for i, bit in enumerate(bloom1.bit_array) if bit)
-            bits2 = set(i for i, bit in enumerate(bloom2.bit_array) if bit)
+            bits1 = {i for i, bit in enumerate(bloom1.bit_array) if bit}
+            bits2 = {i for i, bit in enumerate(bloom2.bit_array) if bit}
 
             if not bits1 and not bits2:
                 return 1.0  # Both empty
@@ -625,7 +616,7 @@ class BinbloomAnalyzer:
         """
         try:
             bloom_bytes = base64.b64decode(bloom_b64.encode("utf-8"))
-            return pickle.loads(bloom_bytes)
+            return pickle.loads(bloom_bytes)  # nosec B301 - trusted internal data
         except Exception as e:
             logger.error(f"Error deserializing Bloom filter: {e}")
             return None

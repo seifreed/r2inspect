@@ -4,9 +4,10 @@ ELF Analysis Module using r2pipe
 """
 
 import re
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd_list, get_elf_headers
+from ..utils.r2_helpers import get_elf_headers, safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -129,9 +130,7 @@ class ELFAnalyzer:
                                 info["build_environment"] = compiler_match.group(1)
 
                             # Try to extract clang information
-                            clang_match = re.search(
-                                r"clang\s+version\s+([0-9.]+)", comment_data
-                            )
+                            clang_match = re.search(r"clang\s+version\s+([0-9.]+)", comment_data)
                             if clang_match:
                                 info["compiler"] = f"Clang {clang_match.group(1)}"
                                 info["compiler_version"] = clang_match.group(1)
@@ -287,9 +286,7 @@ class ELFAnalyzer:
                         }
                     )
             else:
-                logger.debug(
-                    "No program headers found or invalid response from radare2"
-                )
+                logger.debug("No program headers found or invalid response from radare2")
 
         except Exception as e:
             logger.debug(f"Error getting program headers: {e}")

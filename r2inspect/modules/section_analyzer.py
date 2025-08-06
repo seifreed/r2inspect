@@ -4,9 +4,10 @@ Section Analysis Module using r2pipe
 """
 
 import math
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd
+from ..utils.r2_helpers import safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -116,9 +117,7 @@ class SectionAnalyzer:
             )
 
             # Get section characteristics
-            analysis["characteristics"] = self._get_section_characteristics(
-                section, analysis
-            )
+            analysis["characteristics"] = self._get_section_characteristics(section, analysis)
 
         except Exception as e:
             logger.error(f"Error in single section analysis: {e}")
@@ -260,17 +259,11 @@ class SectionAnalyzer:
             size_diff_ratio = abs(vsize - raw_size) / max(vsize, raw_size)
 
             if ratio > 10:
-                indicators.append(
-                    f"Suspicious size ratio: Virtual {ratio:.1f}x larger than raw"
-                )
+                indicators.append(f"Suspicious size ratio: Virtual {ratio:.1f}x larger than raw")
             elif ratio > 5:
-                indicators.append(
-                    f"Large size ratio: Virtual {ratio:.1f}x larger than raw"
-                )
+                indicators.append(f"Large size ratio: Virtual {ratio:.1f}x larger than raw")
             elif size_diff_ratio > 0.8:
-                indicators.append(
-                    f"Large virtual/raw size difference ({size_diff_ratio:.1f})"
-                )
+                indicators.append(f"Large virtual/raw size difference ({size_diff_ratio:.1f})")
 
         # Check for very small sections
         if raw_size < 100 and raw_size > 0:
@@ -336,9 +329,7 @@ class SectionAnalyzer:
             }
 
             # Get characteristics from mapping or use defaults
-            purpose, expected_entropy = section_mappings.get(
-                name, ("Unknown/Custom", "Variable")
-            )
+            purpose, expected_entropy = section_mappings.get(name, ("Unknown/Custom", "Variable"))
             characteristics["purpose"] = purpose
             characteristics["expected_entropy"] = expected_entropy
 
@@ -361,9 +352,7 @@ class SectionAnalyzer:
 
         try:
             entropy = analysis.get("entropy", 0)
-            min_entropy, max_entropy = map(
-                float, characteristics["expected_entropy"].split("-")
-            )
+            min_entropy, max_entropy = map(float, characteristics["expected_entropy"].split("-"))
             if entropy < min_entropy or entropy > max_entropy:
                 characteristics["entropy_anomaly"] = True
         except (ValueError, TypeError) as e:
@@ -411,9 +400,7 @@ class SectionAnalyzer:
 
             if nop_count > size / 100:  # More than 1% NOPs
                 code_info["excessive_nops"] = True
-                code_info["nop_ratio"] = nop_count / (
-                    size / 4
-                )  # Approximate instruction count
+                code_info["nop_ratio"] = nop_count / (size / 4)  # Approximate instruction count
 
         except Exception as e:
             logger.error(f"Error analyzing code section: {e}")

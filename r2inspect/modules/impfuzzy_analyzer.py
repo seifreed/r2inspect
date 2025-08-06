@@ -11,8 +11,9 @@ Based on research from JPCERT/CC:
 - http://blog.jpcert.or.jp/2016/05/classifying-mal-a988.html
 """
 
-from typing import Dict, List, Any, Optional
 from collections import defaultdict
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
 
@@ -113,17 +114,13 @@ class ImpfuzzyAnalyzer:
                     "impfuzzy_hash": impfuzzy_hash,
                     "import_count": len(processed_imports),
                     "dll_count": len(unique_dlls),
-                    "imports_processed": processed_imports[
-                        :50
-                    ],  # Limit to first 50 for display
+                    "imports_processed": processed_imports[:50],  # Limit to first 50 for display
                     "total_imports": len(processed_imports),
                 }
             )
 
             logger.debug(f"Impfuzzy calculated successfully: {impfuzzy_hash}")
-            logger.debug(
-                f"Processed {len(processed_imports)} imports from {len(unique_dlls)} DLLs"
-            )
+            logger.debug(f"Processed {len(processed_imports)} imports from {len(unique_dlls)} DLLs")
 
         except Exception as e:
             logger.error(f"Impfuzzy analysis failed: {e}")
@@ -227,10 +224,7 @@ class ImpfuzzyAnalyzer:
 
                 # Extract function name
                 func_name = (
-                    imp.get("name")
-                    or imp.get("func")
-                    or imp.get("function")
-                    or imp.get("symbol")
+                    imp.get("name") or imp.get("func") or imp.get("function") or imp.get("symbol")
                 )
 
                 if func_name and func_name != "unknown":
@@ -253,9 +247,7 @@ class ImpfuzzyAnalyzer:
             # Sort imports for consistency
             processed_imports.sort()
 
-            logger.debug(
-                f"Processed imports into {len(processed_imports)} dll.function entries"
-            )
+            logger.debug(f"Processed imports into {len(processed_imports)} dll.function entries")
 
             return processed_imports
 

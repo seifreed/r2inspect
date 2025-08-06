@@ -3,13 +3,14 @@
 Retry logic for unstable r2 commands and operations
 """
 
-import time
-import secrets
 import functools
+import secrets
 import threading
-from typing import Any, Callable, Dict, Optional
+import time
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Callable, Dict, Optional
+
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -57,27 +58,19 @@ class RetryManager:
         "analysis": RetryConfig(
             max_attempts=3, base_delay=0.2, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
         ),
-        "info": RetryConfig(
-            max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY
-        ),
+        "info": RetryConfig(max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY),
         "search": RetryConfig(
             max_attempts=4, base_delay=0.3, strategy=RetryStrategy.LINEAR_BACKOFF
         ),
-        "print": RetryConfig(
-            max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY
-        ),
+        "print": RetryConfig(max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY),
         "sections": RetryConfig(
             max_attempts=3, base_delay=0.15, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
         ),
         "functions": RetryConfig(
             max_attempts=3, base_delay=0.2, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
         ),
-        "memory": RetryConfig(
-            max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY
-        ),
-        "generic": RetryConfig(
-            max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY
-        ),
+        "memory": RetryConfig(max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY),
+        "generic": RetryConfig(max_attempts=2, base_delay=0.1, strategy=RetryStrategy.FIXED_DELAY),
     }
 
     # Commands that are known to be unstable and should be retried
@@ -169,18 +162,14 @@ class RetryManager:
             delay = config.base_delay * attempt
 
         elif config.strategy == RetryStrategy.RANDOM_JITTER:
-            delay = config.base_delay + (
-                secrets.randbelow(int(config.base_delay * 1000)) / 1000.0
-            )
+            delay = config.base_delay + (secrets.randbelow(int(config.base_delay * 1000)) / 1000.0)
 
         else:
             delay = config.base_delay
 
         # Apply jitter if enabled
         if config.jitter and config.strategy != RetryStrategy.RANDOM_JITTER:
-            jitter = (
-                delay * 0.1 * ((secrets.randbelow(2000) - 1000) / 1000.0)
-            )  # ±10% jitter
+            jitter = delay * 0.1 * ((secrets.randbelow(2000) - 1000) / 1000.0)  # ±10% jitter
             delay = max(0.01, delay + jitter)
 
         # Ensure delay doesn't exceed maximum
@@ -229,14 +218,10 @@ class RetryManager:
         if last_exception:
             raise last_exception
 
-    def _get_retry_config(
-        self, command_type: str, config: Optional[RetryConfig]
-    ) -> RetryConfig:
+    def _get_retry_config(self, command_type: str, config: Optional[RetryConfig]) -> RetryConfig:
         """Get retry configuration for the operation"""
         if config is None:
-            return self.DEFAULT_CONFIGS.get(
-                command_type, self.DEFAULT_CONFIGS["generic"]
-            )
+            return self.DEFAULT_CONFIGS.get(command_type, self.DEFAULT_CONFIGS["generic"])
         return config
 
     def _check_timeout(self, start_time: float, config: RetryConfig) -> None:
@@ -264,9 +249,7 @@ class RetryManager:
         if attempt >= config.max_attempts:
             with self.lock:
                 self.retry_stats["failed_after_retries"] += 1
-            logger.warning(
-                f"Operation failed after {config.max_attempts} attempts: {e}"
-            )
+            logger.warning(f"Operation failed after {config.max_attempts} attempts: {e}")
             raise
 
         self._wait_for_retry(attempt, config)

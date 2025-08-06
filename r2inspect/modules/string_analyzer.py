@@ -3,9 +3,10 @@
 String Analysis Module using r2pipe
 """
 
-import re
 import base64
-from typing import Dict, List, Any
+import re
+from typing import Any, Dict, List
+
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list
 
@@ -170,9 +171,7 @@ class StringAnalyzer:
             for pattern_name, pattern in patterns.items():
                 matches = re.findall(pattern, string, re.IGNORECASE)
                 if matches:
-                    suspicious.append(
-                        {"string": string, "type": pattern_name, "matches": matches}
-                    )
+                    suspicious.append({"string": string, "type": pattern_name, "matches": matches})
 
         return suspicious
 

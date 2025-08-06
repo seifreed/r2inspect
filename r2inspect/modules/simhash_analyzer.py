@@ -21,10 +21,11 @@ Based on Charikar's SimHash algorithm for near-duplicate detection.
 Reference: https://en.wikipedia.org/wiki/SimHash
 """
 
-from typing import Dict, List, Any, Optional, Set, Tuple
-from collections import Counter, defaultdict
+from collections import Counter
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, safe_cmd_list
+from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -167,9 +168,7 @@ class SimHashAnalyzer:
 
             results["feature_stats"] = feature_stats
 
-            logger.debug(
-                f"SimHash analysis completed: {len(combined_features)} total features"
-            )
+            logger.debug(f"SimHash analysis completed: {len(combined_features)} total features")
             logger.debug(
                 f"Binary SimHash: {hex(combined_simhash.value) if combined_features else 'N/A'}"
             )
@@ -199,18 +198,14 @@ class SimHashAnalyzer:
                         string_value = string_entry["string"]
 
                         # Filter strings by length and content
-                        if len(
-                            string_value
-                        ) >= self.min_string_length and self._is_useful_string(
+                        if len(string_value) >= self.min_string_length and self._is_useful_string(
                             string_value
                         ):
                             # Add string as-is
                             string_features.append(f"STR:{string_value}")
 
                             # Add string length category
-                            length_category = self._get_length_category(
-                                len(string_value)
-                            )
+                            length_category = self._get_length_category(len(string_value))
                             string_features.append(f"STRLEN:{length_category}")
 
                             # Add string type indicators
@@ -246,9 +241,7 @@ class SimHashAnalyzer:
             functions = safe_cmd_list(self.r2, "aflj")
 
             if not functions:
-                logger.debug(
-                    "No functions found for opcode extraction, trying alternative methods"
-                )
+                logger.debug("No functions found for opcode extraction, trying alternative methods")
                 # Try alternative function discovery
                 functions = safe_cmd_list(self.r2, "afl")
                 if not functions:
@@ -273,9 +266,7 @@ class SimHashAnalyzer:
                 func_opcodes = self._extract_function_opcodes(func_name)
                 if func_opcodes:
                     opcode_features.extend(func_opcodes)
-                    logger.debug(
-                        f"Extracted {len(func_opcodes)} opcodes from {func_name}"
-                    )
+                    logger.debug(f"Extracted {len(func_opcodes)} opcodes from {func_name}")
 
                 # Limit total opcodes to avoid memory issues
                 if len(opcode_features) > 10000:
@@ -336,14 +327,10 @@ class SimHashAnalyzer:
                     }
 
                 except Exception as e:
-                    logger.debug(
-                        f"Error creating SimHash for function {func_name}: {e}"
-                    )
+                    logger.debug(f"Error creating SimHash for function {func_name}: {e}")
                     continue
 
-            logger.debug(
-                f"Extracted SimHash features for {len(function_features)} functions"
-            )
+            logger.debug(f"Extracted SimHash features for {len(function_features)} functions")
             return function_features
 
         except Exception as e:
@@ -391,9 +378,7 @@ class SimHashAnalyzer:
                 return opcodes
 
             # Method 2: Fallback to pdj
-            disasm_list = safe_cmd_list(
-                self.r2, f"pdj {self.max_instructions_per_function}"
-            )
+            disasm_list = safe_cmd_list(self.r2, f"pdj {self.max_instructions_per_function}")
             if isinstance(disasm_list, list):
                 for i, op in enumerate(disasm_list):
                     if isinstance(op, dict) and "mnemonic" in op:
@@ -421,27 +406,20 @@ class SimHashAnalyzer:
             sections = safe_cmd_list(self.r2, "iSj")
             if isinstance(sections, list):
                 for section in sections:
-                    if isinstance(section, dict) and section.get("name", "").startswith(
-                        ".data"
-                    ):
+                    if isinstance(section, dict) and section.get("name", "").startswith(".data"):
                         # Extract strings from data section
                         section_addr = section.get("vaddr", 0)
                         section_size = section.get("size", 0)
 
                         if section_addr and section_size:
                             self.r2.cmd(f"s {section_addr}")
-                            section_strings = self.r2.cmd(
-                                f"ps {min(section_size, 1024)}"
-                            )
+                            section_strings = self.r2.cmd(f"ps {min(section_size, 1024)}")
 
                             if (
                                 section_strings
-                                and len(section_strings.strip())
-                                >= self.min_string_length
+                                and len(section_strings.strip()) >= self.min_string_length
                             ):
-                                data_strings.append(
-                                    f"DATASTR:{section_strings.strip()}"
-                                )
+                                data_strings.append(f"DATASTR:{section_strings.strip()}")
 
         except Exception as e:
             logger.debug(f"Error extracting data section strings: {e}")
@@ -464,9 +442,7 @@ class SimHashAnalyzer:
                 return False
 
         # Check for printable characters
-        printable_ratio = sum(1 for c in string_value if c.isprintable()) / len(
-            string_value
-        )
+        printable_ratio = sum(1 for c in string_value if c.isprintable()) / len(string_value)
         return printable_ratio > 0.8
 
     def _get_length_category(self, length: int) -> str:
@@ -502,8 +478,7 @@ class SimHashAnalyzer:
 
         # Error message pattern
         if any(
-            word in string_value.lower()
-            for word in ["error", "failed", "exception", "invalid"]
+            word in string_value.lower() for word in ["error", "failed", "exception", "invalid"]
         ):
             return "error"
 

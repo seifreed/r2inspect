@@ -4,10 +4,11 @@ Mach-O Analysis Module using r2pipe
 """
 
 import re
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj, get_macho_headers
+from ..utils.r2_helpers import get_macho_headers, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -127,9 +128,7 @@ class MachOAnalyzer:
                     if sdk_version:
                         info["sdk_version_info"] = sdk_version
                         # Could map SDK versions to release dates for estimation
-                        compile_time_estimate = self._estimate_from_sdk_version(
-                            sdk_version
-                        )
+                        compile_time_estimate = self._estimate_from_sdk_version(sdk_version)
                         if compile_time_estimate:
                             info["compile_time"] = compile_time_estimate
 
@@ -188,9 +187,7 @@ class MachOAnalyzer:
                         # Convert timestamp to readable date
                         try:
                             compile_date = datetime.fromtimestamp(timestamp)
-                            info["compile_time"] = compile_date.strftime(
-                                "%a %b %d %H:%M:%S %Y"
-                            )
+                            info["compile_time"] = compile_date.strftime("%a %b %d %H:%M:%S %Y")
                             info["dylib_timestamp"] = timestamp
                         except Exception:
                             info["dylib_timestamp"] = timestamp
