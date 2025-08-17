@@ -209,7 +209,7 @@ class R2Inspector(MemoryAwareAnalyzer):
         self.section_analyzer = SectionAnalyzer(self.r2, self.config)
         self.import_analyzer = ImportAnalyzer(self.r2, self.config)
         self.export_analyzer = ExportAnalyzer(self.r2, self.config)
-        self.yara_analyzer = YaraAnalyzer(self.r2, self.config)
+        self.yara_analyzer = YaraAnalyzer(self.r2, self.config, self.filename)
         self.compiler_detector = CompilerDetector(self.r2, self.config)
         self.function_analyzer = FunctionAnalyzer(self.r2)
         self.ssdeep_analyzer = SSDeepAnalyzer(self.filename)

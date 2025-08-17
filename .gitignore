@@ -1,7 +1,10 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyo
 
 # C extensions
 *.so
@@ -127,6 +130,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+virtualenv/
+.virtualenv/
+pyenv/
+.pyenv/
 
 # Spyder project settings
 .spyderproject
@@ -233,8 +240,21 @@ r2inspect_batch_results/
 *.csv
 !example_output.json
 
-# Ruff cache
+# Development tools and configurations
+.claude/
+.qlty/
+qlty.toml
+.ruff.toml
+ruff.toml
 .ruff_cache/
+.pre-commit-config.yaml
+.flake8
+.pylintrc
+.bandit
+.isort.cfg
+setup.cfg
+tox.ini
+.editorconfig
 
 # Output files
 file.csv
@@ -336,6 +356,13 @@ docker-compose.override.yml
 local/
 dev/
 development/
+
+# Test files
+test_*.py
+test_*.csv
+test_batch.py
+*_test.py
+*_test.csv
 
 # Test coverage
 .coverage

@@ -22,25 +22,28 @@ YARA_YARA_EXT = "*.yara"
 class YaraAnalyzer:
     """YARA rules analysis"""
 
-    def __init__(self, r2, config):
+    def __init__(self, r2, config, filepath=None):
         self.r2 = r2
         self.config = config
         self.rules_path = config.get_yara_rules_path()
+        self.filepath = filepath  # Store filepath directly to avoid r2 dependency
 
     def scan(self, custom_rules_path: Optional[str] = None) -> List[Dict[str, Any]]:
         """Scan file with YARA rules"""
         matches = []
 
         try:
-            # Get file path from r2
-            file_info = safe_cmdj(self.r2, "ij", {})
-            if not file_info or "core" not in file_info:
-                logger.error("Cannot get file information from r2")
-                return matches
+            # Use stored filepath first, fallback to r2 if needed
+            file_path = self.filepath
 
-            file_path = file_info["core"].get("file", "")
+            if not file_path:
+                # Try to get file path from r2 as fallback
+                file_info = safe_cmdj(self.r2, "ij", {})
+                if file_info and "core" in file_info:
+                    file_path = file_info["core"].get("file", "")
+
             if not file_path or not os.path.exists(file_path):
-                logger.error(f"File not found: {file_path}")
+                logger.debug(f"File not accessible for YARA scan: {file_path}")
                 return matches
 
             # Use custom rules path if provided

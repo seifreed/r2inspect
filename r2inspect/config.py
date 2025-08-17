@@ -35,6 +35,12 @@ class Config:
             "function_analysis": True,
             "graph_analysis": False,
         },
+        "pe_analysis": {
+            "analyze_authenticode": True,
+            "analyze_overlay": True,
+            "analyze_resources": True,
+            "analyze_mitigations": True,
+        },
     }
 
     def __init__(self, config_path: Optional[str] = None):
@@ -121,3 +127,24 @@ class Config:
     def __contains__(self, key):
         """Allow 'in' operator"""
         return key in self.config
+
+    # PE Analysis configuration properties
+    @property
+    def analyze_authenticode(self) -> bool:
+        """Check if Authenticode analysis is enabled"""
+        return self.get("pe_analysis", "analyze_authenticode", True)
+
+    @property
+    def analyze_overlay(self) -> bool:
+        """Check if overlay analysis is enabled"""
+        return self.get("pe_analysis", "analyze_overlay", True)
+
+    @property
+    def analyze_resources(self) -> bool:
+        """Check if resource analysis is enabled"""
+        return self.get("pe_analysis", "analyze_resources", True)
+
+    @property
+    def analyze_mitigations(self) -> bool:
+        """Check if exploit mitigation analysis is enabled"""
+        return self.get("pe_analysis", "analyze_mitigations", True)

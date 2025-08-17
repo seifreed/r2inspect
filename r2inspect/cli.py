@@ -295,6 +295,7 @@ def sanitize_xor_string(xor_input):
 @click.option("-o", "--output", help="Output file path or directory for batch mode")
 @click.option("-x", "--xor", help="Search XORed string")
 @click.option("-v", "--verbose", is_flag=True, help="Verbose output")
+@click.option("--quiet", is_flag=True, help="Suppress r2pipe warnings and non-critical output")
 @click.option("--config", help="Custom config file path")
 @click.option("--yara", help="Custom YARA rules directory")
 @click.option(
@@ -322,6 +323,7 @@ def main(
     output,
     xor,
     verbose,
+    quiet,
     config,
     yara,
     batch,
@@ -330,6 +332,18 @@ def main(
     threads,
 ):
     """r2inspect - Advanced malware analysis tool using radare2 and r2pipe"""
+
+    # Suppress r2pipe warnings if quiet mode is enabled
+    if quiet:
+        import logging
+        import warnings
+
+        # Suppress Python warnings
+        warnings.filterwarnings("ignore")
+        # Suppress r2pipe logging
+        logging.getLogger("r2pipe").setLevel(logging.CRITICAL)
+        # Suppress our own debug logging
+        logging.getLogger("r2inspect").setLevel(logging.WARNING)
 
     try:
         # Validate inputs first
@@ -349,7 +363,7 @@ def main(
         validate_input_mode(filename, batch)
 
         # Print banner if not in quiet mode
-        if not output_json and not output_csv:
+        if not output_json and not output_csv and not quiet:
             print_banner()
 
         # Load configuration
@@ -379,6 +393,7 @@ def main(
                 config_obj,
                 use_auto_detect,
                 threads,
+                quiet,
             )
         else:
             # Single file mode with proper cleanup
@@ -1627,7 +1642,8 @@ def find_executable_files_by_magic(directory, recursive=False, verbose=False):
                 console.print(f"[red]Error checking {file_path.name}: {e}[/red]")
             continue
 
-    console.print(f"[green]Found {len(executable_files)} executable files[/green]")
+    if verbose:
+        console.print(f"[green]Found {len(executable_files)} executable files[/green]")
     return executable_files
 
 
@@ -2104,15 +2120,17 @@ def create_json_batch_summary(all_results, failed_files, output_path, timestamp)
     return f"{summary_file.name} + individual JSONs"
 
 
-def find_files_to_process(batch_path, auto_detect, extensions, recursive, verbose):
+def find_files_to_process(batch_path, auto_detect, extensions, recursive, verbose, quiet=False):
     """Find files to process based on auto-detection or extensions"""
     files_to_process = []
 
     if auto_detect:
-        console.print("[blue]Auto-detecting executable files (default behavior)...[/blue]")
+        if not quiet:
+            console.print("[blue]Auto-detecting executable files (default behavior)...[/blue]")
         files_to_process = find_executable_files_by_magic(batch_path, recursive, verbose)
     else:
-        console.print(f"[blue]Searching for files with extensions: {extensions}[/blue]")
+        if not quiet:
+            console.print(f"[blue]Searching for files with extensions: {extensions}[/blue]")
         files_to_process = find_files_by_extensions(batch_path, extensions, recursive)
 
     return files_to_process
@@ -2179,27 +2197,36 @@ def run_batch_analysis(
     config_obj,
     auto_detect,
     threads=10,
+    quiet=False,
 ):
     """Run batch analysis on multiple files in a directory"""
     batch_path = Path(batch_dir)
 
     # Find files to process
     files_to_process = find_files_to_process(
-        batch_path, auto_detect, extensions, recursive, verbose
+        batch_path, auto_detect, extensions, recursive, verbose, quiet
     )
 
     if not files_to_process:
         display_no_files_message(auto_detect, extensions)
         return
 
-    console.print(f"[bold green]Found {len(files_to_process)} files to process[/bold green]")
-    console.print(f"[blue]Using {threads} parallel threads[/blue]")
+    if not quiet:
+        console.print(f"[bold green]Found {len(files_to_process)} files to process[/bold green]")
+        console.print(f"[blue]Using {threads} parallel threads[/blue]")
 
     # Configure logging for batch processing
     if not verbose:
         from .utils.logger import configure_batch_logging
 
         configure_batch_logging()
+
+    # If quiet mode, suppress even more logging
+    if quiet:
+        import logging
+
+        logging.getLogger("r2inspect").setLevel(logging.CRITICAL)
+        logging.getLogger("r2inspect.modules").setLevel(logging.CRITICAL)
 
     # Setup output directory
     output_path = setup_batch_output_directory(output_dir, output_json, output_csv)
