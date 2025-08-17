@@ -231,8 +231,10 @@ $RECYCLE.BIN/
 .nfs*
 
 # r2inspect specific
-# Analysis output files
-output/
+# Analysis output files (but keep README)
+output/*
+!output/README.md
+!output/.gitkeep
 results/
 analysis_results/
 r2inspect_batch_results/
@@ -262,7 +264,9 @@ test_output.csv
 r2inspect_*.csv
 
 # Sample files (malware samples should not be committed)
-samples/
+samples/*
+!samples/README.md
+!samples/.gitkeep
 malware_samples/
 test_samples/
 *.exe
@@ -287,7 +291,10 @@ tmp/
 *.r2
 *.r2db
 
-# Configuration files with sensitive data
+# Configuration files with sensitive data (but keep directory README)
+config/*
+!config/README.md
+!config/.gitkeep
 config.json
 local_config.json
 api_keys.json
