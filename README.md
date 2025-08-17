@@ -17,6 +17,10 @@ r2inspect provides comprehensive static analysis of PE files with the following 
 - **Section Analysis**: Entropy calculation, permission flags, suspicious characteristics with size ratios
 - **YARA Rule Integration**: Built-in and custom rule support
 - **XOR String Search**: Find obfuscated strings with advanced pattern matching
+- **Authenticode Signature Verification**: Digital signature analysis and certificate chain validation
+- **Overlay Data Analysis**: Detection and analysis of data appended after PE structure
+- **Resource Analysis**: PE resource extraction, version info, manifests, and icon analysis  
+- **Exploit Mitigation Detection**: ASLR, DEP, CFG, SafeSEH, stack cookies, and security scoring
 
 ### Advanced Hashing & Similarity Analysis
 
@@ -40,6 +44,31 @@ r2inspect implements multiple hashing algorithms for different malware analysis 
 | **Binlex** | N-gram lexical analysis | Instruction pattern matching | SHA256 per n-gram size |
 
 ### Enhanced Detection Capabilities
+
+#### Security Features Analysis
+- **Authenticode Verification**: 
+  - Certificate table parsing and validation
+  - PKCS#7 signature structure analysis
+  - Signer information extraction
+  - Timestamp verification
+- **Overlay Data Detection**:
+  - Entropy-based analysis of appended data
+  - Embedded file signature detection (PE, ZIP, RAR, PDF, etc.)
+  - Installer framework identification (NSIS, Inno Setup, AutoIt)
+  - Suspicious overlay indicators with severity scoring
+- **Resource Directory Analysis**:
+  - Complete resource tree parsing
+  - Version information extraction
+  - Manifest analysis for UAC requirements
+  - Icon and string table extraction
+  - High-entropy resource detection
+- **Exploit Mitigation Assessment**:
+  - DllCharacteristics flag analysis
+  - Load Configuration Directory parsing
+  - Security cookie (GS) detection
+  - Guard flags for CFG/RFG validation
+  - Security score calculation (A-F grade)
+  - Actionable recommendations for missing mitigations
 
 #### Import Risk Scoring System
 - **Granular 0-100 point scoring** instead of generic High/Medium/Low
@@ -320,6 +349,12 @@ r2inspect uses a configuration file located at `~/.r2inspect/config.json`:
     "enable_rich_header": true,
     "enable_impfuzzy": true
   },
+  "pe_analysis": {
+    "analyze_authenticode": true,
+    "analyze_overlay": true,
+    "analyze_resources": true,
+    "analyze_mitigations": true
+  },
   "output": {
     "json_indent": 2,
     "show_progress": true,
@@ -423,6 +458,10 @@ r2inspect/
 │   ├── export_analyzer.py      # Export analysis
 │   ├── function_analyzer.py    # Function analysis and MACHOC
 │   ├── yara_analyzer.py        # YARA rule integration
+│   ├── authenticode_analyzer.py # Authenticode signature verification
+│   ├── overlay_analyzer.py     # Overlay data detection and analysis
+│   ├── resource_analyzer.py    # PE resource extraction and analysis
+│   ├── exploit_mitigation_analyzer.py # Security features detection
 │   ├── tlsh_analyzer.py        # TLSH locality sensitive hashing
 │   ├── ssdeep_analyzer.py      # SSDeep fuzzy hashing
 │   ├── rich_header_analyzer.py # Rich header analysis
@@ -435,7 +474,8 @@ r2inspect/
     ├── logger.py               # Logging system
     ├── output.py              # Output formatting
     ├── hashing.py             # Hash utilities
-    └── r2_helpers.py          # Radare2 helper functions
+    ├── r2_helpers.py          # Radare2 helper functions
+    └── r2_suppress.py         # Error handling for r2pipe
 ```
 
 ## Contributing
@@ -490,26 +530,6 @@ GNU General Public License v3.0
 - TLSH implementation by Trend Micro
 - Rich header analysis techniques from various researchers
 - Inspiration from the broader malware analysis tool landscape
-
-## Support
-
-- **GitHub Issues**: Report bugs and feature requests
-- **Documentation**: Full API documentation available at [docs.r2inspect.com](https://docs.r2inspect.com)
-- **Community**: Join our discussions on GitHub
-- **Security**: Report security issues privately to security@r2inspect.com
-
-## Roadmap
-
-- [ ] Machine learning-based malware classification
-- [ ] Dynamic analysis integration
-- [ ] Cloud-based analysis API
-- [ ] Integration with threat intelligence platforms
-- [ ] Advanced obfuscation detection
-- [ ] Automated report generation
-- [ ] Plugin system for custom analyzers
-- [ ] Web-based interface
-- [ ] Docker containerization
-- [ ] Kubernetes deployment support
 
 ---
 

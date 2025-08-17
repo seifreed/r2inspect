@@ -36,7 +36,7 @@ class FunctionAnalyzer:
             # Get all functions
             functions = self._get_functions()
             if not functions:
-                logger.warning("No functions found for analysis")
+                logger.debug("No functions found for analysis")
                 return {
                     "total_functions": 0,
                     "machoc_hashes": {},

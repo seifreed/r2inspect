@@ -90,8 +90,17 @@ class SSDeepAnalyzer:
         if not os.path.exists(self.filepath):
             raise FileNotFoundError(f"File not found: {self.filepath}")
 
-        # Calculate ssdeep hash
-        ssdeep_hash = ssdeep.hash_from_file(self.filepath)
+        # Calculate ssdeep hash - read file content manually to avoid file handle issues
+        try:
+            with open(self.filepath, "rb") as f:
+                file_content = f.read()
+            ssdeep_hash = ssdeep.hash(file_content)
+        except OSError as e:
+            # Fall back to hash_from_file if direct read fails
+            try:
+                ssdeep_hash = ssdeep.hash_from_file(self.filepath)
+            except Exception:
+                raise e
 
         return {
             "ssdeep_hash": ssdeep_hash,

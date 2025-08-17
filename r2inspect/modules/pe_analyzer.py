@@ -8,6 +8,10 @@ from typing import Any, Dict, List
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import get_pe_headers, safe_cmd, safe_cmdj
+from .authenticode_analyzer import AuthenticodeAnalyzer
+from .exploit_mitigation_analyzer import ExploitMitigationAnalyzer
+from .overlay_analyzer import OverlayAnalyzer
+from .resource_analyzer import ResourceAnalyzer
 
 logger = get_logger(__name__)
 
@@ -45,6 +49,26 @@ class PEAnalyzer:
 
             # Calculate imphash
             pe_info["imphash"] = self.calculate_imphash()
+
+            # Analyze Authenticode signature
+            if self.config.analyze_authenticode:
+                authenticode_analyzer = AuthenticodeAnalyzer(self.r2)
+                pe_info["authenticode"] = authenticode_analyzer.analyze()
+
+            # Analyze overlay data
+            if self.config.analyze_overlay:
+                overlay_analyzer = OverlayAnalyzer(self.r2)
+                pe_info["overlay"] = overlay_analyzer.analyze()
+
+            # Analyze resources
+            if self.config.analyze_resources:
+                resource_analyzer = ResourceAnalyzer(self.r2)
+                pe_info["resources"] = resource_analyzer.analyze()
+
+            # Analyze exploit mitigations
+            if self.config.analyze_mitigations:
+                mitigation_analyzer = ExploitMitigationAnalyzer(self.r2)
+                pe_info["exploit_mitigations"] = mitigation_analyzer.analyze()
 
         except Exception as e:
             logger.error(f"Error in PE analysis: {e}")
