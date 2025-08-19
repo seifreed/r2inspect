@@ -296,17 +296,7 @@ class AuthenticodeAnalyzer:
 
             # Check security directory is valid
             sec_dir = signature_info.get("security_directory")
-            if not sec_dir or sec_dir.get("size", 0) == 0:
-                return False
-
-            # Additional checks would include:
-            # - Verifying certificate chain
-            # - Checking certificate validity dates
-            # - Verifying signature against computed hash
-            # - Checking revocation status
-
-            # For now, return True if basic structure is valid
-            return True
+            return not (not sec_dir or sec_dir.get("size", 0) == 0)
 
         except Exception as e:
             logger.error(f"Error verifying signature: {e}")

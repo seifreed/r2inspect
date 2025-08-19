@@ -329,10 +329,7 @@ class OverlayAnalyzer:
 
         # Check for repeating patterns (encrypted data usually doesn't have them)
         unique_bytes = len(set(data[:256]))
-        if unique_bytes > 240:  # Almost all bytes are unique
-            return True
-
-        return False
+        return unique_bytes > 240  # Almost all bytes are unique
 
     def _extract_strings(self, data: List[int], min_length: int = 4) -> List[str]:
         """Extract readable strings from data."""
