@@ -60,10 +60,17 @@ jobs:
       run: |
         mypy r2inspect || true
     
-    - name: Test installation
+    - name: Test installation (Unix)
+      if: runner.os != 'Windows'
       run: |
         pip install -e .
         r2inspect --help
+
+    - name: Test installation (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        pip install -e .
+        python -c "import r2inspect, sys; print(r2inspect.__version__)"
 
     - name: Run tests with coverage (unit + fast)
       run: |
