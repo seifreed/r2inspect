@@ -12,12 +12,7 @@ Licensed under the GNU General Public License v3.0 (GPLv3)
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-
-try:
-    from datetime import UTC
-except ImportError:  # Python 3.10 compatibility
-    UTC = timezone.utc
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 

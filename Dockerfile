@@ -3,7 +3,7 @@
 
 # Build arguments
 ARG BUILD_TYPE=production
-ARG BASE_IMAGE=python:3.11-slim
+ARG BASE_IMAGE=python:3.13-slim
 ARG RADARE2_VERSION=master
 
 # Multi-stage build
