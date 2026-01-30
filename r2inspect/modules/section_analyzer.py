@@ -4,20 +4,20 @@ Section Analysis Module using r2pipe
 """
 
 import math
-from typing import Any, Dict, List
+from typing import Any
 
+from ..abstractions import BaseAnalyzer
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
 
-class SectionAnalyzer:
+class SectionAnalyzer(BaseAnalyzer):
     """PE sections analysis using radare2"""
 
     def __init__(self, r2, config):
-        self.r2 = r2
-        self.config = config
+        super().__init__(r2=r2, config=config)
 
         # Standard PE section names
         self.standard_sections = [
@@ -34,7 +34,36 @@ class SectionAnalyzer:
             ".xdata",
         ]
 
-    def analyze_sections(self) -> List[Dict[str, Any]]:
+    def get_category(self) -> str:
+        return "metadata"
+
+    def get_description(self) -> str:
+        return "Analyzes binary sections including entropy, permissions, and suspicious characteristics"
+
+    def supports_format(self, file_format: str) -> bool:
+        return file_format.upper() in {"PE", "PE32", "PE32+", "ELF", "MACH0", "MACHO"}
+
+    def analyze(self) -> dict[str, Any]:
+        """Perform section analysis"""
+        result = self._init_result_structure({"total_sections": 0, "sections": [], "summary": {}})
+
+        try:
+            self._log_info("Starting section analysis")
+            sections = self.analyze_sections()
+            summary = self.get_section_summary()
+
+            result["sections"] = sections
+            result["summary"] = summary
+            result["total_sections"] = len(sections)
+            result["available"] = True
+            self._log_info(f"Analyzed {len(sections)} sections")
+        except Exception as e:
+            result["error"] = str(e)
+            self._log_error(f"Section analysis failed: {e}")
+
+        return result
+
+    def analyze_sections(self) -> list[dict[str, Any]]:
         """Analyze all sections in the PE file"""
         sections_info = []
 
@@ -55,7 +84,7 @@ class SectionAnalyzer:
 
         return sections_info
 
-    def _analyze_single_section(self, section: Dict[str, Any]) -> Dict[str, Any]:
+    def _analyze_single_section(self, section: dict[str, Any]) -> dict[str, Any]:
         """Analyze a single section"""
         analysis = {
             "name": str(section.get("name", "unknown")),
@@ -74,49 +103,13 @@ class SectionAnalyzer:
         }
 
         try:
-            # Parse permission flags from radare2
-            flags = str(section.get("flags", ""))
-            analysis["is_executable"] = "x" in flags
-            analysis["is_writable"] = "w" in flags
-            analysis["is_readable"] = "r" in flags
-
-            # Get PE-specific section characteristics
-            pe_flags = section.get("perm", "")  # Alternative field for permissions
-            if pe_flags:
-                analysis["is_executable"] = analysis["is_executable"] or "x" in pe_flags
-                analysis["is_writable"] = analysis["is_writable"] or "w" in pe_flags
-                analysis["is_readable"] = analysis["is_readable"] or "r" in pe_flags
-
-            # Decode PE section characteristics if available
-            characteristics_value = section.get("characteristics", 0)
-            if isinstance(characteristics_value, int) and characteristics_value > 0:
-                analysis["pe_characteristics"] = self._decode_pe_characteristics(
-                    characteristics_value
-                )
-
-                # Update flags based on PE characteristics
-                if "IMAGE_SCN_MEM_EXECUTE" in analysis["pe_characteristics"]:
-                    analysis["is_executable"] = True
-                if "IMAGE_SCN_MEM_WRITE" in analysis["pe_characteristics"]:
-                    analysis["is_writable"] = True
-                if "IMAGE_SCN_MEM_READ" in analysis["pe_characteristics"]:
-                    analysis["is_readable"] = True
-
-            # Calculate size ratio
-            vsize = analysis["virtual_size"]
-            raw_size = analysis["raw_size"]
-            if raw_size > 0:
-                analysis["size_ratio"] = vsize / raw_size if vsize > 0 else 0.0
-
-            # Calculate entropy
+            self._apply_permissions(section, analysis)
+            self._apply_pe_characteristics(section, analysis)
+            analysis["size_ratio"] = self._calculate_size_ratio(analysis)
             analysis["entropy"] = self._calculate_entropy(section)
-
-            # Check for suspicious characteristics
             analysis["suspicious_indicators"] = self._check_suspicious_characteristics(
                 section, analysis
             )
-
-            # Get section characteristics
             analysis["characteristics"] = self._get_section_characteristics(section, analysis)
 
         except Exception as e:
@@ -125,7 +118,38 @@ class SectionAnalyzer:
 
         return analysis
 
-    def _calculate_entropy(self, section: Dict[str, Any]) -> float:
+    def _apply_permissions(self, section: dict[str, Any], analysis: dict[str, Any]) -> None:
+        flags = str(section.get("flags", ""))
+        analysis["is_executable"] = "x" in flags
+        analysis["is_writable"] = "w" in flags
+        analysis["is_readable"] = "r" in flags
+
+        pe_flags = section.get("perm", "")
+        if pe_flags:
+            analysis["is_executable"] = analysis["is_executable"] or "x" in pe_flags
+            analysis["is_writable"] = analysis["is_writable"] or "w" in pe_flags
+            analysis["is_readable"] = analysis["is_readable"] or "r" in pe_flags
+
+    def _apply_pe_characteristics(self, section: dict[str, Any], analysis: dict[str, Any]) -> None:
+        characteristics_value = section.get("characteristics", 0)
+        if not isinstance(characteristics_value, int) or characteristics_value <= 0:
+            return
+        analysis["pe_characteristics"] = self._decode_pe_characteristics(characteristics_value)
+        if "IMAGE_SCN_MEM_EXECUTE" in analysis["pe_characteristics"]:
+            analysis["is_executable"] = True
+        if "IMAGE_SCN_MEM_WRITE" in analysis["pe_characteristics"]:
+            analysis["is_writable"] = True
+        if "IMAGE_SCN_MEM_READ" in analysis["pe_characteristics"]:
+            analysis["is_readable"] = True
+
+    def _calculate_size_ratio(self, analysis: dict[str, Any]) -> float:
+        vsize = analysis.get("virtual_size", 0)
+        raw_size = analysis.get("raw_size", 0)
+        if raw_size <= 0:
+            return 0.0
+        return vsize / raw_size if vsize > 0 else 0.0
+
+    def _calculate_entropy(self, section: dict[str, Any]) -> float:
         """Calculate Shannon entropy for section"""
         try:
             vaddr = section.get("vaddr", 0)
@@ -171,8 +195,8 @@ class SectionAnalyzer:
             return 0.0
 
     def _check_suspicious_characteristics(
-        self, section: Dict[str, Any], analysis: Dict[str, Any]
-    ) -> List[str]:
+        self, section: dict[str, Any], analysis: dict[str, Any]
+    ) -> list[str]:
         """Check for suspicious section characteristics"""
         indicators = []
 
@@ -192,7 +216,7 @@ class SectionAnalyzer:
 
         return indicators
 
-    def _check_section_name_indicators(self, name: str) -> List[str]:
+    def _check_section_name_indicators(self, name: str) -> list[str]:
         """Check for suspicious section name indicators"""
         indicators = []
 
@@ -226,7 +250,7 @@ class SectionAnalyzer:
 
         return indicators
 
-    def _check_permission_indicators(self, analysis: Dict[str, Any]) -> List[str]:
+    def _check_permission_indicators(self, analysis: dict[str, Any]) -> list[str]:
         """Check for suspicious permission indicators"""
         indicators = []
 
@@ -238,7 +262,7 @@ class SectionAnalyzer:
 
         return indicators
 
-    def _check_entropy_indicators(self, entropy: float) -> List[str]:
+    def _check_entropy_indicators(self, entropy: float) -> list[str]:
         """Check for entropy-based indicators"""
         indicators = []
 
@@ -249,7 +273,7 @@ class SectionAnalyzer:
 
         return indicators
 
-    def _check_size_indicators(self, vsize: int, raw_size: int) -> List[str]:
+    def _check_size_indicators(self, vsize: int, raw_size: int) -> list[str]:
         """Check for size-based indicators"""
         indicators = []
 
@@ -275,7 +299,7 @@ class SectionAnalyzer:
 
         return indicators
 
-    def _decode_pe_characteristics(self, characteristics: int) -> List[str]:
+    def _decode_pe_characteristics(self, characteristics: int) -> list[str]:
         """Decode PE section characteristics flags"""
         flags = []
 
@@ -308,10 +332,10 @@ class SectionAnalyzer:
         return flags
 
     def _get_section_characteristics(
-        self, section: Dict[str, Any], analysis: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, section: dict[str, Any], analysis: dict[str, Any]
+    ) -> dict[str, Any]:
         """Get detailed section characteristics"""
-        characteristics = {}
+        characteristics: dict[str, Any] = {}
 
         try:
             name = str(section.get("name", ""))
@@ -345,7 +369,7 @@ class SectionAnalyzer:
 
         return characteristics
 
-    def _check_entropy_anomaly(self, characteristics: Dict, analysis: Dict) -> None:
+    def _check_entropy_anomaly(self, characteristics: dict, analysis: dict) -> None:
         """Check if entropy is within expected range"""
         if characteristics["expected_entropy"] == "Variable":
             return
@@ -358,9 +382,9 @@ class SectionAnalyzer:
         except (ValueError, TypeError) as e:
             logger.debug(f"Could not parse entropy range: {e}")
 
-    def _analyze_code_section(self, section: Dict[str, Any]) -> Dict[str, Any]:
+    def _analyze_code_section(self, section: dict[str, Any]) -> dict[str, Any]:
         """Analyze executable code sections"""
-        code_info = {}
+        code_info: dict[str, Any] = {}
 
         try:
             vaddr = section.get("vaddr", 0)
@@ -407,9 +431,9 @@ class SectionAnalyzer:
 
         return code_info
 
-    def get_section_summary(self) -> Dict[str, Any]:
+    def get_section_summary(self) -> dict[str, Any]:
         """Get summary of all sections"""
-        summary = {
+        summary: dict[str, Any] = {
             "total_sections": 0,
             "executable_sections": 0,
             "writable_sections": 0,
@@ -426,28 +450,10 @@ class SectionAnalyzer:
                 summary["total_sections"] = len(sections_info)
 
                 total_entropy = 0
-                flag_counts = {}
+                flag_counts: dict[str, int] = {}
 
                 for section in sections_info:
-                    # Count section types
-                    if section.get("is_executable"):
-                        summary["executable_sections"] += 1
-                    if section.get("is_writable"):
-                        summary["writable_sections"] += 1
-                    if section.get("suspicious_indicators"):
-                        summary["suspicious_sections"] += 1
-
-                    entropy = section.get("entropy", 0)
-                    total_entropy += entropy
-                    if entropy > 7.0:
-                        summary["high_entropy_sections"] += 1
-
-                    # Count flag combinations
-                    flags = section.get("flags", "")
-                    if flags in flag_counts:
-                        flag_counts[flags] += 1
-                    else:
-                        flag_counts[flags] = 1
+                    total_entropy += self._update_summary_for_section(summary, section, flag_counts)
 
                 summary["avg_entropy"] = total_entropy / len(sections_info)
                 summary["section_flags_summary"] = flag_counts
@@ -456,3 +462,25 @@ class SectionAnalyzer:
             logger.error(f"Error getting section summary: {e}")
 
         return summary
+
+    def _update_summary_for_section(
+        self,
+        summary: dict[str, Any],
+        section: dict[str, Any],
+        flag_counts: dict[str, int],
+    ) -> float:
+        if section.get("is_executable"):
+            summary["executable_sections"] += 1
+        if section.get("is_writable"):
+            summary["writable_sections"] += 1
+        if section.get("suspicious_indicators"):
+            summary["suspicious_sections"] += 1
+
+        entropy = section.get("entropy", 0)
+        if entropy > 7.0:
+            summary["high_entropy_sections"] += 1
+
+        flags = section.get("flags", "")
+        flag_counts[flags] = flag_counts.get(flags, 0) + 1
+
+        return entropy

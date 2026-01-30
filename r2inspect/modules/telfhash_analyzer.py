@@ -9,9 +9,12 @@ Telfhash is particularly useful for:
 - Clustering ELF malware families
 - Identifying similar ELF binaries with slight variations
 - Grouping binaries compiled with different compilers but same source
+
+Copyright (C) 2025 Marc Rivero López
+Licensed under the GNU General Public License v3.0 (GPLv3)
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, cast
 
 # Try to import telfhash library
 try:
@@ -21,13 +24,14 @@ try:
 except ImportError:
     TELFHASH_AVAILABLE = False
 
+from ..abstractions.hashing_strategy import HashingStrategy
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
 
-class TelfhashAnalyzer:
+class TelfhashAnalyzer(HashingStrategy):
     """Telfhash analyzer for ELF files."""
 
     def __init__(self, r2_instance, filepath: str):
@@ -38,19 +42,86 @@ class TelfhashAnalyzer:
             r2_instance: Active r2pipe instance
             filepath: Path to the file being analyzed
         """
-        self.r2 = r2_instance
-        self.filepath = filepath
+        # Initialize parent with filepath
+        super().__init__(filepath=filepath, r2_instance=r2_instance)
 
-    def analyze(self) -> Dict[str, Any]:
+    def _check_library_availability(self) -> tuple[bool, str | None]:
         """
-        Perform telfhash analysis on ELF file.
+        Check if telfhash library is available.
 
         Returns:
-            Dictionary containing telfhash analysis results
+            Tuple of (is_available, error_message)
         """
-        logger.debug(f"Starting telfhash analysis for {self.filepath}")
+        if TELFHASH_AVAILABLE:
+            return True, None
+        return (
+            False,
+            "telfhash library not available. Install with: pip install telfhash",
+        )
 
-        results = {
+    def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
+        """
+        Calculate telfhash for the ELF file.
+
+        Returns:
+            Tuple of (hash_value, method_used, error_message)
+        """
+        try:
+            # Check if file is ELF
+            if not self._is_elf_file():
+                return None, None, "File is not an ELF binary"
+
+            # Calculate telfhash using the official telfhash library
+            telfhash_result = telfhash(str(self.filepath))
+            logger.debug(f"Telfhash function returned: {type(telfhash_result)} = {telfhash_result}")
+
+            # Parse result based on return type
+            hash_value = None
+            if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
+                # telfhash returns a list with one dictionary for single file
+                result_dict = telfhash_result[0]
+                hash_value = result_dict.get("telfhash")
+                if result_dict.get("msg"):
+                    return None, None, result_dict.get("msg")
+            elif isinstance(telfhash_result, dict):
+                # Extract the actual hash from the result dictionary
+                hash_value = telfhash_result.get("telfhash")
+                if telfhash_result.get("msg"):
+                    return None, None, telfhash_result.get("msg")
+            else:
+                hash_value = cast(str | None, telfhash_result)
+
+            if hash_value:
+                logger.debug(f"Telfhash calculated: {hash_value}")
+                return hash_value, "python_library", None
+            return None, None, "Telfhash calculation returned no hash"
+
+        except Exception as e:
+            logger.error(f"Error calculating telfhash: {e}")
+            return None, None, f"Telfhash calculation failed: {str(e)}"
+
+    def _get_hash_type(self) -> str:
+        """
+        Return the hash type identifier.
+
+        Returns:
+            Hash type string
+        """
+        return "telfhash"
+
+    def analyze_symbols(self) -> dict[str, Any]:
+        """
+        Perform detailed telfhash analysis on ELF file including symbol statistics.
+
+        This method provides detailed symbol analysis in addition to the
+        telfhash value provided by analyze().
+
+        Returns:
+            Dictionary containing detailed telfhash analysis results
+        """
+        logger.debug(f"Starting detailed telfhash analysis for {self.filepath}")
+
+        results: dict[str, Any] = {
             "available": TELFHASH_AVAILABLE,
             "telfhash": None,
             "symbol_count": 0,
@@ -87,9 +158,8 @@ class TelfhashAnalyzer:
             results["symbols_used"] = symbol_names[:20]  # Store first 20 for reference
 
             # Calculate telfhash using the official telfhash library
-            # Note: telfhash() takes a filepath, not a symbol string
             try:
-                telfhash_result = telfhash(self.filepath)
+                telfhash_result = telfhash(str(self.filepath))
                 logger.debug(
                     f"Telfhash function returned: {type(telfhash_result)} = {telfhash_result}"
                 )
@@ -108,7 +178,7 @@ class TelfhashAnalyzer:
                         results["error"] = telfhash_result.get("msg")
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
                 else:
-                    results["telfhash"] = telfhash_result
+                    results["telfhash"] = cast(str | None, telfhash_result)
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
 
             except Exception as e:
@@ -132,6 +202,8 @@ class TelfhashAnalyzer:
             # Try multiple methods to detect ELF format
 
             # Method 1: Check file info command
+            if self.r2 is None:
+                return False
             info_text = self.r2.cmd("i")
             if "elf" in info_text.lower():
                 return True
@@ -163,8 +235,8 @@ class TelfhashAnalyzer:
                     # ELF magic: 0x7F followed by 'ELF'
                     if magic == b"\x7fELF":
                         return True
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(f"Failed to read ELF magic bytes: {exc}")
 
             # Method 4: Check if we can get ELF symbols (if it has symbols, likely ELF)
             try:
@@ -175,8 +247,8 @@ class TelfhashAnalyzer:
                         os_info = info_cmd["bin"].get("os", "").lower()
                         if "linux" in os_info or "unix" in os_info:
                             return True
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(f"Failed to inspect ELF symbols: {exc}")
 
             return False
 
@@ -184,7 +256,7 @@ class TelfhashAnalyzer:
             logger.error(f"Error checking if file is ELF: {e}")
             return False
 
-    def _get_elf_symbols(self) -> List[Dict[str, Any]]:
+    def _get_elf_symbols(self) -> list[dict[str, Any]]:
         """
         Get all symbols from the ELF file.
 
@@ -205,7 +277,7 @@ class TelfhashAnalyzer:
             logger.error(f"Failed to extract symbols: {e}")
             return []
 
-    def _filter_symbols_for_telfhash(self, symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _filter_symbols_for_telfhash(self, symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Filter symbols suitable for telfhash calculation.
 
@@ -220,13 +292,9 @@ class TelfhashAnalyzer:
         Returns:
             List of filtered symbols suitable for telfhash
         """
-        filtered = []
+        filtered: list[dict[str, Any]] = []
 
         for sym in symbols:
-            # Check if symbol has required fields
-            if not isinstance(sym, dict):
-                continue
-
             sym_type = sym.get("type", "").upper()
             sym_bind = sym.get("bind", "").upper()
             sym_name = sym.get("name", "")
@@ -283,7 +351,7 @@ class TelfhashAnalyzer:
 
         return False
 
-    def _extract_symbol_names(self, symbols: List[Dict[str, Any]]) -> List[str]:
+    def _extract_symbol_names(self, symbols: list[dict[str, Any]]) -> list[str]:
         """
         Extract and sort symbol names for telfhash calculation.
 
@@ -293,7 +361,7 @@ class TelfhashAnalyzer:
         Returns:
             Sorted list of symbol names
         """
-        names = []
+        names: list[str] = []
 
         for sym in symbols:
             name = sym.get("name", "").strip()
@@ -307,17 +375,57 @@ class TelfhashAnalyzer:
         return names
 
     @staticmethod
-    def is_available() -> bool:
+    def compare_hashes(hash1: str, hash2: str) -> int | None:
         """
-        Check if telfhash is available.
+        Compare two telfhash values and return similarity score.
+
+        Telfhash uses SSDeep-based comparison internally, returning a percentage
+        (0-100) where higher values indicate greater similarity.
+
+        Args:
+            hash1: First telfhash value
+            hash2: Second telfhash value
 
         Returns:
-            True if telfhash is available, False otherwise
+            Similarity score (0-100, higher is more similar) or None if comparison fails
+
+        Example:
+            >>> hash1 = "T1234..."
+            >>> hash2 = "T1235..."
+            >>> similarity = TelfhashAnalyzer.compare_hashes(hash1, hash2)
+            >>> if similarity is not None and similarity > 70:
+            ...     print("Very similar ELF binaries")
+        """
+        if not TELFHASH_AVAILABLE:
+            return None
+
+        if not hash1 or not hash2:
+            return None
+
+        try:
+            # Telfhash uses SSDeep comparison internally
+            import ssdeep
+
+            return cast(int, ssdeep.compare(hash1, hash2))
+        except ImportError:
+            logger.warning("ssdeep library required for telfhash comparison")
+            return None
+        except Exception as e:
+            logger.warning(f"Telfhash comparison failed: {e}")
+            return None
+
+    @staticmethod
+    def is_available() -> bool:
+        """
+        Check if telfhash library is available.
+
+        Returns:
+            True if telfhash library can be imported, False otherwise
         """
         return TELFHASH_AVAILABLE
 
     @staticmethod
-    def calculate_telfhash_from_file(filepath: str) -> Optional[str]:
+    def calculate_telfhash_from_file(filepath: str) -> str | None:
         """
         Calculate telfhash from a file path.
 
@@ -333,10 +441,10 @@ class TelfhashAnalyzer:
         try:
             result = telfhash(filepath)
             if isinstance(result, list) and len(result) > 0:
-                return result[0].get("telfhash")
+                return cast(str | None, result[0].get("telfhash"))
             elif isinstance(result, dict):
-                return result.get("telfhash")
-            return result
+                return cast(str | None, result.get("telfhash"))
+            return cast(str | None, result)
         except Exception as e:
             logger.warning(f"Failed to calculate telfhash: {e}")
             return None

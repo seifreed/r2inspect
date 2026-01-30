@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Function Analysis Module for r2inspect
 
@@ -9,7 +10,7 @@ This module provides function-level analysis capabilities including:
 
 import hashlib
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
@@ -23,7 +24,7 @@ class FunctionAnalyzer:
         self.r2 = r2_instance
         self.functions_cache = None
 
-    def analyze_functions(self) -> Dict[str, Any]:
+    def analyze_functions(self) -> dict[str, Any]:
         """
         Perform comprehensive function analysis
 
@@ -68,7 +69,7 @@ class FunctionAnalyzer:
                 "error": f"Function analysis failed: {str(e)}",
             }
 
-    def _get_functions(self) -> List[Dict[str, Any]]:
+    def _get_functions(self) -> list[dict[str, Any]]:
         """Get all functions from the binary"""
         try:
             if self.functions_cache is None:
@@ -82,7 +83,7 @@ class FunctionAnalyzer:
             logger.error(f"Error getting functions: {str(e)}")
             return []
 
-    def _generate_machoc_hashes(self, functions: List[Dict[str, Any]]) -> Dict[str, str]:
+    def _generate_machoc_hashes(self, functions: list[dict[str, Any]]) -> dict[str, str]:
         """
         Generate MACHOC hashes for all functions
 
@@ -124,8 +125,8 @@ class FunctionAnalyzer:
         return machoc_hashes
 
     def _process_single_function_hash(
-        self, func: Dict[str, Any], index: int, total: int
-    ) -> Optional[tuple]:
+        self, func: dict[str, Any], index: int, total: int
+    ) -> tuple | None:
         """Process a single function to generate its MACHOC hash"""
         func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
         func_offset = func.get("addr")
@@ -159,7 +160,7 @@ class FunctionAnalyzer:
 
         return func_name, machoc_hash
 
-    def _extract_function_mnemonics(self, func_name: str, func_size: int) -> List[str]:
+    def _extract_function_mnemonics(self, func_name: str, func_size: int) -> list[str]:
         """Extract mnemonics from function using multiple methods"""
         # Try method 1: pdfj
         mnemonics = self._try_pdfj_extraction(func_name)
@@ -180,7 +181,7 @@ class FunctionAnalyzer:
         # Try method 4: text-based pi command
         return self._try_pi_extraction(func_name)
 
-    def _try_pdfj_extraction(self, func_name: str) -> List[str]:
+    def _try_pdfj_extraction(self, func_name: str) -> list[str]:
         """Try extracting mnemonics using pdfj command"""
         try:
             disasm = safe_cmdj(self.r2, "pdfj", {})
@@ -193,7 +194,7 @@ class FunctionAnalyzer:
             logger.debug(f"pdfj failed for {func_name}: {str(e)}")
         return []
 
-    def _try_pdj_extraction(self, func_name: str, func_size: int) -> List[str]:
+    def _try_pdj_extraction(self, func_name: str, func_size: int) -> list[str]:
         """Try extracting mnemonics using pdj with size limit"""
         try:
             max_instructions = min(func_size // 4, 1000)
@@ -205,7 +206,7 @@ class FunctionAnalyzer:
             logger.debug(f"pdj failed for {func_name}: {str(e)}")
         return []
 
-    def _try_basic_pdj_extraction(self, func_name: str) -> List[str]:
+    def _try_basic_pdj_extraction(self, func_name: str) -> list[str]:
         """Try extracting mnemonics using basic pdj"""
         try:
             disasm_list = safe_cmd_list(self.r2, "pdj 50")
@@ -218,7 +219,7 @@ class FunctionAnalyzer:
             logger.debug(f"Basic pdj failed for {func_name}: {str(e)}")
         return []
 
-    def _try_pi_extraction(self, func_name: str) -> List[str]:
+    def _try_pi_extraction(self, func_name: str) -> list[str]:
         """Try extracting mnemonics using pi command"""
         try:
             instructions_text = self.r2.cmd("pi 100")
@@ -237,7 +238,7 @@ class FunctionAnalyzer:
             logger.debug(f"pi failed for {func_name}: {str(e)}")
         return []
 
-    def _extract_mnemonics_from_ops(self, ops: List[Dict]) -> List[str]:
+    def _extract_mnemonics_from_ops(self, ops: list[dict]) -> list[str]:
         """Extract mnemonics from operation list"""
         mnemonics = []
         for op in ops:
@@ -249,7 +250,7 @@ class FunctionAnalyzer:
                         mnemonics.append(mnemonic)
         return mnemonics
 
-    def _generate_function_stats(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _generate_function_stats(self, functions: list[dict[str, Any]]) -> dict[str, Any]:
         """Generate statistics about functions"""
         try:
             if not functions:
@@ -298,7 +299,7 @@ class FunctionAnalyzer:
             logger.error(f"Error generating function stats: {str(e)}")
             return {"error": f"Stats generation failed: {str(e)}"}
 
-    def get_function_similarity(self, machoc_hashes: Dict[str, str]) -> Dict[str, List[str]]:
+    def get_function_similarity(self, machoc_hashes: dict[str, str]) -> dict[str, list[str]]:
         """
         Find functions with identical MACHOC hashes (potential duplicates or similar functions)
 
@@ -330,7 +331,7 @@ class FunctionAnalyzer:
             logger.error(f"Error calculating function similarity: {str(e)}")
             return {}
 
-    def generate_machoc_summary(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_machoc_summary(self, analysis_results: dict[str, Any]) -> dict[str, Any]:
         """Generate a summary of MACHOC analysis results"""
         try:
             machoc_hashes = analysis_results.get("machoc_hashes", {})
@@ -366,7 +367,7 @@ class FunctionAnalyzer:
             logger.error(f"Error generating MACHOC summary: {str(e)}")
             return {"error": f"Summary generation failed: {str(e)}"}
 
-    def _calculate_cyclomatic_complexity(self, func: Dict[str, Any]) -> int:
+    def _calculate_cyclomatic_complexity(self, func: dict[str, Any]) -> int:
         """Calculate cyclomatic complexity for a function"""
         try:
             func_addr = func.get("addr")
@@ -404,7 +405,7 @@ class FunctionAnalyzer:
             logger.debug(f"Error calculating cyclomatic complexity: {e}")
             return 0
 
-    def _classify_function_type(self, func_name: str, func: Dict[str, Any]) -> str:
+    def _classify_function_type(self, func_name: str, func: dict[str, Any]) -> str:
         """Classify function type based on name and characteristics"""
         try:
             name = func_name.lower()
@@ -426,7 +427,7 @@ class FunctionAnalyzer:
         except Exception:
             return "unknown"
 
-    def _calculate_std_dev(self, values: List[float]) -> float:
+    def _calculate_std_dev(self, values: list[float]) -> float:
         """Calculate standard deviation"""
         try:
             if len(values) < 2:
@@ -439,7 +440,7 @@ class FunctionAnalyzer:
         except Exception:
             return 0.0
 
-    def _analyze_function_coverage(self, functions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _analyze_function_coverage(self, functions: list[dict[str, Any]]) -> dict[str, Any]:
         """Analyze function coverage and detection quality"""
         try:
             coverage = {

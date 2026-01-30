@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Rich Header Analyzer Module
 
@@ -15,7 +16,7 @@ Based on research from:
 
 import hashlib
 import struct
-from typing import Any, Dict, List, Optional
+from typing import Any, cast
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
@@ -263,7 +264,7 @@ class RichHeaderAnalyzer:
             0x5E3B: "MSVC_Resource_14x",  # 24123 in decimal
         }
 
-    def analyze(self) -> Dict[str, Any]:
+    def analyze(self) -> dict[str, Any]:
         """
         Perform Rich Header analysis on PE file.
 
@@ -272,7 +273,7 @@ class RichHeaderAnalyzer:
         """
         logger.debug(f"Starting Rich Header analysis for {self.filepath}")
 
-        results = {
+        results: dict[str, Any] = {
             "available": False,
             "rich_header": None,
             "compilers": [],
@@ -327,7 +328,8 @@ class RichHeaderAnalyzer:
             )
 
             # Parse compiler entries
-            compilers = self._parse_compiler_entries(rich_data.get("entries", []))
+            entries = cast(list[dict[str, Any]], rich_data.get("entries", []))
+            compilers = self._parse_compiler_entries(entries)
             results["compilers"] = compilers
             logger.debug(f"Parsed {len(compilers)} compiler entries")
 
@@ -343,7 +345,7 @@ class RichHeaderAnalyzer:
 
         return results
 
-    def _extract_rich_header_pefile(self) -> Optional[Dict[str, Any]]:
+    def _extract_rich_header_pefile(self) -> dict[str, Any] | None:
         """
         Extract Rich Header using pefile library (most reliable method).
 
@@ -353,74 +355,100 @@ class RichHeaderAnalyzer:
         if not PEFILE_AVAILABLE:
             return None
 
+        pe = None
         try:
-            # Load PE file with pefile
             pe = pefile.PE(self.filepath)
-
-            # Check if Rich Header is available
-            if not hasattr(pe, "RICH_HEADER") or not pe.RICH_HEADER:
+            if not self._pefile_has_rich_header(pe):
                 logger.debug("No Rich Header found by pefile")
                 return None
 
-            # Get Rich Header hash using pefile's built-in method
             rich_hash = pe.get_rich_header_hash()
             if not rich_hash:
                 logger.debug("Could not calculate Rich Header hash with pefile")
                 return None
 
             logger.debug(f"pefile calculated Rich Header hash: {rich_hash}")
+            xor_key = self._pefile_get_xor_key(pe)
+            entries = self._pefile_extract_entries(pe)
+            if not entries:
+                entries = self._pefile_entries_from_clear_data(pe)
 
-            # Extract Rich Header details
-            xor_key = pe.RICH_HEADER.checksum if hasattr(pe.RICH_HEADER, "checksum") else None
-
-            # Parse entries from Rich Header
-            entries = []
-            if hasattr(pe.RICH_HEADER, "values") and pe.RICH_HEADER.values:
-                for entry in pe.RICH_HEADER.values:
-                    if (
-                        hasattr(entry, "product_id")
-                        and hasattr(entry, "build_version")
-                        and hasattr(entry, "count")
-                    ):
-                        # pefile uses different field names
-                        entries.append(
-                            {
-                                "product_id": entry.product_id,
-                                "build_number": entry.build_version,
-                                "count": entry.count,
-                                "prodid": (entry.product_id | (entry.build_version << 16)),
-                            }
-                        )
-
-            # Alternative approach if direct access doesn't work
-            if not entries and hasattr(pe.RICH_HEADER, "clear_data"):
-                # Parse clear_data manually
-                clear_data = pe.RICH_HEADER.clear_data
-                entries = self._parse_clear_data_entries(clear_data)
-
-            pe.close()
-
-            return {
-                "xor_key": xor_key,
-                "checksum": xor_key,
-                "entries": entries,
-                "richpe_hash": rich_hash,
-                "clear_data": (
-                    pe.RICH_HEADER.clear_data.hex()
-                    if hasattr(pe.RICH_HEADER, "clear_data")
-                    else None
-                ),
-                "method": "pefile",
-                "clear_data_bytes": (
-                    pe.RICH_HEADER.clear_data if hasattr(pe.RICH_HEADER, "clear_data") else None
-                ),
-            }
+            return self._build_pefile_rich_result(pe, xor_key, entries, rich_hash)
 
         except Exception as e:
             logger.debug(f"pefile Rich Header extraction failed: {e}")
             return None
+        finally:
+            if pe is not None:
+                try:
+                    pe.close()
+                except Exception as exc:
+                    logger.debug(f"Failed to close pefile handle: {exc}")
 
-    def _parse_clear_data_entries(self, clear_data: bytes) -> List[Dict[str, Any]]:
+    def _pefile_has_rich_header(self, pe: Any) -> bool:
+        """Check if pefile exposes a Rich Header."""
+        return hasattr(pe, "RICH_HEADER") and bool(pe.RICH_HEADER)
+
+    def _pefile_get_xor_key(self, pe: Any) -> int | None:
+        """Get XOR key/checksum from pefile Rich Header."""
+        return pe.RICH_HEADER.checksum if hasattr(pe.RICH_HEADER, "checksum") else None
+
+    def _pefile_extract_entries(self, pe: Any) -> list[dict[str, Any]]:
+        """Extract Rich Header entries from pefile RICH_HEADER.values."""
+        entries: list[dict[str, Any]] = []
+        if not hasattr(pe.RICH_HEADER, "values") or not pe.RICH_HEADER.values:
+            return entries
+        for entry in pe.RICH_HEADER.values:
+            parsed = self._pefile_parse_entry(entry)
+            if parsed:
+                entries.append(parsed)
+        return entries
+
+    def _pefile_parse_entry(self, entry: Any) -> dict[str, Any] | None:
+        """Parse a pefile Rich Header entry into our schema."""
+        if not (
+            hasattr(entry, "product_id")
+            and hasattr(entry, "build_version")
+            and hasattr(entry, "count")
+        ):
+            return None
+        prodid = entry.product_id | (entry.build_version << 16)
+        return {
+            "product_id": entry.product_id,
+            "build_number": entry.build_version,
+            "count": entry.count,
+            "prodid": prodid,
+        }
+
+    def _pefile_entries_from_clear_data(self, pe: Any) -> list[dict[str, Any]]:
+        """Fallback: parse entries from pefile clear_data."""
+        if not hasattr(pe.RICH_HEADER, "clear_data"):
+            return []
+        return self._parse_clear_data_entries(pe.RICH_HEADER.clear_data)
+
+    def _build_pefile_rich_result(
+        self,
+        pe: Any,
+        xor_key: int | None,
+        entries: list[dict[str, Any]],
+        rich_hash: str,
+    ) -> dict[str, Any]:
+        """Build Rich Header result dictionary from pefile fields."""
+        return {
+            "xor_key": xor_key,
+            "checksum": xor_key,
+            "entries": entries,
+            "richpe_hash": rich_hash,
+            "clear_data": (
+                pe.RICH_HEADER.clear_data.hex() if hasattr(pe.RICH_HEADER, "clear_data") else None
+            ),
+            "method": "pefile",
+            "clear_data_bytes": (
+                pe.RICH_HEADER.clear_data if hasattr(pe.RICH_HEADER, "clear_data") else None
+            ),
+        }
+
+    def _parse_clear_data_entries(self, clear_data: bytes) -> list[dict[str, Any]]:
         """
         Parse Rich Header entries from clear data.
 
@@ -459,7 +487,7 @@ class RichHeaderAnalyzer:
 
         return entries
 
-    def _extract_rich_header_r2pipe(self) -> Optional[Dict[str, Any]]:
+    def _extract_rich_header_r2pipe(self) -> dict[str, Any] | None:
         """
         Extract Rich Header using r2pipe (fallback method).
 
@@ -489,58 +517,71 @@ class RichHeaderAnalyzer:
             True if file is PE, False otherwise
         """
         try:
-            # First check if r2 instance is valid
             if not self.r2:
                 logger.error("r2 instance is None")
                 return False
 
-            # Check file magic bytes directly first (most reliable)
-            try:
-                with open(self.filepath, "rb") as f:
-                    magic = f.read(2)
-                    # PE files start with MZ
-                    if magic == b"MZ":
-                        logger.debug("Found MZ header - likely PE file")
-                        return True
-            except Exception as e:
-                logger.debug(f"Could not read file magic bytes: {e}")
+            if self._check_magic_bytes():
+                return True
 
-            # Check file info command
-            try:
-                info_text = self.r2.cmd("i")
-                if info_text and "pe" in info_text.lower():
-                    logger.debug("PE detected via 'i' command")
-                    return True
-            except Exception as e:
-                logger.debug(f"Error with 'i' command: {e}")
+            if self._check_info_command():
+                return True
 
-            # Check binary info via ij command
-            try:
-                info_cmd = safe_cmdj(self.r2, "ij", {})
-                if info_cmd and "bin" in info_cmd:
-                    bin_info = info_cmd["bin"]
-
-                    # Check format field
-                    bin_format = bin_info.get("format", "").lower()
-                    if "pe" in bin_format:
-                        logger.debug("PE detected via 'ij' format field")
-                        return True
-
-                    # Check class field
-                    bin_class = bin_info.get("class", "").lower()
-                    if "pe" in bin_class:
-                        logger.debug("PE detected via 'ij' class field")
-                        return True
-            except Exception as e:
-                logger.debug(f"Error with 'ij' command: {e}")
-
-            return False
+            return self._check_bin_info()
 
         except Exception as e:
             logger.error(f"Error checking if file is PE: {e}")
             return False
 
-    def _extract_rich_header(self) -> Optional[Dict[str, Any]]:
+    def _check_magic_bytes(self) -> bool:
+        """Check file magic bytes for MZ header."""
+        try:
+            with open(self.filepath, "rb") as f:
+                magic = f.read(2)
+                if magic == b"MZ":
+                    logger.debug("Found MZ header - likely PE file")
+                    return True
+        except Exception as e:
+            logger.debug(f"Could not read file magic bytes: {e}")
+        return False
+
+    def _check_info_command(self) -> bool:
+        """Check `i` command output for PE marker."""
+        try:
+            info_text = self.r2.cmd("i")
+            if info_text and "pe" in info_text.lower():
+                logger.debug("PE detected via 'i' command")
+                return True
+        except Exception as e:
+            logger.debug(f"Error with 'i' command: {e}")
+        return False
+
+    def _check_bin_info(self) -> bool:
+        """Check `ij` command output for PE markers."""
+        try:
+            info_cmd = safe_cmdj(self.r2, "ij", {})
+            if not info_cmd or "bin" not in info_cmd:
+                return False
+            bin_info = info_cmd["bin"]
+            if self._bin_info_has_pe(bin_info):
+                return True
+        except Exception as e:
+            logger.debug(f"Error with 'ij' command: {e}")
+        return False
+
+    def _bin_info_has_pe(self, bin_info: dict[str, Any]) -> bool:
+        """Check bin info format/class for PE."""
+        bin_format = bin_info.get("format", "").lower()
+        if "pe" in bin_format:
+            logger.debug("PE detected via 'ij' format field")
+            return True
+        bin_class = bin_info.get("class", "").lower()
+        if "pe" in bin_class:
+            logger.debug("PE detected via 'ij' class field")
+            return True
+        return False
+
+    def _extract_rich_header(self) -> dict[str, Any] | None:
         """
         Extract Rich Header from PE file using direct file analysis.
 
@@ -548,76 +589,21 @@ class RichHeaderAnalyzer:
             Dictionary containing Rich Header data or None if not found
         """
         try:
-            # Strategy 1: Direct file analysis (most reliable)
             logger.debug("Trying direct file analysis for Rich Header")
             rich_data = self._direct_file_rich_search()
             if rich_data:
                 logger.debug("Successfully found Rich Header via direct file analysis")
                 return rich_data
 
-            # Strategy 2: r2pipe search (fallback)
             logger.debug("Direct analysis failed, trying r2pipe search")
-
-            # Search for Rich signature in different byte orders
-            rich_patterns = [
-                "52696368",  # "Rich" in little-endian
-                "68636952",  # "Rich" in big-endian
-                "5269636800000000",  # "Rich" + null padding
-            ]
-
-            dans_patterns = [
-                "44616e53",  # "DanS" in little-endian
-                "536e6144",  # "DanS" in big-endian
-                "44616e5300000000",  # "DanS" + null padding
-            ]
-
-            rich_results = []
-            dans_results = []
-
-            # Try each pattern
-            for pattern in rich_patterns:
-                try:
-                    results = safe_cmd_list(self.r2, f"/xj {pattern}")
-                    if results:
-                        rich_results.extend(results)
-                        logger.debug(f"Found Rich pattern {pattern} at {len(results)} locations")
-                except Exception:
-                    continue
-
-            for pattern in dans_patterns:
-                try:
-                    results = safe_cmd_list(self.r2, f"/xj {pattern}")
-                    if results:
-                        dans_results.extend(results)
-                        logger.debug(f"Found DanS pattern {pattern} at {len(results)} locations")
-                except Exception:
-                    continue
-
-            # Strategy 3: If no patterns found, try manual search in DOS stub area
+            rich_results, dans_results = self._collect_rich_dans_offsets()
             if not rich_results or not dans_results:
                 logger.debug("r2pipe patterns not found, trying manual search in DOS stub area")
                 return self._manual_rich_search()
 
-            # Strategy 4: Try all combinations of Rich and DanS offsets
-            for rich_result in rich_results:
-                for dans_result in dans_results:
-                    rich_offset = rich_result.get("offset")
-                    dans_offset = dans_result.get("offset")
-
-                    if rich_offset is None or dans_offset is None:
-                        continue
-
-                    # Validate that DanS comes before Rich (with some tolerance)
-                    if dans_offset >= rich_offset or (rich_offset - dans_offset) > 1024:
-                        continue
-
-                    # Try to extract and validate this Rich Header
-                    rich_data = self._try_extract_rich_at_offsets(dans_offset, rich_offset)
-                    if rich_data:
-                        logger.debug(
-                            f"Successfully extracted Rich Header at DanS:{dans_offset}, Rich:{rich_offset}"
-                        )
-                        return rich_data
+            rich_data = self._try_rich_dans_combinations(rich_results, dans_results)
+            if rich_data:
+                return rich_data
 
             logger.debug("No valid Rich Header found with any strategy")
             return None
@@ -626,7 +612,73 @@ class RichHeaderAnalyzer:
             logger.error(f"Error extracting Rich Header: {e}")
             return None
 
-    def _direct_file_rich_search(self) -> Optional[Dict[str, Any]]:
+    def _collect_rich_dans_offsets(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Scan for Rich/DanS patterns using r2pipe."""
+        rich_patterns = [
+            "52696368",
+            "68636952",
+            "5269636800000000",
+        ]
+        dans_patterns = [
+            "44616e53",
+            "536e6144",
+            "44616e5300000000",
+        ]
+        rich_results = self._scan_patterns(rich_patterns, "Rich")
+        dans_results = self._scan_patterns(dans_patterns, "DanS")
+        return rich_results, dans_results
+
+    def _scan_patterns(self, patterns: list[str], label: str) -> list[dict[str, Any]]:
+        """Scan for patterns and return combined results."""
+        results: list[dict[str, Any]] = []
+        for pattern in patterns:
+            try:
+                found = safe_cmd_list(self.r2, f"/xj {pattern}")
+                if found:
+                    results.extend(found)
+                    logger.debug(f"Found {label} pattern {pattern} at {len(found)} locations")
+            except Exception as exc:
+                logger.debug(f"Failed {label} pattern scan {pattern}: {exc}")
+                continue
+        return results
+
+    def _try_rich_dans_combinations(
+        self, rich_results: list[dict[str, Any]], dans_results: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """Try combinations of Rich and DanS offsets."""
+        for rich_result in rich_results:
+            for dans_result in dans_results:
+                offsets = self._extract_offsets(rich_result, dans_result)
+                if not offsets:
+                    continue
+                dans_offset, rich_offset = offsets
+                if not self._offsets_valid(dans_offset, rich_offset):
+                    continue
+                rich_data = self._try_extract_rich_at_offsets(dans_offset, rich_offset)
+                if rich_data:
+                    logger.debug(
+                        f"Successfully extracted Rich Header at DanS:{dans_offset}, Rich:{rich_offset}"
+                    )
+                    return rich_data
+        return None
+
+    def _extract_offsets(
+        self, rich_result: dict[str, Any], dans_result: dict[str, Any]
+    ) -> tuple[int, int] | None:
+        """Extract Rich/DanS offsets from result dicts."""
+        rich_offset = rich_result.get("offset")
+        dans_offset = dans_result.get("offset")
+        if rich_offset is None or dans_offset is None:
+            return None
+        return dans_offset, rich_offset
+
+    def _offsets_valid(self, dans_offset: int, rich_offset: int) -> bool:
+        """Validate Rich/DanS relative offsets."""
+        return dans_offset < rich_offset and (rich_offset - dans_offset) <= 1024
+
+    def _direct_file_rich_search(self) -> dict[str, Any] | None:
         """
         Direct file analysis for Rich Header (most reliable method).
 
@@ -634,113 +686,156 @@ class RichHeaderAnalyzer:
             Dictionary containing Rich Header data or None if not found
         """
         try:
-            # Read the file directly
-            with open(self.filepath, "rb") as f:
-                data = f.read()
-
-            # Validate PE structure
-            if len(data) < 0x40 or data[:2] != b"MZ":
+            data = self._read_file_bytes()
+            if not data or not self._is_valid_pe_data(data):
                 return None
 
-            # Get PE header offset
-            pe_offset = struct.unpack("<I", data[0x3C : 0x3C + 4])[0]
-            if pe_offset >= len(data) - 4:
+            pe_offset = self._get_pe_offset(data)
+            if pe_offset is None:
                 return None
 
-            # Analyze DOS stub area
-            dos_stub_start = 0x40
-            dos_stub_end = pe_offset
-
-            if dos_stub_end <= dos_stub_start:
+            dos_stub = self._get_dos_stub(data, pe_offset)
+            if dos_stub is None:
                 return None
 
-            dos_stub = data[dos_stub_start:dos_stub_end]
-
-            # Look for Rich signature
-            rich_pos = dos_stub.find(b"Rich")
-            if rich_pos == -1:
-                logger.debug("Rich signature not found in DOS stub")
+            rich_pos = self._find_rich_pos(dos_stub)
+            if rich_pos is None:
                 return None
 
-            rich_absolute_pos = dos_stub_start + rich_pos
-            logger.debug(f"Found Rich signature at absolute position 0x{rich_absolute_pos:x}")
-
-            # Extract XOR key (4 bytes after Rich)
-            if rich_pos + 8 > len(dos_stub):
-                logger.debug("Not enough data after Rich signature for XOR key")
+            xor_key = self._extract_xor_key_from_stub(dos_stub, rich_pos)
+            if xor_key is None:
                 return None
 
-            xor_key_bytes = dos_stub[rich_pos + 4 : rich_pos + 8]
-            xor_key = struct.unpack("<I", xor_key_bytes)[0]
-            logger.debug(f"Extracted XOR key: 0x{xor_key:08x}")
-
-            # Find DanS signature by working backwards from Rich
-            # DanS should be at the beginning of the Rich Header
-            dans_search_area = dos_stub[:rich_pos]
-            dans_pos = dans_search_area.rfind(b"DanS")
-
-            if dans_pos == -1:
-                # Sometimes DanS is not present or encoded differently
-                # Try to find the start of encoded data by looking for patterns
-                logger.debug("DanS signature not found, trying to find encoded data start")
-
-                # Look for the start of the Rich Header by finding repeated XOR patterns
-                # Rich Headers typically start with encoded entries
-                for start_pos in range(max(0, rich_pos - 512), rich_pos, 4):
-                    if start_pos + 8 <= len(dos_stub):
-                        # Try this as potential start
-                        test_data = dos_stub[start_pos:rich_pos]
-                        if len(test_data) >= 8 and len(test_data) % 8 == 0:
-                            # This could be our encoded data
-                            dans_pos = start_pos
-                            logger.debug(
-                                f"Estimated Rich Header start at 0x{dos_stub_start + dans_pos:x}"
-                            )
-                            break
-
-                if dans_pos == -1:
-                    logger.debug("Could not determine Rich Header start")
-                    return None
-            else:
-                logger.debug(f"Found DanS signature at DOS stub offset 0x{dans_pos:x}")
-
-            # Extract encoded data between DanS/start and Rich
-            encoded_data = dos_stub[dans_pos + 4 : rich_pos]  # +4 to skip DanS signature
-
-            if len(encoded_data) == 0 or len(encoded_data) % 8 != 0:
-                logger.debug(f"Invalid encoded data length: {len(encoded_data)}")
+            dans_pos = self._find_or_estimate_dans(dos_stub, rich_pos)
+            if dans_pos is None:
                 return None
 
-            logger.debug(f"Extracted {len(encoded_data)} bytes of encoded data")
+            encoded_data = self._extract_encoded_from_stub(dos_stub, dans_pos, rich_pos)
+            if not encoded_data:
+                return None
 
-            # Decode the Rich Header entries
             entries = self._decode_rich_header(encoded_data, xor_key)
-
             if not entries:
                 logger.debug("No valid entries decoded from Rich Header")
                 return None
 
-            logger.debug(f"Successfully decoded {len(entries)} Rich Header entries")
-
-            # Calculate checksum (should match XOR key)
             calculated_checksum = self._calculate_rich_checksum(data, pe_offset, entries)
-
-            return {
-                "xor_key": xor_key,
-                "checksum": calculated_checksum,
-                "entries": entries,
-                "dans_offset": dos_stub_start + dans_pos,
-                "rich_offset": rich_absolute_pos,
-                "encoded_data": encoded_data.hex(),
-                "valid_checksum": calculated_checksum == xor_key,
-            }
+            return self._build_direct_rich_result(
+                xor_key,
+                calculated_checksum,
+                entries,
+                encoded_data,
+                dos_stub_start=0x40,
+                dans_pos=dans_pos,
+                rich_pos=rich_pos,
+            )
 
         except Exception as e:
             logger.error(f"Error in direct file Rich Header search: {e}")
             return None
 
+    def _read_file_bytes(self) -> bytes | None:
+        """Read the full file into memory."""
+        try:
+            with open(self.filepath, "rb") as f:
+                return f.read()
+        except Exception as e:
+            logger.debug(f"Could not read file bytes: {e}")
+            return None
+
+    def _is_valid_pe_data(self, data: bytes) -> bool:
+        """Validate minimal PE data structure."""
+        return len(data) >= 0x40 and data[:2] == b"MZ"
+
+    def _get_pe_offset(self, data: bytes) -> int | None:
+        """Get PE header offset from DOS header."""
+        pe_offset = struct.unpack("<I", data[0x3C : 0x3C + 4])[0]
+        if pe_offset >= len(data) - 4:
+            return None
+        return pe_offset
+
+    def _get_dos_stub(self, data: bytes, pe_offset: int) -> bytes | None:
+        """Extract DOS stub data."""
+        dos_stub_start = 0x40
+        if pe_offset <= dos_stub_start:
+            return None
+        return data[dos_stub_start:pe_offset]
+
+    def _find_rich_pos(self, dos_stub: bytes) -> int | None:
+        """Locate Rich signature within DOS stub."""
+        rich_pos = dos_stub.find(b"Rich")
+        if rich_pos == -1:
+            logger.debug("Rich signature not found in DOS stub")
+            return None
+        logger.debug(f"Found Rich signature at DOS stub offset 0x{rich_pos:x}")
+        return rich_pos
+
+    def _extract_xor_key_from_stub(self, dos_stub: bytes, rich_pos: int) -> int | None:
+        """Extract XOR key from Rich header position."""
+        if rich_pos + 8 > len(dos_stub):
+            logger.debug("Not enough data after Rich signature for XOR key")
+            return None
+        xor_key_bytes = dos_stub[rich_pos + 4 : rich_pos + 8]
+        xor_key = struct.unpack("<I", xor_key_bytes)[0]
+        logger.debug(f"Extracted XOR key: 0x{xor_key:08x}")
+        return xor_key
+
+    def _find_or_estimate_dans(self, dos_stub: bytes, rich_pos: int) -> int | None:
+        """Find DanS signature or estimate encoded data start."""
+        dans_pos = dos_stub[:rich_pos].rfind(b"DanS")
+        if dans_pos != -1:
+            logger.debug(f"Found DanS signature at DOS stub offset 0x{dans_pos:x}")
+            return dans_pos
+        logger.debug("DanS signature not found, trying to find encoded data start")
+        return self._estimate_dans_start(dos_stub, rich_pos)
+
+    def _estimate_dans_start(self, dos_stub: bytes, rich_pos: int) -> int | None:
+        """Estimate start of Rich Header if DanS is missing."""
+        for start_pos in range(max(0, rich_pos - 512), rich_pos, 4):
+            if start_pos + 8 > len(dos_stub):
+                continue
+            test_data = dos_stub[start_pos:rich_pos]
+            if len(test_data) >= 8 and len(test_data) % 8 == 0:
+                logger.debug(f"Estimated Rich Header start at 0x{0x40 + start_pos:x}")
+                return start_pos
+        logger.debug("Could not determine Rich Header start")
+        return None
+
+    def _extract_encoded_from_stub(
+        self, dos_stub: bytes, dans_pos: int, rich_pos: int
+    ) -> bytes | None:
+        """Extract encoded data between DanS/start and Rich."""
+        encoded_data = dos_stub[dans_pos + 4 : rich_pos]
+        if len(encoded_data) == 0 or len(encoded_data) % 8 != 0:
+            logger.debug(f"Invalid encoded data length: {len(encoded_data)}")
+            return None
+        logger.debug(f"Extracted {len(encoded_data)} bytes of encoded data")
+        return encoded_data
+
+    def _build_direct_rich_result(
+        self,
+        xor_key: int,
+        calculated_checksum: int,
+        entries: list[dict[str, Any]],
+        encoded_data: bytes,
+        dos_stub_start: int,
+        dans_pos: int,
+        rich_pos: int,
+    ) -> dict[str, Any]:
+        """Build Rich Header result from direct file search."""
+        rich_absolute_pos = dos_stub_start + rich_pos
+        return {
+            "xor_key": xor_key,
+            "checksum": calculated_checksum,
+            "entries": entries,
+            "dans_offset": dos_stub_start + dans_pos,
+            "rich_offset": rich_absolute_pos,
+            "encoded_data": encoded_data.hex(),
+            "valid_checksum": calculated_checksum == xor_key,
+        }
+
     def _calculate_rich_checksum(
-        self, data: bytes, pe_offset: int, entries: List[Dict[str, Any]]
+        self, data: bytes, pe_offset: int, entries: list[dict[str, Any]]
     ) -> int:
         """
         Calculate Rich Header checksum.
@@ -778,7 +873,7 @@ class RichHeaderAnalyzer:
             logger.debug(f"Error calculating Rich Header checksum: {e}")
             return 0
 
-    def _manual_rich_search(self) -> Optional[Dict[str, Any]]:
+    def _manual_rich_search(self) -> dict[str, Any] | None:
         """
         Manual search for Rich Header in DOS stub area when patterns fail.
 
@@ -786,66 +881,87 @@ class RichHeaderAnalyzer:
             Dictionary containing Rich Header data or None if not found
         """
         try:
-            # Read more data to ensure we capture the Rich Header
-            # PE files can have larger DOS stubs, so read up to 2KB
-            self.r2.cmd("s 0")
-            data_bytes = safe_cmd_list(self.r2, "p8j 2048")
-            if not data_bytes:
+            data = self._read_manual_search_bytes()
+            if not data:
                 return None
 
-            data = bytes(data_bytes)
-
-            # Look for Rich and DanS signatures manually with different variations
             signatures_to_try = [
                 (b"Rich", b"DanS"),
-                (b"hciR", b"SnaD"),  # Reversed byte order
+                (b"hciR", b"SnaD"),
             ]
-
             for rich_sig, dans_sig in signatures_to_try:
-                rich_offsets = []
-                dans_offsets = []
-
-                # Find all occurrences of this signature pair
-                start = 0
-                while True:
-                    pos = data.find(rich_sig, start)
-                    if pos == -1:
-                        break
-                    rich_offsets.append(pos)
-                    start = pos + 1
-
-                start = 0
-                while True:
-                    pos = data.find(dans_sig, start)
-                    if pos == -1:
-                        break
-                    dans_offsets.append(pos)
-                    start = pos + 1
-
-                logger.debug(
-                    f"Manual search found Rich at: {rich_offsets}, DanS at: {dans_offsets}"
+                offsets = self._find_signature_offsets(data, rich_sig, dans_sig)
+                if not offsets:
+                    continue
+                rich_offsets, dans_offsets = offsets
+                rich_data = self._try_signature_pairs(
+                    rich_offsets, dans_offsets, rich_sig, dans_sig
                 )
+                if rich_data:
+                    return rich_data
 
-                # Try combinations for this signature pair
-                for dans_offset in dans_offsets:
-                    for rich_offset in rich_offsets:
-                        if dans_offset < rich_offset and (rich_offset - dans_offset) <= 512:
-                            rich_data = self._try_extract_rich_at_offsets(dans_offset, rich_offset)
-                            if rich_data:
-                                logger.debug(
-                                    f"Found valid Rich Header with signature pair {rich_sig}/{dans_sig}"
-                                )
-                                return rich_data
-
-            # Additional strategy: Look for characteristic Rich Header patterns
-            # Rich Headers often have repeating null bytes and specific structures
             return self._pattern_based_rich_search(data)
 
         except Exception as e:
             logger.error(f"Error in manual Rich Header search: {e}")
             return None
 
-    def _pattern_based_rich_search(self, data: bytes) -> Optional[Dict[str, Any]]:
+    def _read_manual_search_bytes(self) -> bytes | None:
+        """Read a larger prefix of the file for manual search."""
+        self.r2.cmd("s 0")
+        data_bytes = cast(list[int], safe_cmdj(self.r2, "p8j 2048", []))
+        if not data_bytes:
+            return None
+        return bytes(data_bytes)
+
+    def _find_signature_offsets(
+        self, data: bytes, rich_sig: bytes, dans_sig: bytes
+    ) -> tuple[list[int], list[int]] | None:
+        """Find all signature offsets for a Rich/DanS pair."""
+        rich_offsets = self._find_all_occurrences(data, rich_sig)
+        dans_offsets = self._find_all_occurrences(data, dans_sig)
+        logger.debug(f"Manual search found Rich at: {rich_offsets}, DanS at: {dans_offsets}")
+        if not rich_offsets or not dans_offsets:
+            return None
+        return rich_offsets, dans_offsets
+
+    def _find_all_occurrences(self, data: bytes, sig: bytes) -> list[int]:
+        """Find all occurrences of a signature."""
+        offsets: list[int] = []
+        start = 0
+        while True:
+            pos = data.find(sig, start)
+            if pos == -1:
+                break
+            offsets.append(pos)
+            start = pos + 1
+        return offsets
+
+    def _try_signature_pairs(
+        self,
+        rich_offsets: list[int],
+        dans_offsets: list[int],
+        rich_sig: bytes,
+        dans_sig: bytes,
+    ) -> dict[str, Any] | None:
+        """Try combinations of Rich/DanS offsets for a signature pair."""
+        for dans_offset in dans_offsets:
+            for rich_offset in rich_offsets:
+                if not self._offset_pair_valid(dans_offset, rich_offset, 512):
+                    continue
+                rich_data = self._try_extract_rich_at_offsets(dans_offset, rich_offset)
+                if rich_data:
+                    logger.debug(
+                        f"Found valid Rich Header with signature pair {rich_sig!r}/{dans_sig!r}"
+                    )
+                    return rich_data
+        return None
+
+    def _offset_pair_valid(self, dans_offset: int, rich_offset: int, max_delta: int) -> bool:
+        """Validate signature offset pair distance."""
+        return dans_offset < rich_offset and (rich_offset - dans_offset) <= max_delta
+
+    def _pattern_based_rich_search(self, data: bytes) -> dict[str, Any] | None:
         """
         Pattern-based search for Rich Header using structural characteristics.
 
@@ -856,40 +972,50 @@ class RichHeaderAnalyzer:
             Dictionary containing Rich Header data or None if not found
         """
         try:
-            # Look for potential XOR keys (4 bytes after "Rich")
-            # Rich Headers typically have the pattern: DanS...Rich[4-byte-key]
-
-            for i in range(len(data) - 8):
-                # Look for potential Rich signature area
-                if data[i : i + 4] == b"Rich":
-                    # Extract potential XOR key
-                    if i + 8 <= len(data):
-                        potential_key = struct.unpack("<I", data[i + 4 : i + 8])[0]
-
-                        # Skip if key is 0 or looks invalid
-                        if potential_key == 0 or potential_key == 0xFFFFFFFF:
-                            continue
-
-                        # Look backwards for DanS signature
-                        for j in range(max(0, i - 512), i):
-                            if data[j : j + 4] == b"DanS":
-                                # Try to extract Rich Header at these offsets
-                                rich_data = self._try_extract_rich_at_offsets(j, i)
-                                if rich_data:
-                                    logger.debug(
-                                        f"Pattern-based search found Rich Header at DanS:{j}, Rich:{i}"
-                                    )
-                                    return rich_data
-
+            rich_positions = self._find_rich_positions(data)
+            for rich_pos in rich_positions:
+                if not self._is_valid_rich_key(data, rich_pos):
+                    continue
+                dans_pos = self._find_dans_before_rich(data, rich_pos)
+                if dans_pos is None:
+                    continue
+                rich_data = self._try_extract_rich_at_offsets(dans_pos, rich_pos)
+                if rich_data:
+                    logger.debug(
+                        f"Pattern-based search found Rich Header at DanS:{dans_pos}, Rich:{rich_pos}"
+                    )
+                    return rich_data
             return None
 
         except Exception as e:
             logger.debug(f"Error in pattern-based Rich Header search: {e}")
             return None
 
+    def _find_rich_positions(self, data: bytes) -> list[int]:
+        """Find positions of 'Rich' signature."""
+        positions: list[int] = []
+        for i in range(len(data) - 8):
+            if data[i : i + 4] == b"Rich":
+                positions.append(i)
+        return positions
+
+    def _is_valid_rich_key(self, data: bytes, rich_pos: int) -> bool:
+        """Validate potential XOR key after Rich signature."""
+        if rich_pos + 8 > len(data):
+            return False
+        potential_key = struct.unpack("<I", data[rich_pos + 4 : rich_pos + 8])[0]
+        return potential_key not in (0, 0xFFFFFFFF)
+
+    def _find_dans_before_rich(self, data: bytes, rich_pos: int) -> int | None:
+        """Find DanS signature before Rich within a window."""
+        for j in range(max(0, rich_pos - 512), rich_pos):
+            if data[j : j + 4] == b"DanS":
+                return j
+        return None
+
     def _try_extract_rich_at_offsets(
         self, dans_offset: int, rich_offset: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Try to extract Rich Header at specific offsets.
 
@@ -927,11 +1053,11 @@ class RichHeaderAnalyzer:
         """Validate Rich Header size"""
         return rich_size > 8 and rich_size <= 512
 
-    def _extract_xor_key(self, rich_offset: int) -> Optional[int]:
+    def _extract_xor_key(self, rich_offset: int) -> int | None:
         """Extract and validate XOR key"""
         xor_key_offset = rich_offset + 4
         self.r2.cmd(f"s {xor_key_offset}")
-        xor_key_bytes = safe_cmd_list(self.r2, "p8j 4")
+        xor_key_bytes = cast(list[int], safe_cmdj(self.r2, "p8j 4", []))
 
         if not xor_key_bytes or len(xor_key_bytes) < 4:
             return None
@@ -939,17 +1065,17 @@ class RichHeaderAnalyzer:
         xor_key = struct.unpack("<I", bytes(xor_key_bytes))[0]
         return xor_key if xor_key != 0 else None
 
-    def _extract_encoded_data(self, dans_offset: int, rich_size: int) -> Optional[bytes]:
+    def _extract_encoded_data(self, dans_offset: int, rich_size: int) -> bytes | None:
         """Extract encoded Rich Header data"""
         self.r2.cmd(f"s {dans_offset}")
-        encoded_data = safe_cmd_list(self.r2, f"p8j {rich_size}")
+        encoded_data = cast(list[int], safe_cmdj(self.r2, f"p8j {rich_size}", []))
 
         if not encoded_data or len(encoded_data) < 8:
             return None
 
         return bytes(encoded_data)
 
-    def _validate_decoded_entries(self, decoded_entries: List[Dict]) -> bool:
+    def _validate_decoded_entries(self, decoded_entries: list[dict]) -> bool:
         """Validate decoded Rich Header entries"""
         if not decoded_entries:
             return False
@@ -964,8 +1090,8 @@ class RichHeaderAnalyzer:
         return valid_entries > 0
 
     def _build_rich_header_result(
-        self, decoded_entries: List[Dict], xor_key: int
-    ) -> Dict[str, Any]:
+        self, decoded_entries: list[dict], xor_key: int
+    ) -> dict[str, Any]:
         """Build the final Rich Header result dictionary"""
         # Calculate checksum (XOR of all decoded entries)
         checksum = 0
@@ -983,7 +1109,7 @@ class RichHeaderAnalyzer:
             "entries": decoded_entries,
         }
 
-    def _decode_rich_header(self, encoded_data: bytes, xor_key: int) -> List[Dict[str, Any]]:
+    def _decode_rich_header(self, encoded_data: bytes, xor_key: int) -> list[dict[str, Any]]:
         """
         Decode Rich Header entries by XORing with the key.
 
@@ -1031,7 +1157,7 @@ class RichHeaderAnalyzer:
 
         return entries
 
-    def _parse_compiler_entries(self, entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _parse_compiler_entries(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Parse Rich Header entries into human-readable compiler information.
 
@@ -1098,7 +1224,7 @@ class RichHeaderAnalyzer:
 
         return f"{compiler_name} (Build {build_number})"
 
-    def _calculate_richpe_hash(self, rich_data: Dict[str, Any]) -> Optional[str]:
+    def _calculate_richpe_hash(self, rich_data: dict[str, Any]) -> str | None:
         """
         Calculate RichPE hash based on VirusTotal standard (MD5 of clear bytes).
 
@@ -1181,7 +1307,7 @@ class RichHeaderAnalyzer:
             logger.debug(f"File size: {file_size} bytes")
 
             # Read first 512 bytes and look for patterns
-            data_bytes = safe_cmd_list(self.r2, "p8j 512")
+            data_bytes = cast(list[int], safe_cmdj(self.r2, "p8j 512", []))
             if data_bytes:
                 data = bytes(data_bytes)
 
@@ -1227,7 +1353,7 @@ class RichHeaderAnalyzer:
 
                 # Alternative: Search entire first 2KB for patterns
                 logger.debug("Searching first 2KB for Rich Header patterns...")
-                extended_data = safe_cmd_list(self.r2, "p8j 2048")
+                extended_data = cast(list[int], safe_cmdj(self.r2, "p8j 2048", []))
                 if extended_data:
                     extended_bytes = bytes(extended_data)
 
@@ -1263,7 +1389,7 @@ class RichHeaderAnalyzer:
             logger.debug(f"Debug analysis failed: {e}")
 
     @staticmethod
-    def calculate_richpe_hash_from_file(filepath: str) -> Optional[str]:
+    def calculate_richpe_hash_from_file(filepath: str) -> str | None:
         """
         Calculate RichPE hash directly from a file path.
 

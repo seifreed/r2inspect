@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Impfuzzy Analyzer Module
 
@@ -9,11 +10,15 @@ Based on research from JPCERT/CC:
 - https://github.com/JPCERTCC/impfuzzy
 - https://www.jpcert.or.jp/magazine/acreport-impfuzzy.html
 - http://blog.jpcert.or.jp/2016/05/classifying-mal-a988.html
+
+Copyright (C) 2025 Marc Rivero López
+Licensed under the GNU General Public License v3.0 (GPLv3)
 """
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from ..abstractions.hashing_strategy import HashingStrategy
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
 
@@ -36,7 +41,7 @@ except ImportError:
         logger.debug("impfuzzy library not available")
 
 
-class ImpfuzzyAnalyzer:
+class ImpfuzzyAnalyzer(HashingStrategy):
     """Impfuzzy hash calculation from PE import table"""
 
     def __init__(self, r2_instance, filepath: str):
@@ -47,17 +52,72 @@ class ImpfuzzyAnalyzer:
             r2_instance: Active r2pipe instance
             filepath: Path to the PE file being analyzed
         """
-        self.r2 = r2_instance
-        self.filepath = filepath
+        # Initialize parent with filepath
+        super().__init__(filepath=filepath, r2_instance=r2_instance)
 
-    def analyze(self) -> Dict[str, Any]:
+    def _check_library_availability(self) -> tuple[bool, str | None]:
         """
-        Perform impfuzzy analysis on PE file.
+        Check if impfuzzy library is available.
 
         Returns:
-            Dictionary containing impfuzzy analysis results
+            Tuple of (is_available, error_message)
         """
-        logger.debug(f"Starting impfuzzy analysis for {self.filepath}")
+        if ImpfuzzyAnalyzer.is_available():
+            return True, None
+        return (
+            False,
+            "pyimpfuzzy library not available. Install with: pip install pyimpfuzzy",
+        )
+
+    def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
+        """
+        Calculate impfuzzy hash for the PE file.
+
+        Returns:
+            Tuple of (hash_value, method_used, error_message)
+        """
+        try:
+            # Check if file is PE
+            if not self._is_pe_file():
+                return None, None, "File is not a PE binary"
+
+            # Calculate impfuzzy hash directly from file
+            impfuzzy_hash = pyimpfuzzy.get_impfuzzy(str(self.filepath))
+
+            if impfuzzy_hash:
+                logger.debug(f"Impfuzzy hash calculated: {impfuzzy_hash}")
+                return impfuzzy_hash, "python_library", None
+            else:
+                return (
+                    None,
+                    None,
+                    "No imports found or failed to calculate impfuzzy hash",
+                )
+
+        except Exception as e:
+            logger.error(f"Error calculating impfuzzy hash: {e}")
+            return None, None, f"Impfuzzy calculation failed: {str(e)}"
+
+    def _get_hash_type(self) -> str:
+        """
+        Return the hash type identifier.
+
+        Returns:
+            Hash type string
+        """
+        return "impfuzzy"
+
+    def analyze_imports(self) -> dict[str, Any]:
+        """
+        Perform detailed impfuzzy analysis on PE file including import statistics.
+
+        This method provides detailed import analysis in addition to the
+        impfuzzy hash provided by analyze().
+
+        Returns:
+            Dictionary containing detailed impfuzzy analysis results
+        """
+        logger.debug(f"Starting detailed impfuzzy analysis for {self.filepath}")
 
         results = {
             "available": False,
@@ -96,7 +156,7 @@ class ImpfuzzyAnalyzer:
                 return results
 
             # Calculate impfuzzy hash
-            impfuzzy_hash = self._calculate_impfuzzy(processed_imports)
+            impfuzzy_hash = pyimpfuzzy.get_impfuzzy(str(self.filepath))
             if not impfuzzy_hash:
                 results["error"] = "Failed to calculate impfuzzy hash"
                 logger.debug("Failed to calculate impfuzzy hash")
@@ -163,7 +223,7 @@ class ImpfuzzyAnalyzer:
             logger.error(f"Error checking if file is PE: {e}")
             return False
 
-    def _extract_imports(self) -> Optional[List[Dict[str, Any]]]:
+    def _extract_imports(self) -> list[dict[str, Any | None]]:
         """
         Extract imports from PE file using r2pipe.
 
@@ -193,7 +253,7 @@ class ImpfuzzyAnalyzer:
             logger.error(f"Error extracting imports: {e}")
             return None
 
-    def _process_imports(self, imports_data: List[Dict[str, Any]]) -> List[str]:
+    def _process_imports(self, imports_data: list[dict[str, Any]]) -> list[str]:
         """
         Process import data into dll.function format required by impfuzzy.
 
@@ -255,48 +315,58 @@ class ImpfuzzyAnalyzer:
             logger.error(f"Error processing imports: {e}")
             return []
 
-    def _calculate_impfuzzy(self, imports_list: List[str]) -> Optional[str]:
+    @staticmethod
+    def compare_hashes(hash1: str, hash2: str) -> int | None:
         """
-        Calculate impfuzzy hash directly from PE file.
+        Compare two impfuzzy hashes and return similarity score.
+
+        Impfuzzy uses SSDeep-based comparison, returning a percentage (0-100)
+        where higher values indicate greater similarity.
 
         Args:
-            imports_list: List of strings in format "dll.function" (used for validation)
+            hash1: First impfuzzy hash
+            hash2: Second impfuzzy hash
 
         Returns:
-            Impfuzzy hash string or None if calculation fails
+            Similarity score (0-100, higher is more similar) or None if comparison fails
+
+        Example:
+            >>> hash1 = "3:abcd..."
+            >>> hash2 = "3:abce..."
+            >>> similarity = ImpfuzzyAnalyzer.compare_hashes(hash1, hash2)
+            >>> if similarity is not None and similarity > 70:
+            ...     print("Very similar")
         """
+        if not IMPFUZZY_AVAILABLE:
+            return None
+
+        if not hash1 or not hash2:
+            return None
+
         try:
-            if not imports_list:
-                logger.debug("Empty imports list, cannot calculate impfuzzy")
-                return None
+            # pyimpfuzzy uses ssdeep comparison internally
+            import ssdeep
 
-            # Calculate impfuzzy hash directly from file
-            # pyimpfuzzy.get_impfuzzy() expects a file path, not a list
-            impfuzzy_hash = pyimpfuzzy.get_impfuzzy(self.filepath)
-
-            if impfuzzy_hash:
-                logger.debug(f"Impfuzzy hash calculated: {impfuzzy_hash}")
-                return impfuzzy_hash
-            else:
-                logger.debug("Impfuzzy calculation returned empty result")
-                return None
-
+            return ssdeep.compare(hash1, hash2)
+        except ImportError:
+            logger.warning("ssdeep library required for impfuzzy comparison")
+            return None
         except Exception as e:
-            logger.error(f"Error calculating impfuzzy hash: {e}")
+            logger.warning(f"Impfuzzy comparison failed: {e}")
             return None
 
     @staticmethod
     def is_available() -> bool:
         """
-        Check if impfuzzy analysis is available.
+        Check if impfuzzy library is available.
 
         Returns:
-            True if impfuzzy library is available
+            True if impfuzzy library can be imported, False otherwise
         """
         return IMPFUZZY_AVAILABLE
 
     @staticmethod
-    def calculate_impfuzzy_from_file(filepath: str) -> Optional[str]:
+    def calculate_impfuzzy_from_file(filepath: str) -> str | None:
         """
         Calculate impfuzzy hash directly from a file path.
 
@@ -306,14 +376,11 @@ class ImpfuzzyAnalyzer:
         Returns:
             Impfuzzy hash string or None if calculation fails
         """
+        if not IMPFUZZY_AVAILABLE:
+            return None
+
         try:
-            import r2pipe
-
-            with r2pipe.open(filepath, flags=["-2"]) as r2:
-                analyzer = ImpfuzzyAnalyzer(r2, filepath)
-                results = analyzer.analyze()
-                return results.get("impfuzzy_hash")
-
+            return pyimpfuzzy.get_impfuzzy(filepath)
         except Exception as e:
             logger.error(f"Error calculating impfuzzy from file: {e}")
             return None

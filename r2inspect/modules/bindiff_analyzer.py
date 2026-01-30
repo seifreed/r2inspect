@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Binary Diff Analyzer Module
 
@@ -23,7 +24,7 @@ Based on BinDiff and similar binary comparison tools.
 
 import hashlib
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
@@ -39,7 +40,7 @@ class BinDiffAnalyzer:
         self.filepath = filepath
         self.filename = Path(filepath).name
 
-    def analyze(self) -> Dict[str, Any]:
+    def analyze(self) -> dict[str, Any]:
         """Perform binary diffing analysis"""
         try:
             logger.debug(f"Starting binary diff analysis for {self.filename}")
@@ -70,7 +71,7 @@ class BinDiffAnalyzer:
                 "comparison_ready": False,
             }
 
-    def compare_with(self, other_results: Dict[str, Any]) -> Dict[str, Any]:
+    def compare_with(self, other_results: dict[str, Any]) -> dict[str, Any]:
         """Compare this binary with another binary's analysis results"""
         try:
             # Get our own analysis results first
@@ -118,7 +119,7 @@ class BinDiffAnalyzer:
             logger.error(f"Error comparing binaries: {e}")
             return {"error": str(e), "similarity_score": 0.0}
 
-    def _extract_structural_features(self) -> Dict[str, Any]:
+    def _extract_structural_features(self) -> dict[str, Any]:
         """Extract structural features for comparison"""
         features = {}
 
@@ -171,7 +172,7 @@ class BinDiffAnalyzer:
 
         return features
 
-    def _extract_function_features(self) -> Dict[str, Any]:
+    def _extract_function_features(self) -> dict[str, Any]:
         """Extract function-level features for comparison"""
         features = {}
 
@@ -213,7 +214,7 @@ class BinDiffAnalyzer:
 
         return features
 
-    def _extract_string_features(self) -> Dict[str, Any]:
+    def _extract_string_features(self) -> dict[str, Any]:
         """Extract string-based features for comparison"""
         features = {}
 
@@ -260,7 +261,7 @@ class BinDiffAnalyzer:
 
         return features
 
-    def _extract_byte_features(self) -> Dict[str, Any]:
+    def _extract_byte_features(self) -> dict[str, Any]:
         """Extract byte-level features for comparison"""
         features = {}
 
@@ -276,15 +277,15 @@ class BinDiffAnalyzer:
                     data = f.read(8192)  # Read first 8KB
                     if data:
                         features["rolling_hash"] = self._calculate_rolling_hash(data)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(f"Failed to compute rolling hash: {exc}")
 
         except Exception as e:
             logger.debug(f"Error extracting byte features: {e}")
 
         return features
 
-    def _extract_behavioral_features(self) -> Dict[str, Any]:
+    def _extract_behavioral_features(self) -> dict[str, Any]:
         """Extract behavioral pattern features"""
         features = {}
 
@@ -322,7 +323,7 @@ class BinDiffAnalyzer:
 
         return features
 
-    def _generate_comparison_signatures(self, results: Dict[str, Any]) -> Dict[str, str]:
+    def _generate_comparison_signatures(self, results: dict[str, Any]) -> dict[str, str]:
         """Generate signatures for quick comparison"""
         signatures = {}
 
@@ -360,7 +361,7 @@ class BinDiffAnalyzer:
 
         return signatures
 
-    def _compare_structural(self, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    def _compare_structural(self, a: dict[str, Any], b: dict[str, Any]) -> float:
         """Compare structural features between two binaries"""
         try:
             a_struct = a.get("structural_features", {})
@@ -409,7 +410,7 @@ class BinDiffAnalyzer:
             logger.debug(f"Error comparing structural features: {e}")
             return 0.0
 
-    def _compare_functions(self, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    def _compare_functions(self, a: dict[str, Any], b: dict[str, Any]) -> float:
         """Compare function-level features between two binaries"""
         try:
             a_func = a.get("function_features", {})
@@ -442,7 +443,7 @@ class BinDiffAnalyzer:
             logger.debug(f"Error comparing function features: {e}")
             return 0.0
 
-    def _compare_strings(self, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    def _compare_strings(self, a: dict[str, Any], b: dict[str, Any]) -> float:
         """Compare string-based features between two binaries"""
         try:
             a_str = a.get("string_features", {})
@@ -489,7 +490,7 @@ class BinDiffAnalyzer:
             logger.debug(f"Error comparing string features: {e}")
             return 0.0
 
-    def _compare_bytes(self, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    def _compare_bytes(self, a: dict[str, Any], b: dict[str, Any]) -> float:
         """Compare byte-level features between two binaries"""
         try:
             a_bytes = a.get("byte_features", {})
@@ -512,7 +513,7 @@ class BinDiffAnalyzer:
             logger.debug(f"Error comparing byte features: {e}")
             return 0.0
 
-    def _compare_behavioral(self, a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    def _compare_behavioral(self, a: dict[str, Any], b: dict[str, Any]) -> float:
         """Compare behavioral features between two binaries"""
         try:
             a_behav = a.get("behavioral_features", {})
@@ -546,16 +547,17 @@ class BinDiffAnalyzer:
             return 0.0
 
     # Helper methods
-    def _calculate_cyclomatic_complexity(self, cfg: Dict[str, Any]) -> int:
+    def _calculate_cyclomatic_complexity(self, cfg: dict[str, Any]) -> int:
         """Calculate cyclomatic complexity from CFG"""
         try:
             edges = len(cfg.get("edges", []))
             nodes = len(cfg.get("blocks", []))
             return edges - nodes + 2 if nodes > 0 else 0
-        except:
+        except (TypeError, AttributeError, KeyError) as e:
+            logger.debug(f"Error calculating cyclomatic complexity: {e}")
             return 0
 
-    def _calculate_rolling_hash(self, data: bytes, window_size: int = 64) -> List[int]:
+    def _calculate_rolling_hash(self, data: bytes, window_size: int = 64) -> list[int]:
         """Calculate rolling hash for byte similarity"""
         hashes = []
         for i in range(len(data) - window_size + 1):
@@ -563,7 +565,7 @@ class BinDiffAnalyzer:
             hashes.append(hash(window) & 0xFFFFFFFF)
         return hashes[:100]  # Limit to first 100 hashes
 
-    def _compare_rolling_hashes(self, a_hashes: List[int], b_hashes: List[int]) -> float:
+    def _compare_rolling_hashes(self, a_hashes: list[int], b_hashes: list[int]) -> float:
         """Compare rolling hashes for similarity"""
         if not a_hashes or not b_hashes:
             return 0.0

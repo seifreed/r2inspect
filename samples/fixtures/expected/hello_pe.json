@@ -1,0 +1,9 @@
+{
+  "file_format": "PE",
+  "name": "hello_pe.exe",
+  "size": 140217,
+  "hashes": {
+    "md5": "d8f29b674709c49dfdf3c7ecc16ad4c9",
+    "sha256": "b4b674b6ede0cd5d4dcff2cff31a5957ac022ab995da977c667ddc7626205aea"
+  }
+}

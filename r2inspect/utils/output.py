@@ -6,7 +6,7 @@ Output formatting utilities for r2inspect
 import csv
 import io
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -15,7 +15,7 @@ from rich.table import Table
 class OutputFormatter:
     """Format analysis results for different output types"""
 
-    def __init__(self, results: Dict[str, Any]):
+    def __init__(self, results: dict[str, Any]):
         self.results = results
         self.console = Console()
 
@@ -84,193 +84,182 @@ class OutputFormatter:
                     "num_sections",
                 ]
 
-                writer = csv.DictWriter(output, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerow(csv_data)
+                dict_writer = csv.DictWriter(output, fieldnames=fieldnames)
+                dict_writer.writeheader()
+                dict_writer.writerow(csv_data)
 
             return output.getvalue()
 
         except Exception as e:
             # Fallback simple CSV
-            writer = csv.writer(output)
-            writer.writerow(["Error", "Message"])
-            writer.writerow(["CSV Export Failed", str(e)])
+            row_writer = csv.writer(output)
+            row_writer.writerow(["Error", "Message"])
+            row_writer.writerow(["CSV Export Failed", str(e)])
             return output.getvalue()
 
         finally:
             output.close()
 
-    def _extract_csv_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_names_from_list(
+        self,
+        data: dict[str, Any],
+        key: str,
+        name_field: str = "name",
+        separator: str = ", ",
+    ) -> str:
+        """Extract names from a list of dicts and join them."""
+        items = data.get(key, [])
+        if not isinstance(items, list):
+            return ""
+
+        names = []
+        for item in items:
+            if isinstance(item, dict):
+                name = item.get(name_field, "")
+                if name:
+                    names.append(str(name))
+            elif item:
+                names.append(str(item))
+
+        return separator.join(names)
+
+    def _extract_csv_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Extract specific fields for CSV export"""
         csv_row = {}
 
         try:
-            # File info fields
-            file_info = data.get("file_info", {})
-            csv_row["name"] = file_info.get("name", "")
-            csv_row["size"] = self._format_file_size(file_info.get("size", 0))
-            csv_row["file_type"] = self._clean_file_type(file_info.get("file_type", ""))
-            csv_row["md5"] = file_info.get("md5", "")
-            csv_row["sha1"] = file_info.get("sha1", "")
-            csv_row["sha256"] = file_info.get("sha256", "")
-            csv_row["sha512"] = file_info.get("sha512", "")
-
-            # Compile time - Extract from different sources based on file type
-            compile_time = ""
-            # Try PE info first
-            if "pe_info" in data and "compile_time" in data["pe_info"]:
-                compile_time = data["pe_info"]["compile_time"]
-            # Try ELF info
-            elif "elf_info" in data and "compile_time" in data["elf_info"]:
-                compile_time = data["elf_info"]["compile_time"]
-            # Try Mach-O info
-            elif "macho_info" in data and "compile_time" in data["macho_info"]:
-                compile_time = data["macho_info"]["compile_time"]
-            # Fallback to generic file info
-            elif "file_info" in data and "compile_time" in data["file_info"]:
-                compile_time = data["file_info"]["compile_time"]
-
-            csv_row["compile_time"] = compile_time
-
-            # Import hash (imphash) - Extract from PE info
-            imphash = ""
-            if "pe_info" in data and "imphash" in data["pe_info"]:
-                imphash = data["pe_info"]["imphash"]
-            csv_row["imphash"] = imphash
-
-            # SSDeep fuzzy hash
-            ssdeep_info = data.get("ssdeep", {})
-            csv_row["ssdeep_hash"] = ssdeep_info.get("ssdeep_hash", "")
-
-            # TLSH locality sensitive hash
-            tlsh_info = data.get("tlsh", {})
-            csv_row["tlsh_binary"] = tlsh_info.get("binary_tlsh", "")
-            csv_row["tlsh_text_section"] = tlsh_info.get("text_section_tlsh", "")
-            csv_row["tlsh_functions_with_hash"] = tlsh_info.get("stats", {}).get(
-                "functions_with_tlsh", 0
+            self._add_file_info(csv_row, data)
+            csv_row["compile_time"] = self._extract_compile_time(data)
+            csv_row["imphash"] = self._extract_imphash(data)
+            self._add_ssdeep(csv_row, data)
+            self._add_tlsh(csv_row, data)
+            self._add_telfhash(csv_row, data)
+            self._add_rich_header(csv_row, data)
+            self._add_imports_exports_sections(csv_row, data)
+            self._add_anti_analysis(csv_row, data)
+            csv_row["yara_matches"] = self._extract_names_from_list(
+                data, "yara_matches", name_field="rule"
             )
-
-            # Telfhash for ELF files
-            telfhash_info = data.get("telfhash", {})
-            csv_row["telfhash"] = telfhash_info.get("telfhash", "")
-            csv_row["telfhash_symbols_used"] = telfhash_info.get("filtered_symbols", 0)
-
-            # Rich Header for PE files
-            rich_header_info = data.get("rich_header", {})
-            csv_row["rich_header_xor_key"] = (
-                hex(rich_header_info.get("xor_key", 0)) if rich_header_info.get("xor_key") else ""
-            )
-            csv_row["rich_header_checksum"] = (
-                hex(rich_header_info.get("checksum", 0)) if rich_header_info.get("checksum") else ""
-            )
-            csv_row["richpe_hash"] = rich_header_info.get("richpe_hash", "")
-
-            # Rich Header compilers (comma-separated)
-            compilers_list = []
-            if "compilers" in rich_header_info and isinstance(rich_header_info["compilers"], list):
-                for compiler in rich_header_info["compilers"]:
-                    if isinstance(compiler, dict):
-                        compiler_name = compiler.get("compiler_name", "")
-                        count = compiler.get("count", 0)
-                        if compiler_name:
-                            compilers_list.append(f"{compiler_name}({count})")
-            csv_row["rich_header_compilers"] = ", ".join(compilers_list)
-            csv_row["rich_header_entries"] = len(rich_header_info.get("compilers", []))
-
-            # Imports (comma-separated)
-            imports_list = []
-            if "imports" in data and isinstance(data["imports"], list):
-                for imp in data["imports"]:
-                    if isinstance(imp, dict):
-                        import_name = imp.get("name", "")
-                        if import_name:
-                            imports_list.append(import_name)
-                    else:
-                        imports_list.append(str(imp))
-            csv_row["imports"] = ", ".join(imports_list)
-
-            # Exports (comma-separated)
-            exports_list = []
-            if "exports" in data and isinstance(data["exports"], list):
-                for exp in data["exports"]:
-                    if isinstance(exp, dict):
-                        export_name = exp.get("name", "")
-                        if export_name:
-                            exports_list.append(export_name)
-                    else:
-                        exports_list.append(str(exp))
-            csv_row["exports"] = ", ".join(exports_list)
-
-            # Sections (comma-separated)
-            sections_list = []
-            if "sections" in data and isinstance(data["sections"], list):
-                for section in data["sections"]:
-                    if isinstance(section, dict):
-                        section_name = section.get("name", "")
-                        if section_name:
-                            sections_list.append(section_name)
-                    else:
-                        sections_list.append(str(section))
-            csv_row["sections"] = ", ".join(sections_list)
-
-            # Anti-analysis flags
-            anti_analysis = data.get("anti_analysis", {})
-            csv_row["anti_debug"] = anti_analysis.get("anti_debug", False)
-            csv_row["anti_vm"] = anti_analysis.get("anti_vm", False)
-            csv_row["anti_sandbox"] = anti_analysis.get("anti_sandbox", False)
-
-            # YARA matches (comma-separated rule names)
-            yara_matches_list = []
-            if "yara_matches" in data and isinstance(data["yara_matches"], list):
-                for match in data["yara_matches"]:
-                    if isinstance(match, dict):
-                        rule_name = match.get("rule", "")
-                        if rule_name:
-                            yara_matches_list.append(rule_name)
-                    else:
-                        yara_matches_list.append(str(match))
-            csv_row["yara_matches"] = ", ".join(yara_matches_list)
-
-            # Compiler information
-            compiler_info = data.get("compiler", {})
-            csv_row["compiler"] = compiler_info.get("compiler", "Unknown")
-            csv_row["compiler_version"] = compiler_info.get("version", "Unknown")
-            csv_row["compiler_confidence"] = compiler_info.get("confidence", 0.0)
-
-            # Function analysis information
-            functions_info = data.get("functions", {})
-            csv_row["num_functions"] = functions_info.get("total_functions", 0)
-
-            # MACHOC hash information
-            machoc_hashes = functions_info.get("machoc_hashes", {})
-            csv_row["num_unique_machoc"] = len(set(machoc_hashes.values())) if machoc_hashes else 0
-
-            # Calculate duplicate functions (functions with same MACHOC hash)
-            num_duplicate_functions = 0
-            if machoc_hashes:
-                hash_counts = {}
-                for func_name, machoc_hash in machoc_hashes.items():
-                    hash_counts[machoc_hash] = hash_counts.get(machoc_hash, 0) + 1
-                num_duplicate_functions = sum(
-                    count - 1 for count in hash_counts.values() if count > 1
-                )
-            csv_row["num_duplicate_functions"] = num_duplicate_functions
-
-            # Counters
-            csv_row["num_imports"] = len(imports_list) if imports_list else 0
-            csv_row["num_exports"] = len(exports_list) if exports_list else 0
-            csv_row["num_sections"] = len(sections_list) if sections_list else 0
+            self._add_compiler_info(csv_row, data)
+            self._add_function_info(csv_row, data)
+            self._add_counts(csv_row, data)
 
         except Exception as e:
             csv_row["error"] = f"Data extraction failed: {str(e)}"
 
         return csv_row
 
+    def _add_file_info(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        file_info = data.get("file_info", {})
+        csv_row["name"] = file_info.get("name", "")
+        csv_row["size"] = self._format_file_size(file_info.get("size", 0))
+        csv_row["file_type"] = self._clean_file_type(file_info.get("file_type", ""))
+        csv_row["md5"] = file_info.get("md5", "")
+        csv_row["sha1"] = file_info.get("sha1", "")
+        csv_row["sha256"] = file_info.get("sha256", "")
+        csv_row["sha512"] = file_info.get("sha512", "")
+
+    def _extract_compile_time(self, data: dict[str, Any]) -> str:
+        if "pe_info" in data and "compile_time" in data["pe_info"]:
+            return data["pe_info"]["compile_time"]
+        if "elf_info" in data and "compile_time" in data["elf_info"]:
+            return data["elf_info"]["compile_time"]
+        if "macho_info" in data and "compile_time" in data["macho_info"]:
+            return data["macho_info"]["compile_time"]
+        if "file_info" in data and "compile_time" in data["file_info"]:
+            return data["file_info"]["compile_time"]
+        return ""
+
+    def _extract_imphash(self, data: dict[str, Any]) -> str:
+        if "pe_info" in data and "imphash" in data["pe_info"]:
+            return data["pe_info"]["imphash"]
+        return ""
+
+    def _add_ssdeep(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        ssdeep_info = data.get("ssdeep", {})
+        csv_row["ssdeep_hash"] = ssdeep_info.get("ssdeep_hash", "")
+
+    def _add_tlsh(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        tlsh_info = data.get("tlsh", {})
+        csv_row["tlsh_binary"] = tlsh_info.get("binary_tlsh", "")
+        csv_row["tlsh_text_section"] = tlsh_info.get("text_section_tlsh", "")
+        csv_row["tlsh_functions_with_hash"] = tlsh_info.get("stats", {}).get(
+            "functions_with_tlsh", 0
+        )
+
+    def _add_telfhash(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        telfhash_info = data.get("telfhash", {})
+        csv_row["telfhash"] = telfhash_info.get("telfhash", "")
+        csv_row["telfhash_symbols_used"] = telfhash_info.get("filtered_symbols", 0)
+
+    def _add_rich_header(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        rich_header_info = data.get("rich_header", {})
+        csv_row["rich_header_xor_key"] = (
+            hex(rich_header_info.get("xor_key", 0)) if rich_header_info.get("xor_key") else ""
+        )
+        csv_row["rich_header_checksum"] = (
+            hex(rich_header_info.get("checksum", 0)) if rich_header_info.get("checksum") else ""
+        )
+        csv_row["richpe_hash"] = rich_header_info.get("richpe_hash", "")
+        csv_row["rich_header_compilers"] = self._format_rich_header_compilers(rich_header_info)
+        csv_row["rich_header_entries"] = len(rich_header_info.get("compilers", []))
+
+    def _format_rich_header_compilers(self, rich_header_info: dict[str, Any]) -> str:
+        compilers_list = []
+        if "compilers" in rich_header_info and isinstance(rich_header_info["compilers"], list):
+            for compiler in rich_header_info["compilers"]:
+                if isinstance(compiler, dict):
+                    compiler_name = compiler.get("compiler_name", "")
+                    count = compiler.get("count", 0)
+                    if compiler_name:
+                        compilers_list.append(f"{compiler_name}({count})")
+        return ", ".join(compilers_list)
+
+    def _add_imports_exports_sections(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        csv_row["imports"] = self._extract_names_from_list(data, "imports")
+        csv_row["exports"] = self._extract_names_from_list(data, "exports")
+        csv_row["sections"] = self._extract_names_from_list(data, "sections")
+
+    def _add_anti_analysis(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        anti_analysis = data.get("anti_analysis", {})
+        csv_row["anti_debug"] = anti_analysis.get("anti_debug", False)
+        csv_row["anti_vm"] = anti_analysis.get("anti_vm", False)
+        csv_row["anti_sandbox"] = anti_analysis.get("anti_sandbox", False)
+
+    def _add_compiler_info(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        compiler_info = data.get("compiler", {})
+        csv_row["compiler"] = compiler_info.get("compiler", "Unknown")
+        csv_row["compiler_version"] = compiler_info.get("version", "Unknown")
+        csv_row["compiler_confidence"] = compiler_info.get("confidence", 0.0)
+
+    def _add_function_info(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        functions_info = data.get("functions", {})
+        csv_row["num_functions"] = functions_info.get("total_functions", 0)
+        machoc_hashes = functions_info.get("machoc_hashes", {})
+        csv_row["num_unique_machoc"] = len(set(machoc_hashes.values())) if machoc_hashes else 0
+        csv_row["num_duplicate_functions"] = self._count_duplicate_machoc(machoc_hashes)
+
+    def _count_duplicate_machoc(self, machoc_hashes: dict[str, Any]) -> int:
+        if not machoc_hashes:
+            return 0
+        hash_counts: dict[str, int] = {}
+        for _, machoc_hash in machoc_hashes.items():
+            hash_counts[machoc_hash] = hash_counts.get(machoc_hash, 0) + 1
+        return sum(count - 1 for count in hash_counts.values() if count > 1)
+
+    def _add_counts(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
+        imports = data.get("imports", [])
+        exports = data.get("exports", [])
+        sections = data.get("sections", [])
+        csv_row["num_imports"] = len(imports) if isinstance(imports, list) else 0
+        csv_row["num_exports"] = len(exports) if isinstance(exports, list) else 0
+        csv_row["num_sections"] = len(sections) if isinstance(sections, list) else 0
+
     def _format_file_size(self, size_bytes: int) -> str:
         """Format file size in human-readable units"""
         try:
-            size_bytes = int(size_bytes)
-            if size_bytes == 0:
+            size_value = float(size_bytes)
+            if size_value == 0:
                 return "0 B"
 
             # Define size units
@@ -278,15 +267,15 @@ class OutputFormatter:
             i = 0
 
             # Calculate the appropriate unit
-            while size_bytes >= 1024 and i < len(size_names) - 1:
-                size_bytes /= 1024.0
+            while size_value >= 1024 and i < len(size_names) - 1:
+                size_value /= 1024.0
                 i += 1
 
             # Format with appropriate precision
             if i == 0:  # Bytes
-                return f"{int(size_bytes)} {size_names[i]}"
+                return f"{int(size_value)} {size_names[i]}"
             else:
-                return f"{size_bytes:.1f} {size_names[i]}"
+                return f"{size_value:.1f} {size_names[i]}"
 
         except (ValueError, TypeError):
             return str(size_bytes)
@@ -308,7 +297,7 @@ class OutputFormatter:
         except Exception:
             return file_type
 
-    def _flatten_results(self, data: Dict[str, Any], prefix: str = "") -> List[Dict[str, Any]]:
+    def _flatten_results(self, data: dict[str, Any], prefix: str = "") -> list[dict[str, Any]]:
         """Flatten nested dictionary for CSV export (legacy method, kept for compatibility)"""
         rows = []
 
@@ -322,7 +311,7 @@ class OutputFormatter:
 
         return rows
 
-    def _flatten_value(self, value: Any, prefix: str) -> List[Dict[str, Any]]:
+    def _flatten_value(self, value: Any, prefix: str) -> list[dict[str, Any]]:
         """Flatten a single value based on its type"""
         if isinstance(value, dict):
             return self._flatten_results(value, prefix)
@@ -331,7 +320,7 @@ class OutputFormatter:
         else:
             return [{"field": prefix, "value": str(value)}]
 
-    def _flatten_list(self, items: list, prefix: str) -> List[Dict[str, Any]]:
+    def _flatten_list(self, items: list, prefix: str) -> list[dict[str, Any]]:
         """Flatten a list of items"""
         rows = []
         for i, item in enumerate(items):
@@ -339,14 +328,14 @@ class OutputFormatter:
             rows.extend(self._flatten_value(item, item_prefix))
         return rows
 
-    def format_table(self, data: Dict[str, Any], title: str = "Analysis Results") -> Table:
+    def format_table(self, data: dict[str, Any], title: str = "Analysis Results") -> Table:
         """Format data as a Rich table"""
         table = Table(title=title, show_header=True)
         table.add_column("Property", style="cyan")
         table.add_column("Value", style="green")
 
         for key, value in data.items():
-            if isinstance(value, (dict, list)):
+            if isinstance(value, dict | list):
                 value_str = json.dumps(value, indent=2, default=str)
             else:
                 value_str = str(value)
@@ -355,7 +344,7 @@ class OutputFormatter:
 
         return table
 
-    def format_sections(self, sections: List[Dict[str, Any]]) -> Table:
+    def format_sections(self, sections: list[dict[str, Any]]) -> Table:
         """Format sections data as a Rich table"""
         table = Table(title="Section Analysis", show_header=True)
         table.add_column("Name", style="cyan")
@@ -376,7 +365,7 @@ class OutputFormatter:
 
         return table
 
-    def format_imports(self, imports: List[Dict[str, Any]]) -> Table:
+    def format_imports(self, imports: list[dict[str, Any]]) -> Table:
         """Format imports data with enhanced risk scoring"""
         table = Table(title="Import Analysis", show_header=True)
         table.add_column("Function", style="cyan", width=25)

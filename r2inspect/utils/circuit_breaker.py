@@ -7,8 +7,9 @@ import functools
 import threading
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, Dict
+from typing import Any
 
 
 class CircuitState(Enum):
@@ -32,7 +33,7 @@ class CircuitBreaker:
         self,
         failure_threshold: int = 5,
         recovery_timeout: float = 60.0,
-        expected_exception: tuple = (Exception,),
+        expected_exception: tuple[type[BaseException], ...] = (Exception,),
         name: str = "default",
     ):
         """
@@ -52,8 +53,8 @@ class CircuitBreaker:
         # State management
         self.state = CircuitState.CLOSED
         self.failure_count = 0
-        self.last_failure_time = None
-        self.last_success_time = time.time()
+        self.last_failure_time: float | None = None
+        self.last_success_time: float = time.time()
 
         # Statistics
         self.total_calls = 0
@@ -110,7 +111,7 @@ class CircuitBreaker:
         except self.expected_exception:
             self._on_failure()
             raise
-        except Exception:  # pragma: no cover
+        except BaseException:  # pragma: no cover
             # Unexpected exceptions don't count as failures - re-raise them immediately
             # without modifying the exception or counting it as a failure
             raise
@@ -156,7 +157,7 @@ class CircuitBreaker:
             self.failure_count = 0
             self.last_failure_time = None
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get circuit breaker statistics"""
         with self.lock:
             success_rate = (self.total_successes / max(1, self.total_calls)) * 100
@@ -180,7 +181,7 @@ class R2CommandCircuitBreaker:
     """Circuit breaker specifically for r2pipe commands"""
 
     def __init__(self):
-        self.breakers = {}
+        self.breakers: dict[str, CircuitBreaker] = {}
         self.command_stats = defaultdict(
             lambda: {
                 "calls": 0,
@@ -269,7 +270,7 @@ class R2CommandCircuitBreaker:
                 alpha = 0.1
                 stats["avg_time"] = alpha * execution_time + (1 - alpha) * stats["avg_time"]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get comprehensive statistics"""
         stats = {}
 

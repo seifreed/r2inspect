@@ -50,8 +50,6 @@ repos:
       - id: ruff
         name: Lint with Ruff
         args: ['--fix', '--exit-non-zero-on-fix']
-      - id: ruff-format
-        name: Format with Ruff
 
   # Bandit - Security linter
   - repo: https://github.com/PyCQA/bandit

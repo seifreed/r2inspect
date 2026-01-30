@@ -8,7 +8,7 @@ import os
 import threading
 import time
 from collections import deque
-from typing import Any, Dict, Optional
+from typing import Any
 
 import psutil
 
@@ -30,7 +30,7 @@ class TokenBucket:
         self.last_refill = time.time()
         self.lock = threading.Lock()
 
-    def acquire(self, tokens: int = 1, timeout: Optional[float] = None) -> bool:
+    def acquire(self, tokens: int = 1, timeout: float | None = None) -> bool:
         """
         Acquire tokens from bucket
 
@@ -92,8 +92,8 @@ class AdaptiveRateLimiter:
         self.current_rate = base_rate
 
         # Error tracking
-        self.error_window = deque(maxlen=100)  # Last 100 operations
-        self.success_window = deque(maxlen=100)
+        self.error_window: deque[float] = deque(maxlen=100)  # Last 100 operations
+        self.success_window: deque[float] = deque(maxlen=100)
 
         # System monitoring
         self.last_system_check = time.time()
@@ -105,7 +105,7 @@ class AdaptiveRateLimiter:
         # Create token bucket
         self.bucket = TokenBucket(capacity=int(base_rate * 10), refill_rate=base_rate)
 
-    def acquire_permit(self, timeout: Optional[float] = 30.0) -> bool:
+    def acquire_permit(self, timeout: float | None = 30.0) -> bool:
         """
         Acquire permission to process a file
 
@@ -190,7 +190,7 @@ class AdaptiveRateLimiter:
         elif error_rate < 0.05:  # Low error rate
             self.current_rate = min(self.max_rate, self.current_rate * 1.2)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get current rate limiter statistics"""
         with self.lock:
             now = time.time()
@@ -225,7 +225,7 @@ class BatchRateLimiter:
         self.semaphore = threading.Semaphore(max_concurrent)
 
         if enable_adaptive:
-            self.rate_limiter = AdaptiveRateLimiter(
+            self.rate_limiter: AdaptiveRateLimiter | TokenBucket = AdaptiveRateLimiter(
                 base_rate=rate_per_second,
                 max_rate=rate_per_second * 2,
                 min_rate=rate_per_second * 0.1,
@@ -244,7 +244,7 @@ class BatchRateLimiter:
         }
         self.stats_lock = threading.Lock()
 
-    def acquire(self, timeout: Optional[float] = 60.0) -> bool:
+    def acquire(self, timeout: float | None = 60.0) -> bool:
         """
         Acquire permission to process a file
 
@@ -267,7 +267,7 @@ class BatchRateLimiter:
                 elapsed = time.time() - start_time
                 remaining_timeout = max(0, timeout - elapsed)
 
-            if self.adaptive:
+            if isinstance(self.rate_limiter, AdaptiveRateLimiter):
                 success = self.rate_limiter.acquire_permit(timeout=remaining_timeout)
             else:
                 success = self.rate_limiter.acquire(tokens=1, timeout=remaining_timeout)
@@ -292,7 +292,7 @@ class BatchRateLimiter:
 
     def release_success(self):
         """Release after successful processing"""
-        if self.adaptive:
+        if isinstance(self.rate_limiter, AdaptiveRateLimiter):
             self.rate_limiter.record_success()
 
         with self.stats_lock:
@@ -302,7 +302,7 @@ class BatchRateLimiter:
 
     def release_error(self, error_type: str = "unknown"):
         """Release after failed processing"""
-        if self.adaptive:
+        if isinstance(self.rate_limiter, AdaptiveRateLimiter):
             self.rate_limiter.record_error(error_type)
 
         with self.stats_lock:
@@ -310,12 +310,12 @@ class BatchRateLimiter:
 
         self.semaphore.release()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get rate limiter statistics"""
         with self.stats_lock:
             base_stats = self.stats.copy()
 
-        if self.adaptive:
+        if isinstance(self.rate_limiter, AdaptiveRateLimiter):
             rate_stats = self.rate_limiter.get_stats()
             base_stats.update(rate_stats)
 
