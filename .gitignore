@@ -378,6 +378,8 @@ test_*.csv
 test_batch.py
 *_test.py
 *_test.csv
+!tests/
+!tests/**
 
 # Test coverage
 .coverage
