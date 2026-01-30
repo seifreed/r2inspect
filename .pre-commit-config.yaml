@@ -45,7 +45,7 @@ repos:
 
   # Ruff - Fast Python linter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.5
+    rev: v0.14.14
     hooks:
       - id: ruff
         name: Lint with Ruff
