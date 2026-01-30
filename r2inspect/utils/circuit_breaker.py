@@ -111,10 +111,6 @@ class CircuitBreaker:
         except self.expected_exception:
             self._on_failure()
             raise
-        except BaseException:  # pragma: no cover
-            # Unexpected exceptions don't count as failures - re-raise them immediately
-            # without modifying the exception or counting it as a failure
-            raise
 
     def _on_success(self):
         """Handle successful call"""

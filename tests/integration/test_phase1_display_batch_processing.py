@@ -14,7 +14,9 @@ pytestmark = pytest.mark.requires_r2
 FIXTURE_DIR = Path("samples/fixtures")
 
 
-def test_display_hash_strings_sections_truncation(capsys: pytest.CaptureFixture[str]) -> None:
+def test_display_hash_strings_sections_truncation(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     long_hash = "a" * 80
     results = {
         "bindiff": {

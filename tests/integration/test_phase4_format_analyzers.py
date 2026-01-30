@@ -100,7 +100,10 @@ def test_rich_header_analyzer_pe_and_non_pe(tmp_path: Path) -> None:
         r2_elf.quit()
 
     assert result_non_pe["available"] is False
-    assert result_non_pe["error"] in {"File is not a PE binary", "Rich Header not found"}
+    assert result_non_pe["error"] in {
+        "File is not a PE binary",
+        "Rich Header not found",
+    }
 
 
 def test_overlay_analyzer_no_overlay(tmp_path: Path) -> None:

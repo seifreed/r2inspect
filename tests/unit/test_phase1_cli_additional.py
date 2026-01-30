@@ -69,7 +69,11 @@ def test_display_results_renders_core_sections(capsys):
             "error_rate": 0.01,
             "unique_signatures": 1,
             "function_signatures": {
-                "f1": {"signature": "sig1", "instruction_count": 3, "unique_instructions": 2}
+                "f1": {
+                    "signature": "sig1",
+                    "instruction_count": 3,
+                    "unique_instructions": 2,
+                }
             },
         },
         "functions": {"total_functions": 2, "machoc_hashes": {"f1": "h1", "f2": "h1"}},

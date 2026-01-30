@@ -14,6 +14,8 @@ from ..utils.r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
 
+NETWORK_CATEGORY = "Network/Internet"
+
 
 class ImportAnalyzer(BaseAnalyzer):
     """Import table analysis using radare2"""
@@ -180,7 +182,7 @@ class ImportAnalyzer(BaseAnalyzer):
                 "RegEnumValue",
                 "RegCloseKey",
             ],
-            "Network/Internet": [
+            NETWORK_CATEGORY: [
                 "WSAStartup",
                 "WSACleanup",
                 "socket",
@@ -549,7 +551,7 @@ class ImportAnalyzer(BaseAnalyzer):
                 )
 
             # Check for network communication
-            network_count = categories.count("Network/Internet")
+            network_count = categories.count(NETWORK_CATEGORY)
             if network_count > 5:
                 patterns.append(
                     {
@@ -675,7 +677,7 @@ class ImportAnalyzer(BaseAnalyzer):
         if categories.get("Registry", {}).get("count", 0) >= 4:
             suspicious_apis.append("Extensive registry manipulation")
             risk_score += 15
-        if categories.get("Network/Internet", {}).get("count", 0) >= 3:
+        if categories.get(NETWORK_CATEGORY, {}).get("count", 0) >= 3:
             suspicious_apis.append("Network communication capabilities")
             risk_score += 10
         return suspicious_apis, risk_score
@@ -840,12 +842,15 @@ class ImportAnalyzer(BaseAnalyzer):
             unusual_dlls = []
             for imp in imports:
                 dll = imp.get("dll", "").lower()
-                if dll and not any(
-                    common in dll
-                    for common in ["kernel32", "user32", "advapi32", "ntdll", "msvcrt"]
+                if (
+                    dll
+                    and dll not in unusual_dlls
+                    and not any(
+                        common in dll
+                        for common in ["kernel32", "user32", "advapi32", "ntdll", "msvcrt"]
+                    )
                 ):
-                    if dll not in unusual_dlls:
-                        unusual_dlls.append(dll)
+                    unusual_dlls.append(dll)
 
             if len(unusual_dlls) > 5:
                 anomalies.append(
@@ -886,7 +891,7 @@ class ImportAnalyzer(BaseAnalyzer):
                 if isinstance(string_entry, dict) and "string" in string_entry:
                     string_value = string_entry["string"]
                     # Look for DLL.function pattern (typical forwarding)
-                    if re.match(r"^[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$", string_value):
+                    if re.match(r"^\\w+\\.\\w+$", string_value):
                         forwards.append(
                             {
                                 "forward": string_value,

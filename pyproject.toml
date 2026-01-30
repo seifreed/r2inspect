@@ -40,7 +40,7 @@ dependencies = [
     "yara-python>=4.5.0",
     "python-magic>=0.4.27",
     "pycryptodome>=3.19.0",
-    "cryptography>=41.0.0",
+    "cryptography>=45.0.2",
     "psutil>=5.9.0",
     "pydantic>=2.5.0",
     "pybloom-live>=4.0.0",
@@ -49,7 +49,7 @@ dependencies = [
     "tabulate>=0.9.0",
     "pyfiglet>=0.8.post1",
     "pandas>=2.0.0",
-    "requests>=2.31.0",
+    "requests>=2.32.4",
 ]
 
 [project.optional-dependencies]

@@ -1301,92 +1301,107 @@ class RichHeaderAnalyzer:
         try:
             logger.debug("=== DEBUGGING FILE STRUCTURE ===")
 
-            # Get file size
-            self.r2.cmd("s 0")
-            file_size = safe_cmdj(self.r2, "ij", {}).get("core", {}).get("size", 0)
+            file_size = self._debug_get_file_size()
             logger.debug(f"File size: {file_size} bytes")
 
-            # Read first 512 bytes and look for patterns
-            data_bytes = cast(list[int], safe_cmdj(self.r2, "p8j 512", []))
-            if data_bytes:
-                data = bytes(data_bytes)
+            data = self._debug_read_bytes(512)
+            if not data:
+                return
 
-                # Look for MZ header
-                if data[:2] == b"MZ":
-                    logger.debug("Found MZ header at offset 0")
+            if self._debug_has_mz_header(data):
+                pe_offset = self._debug_get_pe_offset(data)
+                if pe_offset is not None:
+                    self._debug_log_stub_analysis(data, pe_offset)
 
-                    # Look for PE header offset
-                    if len(data) >= 0x3C + 4:
-                        pe_offset = struct.unpack("<I", data[0x3C : 0x3C + 4])[0]
-                        logger.debug(f"PE header offset: 0x{pe_offset:x}")
-
-                        # Check what's between MZ and PE
-                        if pe_offset > 64:  # Reasonable space for Rich Header
-                            stub_data = data[64 : min(pe_offset, len(data))]
-                            logger.debug(f"DOS stub size: {len(stub_data)} bytes")
-
-                            # Look for any Rich/DanS patterns in stub
-                            rich_pos = stub_data.find(b"Rich")
-                            dans_pos = stub_data.find(b"DanS")
-
-                            if rich_pos != -1:
-                                logger.debug(f"Found 'Rich' at DOS stub offset: {rich_pos + 64}")
-                            if dans_pos != -1:
-                                logger.debug(f"Found 'DanS' at DOS stub offset: {dans_pos + 64}")
-
-                            # Show hex dump of suspicious areas
-                            if rich_pos != -1 or dans_pos != -1:
-                                if dans_pos != -1 and rich_pos != -1:
-                                    start = max(0, min(rich_pos, dans_pos) - 16)
-                                elif rich_pos != -1:
-                                    start = rich_pos - 16
-                                else:
-                                    start = dans_pos - 16
-                                if dans_pos != -1 and rich_pos != -1:
-                                    end = min(len(stub_data), max(rich_pos, dans_pos) + 32)
-                                elif rich_pos != -1:
-                                    end = rich_pos + 32
-                                else:
-                                    end = dans_pos + 32
-                                hex_dump = stub_data[start:end].hex()
-                                logger.debug(f"Hex dump around signatures: {hex_dump}")
-
-                # Alternative: Search entire first 2KB for patterns
-                logger.debug("Searching first 2KB for Rich Header patterns...")
-                extended_data = cast(list[int], safe_cmdj(self.r2, "p8j 2048", []))
-                if extended_data:
-                    extended_bytes = bytes(extended_data)
-
-                    # Find all occurrences
-                    rich_positions = []
-                    dans_positions = []
-
-                    pos = 0
-                    while pos < len(extended_bytes) - 4:
-                        if extended_bytes[pos : pos + 4] == b"Rich":
-                            rich_positions.append(pos)
-                        if extended_bytes[pos : pos + 4] == b"DanS":
-                            dans_positions.append(pos)
-                        pos += 1
-
-                    logger.debug(f"Found 'Rich' at positions: {rich_positions}")
-                    logger.debug(f"Found 'DanS' at positions: {dans_positions}")
-
-                    # Try to extract at these positions manually
-                    for dans_pos in dans_positions:
-                        for rich_pos in rich_positions:
-                            if dans_pos < rich_pos and (rich_pos - dans_pos) < 512:
-                                logger.debug(
-                                    f"Attempting manual extraction at DanS:{dans_pos}, Rich:{rich_pos}"
-                                )
-                                # Show the data between them
-                                segment = extended_bytes[dans_pos : rich_pos + 8]
-                                logger.debug(
-                                    f"Rich Header candidate ({len(segment)} bytes): {segment.hex()}"
-                                )
+            self._debug_log_extended_patterns()
 
         except Exception as e:
             logger.debug(f"Debug analysis failed: {e}")
+
+    def _debug_get_file_size(self) -> int:
+        self.r2.cmd("s 0")
+        return safe_cmdj(self.r2, "ij", {}).get("core", {}).get("size", 0)
+
+    def _debug_read_bytes(self, size: int) -> bytes | None:
+        data_bytes = cast(list[int], safe_cmdj(self.r2, f"p8j {size}", []))
+        return bytes(data_bytes) if data_bytes else None
+
+    @staticmethod
+    def _debug_has_mz_header(data: bytes) -> bool:
+        if data[:2] == b"MZ":
+            logger.debug("Found MZ header at offset 0")
+            return True
+        return False
+
+    @staticmethod
+    def _debug_get_pe_offset(data: bytes) -> int | None:
+        if len(data) < 0x3C + 4:
+            return None
+        pe_offset = struct.unpack("<I", data[0x3C : 0x3C + 4])[0]
+        logger.debug(f"PE header offset: 0x{pe_offset:x}")
+        return pe_offset
+
+    def _debug_log_stub_analysis(self, data: bytes, pe_offset: int) -> None:
+        if pe_offset <= 64:
+            return
+        stub_data = data[64 : min(pe_offset, len(data))]
+        logger.debug(f"DOS stub size: {len(stub_data)} bytes")
+
+        rich_pos = stub_data.find(b"Rich")
+        dans_pos = stub_data.find(b"DanS")
+
+        if rich_pos != -1:
+            logger.debug(f"Found 'Rich' at DOS stub offset: {rich_pos + 64}")
+        if dans_pos != -1:
+            logger.debug(f"Found 'DanS' at DOS stub offset: {dans_pos + 64}")
+
+        if rich_pos == -1 and dans_pos == -1:
+            return
+
+        start = max(0, min(pos for pos in [rich_pos, dans_pos] if pos != -1) - 16)
+        end_candidates = [pos for pos in [rich_pos, dans_pos] if pos != -1]
+        end = min(len(stub_data), max(end_candidates) + 32)
+        hex_dump = stub_data[start:end].hex()
+        logger.debug(f"Hex dump around signatures: {hex_dump}")
+
+    def _debug_log_extended_patterns(self) -> None:
+        logger.debug("Searching first 2KB for Rich Header patterns...")
+        extended_data = cast(list[int], safe_cmdj(self.r2, "p8j 2048", []))
+        if not extended_data:
+            return
+        extended_bytes = bytes(extended_data)
+        rich_positions, dans_positions = self._find_rich_dans_positions(extended_bytes)
+
+        logger.debug(f"Found 'Rich' at positions: {rich_positions}")
+        logger.debug(f"Found 'DanS' at positions: {dans_positions}")
+
+        self._debug_log_candidates(extended_bytes, rich_positions, dans_positions)
+
+    @staticmethod
+    def _find_rich_dans_positions(data: bytes) -> tuple[list[int], list[int]]:
+        rich_positions: list[int] = []
+        dans_positions: list[int] = []
+        pos = 0
+        while pos < len(data) - 4:
+            if data[pos : pos + 4] == b"Rich":
+                rich_positions.append(pos)
+            if data[pos : pos + 4] == b"DanS":
+                dans_positions.append(pos)
+            pos += 1
+        return rich_positions, dans_positions
+
+    @staticmethod
+    def _debug_log_candidates(
+        data: bytes, rich_positions: list[int], dans_positions: list[int]
+    ) -> None:
+        for dans_pos in dans_positions:
+            for rich_pos in rich_positions:
+                if dans_pos < rich_pos and (rich_pos - dans_pos) < 512:
+                    logger.debug(
+                        f"Attempting manual extraction at DanS:{dans_pos}, Rich:{rich_pos}"
+                    )
+                    segment = data[dans_pos : rich_pos + 8]
+                    logger.debug(f"Rich Header candidate ({len(segment)} bytes): {segment.hex()}")
 
     @staticmethod
     def calculate_richpe_hash_from_file(filepath: str) -> str | None:

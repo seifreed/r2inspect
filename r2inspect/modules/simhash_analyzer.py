@@ -518,7 +518,7 @@ class SimHashAnalyzer(HashingStrategy):
             return "registry"
 
         # API or function name pattern
-        if re.match(r"^[A-Z][a-zA-Z0-9_]*[A-Z]", string_value):
+        if re.match(r"^[A-Z][\\w]*[A-Z]", string_value):
             return "api"
 
         # Error message pattern
