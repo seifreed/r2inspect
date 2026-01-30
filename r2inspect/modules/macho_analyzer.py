@@ -1,52 +1,75 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Mach-O Analysis Module using r2pipe
 """
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from ..abstractions import BaseAnalyzer
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import get_macho_headers, safe_cmdj
 
 logger = get_logger(__name__)
 
 
-class MachOAnalyzer:
+class MachOAnalyzer(BaseAnalyzer):
     """Mach-O file analysis using radare2"""
 
     def __init__(self, r2, config):
-        self.r2 = r2
-        self.config = config
+        super().__init__(r2=r2, config=config)
 
-    def analyze(self) -> Dict[str, Any]:
+    def get_category(self) -> str:
+        return "format"
+
+    def get_description(self) -> str:
+        return "Comprehensive analysis of Mach-O binary format for macOS/iOS including load commands and security features"
+
+    def supports_format(self, file_format: str) -> bool:
+        return file_format.upper() in {"MACH0", "MACHO", "MACH-O", "MACH064"}
+
+    def analyze(self) -> dict[str, Any]:
         """Perform complete Mach-O analysis"""
-        macho_info = {}
+        result = self._init_result_structure(
+            {
+                "architecture": "Unknown",
+                "bits": 0,
+                "load_commands": [],
+                "sections": [],
+                "security_features": {},
+            }
+        )
 
         try:
+            self._log_info("Starting Mach-O analysis")
+
             # Get Mach-O headers information
-            macho_info.update(self._get_macho_headers())
+            result.update(self._get_macho_headers())
 
             # Get compilation info
-            macho_info.update(self._get_compilation_info())
+            result.update(self._get_compilation_info())
 
             # Get load commands
-            macho_info["load_commands"] = self._get_load_commands()
+            result["load_commands"] = self._get_load_commands()
 
             # Get section information
-            macho_info["sections"] = self._get_section_info()
+            result["sections"] = self._get_section_info()
 
             # Get security features
-            macho_info["security_features"] = self.get_security_features()
+            result["security_features"] = self.get_security_features()
+
+            result["available"] = True
+            self._log_info("Mach-O analysis completed successfully")
 
         except Exception as e:
-            logger.error(f"Error in Mach-O analysis: {e}")
-            macho_info["error"] = str(e)
+            result["error"] = str(e)
+            self._log_error(f"Mach-O analysis failed: {e}")
 
-        return macho_info
+        return result
 
-    def _get_macho_headers(self) -> Dict[str, Any]:
+    def _get_macho_headers(self) -> dict[str, Any]:
         """Extract Mach-O header information"""
         info = {}
 
@@ -74,7 +97,7 @@ class MachOAnalyzer:
 
         return info
 
-    def _get_compilation_info(self) -> Dict[str, Any]:
+    def _get_compilation_info(self) -> dict[str, Any]:
         """Get compilation information from Mach-O load commands"""
         info = {}
 
@@ -108,7 +131,7 @@ class MachOAnalyzer:
 
         return info
 
-    def _extract_build_version(self) -> Dict[str, Any]:
+    def _extract_build_version(self) -> dict[str, Any]:
         """Extract build version information from LC_BUILD_VERSION"""
         info = {}
 
@@ -139,7 +162,7 @@ class MachOAnalyzer:
 
         return info
 
-    def _extract_version_min(self) -> Dict[str, Any]:
+    def _extract_version_min(self) -> dict[str, Any]:
         """Extract version minimum information from LC_VERSION_MIN_* commands"""
         info = {}
 
@@ -171,7 +194,7 @@ class MachOAnalyzer:
 
         return info
 
-    def _extract_dylib_info(self) -> Dict[str, Any]:
+    def _extract_dylib_info(self) -> dict[str, Any]:
         """Extract dylib compilation information"""
         info = {}
 
@@ -203,7 +226,7 @@ class MachOAnalyzer:
 
         return info
 
-    def _extract_uuid(self) -> Optional[str]:
+    def _extract_uuid(self) -> str | None:
         """Extract UUID from LC_UUID command"""
         try:
             # Get load commands
@@ -221,7 +244,7 @@ class MachOAnalyzer:
 
         return None
 
-    def _estimate_from_sdk_version(self, sdk_version: str) -> Optional[str]:
+    def _estimate_from_sdk_version(self, sdk_version: str) -> str | None:
         """Estimate compilation timeframe from SDK version"""
         try:
             # Basic mapping of SDK versions to release timeframes
@@ -252,7 +275,7 @@ class MachOAnalyzer:
         # For Mach-O files without specific timestamp info
         return ""
 
-    def _get_load_commands(self) -> List[Dict[str, Any]]:
+    def _get_load_commands(self) -> list[dict[str, Any]]:
         """Get Mach-O load commands information"""
         commands = []
 
@@ -274,7 +297,7 @@ class MachOAnalyzer:
 
         return commands
 
-    def _get_section_info(self) -> List[Dict[str, Any]]:
+    def _get_section_info(self) -> list[dict[str, Any]]:
         """Get Mach-O section information"""
         sections = []
 
@@ -299,7 +322,7 @@ class MachOAnalyzer:
 
         return sections
 
-    def get_security_features(self) -> Dict[str, bool]:
+    def get_security_features(self) -> dict[str, bool]:
         """Check for Mach-O security features"""
         features = {
             "pie": False,
@@ -311,50 +334,51 @@ class MachOAnalyzer:
         }
 
         try:
-            # Check for PIE (Position Independent Executable)
-            macho_info = safe_cmdj(self.r2, "ij")
-            if macho_info and "bin" in macho_info:
-                file_type = macho_info["bin"].get("filetype", "")
-                if "DYLIB" in file_type.upper() or "PIE" in file_type.upper():
-                    features["pie"] = True
-
-            # Check for stack canary
+            self._check_pie(features)
             symbols = safe_cmdj(self.r2, "isj")
-            for symbol in symbols:
-                name = symbol.get("name", "")
-                if "___stack_chk_fail" in name or "___stack_chk_guard" in name:
-                    features["stack_canary"] = True
-                    break
-
-            # Check for ARC (Automatic Reference Counting) symbols
-            for symbol in symbols:
-                name = symbol.get("name", "")
-                if "_objc_" in name and ("retain" in name or "release" in name):
-                    features["arc"] = True
-                    break
-
-            # Check for encryption
+            self._check_stack_canary(features, symbols)
+            self._check_arc(features, symbols)
             headers = get_macho_headers(self.r2)
-            for header in headers:
-                if (
-                    header.get("type") == "LC_ENCRYPTION_INFO"
-                    or header.get("type") == "LC_ENCRYPTION_INFO_64"
-                ):
-                    cryptid = header.get("cryptid", 0)
-                    if cryptid > 0:
-                        features["encrypted"] = True
-                    break
-
-            # Check for code signature
-            for header in headers:
-                if header.get("type") == "LC_CODE_SIGNATURE":
-                    features["signed"] = True
-                    break
-
-            # NX bit is typically enabled by default on modern macOS
+            self._check_encryption(features, headers)
+            self._check_code_signature(features, headers)
             features["nx"] = True
 
         except Exception as e:
             logger.error(f"Error checking security features: {e}")
 
         return features
+
+    def _check_pie(self, features: dict[str, bool]) -> None:
+        macho_info = safe_cmdj(self.r2, "ij")
+        if macho_info and "bin" in macho_info:
+            file_type = macho_info["bin"].get("filetype", "")
+            if "DYLIB" in file_type.upper() or "PIE" in file_type.upper():
+                features["pie"] = True
+
+    def _check_stack_canary(self, features: dict[str, bool], symbols: list[dict[str, Any]]):
+        for symbol in symbols or []:
+            name = symbol.get("name", "")
+            if "___stack_chk_fail" in name or "___stack_chk_guard" in name:
+                features["stack_canary"] = True
+                break
+
+    def _check_arc(self, features: dict[str, bool], symbols: list[dict[str, Any]]):
+        for symbol in symbols or []:
+            name = symbol.get("name", "")
+            if "_objc_" in name and ("retain" in name or "release" in name):
+                features["arc"] = True
+                break
+
+    def _check_encryption(self, features: dict[str, bool], headers: list[dict[str, Any]]):
+        for header in headers or []:
+            if header.get("type") in {"LC_ENCRYPTION_INFO", "LC_ENCRYPTION_INFO_64"}:
+                cryptid = header.get("cryptid", 0)
+                if cryptid > 0:
+                    features["encrypted"] = True
+                break
+
+    def _check_code_signature(self, features: dict[str, bool], headers: list[dict[str, Any]]):
+        for header in headers or []:
+            if header.get("type") == "LC_CODE_SIGNATURE":
+                features["signed"] = True
+                break

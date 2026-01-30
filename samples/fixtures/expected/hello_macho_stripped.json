@@ -1,0 +1,9 @@
+{
+  "file_format": "Mach-O",
+  "name": "hello_macho_stripped",
+  "size": 33448,
+  "hashes": {
+    "md5": "d5d236a7c03f5351eeeaf3f02feded74",
+    "sha256": "df350f6cb624bf5a9510e29693cc0142dbd4cfc3bbd0b9eccb9c49def29286ec"
+  }
+}

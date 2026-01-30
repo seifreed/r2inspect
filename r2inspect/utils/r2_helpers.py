@@ -1,20 +1,38 @@
 #!/usr/bin/env python3
 """
-R2pipe Helper Functions
+R2pipe Helper Functions - Simplified Error Handling
+
+This module provides safe wrappers for r2pipe commands using the unified
+error handling system. The new system consolidates retry, circuit breaker,
+and fallback logic into a single declarative interface.
+
+Copyright (C) 2025 Marc Rivero Lopez
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Author: Marc Rivero Lopez
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, cast
 
-from .circuit_breaker import CircuitBreakerError, r2_circuit_breaker
+from ..error_handling import ErrorHandlingStrategy, ErrorPolicy, handle_errors
+from ..error_handling.presets import (
+    R2_ANALYSIS_POLICY,
+    R2_JSON_DICT_POLICY,
+    R2_JSON_LIST_POLICY,
+    R2_TEXT_POLICY,
+)
 from .logger import get_logger
-from .retry_manager import RetryConfig, global_retry_manager
 
 logger = get_logger(__name__)
 
 
-def validate_r2_data(data, expected_type="dict"):
+def validate_r2_data(data: Any, expected_type: str = "dict") -> Any:
     """
-    Validate and clean r2 data to prevent 'str' object has no attribute 'get' errors
+    Validate and clean r2 data to prevent type errors
 
     Args:
         data: The data to validate
@@ -31,7 +49,7 @@ def validate_r2_data(data, expected_type="dict"):
         return data
 
 
-def _validate_dict_data(data):
+def _validate_dict_data(data: Any) -> dict[str, Any]:
     """Validate dictionary data"""
     if isinstance(data, dict):
         return data
@@ -40,7 +58,7 @@ def _validate_dict_data(data):
         return {}
 
 
-def _validate_list_data(data):
+def _validate_list_data(data: Any) -> list[dict[str, Any]]:
     """Validate and clean list data"""
     if isinstance(data, list):
         return _clean_list_items(data)
@@ -49,7 +67,7 @@ def _validate_list_data(data):
         return []
 
 
-def _clean_list_items(data):
+def _clean_list_items(data: list[Any]) -> list[dict[str, Any]]:
     """Clean list items and filter out malformed entries"""
     cleaned = []
     for item in data:
@@ -61,15 +79,18 @@ def _clean_list_items(data):
     return cleaned
 
 
-def _clean_html_entities(item):
+def _clean_html_entities(item: dict[str, Any]) -> None:
     """Clean HTML entities from item names"""
     if "name" in item and isinstance(item["name"], str):
         item["name"] = item["name"].replace("&nbsp;", " ").replace("&amp;", "&")
 
 
-def safe_cmdj(r2_instance, command: str, default: Optional[Any] = None) -> Optional[Any]:
+def safe_cmdj(r2_instance: Any, command: str, default: Any | None = None) -> Any | None:
     """
-    Safely execute a radare2 JSON command with circuit breaker protection and retry logic.
+    Safely execute a radare2 JSON command with unified error handling.
+
+    This function uses the new unified error handling system which consolidates
+    retry logic and fallback behavior into a single policy.
 
     Args:
         r2_instance: The r2pipe instance
@@ -79,68 +100,33 @@ def safe_cmdj(r2_instance, command: str, default: Optional[Any] = None) -> Optio
     Returns:
         JSON result or default value on error
     """
-    command_type = _get_command_type(command)
+    # Select policy based on command characteristics
+    policy = _select_json_policy(command, default)
 
-    def _execute_command():
-        """Execute the command with circuit breaker protection"""
-        try:
-            result = r2_circuit_breaker.execute_command(r2_instance, command, command_type)
-            return result if result is not None else default
-        except CircuitBreakerError:
-            logger.debug(
-                f"Circuit breaker open for command type '{command_type}', returning default"
-            )
-            return default
-        except Exception as e:
-            return _handle_command_error(e, command, default)
+    @handle_errors(policy)
+    def _execute() -> Any:
+        return r2_instance.cmdj(command)
 
-    # Execute with or without retry based on command type
-    if global_retry_manager.is_retryable_command(command):
-        return _execute_with_retry(_execute_command, command_type, command, default)
-    else:
-        return _execute_command()
+    return _execute()
 
 
-def _handle_command_error(e: Exception, command: str, default: Any) -> Any:
-    """Handle command execution errors"""
-    if global_retry_manager.is_retryable_error(e):
-        raise
+def _select_json_policy(command: str, default: Any) -> ErrorPolicy:
+    """Select appropriate error policy based on command type"""
+    command_lower = command.lower().strip()
 
-    error_msg = str(e)
-    error_type = type(e).__name__
+    # Analysis commands use circuit breaker with retry
+    if command_lower.startswith(("aaa", "aac", "af", "a")):
+        return R2_ANALYSIS_POLICY
 
-    if _is_common_json_error(error_msg):
-        logger.debug(f"Common r2pipe JSON parsing issue for command '{command}': {error_type}")
-    else:
-        logger.warning(f"Unexpected error executing command '{command}': {error_type}: {error_msg}")
+    # List-returning commands
+    if isinstance(default, list):
+        return R2_JSON_LIST_POLICY
 
-    return default
-
-
-def _execute_with_retry(execute_func, command_type: str, command: str, default: Any) -> Any:
-    """Execute function with retry logic"""
-    try:
-        return global_retry_manager.retry_operation(execute_func, command_type=command_type)
-    except Exception as e:
-        logger.debug(f"Command '{command}' failed after retries: {e}")
-        return default
+    # Dict-returning commands (most common)
+    return R2_JSON_DICT_POLICY
 
 
-def _is_common_json_error(error_msg: str) -> bool:
-    """Check if error message indicates a common JSON parsing error"""
-    return any(
-        phrase in error_msg
-        for phrase in [
-            "Expecting value: line 1 column 1",
-            "Extra data: line 1 column 2",
-            "r2pipe.cmdj.Error",
-            "JSONDecodeError",
-            "No JSON object could be decoded",
-        ]
-    )
-
-
-def safe_cmd_list(r2_instance, command: str) -> List[Dict[str, Any]]:
+def safe_cmd_list(r2_instance: Any, command: str) -> list[dict[str, Any]]:
     """
     Safely execute a radare2 JSON command expecting a list result.
 
@@ -152,10 +138,10 @@ def safe_cmd_list(r2_instance, command: str) -> List[Dict[str, Any]]:
         List result or empty list on error
     """
     result = safe_cmdj(r2_instance, command, [])
-    return validate_r2_data(result, "list")
+    return cast(list[dict[str, Any]], validate_r2_data(result, "list"))
 
 
-def safe_cmd_dict(r2_instance, command: str) -> Dict[str, Any]:
+def safe_cmd_dict(r2_instance: Any, command: str) -> dict[str, Any]:
     """
     Safely execute a radare2 JSON command expecting a dict result.
 
@@ -167,12 +153,12 @@ def safe_cmd_dict(r2_instance, command: str) -> Dict[str, Any]:
         Dict result or empty dict on error
     """
     result = safe_cmdj(r2_instance, command, {})
-    return validate_r2_data(result, "dict")
+    return cast(dict[str, Any], validate_r2_data(result, "dict"))
 
 
-def safe_cmd(r2_instance, command: str, default: str = "") -> str:
+def safe_cmd(r2_instance: Any, command: str, default: str = "") -> str:
     """
-    Safely execute a radare2 command returning text with circuit breaker protection and retry logic.
+    Safely execute a radare2 command returning text with unified error handling.
 
     Args:
         r2_instance: The r2pipe instance
@@ -182,134 +168,15 @@ def safe_cmd(r2_instance, command: str, default: str = "") -> str:
     Returns:
         Command result or default value on error
     """
-    # Determine command type for circuit breaker and retry configuration
-    command_type = _get_command_type(command)
 
-    def _execute_with_retry():
-        """Inner function for retry execution"""
-        try:
-            # Use circuit breaker to execute command
-            result = r2_circuit_breaker.execute_command(r2_instance, command, command_type)
-            return result if result is not None else default
+    @handle_errors(R2_TEXT_POLICY)
+    def _execute() -> Any:
+        return r2_instance.cmd(command)
 
-        except CircuitBreakerError:
-            logger.debug(
-                f"Circuit breaker open for command type '{command_type}', returning default"
-            )
-            return default
-
-        except Exception as e:
-            # Check if this is a retryable error
-            if global_retry_manager.is_retryable_error(e):
-                # Re-raise for retry logic to handle
-                raise
-
-            logger.debug(f"Error executing command '{command}': {type(e).__name__}: {str(e)}")
-            return default
-
-    # Check if command should be retried
-    if global_retry_manager.is_retryable_command(command):
-        try:
-            return global_retry_manager.retry_operation(
-                _execute_with_retry, command_type=command_type
-            )
-        except Exception as e:
-            logger.debug(f"Command '{command}' failed after retries: {e}")
-            return default
-    else:
-        return _execute_with_retry()
+    return cast(str, _execute())
 
 
-def _get_command_type(command: str) -> str:
-    """
-    Determine command type for circuit breaker categorization
-
-    Args:
-        command: The radare2 command
-
-    Returns:
-        Command type string
-    """
-    command = command.strip().lower()
-
-    # Analysis commands
-    if command.startswith(("aaa", "aac", "af", "a")):
-        return "analysis"
-
-    # Information commands
-    elif command.startswith(("i", "ii", "il", "ie", "is", "iz")):
-        return "info"
-
-    # Search commands
-    elif command.startswith(("/x", "/c", "/r", "/a", "/")):
-        return "search"
-
-    # Print commands
-    elif command.startswith(("p", "px", "pf", "pd")):
-        return "print"
-
-    # Section commands
-    elif command.startswith(("S", "iS")):
-        return "sections"
-
-    # Function commands
-    elif command.startswith(("f", "fl", "fs")):
-        return "functions"
-
-    # Memory commands
-    elif command.startswith(("dm", "dmi", "dmm")):
-        return "memory"
-
-    # Other commands
-    else:
-        return "generic"
-
-
-def get_circuit_breaker_stats() -> Dict[str, Any]:
-    """Get circuit breaker statistics"""
-    return r2_circuit_breaker.get_stats()
-
-
-def reset_circuit_breakers():
-    """Reset all circuit breakers"""
-    r2_circuit_breaker.reset_all()
-    logger.info("All circuit breakers have been reset")
-
-
-def get_retry_stats() -> Dict[str, Any]:
-    """Get retry statistics"""
-    return global_retry_manager.get_stats()
-
-
-def reset_retry_stats():
-    """Reset retry statistics"""
-    global_retry_manager.reset_stats()
-    logger.info("Retry statistics have been reset")
-
-
-def configure_retry_for_command_type(
-    command_type: str,
-    max_attempts: int = 3,
-    base_delay: float = 0.1,
-    max_delay: float = 5.0,
-):
-    """
-    Configure retry behavior for specific command type
-
-    Args:
-        command_type: Type of command ('analysis', 'info', 'search', etc.)
-        max_attempts: Maximum retry attempts
-        base_delay: Base delay between retries
-        max_delay: Maximum delay between retries
-    """
-    config = RetryConfig(max_attempts=max_attempts, base_delay=base_delay, max_delay=max_delay)
-    global_retry_manager.DEFAULT_CONFIGS[command_type] = config
-    logger.info(
-        f"Updated retry configuration for {command_type}: {max_attempts} attempts, {base_delay}s base delay"
-    )
-
-
-def parse_pe_header_text(r2_instance) -> Optional[Dict[str, Any]]:
+def parse_pe_header_text(r2_instance: Any) -> dict[str, Any] | None:
     """
     Parse PE header text output from ih command.
 
@@ -321,7 +188,9 @@ def parse_pe_header_text(r2_instance) -> Optional[Dict[str, Any]]:
     Returns:
         Parsed PE header dict or None on error
     """
-    try:
+
+    @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=None))
+    def _parse():
         text_output = safe_cmd(r2_instance, "ih")
         if not text_output:
             return None
@@ -340,12 +209,11 @@ def parse_pe_header_text(r2_instance) -> Optional[Dict[str, Any]]:
                 _parse_key_value_pair(line, result, current_section)
 
         return result
-    except Exception as e:
-        logger.debug(f"Could not parse PE header text: {e}")
-        return None
+
+    return cast(dict[str, Any] | None, _parse())
 
 
-def _parse_section_header(line: str, current_section: Optional[str]) -> Optional[str]:
+def _parse_section_header(line: str, current_section: str | None) -> str | None:
     """Parse section headers from PE header text"""
     if line == "IMAGE_NT_HEADERS":
         return "nt_headers"
@@ -356,23 +224,26 @@ def _parse_section_header(line: str, current_section: Optional[str]) -> Optional
     return current_section
 
 
-def _parse_key_value_pair(line: str, result: Dict, current_section: str) -> None:
+def _parse_key_value_pair(
+    line: str, result: dict[str, dict[str, Any]], current_section: str
+) -> None:
     """Parse key-value pairs from PE header text"""
-    key, value = line.split(":", 1)
+    key, value_raw = line.split(":", 1)
     key = key.strip()
-    value = value.strip()
+    value_str = value_raw.strip()
+    parsed_value: str | int = value_str
 
     # Try to parse hex values
-    if value.startswith("0x"):
+    if value_str.startswith("0x"):
         try:
-            value = int(value, 16)
+            parsed_value = int(value_str, 16)
         except ValueError:
             pass
 
-    result[current_section][key] = value
+    result[current_section][key] = parsed_value
 
 
-def get_pe_headers(r2_instance) -> Optional[Dict[str, Any]]:
+def get_pe_headers(r2_instance: Any) -> dict[str, Any] | None:
     """
     Get PE headers information. Parse ihj command output into PE header structure.
 
@@ -382,77 +253,82 @@ def get_pe_headers(r2_instance) -> Optional[Dict[str, Any]]:
     Returns:
         PE headers dict or None on error
     """
-    # Get headers list from ihj
-    headers_list = safe_cmdj(r2_instance, "ihj", [])
 
-    if not headers_list or not isinstance(headers_list, list):
-        # Fallback to parsing text if JSON fails
-        return parse_pe_header_text(r2_instance)
+    @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=None))
+    def _get_headers():
+        # Get headers list from ihj
+        headers_list = safe_cmdj(r2_instance, "ihj", [])
 
-    # Parse the list into PE header structure
-    result = {"nt_headers": {}, "file_header": {}, "optional_header": {}}
+        if not headers_list or not isinstance(headers_list, list):
+            # Fallback to parsing text if JSON fails
+            return parse_pe_header_text(r2_instance)
 
-    # Map field names to header sections
-    for item in headers_list:
-        if not isinstance(item, dict):
-            continue
+        # Parse the list into PE header structure
+        result = {"nt_headers": {}, "file_header": {}, "optional_header": {}}
 
-        name = item.get("name", "")
-        value = item.get("value", 0)
+        # Map field names to header sections
+        for item in headers_list:
+            if not isinstance(item, dict):
+                continue
 
-        # Map to appropriate section based on field name
-        if name in [
-            "Signature",
-            "Machine",
-            "NumberOfSections",
-            "TimeDateStamp",
-            "PointerToSymbolTable",
-            "NumberOfSymbols",
-            "SizeOfOptionalHeader",
-            "Characteristics",
-        ]:
-            result["file_header"][name] = value
-        elif name in [
-            "Magic",
-            "MajorLinkerVersion",
-            "MinorLinkerVersion",
-            "SizeOfCode",
-            "SizeOfInitializedData",
-            "SizeOfUninitializedData",
-            "AddressOfEntryPoint",
-            "BaseOfCode",
-            "BaseOfData",
-            "ImageBase",
-            "SectionAlignment",
-            "FileAlignment",
-            "MajorOperatingSystemVersion",
-            "MinorOperatingSystemVersion",
-            "MajorImageVersion",
-            "MinorImageVersion",
-            "MajorSubsystemVersion",
-            "MinorSubsystemVersion",
-            "Win32VersionValue",
-            "SizeOfImage",
-            "SizeOfHeaders",
-            "CheckSum",
-            "Subsystem",
-            "DllCharacteristics",
-            "SizeOfStackReserve",
-            "SizeOfStackCommit",
-            "SizeOfHeapReserve",
-            "SizeOfHeapCommit",
-            "LoaderFlags",
-            "NumberOfRvaAndSizes",
-        ]:
-            result["optional_header"][name] = value
-        else:
-            # Put in nt_headers by default
-            result["nt_headers"][name] = value
+            name = item.get("name", "")
+            value = item.get("value", 0)
 
-    return result
+            # Map to appropriate section based on field name
+            if name in [
+                "Signature",
+                "Machine",
+                "NumberOfSections",
+                "TimeDateStamp",
+                "PointerToSymbolTable",
+                "NumberOfSymbols",
+                "SizeOfOptionalHeader",
+                "Characteristics",
+            ]:
+                result["file_header"][name] = value
+            elif name in [
+                "Magic",
+                "MajorLinkerVersion",
+                "MinorLinkerVersion",
+                "SizeOfCode",
+                "SizeOfInitializedData",
+                "SizeOfUninitializedData",
+                "AddressOfEntryPoint",
+                "BaseOfCode",
+                "BaseOfData",
+                "ImageBase",
+                "SectionAlignment",
+                "FileAlignment",
+                "MajorOperatingSystemVersion",
+                "MinorOperatingSystemVersion",
+                "MajorImageVersion",
+                "MinorImageVersion",
+                "MajorSubsystemVersion",
+                "MinorSubsystemVersion",
+                "Win32VersionValue",
+                "SizeOfImage",
+                "SizeOfHeaders",
+                "CheckSum",
+                "Subsystem",
+                "DllCharacteristics",
+                "SizeOfStackReserve",
+                "SizeOfStackCommit",
+                "SizeOfHeapReserve",
+                "SizeOfHeapCommit",
+                "LoaderFlags",
+                "NumberOfRvaAndSizes",
+            ]:
+                result["optional_header"][name] = value
+            else:
+                # Put in nt_headers by default
+                result["nt_headers"][name] = value
+
+        return result
+
+    return cast(dict[str, Any] | None, _get_headers())
 
 
-def get_elf_headers(r2_instance) -> Optional[List[Dict[str, Any]]]:
+def get_elf_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
     """
     Get ELF program headers. Use ihj command which exists in r2.
 
@@ -462,56 +338,52 @@ def get_elf_headers(r2_instance) -> Optional[List[Dict[str, Any]]]:
     Returns:
         List of ELF headers or empty list on error
     """
-    try:
-        # First try the correct JSON command
-        headers = safe_cmdj(r2_instance, "ihj", None)
-        if headers:
-            # Convert to list format if needed
-            if isinstance(headers, dict):
-                return [headers]
-            elif isinstance(headers, list):
-                return headers
 
-        # Fallback: For ELF files, use text commands
-        # Get program headers
+    @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=[]))
+    def _get_headers():
+        # First try the correct JSON command
+        headers = _get_headers_json(r2_instance)
+        if headers is not None:
+            return headers
+
         ph_output = safe_cmd(r2_instance, "ih")
         if not ph_output:
             return []
 
-        headers = []
-        lines = ph_output.split("\n")
+        return _parse_elf_headers_text(ph_output)
 
-        for line in lines:
-            line = line.strip()
-            if not line or ":" not in line:
-                continue
+    return cast(list[dict[str, Any]] | None, _get_headers())
 
-            # Parse ELF program header entries
-            # These typically have format like "Type: LOAD"
-            parts = line.split(":", 1)
-            if len(parts) == 2:
-                key = parts[0].strip()
-                value = parts[1].strip()
 
-                # Look for program header entries
-                if key.lower() in [
-                    "type",
-                    "flags",
-                    "offset",
-                    "vaddr",
-                    "paddr",
-                    "filesz",
-                    "memsz",
-                ]:
-                    headers.append({key.lower(): value})
-
+def _get_headers_json(r2_instance: Any) -> list[dict[str, Any]] | None:
+    headers = safe_cmdj(r2_instance, "ihj", None)
+    if not headers:
+        return None
+    if isinstance(headers, dict):
+        return [headers]
+    if isinstance(headers, list):
         return headers
-    except Exception as e:
-        logger.debug(f"Could not parse ELF headers: {e}")
-        return []
+    return None
 
 
-def get_macho_headers(r2_instance) -> Optional[List[Dict[str, Any]]]:
+def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
+    headers: list[dict[str, Any]] = []
+    lines = ph_output.split("\n")
+    for line in lines:
+        line = line.strip()
+        if not line or ":" not in line:
+            continue
+        parts = line.split(":", 1)
+        if len(parts) != 2:
+            continue
+        key = parts[0].strip().lower()
+        value = parts[1].strip()
+        if key in {"type", "flags", "offset", "vaddr", "paddr", "filesz", "memsz"}:
+            headers.append({key: value})
+    return headers
+
+
+def get_macho_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
     """
     Get Mach-O load commands. Use ihj command which exists in r2.
 
@@ -521,7 +393,9 @@ def get_macho_headers(r2_instance) -> Optional[List[Dict[str, Any]]]:
     Returns:
         List of Mach-O load commands or empty list on error
     """
-    try:
+
+    @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=[]))
+    def _get_headers():
         # First try the correct JSON command
         headers = safe_cmdj(r2_instance, "ihj", None)
         if headers:
@@ -537,11 +411,49 @@ def get_macho_headers(r2_instance) -> Optional[List[Dict[str, Any]]]:
         if not headers_output:
             return []
 
-        headers = []
         # Parse Mach-O specific header format
         # This would need proper parsing based on actual r2 output for Mach-O files
-
-        return headers
-    except Exception as e:
-        logger.debug(f"Could not parse Mach-O headers: {e}")
         return []
+
+    return cast(list[dict[str, Any]] | None, _get_headers())
+
+
+# Legacy compatibility functions
+# These maintain backward compatibility with old circuit breaker/retry system
+
+
+def get_circuit_breaker_stats() -> dict[str, Any]:
+    """Get circuit breaker statistics (compatibility wrapper)"""
+    from ..error_handling.unified_handler import get_circuit_breaker_stats
+
+    return get_circuit_breaker_stats()
+
+
+def reset_circuit_breakers():
+    """Reset all circuit breakers (compatibility wrapper)"""
+    from ..error_handling.unified_handler import reset_circuit_breakers
+
+    reset_circuit_breakers()
+    logger.info("All circuit breakers have been reset")
+
+
+def get_retry_stats() -> dict[str, Any]:
+    """
+    Get retry statistics (legacy compatibility)
+
+    Note: The new unified error handling system does not track separate
+    retry statistics. This function returns circuit breaker stats instead.
+    """
+    # Compatibility shim: return circuit breaker stats without emitting warnings
+    return get_circuit_breaker_stats()
+
+
+def reset_retry_stats():
+    """
+    Reset retry statistics (legacy compatibility)
+
+    Note: The new unified error handling system does not have separate
+    retry statistics. This resets circuit breakers instead.
+    """
+    # Compatibility shim: reset circuit breakers without emitting warnings
+    reset_circuit_breakers()

@@ -8,7 +8,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import psutil
 
@@ -34,7 +34,7 @@ class MemoryLimits:
 class MemoryMonitor:
     """Thread-safe memory monitoring and management"""
 
-    def __init__(self, limits: MemoryLimits = None):
+    def __init__(self, limits: MemoryLimits | None = None):
         self.limits = limits or MemoryLimits()
         self.lock = threading.Lock()
         self.process = psutil.Process(os.getpid())
@@ -47,10 +47,12 @@ class MemoryMonitor:
         self.peak_memory_mb = 0.0
 
         # Callbacks
-        self.warning_callback: Optional[Callable] = None
-        self.critical_callback: Optional[Callable] = None
+        from collections.abc import Callable
 
-    def check_memory(self, force: bool = False) -> Dict[str, Any]:
+        self.warning_callback: Callable[[dict[str, Any]], Any] | None = None
+        self.critical_callback: Callable[[dict[str, Any]], Any] | None = None
+
+    def check_memory(self, force: bool = False) -> dict[str, Any]:
         """
         Check current memory usage
 
@@ -115,7 +117,7 @@ class MemoryMonitor:
                 logger.error(f"Error checking memory: {e}")
                 return self._get_error_stats()
 
-    def _handle_warning_memory(self, stats: Dict[str, Any]):
+    def _handle_warning_memory(self, stats: dict[str, Any]):
         """Handle warning memory threshold"""
         self.memory_warnings += 1
         logger.warning(
@@ -133,7 +135,7 @@ class MemoryMonitor:
             except Exception as e:
                 logger.error(f"Error in warning callback: {e}")
 
-    def _handle_critical_memory(self, stats: Dict[str, Any]):
+    def _handle_critical_memory(self, stats: dict[str, Any]):
         """Handle critical memory threshold"""
         logger.error(
             f"Critical memory usage: {stats['process_memory_mb']:.1f}MB "
@@ -162,7 +164,7 @@ class MemoryMonitor:
         self.gc_count += 1
         logger.debug(f"Garbage collection triggered (count: {self.gc_count})")
 
-    def _get_cached_stats(self) -> Dict[str, Any]:
+    def _get_cached_stats(self) -> dict[str, Any]:
         """Get cached stats when not checking"""
         try:
             memory_info = self.process.memory_info()
@@ -178,7 +180,7 @@ class MemoryMonitor:
         except Exception:
             return self._get_error_stats()
 
-    def _get_error_stats(self) -> Dict[str, Any]:
+    def _get_error_stats(self) -> dict[str, Any]:
         """Get error stats when monitoring fails"""
         return {
             "process_memory_mb": 0.0,
@@ -198,14 +200,14 @@ class MemoryMonitor:
             True if memory is available
         """
         stats = self.check_memory()
-        current_mb = stats.get("process_memory_mb", 0)
+        current_mb = float(stats.get("process_memory_mb", 0))
 
         # Check if we would exceed process limit
         if current_mb + required_mb > self.limits.max_process_memory_mb:
             return False
 
         # Check system memory availability
-        system_available = stats.get("system_memory_available_mb", 0)
+        system_available = float(stats.get("system_memory_available_mb", 0))
         return required_mb <= system_available * 0.8  # Leave 20% buffer
 
     def validate_file_size(self, file_size_bytes: int) -> bool:
@@ -222,8 +224,7 @@ class MemoryMonitor:
 
         if file_size_mb > self.limits.max_file_size_mb:
             logger.warning(
-                f"File too large: {file_size_mb:.1f}MB "
-                f"(limit: {self.limits.max_file_size_mb}MB)"
+                f"File too large: {file_size_mb:.1f}MB (limit: {self.limits.max_file_size_mb}MB)"
             )
             return False
 
@@ -250,7 +251,9 @@ class MemoryMonitor:
 
         return True
 
-    def limit_collection_size(self, collection, max_size: int, name: str = "collection"):
+    def limit_collection_size(
+        self, collection: list[Any], max_size: int, name: str = "collection"
+    ) -> list[Any]:
         """
         Limit collection size and log if truncated
 
@@ -268,7 +271,11 @@ class MemoryMonitor:
 
         return collection
 
-    def set_callbacks(self, warning_callback: Callable = None, critical_callback: Callable = None):
+    def set_callbacks(
+        self,
+        warning_callback: Any | None = None,
+        critical_callback: Any | None = None,
+    ) -> None:
         """Set memory threshold callbacks"""
         self.warning_callback = warning_callback
         self.critical_callback = critical_callback
@@ -277,7 +284,7 @@ class MemoryMonitor:
 class MemoryAwareAnalyzer:
     """Base class for memory-aware analyzers"""
 
-    def __init__(self, memory_monitor: MemoryMonitor = None):
+    def __init__(self, memory_monitor: MemoryMonitor | None = None):
         self.memory_monitor = memory_monitor or MemoryMonitor()
 
     def should_skip_analysis(
@@ -304,7 +311,7 @@ class MemoryAwareAnalyzer:
 
     def safe_large_operation(
         self,
-        operation: Callable,
+        operation,
         estimated_memory_mb: float,
         operation_name: str = "operation",
     ):
@@ -356,7 +363,7 @@ class MemoryAwareAnalyzer:
 global_memory_monitor = MemoryMonitor()
 
 
-def get_memory_stats() -> Dict[str, Any]:
+def get_memory_stats() -> dict[str, Any]:
     """Get global memory statistics"""
     return global_memory_monitor.check_memory()
 

@@ -1,0 +1,9 @@
+{
+  "file_format": "Mach-O",
+  "name": "hello_macho",
+  "size": 33432,
+  "hashes": {
+    "md5": "78e78197ec97689a8d4b0d8c561de991",
+    "sha256": "ccee249906bc711fae5d2cce11a3420e5598d71b10efa89c954e459905566357"
+  }
+}

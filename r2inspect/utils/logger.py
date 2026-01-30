@@ -49,7 +49,7 @@ def setup_logger(
 
             # Use RotatingFileHandler for better thread safety and log management
             if thread_safe:
-                file_handler = logging.handlers.RotatingFileHandler(
+                file_handler: logging.Handler = logging.handlers.RotatingFileHandler(
                     log_dir / "r2inspect.log",
                     maxBytes=10 * 1024 * 1024,  # 10MB
                     backupCount=5,

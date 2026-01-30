@@ -231,6 +231,9 @@ $RECYCLE.BIN/
 .nfs*
 
 # r2inspect specific
+# Benchmark samples (binary test files - too large for git)
+bench_samples/
+
 # Analysis output files (but keep README)
 output/*
 !output/README.md
@@ -241,6 +244,7 @@ r2inspect_batch_results/
 *.json
 *.csv
 !example_output.json
+!samples/fixtures/expected/*.json
 
 # Development tools and configurations
 .claude/
@@ -267,6 +271,10 @@ r2inspect_*.csv
 samples/*
 !samples/README.md
 !samples/.gitkeep
+!samples/fixtures/
+!samples/fixtures/**
+!samples/fixtures/expected/
+!samples/fixtures/expected/*.json
 malware_samples/
 test_samples/
 *.exe

@@ -6,8 +6,9 @@ Unified error handling strategy for r2inspect
 import functools
 import threading
 from collections import defaultdict, deque
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, Dict, Tuple
+from typing import Any
 
 from .logger import get_logger
 
@@ -45,9 +46,9 @@ class ErrorInfo:
         exception: Exception,
         severity: ErrorSeverity,
         category: ErrorCategory,
-        context: Dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
         recoverable: bool = True,
-        suggested_action: str = None,
+        suggested_action: str | None = None,
     ):
         self.exception = exception
         self.severity = severity
@@ -58,7 +59,7 @@ class ErrorInfo:
         self.timestamp = __import__("time").time()
         self.thread_id = threading.get_ident()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for logging/serialization"""
         return {
             "exception_type": type(self.exception).__name__,
@@ -97,7 +98,7 @@ class ErrorClassifier:
     }
 
     @classmethod
-    def classify(cls, exception: Exception, context: Dict[str, Any] = None) -> ErrorInfo:
+    def classify(cls, exception: Exception, context: dict[str, Any] | None = None) -> ErrorInfo:
         """
         Classify an exception
 
@@ -156,7 +157,7 @@ class ErrorClassifier:
         exception: Exception,
         category: ErrorCategory,
         severity: ErrorSeverity,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> tuple:
         """Adjust classification based on context"""
 
@@ -185,7 +186,7 @@ class ErrorClassifier:
 
     @classmethod
     def _is_recoverable(
-        cls, exception: Exception, severity: ErrorSeverity, context: Dict[str, Any]
+        cls, exception: Exception, severity: ErrorSeverity, context: dict[str, Any]
     ) -> bool:
         """Determine if error is recoverable"""
 
@@ -195,11 +196,11 @@ class ErrorClassifier:
 
         # Memory errors might be recoverable with cleanup
         if isinstance(exception, MemoryError):
-            return context.get("memory_cleanup_available", True)
+            return bool(context.get("memory_cleanup_available", True))
 
         # File access errors for optional components are recoverable
-        if isinstance(exception, (FileNotFoundError, PermissionError)):
-            return context.get("component_optional", True)
+        if isinstance(exception, FileNotFoundError | PermissionError):
+            return bool(context.get("component_optional", True))
 
         # Most other errors are recoverable
         return True
@@ -210,7 +211,7 @@ class ErrorClassifier:
         exception: Exception,
         category: ErrorCategory,
         severity: ErrorSeverity,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> str:
         """Suggest recovery action"""
 
@@ -235,8 +236,7 @@ class ErrorClassifier:
         elif category == ErrorCategory.INPUT_VALIDATION:
             return "Validate input and retry with corrected parameters"
 
-        else:
-            return "Log error and continue with remaining analysis"
+        return "Log error and continue with remaining analysis"
 
 
 class ErrorRecoveryManager:
@@ -254,7 +254,7 @@ class ErrorRecoveryManager:
         """Register a recovery strategy for an error category"""
         self.recovery_strategies[category] = strategy
 
-    def handle_error(self, error_info: ErrorInfo) -> Tuple[bool, Any]:
+    def handle_error(self, error_info: ErrorInfo) -> tuple[bool, Any]:
         """
         Handle an error with appropriate recovery strategy
 
@@ -300,13 +300,13 @@ class ErrorRecoveryManager:
         else:
             logger.debug(f"Low severity error: {error_dict}")
 
-    def get_error_stats(self) -> Dict[str, Any]:
+    def get_error_stats(self) -> dict[str, Any]:
         """Get error statistics"""
         with self.lock:
             recent_count = len(self.recent_errors)
 
             # Count by severity
-            severity_counts = defaultdict(int)
+            severity_counts: dict[str, int] = defaultdict(int)
             for error in self.recent_errors:
                 severity_counts[error.severity.value] += 1
 
@@ -326,7 +326,7 @@ global_error_manager = ErrorRecoveryManager()
 def error_handler(
     category: ErrorCategory = ErrorCategory.UNKNOWN,
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-    context: Dict[str, Any] = None,
+    context: dict[str, Any] | None = None,
     fallback_result: Any = None,
 ):
     """
@@ -382,7 +382,7 @@ def safe_execute(
     func: Callable,
     *args,
     fallback_result: Any = None,
-    context: Dict[str, Any] = None,
+    context: dict[str, Any] | None = None,
     **kwargs,
 ) -> Any:
     """
@@ -454,7 +454,7 @@ def register_recovery_strategies():
 register_recovery_strategies()
 
 
-def get_error_stats() -> Dict[str, Any]:
+def get_error_stats() -> dict[str, Any]:
     """Get global error statistics"""
     return global_error_manager.get_error_stats()
 

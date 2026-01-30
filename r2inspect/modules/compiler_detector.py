@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Compiler Detection Module - Identifies compilers used to build binaries
 """
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
@@ -352,7 +353,7 @@ class CompilerDetector:
             "VCRUNTIME140_1.dll": "Visual Studio 2019/2022 (14.2+)",
         }
 
-    def detect_compiler(self) -> Dict[str, Any]:
+    def detect_compiler(self) -> dict[str, Any]:
         """Main function to detect compiler information"""
 
         logger.debug("Starting compiler detection...")
@@ -379,73 +380,16 @@ class CompilerDetector:
 
             # PE-specific analysis
             if file_format == "PE":
-                rich_header = self._analyze_rich_header()
-                results["rich_header_info"] = rich_header
-
-                # Check if Rich Header contains MSVC compiler entries
-                if rich_header.get("available") and rich_header.get("compilers"):
-                    for compiler_entry in rich_header["compilers"]:
-                        compiler_name = compiler_entry.get("compiler_name", "")
-                        if "MSVC" in compiler_name or "Utc" in compiler_name:
-                            # Found MSVC compiler in Rich Header
-                            results["detected"] = True
-                            results["compiler"] = "MSVC"
-                            results["confidence"] = 0.95  # High confidence from Rich Header
-
-                            # Determine version from compiler name
-                            if "2019" in compiler_name:
-                                results["version"] = "Visual Studio 2019"
-                            elif "2022" in compiler_name:
-                                results["version"] = "Visual Studio 2022"
-                            elif "1900" in compiler_name:
-                                results["version"] = "Visual Studio 2015"
-                            elif "1910" in compiler_name:
-                                results["version"] = "Visual Studio 2017"
-                            else:
-                                results["version"] = "Visual Studio (version from Rich Header)"
-
-                            results["details"] = {"detection_method": "Rich Header Analysis"}
-                            logger.debug(
-                                f"Detected {results['compiler']} {results['version']} from Rich Header"
-                            )
-                            return results  # Return early with Rich Header detection
+                if self._apply_rich_header_detection(results):
+                    return results
 
             # Score each compiler
-            compiler_scores = {}
-
-            for compiler_name, signatures in self.compiler_signatures.items():
-                score = self._calculate_compiler_score(
-                    compiler_name,
-                    signatures,
-                    strings_data,
-                    imports_data,
-                    sections_data,
-                    symbols_data,
-                )
-                compiler_scores[compiler_name] = score
-
-            # Find best match
-            if compiler_scores:
-                best_compiler = max(compiler_scores, key=compiler_scores.get)
-                best_score = compiler_scores[best_compiler]
-
-                if best_score > 0.3:  # Minimum confidence threshold
-                    results["detected"] = True
-                    results["compiler"] = best_compiler
-                    results["confidence"] = best_score
-
-                    # Get specific version if possible
-                    version_info = self._detect_compiler_version(
-                        best_compiler, strings_data, imports_data
-                    )
-                    results["version"] = version_info
-
-                    # Additional details
-                    results["details"] = {
-                        "all_scores": compiler_scores,
-                        "file_format": file_format,
-                        "detection_method": self._get_detection_method(best_compiler, best_score),
-                    }
+            compiler_scores = self._score_compilers(
+                strings_data, imports_data, sections_data, symbols_data
+            )
+            self._apply_best_compiler(
+                results, compiler_scores, strings_data, imports_data, file_format
+            )
 
             logger.debug(
                 f"Compiler detection completed: {results['compiler']} (confidence: {results['confidence']:.2f})"
@@ -456,6 +400,84 @@ class CompilerDetector:
             results["error"] = str(e)
 
         return results
+
+    def _apply_rich_header_detection(self, results: dict[str, Any]) -> bool:
+        rich_header = self._analyze_rich_header()
+        results["rich_header_info"] = rich_header
+        if not (rich_header.get("available") and rich_header.get("compilers")):
+            return False
+
+        for compiler_entry in rich_header["compilers"]:
+            compiler_name = compiler_entry.get("compiler_name", "")
+            if "MSVC" in compiler_name or "Utc" in compiler_name:
+                results["detected"] = True
+                results["compiler"] = "MSVC"
+                results["confidence"] = 0.95
+                results["version"] = self._map_msvc_version_from_rich(compiler_name)
+                results["details"] = {"detection_method": "Rich Header Analysis"}
+                logger.debug(
+                    f"Detected {results['compiler']} {results['version']} from Rich Header"
+                )
+                return True
+        return False
+
+    def _map_msvc_version_from_rich(self, compiler_name: str) -> str:
+        if "2019" in compiler_name:
+            return "Visual Studio 2019"
+        if "2022" in compiler_name:
+            return "Visual Studio 2022"
+        if "1900" in compiler_name:
+            return "Visual Studio 2015"
+        if "1910" in compiler_name:
+            return "Visual Studio 2017"
+        return "Visual Studio (version from Rich Header)"
+
+    def _score_compilers(
+        self,
+        strings_data: list[str],
+        imports_data: list[str],
+        sections_data: list[str],
+        symbols_data: list[str],
+    ) -> dict[str, float]:
+        compiler_scores: dict[str, float] = {}
+        for compiler_name, signatures in self.compiler_signatures.items():
+            score = self._calculate_compiler_score(
+                compiler_name,
+                signatures,
+                strings_data,
+                imports_data,
+                sections_data,
+                symbols_data,
+            )
+            compiler_scores[compiler_name] = score
+        return compiler_scores
+
+    def _apply_best_compiler(
+        self,
+        results: dict[str, Any],
+        compiler_scores: dict[str, float],
+        strings_data: list[str],
+        imports_data: list[str],
+        file_format: str,
+    ) -> None:
+        if not compiler_scores:
+            return
+        best_compiler = max(compiler_scores, key=compiler_scores.get)
+        best_score = compiler_scores[best_compiler]
+
+        if best_score <= 0.3:
+            return
+        results["detected"] = True
+        results["compiler"] = best_compiler
+        results["confidence"] = best_score
+        results["version"] = self._detect_compiler_version(
+            best_compiler, strings_data, imports_data
+        )
+        results["details"] = {
+            "all_scores": compiler_scores,
+            "file_format": file_format,
+            "detection_method": self._get_detection_method(best_compiler, best_score),
+        }
 
     def _get_file_format(self) -> str:
         """Detect file format (PE, ELF, Mach-O)"""
@@ -470,10 +492,11 @@ class CompilerDetector:
                 elif "MACH" in format_info:
                     return "Mach-O"
             return "Unknown"
-        except:
+        except Exception as e:
+            logger.debug(f"Error detecting file format: {e}")
             return "Unknown"
 
-    def _get_strings(self) -> List[str]:
+    def _get_strings(self) -> list[str]:
         """Extract strings from binary"""
         try:
             strings_output = self.r2.cmd("izz~..")  # Get all strings
@@ -492,7 +515,7 @@ class CompilerDetector:
             logger.error(f"Error extracting strings: {e}")
             return []
 
-    def _get_imports(self) -> List[str]:
+    def _get_imports(self) -> list[str]:
         """Get imported functions and libraries"""
         try:
             imports = []
@@ -513,7 +536,7 @@ class CompilerDetector:
             logger.error(f"Error getting imports: {e}")
             return []
 
-    def _get_sections(self) -> List[str]:
+    def _get_sections(self) -> list[str]:
         """Get section names"""
         try:
             sections = []
@@ -529,7 +552,7 @@ class CompilerDetector:
             logger.error(f"Error getting sections: {e}")
             return []
 
-    def _get_symbols(self) -> List[str]:
+    def _get_symbols(self) -> list[str]:
         """Get symbol names"""
         try:
             symbols = []
@@ -545,7 +568,7 @@ class CompilerDetector:
             logger.error(f"Error getting symbols: {e}")
             return []
 
-    def _analyze_rich_header(self) -> Dict[str, Any]:
+    def _analyze_rich_header(self) -> dict[str, Any]:
         """Analyze Rich Header for PE files (MSVC specific)"""
         try:
             # Use the RichHeaderAnalyzer module for proper analysis
@@ -572,11 +595,11 @@ class CompilerDetector:
     def _calculate_compiler_score(
         self,
         _compiler_name: str,
-        signatures: Dict,
-        strings_data: List[str],
-        imports_data: List[str],
-        sections_data: List[str],
-        symbols_data: List[str],
+        signatures: dict,
+        strings_data: list[str],
+        imports_data: list[str],
+        sections_data: list[str],
+        symbols_data: list[str],
     ) -> float:
         """Calculate confidence score for a specific compiler"""
 
@@ -598,7 +621,7 @@ class CompilerDetector:
 
         return 0.0
 
-    def _check_string_signatures(self, signatures: Dict, strings_data: List[str]) -> tuple:
+    def _check_string_signatures(self, signatures: dict, strings_data: list[str]) -> tuple:
         """Check string pattern signatures"""
         if "strings" not in signatures:
             return 0.0, 0.0
@@ -614,7 +637,7 @@ class CompilerDetector:
 
         return score, max_score
 
-    def _check_import_signatures(self, signatures: Dict, imports_data: List[str]) -> tuple:
+    def _check_import_signatures(self, signatures: dict, imports_data: list[str]) -> tuple:
         """Check import signatures"""
         if "imports" not in signatures:
             return 0.0, 0.0
@@ -628,7 +651,7 @@ class CompilerDetector:
 
         return score, max_score
 
-    def _check_section_signatures(self, signatures: Dict, sections_data: List[str]) -> tuple:
+    def _check_section_signatures(self, signatures: dict, sections_data: list[str]) -> tuple:
         """Check section signatures"""
         if "sections" not in signatures:
             return 0.0, 0.0
@@ -642,7 +665,7 @@ class CompilerDetector:
 
         return score, max_score
 
-    def _check_symbol_signatures(self, signatures: Dict, symbols_data: List[str]) -> tuple:
+    def _check_symbol_signatures(self, signatures: dict, symbols_data: list[str]) -> tuple:
         """Check symbol signatures"""
         if "symbols" not in signatures:
             return 0.0, 0.0
@@ -657,7 +680,7 @@ class CompilerDetector:
         return score, max_score
 
     def _detect_compiler_version(
-        self, compiler: str, strings_data: List[str], imports_data: List[str]
+        self, compiler: str, strings_data: list[str], imports_data: list[str]
     ) -> str:
         """Detect specific compiler version"""
 
@@ -679,7 +702,7 @@ class CompilerDetector:
 
         return "Unknown"
 
-    def _detect_msvc_version(self, strings_data: List[str], imports_data: List[str]) -> str:
+    def _detect_msvc_version(self, strings_data: list[str], imports_data: list[str]) -> str:
         """Detect MSVC version"""
         # Check runtime libraries for MSVC version
         for import_name in imports_data:
@@ -694,7 +717,7 @@ class CompilerDetector:
 
         return "Unknown"
 
-    def _detect_gcc_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_gcc_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect GCC version"""
         for string in strings_data:
             match = re.search(r"GCC.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -705,7 +728,7 @@ class CompilerDetector:
                 return f"GCC {match.group(1)}"
         return "Unknown"
 
-    def _detect_clang_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_clang_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect Clang version"""
         for string in strings_data:
             match = re.search(r"clang.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -716,19 +739,19 @@ class CompilerDetector:
                 return f"Apple Clang {match.group(1)}"
         return "Unknown"
 
-    def _detect_intel_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_intel_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect Intel version"""
         return "Unknown"
 
-    def _detect_borland_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_borland_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect Borland version"""
         return "Unknown"
 
-    def _detect_mingw_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_mingw_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect MinGW version"""
         return "Unknown"
 
-    def _detect_go_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_go_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect Go version"""
         for string in strings_data:
             match = re.search(r"go(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -736,7 +759,7 @@ class CompilerDetector:
                 return f"Go {match.group(1)}"
         return "Unknown"
 
-    def _detect_rust_version(self, strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_rust_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect Rust version"""
         for string in strings_data:
             match = re.search(r"rustc.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
@@ -744,7 +767,7 @@ class CompilerDetector:
                 return f"Rust {match.group(1)}"
         return "Unknown"
 
-    def _detect_delphi_version(self, _strings_data: List[str], _imports_data: List[str]) -> str:
+    def _detect_delphi_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
         """Detect Delphi version"""
         return "Unknown"
 

@@ -46,6 +46,7 @@ dependencies = [
     "pycryptodome>=3.19.0",
     "cryptography>=41.0.0",
     "psutil>=5.9.0",
+    "pydantic>=2.5.0",
     "pybloom-live>=4.0.0",
     "simhash>=2.1.0",
     "colorama>=0.4.6",
@@ -66,6 +67,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "pre-commit>=3.0.0",
     "bandit>=1.7.0",
+    "mutmut>=2.4.0",
 ]
 docker = [
     "pycparser>=2.21",
@@ -121,14 +123,17 @@ extend-exclude = '''
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py312"
+extend-exclude = [
+    "templates/**",
+    "bench_samples/**",
+]
 
 [tool.ruff.lint]
 select = [
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
     "F",    # pyflakes
-    "I",    # isort
     "B",    # flake8-bugbear
     "C4",   # flake8-comprehensions
     "UP",   # pyupgrade
@@ -192,7 +197,7 @@ use_parentheses = true
 ensure_newline_before_comments = true
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -210,6 +215,9 @@ exclude = [
     "build",
     "dist",
     ".qlty",
+    "bench_samples",
+    "benchmarks",
+    "samples",
 ]
 
 [tool.pylint.messages_control]
