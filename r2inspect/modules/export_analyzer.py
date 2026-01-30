@@ -1,24 +1,54 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Export Analysis Module using r2pipe
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
+from ..abstractions import BaseAnalyzer
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
 
-class ExportAnalyzer:
+class ExportAnalyzer(BaseAnalyzer):
     """Export table analysis using radare2"""
 
     def __init__(self, r2, config):
-        self.r2 = r2
-        self.config = config
+        super().__init__(r2=r2, config=config)
 
-    def get_exports(self) -> List[Dict[str, Any]]:
+    def get_category(self) -> str:
+        return "metadata"
+
+    def get_description(self) -> str:
+        return "Analyzes exported functions and symbols from PE/ELF binaries"
+
+    def supports_format(self, file_format: str) -> bool:
+        return file_format.upper() in {"PE", "PE32", "PE32+", "ELF", "DLL"}
+
+    def analyze(self) -> dict[str, Any]:
+        """Perform export analysis"""
+        result = self._init_result_structure({"total_exports": 0, "exports": [], "statistics": {}})
+
+        try:
+            self._log_info("Starting export analysis")
+            exports = self.get_exports()
+            stats = self.get_export_statistics()
+
+            result["exports"] = exports
+            result["statistics"] = stats
+            result["total_exports"] = len(exports)
+            result["available"] = True
+            self._log_info(f"Found {len(exports)} exports")
+        except Exception as e:
+            result["error"] = str(e)
+            self._log_error(f"Export analysis failed: {e}")
+
+        return result
+
+    def get_exports(self) -> list[dict[str, Any]]:
         """Get all exported functions with analysis"""
         exports_info = []
 
@@ -40,7 +70,7 @@ class ExportAnalyzer:
 
         return exports_info
 
-    def _analyze_export(self, exp: Dict[str, Any]) -> Dict[str, Any]:
+    def _analyze_export(self, exp: dict[str, Any]) -> dict[str, Any]:
         """Analyze a single export"""
         analysis = {
             "name": exp.get("name", "unknown"),
@@ -63,7 +93,7 @@ class ExportAnalyzer:
 
         return analysis
 
-    def _get_export_characteristics(self, exp: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_export_characteristics(self, exp: dict[str, Any]) -> dict[str, Any]:
         """Get characteristics of an export"""
         characteristics = {}
 
@@ -117,7 +147,7 @@ class ExportAnalyzer:
 
         return characteristics
 
-    def get_export_statistics(self) -> Dict[str, Any]:
+    def get_export_statistics(self) -> dict[str, Any]:
         """Get statistics about exports"""
         stats = {
             "total_exports": 0,
@@ -135,27 +165,27 @@ class ExportAnalyzer:
                 stats["total_exports"] = len(exports)
 
                 for exp in exports:
-                    # Skip if export is not a dictionary (malformed data)
-                    if not isinstance(exp, dict):
-                        logger.debug(
-                            f"Skipping malformed export data in statistics: {type(exp)} - {exp}"
-                        )
-                        continue
-
-                    stats["export_names"].append(exp.get("name", "unknown"))
-
-                    if exp.get("is_forwarded"):
-                        stats["forwarded_exports"] += 1
-
-                    if exp.get("characteristics", {}).get("is_function"):
-                        stats["function_exports"] += 1
-                    else:
-                        stats["data_exports"] += 1
-
-                    if exp.get("characteristics", {}).get("suspicious_name"):
-                        stats["suspicious_exports"] += 1
+                    self._update_export_stats(stats, exp)
 
         except Exception as e:
             logger.error(f"Error getting export statistics: {e}")
 
         return stats
+
+    def _update_export_stats(self, stats: dict[str, Any], exp: Any) -> None:
+        if not isinstance(exp, dict):
+            logger.debug(f"Skipping malformed export data in statistics: {type(exp)} - {exp}")
+            return
+
+        stats["export_names"].append(exp.get("name", "unknown"))
+
+        if exp.get("is_forwarded"):
+            stats["forwarded_exports"] += 1
+
+        if exp.get("characteristics", {}).get("is_function"):
+            stats["function_exports"] += 1
+        else:
+            stats["data_exports"] += 1
+
+        if exp.get("characteristics", {}).get("suspicious_name"):
+            stats["suspicious_exports"] += 1

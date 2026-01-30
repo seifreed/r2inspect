@@ -7,7 +7,11 @@ import contextlib
 import io
 import sys
 import warnings
-from typing import Any, Optional
+from typing import Any
+
+from .logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class R2PipeErrorSuppressor:
@@ -35,7 +39,7 @@ class R2PipeErrorSuppressor:
         return False
 
 
-def silent_cmdj(r2_instance, command: str, default: Optional[Any] = None) -> Optional[Any]:
+def silent_cmdj(r2_instance, command: str, default: Any | None = None) -> Any | None:
     """
     Execute r2pipe cmdj command with complete error suppression.
 
@@ -54,36 +58,51 @@ def silent_cmdj(r2_instance, command: str, default: Optional[Any] = None) -> Opt
         return default
 
     try:
-        # First try the normal cmdj
-        with R2PipeErrorSuppressor():
-            # Test if pipe is still open
-            try:
-                result = r2_instance.cmdj(command)
-                return result if result is not None else default
-            except (OSError, BrokenPipeError, ConnectionError):
-                # Pipe is closed or broken
-                return default
-
-    except (json.JSONDecodeError, ValueError, TypeError):
-        # If cmdj fails, try cmd and parse manually
-        try:
-            with R2PipeErrorSuppressor():
-                raw_result = r2_instance.cmd(command)
-                if raw_result and raw_result.strip():
-                    # Try to parse as JSON
-                    try:
-                        return json.loads(raw_result)
-                    except:
-                        # If not JSON, return as string if it's meaningful
-                        if len(raw_result.strip()) > 2:
-                            return raw_result.strip()
-        except:
-            pass
-    except Exception:
-        # Any other exception, just return default
+        result = _try_cmdj(r2_instance, command, default)
+        if result is not None or result == default:
+            return result
+    except (json.JSONDecodeError, TypeError):
         pass
+    except Exception as exc:
+        logger.debug("Suppressed unexpected r2pipe error for %s: %s", command, exc)
+        return default
+
+    try:
+        return _try_cmd_parse(r2_instance, command, default)
+    except (OSError, json.JSONDecodeError, TypeError):
+        logger.debug("Suppressed r2pipe command error for %s", command)
 
     return default
+
+
+def _try_cmdj(r2_instance, command: str, default: Any | None) -> Any | None:
+    with R2PipeErrorSuppressor():
+        try:
+            result = r2_instance.cmdj(command)
+            return result if result is not None else default
+        except OSError:
+            return default
+
+
+def _try_cmd_parse(r2_instance, command: str, default: Any | None) -> Any | None:
+    with R2PipeErrorSuppressor():
+        raw_result = r2_instance.cmd(command)
+        if raw_result and raw_result.strip():
+            parsed = _parse_raw_result(raw_result)
+            if parsed is not None:
+                return parsed
+    return default
+
+
+def _parse_raw_result(raw_result: str) -> Any | None:
+    import json
+
+    try:
+        return json.loads(raw_result)
+    except (json.JSONDecodeError, TypeError):
+        if len(raw_result.strip()) > 2:
+            return raw_result.strip()
+    return None
 
 
 @contextlib.contextmanager

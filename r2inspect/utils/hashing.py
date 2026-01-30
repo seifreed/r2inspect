@@ -5,10 +5,10 @@ Hashing utilities for r2inspect
 
 import hashlib
 import os
-from typing import Dict, Optional
+from typing import cast
 
 
-def calculate_hashes(file_path: str) -> Dict[str, str]:
+def calculate_hashes(file_path: str) -> dict[str, str]:
     """Calculate various hashes for a file"""
     hashes = {"md5": "", "sha1": "", "sha256": "", "sha512": ""}
 
@@ -44,7 +44,7 @@ def calculate_hashes(file_path: str) -> Dict[str, str]:
     return hashes
 
 
-def calculate_imphash(imports: list) -> Optional[str]:
+def calculate_imphash(imports: list) -> str | None:
     """Calculate import hash (imphash) from imports list"""
     try:
         if not imports:
@@ -71,12 +71,12 @@ def calculate_imphash(imports: list) -> Optional[str]:
         return None
 
 
-def calculate_ssdeep(file_path: str) -> Optional[str]:
+def calculate_ssdeep(file_path: str) -> str | None:
     """Calculate ssdeep fuzzy hash (requires ssdeep library)"""
     try:
         import ssdeep
 
-        return ssdeep.hash_from_file(file_path)
+        return cast(str | None, ssdeep.hash_from_file(file_path))
     except ImportError:
         return None
     except Exception:

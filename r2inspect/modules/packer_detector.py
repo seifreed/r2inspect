@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Packer Detection Module using r2pipe
 """
 
 import math
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmdj
@@ -42,7 +43,7 @@ class PackerDetector:
             "MPRESS": [b"MPRESS", b".MPRESS"],
         }
 
-    def detect(self) -> Dict[str, Any]:
+    def detect(self) -> dict[str, Any]:
         """Detect if file is packed"""
         packer_info = {
             "is_packed": False,
@@ -114,39 +115,50 @@ class PackerDetector:
 
         return packer_info
 
-    def _check_packer_signatures(self) -> Optional[Dict[str, str]]:
+    def _check_packer_signatures(self) -> dict[str, str] | None:
         """Check for known packer signatures"""
 
         try:
-            for packer_name, signatures in self.packer_signatures.items():
-                for signature in signatures:
-                    # Search for signature in binary
-                    hex_sig = signature.hex()
-                    search_cmd = f"/x {hex_sig}"
-                    result = self.r2.cmd(search_cmd)
+            signature = self._find_packer_signature()
+            if signature:
+                return signature
 
-                    if result and result.strip():
-                        return {
-                            "type": packer_name,
-                            "signature": signature.decode("utf-8", errors="ignore"),
-                        }
-
-            # Check strings for packer indicators
-            strings_result = safe_cmdj(self.r2, "izj")
-            if strings_result:
-                for string_info in strings_result:
-                    string_val = string_info.get("string", "").lower()
-
-                    for packer_name in self.packer_signatures:
-                        if packer_name.lower() in string_val:
-                            return {"type": packer_name, "signature": string_val}
+            packer_string = self._find_packer_string()
+            if packer_string:
+                return packer_string
 
         except Exception as e:
             logger.error(f"Error checking packer signatures: {e}")
 
         return None
 
-    def _analyze_entropy(self) -> Dict[str, Any]:
+    def _find_packer_signature(self) -> dict[str, str] | None:
+        for packer_name, signatures in self.packer_signatures.items():
+            for signature in signatures:
+                if self._search_signature_hex(signature.hex()):
+                    return {
+                        "type": packer_name,
+                        "signature": signature.decode("utf-8", errors="ignore"),
+                    }
+        return None
+
+    def _search_signature_hex(self, hex_sig: str) -> bool:
+        search_cmd = f"/x {hex_sig}"
+        result = self.r2.cmd(search_cmd)
+        return bool(result and result.strip())
+
+    def _find_packer_string(self) -> dict[str, str] | None:
+        strings_result = safe_cmdj(self.r2, "izj")
+        if not strings_result:
+            return None
+        for string_info in strings_result:
+            string_val = string_info.get("string", "").lower()
+            for packer_name in self.packer_signatures:
+                if packer_name.lower() in string_val:
+                    return {"type": packer_name, "signature": string_val}
+        return None
+
+    def _analyze_entropy(self) -> dict[str, Any]:
         """Analyze entropy of file sections"""
         entropy_info = {}
 
@@ -183,7 +195,7 @@ class PackerDetector:
 
         return entropy_info
 
-    def _calculate_section_entropy(self, section: Dict[str, Any]) -> float:
+    def _calculate_section_entropy(self, section: dict[str, Any]) -> float:
         """Calculate Shannon entropy for a section"""
         try:
             vaddr = section.get("vaddr", 0)
@@ -232,10 +244,11 @@ class PackerDetector:
         try:
             imports = safe_cmdj(self.r2, "iij")
             return len(imports) if imports else 0
-        except:
+        except Exception as e:
+            logger.debug(f"Error counting imports: {e}")
             return 0
 
-    def _analyze_sections(self) -> Dict[str, Any]:
+    def _analyze_sections(self) -> dict[str, Any]:
         """Analyze section characteristics for packer indicators"""
         section_info = {
             "suspicious_sections": [],
@@ -251,60 +264,47 @@ class PackerDetector:
                 section_info["section_count"] = len(sections)
 
                 for section in sections:
-                    name = str(section.get("name", ""))
-                    flags = str(section.get("flags", ""))
-                    size = section.get("size", 0)
-
-                    # Check for executable sections
-                    if "x" in flags:
-                        section_info["executable_sections"] += 1
-
-                        # Check for writable+executable (suspicious)
-                        if "w" in flags:
-                            section_info["writable_executable"] += 1
-                            section_info["suspicious_sections"].append(
-                                {
-                                    "name": name,
-                                    "reason": "Writable and executable",
-                                    "flags": flags,
-                                }
-                            )
-
-                    # Check for suspicious section names
-                    suspicious_names = [
-                        ".upx",
-                        ".aspack",
-                        ".themida",
-                        ".vmp",
-                        ".packed",
-                    ]
-                    if isinstance(name, str) and any(
-                        sus_name in name.lower() for sus_name in suspicious_names
-                    ):
-                        section_info["suspicious_sections"].append(
-                            {
-                                "name": name,
-                                "reason": "Suspicious section name",
-                                "flags": flags,
-                            }
-                        )
-
-                    # Check for very small or very large sections
-                    if size < 100:
-                        section_info["suspicious_sections"].append(
-                            {"name": name, "reason": "Very small section", "size": size}
-                        )
-                    elif size > 10000000:  # 10MB
-                        section_info["suspicious_sections"].append(
-                            {"name": name, "reason": "Very large section", "size": size}
-                        )
+                    self._update_section_info(section_info, section)
 
         except Exception as e:
             logger.error(f"Error analyzing sections: {e}")
 
         return section_info
 
-    def _calculate_heuristic_score(self, entropy_results: Dict, section_results: Dict) -> float:
+    def _update_section_info(self, section_info: dict[str, Any], section: dict[str, Any]) -> None:
+        name = str(section.get("name", ""))
+        flags = str(section.get("flags", ""))
+        size = section.get("size", 0)
+
+        if "x" in flags:
+            section_info["executable_sections"] += 1
+            if "w" in flags:
+                section_info["writable_executable"] += 1
+                section_info["suspicious_sections"].append(
+                    {"name": name, "reason": "Writable and executable", "flags": flags}
+                )
+
+        if self._is_suspicious_section_name(name):
+            section_info["suspicious_sections"].append(
+                {"name": name, "reason": "Suspicious section name", "flags": flags}
+            )
+
+        if size < 100:
+            section_info["suspicious_sections"].append(
+                {"name": name, "reason": "Very small section", "size": size}
+            )
+        elif size > 10000000:
+            section_info["suspicious_sections"].append(
+                {"name": name, "reason": "Very large section", "size": size}
+            )
+
+    def _is_suspicious_section_name(self, name: str) -> bool:
+        suspicious_names = [".upx", ".aspack", ".themida", ".vmp", ".packed"]
+        return isinstance(name, str) and any(
+            sus_name in name.lower() for sus_name in suspicious_names
+        )
+
+    def _calculate_heuristic_score(self, entropy_results: dict, section_results: dict) -> float:
         """Calculate heuristic score for packer detection"""
         score = 0.0
 
@@ -336,7 +336,7 @@ class PackerDetector:
 
         return min(score, 1.0)
 
-    def get_overlay_info(self) -> Dict[str, Any]:
+    def get_overlay_info(self) -> dict[str, Any]:
         """Check for overlay data (common in packed files)"""
         overlay_info = {}
 

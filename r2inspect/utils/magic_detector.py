@@ -5,7 +5,7 @@ Enhanced file type detection using precise magic bytes
 
 import struct
 from pathlib import Path
-from typing import Dict
+from typing import Any, BinaryIO
 
 from .logger import get_logger
 
@@ -16,7 +16,7 @@ class MagicByteDetector:
     """Enhanced file type detection with precise magic byte patterns"""
 
     # Comprehensive magic byte patterns for executable formats
-    MAGIC_PATTERNS = {
+    MAGIC_PATTERNS: dict[str, dict[str, Any]] = {
         # PE (Portable Executable) - Windows
         "PE32": {
             "signatures": [
@@ -167,9 +167,9 @@ class MagicByteDetector:
     }
 
     def __init__(self):
-        self.cache = {}
+        self.cache: dict[str, dict[str, Any]] = {}
 
-    def detect_file_type(self, file_path: str) -> Dict[str, any]:
+    def detect_file_type(self, file_path: str) -> dict[str, Any]:
         """
         Detect file type using precise magic byte analysis
 
@@ -179,14 +179,14 @@ class MagicByteDetector:
         Returns:
             Dictionary with file type information
         """
-        file_path = Path(file_path)
+        path = Path(file_path)
 
         # Check cache first
-        cache_key = f"{file_path}:{file_path.stat().st_mtime}"
+        cache_key = f"{path}:{path.stat().st_mtime}"
         if cache_key in self.cache:
             return self.cache[cache_key]
 
-        result = {
+        result: dict[str, Any] = {
             "file_format": "Unknown",
             "format_category": "Unknown",
             "architecture": "Unknown",
@@ -198,16 +198,16 @@ class MagicByteDetector:
             "is_document": False,
             "potential_threat": False,
             "magic_matches": [],
-            "file_size": file_path.stat().st_size if file_path.exists() else 0,
+            "file_size": path.stat().st_size if path.exists() else 0,
             "extensions": [],
         }
 
-        if not file_path.exists() or not file_path.is_file():
+        if not path.exists() or not path.is_file():
             self.cache[cache_key] = result
             return result
 
         try:
-            with open(file_path, "rb") as f:
+            with open(path, "rb") as f:
                 # Read first 1024 bytes for magic byte analysis
                 header = f.read(1024)
 
@@ -232,17 +232,22 @@ class MagicByteDetector:
 
                 # If no magic pattern matched, try fallback detection
                 if result["confidence"] == 0:
-                    result.update(self._fallback_detection(header, file_path))
+                    result.update(self._fallback_detection(header, path))
 
         except Exception as e:
-            logger.error(f"Error detecting file type for {file_path}: {e}")
+            logger.error(f"Error detecting file type for {path}: {e}")
             result["error"] = str(e)
 
         # Cache result
         self.cache[cache_key] = result
         return result
 
-    def _check_magic_pattern(self, header: bytes, format_info: Dict, file_handle) -> float:
+    def _check_magic_pattern(
+        self,
+        header: bytes,
+        format_info: dict[str, Any],
+        file_handle: BinaryIO,
+    ) -> float:
         """Check if header matches magic pattern"""
         signatures = format_info.get("signatures", [])
 
@@ -265,7 +270,7 @@ class MagicByteDetector:
 
         return 0.0
 
-    def _validate_pe_format(self, header: bytes, file_handle) -> float:
+    def _validate_pe_format(self, header: bytes, file_handle: BinaryIO) -> float:
         """Validate PE format with detailed checks"""
         try:
             if len(header) < 64:
@@ -294,7 +299,7 @@ class MagicByteDetector:
 
         return 0.3  # Low confidence, just DOS header
 
-    def _validate_docx_format(self, file_handle) -> float:
+    def _validate_docx_format(self, file_handle: BinaryIO) -> float:
         """Validate DOCX format (ZIP with Office content)"""
         try:
             file_handle.seek(0)
@@ -333,7 +338,9 @@ class MagicByteDetector:
 
         return 0.0
 
-    def _get_format_details(self, format_name: str, header: bytes, file_handle) -> Dict:
+    def _get_format_details(
+        self, format_name: str, header: bytes, file_handle: BinaryIO
+    ) -> dict[str, Any]:
         """Get detailed information about detected format"""
         details = {
             "file_format": format_name,
@@ -354,7 +361,7 @@ class MagicByteDetector:
 
         return details
 
-    def _analyze_elf_details(self, header: bytes) -> Dict:
+    def _analyze_elf_details(self, header: bytes) -> dict[str, Any]:
         """Analyze ELF format details"""
         if len(header) < 20:
             return {
@@ -364,13 +371,13 @@ class MagicByteDetector:
             }
 
         # ELF header analysis
+        bits: int | str = "Unknown"
         if header[4] == 1:
             bits = 32
         elif header[4] == 2:
             bits = 64
-        else:
-            bits = "Unknown"
 
+        endian: str
         if header[5] == 1:
             endian = "Little"
         elif header[5] == 2:
@@ -403,7 +410,7 @@ class MagicByteDetector:
 
         return {"architecture": architecture, "bits": bits, "endianness": endian}
 
-    def _analyze_pe_details(self, header: bytes, file_handle) -> Dict:
+    def _analyze_pe_details(self, header: bytes, file_handle: BinaryIO) -> dict[str, Any]:
         """Analyze PE format details"""
         try:
             if len(header) < 64:
@@ -439,6 +446,8 @@ class MagicByteDetector:
                 0x0200: ("Intel Itanium", 64),
             }
 
+            arch: str
+            bits: int | str
             if machine in machine_map:
                 arch, bits = machine_map[machine]
             else:
@@ -454,7 +463,7 @@ class MagicByteDetector:
                 "endianness": "Little",
             }
 
-    def _analyze_macho_details(self, header: bytes) -> Dict:
+    def _analyze_macho_details(self, header: bytes) -> dict[str, Any]:
         """Analyze Mach-O format details"""
         if len(header) < 8:
             return {
@@ -466,6 +475,8 @@ class MagicByteDetector:
         magic = struct.unpack("<I", header[0:4])[0]
 
         # Determine endianness and bits from magic
+        bits: int | str
+        endian: str
         if magic in [0xFEEDFACE, 0xCEFAEDFE]:  # 32-bit
             bits = 32
             endian = "Big" if magic == 0xFEEDFACE else "Little"
@@ -501,7 +512,7 @@ class MagicByteDetector:
 
         return {"architecture": architecture, "bits": bits, "endianness": endian}
 
-    def _fallback_detection(self, header: bytes, file_path: Path) -> Dict:
+    def _fallback_detection(self, header: bytes, file_path: Path) -> dict[str, Any]:
         """Fallback detection using file extension and basic heuristics"""
         result = {
             "file_format": "Unknown",
@@ -620,7 +631,7 @@ class MagicByteDetector:
         ]
         return format_name in threat_formats
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear detection cache"""
         self.cache.clear()
         logger.debug("Magic byte detection cache cleared")
@@ -630,7 +641,7 @@ class MagicByteDetector:
 global_detector = MagicByteDetector()
 
 
-def detect_file_type(file_path: str) -> Dict[str, any]:
+def detect_file_type(file_path: str) -> dict[str, Any]:
     """
     Detect file type using enhanced magic byte detection
 
@@ -654,7 +665,7 @@ def is_executable_file(file_path: str) -> bool:
         True if file appears to be executable
     """
     result = detect_file_type(file_path)
-    return result.get("is_executable", False)
+    return bool(result.get("is_executable", False))
 
 
 def get_file_threat_level(file_path: str) -> str:

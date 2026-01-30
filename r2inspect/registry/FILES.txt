@@ -1,0 +1,70 @@
+r2inspect Registry Pattern - File Listing
+==========================================
+
+Created Files:
+--------------
+
+1. /Users/seifreed/tools/malware/r2inspect/r2inspect/registry/__init__.py
+   - Public API exports
+   - Module documentation
+   - Usage examples
+   - 127 lines
+
+2. /Users/seifreed/tools/malware/r2inspect/r2inspect/registry/analyzer_registry.py
+   - AnalyzerCategory enum (7 categories)
+   - AnalyzerMetadata class
+   - AnalyzerRegistry class (13 public methods)
+   - 621 lines
+
+3. /Users/seifreed/tools/malware/r2inspect/r2inspect/registry/default_registry.py
+   - create_default_registry() factory
+   - get_format_specific_analyzers() factory
+   - get_minimal_registry() factory
+   - get_category_registry() factory
+   - 30 analyzer registrations
+   - 548 lines
+
+4. /Users/seifreed/tools/malware/r2inspect/r2inspect/registry/README.md
+   - Module overview
+   - Quick start guide
+   - Feature summary
+   - API reference
+   - 318 lines
+
+5. /Users/seifreed/tools/malware/r2inspect/r2inspect/registry/USAGE.md
+   - Comprehensive usage guide
+   - Code examples for all features
+   - Complete analyzer catalog
+   - Integration examples
+   - 520 lines
+
+6. /Users/seifreed/tools/malware/r2inspect/r2inspect/registry/ARCHITECTURE.md
+   - Design rationale
+   - Pattern documentation
+   - SOLID principles analysis
+   - Integration strategy
+   - Extension scenarios
+   - 551 lines
+
+7. /Users/seifreed/tools/malware/r2inspect/REGISTRY_IMPLEMENTATION_SUMMARY.md
+   - Executive summary
+   - Complete implementation overview
+   - Analyzer catalog
+   - Integration plan
+   - 423 lines
+
+Statistics:
+-----------
+Total Python Code:     1,296 lines
+Total Documentation:   1,812 lines
+Total Lines:           3,108 lines
+Total Files:           7 files
+
+Registered Analyzers:  30 analyzers
+Categories:            7 categories
+Public API Methods:    13 methods
+Factory Functions:     4 functions
+
+Author: Marc Rivero López
+License: GNU General Public License v3.0 (GPLv3)
+Date: November 2, 2025

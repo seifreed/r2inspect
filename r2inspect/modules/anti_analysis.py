@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# mypy: ignore-errors
 """
 Anti-Analysis Detection Module using r2pipe
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd, safe_cmdj
@@ -70,7 +71,7 @@ class AntiAnalysisDetector:
             "cwsandbox",
         ]
 
-    def detect(self) -> Dict[str, Any]:
+    def detect(self) -> dict[str, Any]:
         """Detect anti-analysis techniques with detailed evidence"""
         anti_analysis = {
             "anti_debug": False,
@@ -124,7 +125,7 @@ class AntiAnalysisDetector:
 
         return anti_analysis
 
-    def _detect_anti_debug_detailed(self) -> Dict[str, Any]:
+    def _detect_anti_debug_detailed(self) -> dict[str, Any]:
         """Detect anti-debugging techniques with detailed evidence"""
         result = {"detected": False, "evidence": []}
 
@@ -192,74 +193,46 @@ class AntiAnalysisDetector:
 
         return result
 
-    def _detect_anti_vm_detailed(self) -> Dict[str, Any]:
+    def _detect_anti_vm_detailed(self) -> dict[str, Any]:
         """Detect anti-VM techniques with detailed evidence"""
         result = {"detected": False, "evidence": []}
 
         try:
-            # Check strings for VM artifacts
-            strings_result = safe_cmdj(self.r2, "izj")
-            if strings_result:
-                vm_strings = []
-                for string_info in strings_result:
-                    string_val = string_info.get("string", "")
-
-                    for artifact in self.vm_artifacts:
-                        if artifact.lower() in string_val.lower():
-                            vm_strings.append(
-                                {
-                                    "artifact": artifact,
-                                    "string": string_val,
-                                    "address": hex(string_info.get("vaddr", 0)),
-                                }
-                            )
-                            result["detected"] = True
-
-                if vm_strings:
-                    result["evidence"].append(
-                        {
-                            "type": "VM Artifact Strings",
-                            "detail": f"Found {len(vm_strings)} VM-related strings",
-                            "strings": vm_strings[:5],  # Limit to first 5
-                        }
-                    )
-
-            # Check for CPUID usage (VM detection)
-            cpuid_checks = safe_cmd(self.r2, "/c cpuid")
-            if cpuid_checks and cpuid_checks.strip():
-                result["detected"] = True
-                addresses = cpuid_checks.strip().split("\n")
-                result["evidence"].append(
-                    {
-                        "type": "CPUID Detection",
-                        "detail": f"CPUID instruction at {len(addresses)} locations (VM detection)",
-                        "addresses": addresses[:3],
-                    }
-                )
-
-            # Check for MAC address queries
-            mac_checks = safe_cmd(self.r2, "iz~mac")
-            if mac_checks and mac_checks.strip():
+            vm_strings = self._collect_artifact_strings(self.vm_artifacts)
+            if vm_strings:
                 result["detected"] = True
                 result["evidence"].append(
                     {
-                        "type": "MAC Address Query",
-                        "detail": "MAC address strings found (VM fingerprinting)",
-                        "strings": mac_checks.strip().split("\n")[:3],
+                        "type": "VM Artifact Strings",
+                        "detail": f"Found {len(vm_strings)} VM-related strings",
+                        "strings": vm_strings[:5],
                     }
                 )
 
-            # Check registry queries for VM detection
-            reg_vm_checks = safe_cmd(self.r2, "iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX")
-            if reg_vm_checks and reg_vm_checks.strip():
-                result["detected"] = True
-                result["evidence"].append(
-                    {
-                        "type": "Registry VM Check",
-                        "detail": "VM-related registry keys found",
-                        "keys": reg_vm_checks.strip().split("\n")[:3],
-                    }
-                )
+            self._add_simple_evidence(
+                result,
+                cmd="/c cpuid",
+                evidence_type="CPUID Detection",
+                detail_prefix="CPUID instruction at",
+                field="addresses",
+                limit=3,
+            )
+            self._add_simple_evidence(
+                result,
+                cmd="iz~mac",
+                evidence_type="MAC Address Query",
+                detail_prefix="MAC address strings found (VM fingerprinting)",
+                field="strings",
+                limit=3,
+            )
+            self._add_simple_evidence(
+                result,
+                cmd="iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX",
+                evidence_type="Registry VM Check",
+                detail_prefix="VM-related registry keys found",
+                field="keys",
+                limit=3,
+            )
 
         except Exception as e:
             logger.error(f"Error detecting anti-VM: {e}")
@@ -267,61 +240,38 @@ class AntiAnalysisDetector:
 
         return result
 
-    def _detect_anti_sandbox_detailed(self) -> Dict[str, Any]:
+    def _detect_anti_sandbox_detailed(self) -> dict[str, Any]:
         """Detect sandbox evasion techniques with detailed evidence"""
         result = {"detected": False, "evidence": []}
 
         try:
-            # Check strings for sandbox indicators
-            strings_result = safe_cmdj(self.r2, "izj")
-            if strings_result:
-                sandbox_strings = []
-                for string_info in strings_result:
-                    string_val = string_info.get("string", "")
-
-                    for indicator in self.sandbox_indicators:
-                        if indicator.lower() in string_val.lower():
-                            sandbox_strings.append(
-                                {
-                                    "indicator": indicator,
-                                    "string": string_val,
-                                    "address": hex(string_info.get("vaddr", 0)),
-                                }
-                            )
-                            result["detected"] = True
-
-                if sandbox_strings:
-                    result["evidence"].append(
-                        {
-                            "type": "Sandbox Indicator Strings",
-                            "detail": f"Found {len(sandbox_strings)} sandbox-related strings",
-                            "strings": sandbox_strings[:5],
-                        }
-                    )
-
-            # Check for sleep/delay calls (sandbox evasion)
-            sleep_calls = safe_cmd(self.r2, "ii~Sleep|ii~Delay")
-            if sleep_calls and sleep_calls.strip():
+            sandbox_strings = self._collect_artifact_strings(self.sandbox_indicators)
+            if sandbox_strings:
                 result["detected"] = True
                 result["evidence"].append(
                     {
-                        "type": "Sleep/Delay Calls",
-                        "detail": "Sleep or delay functions found (sandbox evasion)",
-                        "functions": sleep_calls.strip().split("\n")[:3],
+                        "type": "Sandbox Indicator Strings",
+                        "detail": f"Found {len(sandbox_strings)} sandbox-related strings",
+                        "strings": sandbox_strings[:5],
                     }
                 )
 
-            # Check for file/process enumeration (environment fingerprinting)
-            enum_calls = safe_cmd(self.r2, "ii~FindFirst|ii~Process32|ii~Module32")
-            if enum_calls and enum_calls.strip():
-                result["detected"] = True
-                result["evidence"].append(
-                    {
-                        "type": "Environment Enumeration",
-                        "detail": "File/process enumeration APIs found (fingerprinting)",
-                        "functions": enum_calls.strip().split("\n")[:3],
-                    }
-                )
+            self._add_simple_evidence(
+                result,
+                cmd="ii~Sleep|ii~Delay",
+                evidence_type="Sleep/Delay Calls",
+                detail_prefix="Sleep or delay functions found (sandbox evasion)",
+                field="functions",
+                limit=3,
+            )
+            self._add_simple_evidence(
+                result,
+                cmd="ii~FindFirst|ii~Process32|ii~Module32",
+                evidence_type="Environment Enumeration",
+                detail_prefix="File/process enumeration APIs found (fingerprinting)",
+                field="functions",
+                limit=3,
+            )
 
         except Exception as e:
             logger.error(f"Error detecting anti-sandbox: {e}")
@@ -329,84 +279,22 @@ class AntiAnalysisDetector:
 
         return result
 
-    def _detect_evasion_techniques(self) -> List[Dict[str, Any]]:
+    def _detect_evasion_techniques(self) -> list[dict[str, Any]]:
         """Detect various evasion techniques"""
         techniques = []
 
         try:
-            # Check for code obfuscation patterns
-            # Look for excessive jumps and calls
-            jmp_count = (
-                len(safe_cmd(self.r2, "/c jmp").strip().split("\n"))
-                if safe_cmd(self.r2, "/c jmp").strip()
-                else 0
-            )
-            call_count = (
-                len(safe_cmd(self.r2, "/c call").strip().split("\n"))
-                if safe_cmd(self.r2, "/c call").strip()
-                else 0
-            )
-
-            if jmp_count > 100 or call_count > 200:
-                techniques.append(
-                    {
-                        "technique": "Code Obfuscation",
-                        "description": f"High number of jumps ({jmp_count}) and calls ({call_count})",
-                        "severity": "Medium",
-                    }
-                )
-
-            # Check for self-modifying code
-            modify_patterns = safe_cmd(self.r2, "/c mov.*cs:|/c mov.*ds:")
-            if modify_patterns and modify_patterns.strip():
-                techniques.append(
-                    {
-                        "technique": "Self-Modifying Code",
-                        "description": "Code segment modifications detected",
-                        "severity": "High",
-                    }
-                )
-
-            # Check for API hashing/obfuscation
-            hash_patterns = safe_cmd(self.r2, "iz~hash|iz~crc32|iz~fnv")
-            if hash_patterns and hash_patterns.strip():
-                techniques.append(
-                    {
-                        "technique": "API Hashing",
-                        "description": "Hash-based API resolution detected",
-                        "severity": "Medium",
-                    }
-                )
-
-            # Check for DLL injection patterns
-            injection_apis = [
-                "VirtualAllocEx",
-                "WriteProcessMemory",
-                "CreateRemoteThread",
-            ]
-            imports = safe_cmdj(self.r2, "iij")
-            injection_found = 0
-
-            if imports:
-                for imp in imports:
-                    if imp.get("name") in injection_apis:
-                        injection_found += 1
-
-            if injection_found >= 2:
-                techniques.append(
-                    {
-                        "technique": "DLL Injection",
-                        "description": f"Process injection APIs detected ({injection_found})",
-                        "severity": "High",
-                    }
-                )
+            techniques.extend(self._detect_obfuscation())
+            techniques.extend(self._detect_self_modifying())
+            techniques.extend(self._detect_api_hashing())
+            techniques.extend(self._detect_injection_apis())
 
         except Exception as e:
             logger.error(f"Error detecting evasion techniques: {e}")
 
         return techniques
 
-    def _find_suspicious_apis(self) -> List[Dict[str, Any]]:
+    def _find_suspicious_apis(self) -> list[dict[str, Any]]:
         """Find suspicious API calls"""
         suspicious = []
 
@@ -414,60 +302,159 @@ class AntiAnalysisDetector:
             imports = safe_cmdj(self.r2, "iij")
 
             if imports:
-                suspicious_categories = {
-                    "Process/Thread": [
-                        "CreateProcess",
-                        "CreateThread",
-                        "OpenProcess",
-                        "TerminateProcess",
-                    ],
-                    "Memory": [
-                        "VirtualAlloc",
-                        "VirtualProtect",
-                        "HeapAlloc",
-                        "MapViewOfFile",
-                    ],
-                    "File System": [
-                        "CreateFile",
-                        "DeleteFile",
-                        "MoveFile",
-                        "FindFirstFile",
-                    ],
-                    "Registry": [
-                        "RegOpenKey",
-                        "RegSetValue",
-                        "RegDeleteKey",
-                        "RegEnumKey",
-                    ],
-                    "Network": ["WSAStartup", "socket", "connect", "HttpOpenRequest"],
-                    "Crypto": [
-                        "CryptAcquireContext",
-                        "CryptCreateHash",
-                        "CryptEncrypt",
-                    ],
-                    "Service": ["CreateService", "StartService", "OpenSCManager"],
-                }
-
                 for imp in imports:
-                    imp_name = imp.get("name", "")
-
-                    for category, apis in suspicious_categories.items():
-                        for api in apis:
-                            if api in imp_name:
-                                suspicious.append(
-                                    {
-                                        "api": imp_name,
-                                        "category": category,
-                                        "address": hex(imp.get("plt", 0)),
-                                    }
-                                )
+                    match = self._match_suspicious_api(imp)
+                    if match:
+                        suspicious.append(match)
 
         except Exception as e:
             logger.error(f"Error finding suspicious APIs: {e}")
 
         return suspicious
 
-    def _detect_timing_checks_detailed(self) -> Dict[str, Any]:
+    def _collect_artifact_strings(self, artifacts: list[str]) -> list[dict[str, Any]]:
+        strings_result = safe_cmdj(self.r2, "izj")
+        if not strings_result:
+            return []
+        matches: list[dict[str, Any]] = []
+        for string_info in strings_result:
+            string_val = string_info.get("string", "")
+            for artifact in artifacts:
+                if artifact.lower() in string_val.lower():
+                    matches.append(
+                        {
+                            "artifact": artifact,
+                            "string": string_val,
+                            "address": hex(string_info.get("vaddr", 0)),
+                        }
+                    )
+        return matches
+
+    def _add_simple_evidence(
+        self,
+        result: dict[str, Any],
+        cmd: str,
+        evidence_type: str,
+        detail_prefix: str,
+        field: str,
+        limit: int,
+    ) -> None:
+        checks = safe_cmd(self.r2, cmd)
+        if not checks or not checks.strip():
+            return
+        result["detected"] = True
+        items = checks.strip().split("\n")[:limit]
+        detail = (
+            f"{detail_prefix} at {len(checks.strip().splitlines())} locations"
+            if field == "addresses"
+            else detail_prefix
+        )
+        result["evidence"].append({"type": evidence_type, "detail": detail, field: items})
+
+    def _detect_obfuscation(self) -> list[dict[str, Any]]:
+        techniques: list[dict[str, Any]] = []
+        jmp_count = self._count_opcode_occurrences("/c jmp")
+        call_count = self._count_opcode_occurrences("/c call")
+        if jmp_count > 100 or call_count > 200:
+            techniques.append(
+                {
+                    "technique": "Code Obfuscation",
+                    "description": f"High number of jumps ({jmp_count}) and calls ({call_count})",
+                    "severity": "Medium",
+                }
+            )
+        return techniques
+
+    def _count_opcode_occurrences(self, cmd: str) -> int:
+        output = safe_cmd(self.r2, cmd)
+        if not output or not output.strip():
+            return 0
+        return len(output.strip().split("\n"))
+
+    def _detect_self_modifying(self) -> list[dict[str, Any]]:
+        modify_patterns = safe_cmd(self.r2, "/c mov.*cs:|/c mov.*ds:")
+        if modify_patterns and modify_patterns.strip():
+            return [
+                {
+                    "technique": "Self-Modifying Code",
+                    "description": "Code segment modifications detected",
+                    "severity": "High",
+                }
+            ]
+        return []
+
+    def _detect_api_hashing(self) -> list[dict[str, Any]]:
+        hash_patterns = safe_cmd(self.r2, "iz~hash|iz~crc32|iz~fnv")
+        if hash_patterns and hash_patterns.strip():
+            return [
+                {
+                    "technique": "API Hashing",
+                    "description": "Hash-based API resolution detected",
+                    "severity": "Medium",
+                }
+            ]
+        return []
+
+    def _detect_injection_apis(self) -> list[dict[str, Any]]:
+        injection_apis = ["VirtualAllocEx", "WriteProcessMemory", "CreateRemoteThread"]
+        imports = safe_cmdj(self.r2, "iij")
+        injection_found = 0
+        if imports:
+            for imp in imports:
+                if imp.get("name") in injection_apis:
+                    injection_found += 1
+        if injection_found >= 2:
+            return [
+                {
+                    "technique": "DLL Injection",
+                    "description": f"Process injection APIs detected ({injection_found})",
+                    "severity": "High",
+                }
+            ]
+        return []
+
+    def _match_suspicious_api(self, imp: dict[str, Any]) -> dict[str, Any] | None:
+        suspicious_categories = {
+            "Process/Thread": [
+                "CreateProcess",
+                "CreateThread",
+                "OpenProcess",
+                "TerminateProcess",
+            ],
+            "Memory": [
+                "VirtualAlloc",
+                "VirtualProtect",
+                "HeapAlloc",
+                "MapViewOfFile",
+            ],
+            "File System": [
+                "CreateFile",
+                "DeleteFile",
+                "MoveFile",
+                "FindFirstFile",
+            ],
+            "Registry": [
+                "RegOpenKey",
+                "RegSetValue",
+                "RegDeleteKey",
+                "RegEnumKey",
+            ],
+            "Network": ["WSAStartup", "socket", "connect", "HttpOpenRequest"],
+            "Crypto": ["CryptAcquireContext", "CryptCreateHash", "CryptEncrypt"],
+            "Service": ["CreateService", "StartService", "OpenSCManager"],
+        }
+        imp_name = imp.get("name", "")
+        for category, apis in suspicious_categories.items():
+            for api in apis:
+                if api in imp_name:
+                    return {
+                        "api": imp_name,
+                        "category": category,
+                        "address": hex(imp.get("plt", 0)),
+                    }
+        return None
+
+    def _detect_timing_checks_detailed(self) -> dict[str, Any]:
         """Detect timing-based evasion techniques with detailed evidence"""
         result = {"detected": False, "evidence": []}
 
@@ -525,7 +512,7 @@ class AntiAnalysisDetector:
 
         return result
 
-    def _detect_environment_checks(self) -> List[Dict[str, Any]]:
+    def _detect_environment_checks(self) -> list[dict[str, Any]]:
         """Detect environment fingerprinting"""
         checks = []
 

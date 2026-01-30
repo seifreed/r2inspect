@@ -13,7 +13,7 @@ Based on the Binlex approach for lexical analysis of binary functions.
 
 import hashlib
 from collections import Counter, defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
@@ -40,7 +40,7 @@ class BinlexAnalyzer:
         self.filepath = filepath
         self.default_ngram_size = 3  # Default n-gram size
 
-    def analyze(self, ngram_sizes: Optional[List[int]] = None) -> Dict[str, Any]:
+    def analyze(self, ngram_sizes: list[int] | None = None) -> dict[str, Any]:
         """
         Perform Binlex analysis on all functions in the binary.
 
@@ -55,7 +55,7 @@ class BinlexAnalyzer:
 
         logger.debug(f"Starting Binlex analysis for {self.filepath}")
 
-        results = {
+        results: dict[str, Any] = {
             "available": False,
             "function_signatures": {},
             "ngram_sizes": ngram_sizes,
@@ -79,29 +79,9 @@ class BinlexAnalyzer:
             results["total_functions"] = len(functions)
             logger.debug(f"Found {len(functions)} functions to analyze")
 
-            # Analyze functions for each n-gram size
-            function_signatures = {}
-            all_ngrams = defaultdict(Counter)  # Track all n-grams across functions
-            analyzed_count = 0
-
-            for func in functions:
-                func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-                func_addr = func.get("addr")
-
-                if func_addr is None:
-                    continue
-
-                # Extract function signatures for all n-gram sizes
-                func_sigs = self._analyze_function(func_addr, func_name, ngram_sizes)
-                if func_sigs:
-                    function_signatures[func_name] = func_sigs
-                    analyzed_count += 1
-
-                    # Collect n-grams for global analysis
-                    for n in ngram_sizes:
-                        if n in func_sigs and "ngrams" in func_sigs[n]:
-                            for ngram in func_sigs[n]["ngrams"]:
-                                all_ngrams[n][ngram] += 1
+            function_signatures, all_ngrams, analyzed_count = self._collect_function_signatures(
+                functions, ngram_sizes
+            )
 
             if not function_signatures:
                 results["error"] = "No functions could be analyzed for Binlex"
@@ -113,39 +93,9 @@ class BinlexAnalyzer:
             results["function_signatures"] = function_signatures
             results["analyzed_functions"] = analyzed_count
 
-            # Calculate unique signatures for each n-gram size
-            unique_signatures = {}
-            similar_functions = {}
-
-            for n in ngram_sizes:
-                # Count unique signatures
-                signatures = set()
-                signature_groups = defaultdict(list)
-
-                for func_name, func_sigs in function_signatures.items():
-                    if n in func_sigs and "signature" in func_sigs[n]:
-                        sig = func_sigs[n]["signature"]
-                        signatures.add(sig)
-                        signature_groups[sig].append(func_name)
-
-                unique_signatures[n] = len(signatures)
-
-                # Find similar functions (same signature)
-                similar_groups = []
-                for sig, funcs in signature_groups.items():
-                    if len(funcs) > 1:
-                        similar_groups.append(
-                            {
-                                "signature": sig[:16] + "..." if len(sig) > 16 else sig,
-                                "functions": funcs,
-                                "count": len(funcs),
-                            }
-                        )
-
-                # Sort by group size
-                similar_groups.sort(key=lambda x: x["count"], reverse=True)
-                similar_functions[n] = similar_groups
-
+            unique_signatures, similar_functions = self._build_signature_groups(
+                function_signatures, ngram_sizes
+            )
             results["unique_signatures"] = unique_signatures
             results["similar_functions"] = similar_functions
 
@@ -154,12 +104,7 @@ class BinlexAnalyzer:
             results["binary_signature"] = binary_signature
 
             # Get top n-grams for each size
-            top_ngrams = {}
-            for n in ngram_sizes:
-                if n in all_ngrams:
-                    # Get top 10 most common n-grams
-                    top_ngrams[n] = all_ngrams[n].most_common(10)
-            results["top_ngrams"] = top_ngrams
+            results["top_ngrams"] = self._collect_top_ngrams(all_ngrams, ngram_sizes)
 
             logger.debug(
                 f"Binlex analysis completed: {analyzed_count}/{len(functions)} functions analyzed"
@@ -171,7 +116,103 @@ class BinlexAnalyzer:
 
         return results
 
-    def _extract_functions(self) -> List[Dict[str, Any]]:
+    def _collect_function_signatures(
+        self, functions: list[dict[str, Any]], ngram_sizes: list[int]
+    ) -> tuple[dict[str, dict[int, dict[str, Any]]], defaultdict[int, Counter[str]], int]:
+        function_signatures: dict[str, dict[int, dict[str, Any]]] = {}
+        all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
+        analyzed_count = 0
+
+        for func in functions:
+            func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
+            func_addr = func.get("addr")
+
+            if func_addr is None:
+                continue
+
+            func_sigs = self._analyze_function(func_addr, func_name, ngram_sizes)
+            if not func_sigs:
+                continue
+
+            function_signatures[func_name] = func_sigs
+            analyzed_count += 1
+            self._accumulate_ngrams(all_ngrams, func_sigs, ngram_sizes)
+
+        return function_signatures, all_ngrams, analyzed_count
+
+    def _accumulate_ngrams(
+        self,
+        all_ngrams: defaultdict[int, Counter[str]],
+        func_sigs: dict[int, dict[str, Any]],
+        ngram_sizes: list[int],
+    ) -> None:
+        for n in ngram_sizes:
+            if n not in func_sigs or "ngrams" not in func_sigs[n]:
+                continue
+            ngrams_value = func_sigs[n].get("ngrams")
+            if not isinstance(ngrams_value, list):
+                continue
+            for ngram in ngrams_value:
+                all_ngrams[n][ngram] += 1
+
+    def _build_signature_groups(
+        self,
+        function_signatures: dict[str, dict[int, dict[str, Any]]],
+        ngram_sizes: list[int],
+    ) -> tuple[dict[int, int], dict[int, list[dict[str, Any]]]]:
+        unique_signatures: dict[int, int] = {}
+        similar_functions: dict[int, list[dict[str, Any]]] = {}
+
+        for n in ngram_sizes:
+            signatures, signature_groups = self._collect_signatures_for_size(function_signatures, n)
+            unique_signatures[n] = len(signatures)
+            similar_groups = self._build_similar_groups(signature_groups)
+            similar_groups.sort(key=lambda x: int(x["count"]), reverse=True)
+            similar_functions[n] = similar_groups
+
+        return unique_signatures, similar_functions
+
+    def _collect_signatures_for_size(
+        self, function_signatures: dict[str, dict[int, dict[str, Any]]], n: int
+    ) -> tuple[set[str], defaultdict[str, list[str]]]:
+        signatures: set[str] = set()
+        signature_groups: defaultdict[str, list[str]] = defaultdict(list)
+
+        for func_name, func_sigs in function_signatures.items():
+            if n not in func_sigs or "signature" not in func_sigs[n]:
+                continue
+            sig_value = func_sigs[n].get("signature")
+            if isinstance(sig_value, str):
+                signatures.add(sig_value)
+                signature_groups[sig_value].append(func_name)
+
+        return signatures, signature_groups
+
+    def _build_similar_groups(
+        self, signature_groups: defaultdict[str, list[str]]
+    ) -> list[dict[str, Any]]:
+        similar_groups: list[dict[str, Any]] = []
+        for sig, funcs in signature_groups.items():
+            if len(funcs) > 1:
+                similar_groups.append(
+                    {
+                        "signature": sig[:16] + "..." if len(sig) > 16 else sig,
+                        "functions": funcs,
+                        "count": len(funcs),
+                    }
+                )
+        return similar_groups
+
+    def _collect_top_ngrams(
+        self, all_ngrams: defaultdict[int, Counter[str]], ngram_sizes: list[int]
+    ) -> dict[int, list[tuple[str, int]]]:
+        top_ngrams: dict[int, list[tuple[str, int]]] = {}
+        for n in ngram_sizes:
+            if n in all_ngrams:
+                top_ngrams[n] = all_ngrams[n].most_common(10)
+        return top_ngrams
+
+    def _extract_functions(self) -> list[dict[str, Any]]:
         """
         Extract all functions from the binary.
 
@@ -203,8 +244,8 @@ class BinlexAnalyzer:
             return []
 
     def _analyze_function(
-        self, func_addr: int, func_name: str, ngram_sizes: List[int]
-    ) -> Optional[Dict[int, Dict[str, Any]]]:
+        self, func_addr: int, func_name: str, ngram_sizes: list[int]
+    ) -> dict[int, dict[str, Any | None]] | None:
         """
         Analyze a single function with Binlex for multiple n-gram sizes.
 
@@ -227,7 +268,7 @@ class BinlexAnalyzer:
                 return None
 
             # Analyze for each n-gram size
-            results = {}
+            results: dict[int, dict[str, Any | None]] = {}
             for n in ngram_sizes:
                 if len(tokens) < n:
                     logger.debug(
@@ -257,7 +298,7 @@ class BinlexAnalyzer:
             logger.debug(f"Error analyzing function {func_name}: {e}")
             return None
 
-    def _extract_instruction_tokens(self, func_name: str) -> List[str]:
+    def _extract_instruction_tokens(self, func_name: str) -> list[str]:
         """
         Extract instruction tokens (mnemonics) from current function.
 
@@ -267,93 +308,91 @@ class BinlexAnalyzer:
         Returns:
             List of instruction mnemonics
         """
-        tokens = []
-
         try:
-            # Method 1: Try pdfj (print disassembly function JSON)
-            disasm = safe_cmdj(self.r2, "pdfj", {})
-            if disasm and "ops" in disasm:
-                for op in disasm["ops"]:
-                    if isinstance(op, dict):
-                        # Try different fields for mnemonic
-                        mnemonic = op.get("mnemonic")
-                        if not mnemonic and "opcode" in op:
-                            opcode = op["opcode"].strip()
-                            if opcode:
-                                mnemonic = opcode.split()[0]
+            tokens = self._extract_tokens_from_pdfj(func_name)
+            if tokens:
+                return tokens
 
-                        if mnemonic:
-                            # Clean and normalize mnemonic
-                            clean_mnemonic = mnemonic.strip().lower()
-                            # Remove any HTML entities or special characters
-                            clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(
-                                HTML_AMP, "&"
-                            )
-                            # Only add if it looks like a valid instruction
-                            if clean_mnemonic and not clean_mnemonic.startswith("&"):
-                                tokens.append(clean_mnemonic)
+            tokens = self._extract_tokens_from_pdj(func_name)
+            if tokens:
+                return tokens
 
-                if tokens:
-                    logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdfj")
-                    return tokens
-
-            # Method 2: Try pdj with instruction limit
-            disasm_list = safe_cmd_list(self.r2, "pdj 200")  # Limit to 200 instructions
-            if isinstance(disasm_list, list):
-                for op in disasm_list:
-                    if isinstance(op, dict):
-                        # Try different fields for mnemonic
-                        mnemonic = op.get("mnemonic")
-                        if not mnemonic and "opcode" in op:
-                            opcode = op["opcode"].strip()
-                            if opcode:
-                                mnemonic = opcode.split()[0]
-
-                        if mnemonic:
-                            # Clean and normalize mnemonic
-                            clean_mnemonic = mnemonic.strip().lower()
-                            # Remove any HTML entities or special characters
-                            clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(
-                                HTML_AMP, "&"
-                            )
-                            # Only add if it looks like a valid instruction
-                            if clean_mnemonic and not clean_mnemonic.startswith("&"):
-                                tokens.append(clean_mnemonic)
-
-                if tokens:
-                    logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdj")
-                    return tokens
-
-            # Method 3: Fallback to text-based extraction
-            instructions_text = self.r2.cmd("pi 100")  # Get up to 100 instructions
-            if instructions_text and instructions_text.strip():
-                lines = instructions_text.strip().split("\n")
-                for line in lines:
-                    line = line.strip()
-                    if line:
-                        # Extract mnemonic (first word)
-                        mnemonic = line.split()[0]
-                        if mnemonic:
-                            # Clean and normalize mnemonic
-                            clean_mnemonic = mnemonic.strip().lower()
-                            # Remove any HTML entities or special characters
-                            clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(
-                                HTML_AMP, "&"
-                            )
-                            # Only add if it looks like a valid instruction
-                            if clean_mnemonic and not clean_mnemonic.startswith("&"):
-                                tokens.append(clean_mnemonic)
-
-                if tokens:
-                    logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pi")
-                    return tokens
+            tokens = self._extract_tokens_from_text(func_name)
+            if tokens:
+                return tokens
 
         except Exception as e:
             logger.debug(f"Error extracting tokens from {func_name}: {e}")
 
+        return []
+
+    def _extract_tokens_from_pdfj(self, func_name: str) -> list[str]:
+        disasm = safe_cmdj(self.r2, "pdfj", {})
+        if not disasm or "ops" not in disasm:
+            return []
+        tokens = self._extract_tokens_from_ops(disasm["ops"])
+        if tokens:
+            logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdfj")
         return tokens
 
-    def _generate_ngrams(self, tokens: List[str], n: int) -> List[str]:
+    def _extract_tokens_from_pdj(self, func_name: str) -> list[str]:
+        disasm_list = safe_cmd_list(self.r2, "pdj 200")
+        if not isinstance(disasm_list, list):
+            return []
+        tokens = self._extract_tokens_from_ops(disasm_list)
+        if tokens:
+            logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdj")
+        return tokens
+
+    def _extract_tokens_from_text(self, func_name: str) -> list[str]:
+        instructions_text = self.r2.cmd("pi 100")
+        if not instructions_text or not instructions_text.strip():
+            return []
+        tokens: list[str] = []
+        for line in instructions_text.strip().split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            mnemonic = line.split()[0]
+            clean_mnemonic = self._normalize_mnemonic(mnemonic)
+            if clean_mnemonic:
+                tokens.append(clean_mnemonic)
+        if tokens:
+            logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pi")
+        return tokens
+
+    def _extract_tokens_from_ops(self, ops: list[Any]) -> list[str]:
+        tokens: list[str] = []
+        for op in ops:
+            if not isinstance(op, dict):
+                continue
+            mnemonic = self._extract_mnemonic_from_op(op)
+            clean_mnemonic = self._normalize_mnemonic(mnemonic)
+            if clean_mnemonic:
+                tokens.append(clean_mnemonic)
+        return tokens
+
+    def _extract_mnemonic_from_op(self, op: dict[str, Any]) -> str | None:
+        mnemonic = op.get("mnemonic")
+        if mnemonic:
+            return mnemonic
+        opcode = op.get("opcode")
+        if isinstance(opcode, str):
+            opcode = opcode.strip()
+            if opcode:
+                return opcode.split()[0]
+        return None
+
+    def _normalize_mnemonic(self, mnemonic: str | None) -> str | None:
+        if not mnemonic:
+            return None
+        clean_mnemonic = mnemonic.strip().lower()
+        clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(HTML_AMP, "&")
+        if clean_mnemonic and not clean_mnemonic.startswith("&"):
+            return clean_mnemonic
+        return None
+
+    def _generate_ngrams(self, tokens: list[str], n: int) -> list[str]:
         """
         Generate n-grams from token sequence.
 
@@ -374,7 +413,7 @@ class BinlexAnalyzer:
 
         return ngrams
 
-    def _create_signature(self, ngrams: List[str]) -> str:
+    def _create_signature(self, ngrams: list[str]) -> str:
         """
         Create a signature hash from n-grams.
 
@@ -394,9 +433,9 @@ class BinlexAnalyzer:
 
     def _calculate_binary_signature(
         self,
-        function_signatures: Dict[str, Dict[int, Dict[str, Any]]],
-        ngram_sizes: List[int],
-    ) -> Dict[int, str]:
+        function_signatures: dict[str, dict[int, dict[str, Any]]],
+        ngram_sizes: list[int],
+    ) -> dict[int, str]:
         """
         Calculate binary-wide signatures by combining all function signatures.
 
@@ -445,7 +484,7 @@ class BinlexAnalyzer:
         return func1_sig == func2_sig
 
     def get_function_similarity_score(
-        self, func1_ngrams: List[str], func2_ngrams: List[str]
+        self, func1_ngrams: list[str], func2_ngrams: list[str]
     ) -> float:
         """
         Calculate similarity score between two functions based on n-gram overlap.
@@ -490,8 +529,8 @@ class BinlexAnalyzer:
 
     @staticmethod
     def calculate_binlex_from_file(
-        filepath: str, ngram_sizes: Optional[List[int]] = None
-    ) -> Optional[Dict[str, Any]]:
+        filepath: str, ngram_sizes: list[int] | None = None
+    ) -> dict[str, Any | None] | None:
         """
         Calculate Binlex signatures directly from a file path.
 

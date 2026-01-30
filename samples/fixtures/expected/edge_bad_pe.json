@@ -1,0 +1,9 @@
+{
+  "file_format": "PE",
+  "name": "edge_bad_pe.bin",
+  "size": 258,
+  "hashes": {
+    "md5": "884aac8af10d07139e341444c0728b2c",
+    "sha256": "10162bac44ed65caf0b4b8cb1dd6ff78522719e3d26580d9f0c63debeefd44c1"
+  }
+}

@@ -7,9 +7,10 @@ import functools
 import secrets
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 from .logger import get_logger
 
@@ -35,7 +36,7 @@ class RetryConfig:
     strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF
     jitter: bool = True  # Add random jitter to delays
     backoff_multiplier: float = 2.0
-    timeout: Optional[float] = None  # Total timeout for all attempts
+    timeout: float | None = None  # Total timeout for all attempts
 
 
 class RetryableError(Exception):
@@ -149,6 +150,8 @@ class RetryManager:
 
     def calculate_delay(self, attempt: int, config: RetryConfig) -> float:
         """Calculate delay for given attempt using configured strategy"""
+        delay = config.base_delay
+
         if config.strategy == RetryStrategy.FIXED_DELAY:
             delay = config.base_delay
 
@@ -160,9 +163,6 @@ class RetryManager:
 
         elif config.strategy == RetryStrategy.RANDOM_JITTER:
             delay = config.base_delay + (secrets.randbelow(int(config.base_delay * 1000)) / 1000.0)
-
-        else:
-            delay = config.base_delay
 
         # Apply jitter if enabled
         if config.jitter and config.strategy != RetryStrategy.RANDOM_JITTER:
@@ -177,7 +177,7 @@ class RetryManager:
         operation: Callable,
         *args,
         command_type: str = "generic",
-        config: Optional[RetryConfig] = None,
+        config: RetryConfig | None = None,
         **kwargs,
     ) -> Any:
         """
@@ -215,7 +215,7 @@ class RetryManager:
         if last_exception:
             raise last_exception
 
-    def _get_retry_config(self, command_type: str, config: Optional[RetryConfig]) -> RetryConfig:
+    def _get_retry_config(self, command_type: str, config: RetryConfig | None) -> RetryConfig:
         """Get retry configuration for the operation"""
         if config is None:
             return self.DEFAULT_CONFIGS.get(command_type, self.DEFAULT_CONFIGS["generic"])
@@ -275,7 +275,7 @@ class RetryManager:
         )
         time.sleep(delay)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get retry statistics"""
         with self.lock:
             return {
@@ -305,7 +305,7 @@ class RetryManager:
 
 def retry_on_failure(
     command_type: str = "generic",
-    config: Optional[RetryConfig] = None,
+    config: RetryConfig | None = None,
     auto_retry: bool = True,
 ):
     """
@@ -355,7 +355,7 @@ def retry_on_failure(
 global_retry_manager = RetryManager()
 
 
-def get_retry_stats() -> Dict[str, Any]:
+def get_retry_stats() -> dict[str, Any]:
     """Get global retry statistics"""
     return global_retry_manager.get_stats()
 

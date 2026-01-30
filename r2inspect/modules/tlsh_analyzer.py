@@ -8,9 +8,12 @@ This module provides TLSH hashing capabilities for:
 
 TLSH is particularly useful for malware clustering and similarity detection
 as it's resistant to small modifications like compiler changes, padding, etc.
+
+Copyright (C) 2025 Marc Rivero López
+Licensed under the GNU General Public License v3.0 (GPLv3)
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, cast
 
 # Try to import TLSH library
 try:
@@ -20,37 +23,85 @@ try:
 except ImportError:
     TLSH_AVAILABLE = False
 
+from ..abstractions.hashing_strategy import HashingStrategy
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
 
-class TLSHAnalyzer:
+class TLSHAnalyzer(HashingStrategy):
     """TLSH (Trend Micro Locality Sensitive Hash) analyzer for sections and functions"""
 
-    def __init__(self, r2, config):
-        self.r2 = r2
-        self.config = config
-        self.tlsh_available = self._check_tlsh_availability()
+    def __init__(self, r2, filename: str):
+        """
+        Initialize TLSH analyzer.
 
-    def _check_tlsh_availability(self) -> bool:
-        """Check if TLSH library is available"""
+        Args:
+            r2: Active r2pipe instance for binary analysis
+            filename: Path to the binary file being analyzed
+        """
+        # Initialize parent with filepath
+        super().__init__(filepath=filename, r2_instance=r2)
+
+    def _check_library_availability(self) -> tuple[bool, str | None]:
+        """
+        Check if TLSH library is available.
+
+        Returns:
+            Tuple of (is_available, error_message)
+        """
+        if TLSHAnalyzer.is_available():
+            return True, None
+        return (
+            False,
+            "TLSH library not available. Install with: pip install python-tlsh",
+        )
+
+    def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
+        """
+        Calculate TLSH hash for the entire binary.
+
+        Returns:
+            Tuple of (hash_value, method_used, error_message)
+        """
         try:
-            import tlsh
+            hash_value = self._calculate_binary_tlsh()
+            if hash_value:
+                return hash_value, "python_library", None
+            return (
+                None,
+                None,
+                "TLSH calculation returned no hash (file may be too small)",
+            )
+        except Exception as e:
+            logger.error(f"Error calculating TLSH hash: {e}")
+            return None, None, f"TLSH calculation failed: {str(e)}"
 
-            return True
-        except ImportError:
-            logger.warning("TLSH library not available. Install with: pip install python-tlsh")
-            return False
+    def _get_hash_type(self) -> str:
+        """
+        Return the hash type identifier.
 
-    def analyze(self) -> Dict[str, Any]:
-        """Perform TLSH analysis on binary sections"""
-        if not self.tlsh_available:
+        Returns:
+            Hash type string
+        """
+        return "tlsh"
+
+    def analyze_sections(self) -> dict[str, Any]:
+        """
+        Perform detailed TLSH analysis on binary sections and functions.
+
+        This method provides section-level and function-level TLSH analysis
+        in addition to the binary-wide hash provided by analyze().
+
+        Returns:
+            Dictionary containing detailed section and function analysis
+        """
+        if not TLSH_AVAILABLE:
             return {"available": False, "error": "TLSH library not installed"}
 
         try:
-            result = {
+            result: dict[str, Any] = {
                 "available": True,
                 "binary_tlsh": None,
                 "text_section_tlsh": None,
@@ -69,20 +120,19 @@ class TLSHAnalyzer:
 
             # Get section-wise TLSH
             result["section_tlsh"] = self._calculate_section_tlsh()
-            result["stats"]["sections_analyzed"] = len(result["section_tlsh"])
-            result["stats"]["sections_with_tlsh"] = sum(
-                1 for v in result["section_tlsh"].values() if v
-            )
+            stats = cast(dict[str, int], result["stats"])
+            section_hashes = cast(dict[str, str | None], result["section_tlsh"])
+            stats["sections_analyzed"] = len(section_hashes)
+            stats["sections_with_tlsh"] = sum(1 for v in section_hashes.values() if v)
 
             # Get text section TLSH specifically
-            result["text_section_tlsh"] = result["section_tlsh"].get(".text")
+            result["text_section_tlsh"] = section_hashes.get(".text")
 
             # Get function-wise TLSH (limited to avoid performance issues)
             result["function_tlsh"] = self._calculate_function_tlsh()
-            result["stats"]["functions_analyzed"] = len(result["function_tlsh"])
-            result["stats"]["functions_with_tlsh"] = sum(
-                1 for v in result["function_tlsh"].values() if v
-            )
+            function_hashes = cast(dict[str, str | None], result["function_tlsh"])
+            stats["functions_analyzed"] = len(function_hashes)
+            stats["functions_with_tlsh"] = sum(1 for v in function_hashes.values() if v)
 
             return result
 
@@ -90,58 +140,57 @@ class TLSHAnalyzer:
             logger.error(f"Error in TLSH analysis: {e}")
             return {"available": False, "error": str(e)}
 
-    def _calculate_binary_tlsh(self) -> Optional[str]:
-        """Calculate TLSH for entire binary"""
+    # Minimum data size required for TLSH calculation
+    TLSH_MIN_DATA_SIZE = 50
+
+    def _calculate_tlsh_from_hex(self, hex_data: str | None) -> str | None:
+        """
+        Calculate TLSH hash from hex-encoded data.
+
+        This is a helper method used by both section and function TLSH calculations
+        to avoid code duplication.
+
+        Args:
+            hex_data: Hex-encoded string of binary data
+
+        Returns:
+            TLSH hash string or None if calculation fails
+        """
+        if not hex_data or not hex_data.strip():
+            return None
+
         try:
-            import tlsh
-
-            # Get file size
-            file_info = safe_cmdj(self.r2, "ij")
-            if not file_info or "bin" not in file_info:
+            data = bytes.fromhex(hex_data.strip())
+            if len(data) < self.TLSH_MIN_DATA_SIZE:
                 return None
+            return cast(str | None, tlsh.hash(data))
+        except Exception:
+            return None
 
-            file_size = file_info["bin"].get("size", 0)
-            if file_size == 0:
+    def _calculate_binary_tlsh(self) -> str | None:
+        """Calculate TLSH for entire binary (read directly from file for speed)."""
+        try:
+            # Read directly from filesystem to avoid r2 hex conversion overhead
+            max_size = 10 * 1024 * 1024  # 10MB cap
+            with open(self.filepath, "rb") as f:
+                data = f.read(max_size)
+            if not data or len(data) < self.TLSH_MIN_DATA_SIZE:
                 return None
-
-            # Read binary data (limit to reasonable size)
-            max_size = min(file_size, 10 * 1024 * 1024)  # 10MB limit
-            hex_data = safe_cmd(self.r2, f"p8 {max_size}")
-
-            if not hex_data or not hex_data.strip():
-                return None
-
-            try:
-                data = bytes.fromhex(hex_data.strip())
-                if len(data) < 50:  # TLSH requires minimum data size
-                    return None
-
-                return tlsh.hash(data)
-
-            except ValueError:
-                return None
-
+            return cast(str | None, tlsh.hash(data))
         except Exception as e:
             logger.error(f"Error calculating binary TLSH: {e}")
             return None
 
-    def _calculate_section_tlsh(self) -> Dict[str, Optional[str]]:
+    def _calculate_section_tlsh(self) -> dict[str, str | None]:
         """Calculate TLSH for each section"""
-        section_hashes = {}
+        section_hashes: dict[str, str | None] = {}
 
         try:
-            import tlsh
-
-            sections = safe_cmdj(self.r2, "iSj")
+            sections = cast(list[dict[str, Any]], safe_cmdj(self.r2, "iSj", []))
             if not sections:
                 return section_hashes
 
             for section in sections:
-                # Skip if section is not a dictionary (malformed data)
-                if not isinstance(section, dict):
-                    logger.debug(f"Skipping malformed section data: {type(section)} - {section}")
-                    continue
-
                 section_name = section.get("name", "unknown")
                 vaddr = section.get("vaddr", 0)
                 size = section.get("size", 0)
@@ -154,17 +203,7 @@ class TLSHAnalyzer:
                     # Read section data
                     read_size = min(size, 1024 * 1024)  # 1MB limit per section
                     hex_data = safe_cmd(self.r2, f"p8 {read_size} @ {vaddr}")
-
-                    if not hex_data or not hex_data.strip():
-                        section_hashes[section_name] = None
-                        continue
-
-                    data = bytes.fromhex(hex_data.strip())
-                    if len(data) < 50:  # TLSH minimum
-                        section_hashes[section_name] = None
-                        continue
-
-                    section_hashes[section_name] = tlsh.hash(data)
+                    section_hashes[section_name] = self._calculate_tlsh_from_hex(hex_data)
 
                 except Exception as e:
                     logger.debug(f"Error calculating TLSH for section {section_name}: {e}")
@@ -175,15 +214,12 @@ class TLSHAnalyzer:
 
         return section_hashes
 
-    def _calculate_function_tlsh(self) -> Dict[str, Optional[str]]:
+    def _calculate_function_tlsh(self) -> dict[str, str | None]:
         """Calculate TLSH for functions (limited sample)"""
-        function_hashes = {}
+        function_hashes: dict[str, str | None] = {}
 
         try:
-            import tlsh
-
-            # Get functions
-            self.r2.cmd("aaa")  # Ensure analysis is complete
+            # Get functions (core already performed analysis)
             functions = safe_cmdj(self.r2, "aflj")
 
             if not functions:
@@ -209,17 +245,7 @@ class TLSHAnalyzer:
                 try:
                     # Read function data
                     hex_data = safe_cmd(self.r2, f"p8 {func_size} @ {func_addr}")
-
-                    if not hex_data or not hex_data.strip():
-                        function_hashes[func_name] = None
-                        continue
-
-                    data = bytes.fromhex(hex_data.strip())
-                    if len(data) < 50:  # TLSH minimum
-                        function_hashes[func_name] = None
-                        continue
-
-                    function_hashes[func_name] = tlsh.hash(data)
+                    function_hashes[func_name] = self._calculate_tlsh_from_hex(hex_data)
 
                 except Exception as e:
                     logger.debug(f"Error calculating TLSH for function {func_name}: {e}")
@@ -230,21 +256,19 @@ class TLSHAnalyzer:
 
         return function_hashes
 
-    def compare_tlsh(self, hash1: str, hash2: str) -> Optional[int]:
+    def compare_tlsh(self, hash1: str, hash2: str) -> int | None:
         """Compare two TLSH hashes and return similarity score"""
         try:
-            import tlsh
-
             if not hash1 or not hash2:
                 return None
 
-            return tlsh.diff(hash1, hash2)
+            return cast(int, tlsh.diff(hash1, hash2))
 
         except Exception as e:
             logger.error(f"Error comparing TLSH hashes: {e}")
             return None
 
-    def find_similar_sections(self, threshold: int = 100) -> List[Dict[str, Any]]:
+    def find_similar_sections(self, threshold: int = 100) -> list[dict[str, Any]]:
         """Find sections with similar TLSH hashes"""
         try:
             analysis = self.analyze()
@@ -285,16 +309,26 @@ class TLSHAnalyzer:
             return []
 
     @staticmethod
-    def compare_hashes(hash1: str, hash2: str) -> Optional[int]:
+    def compare_hashes(hash1: str, hash2: str) -> int | None:
         """
-        Compare two TLSH hashes and return similarity score.
+        Compare two TLSH hashes and return distance score.
+
+        The TLSH distance metric returns lower values for more similar hashes.
+        A distance of 0 indicates identical hashes.
 
         Args:
             hash1: First TLSH hash
             hash2: Second TLSH hash
 
         Returns:
-            Similarity score (lower is more similar) or None if comparison fails
+            Distance score (lower is more similar, 0-1000+) or None if comparison fails
+
+        Example:
+            >>> hash1 = "T1234..."
+            >>> hash2 = "T1235..."
+            >>> distance = TLSHAnalyzer.compare_hashes(hash1, hash2)
+            >>> if distance is not None and distance < 50:
+            ...     print("Very similar")
         """
         if not TLSH_AVAILABLE:
             return None
@@ -303,7 +337,7 @@ class TLSHAnalyzer:
             return None
 
         try:
-            score = tlsh.diff(hash1, hash2)
+            score = cast(int, tlsh.diff(hash1, hash2))
             return score
         except Exception as e:
             logger.warning(f"TLSH comparison failed: {e}")
@@ -312,15 +346,15 @@ class TLSHAnalyzer:
     @staticmethod
     def is_available() -> bool:
         """
-        Check if TLSH is available.
+        Check if TLSH library is available.
 
         Returns:
-            True if TLSH is available, False otherwise
+            True if TLSH library can be imported, False otherwise
         """
         return TLSH_AVAILABLE
 
     @staticmethod
-    def get_similarity_level(score: int) -> str:
+    def get_similarity_level(score: int | None) -> str:
         """
         Get human-readable similarity level based on TLSH score.
 

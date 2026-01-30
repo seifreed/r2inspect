@@ -4,26 +4,58 @@ String Analysis Module using r2pipe
 """
 
 import base64
+import binascii
 import re
-from typing import Any, Dict, List
+from typing import Any
 
+from ..abstractions import BaseAnalyzer
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd_list
 
 logger = get_logger(__name__)
 
 
-class StringAnalyzer:
+class StringAnalyzer(BaseAnalyzer):
     """String extraction and analysis using radare2"""
 
     def __init__(self, r2, config):
-        self.r2 = r2
-        self.config = config
+        super().__init__(r2=r2, config=config)
         self.min_length = config.get("strings", "min_length", 4)
         self.max_length = config.get("strings", "max_length", 100)
         self.max_strings = config.get("general", "max_strings", 1000)
 
-    def extract_strings(self) -> List[str]:
+    def get_category(self) -> str:
+        return "metadata"
+
+    def get_description(self) -> str:
+        return "Extracts and analyzes strings from binary files including ASCII, Unicode, and encoded strings"
+
+    def analyze(self) -> dict[str, Any]:
+        """Perform string analysis"""
+        result = self._init_result_structure(
+            {
+                "total_strings": 0,
+                "strings": [],
+                "suspicious_strings": [],
+                "decoded_strings": [],
+                "statistics": {},
+            }
+        )
+
+        try:
+            self._log_info("Starting string analysis")
+            strings = self.extract_strings()
+            result["strings"] = strings
+            result["total_strings"] = len(strings)
+            result["available"] = True
+            self._log_info(f"Extracted {len(strings)} strings")
+        except Exception as e:
+            result["error"] = str(e)
+            self._log_error(f"String analysis failed: {e}")
+
+        return result
+
+    def extract_strings(self) -> list[str]:
         """Extract strings from binary"""
         strings = []
 
@@ -51,7 +83,7 @@ class StringAnalyzer:
 
         return strings
 
-    def _extract_ascii_strings(self) -> List[str]:
+    def _extract_ascii_strings(self) -> list[str]:
         """Extract ASCII strings using radare2"""
         strings = []
 
@@ -70,7 +102,7 @@ class StringAnalyzer:
 
         return strings
 
-    def _extract_unicode_strings(self) -> List[str]:
+    def _extract_unicode_strings(self) -> list[str]:
         """Extract Unicode strings using radare2"""
         strings = []
 
@@ -89,7 +121,7 @@ class StringAnalyzer:
 
         return strings
 
-    def _filter_strings(self, strings: List[str]) -> List[str]:
+    def _filter_strings(self, strings: list[str]) -> list[str]:
         """Filter and clean strings"""
         filtered = []
 
@@ -105,7 +137,7 @@ class StringAnalyzer:
 
         return filtered
 
-    def search_xor(self, search_string: str) -> List[Dict[str, Any]]:
+    def search_xor(self, search_string: str) -> list[dict[str, Any]]:
         """Search for XOR'd strings"""
         matches = []
 
@@ -137,7 +169,7 @@ class StringAnalyzer:
         """XOR a string with a single byte key"""
         return "".join(chr(ord(c) ^ key) for c in text)
 
-    def _parse_search_results(self, result: str) -> List[str]:
+    def _parse_search_results(self, result: str) -> list[str]:
         """Parse radare2 search results"""
         addresses = []
 
@@ -149,7 +181,7 @@ class StringAnalyzer:
 
         return addresses
 
-    def get_suspicious_strings(self) -> List[Dict[str, Any]]:
+    def get_suspicious_strings(self) -> list[dict[str, Any]]:
         """Find suspicious strings that might indicate malware"""
         suspicious = []
         strings = self.extract_strings()
@@ -175,45 +207,53 @@ class StringAnalyzer:
 
         return suspicious
 
-    def decode_strings(self) -> List[Dict[str, Any]]:
+    def decode_strings(self) -> list[dict[str, Any]]:
         """Attempt to decode encoded strings"""
         decoded = []
         strings = self.extract_strings()
 
         for string in strings:
-            # Try base64 decoding
-            if self._is_base64(string):
-                try:
-                    decoded_bytes = base64.b64decode(string)
-                    decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
-                    if decoded_str and decoded_str.isprintable():
-                        decoded.append(
-                            {
-                                "original": string,
-                                "decoded": decoded_str,
-                                "encoding": "base64",
-                            }
-                        )
-                except:
-                    pass
+            decoded_entry = self._decode_base64(string)
+            if decoded_entry:
+                decoded.append(decoded_entry)
 
-            # Try hex decoding
-            if self._is_hex(string):
-                try:
-                    decoded_bytes = bytes.fromhex(string)
-                    decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
-                    if decoded_str and decoded_str.isprintable():
-                        decoded.append(
-                            {
-                                "original": string,
-                                "decoded": decoded_str,
-                                "encoding": "hex",
-                            }
-                        )
-                except:
-                    pass
+            decoded_entry = self._decode_hex(string)
+            if decoded_entry:
+                decoded.append(decoded_entry)
 
         return decoded
+
+    def _decode_base64(self, string: str) -> dict[str, Any] | None:
+        if not self._is_base64(string):
+            return None
+        try:
+            decoded_bytes = base64.b64decode(string)
+            decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
+            if decoded_str and decoded_str.isprintable():
+                return {
+                    "original": string,
+                    "decoded": decoded_str,
+                    "encoding": "base64",
+                }
+        except (UnicodeDecodeError, binascii.Error):
+            return None
+        return None
+
+    def _decode_hex(self, string: str) -> dict[str, Any] | None:
+        if not self._is_hex(string):
+            return None
+        try:
+            decoded_bytes = bytes.fromhex(string)
+            decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
+            if decoded_str and decoded_str.isprintable():
+                return {
+                    "original": string,
+                    "decoded": decoded_str,
+                    "encoding": "hex",
+                }
+        except UnicodeDecodeError:
+            return None
+        return None
 
     def _is_base64(self, s: str) -> bool:
         """Check if string looks like base64"""
@@ -221,7 +261,7 @@ class StringAnalyzer:
             return False
         try:
             return base64.b64encode(base64.b64decode(s)).decode() == s
-        except:
+        except (UnicodeDecodeError, binascii.Error):
             return False
 
     def _is_hex(self, s: str) -> bool:
@@ -231,10 +271,10 @@ class StringAnalyzer:
         try:
             int(s, 16)
             return True
-        except:
+        except ValueError:
             return False
 
-    def get_string_statistics(self) -> Dict[str, Any]:
+    def get_string_statistics(self) -> dict[str, Any]:
         """Get statistics about extracted strings"""
         strings = self.extract_strings()
 
@@ -248,7 +288,7 @@ class StringAnalyzer:
 
         return stats
 
-    def _analyze_charset(self, strings: List[str]) -> Dict[str, int]:
+    def _analyze_charset(self, strings: list[str]) -> dict[str, int]:
         """Analyze character sets used in strings"""
         charset_count = {"ascii": 0, "unicode": 0, "printable": 0, "alphanumeric": 0}
 

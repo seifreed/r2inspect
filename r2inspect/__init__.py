@@ -11,12 +11,9 @@ from .__version__ import __author__, __author_email__, __license__, __url__, __v
 
 __description__ = "Advanced malware analysis tool using radare2 and r2pipe"
 
-from .core import R2Inspector
-from .modules import *
-from .utils import *
-
+# Avoid importing heavy subpackages at module import time to prevent
+# optional dependency errors (e.g., r2pipe) during partial imports
 __all__ = [
-    "R2Inspector",
     "__version__",
     "__author__",
     "__author_email__",
