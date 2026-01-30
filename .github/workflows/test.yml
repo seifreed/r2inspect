@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -13,71 +13,71 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.13', '3.14']
-    
+        python-version: ["3.13", "3.14"]
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install system dependencies (Ubuntu)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libmagic-dev
-    
-    - name: Install system dependencies (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install libmagic
+      - uses: actions/checkout@v4
 
-    - name: Install system dependencies (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        pip install python-magic-bin
-    
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
-    
-    - name: Lint with ruff
-      run: |
-        ruff check r2inspect
-    
-    - name: Format check with black
-      run: |
-        black --check r2inspect
-    
-    - name: Security check with bandit
-      run: |
-        bandit -r r2inspect -f json -o bandit-report.json || true
-    
-    - name: Type check with mypy
-      run: |
-        mypy r2inspect || true
-    
-    - name: Test installation (Unix)
-      if: runner.os != 'Windows'
-      run: |
-        pip install -e .
-        r2inspect --help
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Test installation (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        pip install -e .
-        python -c "import r2inspect, sys; print(r2inspect.__version__)"
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagic-dev
 
-    - name: Run tests with coverage (unit + fast)
-      run: |
-        pytest -m "not requires_r2 and not slow" --cov=r2inspect --cov-report=term-missing --cov-fail-under=60
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libmagic
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        slug: seifreed/r2inspect
+      - name: Install system dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install python-magic-bin
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Lint with ruff
+        run: |
+          ruff check r2inspect
+
+      - name: Format check with black
+        run: |
+          black --check r2inspect
+
+      - name: Security check with bandit
+        run: |
+          bandit -r r2inspect -f json -o bandit-report.json || true
+
+      - name: Type check with mypy
+        run: |
+          mypy r2inspect || true
+
+      - name: Test installation (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          pip install -e .
+          r2inspect --help
+
+      - name: Test installation (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install -e .
+          python -c "import r2inspect, sys; print(r2inspect.__version__)"
+
+      - name: Run tests with coverage (unit + fast)
+        run: |
+          pytest -m "not requires_r2 and not slow" --cov=r2inspect --cov-report=term-missing --cov-fail-under=60
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: seifreed/r2inspect

@@ -30,17 +30,17 @@
 
 ### Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-format Support** | PE, ELF, Mach-O format detection and analysis |
-| **String Analysis** | ASCII/Unicode extraction with filtering and decoding |
-| **Packer Detection** | Evidence-based scoring with entropy and signature checks |
-| **Crypto Detection** | API and constant analysis with confidence scoring |
-| **Anti-Analysis** | Anti-debug/VM/sandbox indicators with evidence |
-| **Hashing Suite** | MD5/SHA, SSDeep, TLSH, MACHOC, RichPE, Telfhash, SimHash |
-| **Metadata Analysis** | Sections, imports, exports, resources, overlays |
-| **YARA Integration** | Built-in and custom rule scanning |
-| **Rich Output** | Console tables, JSON, and CSV exports |
+| Feature                  | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| **Multi-format Support** | PE, ELF, Mach-O format detection and analysis            |
+| **String Analysis**      | ASCII/Unicode extraction with filtering and decoding     |
+| **Packer Detection**     | Evidence-based scoring with entropy and signature checks |
+| **Crypto Detection**     | API and constant analysis with confidence scoring        |
+| **Anti-Analysis**        | Anti-debug/VM/sandbox indicators with evidence           |
+| **Hashing Suite**        | MD5/SHA, SSDeep, TLSH, MACHOC, RichPE, Telfhash, SimHash |
+| **Metadata Analysis**    | Sections, imports, exports, resources, overlays          |
+| **YARA Integration**     | Built-in and custom rule scanning                        |
+| **Rich Output**          | Console tables, JSON, and CSV exports                    |
 
 ### Supported Formats
 
@@ -113,19 +113,19 @@ r2inspect --yara /path/to/rules malware.exe
 
 ### Available Options
 
-| Option | Description |
-|--------|-------------|
-| `-i, --interactive` | Interactive analysis shell |
-| `-j, --json` | Output in JSON format |
-| `-c, --csv` | Output in CSV format |
-| `-o, --output` | Output file or directory |
-| `--batch` | Batch mode for directories |
-| `--extensions` | Filter batch by extensions |
-| `--yara` | Custom YARA rules directory |
-| `-x, --xor` | XOR search string |
-| `-v, --verbose` | Verbose output |
-| `--quiet` | Suppress non-critical output |
-| `--threads` | Parallel threads for batch mode |
+| Option              | Description                     |
+| ------------------- | ------------------------------- |
+| `-i, --interactive` | Interactive analysis shell      |
+| `-j, --json`        | Output in JSON format           |
+| `-c, --csv`         | Output in CSV format            |
+| `-o, --output`      | Output file or directory        |
+| `--batch`           | Batch mode for directories      |
+| `--extensions`      | Filter batch by extensions      |
+| `--yara`            | Custom YARA rules directory     |
+| `-x, --xor`         | XOR search string               |
+| `-v, --verbose`     | Verbose output                  |
+| `--quiet`           | Suppress non-critical output    |
+| `--threads`         | Parallel threads for batch mode |
 
 ---
 
@@ -190,6 +190,7 @@ If you find r2inspect useful, consider supporting its development:
 GNU General Public License v3.0
 
 **Attribution Required:**
+
 - Author: **Marc Rivero** | [@seifreed](https://github.com/seifreed)
 - Repository: [github.com/seifreed/r2inspect](https://github.com/seifreed/r2inspect)
 

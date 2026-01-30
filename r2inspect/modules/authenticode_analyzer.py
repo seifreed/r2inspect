@@ -255,7 +255,7 @@ class AuthenticodeAnalyzer:
                 positions.append(i)
         return positions
 
-    def _compute_authenticode_hash(self) -> dict[str, str | None]:
+    def _compute_authenticode_hash(self) -> dict[str, str | None] | None:
         """Compute the Authenticode hash of the PE file."""
         try:
             # Get file size

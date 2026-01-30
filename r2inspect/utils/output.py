@@ -420,51 +420,56 @@ class OutputFormatter:
 
     def format_summary(self) -> str:
         """Create a summary of the analysis results"""
-        summary_lines = []
+        summary_lines: list[str] = []
 
         try:
             summary_lines.append("=== R2INSPECT ANALYSIS SUMMARY ===\n")
-
-            # File information
-            if "file_info" in self.results:
-                file_info = self.results["file_info"]
-                summary_lines.append(f"File: {file_info.get('name', 'Unknown')}")
-                summary_lines.append(f"Size: {file_info.get('size', 0)} bytes")
-                summary_lines.append(f"Type: {file_info.get('file_type', 'Unknown')}")
-                summary_lines.append(f"MD5: {file_info.get('md5', 'Unknown')}")
-                summary_lines.append("")
-
-            # Indicators
-            if "indicators" in self.results:
-                indicators = self.results["indicators"]
-                if indicators:
-                    summary_lines.append(f"Suspicious Indicators: {len(indicators)}")
-                    for indicator in indicators[:5]:  # Show first 5
-                        summary_lines.append(
-                            f"  - {indicator.get('type', 'Unknown')}: {indicator.get('description', 'N/A')}"
-                        )
-                    if len(indicators) > 5:
-                        summary_lines.append(f"  ... and {len(indicators) - 5} more")
-                    summary_lines.append("")
-
-            # Packer detection
-            if "packer" in self.results:
-                packer = self.results["packer"]
-                if packer.get("is_packed"):
-                    summary_lines.append(f"Packer Detected: {packer.get('packer_type', 'Unknown')}")
-                    summary_lines.append(f"Confidence: {packer.get('confidence', 0):.2f}")
-                    summary_lines.append("")
-
-            # YARA matches
-            if "yara_matches" in self.results:
-                yara_matches = self.results["yara_matches"]
-                if yara_matches:
-                    summary_lines.append(f"YARA Matches: {len(yara_matches)}")
-                    for match in yara_matches[:3]:  # Show first 3
-                        summary_lines.append(f"  - {match.get('rule', 'Unknown')}")
-                    summary_lines.append("")
+            self._append_file_info_summary(summary_lines)
+            self._append_indicators_summary(summary_lines)
+            self._append_packer_summary(summary_lines)
+            self._append_yara_summary(summary_lines)
 
         except Exception as e:
             summary_lines.append(f"Error generating summary: {str(e)}")
 
         return "\n".join(summary_lines)
+
+    def _append_file_info_summary(self, summary_lines: list[str]) -> None:
+        file_info = self.results.get("file_info")
+        if not file_info:
+            return
+        summary_lines.append(f"File: {file_info.get('name', 'Unknown')}")
+        summary_lines.append(f"Size: {file_info.get('size', 0)} bytes")
+        summary_lines.append(f"Type: {file_info.get('file_type', 'Unknown')}")
+        summary_lines.append(f"MD5: {file_info.get('md5', 'Unknown')}")
+        summary_lines.append("")
+
+    def _append_indicators_summary(self, summary_lines: list[str]) -> None:
+        indicators = self.results.get("indicators")
+        if not indicators:
+            return
+        summary_lines.append(f"Suspicious Indicators: {len(indicators)}")
+        for indicator in indicators[:5]:
+            summary_lines.append(
+                f"  - {indicator.get('type', 'Unknown')}: {indicator.get('description', 'N/A')}"
+            )
+        if len(indicators) > 5:
+            summary_lines.append(f"  ... and {len(indicators) - 5} more")
+        summary_lines.append("")
+
+    def _append_packer_summary(self, summary_lines: list[str]) -> None:
+        packer = self.results.get("packer")
+        if not packer or not packer.get("is_packed"):
+            return
+        summary_lines.append(f"Packer Detected: {packer.get('packer_type', 'Unknown')}")
+        summary_lines.append(f"Confidence: {packer.get('confidence', 0):.2f}")
+        summary_lines.append("")
+
+    def _append_yara_summary(self, summary_lines: list[str]) -> None:
+        yara_matches = self.results.get("yara_matches")
+        if not yara_matches:
+            return
+        summary_lines.append(f"YARA Matches: {len(yara_matches)}")
+        for match in yara_matches[:3]:
+            summary_lines.append(f"  - {match.get('rule', 'Unknown')}")
+        summary_lines.append("")

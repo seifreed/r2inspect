@@ -86,7 +86,12 @@ def test_from_dict_full_fields():
             "timing_checks": True,
             "techniques": [],
         },
-        "packer": {"is_packed": False, "packer_type": "", "confidence": 0, "indicators": []},
+        "packer": {
+            "is_packed": False,
+            "packer_type": "",
+            "confidence": 0,
+            "indicators": [],
+        },
         "crypto": {"algorithms": [], "constants": [], "functions": []},
         "indicators": [{"type": "t", "description": "d", "severity": "Low"}],
         "timestamp": datetime.utcnow().isoformat(),
