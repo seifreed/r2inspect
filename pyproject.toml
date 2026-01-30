@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "r2inspect"
-version = "1.0.1"
+version = "2.0.0"
 description = "Advanced malware analysis tool using radare2 and r2pipe"
 readme = "README.md"
 authors = [
