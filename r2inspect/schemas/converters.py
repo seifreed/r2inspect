@@ -10,7 +10,7 @@ Licensed under the GNU General Public License v3.0 (GPLv3)
 """
 
 import logging
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
@@ -18,10 +18,10 @@ from .base import AnalysisResultBase
 
 logger = logging.getLogger(__name__)
 
+TModel = TypeVar("TModel", bound=BaseModel)
 
-def dict_to_model[T: BaseModel](
-    data: dict[str, Any], model_class: type[T], strict: bool = False
-) -> T:
+
+def dict_to_model(data: dict[str, Any], model_class: type[TModel], strict: bool = False) -> TModel:
     """
     Convert dictionary to Pydantic model.
 
@@ -257,9 +257,9 @@ class ResultConverter:
         return {name: schema.__name__ for name, schema in cls._schema_registry.items()}
 
 
-def safe_convert[T: BaseModel](
-    data: Any, model_class: type[T], default: T | None = None
-) -> T | None:
+def safe_convert(
+    data: Any, model_class: type[TModel], default: TModel | None = None
+) -> TModel | None:
     """
     Safely convert data to model, returning default on failure.
 
