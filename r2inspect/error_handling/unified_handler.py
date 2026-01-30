@@ -20,12 +20,7 @@ import threading
 import time
 from collections.abc import Callable
 from enum import Enum
-from typing import Any
-
-try:
-    from typing import assert_never
-except ImportError:  # pragma: no cover - Python < 3.11
-    from typing_extensions import assert_never
+from typing import Any, assert_never
 
 from ..utils.logger import get_logger
 from .policies import ErrorHandlingStrategy, ErrorPolicy

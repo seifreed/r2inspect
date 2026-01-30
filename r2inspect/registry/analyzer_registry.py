@@ -34,7 +34,7 @@ from importlib import import_module
 from typing import Any
 
 try:
-    # Python 3.10+
+    # Python 3.13+
     from importlib.metadata import EntryPoint
     from importlib.metadata import entry_points as _entry_points
 
