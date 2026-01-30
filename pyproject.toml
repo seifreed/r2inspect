@@ -156,6 +156,7 @@ ignore = [
     "SIM116", # use dict instead of if-elif
     "SIM401", # use dict.get
     "F401",  # unused imports in some __init__ files
+    "UP047", # avoid PEP 695 type parameter enforcement (py3.8 support)
 ]
 exclude = [
     ".bzr",
