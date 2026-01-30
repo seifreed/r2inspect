@@ -104,7 +104,7 @@ class Config:
         return self._typed_config
 
     @property
-    def config(self) -> dict[str, Any]:
+    def config_dict(self) -> dict[str, Any]:
         """
         Get the configuration as a dictionary for backward compatibility.
 
@@ -113,6 +113,11 @@ class Config:
         """
         # Return full dictionary (including unknown sections like 'pipeline')
         return dict(self._full_config_dict)
+
+    @property
+    def config(self) -> dict[str, Any]:  # noqa: S1700
+        """Deprecated alias for config_dict to preserve legacy API."""
+        return self.config_dict
 
     def _get_default_config_path(self) -> str:
         """Get default configuration file path"""
@@ -166,7 +171,7 @@ class Config:
             config_dir.mkdir(exist_ok=True)
 
             with open(self.config_path, "w") as f:
-                json.dump(self.config, f, indent=2)
+                json.dump(self.config_dict, f, indent=2)
         except Exception as e:
             print(f"Warning: Could not save config to {self.config_path}: {e}")
 
@@ -182,7 +187,7 @@ class Config:
         Returns:
             Configuration value or default
         """
-        config_dict = self.config
+        config_dict = self.config_dict
         if key is None:
             return config_dict.get(section, default)
         return config_dict.get(section, {}).get(key, default)
@@ -197,7 +202,7 @@ class Config:
             value: Value to set
         """
         # Get current config as dict
-        config_dict = self.config
+        config_dict = self.config_dict
 
         # Update the dictionary
         if section not in config_dict:
@@ -217,10 +222,10 @@ class Config:
         Returns:
             Config: New configuration instance
         """
-        config = Config.__new__(Config)
-        config.config_path = self.config_path
-        config._load_from_dict(config_dict)
-        return config
+        config_instance = Config.__new__(Config)
+        config_instance.config_path = self.config_path
+        config_instance._load_from_dict(config_dict)
+        return config_instance
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -229,7 +234,7 @@ class Config:
         Returns:
             dict[str, Any]: Configuration dictionary
         """
-        return self.config
+        return self.config_dict
 
     def get_yara_rules_path(self) -> str:
         """Get YARA rules directory path"""
@@ -250,11 +255,11 @@ class Config:
 
     def __getitem__(self, key: str) -> Any:
         """Allow dict-like access"""
-        return self.config[key]
+        return self.config_dict[key]
 
     def __contains__(self, key: str) -> bool:
         """Allow 'in' operator"""
-        return key in self.config
+        return key in self.config_dict
 
     # PE Analysis configuration properties
     @property

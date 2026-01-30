@@ -5,6 +5,7 @@
 This roadmap enumerates test coverage needed to fully cover the project. It is organized in phases so you can land value early and build toward full coverage.
 
 Legend:
+
 - [ ] not started
 - [~] in progress
 - [x] done
@@ -21,6 +22,7 @@ Legend:
 ## Phase 1 - Core unit tests (fast, no external deps)
 
 ### Core runtime
+
 - [x] `r2inspect/core/file_validator.py` input validation and error paths
 - [x] `r2inspect/core/r2_session.py` session lifecycle, error handling, timeout paths
 - [x] `r2inspect/core/inspector.py` orchestration logic with mocked analyzers
@@ -28,19 +30,23 @@ Legend:
 - [x] `r2inspect/core/result_aggregator.py` merge logic and edge cases
 
 ### Pipeline
+
 - [ ] `r2inspect/pipeline/analysis_pipeline.py` dependency resolution, skip logic, error handling
 - [ ] `r2inspect/pipeline/stages.py` hashing/detection/format stage behavior with stub analyzers
 
 ### Adapters
+
 - [x] `r2inspect/adapters/validation.py` response validation and sanitization
 - [x] `r2inspect/adapters/r2pipe_adapter.py` adapter behavior and command execution
 
 ### Registry and lazy loading
+
 - [ ] `r2inspect/registry/analyzer_registry.py` registration modes, metadata extraction, dependency order
 - [x] `r2inspect/registry/default_registry.py` ensures expected analyzers registered
 - [x] `r2inspect/lazy_loader.py` caching behavior, load failures, stats
 
 ### Schemas and conversions
+
 - [x] `r2inspect/schemas/base.py` data validation behaviors
 - [x] `r2inspect/schemas/format.py` format mapping rules
 - [x] `r2inspect/schemas/metadata.py` metadata parsing
@@ -50,6 +56,7 @@ Legend:
 - [x] `r2inspect/schemas/hashing.py` field normalization
 
 ### Utilities and helpers
+
 - [x] `r2inspect/utils/r2_helpers.py` safe command wrappers
 - [x] `r2inspect/utils/r2_suppress.py` suppression and fallback handling
 - [x] `r2inspect/utils/hashing.py` deterministic hashing helpers
@@ -63,11 +70,13 @@ Legend:
 - [x] `r2inspect/utils/logger.py` configuration defaults
 
 ### Config
+
 - [x] `r2inspect/config.py` defaults and overrides
 - [x] `r2inspect/config_schemas/builder.py` schema building
 - [x] `r2inspect/config_schemas/schemas.py` schema validation
 
 ### CLI (unit)
+
 - [x] `r2inspect/cli/validators.py` input validation
 - [x] `r2inspect/cli/analysis_runner.py` argument handling with stub pipeline
 - [x] `r2inspect/cli/commands/*.py` command routing
@@ -79,16 +88,19 @@ Legend:
 ## Phase 2 - Module unit tests (mocked r2pipe)
 
 Each analyzer should have unit tests that validate:
+
 - correct handling of missing/empty r2 responses
 - safe defaults when fields are absent
 - deterministic outputs on provided fixtures
 
 ### PE/ELF/Mach-O format analyzers
+
 - [x] `r2inspect/modules/pe_analyzer.py`
 - [x] `r2inspect/modules/elf_analyzer.py`
 - [x] `r2inspect/modules/macho_analyzer.py`
 
 ### PE adjunct analyzers
+
 - [x] `r2inspect/modules/resource_analyzer.py`
 - [x] `r2inspect/modules/rich_header_analyzer.py`
 - [x] `r2inspect/modules/authenticode_analyzer.py`
@@ -99,6 +111,7 @@ Each analyzer should have unit tests that validate:
 - [x] `r2inspect/modules/exploit_mitigation_analyzer.py`
 
 ### Detection analyzers
+
 - [x] `r2inspect/modules/packer_detector.py`
 - [x] `r2inspect/modules/anti_analysis.py`
 - [x] `r2inspect/modules/compiler_detector.py`
@@ -106,6 +119,7 @@ Each analyzer should have unit tests that validate:
 - [x] `r2inspect/modules/yara_analyzer.py` (mock yara hits)
 
 ### Hashing/similarity analyzers
+
 - [x] `r2inspect/modules/ssdeep_analyzer.py`
 - [x] `r2inspect/modules/tlsh_analyzer.py`
 - [x] `r2inspect/modules/telfhash_analyzer.py`
@@ -121,11 +135,13 @@ Each analyzer should have unit tests that validate:
 ## Phase 3 - Integration tests (real r2pipe + fixtures)
 
 ### Fixture set
+
 - [x] Curate minimal sample binaries for PE/ELF/Mach-O (safe, non-malicious)
 - [x] Add fixtures for edge cases: packed sample, high entropy, missing headers, tiny files
 - [x] Add expected output JSON per fixture
 
 ### Integration suites
+
 - [x] Analyze each fixture end-to-end via `R2Inspector` and compare to golden output
 - [x] Validate pipeline dependency resolution with optional analyzers toggled
 - [x] Validate config-driven behavior (disable analyzers, set timeouts)

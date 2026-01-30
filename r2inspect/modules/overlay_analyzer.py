@@ -34,105 +34,118 @@ class OverlayAnalyzer:
         Returns:
             Dictionary containing overlay information
         """
+        result = self._default_result()
+
         try:
-            result = {
-                "has_overlay": False,
-                "overlay_offset": 0,
-                "overlay_size": 0,
-                "overlay_entropy": 0.0,
-                "overlay_hashes": {},
-                "patterns_found": [],
-                "potential_type": "unknown",
-                "suspicious_indicators": [],
-                "extracted_strings": [],
-            }
-
-            # Get file size
-            file_info = silent_cmdj(self.r2, "ij", {})
-            if not file_info:
+            file_size = self._get_file_size()
+            if not file_size:
                 return result
 
-            # Handle different response formats from radare2
-            if isinstance(file_info, dict):
-                file_size = file_info.get("core", {}).get("size", 0)
-            else:
+            pe_end = self._get_valid_pe_end(file_size)
+            if not pe_end:
                 return result
 
-            if file_size == 0:
-                return result
-
-            # Calculate where PE structure ends
-            pe_end = self._calculate_pe_end()
-
-            # Ensure pe_end and file_size are integers
-            try:
-                pe_end = int(pe_end) if pe_end else 0
-                file_size = int(file_size) if file_size else 0
-            except (ValueError, TypeError):
-                return result
-
-            if pe_end == 0 or pe_end >= file_size:
-                return result
-
-            # We have overlay data
             overlay_size = file_size - pe_end
             if overlay_size <= 0:
                 return result
 
-            result["has_overlay"] = True
-            result["overlay_offset"] = pe_end
-            result["overlay_size"] = overlay_size
-            result["file_size"] = file_size
-            result["pe_end"] = pe_end
-
-            # Analyze overlay content
+            self._populate_overlay_metadata(result, file_size, pe_end, overlay_size)
             self._analyze_overlay_content(result, pe_end, overlay_size)
-
-            # Check for suspicious indicators
             self._check_suspicious_indicators(result)
-
             return result
 
         except Exception as e:
             logger.error(f"Error analyzing overlay data: {e}")
             return {"has_overlay": False, "error": str(e)}
 
+    @staticmethod
+    def _default_result() -> dict[str, Any]:
+        return {
+            "has_overlay": False,
+            "overlay_offset": 0,
+            "overlay_size": 0,
+            "overlay_entropy": 0.0,
+            "overlay_hashes": {},
+            "patterns_found": [],
+            "potential_type": "unknown",
+            "suspicious_indicators": [],
+            "extracted_strings": [],
+        }
+
+    def _get_file_size(self) -> int | None:
+        file_info = silent_cmdj(self.r2, "ij", {})
+        if not isinstance(file_info, dict):
+            return None
+        file_size = file_info.get("core", {}).get("size", 0)
+        if not file_size:
+            return None
+        try:
+            return int(file_size)
+        except (ValueError, TypeError):
+            return None
+
+    def _get_valid_pe_end(self, file_size: int) -> int | None:
+        pe_end = self._calculate_pe_end()
+        if not pe_end:
+            return None
+        try:
+            pe_end_int = int(pe_end)
+        except (ValueError, TypeError):
+            return None
+        if pe_end_int == 0 or pe_end_int >= file_size:
+            return None
+        return pe_end_int
+
+    @staticmethod
+    def _populate_overlay_metadata(
+        result: dict[str, Any], file_size: int, pe_end: int, overlay_size: int
+    ) -> None:
+        result["has_overlay"] = True
+        result["overlay_offset"] = pe_end
+        result["overlay_size"] = overlay_size
+        result["file_size"] = file_size
+        result["pe_end"] = pe_end
+
     def _calculate_pe_end(self) -> int:
         """Calculate where the PE structure ends."""
         try:
-            # Get all sections
-            sections = silent_cmdj(self.r2, "iSj", [])
-            if not isinstance(sections, list):
-                sections = []
+            sections = self._get_sections()
             if not sections:
                 return 0
-
-            # Find the last section's end
-            max_end = 0
-            for section in sections:
-                if isinstance(section, dict):
-                    # Calculate section end (raw offset + raw size)
-                    section_end = section.get("paddr", 0) + section.get("size", 0)
-                    if section_end > max_end:
-                        max_end = section_end
-
-            # Check if there's a certificate table that extends beyond sections
-            data_dirs = silent_cmdj(self.r2, "iDj", [])
-            if isinstance(data_dirs, list):
-                for dd in data_dirs:
-                    if isinstance(dd, dict) and dd.get("name") == "SECURITY":
-                        cert_offset = dd.get("paddr", 0)
-                        cert_size = dd.get("size", 0)
-                        if cert_offset > 0 and cert_size > 0:
-                            cert_end = cert_offset + cert_size
-                            if cert_end > max_end:
-                                max_end = cert_end
-
-            return max_end
+            max_end = self._get_max_section_end(sections)
+            return self._extend_end_with_certificate(max_end)
 
         except Exception as e:
             logger.error(f"Error calculating PE end: {e}")
             return 0
+
+    def _get_sections(self) -> list[dict[str, Any]]:
+        sections = silent_cmdj(self.r2, "iSj", [])
+        if not isinstance(sections, list):
+            return []
+        return [section for section in sections if isinstance(section, dict)]
+
+    @staticmethod
+    def _get_max_section_end(sections: list[dict[str, Any]]) -> int:
+        max_end = 0
+        for section in sections:
+            section_end = section.get("paddr", 0) + section.get("size", 0)
+            if section_end > max_end:
+                max_end = section_end
+        return max_end
+
+    def _extend_end_with_certificate(self, max_end: int) -> int:
+        data_dirs = silent_cmdj(self.r2, "iDj", [])
+        if not isinstance(data_dirs, list):
+            return max_end
+        for dd in data_dirs:
+            if not isinstance(dd, dict) or dd.get("name") != "SECURITY":
+                continue
+            cert_offset = dd.get("paddr", 0)
+            cert_size = dd.get("size", 0)
+            if cert_offset > 0 and cert_size > 0:
+                max_end = max(max_end, cert_offset + cert_size)
+        return max_end
 
     def _analyze_overlay_content(self, result: dict[str, Any], offset: int, size: int):
         """Analyze the content of the overlay data."""

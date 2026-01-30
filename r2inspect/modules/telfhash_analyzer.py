@@ -199,61 +199,55 @@ class TelfhashAnalyzer(HashingStrategy):
             True if file is ELF, False otherwise
         """
         try:
-            # Try multiple methods to detect ELF format
-
-            # Method 1: Check file info command
             if self.r2 is None:
                 return False
-            info_text = self.r2.cmd("i")
-            if "elf" in info_text.lower():
-                return True
-
-            # Method 2: Check binary info via ij command
             info_cmd = safe_cmdj(self.r2, "ij", {})
-            if info_cmd and "bin" in info_cmd:
-                bin_info = info_cmd["bin"]
-
-                # Check format field
-                bin_format = bin_info.get("format", "").lower()
-                if "elf" in bin_format:
-                    return True
-
-                # Check type field
-                bin_type = bin_info.get("type", "").lower()
-                if "elf" in bin_type:
-                    return True
-
-                # Check class field (ELF32/ELF64)
-                bin_class = bin_info.get("class", "").lower()
-                if "elf" in bin_class:
-                    return True
-
-            # Method 3: Check file magic bytes directly
-            try:
-                with open(self.filepath, "rb") as f:
-                    magic = f.read(4)
-                    # ELF magic: 0x7F followed by 'ELF'
-                    if magic == b"\x7fELF":
-                        return True
-            except Exception as exc:
-                logger.debug(f"Failed to read ELF magic bytes: {exc}")
-
-            # Method 4: Check if we can get ELF symbols (if it has symbols, likely ELF)
-            try:
-                symbols = safe_cmd_list(self.r2, "isj")
-                if symbols and len(symbols) > 0:
-                    # If we can get symbols and file info suggests it's some kind of executable
-                    if info_cmd and "bin" in info_cmd:
-                        os_info = info_cmd["bin"].get("os", "").lower()
-                        if "linux" in os_info or "unix" in os_info:
-                            return True
-            except Exception as exc:
-                logger.debug(f"Failed to inspect ELF symbols: {exc}")
-
-            return False
+            if self._is_elf_in_r2_info():
+                return True
+            if self._is_elf_in_bin_info(info_cmd):
+                return True
+            if self._has_elf_magic():
+                return True
+            return self._has_elf_symbols(info_cmd)
 
         except Exception as e:
             logger.error(f"Error checking if file is ELF: {e}")
+            return False
+
+    def _is_elf_in_r2_info(self) -> bool:
+        info_text = self.r2.cmd("i")
+        return "elf" in info_text.lower()
+
+    @staticmethod
+    def _is_elf_in_bin_info(info_cmd: dict[str, Any] | None) -> bool:
+        if not info_cmd or "bin" not in info_cmd:
+            return False
+        bin_info = info_cmd["bin"]
+        for key in ("format", "type", "class"):
+            if "elf" in str(bin_info.get(key, "")).lower():
+                return True
+        return False
+
+    def _has_elf_magic(self) -> bool:
+        try:
+            with open(self.filepath, "rb") as f:
+                magic = f.read(4)
+                return magic == b"\x7fELF"
+        except Exception as exc:
+            logger.debug(f"Failed to read ELF magic bytes: {exc}")
+            return False
+
+    def _has_elf_symbols(self, info_cmd: dict[str, Any] | None) -> bool:
+        try:
+            symbols = safe_cmd_list(self.r2, "isj")
+            if not symbols:
+                return False
+            if not info_cmd or "bin" not in info_cmd:
+                return False
+            os_info = str(info_cmd["bin"].get("os", "")).lower()
+            return "linux" in os_info or "unix" in os_info
+        except Exception as exc:
+            logger.debug(f"Failed to inspect ELF symbols: {exc}")
             return False
 
     def _get_elf_symbols(self) -> list[dict[str, Any]]:

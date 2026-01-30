@@ -76,43 +76,53 @@ class YaraAnalyzer:
             if yara is None:
                 logger.warning("python-yara not available; skipping YARA scan")
                 return matches
-            # Use stored filepath first, fallback to r2 if needed
-            file_path = self.filepath
-
+            file_path = self._resolve_file_path()
             if not file_path:
-                # Try to get file path from r2 as fallback
-                file_info = safe_cmdj(self.r2, "ij", {})
-                if file_info and "core" in file_info:
-                    file_path = file_info["core"].get("file", "")
-
-            if not file_path or not os.path.exists(file_path):
-                logger.debug(f"File not accessible for YARA scan: {file_path}")
                 return matches
 
-            # Use custom rules path if provided
-            rules_path = custom_rules_path or self.rules_path
+            rules_path = self._resolve_rules_path(custom_rules_path)
+            if not rules_path:
+                return matches
 
-            if not os.path.exists(rules_path):
-                # Attempt to create minimal default rules and retry
-                logger.info(f"YARA rules path not found: {rules_path}. Creating defaults.")
-                self.create_default_rules()
-                if not os.path.exists(rules_path):
-                    return matches
-
-            # Compile and run YARA rules (with cache per rules_path)
-            rules = _COMPILED_CACHE.get(rules_path)
+            rules = self._get_cached_rules(rules_path)
             if not rules:
-                rules = self._compile_rules(rules_path)
-                if rules:
-                    _COMPILED_CACHE[rules_path] = rules
-            if rules:
-                yara_matches = rules.match(file_path)
-                matches = self._process_matches(yara_matches)
+                return matches
+
+            yara_matches = rules.match(file_path)
+            matches = self._process_matches(yara_matches)
 
         except Exception as e:
             logger.error(f"Error in YARA scan: {e}")
 
         return matches
+
+    def _resolve_file_path(self) -> str | None:
+        file_path = self.filepath
+        if not file_path:
+            file_info = safe_cmdj(self.r2, "ij", {})
+            if file_info and "core" in file_info:
+                file_path = file_info["core"].get("file", "")
+        if not file_path or not os.path.exists(file_path):
+            logger.debug(f"File not accessible for YARA scan: {file_path}")
+            return None
+        return file_path
+
+    def _resolve_rules_path(self, custom_rules_path: str | None) -> str | None:
+        rules_path = custom_rules_path or self.rules_path
+        if os.path.exists(rules_path):
+            return rules_path
+        logger.info(f"YARA rules path not found: {rules_path}. Creating defaults.")
+        self.create_default_rules()
+        return rules_path if os.path.exists(rules_path) else None
+
+    def _get_cached_rules(self, rules_path: str) -> Any | None:
+        rules = _COMPILED_CACHE.get(rules_path)
+        if rules:
+            return rules
+        rules = self._compile_rules(rules_path)
+        if rules:
+            _COMPILED_CACHE[rules_path] = rules
+        return rules
 
     def _compile_rules(self, rules_path: str) -> Any | None:
         """

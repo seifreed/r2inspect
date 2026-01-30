@@ -23,6 +23,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import importlib
 
+MODULE_BATCH_PROCESSING = "r2inspect.cli.batch_processing"
+MODULE_BATCH_OUTPUT = "r2inspect.cli.batch_output"
+MODULE_COMMANDS = "r2inspect.cli.commands"
+MODULE_DISPLAY = "r2inspect.cli.display"
+MODULE_INTERACTIVE = "r2inspect.cli.interactive"
+MODULE_RUNNER = "r2inspect.cli.analysis_runner"
+MODULE_VALIDATORS = "r2inspect.cli.validators"
+
 __all__ = [
     # Commands
     "Command",
@@ -56,35 +64,38 @@ __all__ = [
 
 _LAZY_ATTRS: dict[str, tuple[str, str | None]] = {
     # Utility modules
-    "validators": ("r2inspect.cli.validators", None),
-    "display": ("r2inspect.cli.display", None),
-    "batch_processing": ("r2inspect.cli.batch_processing", None),
-    "batch_output": ("r2inspect.cli.batch_output", None),
-    "analysis_runner": ("r2inspect.cli.analysis_runner", None),
-    "interactive": ("r2inspect.cli.interactive", None),
+    "validators": (MODULE_VALIDATORS, None),
+    "display": (MODULE_DISPLAY, None),
+    "batch_processing": (MODULE_BATCH_PROCESSING, None),
+    "batch_output": (MODULE_BATCH_OUTPUT, None),
+    "analysis_runner": (MODULE_RUNNER, None),
+    "interactive": (MODULE_INTERACTIVE, None),
     # Exported utilities
-    "create_batch_summary": ("r2inspect.cli.batch_output", "create_batch_summary"),
-    "display_batch_results": ("r2inspect.cli.batch_processing", "display_batch_results"),
-    "display_no_files_message": ("r2inspect.cli.batch_processing", "display_no_files_message"),
-    "find_files_to_process": ("r2inspect.cli.batch_processing", "find_files_to_process"),
-    "process_files_parallel": ("r2inspect.cli.batch_processing", "process_files_parallel"),
+    "create_batch_summary": (MODULE_BATCH_OUTPUT, "create_batch_summary"),
+    "display_batch_results": (MODULE_BATCH_PROCESSING, "display_batch_results"),
+    "display_no_files_message": (MODULE_BATCH_PROCESSING, "display_no_files_message"),
+    "find_files_to_process": (MODULE_BATCH_PROCESSING, "find_files_to_process"),
+    "process_files_parallel": (MODULE_BATCH_PROCESSING, "process_files_parallel"),
     "setup_batch_output_directory": (
-        "r2inspect.cli.batch_processing",
+        MODULE_BATCH_PROCESSING,
         "setup_batch_output_directory",
     ),
-    "setup_rate_limiter": ("r2inspect.cli.batch_processing", "setup_rate_limiter"),
-    "display_results": ("r2inspect.cli.display", "display_results"),
-    "display_error_statistics": ("r2inspect.cli.display", "display_error_statistics"),
-    "display_performance_statistics": ("r2inspect.cli.display", "display_performance_statistics"),
-    "has_circuit_breaker_data": ("r2inspect.cli.analysis_runner", "has_circuit_breaker_data"),
+    "setup_rate_limiter": (MODULE_BATCH_PROCESSING, "setup_rate_limiter"),
+    "display_results": (MODULE_DISPLAY, "display_results"),
+    "display_error_statistics": (MODULE_DISPLAY, "display_error_statistics"),
+    "display_performance_statistics": (
+        MODULE_DISPLAY,
+        "display_performance_statistics",
+    ),
+    "has_circuit_breaker_data": (MODULE_RUNNER, "has_circuit_breaker_data"),
     # Commands
-    "Command": ("r2inspect.cli.commands", "Command"),
-    "CommandContext": ("r2inspect.cli.commands", "CommandContext"),
-    "AnalyzeCommand": ("r2inspect.cli.commands", "AnalyzeCommand"),
-    "BatchCommand": ("r2inspect.cli.commands", "BatchCommand"),
-    "InteractiveCommand": ("r2inspect.cli.commands", "InteractiveCommand"),
-    "VersionCommand": ("r2inspect.cli.commands", "VersionCommand"),
-    "ConfigCommand": ("r2inspect.cli.commands", "ConfigCommand"),
+    "Command": (MODULE_COMMANDS, "Command"),
+    "CommandContext": (MODULE_COMMANDS, "CommandContext"),
+    "AnalyzeCommand": (MODULE_COMMANDS, "AnalyzeCommand"),
+    "BatchCommand": (MODULE_COMMANDS, "BatchCommand"),
+    "InteractiveCommand": (MODULE_COMMANDS, "InteractiveCommand"),
+    "VersionCommand": (MODULE_COMMANDS, "VersionCommand"),
+    "ConfigCommand": (MODULE_COMMANDS, "ConfigCommand"),
 }
 
 

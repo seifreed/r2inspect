@@ -253,7 +253,7 @@ class BinbloomAnalyzer:
 
     def _create_function_bloom(
         self, func_addr: int, func_name: str, capacity: int, error_rate: float
-    ) -> tuple[BloomFilter, list[str | None, str]]:
+    ) -> tuple[BloomFilter, list[str], str] | None:
         """
         Create a Bloom filter for a specific function.
 

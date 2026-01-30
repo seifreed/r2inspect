@@ -50,7 +50,13 @@ def test_yara_scan_missing_rules_path(tmp_path):
 def test_binbloom_deserialize_invalid():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
-    payload = {"version": 2, "error_rate": 0.1, "capacity": 10, "count": 0, "bitarray": []}
+    payload = {
+        "version": 2,
+        "error_rate": 0.1,
+        "capacity": 10,
+        "count": 0,
+        "bitarray": [],
+    }
     blob = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
     assert BinbloomAnalyzer.deserialize_bloom(blob) is None
 
