@@ -1,17 +1,4 @@
-"""
-TLSH (Trend Micro Locality Sensitive Hashing) Analyzer Module
-
-This module provides TLSH hashing capabilities for:
-- Complete binary
-- .text section only
-- Individual functions (if size > 512 bytes)
-
-TLSH is particularly useful for malware clustering and similarity detection
-as it's resistant to small modifications like compiler changes, padding, etc.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""TLSH hashing for binaries, sections, and functions."""
 
 from typing import Any, cast
 
@@ -25,7 +12,6 @@ except ImportError:
 
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -33,7 +19,7 @@ logger = get_logger(__name__)
 class TLSHAnalyzer(HashingStrategy):
     """TLSH (Trend Micro Locality Sensitive Hash) analyzer for sections and functions"""
 
-    def __init__(self, r2, filename: str):
+    def __init__(self, adapter: Any, filename: str) -> None:
         """
         Initialize TLSH analyzer.
 
@@ -42,7 +28,8 @@ class TLSHAnalyzer(HashingStrategy):
             filename: Path to the binary file being analyzed
         """
         # Initialize parent with filepath
-        super().__init__(filepath=filename, r2_instance=r2)
+        super().__init__(filepath=filename, r2_instance=adapter)
+        self.adapter: Any = adapter
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
@@ -186,7 +173,7 @@ class TLSHAnalyzer(HashingStrategy):
         section_hashes: dict[str, str | None] = {}
 
         try:
-            sections = cast(list[dict[str, Any]], safe_cmdj(self.r2, "iSj", []))
+            sections = self._get_sections()
             if not sections:
                 return section_hashes
 
@@ -202,7 +189,7 @@ class TLSHAnalyzer(HashingStrategy):
                 try:
                     # Read section data
                     read_size = min(size, 1024 * 1024)  # 1MB limit per section
-                    hex_data = safe_cmd(self.r2, f"p8 {read_size} @ {vaddr}")
+                    hex_data = self._read_bytes_hex(vaddr, read_size)
                     section_hashes[section_name] = self._calculate_tlsh_from_hex(hex_data)
 
                 except Exception as e:
@@ -220,7 +207,7 @@ class TLSHAnalyzer(HashingStrategy):
 
         try:
             # Get functions (core already performed analysis)
-            functions = safe_cmdj(self.r2, "aflj")
+            functions = self._get_functions()
 
             if not functions:
                 return function_hashes
@@ -244,7 +231,7 @@ class TLSHAnalyzer(HashingStrategy):
 
                 try:
                     # Read function data
-                    hex_data = safe_cmd(self.r2, f"p8 {func_size} @ {func_addr}")
+                    hex_data = self._read_bytes_hex(func_addr, func_size)
                     function_hashes[func_name] = self._calculate_tlsh_from_hex(hex_data)
 
                 except Exception as e:
@@ -255,6 +242,25 @@ class TLSHAnalyzer(HashingStrategy):
             logger.error(f"Error in function TLSH calculation: {e}")
 
         return function_hashes
+
+    def _get_sections(self) -> list[Any]:
+        if self.adapter is not None and hasattr(self.adapter, "get_sections"):
+            return cast(list[Any], self.adapter.get_sections())
+        return []
+
+    def _get_functions(self) -> list[Any]:
+        if self.adapter is not None and hasattr(self.adapter, "get_functions"):
+            return cast(list[Any], self.adapter.get_functions())
+        return []
+
+    def _read_bytes_hex(self, vaddr: int, size: int) -> str | None:
+        if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
+            try:
+                data = self.adapter.read_bytes(vaddr, size)
+                return data.hex() if data else None
+            except Exception:
+                return None
+        return None
 
     def compare_tlsh(self, hash1: str, hash2: str) -> int | None:
         """Compare two TLSH hashes and return similarity score"""

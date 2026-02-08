@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""
-Hashing Analyzer Pydantic Schemas
-
-Schemas for all hash-based analyzers (SSDeep, TLSH, Impfuzzy, etc.)
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Hashing analyzer schemas."""
 
 from pydantic import Field, field_validator
 

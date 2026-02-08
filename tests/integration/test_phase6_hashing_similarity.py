@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import r2pipe
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.binbloom_analyzer import BLOOM_AVAILABLE, BinbloomAnalyzer
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
@@ -21,6 +23,11 @@ PE_FIXTURE = "samples/fixtures/hello_pe.exe"
 ELF_FIXTURE = "samples/fixtures/hello_elf"
 
 
+def _open_adapter(path: str) -> tuple[Any, R2PipeAdapter]:
+    r2 = r2pipe.open(path)
+    return r2, R2PipeAdapter(r2)
+
+
 def test_ssdeep_analyzer_real_binary() -> None:
     analyzer = SSDeepAnalyzer(PE_FIXTURE)
     result = analyzer.analyze()
@@ -28,16 +35,16 @@ def test_ssdeep_analyzer_real_binary() -> None:
     if SSDeepAnalyzer.is_available():
         assert result["available"] is True
         assert result["hash_value"]
-        assert result.get("ssdeep_hash")
+        assert result.get("hash_value")
     else:
         assert result["available"] is False
         assert "SSDeep not available" in result["error"]
 
 
 def test_tlsh_analyzer_library_gate() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = TLSHAnalyzer(r2, PE_FIXTURE)
+        analyzer = TLSHAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -51,9 +58,9 @@ def test_tlsh_analyzer_library_gate() -> None:
 
 
 def test_telfhash_analyzer_library_gate() -> None:
-    r2 = r2pipe.open(ELF_FIXTURE)
+    r2, adapter = _open_adapter(ELF_FIXTURE)
     try:
-        analyzer = TelfhashAnalyzer(r2, ELF_FIXTURE)
+        analyzer = TelfhashAnalyzer(adapter, ELF_FIXTURE)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -67,9 +74,9 @@ def test_telfhash_analyzer_library_gate() -> None:
 
 
 def test_impfuzzy_analyzer_library_gate() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = ImpfuzzyAnalyzer(r2, PE_FIXTURE)
+        analyzer = ImpfuzzyAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -83,9 +90,9 @@ def test_impfuzzy_analyzer_library_gate() -> None:
 
 
 def test_simhash_analyzer_basic() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = SimHashAnalyzer(r2, PE_FIXTURE)
+        analyzer = SimHashAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze()
         detailed = analyzer.analyze_detailed()
     finally:
@@ -99,9 +106,9 @@ def test_simhash_analyzer_basic() -> None:
 
 
 def test_binbloom_analyzer_basic() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = BinbloomAnalyzer(r2, PE_FIXTURE)
+        analyzer = BinbloomAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze(capacity=64, error_rate=0.01)
     finally:
         r2.quit()
@@ -123,9 +130,9 @@ def test_binbloom_analyzer_basic() -> None:
 
 
 def test_binlex_analyzer_basic() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = BinlexAnalyzer(r2, PE_FIXTURE)
+        analyzer = BinlexAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze(ngram_sizes=[2])
     finally:
         r2.quit()
@@ -143,9 +150,9 @@ def test_binlex_analyzer_basic() -> None:
 
 
 def test_bindiff_analyzer_basic() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = BinDiffAnalyzer(r2, PE_FIXTURE)
+        analyzer = BinDiffAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -156,9 +163,9 @@ def test_bindiff_analyzer_basic() -> None:
 
 
 def test_ccbhash_analyzer_error_path() -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = CCBHashAnalyzer(r2, PE_FIXTURE)
+        analyzer = CCBHashAnalyzer(adapter, PE_FIXTURE)
         result = analyzer.analyze()
     finally:
         r2.quit()

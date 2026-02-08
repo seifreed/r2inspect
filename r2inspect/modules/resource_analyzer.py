@@ -1,66 +1,33 @@
-# mypy: ignore-errors
-"""
-PE Resource analyzer module using radare2.
-Analyzes resources embedded in PE files.
-"""
+"""PE resource analyzer."""
 
 import hashlib
-import logging
-import math
 from typing import Any
 
-from ..utils.r2_helpers import safe_cmd, safe_cmdj
-from ..utils.r2_suppress import silent_cmdj
+from ..utils.command_helpers import cmdj as cmdj_helper
+from ..utils.logger import get_logger
+from .domain_helpers import entropy_from_ints
+from .pe_resource_defaults import RESOURCE_TYPES
+from .string_extraction import split_null_terminated
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ResourceAnalyzer:
     """Analyzes resources in PE files."""
 
     # Resource type constants
-    RESOURCE_TYPES = {
-        1: "RT_CURSOR",
-        2: "RT_BITMAP",
-        3: "RT_ICON",
-        4: "RT_MENU",
-        5: "RT_DIALOG",
-        6: "RT_STRING",
-        7: "RT_FONTDIR",
-        8: "RT_FONT",
-        9: "RT_ACCELERATOR",
-        10: "RT_RCDATA",
-        11: "RT_MESSAGETABLE",
-        12: "RT_GROUP_CURSOR",
-        14: "RT_GROUP_ICON",
-        16: "RT_VERSION",
-        17: "RT_DLGINCLUDE",
-        19: "RT_PLUGPLAY",
-        20: "RT_VXD",
-        21: "RT_ANICURSOR",
-        22: "RT_ANIICON",
-        23: "RT_HTML",
-        24: "RT_MANIFEST",
-    }
+    RESOURCE_TYPES = RESOURCE_TYPES
 
-    def __init__(self, r2):
-        """
-        Initialize the Resource analyzer.
-
-        Args:
-            r2: Radare2 instance
-        """
-        self.r2 = r2
+    def __init__(self, adapter: Any) -> None:
+        """Initialize the analyzer."""
+        self.adapter = adapter
+        self.r2 = adapter
 
     def analyze(self) -> dict[str, Any]:
-        """
-        Analyze resources in the PE file.
-
-        Returns:
-            Dictionary containing resource information
-        """
+        """Analyze PE resources."""
         try:
-            result = {
+            result: dict[str, Any] = {
+                "available": True,
                 "has_resources": False,
                 "resource_directory": None,
                 "total_resources": 0,
@@ -108,13 +75,13 @@ class ResourceAnalyzer:
 
         except Exception as e:
             logger.error(f"Error analyzing resources: {e}")
-            return {"has_resources": False, "error": str(e)}
+            return {"available": False, "has_resources": False, "error": str(e)}
 
-    def _get_resource_directory(self) -> dict[str, Any | None]:
+    def _get_resource_directory(self) -> dict[str, Any] | None:
         """Get resource directory information."""
         try:
             # Get data directories
-            data_dirs = silent_cmdj(self.r2, "iDj", [])
+            data_dirs = self._cmdj("iDj", [])
             if not data_dirs or not isinstance(data_dirs, list):
                 return None
 
@@ -138,7 +105,7 @@ class ResourceAnalyzer:
         """Parse resources using radare2."""
         try:
             # Use radare2's resource parsing command
-            resources = silent_cmdj(self.r2, "iRj", [])
+            resources = self._cmdj("iRj", [])
             if not resources:
                 return []
 
@@ -185,7 +152,7 @@ class ResourceAnalyzer:
             if rsrc_offset == 0:
                 return []
 
-            dir_data = silent_cmdj(self.r2, f"pxj 16 @ {rsrc_offset}", [])
+            dir_data = self._cmdj(f"pxj 16 @ {rsrc_offset}", [])
             if not self._is_valid_dir_header(dir_data):
                 return []
 
@@ -198,7 +165,7 @@ class ResourceAnalyzer:
 
     def _get_rsrc_section(self) -> dict[str, Any] | None:
         """Return the .rsrc section dictionary, if present."""
-        sections = silent_cmdj(self.r2, "iSj", [])
+        sections = self._cmdj("iSj", [])
         if not sections or not isinstance(sections, list):
             return None
         for section in sections:
@@ -208,7 +175,9 @@ class ResourceAnalyzer:
 
     def _is_valid_dir_header(self, dir_data: list[int] | None) -> bool:
         """Validate resource directory header data length."""
-        return bool(dir_data) and len(dir_data) >= 16
+        if not dir_data:
+            return False
+        return len(dir_data) >= 16
 
     def _get_dir_total_entries(self, dir_data: list[int]) -> int:
         """Compute total entries from IMAGE_RESOURCE_DIRECTORY header bytes."""
@@ -221,7 +190,7 @@ class ResourceAnalyzer:
         resources: list[dict[str, Any]] = []
         entry_offset = rsrc_offset + 16
         for i in range(min(total_entries, 20)):
-            entry_data = silent_cmdj(self.r2, f"pxj 8 @ {entry_offset}", [])
+            entry_data = self._cmdj(f"pxj 8 @ {entry_offset}", [])
             resource = self._parse_dir_entry(rsrc_offset, entry_data, i)
             if resource:
                 resources.append(resource)
@@ -263,7 +232,7 @@ class ResourceAnalyzer:
         """Get resource type name from ID."""
         return self.RESOURCE_TYPES.get(type_id, f"UNKNOWN_{type_id}")
 
-    def _analyze_resource_data(self, resource: dict[str, Any]):
+    def _analyze_resource_data(self, resource: dict[str, Any]) -> None:
         """Analyze resource data (entropy, hashes)."""
         try:
             offset = resource["offset"]
@@ -273,7 +242,7 @@ class ResourceAnalyzer:
                 return
 
             # Read resource data
-            data = silent_cmdj(self.r2, f"pxj {size} @ {offset}", [])
+            data = self._cmdj(f"pxj {size} @ {offset}", [])
             if not data:
                 return
 
@@ -296,30 +265,15 @@ class ResourceAnalyzer:
             logger.error(f"Error analyzing resource data: {e}")
 
     def _calculate_entropy(self, data: list[int]) -> float:
-        """Calculate Shannon entropy of data."""
-        if not data:
-            return 0.0
+        """Calculate Shannon entropy."""
+        return round(entropy_from_ints(data), 4)
 
-        # Count byte frequencies
-        freq = {}
-        for byte in data:
-            freq[byte] = freq.get(byte, 0) + 1
-
-        # Calculate entropy
-        entropy = 0.0
-        data_len = len(data)
-
-        for count in freq.values():
-            if count > 0:
-                probability = count / data_len
-                entropy -= probability * math.log2(probability)
-
-        return round(entropy, 4)
-
-    def _analyze_resource_types(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _analyze_resource_types(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None:
         """Analyze resource types and counts."""
-        type_counts = {}
-        type_sizes = {}
+        type_counts: dict[str, int] = {}
+        type_sizes: dict[str, int] = {}
 
         for res in resources:
             type_name = res.get("type_name", "UNKNOWN")
@@ -337,7 +291,9 @@ class ResourceAnalyzer:
 
         result["total_size"] = sum(type_sizes.values())
 
-    def _extract_version_info(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _extract_version_info(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None:
         """Extract version information from resources."""
         for res in resources:
             if res.get("type_name") == "RT_VERSION":
@@ -349,7 +305,7 @@ class ResourceAnalyzer:
                 except Exception as e:
                     logger.debug(f"Error extracting version info from resource: {e}")
 
-    def _parse_version_info(self, offset: int, size: int) -> dict[str, Any | None]:
+    def _parse_version_info(self, offset: int, size: int) -> dict[str, Any] | None:
         """Parse VERSION_INFO resource."""
         try:
             if offset == 0 or size < 64:
@@ -385,10 +341,10 @@ class ResourceAnalyzer:
 
     def _read_version_info_data(self, offset: int, size: int) -> list[int] | None:
         """Read VERSION_INFO data with size limit."""
-        data = silent_cmdj(self.r2, f"pxj {min(size, 1024)} @ {offset}", [])
+        data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])
         if not data or len(data) < 64:
             return None
-        return data
+        return list(data)
 
     def _find_vs_signature(self, data: list[int]) -> int:
         """Find VS_FIXEDFILEINFO signature in VERSION_INFO."""
@@ -460,7 +416,7 @@ class ResourceAnalyzer:
         except UnicodeDecodeError:
             return ""
 
-    def _extract_manifest(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _extract_manifest(self, result: dict[str, Any], resources: list[dict[str, Any]]) -> None:
         """Extract manifest from resources."""
         for res in resources:
             if res.get("type_name") == "RT_MANIFEST":
@@ -478,7 +434,7 @@ class ResourceAnalyzer:
                 except Exception as e:
                     logger.debug(f"Error extracting manifest from resource: {e}")
 
-    def _extract_icons(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _extract_icons(self, result: dict[str, Any], resources: list[dict[str, Any]]) -> None:
         """Extract icon information from resources."""
         icons = []
 
@@ -499,7 +455,7 @@ class ResourceAnalyzer:
 
         result["icons"] = icons
 
-    def _extract_strings(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _extract_strings(self, result: dict[str, Any], resources: list[dict[str, Any]]) -> None:
         """Extract string table resources."""
         strings = []
 
@@ -509,8 +465,8 @@ class ResourceAnalyzer:
                     string_data = self._read_resource_as_string(res["offset"], res["size"])
                     if string_data:
                         # Extract individual strings (simplified)
-                        extracted = [s for s in string_data.split("\0") if s and len(s) > 3]
-                        strings.extend(extracted[:20])  # Limit to 20 strings per resource
+                        extracted = split_null_terminated(string_data, min_length=4, limit=20)
+                        strings.extend(extracted)
                 except Exception as e:
                     logger.debug(f"Error extracting strings from resource: {e}")
 
@@ -526,7 +482,7 @@ class ResourceAnalyzer:
             read_size = min(size, 8192)
 
             # Read data
-            data = silent_cmdj(self.r2, f"pxj {read_size} @ {offset}", [])
+            data = self._cmdj(f"pxj {read_size} @ {offset}", [])
             if not data:
                 return None
 
@@ -560,7 +516,9 @@ class ResourceAnalyzer:
             logger.error(f"Error reading resource as string: {e}")
             return None
 
-    def _calculate_statistics(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _calculate_statistics(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None:
         """Calculate resource statistics."""
         if not resources:
             return
@@ -579,7 +537,9 @@ class ResourceAnalyzer:
             "unique_types": len({res["type_name"] for res in resources}),
         }
 
-    def _check_suspicious_resources(self, result: dict[str, Any], resources: list[dict[str, Any]]):
+    def _check_suspicious_resources(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None:
         """Check for suspicious resources."""
         suspicious: list[dict[str, Any]] = []
 
@@ -637,7 +597,7 @@ class ResourceAnalyzer:
             return []
         if res["size"] <= 1024 or res["offset"] <= 0:
             return []
-        header_data = silent_cmdj(self.r2, f"pxj 2 @ {res['offset']}", [])
+        header_data = self._cmdj(f"pxj 2 @ {res['offset']}", [])
         if not header_data or len(header_data) < 2:
             return []
         if header_data[0] == 0x4D and header_data[1] == 0x5A:
@@ -649,6 +609,10 @@ class ResourceAnalyzer:
                 }
             ]
         return []
+
+    def _cmdj(self, command: str, default: Any | None = None) -> Any:
+        fallback = default if default is not None else []
+        return cmdj_helper(self.adapter, self.r2, command, fallback)
 
     def _find_pattern(self, data: list[int], pattern: list[int]) -> int:
         """Find a byte pattern in data. Returns position or -1 if not found."""

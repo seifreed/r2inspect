@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
-# mypy: ignore-errors
-"""
-Rich Header Analyzer Module
+"""Rich Header analysis for PE files."""
 
-This module extracts and analyzes the Rich Header from PE files.
-The Rich Header is an undocumented Microsoft structure that contains
-metadata about the build environment (compilers, linkers, tools used).
-
-Based on research from:
-- https://github.com/RichHeaderResearch/RichPE
-- https://www.ntcore.com/files/richsign.htm
-- https://bytepointer.com/articles/the_microsoft_rich_header.htm
-- https://forensicitguy.github.io/rich-header-hashes-with-pefile/
-"""
-
-import hashlib
 import struct
 from typing import Any, cast
 
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
+from .rich_header_defaults import DANS_PATTERNS, RICH_PATTERNS
+from .rich_header_domain import (
+    build_rich_header_result,
+    calculate_richpe_hash,
+    decode_rich_header,
+    parse_clear_data_entries,
+    parse_compiler_entries,
+    validate_decoded_entries,
+)
 
 logger = get_logger(__name__)
 
@@ -37,240 +32,20 @@ except ImportError:
 class RichHeaderAnalyzer:
     """Rich Header extraction and analysis for PE files"""
 
-    def __init__(self, r2_instance, filepath: str):
-        """
-        Initialize Rich Header analyzer.
-
-        Args:
-            r2_instance: Active r2pipe instance
-            filepath: Path to the PE file being analyzed
-        """
-        self.r2 = r2_instance
+    def __init__(
+        self,
+        adapter: Any | None = None,
+        filepath: str | None = None,
+        r2_instance: Any | None = None,
+    ) -> None:
+        if adapter is None:
+            adapter = r2_instance
+        self.adapter = adapter
+        self.r2 = adapter
         self.filepath = filepath
 
-        # Known compiler product IDs (partial list)
-        self.compiler_products = {
-            0x0000: "Unknown",
-            0x0001: "Import0",
-            0x0002: "Linker510",
-            0x0003: "Cvtomf510",
-            0x0004: "Linker600",
-            0x0005: "Cvtomf600",
-            0x0006: "Cvtres500",
-            0x0007: "Utc11_Basic",
-            0x0008: "Utc11_C",
-            0x0009: "Utc11_CPP",
-            0x000A: "AliasObj60",
-            0x000B: "VisualBasic60",
-            0x000C: "Masm613",
-            0x000D: "Masm710",
-            0x000E: "Linker511",
-            0x000F: "Cvtomf511",
-            0x0010: "Masm614",
-            0x0011: "Linker512",
-            0x0012: "Cvtomf512",
-            0x0013: "Utc12_Basic",
-            0x0014: "Utc12_C",
-            0x0015: "Utc12_CPP",
-            0x0016: "AliasObj70",
-            0x0017: "Linker620",
-            0x0018: "Cvtomf620",
-            0x0019: "AliasObj71",
-            0x001A: "Linker621",
-            0x001B: "Cvtomf621",
-            0x001C: "Masm615",
-            0x001D: "Utc13_Basic",
-            0x001E: "Utc13_C",
-            0x001F: "Utc13_CPP",
-            0x0020: "AliasObj80",
-            0x0021: "AliasObj90",
-            0x0022: "Utc12_C_Std",
-            0x0023: "Utc12_CPP_Std",
-            0x0024: "Utc12_C_Book",
-            0x0025: "Utc12_CPP_Book",
-            0x0026: "Implib622",
-            0x0027: "Cvtomf622",
-            0x0028: "Cvtres501",
-            0x002A: "Utc13_C_Std",
-            0x002B: "Utc13_CPP_Std",
-            0x002C: "Cvtpgd1300",
-            0x002D: "Linker622",
-            0x002E: "Linker700",
-            0x002F: "Export622",
-            0x0030: "Export700",
-            0x0031: "Masm700",
-            0x0032: "Utc13_POGO_I_C",
-            0x0033: "Utc13_POGO_I_CPP",
-            0x0034: "Utc13_POGO_O_C",
-            0x0035: "Utc13_POGO_O_CPP",
-            0x0036: "Cvtres700",
-            0x0037: "Cvtres710p",
-            0x0038: "Linker710p",
-            0x0039: "Cvtomf710p",
-            0x003A: "Export710p",
-            0x003B: "Implib710p",
-            0x003C: "Masm710p",
-            0x003D: "Utc1310p_C",
-            0x003E: "Utc1310p_CPP",
-            0x003F: "Utc1310p_C_Std",
-            0x0040: "Utc1310p_CPP_Std",
-            0x0041: "Utc1310p_LTCG_C",
-            0x0042: "Utc1310p_LTCG_CPP",
-            0x0043: "Utc1310p_POGO_I_C",
-            0x0044: "Utc1310p_POGO_I_CPP",
-            0x0045: "Utc1310p_POGO_O_C",
-            0x0046: "Utc1310p_POGO_O_CPP",
-            0x0047: "Linker624",
-            0x0048: "Cvtomf624",
-            0x0049: "Export624",
-            0x004A: "Implib624",
-            0x004B: "Linker710",
-            0x004C: "Cvtomf710",
-            0x004D: "Export710",
-            0x004E: "Implib710",
-            0x004F: "Cvtres710",
-            0x0050: "Utc1310_C",
-            0x0051: "Utc1310_CPP",
-            0x0052: "Utc1310_C_Std",
-            0x0053: "Utc1310_CPP_Std",
-            0x0054: "Utc1310_LTCG_C",
-            0x0055: "Utc1310_LTCG_CPP",
-            0x0056: "Utc1310_POGO_I_C",
-            0x0057: "Utc1310_POGO_I_CPP",
-            0x0058: "Utc1310_POGO_O_C",
-            0x0059: "Utc1310_POGO_O_CPP",
-            0x005A: "Cvtpgd1310",
-            0x005B: "Linker771",
-            0x005C: "Cvtomf771",
-            0x005D: "Export771",
-            0x005E: "Implib771",
-            0x005F: "Cvtres771",
-            0x0060: "Utc1400_C",
-            0x0061: "Utc1400_CPP",
-            0x0062: "Utc1400_C_Std",
-            0x0063: "Utc1400_CPP_Std",
-            0x0064: "Utc1400_LTCG_C",
-            0x0065: "Utc1400_LTCG_CPP",
-            0x0066: "Utc1400_POGO_I_C",
-            0x0067: "Utc1400_POGO_I_CPP",
-            0x0068: "Utc1400_POGO_O_C",
-            0x0069: "Utc1400_POGO_O_CPP",
-            0x006A: "Cvtpgd1400",
-            0x006B: "Linker800",
-            0x006C: "Cvtomf800",
-            0x006D: "Export800",
-            0x006E: "Implib800",
-            0x006F: "Cvtres800",
-            0x0070: "Masm800",
-            0x0071: "Utc1500_C",
-            0x0072: "Utc1500_CPP",
-            0x0073: "Utc1500_C_Std",
-            0x0074: "Utc1500_CPP_Std",
-            0x0075: "Utc1500_LTCG_C",
-            0x0076: "Utc1500_LTCG_CPP",
-            0x0077: "Utc1500_POGO_I_C",
-            0x0078: "Utc1500_POGO_I_CPP",
-            0x0079: "Utc1500_POGO_O_C",
-            0x007A: "Utc1500_POGO_O_CPP",
-            0x007B: "Cvtpgd1500",
-            0x007C: "Linker900",
-            0x007D: "Cvtomf900",
-            0x007E: "Export900",
-            0x007F: "Implib900",
-            0x0080: "Cvtres900",
-            0x0081: "Masm900",
-            0x0082: "Utc1600_C",
-            0x0083: "Utc1600_CPP",
-            0x0084: "Utc1600_C_Std",
-            0x0085: "Utc1600_CPP_Std",
-            0x0086: "Utc1600_LTCG_C",
-            0x0087: "Utc1600_LTCG_CPP",
-            0x0088: "Utc1600_POGO_I_C",
-            0x0089: "Utc1600_POGO_I_CPP",
-            0x008A: "Utc1600_POGO_O_C",
-            0x008B: "Utc1600_POGO_O_CPP",
-            0x008C: "Cvtpgd1600",
-            0x008D: "Linker1000",
-            0x008E: "Cvtomf1000",
-            0x008F: "Export1000",
-            0x0090: "Implib1000",
-            0x0091: "Cvtres1000",
-            0x0092: "Masm1000",
-            0x0093: "Utc1700_C",
-            0x0094: "Utc1700_CPP",
-            0x0095: "Utc1700_C_Std",
-            0x0096: "Utc1700_CPP_Std",
-            0x0097: "Utc1700_LTCG_C",
-            0x0098: "Utc1700_LTCG_CPP",
-            0x0099: "Utc1700_POGO_I_C",
-            0x009A: "Utc1700_POGO_I_CPP",
-            0x009B: "Utc1700_POGO_O_C",
-            0x009C: "Utc1700_POGO_O_CPP",
-            0x009D: "Cvtpgd1700",
-            0x009E: "Linker1100",
-            0x009F: "Cvtomf1100",
-            0x00A0: "Export1100",
-            0x00A1: "Implib1100",
-            0x00A2: "Cvtres1100",
-            0x00A3: "Masm1100",
-            0x00A4: "Utc1800_C",
-            0x00A5: "Utc1800_CPP",
-            0x00A6: "Utc1800_C_Std",
-            0x00A7: "Utc1800_CPP_Std",
-            0x00A8: "Utc1800_LTCG_C",
-            0x00A9: "Utc1800_LTCG_CPP",
-            0x00AA: "Utc1800_POGO_I_C",
-            0x00AB: "Utc1800_POGO_I_CPP",
-            0x00AC: "Utc1800_POGO_O_C",
-            0x00AD: "Utc1800_POGO_O_CPP",
-            0x00AE: "Cvtpgd1800",
-            0x00AF: "Linker1200",
-            0x00B0: "Cvtomf1200",
-            0x00B1: "Export1200",
-            0x00B2: "Implib1200",
-            0x00B3: "Cvtres1200",
-            0x00B4: "Masm1200",
-            0x00B5: "Utc1900_C",
-            0x00B6: "Utc1900_CPP",
-            0x00B7: "Utc1900_C_Std",
-            0x00B8: "Utc1900_CPP_Std",
-            0x00B9: "Utc1900_LTCG_C",
-            0x00BA: "Utc1900_LTCG_CPP",
-            0x00BB: "Utc1900_POGO_I_C",
-            0x00BC: "Utc1900_POGO_I_CPP",
-            0x00BD: "Utc1900_POGO_O_C",
-            0x00BE: "Utc1900_POGO_O_CPP",
-            0x00BF: "Cvtpgd1900",
-            0x00C0: "Linker1300",
-            0x00C1: "Cvtomf1300",
-            0x00C2: "Export1300",
-            0x00C3: "Implib1300",
-            0x00C4: "Cvtres1300",
-            0x00C5: "Masm1300",
-            # Visual Studio 2015 (14.0)
-            0x00C6: "Utc1900_C",
-            0x00C7: "Utc1900_CPP",
-            # Visual Studio 2017 (14.1)
-            0x00C8: "Utc1910_C",
-            0x00C9: "Utc1910_CPP",
-            # Visual Studio 2019 (14.2)
-            0x9CB4: "MSVC_2019_CPP",  # 40116 in decimal
-            0x9CB5: "MSVC_2019_C",  # 40117 in decimal
-            # Visual Studio 2022 (14.3)
-            0x9E37: "MSVC_2022_CPP",  # 40503 in decimal
-            0x9E38: "MSVC_2022_C",  # 40504 in decimal
-            # Common newer Visual Studio tools
-            0xA09E: "MSVC_Linker_14x",  # 41118 in decimal
-            0x5E3B: "MSVC_Resource_14x",  # 24123 in decimal
-        }
-
     def analyze(self) -> dict[str, Any]:
-        """
-        Perform Rich Header analysis on PE file.
-
-        Returns:
-            Dictionary containing Rich Header analysis results
-        """
+        """Run Rich Header analysis on a PE file."""
         logger.debug(f"Starting Rich Header analysis for {self.filepath}")
 
         results: dict[str, Any] = {
@@ -329,12 +104,12 @@ class RichHeaderAnalyzer:
 
             # Parse compiler entries
             entries = cast(list[dict[str, Any]], rich_data.get("entries", []))
-            compilers = self._parse_compiler_entries(entries)
+            compilers = parse_compiler_entries(entries)
             results["compilers"] = compilers
             logger.debug(f"Parsed {len(compilers)} compiler entries")
 
             # Calculate RichPE hash
-            richpe_hash = self._calculate_richpe_hash(rich_data)
+            richpe_hash = calculate_richpe_hash(rich_data)
             if richpe_hash:
                 results["richpe_hash"] = richpe_hash
                 logger.debug(f"Calculated RichPE hash: {richpe_hash}")
@@ -346,12 +121,7 @@ class RichHeaderAnalyzer:
         return results
 
     def _extract_rich_header_pefile(self) -> dict[str, Any] | None:
-        """
-        Extract Rich Header using pefile library (most reliable method).
-
-        Returns:
-            Dictionary containing Rich Header data or None if not found
-        """
+        """Extract Rich Header using pefile when available."""
         if not PEFILE_AVAILABLE:
             return None
 
@@ -424,7 +194,7 @@ class RichHeaderAnalyzer:
         """Fallback: parse entries from pefile clear_data."""
         if not hasattr(pe.RICH_HEADER, "clear_data"):
             return []
-        return self._parse_clear_data_entries(pe.RICH_HEADER.clear_data)
+        return parse_clear_data_entries(pe.RICH_HEADER.clear_data)
 
     def _build_pefile_rich_result(
         self,
@@ -447,45 +217,6 @@ class RichHeaderAnalyzer:
                 pe.RICH_HEADER.clear_data if hasattr(pe.RICH_HEADER, "clear_data") else None
             ),
         }
-
-    def _parse_clear_data_entries(self, clear_data: bytes) -> list[dict[str, Any]]:
-        """
-        Parse Rich Header entries from clear data.
-
-        Args:
-            clear_data: Clear (decoded) Rich Header data
-
-        Returns:
-            List of parsed entries
-        """
-        entries = []
-
-        try:
-            # Process in 8-byte chunks (4 bytes prodid + 4 bytes count)
-            for i in range(0, len(clear_data), 8):
-                if i + 8 > len(clear_data):
-                    break
-
-                prodid, count = struct.unpack("<II", clear_data[i : i + 8])
-
-                if count > 0:  # Skip empty entries
-                    # Extract product ID and build number
-                    product_id = prodid & 0xFFFF
-                    build_number = (prodid >> 16) & 0xFFFF
-
-                    entries.append(
-                        {
-                            "product_id": product_id,
-                            "build_number": build_number,
-                            "count": count,
-                            "prodid": prodid,
-                        }
-                    )
-
-        except Exception as e:
-            logger.debug(f"Error parsing clear data entries: {e}")
-
-        return entries
 
     def _extract_rich_header_r2pipe(self) -> dict[str, Any] | None:
         """
@@ -536,6 +267,8 @@ class RichHeaderAnalyzer:
     def _check_magic_bytes(self) -> bool:
         """Check file magic bytes for MZ header."""
         try:
+            if not self.filepath:
+                return False
             with open(self.filepath, "rb") as f:
                 magic = f.read(2)
                 if magic == b"MZ":
@@ -548,7 +281,7 @@ class RichHeaderAnalyzer:
     def _check_info_command(self) -> bool:
         """Check `i` command output for PE marker."""
         try:
-            info_text = self.r2.cmd("i")
+            info_text = self.adapter.get_info_text() if self.adapter else ""
             if info_text and "pe" in info_text.lower():
                 logger.debug("PE detected via 'i' command")
                 return True
@@ -559,7 +292,7 @@ class RichHeaderAnalyzer:
     def _check_bin_info(self) -> bool:
         """Check `ij` command output for PE markers."""
         try:
-            info_cmd = safe_cmdj(self.r2, "ij", {})
+            info_cmd = cmdj_helper(self.adapter, self.r2, "ij", {})
             if not info_cmd or "bin" not in info_cmd:
                 return False
             bin_info = info_cmd["bin"]
@@ -616,18 +349,8 @@ class RichHeaderAnalyzer:
         self,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Scan for Rich/DanS patterns using r2pipe."""
-        rich_patterns = [
-            "52696368",
-            "68636952",
-            "5269636800000000",
-        ]
-        dans_patterns = [
-            "44616e53",
-            "536e6144",
-            "44616e5300000000",
-        ]
-        rich_results = self._scan_patterns(rich_patterns, "Rich")
-        dans_results = self._scan_patterns(dans_patterns, "DanS")
+        rich_results = self._scan_patterns(RICH_PATTERNS, "Rich")
+        dans_results = self._scan_patterns(DANS_PATTERNS, "DanS")
         return rich_results, dans_results
 
     def _scan_patterns(self, patterns: list[str], label: str) -> list[dict[str, Any]]:
@@ -635,7 +358,7 @@ class RichHeaderAnalyzer:
         results: list[dict[str, Any]] = []
         for pattern in patterns:
             try:
-                found = safe_cmd_list(self.r2, f"/xj {pattern}")
+                found = cmdj_helper(self.adapter, self.r2, f"/xj {pattern}", {})
                 if found:
                     results.extend(found)
                     logger.debug(f"Found {label} pattern {pattern} at {len(found)} locations")
@@ -714,7 +437,7 @@ class RichHeaderAnalyzer:
             if not encoded_data:
                 return None
 
-            entries = self._decode_rich_header(encoded_data, xor_key)
+            entries = decode_rich_header(encoded_data, xor_key)
             if not entries:
                 logger.debug("No valid entries decoded from Rich Header")
                 return None
@@ -737,6 +460,8 @@ class RichHeaderAnalyzer:
     def _read_file_bytes(self) -> bytes | None:
         """Read the full file into memory."""
         try:
+            if not self.filepath:
+                return None
             with open(self.filepath, "rb") as f:
                 return f.read()
         except Exception as e:
@@ -749,10 +474,10 @@ class RichHeaderAnalyzer:
 
     def _get_pe_offset(self, data: bytes) -> int | None:
         """Get PE header offset from DOS header."""
-        pe_offset = struct.unpack("<I", data[0x3C : 0x3C + 4])[0]
+        pe_offset = int(struct.unpack("<I", data[0x3C : 0x3C + 4])[0])
         if pe_offset >= len(data) - 4:
             return None
-        return pe_offset
+        return int(pe_offset)
 
     def _get_dos_stub(self, data: bytes, pe_offset: int) -> bytes | None:
         """Extract DOS stub data."""
@@ -776,7 +501,7 @@ class RichHeaderAnalyzer:
             logger.debug("Not enough data after Rich signature for XOR key")
             return None
         xor_key_bytes = dos_stub[rich_pos + 4 : rich_pos + 8]
-        xor_key = struct.unpack("<I", xor_key_bytes)[0]
+        xor_key = int(struct.unpack("<I", xor_key_bytes)[0])
         logger.debug(f"Extracted XOR key: 0x{xor_key:08x}")
         return xor_key
 
@@ -908,11 +633,10 @@ class RichHeaderAnalyzer:
 
     def _read_manual_search_bytes(self) -> bytes | None:
         """Read a larger prefix of the file for manual search."""
-        self.r2.cmd("s 0")
-        data_bytes = cast(list[int], safe_cmdj(self.r2, "p8j 2048", []))
-        if not data_bytes:
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
-        return bytes(data_bytes)
+        data = self.adapter.read_bytes(0, 2048)
+        return data if data else None
 
     def _find_signature_offsets(
         self, data: bytes, rich_sig: bytes, dans_sig: bytes
@@ -1039,11 +763,13 @@ class RichHeaderAnalyzer:
             if encoded_data is None:
                 return None
 
-            decoded_entries = self._decode_rich_header(encoded_data, xor_key)
-            if not self._validate_decoded_entries(decoded_entries):
+            decoded_entries = decode_rich_header(encoded_data, xor_key)
+            if not validate_decoded_entries(decoded_entries):
                 return None
-
-            return self._build_rich_header_result(decoded_entries, xor_key)
+            logger.debug(
+                f"Extracted Rich Header with {len(decoded_entries)} entries, XOR key: 0x{xor_key:08x}"
+            )
+            return build_rich_header_result(decoded_entries, xor_key)
 
         except Exception as e:
             logger.debug(f"Error extracting Rich Header: {e}")
@@ -1056,8 +782,9 @@ class RichHeaderAnalyzer:
     def _extract_xor_key(self, rich_offset: int) -> int | None:
         """Extract and validate XOR key"""
         xor_key_offset = rich_offset + 4
-        self.r2.cmd(f"s {xor_key_offset}")
-        xor_key_bytes = cast(list[int], safe_cmdj(self.r2, "p8j 4", []))
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes_list"):
+            return None
+        xor_key_bytes = cast(list[int], self.adapter.read_bytes_list(xor_key_offset, 4))
 
         if not xor_key_bytes or len(xor_key_bytes) < 4:
             return None
@@ -1067,221 +794,14 @@ class RichHeaderAnalyzer:
 
     def _extract_encoded_data(self, dans_offset: int, rich_size: int) -> bytes | None:
         """Extract encoded Rich Header data"""
-        self.r2.cmd(f"s {dans_offset}")
-        encoded_data = cast(list[int], safe_cmdj(self.r2, f"p8j {rich_size}", []))
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes_list"):
+            return None
+        encoded_data = cast(list[int], self.adapter.read_bytes_list(dans_offset, rich_size))
 
         if not encoded_data or len(encoded_data) < 8:
             return None
 
         return bytes(encoded_data)
-
-    def _validate_decoded_entries(self, decoded_entries: list[dict]) -> bool:
-        """Validate decoded Rich Header entries"""
-        if not decoded_entries:
-            return False
-
-        valid_entries = 0
-        for entry in decoded_entries:
-            prodid = entry.get("prodid", 0)
-            count = entry.get("count", 0)
-            if 0 < count < 10000 and 0 <= prodid < 0x10000:
-                valid_entries += 1
-
-        return valid_entries > 0
-
-    def _build_rich_header_result(
-        self, decoded_entries: list[dict], xor_key: int
-    ) -> dict[str, Any]:
-        """Build the final Rich Header result dictionary"""
-        # Calculate checksum (XOR of all decoded entries)
-        checksum = 0
-        for entry in decoded_entries:
-            checksum ^= entry.get("prodid", 0)
-            checksum ^= entry.get("count", 0)
-
-        logger.debug(
-            f"Extracted Rich Header with {len(decoded_entries)} entries, XOR key: 0x{xor_key:08x}"
-        )
-
-        return {
-            "xor_key": xor_key,
-            "checksum": checksum,
-            "entries": decoded_entries,
-        }
-
-    def _decode_rich_header(self, encoded_data: bytes, xor_key: int) -> list[dict[str, Any]]:
-        """
-        Decode Rich Header entries by XORing with the key.
-
-        Args:
-            encoded_data: Raw encoded Rich Header bytes
-            xor_key: XOR key for decoding
-
-        Returns:
-            List of decoded Rich Header entries
-        """
-        entries = []
-
-        try:
-            # Skip the DanS signature (first 4 bytes) and process in 8-byte chunks
-            # Each entry is 8 bytes: 4 bytes prodid + 4 bytes count
-            for i in range(4, len(encoded_data) - 4, 8):  # -4 to skip Rich signature at end
-                if i + 8 > len(encoded_data):
-                    break
-
-                # Extract 8 bytes for this entry
-                entry_bytes = encoded_data[i : i + 8]
-                if len(entry_bytes) < 8:
-                    break
-
-                # Decode as two 32-bit little-endian integers
-                prodid_encoded, count_encoded = struct.unpack("<II", entry_bytes)
-
-                # XOR decode
-                prodid = prodid_encoded ^ xor_key
-                count = count_encoded ^ xor_key
-
-                # Skip entries with zero count (padding)
-                if count > 0:
-                    entries.append(
-                        {
-                            "prodid": prodid,
-                            "count": count,
-                            "prodid_encoded": prodid_encoded,
-                            "count_encoded": count_encoded,
-                        }
-                    )
-
-        except Exception as e:
-            logger.error(f"Error decoding Rich Header: {e}")
-
-        return entries
-
-    def _parse_compiler_entries(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """
-        Parse Rich Header entries into human-readable compiler information.
-
-        Args:
-            entries: List of decoded Rich Header entries
-
-        Returns:
-            List of compiler information dictionaries
-        """
-        compilers = []
-
-        for entry in entries:
-            prodid = entry.get("prodid", 0)
-            count = entry.get("count", 0)
-
-            # Extract product ID and build number
-            # Product ID is in the lower 16 bits, build number in upper 16 bits
-            product_id = prodid & 0xFFFF
-            build_number = (prodid >> 16) & 0xFFFF
-
-            # Look up compiler name
-            compiler_name = self.compiler_products.get(product_id, f"Unknown_0x{product_id:04X}")
-
-            compilers.append(
-                {
-                    "product_id": product_id,
-                    "build_number": build_number,
-                    "count": count,
-                    "compiler_name": compiler_name,
-                    "full_prodid": prodid,
-                    "description": self._get_compiler_description(compiler_name, build_number),
-                }
-            )
-
-        return compilers
-
-    def _get_compiler_description(self, compiler_name: str, build_number: int) -> str:
-        """
-        Get human-readable description for compiler.
-
-        Args:
-            compiler_name: Name of the compiler
-            build_number: Build number
-
-        Returns:
-            Human-readable description
-        """
-        descriptions = {
-            "Utc": "Microsoft C/C++ Compiler",
-            "Linker": "Microsoft Linker",
-            "Masm": "Microsoft Macro Assembler",
-            "Cvtres": "Microsoft Resource Converter",
-            "Export": "Microsoft Export Tool",
-            "Implib": "Microsoft Import Library Tool",
-            "Cvtomf": "Microsoft OMF Converter",
-            "AliasObj": "Microsoft Alias Object Tool",
-            "VisualBasic": "Microsoft Visual Basic",
-            "Cvtpgd": "Microsoft Profile Guided Optimization Tool",
-        }
-
-        for key, desc in descriptions.items():
-            if key in compiler_name:
-                return f"{desc} (Build {build_number})"
-
-        return f"{compiler_name} (Build {build_number})"
-
-    def _calculate_richpe_hash(self, rich_data: dict[str, Any]) -> str | None:
-        """
-        Calculate RichPE hash based on VirusTotal standard (MD5 of clear bytes).
-
-        This follows the standard used by VirusTotal and pefile library:
-        - Use the clear_data_bytes directly from pefile if available
-        - Otherwise, build clear bytes from decoded entries
-        - Calculate MD5 hash of the clear bytes (not encoded entries)
-
-        Args:
-            rich_data: Rich Header data dictionary
-
-        Returns:
-            RichPE hash string or None if calculation fails
-        """
-        try:
-            # If we have clear_data_bytes from pefile, use them directly (most accurate)
-            if "clear_data_bytes" in rich_data and rich_data["clear_data_bytes"]:
-                clear_bytes = rich_data["clear_data_bytes"]
-                richpe_hash = hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
-                logger.debug(
-                    f"RichPE hash calculated from pefile clear_data_bytes ({len(clear_bytes)} bytes)"
-                )
-                return richpe_hash
-
-            # If we already have the hash from pefile, use it directly
-            if "richpe_hash" in rich_data and rich_data["richpe_hash"]:
-                logger.debug("Using RichPE hash directly from pefile")
-                return rich_data["richpe_hash"]
-
-            # Fallback: build clear bytes from decoded entries (less accurate)
-            entries = rich_data.get("entries", [])
-            if not entries:
-                return None
-
-            # Build clear bytes from decoded entries
-            # Each entry is 8 bytes: 4 bytes prodid + 4 bytes count (little-endian)
-            clear_bytes = bytearray()
-
-            for entry in entries:
-                prodid = entry.get("prodid", 0)
-                count = entry.get("count", 0)
-
-                # Pack as little-endian 32-bit integers
-                clear_bytes.extend(struct.pack("<I", prodid))
-                clear_bytes.extend(struct.pack("<I", count))
-
-            # Calculate MD5 hash of clear bytes (this matches VirusTotal standard)
-            richpe_hash = hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
-
-            logger.debug(
-                f"RichPE hash calculated from reconstructed entries ({len(clear_bytes)} clear bytes)"
-            )
-            return richpe_hash
-
-        except Exception as e:
-            logger.error(f"Error calculating RichPE hash: {e}")
-            return None
 
     @staticmethod
     def is_available() -> bool:
@@ -1294,7 +814,7 @@ class RichHeaderAnalyzer:
         """
         return True
 
-    def _debug_file_structure(self):
+    def _debug_file_structure(self) -> None:
         """
         Debug method to analyze file structure when Rich Header is not found.
         """
@@ -1319,12 +839,13 @@ class RichHeaderAnalyzer:
             logger.debug(f"Debug analysis failed: {e}")
 
     def _debug_get_file_size(self) -> int:
-        self.r2.cmd("s 0")
-        return safe_cmdj(self.r2, "ij", {}).get("core", {}).get("size", 0)
+        return int(self._get_file_info().get("core", {}).get("size", 0))
 
     def _debug_read_bytes(self, size: int) -> bytes | None:
-        data_bytes = cast(list[int], safe_cmdj(self.r2, f"p8j {size}", []))
-        return bytes(data_bytes) if data_bytes else None
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
+            return None
+        data = self.adapter.read_bytes(0, size)
+        return data if data else None
 
     @staticmethod
     def _debug_has_mz_header(data: bytes) -> bool:
@@ -1337,7 +858,7 @@ class RichHeaderAnalyzer:
     def _debug_get_pe_offset(data: bytes) -> int | None:
         if len(data) < 0x3C + 4:
             return None
-        pe_offset = struct.unpack("<I", data[0x3C : 0x3C + 4])[0]
+        pe_offset = int(struct.unpack("<I", data[0x3C : 0x3C + 4])[0])
         logger.debug(f"PE header offset: 0x{pe_offset:x}")
         return pe_offset
 
@@ -1366,10 +887,11 @@ class RichHeaderAnalyzer:
 
     def _debug_log_extended_patterns(self) -> None:
         logger.debug("Searching first 2KB for Rich Header patterns...")
-        extended_data = cast(list[int], safe_cmdj(self.r2, "p8j 2048", []))
-        if not extended_data:
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return
-        extended_bytes = bytes(extended_data)
+        extended_bytes = self.adapter.read_bytes(0, 2048)
+        if not extended_bytes:
+            return
         rich_positions, dans_positions = self._find_rich_dans_positions(extended_bytes)
 
         logger.debug(f"Found 'Rich' at positions: {rich_positions}")
@@ -1403,17 +925,19 @@ class RichHeaderAnalyzer:
                     segment = data[dans_pos : rich_pos + 8]
                     logger.debug(f"Rich Header candidate ({len(segment)} bytes): {segment.hex()}")
 
+    def _read_bytes(self, address: int, size: int) -> bytes:
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
+            return b""
+        return cast(bytes, self.adapter.read_bytes(address, size))
+
+    def _get_file_info(self) -> dict[str, Any]:
+        if self.adapter is None or not hasattr(self.adapter, "get_file_info"):
+            return {}
+        return cast(dict[str, Any], self.adapter.get_file_info())
+
     @staticmethod
     def calculate_richpe_hash_from_file(filepath: str) -> str | None:
-        """
-        Calculate RichPE hash directly from a file path.
-
-        Args:
-            filepath: Path to the PE file
-
-        Returns:
-            RichPE hash string or None if calculation fails
-        """
+        """Calculate RichPE hash directly from a file path."""
         try:
             import r2pipe
 

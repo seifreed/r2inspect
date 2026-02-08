@@ -22,7 +22,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Any
 
-from ...core import R2Inspector
+from ...factory import create_inspector
 from ...utils.output import OutputFormatter
 from .base import Command
 
@@ -47,7 +47,7 @@ class InteractiveCommand(Command):
     - quit/exit: Exit interactive mode
 
     Responsibilities:
-    - Initialize R2Inspector session
+    - Initialize inspector session
     - Provide command-line interface for incremental analysis
     - Execute specific analysis modules on demand
     - Display formatted results for each command
@@ -81,8 +81,8 @@ class InteractiveCommand(Command):
                 xor=args.get("xor"),
             )
 
-            # Initialize R2Inspector with context manager for proper cleanup
-            with R2Inspector(
+            # Initialize inspector with context manager for proper cleanup
+            with create_inspector(
                 filename=filename,
                 config=config,
                 verbose=verbose,
@@ -92,7 +92,7 @@ class InteractiveCommand(Command):
 
             return 0
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # pragma: no cover
             self.context.console.print("\n[yellow]Interactive mode interrupted by user[/yellow]")
             return 0  # Normal exit for Ctrl+C in interactive mode
 
@@ -102,7 +102,7 @@ class InteractiveCommand(Command):
 
     def _run_interactive_mode(
         self,
-        inspector: R2Inspector,
+        inspector: Any,
         options: dict[str, Any],
     ) -> None:
         """
@@ -112,7 +112,7 @@ class InteractiveCommand(Command):
         interactively. Handles command parsing, execution, and output.
 
         Args:
-            inspector: Initialized R2Inspector instance
+            inspector: Initialized inspector instance
             options: Analysis options dictionary
         """
         self._display_welcome()
@@ -129,7 +129,7 @@ class InteractiveCommand(Command):
 
                 self._execute_interactive_command(cmd, inspector, options)
 
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # pragma: no cover
                 break
             except EOFError:
                 break
@@ -167,7 +167,7 @@ class InteractiveCommand(Command):
     def _execute_interactive_command(
         self,
         cmd: str,
-        inspector: R2Inspector,
+        inspector: Any,
         options: dict[str, Any],
     ) -> None:
         """
@@ -178,7 +178,7 @@ class InteractiveCommand(Command):
 
         Args:
             cmd: Command string
-            inspector: R2Inspector instance
+            inspector: Inspector instance
             options: Analysis options dictionary
         """
         # Import display functions from cli module
@@ -205,7 +205,7 @@ class InteractiveCommand(Command):
 
     def _cmd_analyze(
         self,
-        inspector: R2Inspector,
+        inspector: Any,
         options: dict[str, Any],
         display_results: Any,
     ) -> None:
@@ -213,7 +213,7 @@ class InteractiveCommand(Command):
         Execute full analysis command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
             options: Analysis options dictionary
             display_results: Display function for results
         """
@@ -221,12 +221,12 @@ class InteractiveCommand(Command):
         results = inspector.analyze(**options)
         display_results(results)
 
-    def _cmd_strings(self, inspector: R2Inspector) -> None:
+    def _cmd_strings(self, inspector: Any) -> None:
         """
         Execute strings extraction command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
         """
         self.context.console.print("[bold green]Extracting strings...[/bold green]")
         strings = inspector.get_strings()
@@ -234,56 +234,56 @@ class InteractiveCommand(Command):
         for string in strings:
             self.context.console.print(string)
 
-    def _cmd_info(self, inspector: R2Inspector) -> None:
+    def _cmd_info(self, inspector: Any) -> None:
         """
         Execute file info command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
         """
         info = inspector.get_file_info()
         formatter = OutputFormatter({"file_info": info})
         self.context.console.print(formatter.format_table(info, "File Information"))
 
-    def _cmd_pe(self, inspector: R2Inspector) -> None:
+    def _cmd_pe(self, inspector: Any) -> None:
         """
         Execute PE info command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
         """
         pe_info = inspector.get_pe_info()
         formatter = OutputFormatter({"pe_info": pe_info})
         self.context.console.print(formatter.format_table(pe_info, "PE Information"))
 
-    def _cmd_imports(self, inspector: R2Inspector) -> None:
+    def _cmd_imports(self, inspector: Any) -> None:
         """
         Execute imports display command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
         """
         imports = inspector.get_imports()
         for imp in imports:
             self.context.console.print(imp)
 
-    def _cmd_exports(self, inspector: R2Inspector) -> None:
+    def _cmd_exports(self, inspector: Any) -> None:
         """
         Execute exports display command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
         """
         exports = inspector.get_exports()
         for exp in exports:
             self.context.console.print(exp)
 
-    def _cmd_sections(self, inspector: R2Inspector) -> None:
+    def _cmd_sections(self, inspector: Any) -> None:
         """
         Execute sections display command.
 
         Args:
-            inspector: R2Inspector instance
+            inspector: Inspector instance
         """
         sections = inspector.get_sections()
         formatter = OutputFormatter({"sections": sections})

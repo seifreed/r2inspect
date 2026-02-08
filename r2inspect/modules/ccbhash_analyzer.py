@@ -1,26 +1,13 @@
 #!/usr/bin/env python3
-"""
-CCBHash Analyzer Module
-
-This module calculates CCBHash (Compound Code Block Hash) from function Control Flow Graphs.
-CCBHash captures the logical structure of functions and is resistant to minor code changes,
-recompilation, and light obfuscation.
-
-Based on research from NICS Lab:
-- https://github.com/pblprz/ccbhash
-- RECSI 2022: CCBHash - Compound Code Block Hash para Análisis de Malware
-- https://recsi2022.unican.es/wp-content/uploads/2022/10/LibroActas-978-84-19024-14-5.pdf
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""CCBHash calculation from function CFGs."""
 
 import hashlib
 from typing import Any
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -31,7 +18,7 @@ NO_FUNCTIONS_ANALYZED = "No functions could be analyzed for CCBHash"
 class CCBHashAnalyzer(HashingStrategy):
     """CCBHash calculation from function Control Flow Graphs"""
 
-    def __init__(self, r2_instance, filepath: str):
+    def __init__(self, adapter: Any, filepath: str) -> None:
         """
         Initialize CCBHash analyzer.
 
@@ -40,7 +27,9 @@ class CCBHashAnalyzer(HashingStrategy):
             filepath: Path to the binary file being analyzed
         """
         # Initialize parent with filepath
-        super().__init__(filepath=filepath, r2_instance=r2_instance)
+        self.adapter = adapter
+        self.r2 = adapter
+        super().__init__(filepath=filepath, r2_instance=adapter)
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
@@ -206,10 +195,7 @@ class CCBHashAnalyzer(HashingStrategy):
         try:
             # Analysis is performed at core initialization
 
-            # Get function list in JSON format using safe_cmd_list like function_analyzer
-            from ..utils.r2_helpers import safe_cmd_list
-
-            functions = safe_cmd_list(self.r2, "aflj")
+            functions = self._cmd_list("aflj")
 
             if not functions:
                 logger.debug("No functions found with 'aflj' command")
@@ -243,14 +229,12 @@ class CCBHashAnalyzer(HashingStrategy):
             CCBHash string or None if calculation fails
         """
         try:
-            # Seek to function
-            self.r2.cmd(f"s {func_offset}")
-
-            # Force JSON output format
-            self.r2.cmd("e scr.html=false")
-
             # Get Control Flow Graph in JSON format
-            cfg_data = safe_cmdj(self.r2, "agj", [])
+            cfg_data = (
+                self.adapter.get_cfg(func_offset)
+                if self.adapter is not None and hasattr(self.adapter, "get_cfg")
+                else self._cmd_list("agj")
+            )
 
             if not cfg_data or len(cfg_data) == 0:
                 logger.debug(f"No CFG data found for function {func_name}")
@@ -258,33 +242,9 @@ class CCBHashAnalyzer(HashingStrategy):
 
             # Take the first CFG (should be the current function)
             cfg = cfg_data[0]
-
-            # Extract edges from CFG
-            edges = cfg.get("edges", [])
-
-            if not edges:
-                # Function might be a single basic block with no edges
-                # Use basic blocks instead
-                blocks = cfg.get("blocks", [])
-                if blocks:
-                    # Create a canonical representation based on blocks
-                    block_addrs = sorted([block.get("offset", 0) for block in blocks])
-                    canonical = "|".join(str(addr) for addr in block_addrs)
-                else:
-                    # No blocks either, use function address
-                    canonical = str(func_offset)
-            else:
-                # Create canonical edge representation
-                edge_strs = []
-                for edge in edges:
-                    src = edge.get("src")
-                    dst = edge.get("dst")
-                    if src is not None and dst is not None:
-                        edge_strs.append(f"{src}->{dst}")
-
-                # Sort for canonical representation
-                edge_strs.sort()
-                canonical = "|".join(edge_strs)
+            canonical = self._build_canonical_representation(cfg, func_offset)
+            if not canonical:
+                return None
 
             # Calculate SHA256 hash of canonical representation
             ccbhash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -295,6 +255,26 @@ class CCBHashAnalyzer(HashingStrategy):
         except Exception as e:
             logger.debug(f"Error calculating CCBHash for function {func_name}: {e}")
             return None
+
+    @staticmethod
+    def _build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str | None:
+        edges = cfg.get("edges", [])
+        if edges:
+            edge_strs = []
+            for edge in edges:
+                src = edge.get("src")
+                dst = edge.get("dst")
+                if src is not None and dst is not None:
+                    edge_strs.append(f"{src}->{dst}")
+            edge_strs.sort()
+            return "|".join(edge_strs)
+
+        blocks = cfg.get("blocks", [])
+        if blocks:
+            block_addrs = sorted(block.get("offset", 0) for block in blocks)
+            return "|".join(str(addr) for addr in block_addrs)
+
+        return str(func_offset)
 
     def _find_similar_functions(
         self, function_hashes: dict[str, dict[str, Any]]
@@ -381,10 +361,7 @@ class CCBHashAnalyzer(HashingStrategy):
             CCBHash string or None if not found
         """
         try:
-            # Find function by name
-            from ..utils.r2_helpers import safe_cmd_list
-
-            functions = safe_cmd_list(self.r2, "aflj")
+            functions = self._cmd_list("aflj")
             target_func = None
 
             for func in functions:
@@ -403,6 +380,12 @@ class CCBHashAnalyzer(HashingStrategy):
         except Exception as e:
             logger.error(f"Error getting CCBHash for function {func_name}: {e}")
             return None
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
 
     @staticmethod
     def compare_hashes(hash1: str, hash2: str) -> bool | None:

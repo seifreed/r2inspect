@@ -1,44 +1,18 @@
 #!/usr/bin/env python3
-# mypy: ignore-errors
-"""
-Binbloom Analyzer Module
+"""Binbloom-style function fingerprinting."""
 
-This module implements Binbloom-style function fingerprinting using Bloom filters.
-Bloom filters are space-efficient probabilistic data structures that test whether
-an element is a member of a set, with possible false positives but no false negatives.
-
-For binary analysis, this creates compact signatures of functions based on their
-instruction mnemonics, useful for:
-- Fast function similarity detection
-- Compact function fingerprinting
-- Probabilistic matching with controlled false positive rates
-- Efficient clustering of similar functions
-
-Based on Burton Howard Bloom's 1970 paper on space-efficient probabilistic data structures.
-Reference: https://en.wikipedia.org/wiki/Bloom_filter
-
-Security note:
-This module has been hardened against deserialization vulnerabilities (CWE-502).
-All Bloom filter serialization uses JSON format instead of pickle to prevent
-Remote Code Execution (RCE) attacks. The deserialize_bloom() function implements
-defense-in-depth with:
-- JSON-only deserialization (no arbitrary object instantiation)
-- Explicit type validation and sanitization
-- Parameter range checking to prevent resource exhaustion
-- Version checking for format compatibility
-
-This follows OWASP guidelines for secure deserialization and eliminates the entire
-class of pickle-based RCE vulnerabilities (CVSS 9.8 Critical).
-"""
+from __future__ import annotations
 
 import base64
 import hashlib
 import json
 from collections import defaultdict
-from typing import Any
+from typing import Any, TypedDict
 
+from ..utils.command_helpers import cmd as cmd_helper
+from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -53,40 +27,54 @@ except ImportError:
     BloomFilter = None
 
 
+class BinbloomResult(TypedDict):
+    available: bool
+    library_available: bool
+    function_blooms: dict[str, Any]
+    function_signatures: dict[str, Any]
+    total_functions: int
+    analyzed_functions: int
+    capacity: int
+    error_rate: float
+    binary_bloom: str | None
+    binary_signature: str | None
+    similar_functions: list[dict[str, Any]]
+    unique_signatures: int
+    bloom_stats: dict[str, Any]
+    error: str | None
+
+
 class BinbloomAnalyzer:
-    """Binbloom-style function analysis using Bloom filters"""
+    """Bloom filter-based function analysis."""
 
-    def __init__(self, r2_instance, filepath: str):
-        """
-        Initialize Binbloom analyzer.
-
-        Args:
-            r2_instance: Active r2pipe instance
-            filepath: Path to the binary file being analyzed
-        """
-        self.r2 = r2_instance
+    def __init__(self, adapter: Any, filepath: str) -> None:
+        """Initialize analyzer state."""
+        self.adapter = adapter
+        self.r2 = adapter
         self.filepath = filepath
         self.default_capacity = 256  # Default Bloom filter capacity
         self.default_error_rate = 0.001  # 0.1% false positive rate
 
     def analyze(
         self, capacity: int | None = None, error_rate: float | None = None
-    ) -> dict[str, Any]:
-        """
-        Perform Binbloom analysis on all functions in the binary.
-
-        Args:
-            capacity: Bloom filter capacity (default: 256)
-            error_rate: False positive rate (default: 0.001)
-
-        Returns:
-            Dictionary containing Binbloom analysis results
-        """
+    ) -> BinbloomResult:
+        """Analyze functions using Bloom filters."""
         if not BLOOM_AVAILABLE:
             return {
-                "available": False,
-                "error": "pybloom-live library not installed",
                 "library_available": False,
+                "available": False,
+                "function_blooms": {},
+                "function_signatures": {},
+                "total_functions": 0,
+                "analyzed_functions": 0,
+                "capacity": capacity or self.default_capacity,
+                "error_rate": error_rate or self.default_error_rate,
+                "binary_bloom": None,
+                "binary_signature": None,
+                "similar_functions": [],
+                "unique_signatures": 0,
+                "bloom_stats": {},
+                "error": "pybloom-live library not installed",
             }
 
         if capacity is None:
@@ -96,7 +84,7 @@ class BinbloomAnalyzer:
 
         logger.debug(f"Starting Binbloom analysis for {self.filepath}")
 
-        results = {
+        results: BinbloomResult = {
             "available": False,
             "library_available": True,
             "function_blooms": {},
@@ -206,7 +194,7 @@ class BinbloomAnalyzer:
 
     def _add_binary_bloom(
         self,
-        results: dict[str, Any],
+        results: BinbloomResult,
         all_instructions: set[str],
         capacity: int,
         error_rate: float,
@@ -229,10 +217,11 @@ class BinbloomAnalyzer:
         """
         try:
             # Ensure analysis is complete
-            self.r2.cmd("aaa")
+            if self.adapter is not None and hasattr(self.adapter, "analyze_all"):
+                self.adapter.analyze_all()
 
             # Get function list
-            functions = safe_cmd_list(self.r2, "aflj")
+            functions = self._cmd_list("aflj")
 
             if not functions:
                 logger.debug("No functions found with 'aflj' command")
@@ -267,11 +256,8 @@ class BinbloomAnalyzer:
             Tuple of (BloomFilter, instructions list, signature) or None if failed
         """
         try:
-            # Seek to function
-            self.r2.cmd(f"s {func_addr}")
-
             # Extract instruction mnemonics
-            instructions = self._extract_instruction_mnemonics(func_name)
+            instructions = self._extract_instruction_mnemonics(func_addr, func_name)
             if not instructions:
                 logger.debug(f"No instructions found for function {func_name}")
                 return None
@@ -311,7 +297,7 @@ class BinbloomAnalyzer:
             if count > 1:
                 bloom_filter.add(f"{instr}*{count}")
 
-    def _extract_instruction_mnemonics(self, func_name: str) -> list[str]:
+    def _extract_instruction_mnemonics(self, func_addr: int, func_name: str) -> list[str]:
         """
         Extract instruction mnemonics from current function.
 
@@ -322,15 +308,15 @@ class BinbloomAnalyzer:
             List of instruction mnemonics
         """
         try:
-            instructions = self._extract_mnemonics_from_pdfj(func_name)
+            instructions = self._extract_mnemonics_from_pdfj(func_addr, func_name)
             if instructions:
                 return instructions
 
-            instructions = self._extract_mnemonics_from_pdj(func_name)
+            instructions = self._extract_mnemonics_from_pdj(func_addr, func_name)
             if instructions:
                 return instructions
 
-            instructions = self._extract_mnemonics_from_text(func_name)
+            instructions = self._extract_mnemonics_from_text(func_addr, func_name)
             if instructions:
                 return instructions
 
@@ -339,8 +325,12 @@ class BinbloomAnalyzer:
 
         return []
 
-    def _extract_mnemonics_from_pdfj(self, func_name: str) -> list[str]:
-        disasm = safe_cmdj(self.r2, "pdfj", {})
+    def _extract_mnemonics_from_pdfj(self, func_addr: int, func_name: str) -> list[str]:
+        disasm = (
+            self.adapter.get_disasm(address=func_addr)
+            if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+            else self._cmdj("pdfj", {})
+        )
         if not disasm or "ops" not in disasm:
             return []
         mnemonics = self._collect_mnemonics_from_ops(disasm["ops"])
@@ -348,8 +338,12 @@ class BinbloomAnalyzer:
             logger.debug(f"Extracted {len(mnemonics)} mnemonics from {func_name} using pdfj")
         return mnemonics
 
-    def _extract_mnemonics_from_pdj(self, func_name: str) -> list[str]:
-        disasm_list = safe_cmd_list(self.r2, "pdj 200")
+    def _extract_mnemonics_from_pdj(self, func_addr: int, func_name: str) -> list[str]:
+        disasm_list = (
+            self.adapter.get_disasm(address=func_addr, size=200)
+            if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+            else self._cmd_list("pdj 200")
+        )
         if not isinstance(disasm_list, list):
             return []
         mnemonics = self._collect_mnemonics_from_ops(disasm_list)
@@ -357,8 +351,12 @@ class BinbloomAnalyzer:
             logger.debug(f"Extracted {len(mnemonics)} mnemonics from {func_name} using pdj")
         return mnemonics
 
-    def _extract_mnemonics_from_text(self, func_name: str) -> list[str]:
-        instructions_text = self.r2.cmd("pi 100")
+    def _extract_mnemonics_from_text(self, func_addr: int, func_name: str) -> list[str]:
+        instructions_text = (
+            self.adapter.get_disasm_text(address=func_addr, size=100)
+            if self.adapter is not None and hasattr(self.adapter, "get_disasm_text")
+            else self._cmd("pi 100")
+        )
         if not instructions_text or not instructions_text.strip():
             return []
         mnemonics: list[str] = []
@@ -652,6 +650,15 @@ class BinbloomAnalyzer:
             logger.error(f"Error comparing Bloom filters: {e}")
             return 0.0
 
+    def _cmd(self, command: str) -> str:
+        return cmd_helper(self.adapter, self.r2, command)
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
+
     @staticmethod
     def is_available() -> bool:
         """
@@ -762,7 +769,7 @@ class BinbloomAnalyzer:
         filepath: str,
         capacity: int | None = None,
         error_rate: float | None = None,
-    ) -> dict[str, Any | None]:
+    ) -> BinbloomResult | None:
         """
         Calculate Binbloom signatures directly from a file path.
 

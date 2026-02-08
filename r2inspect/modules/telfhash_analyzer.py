@@ -1,18 +1,4 @@
-"""
-Telfhash Analyzer Module
-
-This module provides telfhash capabilities for ELF files.
-Telfhash is a fuzzy hash for ELF files based on exported/imported symbols,
-similar to imphash for PE files but adapted for ELF binary structure.
-
-Telfhash is particularly useful for:
-- Clustering ELF malware families
-- Identifying similar ELF binaries with slight variations
-- Grouping binaries compiled with different compilers but same source
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Telfhash analyzer for ELF binaries."""
 
 from typing import Any, cast
 
@@ -25,8 +11,11 @@ except ImportError:
     TELFHASH_AVAILABLE = False
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..utils.command_helpers import cmd as cmd_helper
+from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
+from ..utils.ssdeep_loader import get_ssdeep
 
 logger = get_logger(__name__)
 
@@ -34,7 +23,7 @@ logger = get_logger(__name__)
 class TelfhashAnalyzer(HashingStrategy):
     """Telfhash analyzer for ELF files."""
 
-    def __init__(self, r2_instance, filepath: str):
+    def __init__(self, adapter: Any, filepath: str) -> None:
         """
         Initialize Telfhash analyzer.
 
@@ -43,7 +32,8 @@ class TelfhashAnalyzer(HashingStrategy):
             filepath: Path to the file being analyzed
         """
         # Initialize parent with filepath
-        super().__init__(filepath=filepath, r2_instance=r2_instance)
+        super().__init__(filepath=filepath, r2_instance=adapter)
+        self.adapter: Any = adapter
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
@@ -81,12 +71,12 @@ class TelfhashAnalyzer(HashingStrategy):
                 # telfhash returns a list with one dictionary for single file
                 result_dict = telfhash_result[0]
                 hash_value = result_dict.get("telfhash")
-                if result_dict.get("msg"):
+                if result_dict.get("msg") and not hash_value:
                     return None, None, result_dict.get("msg")
             elif isinstance(telfhash_result, dict):
                 # Extract the actual hash from the result dictionary
                 hash_value = telfhash_result.get("telfhash")
-                if telfhash_result.get("msg"):
+                if telfhash_result.get("msg") and not hash_value:
                     return None, None, telfhash_result.get("msg")
             else:
                 hash_value = cast(str | None, telfhash_result)
@@ -168,13 +158,13 @@ class TelfhashAnalyzer(HashingStrategy):
                     # telfhash returns a list with one dictionary for single file
                     result_dict = telfhash_result[0]
                     results["telfhash"] = result_dict.get("telfhash")
-                    if result_dict.get("msg"):
+                    if result_dict.get("msg") and not results["telfhash"]:
                         results["error"] = result_dict.get("msg")
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
                 elif isinstance(telfhash_result, dict):
                     # Extract the actual hash from the result dictionary
                     results["telfhash"] = telfhash_result.get("telfhash")
-                    if telfhash_result.get("msg"):
+                    if telfhash_result.get("msg") and not results["telfhash"]:
                         results["error"] = telfhash_result.get("msg")
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
                 else:
@@ -201,7 +191,7 @@ class TelfhashAnalyzer(HashingStrategy):
         try:
             if self.r2 is None:
                 return False
-            info_cmd = safe_cmdj(self.r2, "ij", {})
+            info_cmd = self._cmdj("ij", {})
             if self._is_elf_in_r2_info():
                 return True
             if self._is_elf_in_bin_info(info_cmd):
@@ -215,7 +205,7 @@ class TelfhashAnalyzer(HashingStrategy):
             return False
 
     def _is_elf_in_r2_info(self) -> bool:
-        info_text = self.r2.cmd("i")
+        info_text = self._cmd("i")
         return "elf" in info_text.lower()
 
     @staticmethod
@@ -239,7 +229,7 @@ class TelfhashAnalyzer(HashingStrategy):
 
     def _has_elf_symbols(self, info_cmd: dict[str, Any] | None) -> bool:
         try:
-            symbols = safe_cmd_list(self.r2, "isj")
+            symbols = self._cmd_list("isj")
             if not symbols:
                 return False
             if not info_cmd or "bin" not in info_cmd:
@@ -259,7 +249,7 @@ class TelfhashAnalyzer(HashingStrategy):
         """
         try:
             logger.debug("Extracting symbols from ELF file")
-            symbols = safe_cmd_list(self.r2, "isj")
+            symbols = self._cmd_list("isj")
             if not symbols:
                 logger.warning("No symbols found in ELF file")
                 return []
@@ -270,6 +260,15 @@ class TelfhashAnalyzer(HashingStrategy):
         except Exception as e:
             logger.error(f"Failed to extract symbols: {e}")
             return []
+
+    def _cmd(self, command: str) -> str:
+        return cmd_helper(self.adapter, self.r2, command)
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _filter_symbols_for_telfhash(self, symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -398,12 +397,11 @@ class TelfhashAnalyzer(HashingStrategy):
 
         try:
             # Telfhash uses SSDeep comparison internally
-            import ssdeep
-
-            return cast(int, ssdeep.compare(hash1, hash2))
-        except ImportError:
-            logger.warning("ssdeep library required for telfhash comparison")
-            return None
+            ssdeep_module = get_ssdeep()
+            if ssdeep_module is None:
+                logger.warning("ssdeep library required for telfhash comparison")
+                return None
+            return cast(int, ssdeep_module.compare(hash1, hash2))
         except Exception as e:
             logger.warning(f"Telfhash comparison failed: {e}")
             return None

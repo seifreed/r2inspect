@@ -1,47 +1,14 @@
 #!/usr/bin/env python3
-"""
-Analyzer Registry Module
-
-This module implements the Registry Pattern for managing binary analyzers in r2inspect.
-It provides centralized registration, discovery, and instantiation of analyzer classes
-based on file format, category, and requirements.
-
-The registry pattern decouples the core analysis engine from concrete analyzer
-implementations, enabling dynamic configuration, plugin architectures, and
-flexible analyzer selection strategies.
-
-Copyright (C) 2025 Marc Rivero López
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-"""
+"""Analyzer registry for managing analyzer discovery and metadata."""
 
 import inspect
 import logging
 import os
+from dataclasses import dataclass
 from enum import Enum
 from importlib import import_module
-from typing import Any
-
-try:
-    # Python 3.13+
-    from importlib.metadata import EntryPoint
-    from importlib.metadata import entry_points as _entry_points
-
-    entry_points: Any = _entry_points
-except Exception:  # pragma: no cover
-    entry_points = None
-    EntryPoint = Any  # type: ignore
+from importlib.metadata import entry_points
+from typing import Any, cast
 
 
 class AnalyzerCategory(Enum):
@@ -71,64 +38,29 @@ class AnalyzerCategory(Enum):
     BEHAVIORAL = "behavioral"
 
 
+@dataclass(slots=True)
 class AnalyzerMetadata:
-    """
-    Metadata container for registered analyzers.
+    """Metadata for a registered analyzer."""
 
-    Encapsulates all registration information for a single analyzer,
-    including its class reference, categorization, format applicability,
-    execution requirements, and dependency relationships.
+    name: str
+    analyzer_class: type
+    category: AnalyzerCategory
+    file_formats: set[str] | None = None
+    required: bool = False
+    dependencies: set[str] | None = None
+    description: str = ""
 
-    Attributes:
-        name: Unique identifier for the analyzer
-        analyzer_class: Class reference to the analyzer implementation
-        category: Semantic category from AnalyzerCategory enum
-        file_formats: Set of supported file formats (e.g., {"PE", "PE32", "PE32+"})
-        required: Whether this analyzer must always execute
-        dependencies: Set of analyzer names that must execute before this one
-        description: Human-readable description of analyzer functionality
-    """
-
-    def __init__(
-        self,
-        name: str,
-        analyzer_class: type,
-        category: AnalyzerCategory,
-        file_formats: set[str] | None = None,
-        required: bool = False,
-        dependencies: set[str] | None = None,
-        description: str = "",
-    ):
-        """
-        Initialize analyzer metadata.
-
-        Args:
-            name: Unique analyzer identifier
-            analyzer_class: Reference to analyzer class
-            category: Analyzer category from AnalyzerCategory enum
-            file_formats: Set of supported file formats (None = all formats)
-            required: Whether analyzer is required for all analyses
-            dependencies: Set of analyzer names this analyzer depends on
-            description: Human-readable description
-
-        Raises:
-            ValueError: If name is empty or analyzer_class is None
-            TypeError: If category is not an AnalyzerCategory instance
-        """
-        if not name:
+    def __post_init__(self) -> None:
+        if not self.name:
             raise ValueError("Analyzer name cannot be empty")
-        if analyzer_class is None:
+        if self.analyzer_class is None:
             raise ValueError("Analyzer class cannot be None")
-        if not isinstance(category, AnalyzerCategory):
-            raise TypeError(f"Category must be AnalyzerCategory, got {type(category)}")
-
-        self.name = name
-        self.analyzer_class = analyzer_class
-        self.category = category
-        self.file_formats = file_formats or set()
-        self.required = required
-        self.dependencies = dependencies or set()
-        self.description = description
+        if not isinstance(self.category, AnalyzerCategory):
+            raise TypeError(f"Category must be AnalyzerCategory, got {type(self.category)}")
+        if self.file_formats is None:
+            self.file_formats = set()
+        if self.dependencies is None:
+            self.dependencies = set()
 
     def supports_format(self, file_format: str) -> bool:
         """
@@ -157,9 +89,9 @@ class AnalyzerMetadata:
             "class": self.analyzer_class.__name__,
             "module": self.analyzer_class.__module__,
             "category": self.category.value,
-            "file_formats": list(self.file_formats),
+            "file_formats": list(self.file_formats or []),
             "required": self.required,
-            "dependencies": list(self.dependencies),
+            "dependencies": list(self.dependencies or []),
             "description": self.description,
         }
 
@@ -311,8 +243,7 @@ class AnalyzerRegistry:
 
         try:
             # Create temporary instance with None parameters
-            # BaseAnalyzer accepts r2=None, config=None, filepath=None
-            temp_instance = analyzer_class(r2=None, config=None, filepath=None)
+            temp_instance = analyzer_class(adapter=None, config=None, filepath=None)
 
             # Extract metadata using BaseAnalyzer methods
             extracted_name = name or temp_instance.get_name()
@@ -495,9 +426,9 @@ class AnalyzerRegistry:
         Register an analyzer with the registry.
 
         Enhanced registration that supports:
-        1. Manual metadata specification (backward compatible)
+        1. Manual metadata specification
         2. Automatic metadata extraction from BaseAnalyzer subclasses
-        3. Lazy loading for performance optimization (new)
+        3. Lazy loading for performance optimization
 
         Registration Modes:
 
@@ -695,7 +626,7 @@ class AnalyzerRegistry:
         import importlib
 
         module = importlib.import_module(module_path)
-        return getattr(module, class_name)
+        return cast(type[Any], getattr(module, class_name))
 
     def _ensure_analyzer_class(self, analyzer_class: type | None) -> type:
         """Ensure analyzer class is provided."""
@@ -850,8 +781,11 @@ class AnalyzerRegistry:
         """
         result = {}
         for name, metadata in self._analyzers.items():
-            if metadata.supports_format(file_format):
-                result[name] = metadata.analyzer_class
+            if not metadata.supports_format(file_format):
+                continue
+            analyzer_class = self.get_analyzer_class(name)
+            if analyzer_class:
+                result[name] = analyzer_class
         return result
 
     # ---------------------------------------------------------------------
@@ -872,9 +806,6 @@ class AnalyzerRegistry:
             Number of analyzers (or providers) loaded
         """
         loaded = 0
-        if entry_points is None:
-            return loaded
-
         eps_group = self._get_entry_points_group(group)
         if not eps_group:
             return loaded
@@ -884,14 +815,9 @@ class AnalyzerRegistry:
         return loaded
 
     def _get_entry_points_group(self, group: str) -> list[Any]:
-        """Fetch entry points for a group with compatibility handling."""
+        """Fetch entry points for a group."""
         try:
-            eps = entry_points()
-            return (
-                list(eps.select(group=group))
-                if hasattr(eps, "select")
-                else list(eps.get(group, []))
-            )
+            return list(entry_points().select(group=group))
         except Exception:
             logging.getLogger(__name__).debug("No entry points available")
             return []
@@ -906,11 +832,11 @@ class AnalyzerRegistry:
             )
             return 0
 
-        if callable(obj):
-            return self._register_entry_point_callable(ep, obj)
-
         if inspect.isclass(obj):
             return self._register_entry_point_class(ep, obj)
+
+        if callable(obj):
+            return self._register_entry_point_callable(ep, obj)
 
         return 0
 
@@ -943,8 +869,8 @@ class AnalyzerRegistry:
         """Determine analyzer name from entry point class."""
         if self.is_base_analyzer(obj):
             meta = self.extract_metadata_from_class(obj)
-            return meta["name"]
-        return ep.name
+            return str(meta["name"])
+        return str(ep.name)
 
     def get_by_category(self, category: AnalyzerCategory) -> dict[str, type]:
         """
@@ -972,8 +898,11 @@ class AnalyzerRegistry:
 
         result = {}
         for name, metadata in self._analyzers.items():
-            if metadata.category == category:
-                result[name] = metadata.analyzer_class
+            if metadata.category != category:
+                continue
+            analyzer_class = self.get_analyzer_class(name)
+            if analyzer_class:
+                result[name] = analyzer_class
         return result
 
     def get_required_analyzers(self) -> dict[str, type]:
@@ -993,8 +922,11 @@ class AnalyzerRegistry:
         """
         result = {}
         for name, metadata in self._analyzers.items():
-            if metadata.required:
-                result[name] = metadata.analyzer_class
+            if not metadata.required:
+                continue
+            analyzer_class = self.get_analyzer_class(name)
+            if analyzer_class:
+                result[name] = analyzer_class
         return result
 
     def get_optional_analyzers(self) -> dict[str, type]:
@@ -1013,8 +945,11 @@ class AnalyzerRegistry:
         """
         result = {}
         for name, metadata in self._analyzers.items():
-            if not metadata.required:
-                result[name] = metadata.analyzer_class
+            if metadata.required:
+                continue
+            analyzer_class = self.get_analyzer_class(name)
+            if analyzer_class:
+                result[name] = analyzer_class
         return result
 
     def list_analyzers(self) -> list[dict[str, Any]]:
@@ -1051,7 +986,7 @@ class AnalyzerRegistry:
             >>> # Returns analyzers that must run before rich_header
         """
         metadata = self._analyzers.get(name)
-        return metadata.dependencies.copy() if metadata else set()
+        return metadata.dependencies.copy() if metadata and metadata.dependencies else set()
 
     def resolve_execution_order(self, analyzer_names: list[str]) -> list[str]:
         """
@@ -1145,6 +1080,6 @@ class AnalyzerRegistry:
         """Check if an analyzer is registered using 'in' operator."""
         return name in self._analyzers
 
-    def __iter__(self):
+    def __iter__(self) -> Any:
         """Iterate over analyzer names."""
         return iter(self._analyzers)

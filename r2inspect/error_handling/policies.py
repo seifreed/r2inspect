@@ -60,7 +60,7 @@ class ErrorPolicy:
     retryable_exceptions: set[type[BaseException]] = field(default_factory=lambda: {Exception})
     fatal_exceptions: set[type[BaseException]] = field(default_factory=set)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate policy configuration"""
         if self.max_retries < 0:
             raise ValueError("max_retries must be non-negative")
@@ -99,7 +99,7 @@ class ErrorPolicy:
 
         return False
 
-    def copy_with_overrides(self, **overrides) -> "ErrorPolicy":
+    def copy_with_overrides(self, **overrides: Any) -> "ErrorPolicy":
         """
         Create a copy of this policy with specific overrides
 

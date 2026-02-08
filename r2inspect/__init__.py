@@ -8,6 +8,7 @@ License: GPL-3.0
 """
 
 from .__version__ import __author__, __author_email__, __license__, __url__, __version__
+from .factory import create_inspector
 
 __description__ = "Advanced malware analysis tool using radare2 and r2pipe"
 
@@ -20,4 +21,5 @@ __all__ = [
     "__license__",
     "__url__",
     "__description__",
+    "create_inspector",
 ]

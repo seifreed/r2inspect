@@ -1,5 +1,5 @@
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
-from r2inspect.modules.string_analyzer import StringAnalyzer
+from r2inspect.modules.string_domain import decode_base64, decode_hex, filter_strings
 
 
 class FakeR2:
@@ -14,33 +14,34 @@ class FakeR2:
         return self._cmdj_map.get(command)
 
 
-class ConfigStub:
-    def __init__(self):
-        self._values = {
-            ("strings", "min_length"): 4,
-            ("strings", "max_length"): 100,
-            ("strings", "extract_ascii"): True,
-            ("strings", "extract_unicode"): True,
-            ("general", "max_strings"): 1000,
-        }
+class _Strings:
+    min_length = 4
+    max_length = 100
+    extract_ascii = True
+    extract_unicode = True
 
-    def get(self, section, key, default=None):
-        return self._values.get((section, key), default)
+
+class _General:
+    max_strings = 1000
+
+
+class ConfigStub:
+    class typed_config:
+        strings = _Strings()
+        general = _General()
 
 
 def test_string_filters_and_decoders():
-    analyzer = StringAnalyzer(FakeR2(), ConfigStub())
-
-    filtered = analyzer._filter_strings(["ok", "hello", "\x00bad", "a" * 200])
+    filtered = filter_strings(["ok", "hello", "\x00bad", "a" * 200], 4, 100)
     assert "hello" in filtered
     assert "ok" not in filtered
 
     base64_str = "aGVsbG8="
-    decoded = analyzer._decode_base64(base64_str)
+    decoded = decode_base64(base64_str)
     assert decoded["decoded"] == "hello"
 
     hex_str = "68656c6c6f"
-    decoded_hex = analyzer._decode_hex(hex_str)
+    decoded_hex = decode_hex(hex_str)
     assert decoded_hex["decoded"] == "hello"
 
 

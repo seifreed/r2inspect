@@ -23,10 +23,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from pathlib import Path
 from typing import Any
 
-from ...core import R2Inspector
+from ...error_handling.unified_handler import get_circuit_breaker_stats
+from ...factory import create_inspector
 from ...utils.error_handler import get_error_stats, reset_error_stats
 from ...utils.output import OutputFormatter
-from ...utils.r2_helpers import get_circuit_breaker_stats, get_retry_stats
+from ...utils.retry_manager import get_retry_stats
 from .base import Command, apply_thread_settings
 
 
@@ -36,14 +37,14 @@ class AnalyzeCommand(Command):
 
     Encapsulates the complete workflow for single file analysis:
     - Configuration loading
-    - R2Inspector initialization
+    - Inspector initialization
     - Analysis execution
     - Result formatting and output
     - Statistics collection and display
 
     Responsibilities:
     - Validate file input
-    - Execute malware analysis via R2Inspector
+    - Execute malware analysis via inspector
     - Handle output formatting (JSON, CSV, console)
     - Display error and performance statistics
     """
@@ -82,8 +83,8 @@ class AnalyzeCommand(Command):
                 xor=args.get("xor"),
             )
 
-            # Initialize R2Inspector with context manager for proper cleanup
-            with R2Inspector(
+            # Initialize inspector with context manager for proper cleanup
+            with create_inspector(
                 filename=filename,
                 config=config,
                 verbose=verbose,
@@ -110,18 +111,18 @@ class AnalyzeCommand(Command):
 
     def _run_analysis(
         self,
-        inspector: R2Inspector,
+        inspector: Any,
         options: dict[str, Any],
         output_json: bool,
         output_csv: bool,
-        output_file: str | None,
+        output_file: str | Path | None,
         verbose: bool = False,
     ) -> None:
         """
         Execute analysis and output results.
 
         Args:
-            inspector: Initialized R2Inspector instance
+            inspector: Initialized inspector instance
             options: Analysis options dictionary
             output_json: Flag for JSON output
             output_csv: Flag for CSV output
@@ -147,7 +148,7 @@ class AnalyzeCommand(Command):
         self,
         output_json: bool,
         output_csv: bool,
-        output_file: str | None,
+        output_file: str | Path | None,
     ) -> None:
         """
         Print status message if appropriate based on output options.
@@ -213,7 +214,7 @@ class AnalyzeCommand(Command):
         results: dict[str, Any],
         output_json: bool,
         output_csv: bool,
-        output_file: str | None,
+        output_file: str | Path | None,
         verbose: bool,
     ) -> None:
         """
@@ -240,7 +241,7 @@ class AnalyzeCommand(Command):
     def _output_json_results(
         self,
         formatter: OutputFormatter,
-        output_file: str | None,
+        output_file: str | Path | None,
     ) -> None:
         """
         Output results in JSON format.
@@ -261,7 +262,7 @@ class AnalyzeCommand(Command):
     def _output_csv_results(
         self,
         formatter: OutputFormatter,
-        output_file: str | None,
+        output_file: str | Path | None,
     ) -> None:
         """
         Output results in CSV format.
@@ -310,11 +311,8 @@ class AnalyzeCommand(Command):
         cluttering output with empty tables.
         """
         # Import display functions from cli
-        from .. import (
-            display_error_statistics,
-            display_performance_statistics,
-            has_circuit_breaker_data,
-        )
+        from ..analysis_runner import has_circuit_breaker_data
+        from ..display import display_error_statistics, display_performance_statistics
 
         error_stats, retry_stats, circuit_stats = self._collect_statistics()
 
@@ -324,7 +322,9 @@ class AnalyzeCommand(Command):
         if retry_stats.get("total_retries", 0) > 0 or has_circuit_breaker_data(circuit_stats):
             display_performance_statistics(retry_stats, circuit_stats)
 
-    def _collect_statistics(self):
+    def _collect_statistics(
+        self,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
         """Gather error, retry, and circuit breaker statistics once."""
         error_stats = get_error_stats()
         retry_stats = get_retry_stats()

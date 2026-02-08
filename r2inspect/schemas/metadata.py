@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""
-Metadata Analyzer Pydantic Schemas
-
-Schemas for metadata analyzers (sections, imports, exports, strings, functions)
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Metadata analyzer schemas."""
 
 from typing import Any
 
@@ -190,7 +183,7 @@ class StringAnalysisResult(AnalysisResultBase):
 
     total_strings: int = Field(0, ge=0, description="Total strings")
 
-    statistics: dict[str, Any | None] = Field(None, description="String statistics")
+    statistics: dict[str, Any | None] = Field(default_factory=dict, description="String statistics")
 
 
 class FunctionInfo(BaseModel):
@@ -239,7 +232,9 @@ class FunctionAnalysisResult(AnalysisResultBase):
 
     total_functions: int = Field(0, ge=0, description="Total functions")
 
-    statistics: dict[str, Any | None] = Field(None, description="Function statistics")
+    statistics: dict[str, Any | None] = Field(
+        default_factory=dict, description="Function statistics"
+    )
 
 
 class SectionAnalysisResult(AnalysisResultBase):
@@ -256,7 +251,7 @@ class SectionAnalysisResult(AnalysisResultBase):
 
     sections: list[dict[str, Any]] = Field(default_factory=list, description="List of sections")
 
-    summary: dict[str, Any | None] = Field(None, description="Section summary")
+    summary: dict[str, Any | None] = Field(default_factory=dict, description="Section summary")
 
 
 class ResourceInfo(BaseModel):

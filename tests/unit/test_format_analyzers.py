@@ -1,5 +1,6 @@
 import hashlib
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 from r2inspect.modules.pe_analyzer import PEAnalyzer
@@ -25,7 +26,7 @@ class DummyConfig:
 
 
 def test_pe_determine_format():
-    pe = PEAnalyzer(FakeR2(), DummyConfig(), filepath="sample.exe")
+    pe = PEAnalyzer(R2PipeAdapter(FakeR2()), DummyConfig(), filepath="sample.exe")
     assert pe._determine_pe_format({"format": "PE32"}, None) == "PE32"
     assert pe._determine_pe_format({"format": "Unknown", "bits": 64}, None) == "PE32+"
     assert pe._determine_pe_format({"format": "Unknown", "bits": 32}, None) == "PE32"
@@ -39,8 +40,8 @@ def test_pe_calculate_imphash():
         {"libname": "KERNEL32.dll", "name": "ReadFile"},
         {"libname": "USER32.DLL", "name": "MessageBoxA"},
     ]
-    r2 = FakeR2(cmdj_map={"iij": imports})
-    pe = PEAnalyzer(r2, DummyConfig(), filepath="sample.exe")
+    adapter = R2PipeAdapter(FakeR2(cmdj_map={"iij": imports}))
+    pe = PEAnalyzer(adapter, DummyConfig(), filepath="sample.exe")
 
     expected_strings = [
         "kernel32.createfilea",
@@ -58,8 +59,8 @@ def test_pe_security_features_from_header():
     ihj = [
         {"name": "DllCharacteristics", "value": 0x0040 | 0x0100 | 0x4000},
     ]
-    r2 = FakeR2(cmdj_map={"ihj": ihj})
-    pe = PEAnalyzer(r2, DummyConfig(), filepath="sample.exe")
+    adapter = R2PipeAdapter(FakeR2(cmdj_map={"ihj": ihj}))
+    pe = PEAnalyzer(adapter, DummyConfig(), filepath="sample.exe")
 
     features = pe.get_security_features()
     assert features["aslr"] is True
@@ -71,15 +72,17 @@ def test_pe_security_features_from_header():
 
 def test_elf_security_features():
     ihj = [{"type": "GNU_STACK", "flags": "rw"}]
-    r2 = FakeR2(
-        cmd_map={"id": "BIND_NOW\nRPATH\nRUNPATH"},
-        cmdj_map={
-            "ihj": ihj,
-            "isj": [{"name": "__stack_chk_fail"}],
-            "ij": {"bin": {"class": "DYN"}},
-        },
+    adapter = R2PipeAdapter(
+        FakeR2(
+            cmd_map={"id": "BIND_NOW\nRPATH\nRUNPATH"},
+            cmdj_map={
+                "ihj": ihj,
+                "isj": [{"name": "__stack_chk_fail"}],
+                "ij": {"bin": {"class": "DYN"}},
+            },
+        )
     )
-    elf = ELFAnalyzer(r2, DummyConfig())
+    elf = ELFAnalyzer(adapter, DummyConfig())
 
     features = elf.get_security_features()
     assert features["nx"] is True
@@ -91,7 +94,7 @@ def test_elf_security_features():
 
 
 def test_elf_parse_comment_compiler_info():
-    elf = ELFAnalyzer(FakeR2(), DummyConfig())
+    elf = ELFAnalyzer(R2PipeAdapter(FakeR2()), DummyConfig())
     gcc_info = elf._parse_comment_compiler_info("GCC: (GNU) 9.3.0")
     assert gcc_info["compiler"] == "GCC 9.3.0"
     assert gcc_info["compiler_version"] == "9.3.0"
@@ -105,17 +108,19 @@ def test_macho_security_features():
         {"type": "LC_ENCRYPTION_INFO", "cryptid": 1},
         {"type": "LC_CODE_SIGNATURE"},
     ]
-    r2 = FakeR2(
-        cmdj_map={
-            "ij": {"bin": {"filetype": "PIE"}},
-            "isj": [
-                {"name": "___stack_chk_fail"},
-                {"name": "_objc_retain"},
-            ],
-            "ihj": headers,
-        }
+    adapter = R2PipeAdapter(
+        FakeR2(
+            cmdj_map={
+                "ij": {"bin": {"filetype": "PIE"}},
+                "isj": [
+                    {"name": "___stack_chk_fail"},
+                    {"name": "_objc_retain"},
+                ],
+                "ihj": headers,
+            }
+        )
     )
-    macho = MachOAnalyzer(r2, DummyConfig())
+    macho = MachOAnalyzer(adapter, DummyConfig())
 
     features = macho.get_security_features()
     assert features["pie"] is True
@@ -127,5 +132,5 @@ def test_macho_security_features():
 
 
 def test_macho_estimate_from_sdk_version():
-    macho = MachOAnalyzer(FakeR2(), DummyConfig())
+    macho = MachOAnalyzer(R2PipeAdapter(FakeR2()), DummyConfig())
     assert macho._estimate_from_sdk_version("13.0") == "~2022 (SDK 13.0)"

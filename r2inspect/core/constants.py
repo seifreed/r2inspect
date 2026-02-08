@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-r2inspect Core Constants - File validation and analysis thresholds
-
-This module contains all constants used for file validation and analysis
-configuration in the R2Inspector framework.
-
-Copyright (C) 2025 Marc Rivero Lopez
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Constants for file validation and analysis thresholds."""
 
 # =============================================================================
 # File Validation Constants
@@ -62,6 +54,17 @@ EXCESSIVE_IMPORTS_THRESHOLD = 500  # Above this: unusually high import count
 SUBPROCESS_TIMEOUT_SECONDS = 30  # Maximum seconds to wait for subprocess
 
 # =============================================================================
+# Test Mode Thresholds (more aggressive to reduce resource usage)
+# =============================================================================
+# When R2INSPECT_TEST_MODE=1, these thresholds are used instead of the standard ones
+# to minimize radare2 resource consumption during automated testing.
+TEST_LARGE_FILE_THRESHOLD_MB = 1  # Above this: use minimal analysis (aa) in test mode
+TEST_HUGE_FILE_THRESHOLD_MB = 5  # Above this: skip analysis entirely in test mode
+TEST_R2_OPEN_TIMEOUT = 10.0  # Shorter timeout for r2pipe.open() in test mode
+TEST_R2_CMD_TIMEOUT = 5.0  # Shorter timeout for r2 commands in test mode
+TEST_R2_ANALYSIS_TIMEOUT = 15.0  # Shorter timeout for analysis commands in test mode
+
+# =============================================================================
 # Detection Confidence Levels
 # =============================================================================
 # Confidence scores (0.0-1.0) for different detection methods
@@ -98,4 +101,10 @@ __all__ = [
     "CONFIDENCE_API",
     "CONFIDENCE_CONSTANT",
     "CONFIDENCE_STRING",
+    # Test mode constants
+    "TEST_LARGE_FILE_THRESHOLD_MB",
+    "TEST_HUGE_FILE_THRESHOLD_MB",
+    "TEST_R2_OPEN_TIMEOUT",
+    "TEST_R2_CMD_TIMEOUT",
+    "TEST_R2_ANALYSIS_TIMEOUT",
 ]

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import r2pipe
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
@@ -21,10 +23,15 @@ def _config(tmp_path: Path) -> Config:
     return Config(str(tmp_path / "r2inspect_phase5.json"))
 
 
+def _open_adapter(path: str) -> tuple[Any, R2PipeAdapter]:
+    r2 = r2pipe.open(path)
+    return r2, R2PipeAdapter(r2)
+
+
 def test_anti_analysis_detector_structure(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        detector = AntiAnalysisDetector(r2, _config(tmp_path))
+        detector = AntiAnalysisDetector(adapter, _config(tmp_path))
         result = detector.detect()
     finally:
         r2.quit()
@@ -44,9 +51,9 @@ def test_anti_analysis_detector_structure(tmp_path: Path) -> None:
 
 
 def test_crypto_analyzer_structure(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = CryptoAnalyzer(r2, _config(tmp_path))
+        analyzer = CryptoAnalyzer(adapter, _config(tmp_path))
         result = analyzer.detect()
     finally:
         r2.quit()
@@ -58,9 +65,9 @@ def test_crypto_analyzer_structure(tmp_path: Path) -> None:
 
 
 def test_packer_detector_structure(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        detector = PackerDetector(r2, _config(tmp_path))
+        detector = PackerDetector(adapter, _config(tmp_path))
         result = detector.detect()
     finally:
         r2.quit()
@@ -74,9 +81,9 @@ def test_packer_detector_structure(tmp_path: Path) -> None:
 
 
 def test_exploit_mitigation_analyzer_structure(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = ExploitMitigationAnalyzer(r2)
+        analyzer = ExploitMitigationAnalyzer(adapter)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -90,9 +97,9 @@ def test_exploit_mitigation_analyzer_structure(tmp_path: Path) -> None:
 
 
 def test_authenticode_analyzer_structure(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = AuthenticodeAnalyzer(r2)
+        analyzer = AuthenticodeAnalyzer(adapter)
         result = analyzer.analyze()
     finally:
         r2.quit()

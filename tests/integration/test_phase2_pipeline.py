@@ -6,8 +6,8 @@ import r2pipe
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
-from r2inspect.core.inspector import R2Inspector
 from r2inspect.core.pipeline_builder import PipelineBuilder
+from r2inspect.factory import create_inspector
 from r2inspect.registry.default_registry import create_default_registry
 
 pytestmark = pytest.mark.requires_r2
@@ -96,7 +96,7 @@ def test_inspector_options_disable_detection(tmp_path):
         "detect_packer": False,
         "detect_crypto": False,
     }
-    with R2Inspector(FIXTURES["hello_pe"], config=config, verbose=False) as inspector:
+    with create_inspector(FIXTURES["hello_pe"], config=config, verbose=False) as inspector:
         results = inspector.analyze(**options)
 
     assert "packer" not in results

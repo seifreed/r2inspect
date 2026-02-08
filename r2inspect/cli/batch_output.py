@@ -26,6 +26,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -35,7 +36,7 @@ from ..utils.output import OutputFormatter
 console = Console()
 
 
-def get_csv_fieldnames():
+def get_csv_fieldnames() -> list[str]:
     """Get CSV fieldnames for batch output"""
     return [
         "name",
@@ -77,7 +78,7 @@ def get_csv_fieldnames():
     ]
 
 
-def write_csv_results(csv_file, all_results):
+def write_csv_results(csv_file: Path, all_results: dict[str, dict[str, Any]]) -> None:
     """Write analysis results to CSV file"""
     with open(csv_file, "w", newline="", encoding="utf-8") as f:
         fieldnames = get_csv_fieldnames()
@@ -90,7 +91,7 @@ def write_csv_results(csv_file, all_results):
             writer.writerow(csv_data)
 
 
-def determine_csv_file_path(output_path, timestamp):
+def determine_csv_file_path(output_path: Path, timestamp: str) -> tuple[Path, str]:
     """Determine the CSV file path based on output configuration"""
     if output_path.suffix == ".csv":
         # User provided specific CSV filename
@@ -102,7 +103,7 @@ def determine_csv_file_path(output_path, timestamp):
         return csv_file, csv_filename
 
 
-def update_packer_stats(stats, file_key, result):
+def update_packer_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update packer statistics"""
     if "packer_info" in result and result["packer_info"].get("detected"):
         stats["packers_detected"].append(
@@ -113,14 +114,14 @@ def update_packer_stats(stats, file_key, result):
         )
 
 
-def update_crypto_stats(stats, file_key, result):
+def update_crypto_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update crypto pattern statistics"""
     if "crypto_info" in result and result["crypto_info"]:
         for crypto in result["crypto_info"]:
             stats["crypto_patterns"].append({"file": file_key, "pattern": crypto})
 
 
-def update_indicator_stats(stats, file_key, result):
+def update_indicator_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update suspicious indicator statistics"""
     if "indicators" in result and result["indicators"]:
         stats["suspicious_indicators"].extend(
@@ -128,7 +129,7 @@ def update_indicator_stats(stats, file_key, result):
         )
 
 
-def update_file_type_stats(stats, result):
+def update_file_type_stats(stats: dict[str, Any], result: dict[str, Any]) -> None:
     """Update file type and architecture statistics"""
     if "file_info" in result:
         file_type = result["file_info"].get("file_type", "Unknown")
@@ -138,7 +139,7 @@ def update_file_type_stats(stats, result):
         stats["architectures"][architecture] = stats["architectures"].get(architecture, 0) + 1
 
 
-def update_compiler_stats(stats, result):
+def update_compiler_stats(stats: dict[str, Any], result: dict[str, Any]) -> None:
     """Update compiler statistics"""
     if "compiler" in result:
         compiler_info = result["compiler"]
@@ -147,9 +148,9 @@ def update_compiler_stats(stats, result):
             stats["compilers"][compiler_name] = stats["compilers"].get(compiler_name, 0) + 1
 
 
-def collect_batch_statistics(all_results):
+def collect_batch_statistics(all_results: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Collect statistics from batch analysis results"""
-    stats = {
+    stats: dict[str, Any] = {
         "packers_detected": [],
         "crypto_patterns": [],
         "suspicious_indicators": [],
@@ -168,7 +169,12 @@ def collect_batch_statistics(all_results):
     return stats
 
 
-def create_json_batch_summary(all_results, failed_files, output_path, timestamp):
+def create_json_batch_summary(
+    all_results: dict[str, dict[str, Any]],
+    failed_files: list[tuple[str, str]],
+    output_path: Path,
+    timestamp: str,
+) -> str:
     """Create JSON batch summary file"""
     summary = {
         "batch_summary": {
@@ -193,9 +199,16 @@ def create_json_batch_summary(all_results, failed_files, output_path, timestamp)
     return f"{summary_file.name} + individual JSONs"
 
 
-def find_files_to_process(batch_path, auto_detect, extensions, recursive, verbose, quiet=False):
+def find_files_to_process(
+    batch_path: Path,
+    auto_detect: bool,
+    extensions: str | None,
+    recursive: bool,
+    verbose: bool,
+    quiet: bool = False,
+) -> list[Path]:
     """Find files to process based on auto-detection or extensions"""
-    files_to_process = []
+    files_to_process: list[Path] = []
 
     if auto_detect:
         if not quiet:
@@ -206,14 +219,16 @@ def find_files_to_process(batch_path, auto_detect, extensions, recursive, verbos
     else:
         if not quiet:
             console.print(f"[blue]Searching for files with extensions: {extensions}[/blue]")
+        if extensions is None:
+            return []
         files_to_process = find_files_by_extensions(batch_path, extensions, recursive)
 
     return files_to_process
 
 
-def find_files_by_extensions(batch_path, extensions, recursive):
+def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool) -> list[Path]:
     """Find files by specified extensions"""
-    files_to_process = []
+    files_to_process: list[Path] = []
     ext_list = [ext.strip().lower() for ext in extensions.split(",")]
 
     for ext in ext_list:
@@ -223,7 +238,7 @@ def find_files_by_extensions(batch_path, extensions, recursive):
     return files_to_process
 
 
-def display_no_files_message(auto_detect, extensions):
+def display_no_files_message(auto_detect: bool, extensions: str | None) -> None:
     """Display appropriate message when no files are found"""
     if auto_detect:
         console.print("[yellow]No executable files detected in the directory[/yellow]")
@@ -233,7 +248,9 @@ def display_no_files_message(auto_detect, extensions):
         console.print("[dim]Tip: Use without --extensions for auto-detection[/dim]")
 
 
-def setup_batch_output_directory(output_dir, output_json, output_csv):
+def setup_batch_output_directory(
+    output_dir: str | None, output_json: bool, output_csv: bool
+) -> Path:
     """Setup the output directory for batch processing"""
     if output_dir:
         output_path = Path(output_dir)
@@ -262,7 +279,7 @@ def setup_batch_output_directory(output_dir, output_json, output_csv):
 
 def _configure_batch_logging(verbose: bool, quiet: bool) -> None:
     if not verbose:
-        from .utils.logger import configure_batch_logging
+        from ..utils.logger import configure_batch_logging
 
         configure_batch_logging()
 
@@ -302,24 +319,24 @@ def _prepare_batch_run(
     return files_to_process, output_path
 
 
-def _init_batch_results() -> tuple[dict, list]:
+def _init_batch_results() -> tuple[dict[str, dict[str, Any]], list[tuple[str, str]]]:
     return {}, []
 
 
 def run_batch_analysis(
-    batch_dir,
-    options,
-    output_json,
-    output_csv,
-    output_dir,
-    recursive,
-    extensions,
-    verbose,
-    config_obj,
-    auto_detect,
-    threads=10,
-    quiet=False,
-):
+    batch_dir: str,
+    options: dict[str, Any],
+    output_json: bool,
+    output_csv: bool,
+    output_dir: str | None,
+    recursive: bool,
+    extensions: str | None,
+    verbose: bool,
+    config_obj: Any,
+    auto_detect: bool,
+    threads: int = 10,
+    quiet: bool = False,
+) -> None:
     """Run batch analysis on multiple files in a directory"""
     batch_path = Path(batch_dir)
 
@@ -383,7 +400,13 @@ def run_batch_analysis(
     )
 
 
-def create_batch_summary(all_results, failed_files, output_path, output_json, output_csv):
+def create_batch_summary(
+    all_results: dict[str, dict[str, Any]],
+    failed_files: list[tuple[str, str]],
+    output_path: Path,
+    output_json: bool,
+    output_csv: bool,
+) -> str | None:
     """Create summary report for batch analysis with custom output behavior"""
     # Generate timestamp for CSV filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -416,7 +439,7 @@ def create_batch_summary(all_results, failed_files, output_path, output_json, ou
     return output_filename
 
 
-def _show_summary_table(all_results):
+def _show_summary_table(all_results: dict[str, dict[str, Any]]) -> None:
     """Show a summary table of all analyzed files"""
     if len(all_results) > 10:
         table = _build_summary_table_small(all_results)
@@ -446,18 +469,18 @@ def _simplify_file_type(file_type: str) -> str:
     return cleaned or "Unknown"
 
 
-def _extract_compile_time(result: dict) -> str:
+def _extract_compile_time(result: dict[str, Any]) -> str:
     for key in ("pe_info", "elf_info", "macho_info"):
         compile_time = result.get(key, {}).get("compile_time")
         if compile_time:
-            return compile_time
+            return str(compile_time)
     return "N/A"
 
 
-def _compiler_name(result: dict) -> str:
+def _compiler_name(result: dict[str, Any]) -> str:
     compiler_info = result.get("compiler", {})
     if compiler_info.get("detected", False):
-        compiler = compiler_info.get("compiler", "Unknown")
+        compiler = str(compiler_info.get("compiler", "Unknown"))
         version = compiler_info.get("version", "")
         if version and version != "Unknown":
             return f"{compiler} {version}"
@@ -465,7 +488,7 @@ def _compiler_name(result: dict) -> str:
     return "Unknown"
 
 
-def _collect_yara_matches(result: dict) -> str:
+def _collect_yara_matches(result: dict[str, Any]) -> str:
     matches = result.get("yara_matches", [])
     if not isinstance(matches, list):
         return "None"
@@ -482,7 +505,7 @@ def _collect_yara_matches(result: dict) -> str:
     return ", ".join(yara_matches) if yara_matches else "None"
 
 
-def _build_small_row(file_key: str, result: dict) -> tuple[str, str, str, str]:
+def _build_small_row(file_key: str, result: dict[str, Any]) -> tuple[str, str, str, str]:
     try:
         file_info = result.get("file_info", {})
         filename = file_info.get("name", file_key)
@@ -494,7 +517,7 @@ def _build_small_row(file_key: str, result: dict) -> tuple[str, str, str, str]:
         return file_key, "Error", "Error", "Error"
 
 
-def _build_large_row(file_key: str, result: dict) -> tuple[str, str, str, str, str]:
+def _build_large_row(file_key: str, result: dict[str, Any]) -> tuple[str, str, str, str, str]:
     try:
         file_info = result.get("file_info", {})
         md5 = file_info.get("md5", "N/A")
@@ -507,7 +530,7 @@ def _build_large_row(file_key: str, result: dict) -> tuple[str, str, str, str, s
         return file_key, "Error", "Error", "Error", "Error"
 
 
-def _build_summary_table_small(all_results):
+def _build_summary_table_small(all_results: dict[str, dict[str, Any]]) -> Table:
     table = Table(title="Analysis Summary")
     table.add_column("Filename", style="cyan")
     table.add_column("Type", style="yellow")
@@ -522,7 +545,7 @@ def _build_summary_table_small(all_results):
     return table
 
 
-def _build_summary_table_large(all_results):
+def _build_summary_table_large(all_results: dict[str, dict[str, Any]]) -> Table:
     table = Table(title="Analysis Summary")
     table.add_column("MD5", style="cyan")
     table.add_column("Type", style="yellow")

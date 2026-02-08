@@ -69,21 +69,22 @@ class CLIArgs:
     version: bool
 
 
-def main(**kwargs: Any):
+def main(**kwargs: Any) -> None:
     """
     r2inspect - Advanced malware analysis tool using radare2 and r2pipe.
 
     Modular Command Pattern implementation with delegated execution.
     """
+    args: CLIArgs | None = None
     try:
         args = CLIArgs(**kwargs)
         run_cli(args)
-    except KeyboardInterrupt:
+    except KeyboardInterrupt:  # pragma: no cover
         console.print("\n[yellow]Analysis interrupted by user[/yellow]")
         sys.exit(1)
 
     except Exception as e:
-        handle_main_error(e, args.verbose)
+        handle_main_error(e, args.verbose if args else False)
 
 
 @click.command()
@@ -121,7 +122,7 @@ def main(**kwargs: Any):
     type=click.IntRange(1, 50),
     help="Number of parallel threads for batch processing (1-50, default: 10)",
 )
-def cli(**kwargs: Any):
+def cli(**kwargs: Any) -> None:
     """Click-based CLI entry point."""
     main(**kwargs)
 

@@ -3,10 +3,11 @@
 r2inspect Utilities
 """
 
+from typing import Any
+
 from .hashing import calculate_hashes
 from .logger import get_logger, setup_logger
 from .output import OutputFormatter
-from .r2_helpers import safe_cmd, safe_cmd_dict, safe_cmd_list, safe_cmdj
 
 __all__ = [
     "get_logger",
@@ -18,3 +19,11 @@ __all__ = [
     "safe_cmd_dict",
     "safe_cmd",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name in {"safe_cmdj", "safe_cmd_list", "safe_cmd_dict", "safe_cmd"}:
+        from . import r2_helpers as _r2_helpers
+
+        return getattr(_r2_helpers, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -1,66 +1,27 @@
 #!/usr/bin/env python3
-"""
-Cryptography Detection Module using r2pipe
-"""
+"""Cryptography detection module."""
 
-import math
-import re
-from typing import Any
+from typing import Any, cast
 
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd, safe_cmdj
+from .crypto_constants import CRYPTO_CONSTANTS
+from .crypto_domain import consolidate_detections, detect_algorithms_from_strings
+from .domain_helpers import shannon_entropy
+from .search_helpers import search_hex, search_text
+from .string_domain import parse_search_results
 
 logger = get_logger(__name__)
 
 
 class CryptoAnalyzer:
-    """Cryptographic patterns detection using radare2"""
+    """Cryptographic patterns detection using a backend interface."""
 
-    def __init__(self, r2, config):
-        self.r2 = r2
+    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+        self.adapter = adapter
+        self.r2 = adapter
         self.config = config
 
-        # Known crypto constants
-        self.crypto_constants = {
-            # AES S-Box
-            "aes_sbox": [
-                0x63,
-                0x7C,
-                0x77,
-                0x7B,
-                0xF2,
-                0x6B,
-                0x6F,
-                0xC5,
-                0x30,
-                0x01,
-                0x67,
-                0x2B,
-                0xFE,
-                0xD7,
-                0xAB,
-                0x76,
-            ],
-            # MD5 constants
-            "md5_h": [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476],
-            # SHA1 constants
-            "sha1_h": [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0],
-            # SHA256 constants
-            "sha256_k": [
-                0x428A2F98,
-                0x71374491,
-                0xB5C0FBCF,
-                0xE9B5DBA5,
-                0x3956C25B,
-                0x59F111F1,
-                0x923F82A4,
-                0xAB1C5ED5,
-            ],
-            # DES S-boxes indicators
-            "des_sbox": [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7],
-            # RSA common exponents
-            "rsa_exponents": [3, 17, 65537],
-        }
+        self.crypto_constants = CRYPTO_CONSTANTS
 
     def detect(self) -> dict[str, Any]:
         """Detect cryptographic patterns and algorithms"""
@@ -100,8 +61,7 @@ class CryptoAnalyzer:
                     if isinstance(value, int):
                         # Search for 32-bit integer constants
                         hex_value = f"{value:08x}"
-                        search_cmd = f"/x {hex_value}"
-                        result = safe_cmd(self.r2, search_cmd)
+                        result = self._search_hex(hex_value)
 
                         if result and result.strip():
                             found_constants.append(
@@ -122,8 +82,7 @@ class CryptoAnalyzer:
         crypto_apis = []
 
         try:
-            # Get imports
-            imports = safe_cmdj(self.r2, "iij")
+            imports = self._get_imports()
 
             if imports:
                 # Modern BCrypt/CNG APIs (Windows Vista+)
@@ -226,119 +185,10 @@ class CryptoAnalyzer:
 
     def _detect_via_strings(self, detected_algos: dict[str, list]) -> None:
         """Detect crypto via string patterns (lower confidence)"""
-        strings_result = safe_cmdj(self.r2, "izj")
+        strings_result = self._get_strings()
         if not strings_result:
             return
-
-        crypto_patterns = {
-            "AES": [
-                r"\baes\b",
-                r"\brijndael\b",
-                r"advanced.encryption.standard",
-                r"aes[_-]?(128|192|256)",
-                r"aes[_-]?cbc",
-                r"aes[_-]?ecb",
-            ],
-            "DES": [r"\bdes\b", r"3des", r"triple.des", r"data.encryption.standard"],
-            "RSA": [r"\brsa\b", r"rsa[_-]?key", r"public.key", r"private.key"],
-            "MD5": [r"\bmd5\b", r"md5.hash", r"message.digest.5"],
-            "SHA": [
-                r"\bsha[_-]?1\b",
-                r"\bsha[_-]?256\b",
-                r"\bsha[_-]?512\b",
-                r"secure.hash",
-                r"sha[_-]?hash",
-            ],
-            "RC4": [r"\brc4\b", r"\barcfour\b"],
-            "Blowfish": [r"\bblowfish\b"],
-            "Base64": [r"\bbase64\b", r"base.64"],
-            "OpenSSL": [r"\bopenssl\b", r"\bevp_\w+", r"ssl.ctx"],
-            "BCrypt": [r"\bbcrypt\b", r"bcrypt\w+", r"cng.dll"],
-            "CryptoAPI": [r"crypt32\.dll", r"advapi32\.dll", r"cryptoapi"],
-        }
-
-        noise_patterns = [
-            r"vector.deleting.destructor",
-            r"scalar.deleting.destructor",
-            r"std::",
-            r"class",
-            r"struct",
-            r"__",
-            r"@@",
-            r"\?",
-            r"vtable",
-        ]
-
-        for string_info in strings_result:
-            string_val = string_info.get("string", "").lower()
-
-            # Skip noise strings
-            try:
-                if any(re.search(noise, string_val, re.IGNORECASE) for noise in noise_patterns):
-                    continue
-            except re.error as regex_error:
-                logger.error(f"Regex error in noise patterns: {regex_error}")
-                continue
-
-            # Skip very short strings
-            if len(string_val) < 3:
-                continue
-
-            self._match_string_to_algorithm(
-                string_info, string_val, crypto_patterns, detected_algos
-            )
-
-    def _match_string_to_algorithm(
-        self,
-        string_info: dict[str, Any],
-        string_val: str,
-        crypto_patterns: dict[str, list],
-        detected_algos: dict[str, list],
-    ) -> None:
-        """Match a string against crypto patterns and add to detected algorithms"""
-        for algo_name, patterns in crypto_patterns.items():
-            for pattern in patterns:
-                try:
-                    if re.search(pattern, string_val, re.IGNORECASE):
-                        if algo_name not in detected_algos:
-                            detected_algos[algo_name] = []
-                        detected_algos[algo_name].append(
-                            {
-                                "evidence_type": "String Reference",
-                                "evidence": string_val,
-                                "confidence": 0.4,
-                                "address": hex(string_info.get("vaddr", 0)),
-                            }
-                        )
-                        return  # Found match, no need to check more patterns
-                except re.error as regex_error:
-                    logger.error(f"Regex error with pattern '{pattern}': {regex_error}")
-                    continue
-
-    def _consolidate_detections(self, detected_algos: dict[str, list]) -> list[dict[str, Any]]:
-        """Merge and deduplicate detection results with confidence scoring"""
-        algorithms = []
-
-        for algo_name, evidences in detected_algos.items():
-            # Calculate overall confidence based on evidence types
-            max_confidence = max(e["confidence"] for e in evidences)
-            evidence_types = {e["evidence_type"] for e in evidences}
-
-            # Boost confidence if multiple evidence types
-            if len(evidence_types) > 1:
-                max_confidence = min(max_confidence + 0.2, 0.95)
-
-            algorithms.append(
-                {
-                    "algorithm": algo_name,
-                    "confidence": max_confidence,
-                    "evidence_count": len(evidences),
-                    "evidence_types": list(evidence_types),
-                    "evidences": evidences[:3],  # Limit to top 3 evidences
-                }
-            )
-
-        return algorithms
+        detect_algorithms_from_strings(strings_result, detected_algos)
 
     def _detect_crypto_algorithms(self) -> list[dict[str, Any]]:
         """Detect crypto algorithms from strings and API calls with confidence scoring"""
@@ -355,7 +205,7 @@ class CryptoAnalyzer:
             self._detect_via_strings(detected_algos)
 
             # Consolidate and return results
-            return self._consolidate_detections(detected_algos)
+            return consolidate_detections(detected_algos)
 
         except Exception as e:
             logger.error(f"Error detecting crypto algorithms: {e}")
@@ -366,8 +216,7 @@ class CryptoAnalyzer:
         entropy_info = {}
 
         try:
-            # Get sections information
-            sections = safe_cmdj(self.r2, "iSj")
+            sections = self._get_sections()
 
             if sections:
                 for section in sections:
@@ -389,7 +238,7 @@ class CryptoAnalyzer:
         return entropy_info
 
     def _calculate_section_entropy(self, section: dict[str, Any]) -> float:
-        """Calculate entropy for a section"""
+        """Calculate entropy for a section."""
         try:
             vaddr = section.get("vaddr", 0)
             size = section.get("size", 0)
@@ -397,9 +246,7 @@ class CryptoAnalyzer:
             if size == 0:
                 return 0.0
 
-            # Read section data
-            data_cmd = f"p8 {size} @ {vaddr}"
-            hex_data = safe_cmd(self.r2, data_cmd)
+            hex_data = self._read_bytes(vaddr, size).hex() if size else ""
 
             if not hex_data:
                 return 0.0
@@ -410,25 +257,9 @@ class CryptoAnalyzer:
             except ValueError:
                 return 0.0
 
-            # Calculate entropy
             if len(data) == 0:
                 return 0.0
-
-            # Count byte frequencies
-            byte_counts = [0] * 256
-            for byte in data:
-                byte_counts[byte] += 1
-
-            # Calculate entropy using Shannon entropy formula: -Σ(p * log2(p))
-            entropy = 0.0
-            data_len = len(data)
-
-            for count in byte_counts:
-                if count > 0:
-                    p = count / data_len
-                    entropy -= p * math.log2(p)
-
-            return entropy
+            return shannon_entropy(data)
 
         except Exception as e:
             logger.error(f"Error calculating section entropy: {e}")
@@ -440,7 +271,7 @@ class CryptoAnalyzer:
 
         try:
             # Look for XOR loops (common in crypto and packing)
-            xor_patterns = safe_cmd(self.r2, "/c xor")
+            xor_patterns = self._search_text("xor")
             if xor_patterns and xor_patterns.strip():
                 patterns.append(
                     {
@@ -451,7 +282,7 @@ class CryptoAnalyzer:
                 )
 
             # Look for bit rotation operations
-            rot_patterns = safe_cmd(self.r2, "/c rol,ror")
+            rot_patterns = self._search_text("rol,ror")
             if rot_patterns and rot_patterns.strip():
                 patterns.append(
                     {
@@ -463,7 +294,7 @@ class CryptoAnalyzer:
 
             # Look for table lookups (S-boxes)
             # This is a simplified check
-            mov_patterns = safe_cmd(self.r2, "/c mov.*\\[.*\\\\+.*\\]")
+            mov_patterns = self._search_text("mov.*\\[.*\\\\+.*\\]")
             if mov_patterns and mov_patterns.strip():
                 count = len(mov_patterns.strip().split("\n"))
                 if count > 10:  # Threshold for table lookups
@@ -481,24 +312,49 @@ class CryptoAnalyzer:
         return patterns
 
     def _parse_search_results(self, result: str) -> list[str]:
-        """Parse radare2 search results"""
-        addresses = []
+        """Parse radare2 search results."""
+        return parse_search_results(result)
 
-        lines = result.strip().split("\n")
-        for line in lines:
-            if line.startswith("0x"):
-                addr = line.split()[0]
-                addresses.append(addr)
+    @staticmethod
+    def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        if isinstance(value, dict):
+            return [value]
+        return []
 
-        return addresses
+    def _get_imports(self) -> list[dict[str, Any]]:
+        if self.adapter is not None and hasattr(self.adapter, "get_imports"):
+            return self._coerce_dict_list(self.adapter.get_imports())
+        return []
+
+    def _get_sections(self) -> list[dict[str, Any]]:
+        if self.adapter is not None and hasattr(self.adapter, "get_sections"):
+            return self._coerce_dict_list(self.adapter.get_sections())
+        return []
+
+    def _get_strings(self) -> list[dict[str, Any]]:
+        if self.adapter is not None and hasattr(self.adapter, "get_strings"):
+            return self._coerce_dict_list(self.adapter.get_strings())
+        return []
+
+    def _search_text(self, pattern: str) -> str:
+        return search_text(self.adapter, self.r2, pattern)
+
+    def _search_hex(self, hex_pattern: str) -> str:
+        return search_hex(self.adapter, self.r2, hex_pattern)
+
+    def _read_bytes(self, vaddr: int, size: int) -> bytes:
+        if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
+            return cast(bytes, self.adapter.read_bytes(vaddr, size))
+        return b""
 
     def detect_crypto_libraries(self) -> list[dict[str, Any]]:
         """Detect crypto libraries by import analysis"""
         crypto_libs = []
 
         try:
-            # Get imports
-            imports = safe_cmdj(self.r2, "iij")
+            imports = self._get_imports()
 
             if imports:
                 crypto_api_patterns = {

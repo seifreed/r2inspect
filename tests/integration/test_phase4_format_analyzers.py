@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import r2pipe
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
@@ -25,10 +27,15 @@ def _config(tmp_path: Path) -> Config:
     return Config(str(tmp_path / "r2inspect_phase4.json"))
 
 
+def _open_adapter(path: str) -> tuple[Any, R2PipeAdapter]:
+    r2 = r2pipe.open(path)
+    return r2, R2PipeAdapter(r2)
+
+
 def test_pe_analyzer_basic(tmp_path: Path) -> None:
-    r2 = r2pipe.open(FIXTURES["hello_pe"])
+    r2, adapter = _open_adapter(FIXTURES["hello_pe"])
     try:
-        analyzer = PEAnalyzer(r2, _config(tmp_path), filepath=FIXTURES["hello_pe"])
+        analyzer = PEAnalyzer(adapter, _config(tmp_path), filepath=FIXTURES["hello_pe"])
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -42,9 +49,9 @@ def test_pe_analyzer_basic(tmp_path: Path) -> None:
 
 
 def test_elf_analyzer_basic(tmp_path: Path) -> None:
-    r2 = r2pipe.open(FIXTURES["hello_elf"])
+    r2, adapter = _open_adapter(FIXTURES["hello_elf"])
     try:
-        analyzer = ELFAnalyzer(r2, _config(tmp_path))
+        analyzer = ELFAnalyzer(adapter, _config(tmp_path))
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -59,9 +66,9 @@ def test_elf_analyzer_basic(tmp_path: Path) -> None:
 
 
 def test_macho_analyzer_basic(tmp_path: Path) -> None:
-    r2 = r2pipe.open(FIXTURES["hello_macho"])
+    r2, adapter = _open_adapter(FIXTURES["hello_macho"])
     try:
-        analyzer = MachOAnalyzer(r2, _config(tmp_path))
+        analyzer = MachOAnalyzer(adapter, _config(tmp_path))
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -107,9 +114,9 @@ def test_rich_header_analyzer_pe_and_non_pe(tmp_path: Path) -> None:
 
 
 def test_overlay_analyzer_no_overlay(tmp_path: Path) -> None:
-    r2 = r2pipe.open(FIXTURES["hello_pe"])
+    r2, adapter = _open_adapter(FIXTURES["hello_pe"])
     try:
-        result = OverlayAnalyzer(r2).analyze()
+        result = OverlayAnalyzer(adapter).analyze()
     finally:
         r2.quit()
 

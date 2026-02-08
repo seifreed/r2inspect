@@ -9,7 +9,7 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from enum import Enum
-from typing import Any
+from typing import Any, TypedDict
 
 
 class CircuitState(Enum):
@@ -35,7 +35,7 @@ class CircuitBreaker:
         recovery_timeout: float = 60.0,
         expected_exception: tuple[type[BaseException], ...] = (Exception,),
         name: str = "default",
-    ):
+    ) -> None:
         """
         Initialize circuit breaker
 
@@ -65,16 +65,16 @@ class CircuitBreaker:
         # Thread safety
         self.lock = threading.Lock()
 
-    def __call__(self, func: Callable) -> Callable:
+    def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """Decorator to wrap function with circuit breaker"""
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             return self.call(func, *args, **kwargs)
 
         return wrapper
 
-    def call(self, func: Callable, *args, **kwargs) -> Any:
+    def call(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """
         Call function with circuit breaker protection
 
@@ -112,7 +112,7 @@ class CircuitBreaker:
             self._on_failure()
             raise
 
-    def _on_success(self):
+    def _on_success(self) -> None:
         """Handle successful call"""
         with self.lock:
             self.total_successes += 1
@@ -123,7 +123,7 @@ class CircuitBreaker:
                 self._set_state(CircuitState.CLOSED)
                 self.failure_count = 0
 
-    def _on_failure(self):
+    def _on_failure(self) -> None:
         """Handle failed call"""
         with self.lock:
             self.total_failures += 1
@@ -140,13 +140,13 @@ class CircuitBreaker:
 
         return time.time() - self.last_failure_time >= self.recovery_timeout
 
-    def _set_state(self, new_state: CircuitState):
+    def _set_state(self, new_state: CircuitState) -> None:
         """Change circuit state"""
         if self.state != new_state:
             self.state = new_state
             self.state_changes += 1
 
-    def reset(self):
+    def reset(self) -> None:
         """Manually reset the circuit breaker"""
         with self.lock:
             self.state = CircuitState.CLOSED
@@ -173,19 +173,28 @@ class CircuitBreaker:
             }
 
 
+class CommandStats(TypedDict):
+    calls: int
+    failures: int
+    avg_time: float
+    recent_failures: deque[float]
+
+
+def _default_command_stats() -> CommandStats:
+    return {
+        "calls": 0,
+        "failures": 0,
+        "avg_time": 0.0,
+        "recent_failures": deque(maxlen=50),
+    }
+
+
 class R2CommandCircuitBreaker:
     """Circuit breaker specifically for r2pipe commands"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.breakers: dict[str, CircuitBreaker] = {}
-        self.command_stats = defaultdict(
-            lambda: {
-                "calls": 0,
-                "failures": 0,
-                "avg_time": 0.0,
-                "recent_failures": deque(maxlen=50),
-            }
-        )
+        self.command_stats: defaultdict[str, CommandStats] = defaultdict(_default_command_stats)
         self.lock = threading.Lock()
 
     def get_breaker(self, command_type: str) -> CircuitBreaker:
@@ -215,7 +224,7 @@ class R2CommandCircuitBreaker:
 
             return self.breakers[command_type]
 
-    def execute_command(self, r2_instance, command: str, command_type: str = "generic"):
+    def execute_command(self, r2_instance: Any, command: str, command_type: str = "generic") -> Any:
         """Execute r2 command with circuit breaker protection"""
         breaker = self.get_breaker(command_type)
 
@@ -248,7 +257,9 @@ class R2CommandCircuitBreaker:
             # For JSON commands, return None; for text commands, return empty string
             return None if command.endswith("j") else ""
 
-    def _record_command_stats(self, command_type: str, success: bool, execution_time: float):
+    def _record_command_stats(
+        self, command_type: str, success: bool, execution_time: float
+    ) -> None:
         """Record command execution statistics"""
         with self.lock:
             stats = self.command_stats[command_type]
@@ -295,7 +306,7 @@ class R2CommandCircuitBreaker:
 
         return stats
 
-    def reset_all(self):
+    def reset_all(self) -> None:
         """Reset all circuit breakers"""
         with self.lock:
             for breaker in self.breakers.values():

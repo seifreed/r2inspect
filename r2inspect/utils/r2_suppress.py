@@ -7,8 +7,11 @@ import contextlib
 import io
 import sys
 import warnings
-from typing import Any
+from collections.abc import Iterator
+from types import TracebackType
+from typing import Any, Literal, TextIO
 
+from ..interfaces import R2CommandInterface
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,29 +20,38 @@ logger = get_logger(__name__)
 class R2PipeErrorSuppressor:
     """Context manager to suppress r2pipe.cmdj errors"""
 
-    def __init__(self):
-        self.original_stderr = None
-        self.devnull = None
+    def __init__(self) -> None:
+        self.original_stderr: TextIO | None = None
+        self.original_stdout: TextIO | None = None
+        self.devnull: io.StringIO | None = None
 
-    def __enter__(self):
+    def __enter__(self) -> "R2PipeErrorSuppressor":
         """Suppress stderr output temporarily"""
         self.original_stderr = sys.stderr
+        self.original_stdout = sys.stdout
         self.devnull = io.StringIO()
         sys.stderr = self.devnull
+        sys.stdout = self.devnull
         # Also suppress warnings
         warnings.filterwarnings("ignore", message=".*r2pipe.*")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
         """Restore stderr"""
         sys.stderr = self.original_stderr
-        if self.devnull:
-            self.devnull.close()
+        sys.stdout = self.original_stdout
         # Don't suppress the exception
         return False
 
 
-def silent_cmdj(r2_instance, command: str, default: Any | None = None) -> Any | None:
+def silent_cmdj(
+    r2_instance: R2CommandInterface | None, command: str, default: Any | None = None
+) -> Any | None:
     """
     Execute r2pipe cmdj command with complete error suppression.
 
@@ -71,11 +83,10 @@ def silent_cmdj(r2_instance, command: str, default: Any | None = None) -> Any | 
         return _try_cmd_parse(r2_instance, command, default)
     except (OSError, json.JSONDecodeError, TypeError):
         logger.debug("Suppressed r2pipe command error for %s", command)
-
     return default
 
 
-def _try_cmdj(r2_instance, command: str, default: Any | None) -> Any | None:
+def _try_cmdj(r2_instance: R2CommandInterface, command: str, default: Any | None) -> Any | None:
     with R2PipeErrorSuppressor():
         try:
             result = r2_instance.cmdj(command)
@@ -84,7 +95,9 @@ def _try_cmdj(r2_instance, command: str, default: Any | None) -> Any | None:
             return default
 
 
-def _try_cmd_parse(r2_instance, command: str, default: Any | None) -> Any | None:
+def _try_cmd_parse(
+    r2_instance: R2CommandInterface, command: str, default: Any | None
+) -> Any | None:
     with R2PipeErrorSuppressor():
         raw_result = r2_instance.cmd(command)
         if raw_result and raw_result.strip():
@@ -106,7 +119,7 @@ def _parse_raw_result(raw_result: str) -> Any | None:
 
 
 @contextlib.contextmanager
-def suppress_r2pipe_errors():
+def suppress_r2pipe_errors() -> Iterator[None]:
     """Context manager to suppress all r2pipe errors"""
     with R2PipeErrorSuppressor():
         yield

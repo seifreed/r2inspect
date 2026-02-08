@@ -1,38 +1,28 @@
 #!/usr/bin/env python3
-"""
-Section Analysis Module using r2pipe
-"""
+"""Section analysis module."""
 
-import math
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
+from ..utils.command_helpers import cmd as cmd_helper
+from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd, safe_cmdj
+from .domain_helpers import STANDARD_PE_SECTIONS, shannon_entropy, suspicious_section_name_indicator
 
 logger = get_logger(__name__)
 
 
 class SectionAnalyzer(BaseAnalyzer):
-    """PE sections analysis using radare2"""
+    """Section analysis using backend data."""
 
-    def __init__(self, r2, config):
-        super().__init__(r2=r2, config=config)
+    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+        super().__init__(adapter=adapter, config=config)
 
         # Standard PE section names
-        self.standard_sections = [
-            ".text",
-            ".data",
-            ".rdata",
-            ".bss",
-            ".idata",
-            ".edata",
-            ".rsrc",
-            ".reloc",
-            ".debug",
-            ".pdata",
-            ".xdata",
-        ]
+        self.standard_sections = STANDARD_PE_SECTIONS
+        self._arch: str | None = None
+        self._functions_cache: list[dict[str, Any]] | None = None
 
     def get_category(self) -> str:
         return "metadata"
@@ -68,7 +58,7 @@ class SectionAnalyzer(BaseAnalyzer):
         sections_info = []
 
         try:
-            sections = safe_cmdj(self.r2, "iSj", [])
+            sections = self._cmd_list("iSj")
 
             if sections and isinstance(sections, list):
                 for section in sections:
@@ -150,7 +140,6 @@ class SectionAnalyzer(BaseAnalyzer):
         return vsize / raw_size if vsize > 0 else 0.0
 
     def _calculate_entropy(self, section: dict[str, Any]) -> float:
-        """Calculate Shannon entropy for section"""
         try:
             vaddr = section.get("vaddr", 0)
             size = section.get("size", 0)
@@ -160,35 +149,11 @@ class SectionAnalyzer(BaseAnalyzer):
 
             # Read section data (limit to 1MB for performance)
             read_size = min(size, 1048576)
-            data_cmd = f"p8 {read_size} @ {vaddr}"
-            hex_data = self.r2.cmd(data_cmd)
-
-            if not hex_data or not hex_data.strip():
-                return 0.0
-
-            try:
-                data = bytes.fromhex(hex_data.strip())
-            except ValueError:
-                return 0.0
+            data = self.adapter.read_bytes(vaddr, read_size)
 
             if len(data) == 0:
                 return 0.0
-
-            # Calculate byte frequency
-            byte_counts = [0] * 256
-            for byte in data:
-                byte_counts[byte] += 1
-
-            # Calculate Shannon entropy
-            entropy = 0.0
-            data_len = len(data)
-
-            for count in byte_counts:
-                if count > 0:
-                    p = count / data_len
-                    entropy -= p * math.log2(p)
-
-            return entropy
+            return shannon_entropy(data)
 
         except Exception as e:
             logger.error(f"Error calculating entropy: {e}")
@@ -243,10 +208,9 @@ class SectionAnalyzer(BaseAnalyzer):
         ]
 
         if isinstance(name, str):
-            for sus_name in suspicious_names:
-                if sus_name in name.lower():
-                    indicators.append(f"Suspicious section name: {sus_name}")
-                    break
+            indicator = suspicious_section_name_indicator(name, suspicious_names)
+            if indicator:
+                indicators.append(indicator)
 
         return indicators
 
@@ -393,43 +357,73 @@ class SectionAnalyzer(BaseAnalyzer):
             if size == 0:
                 return code_info
 
-            # Get function count in this section
-            functions_cmd = f"aflj @ {vaddr}"
-            functions = safe_cmdj(self.r2, functions_cmd, [])
+            functions = self._get_functions_in_section(vaddr, size)
+            code_info["function_count"] = len(functions)
 
-            if functions and isinstance(functions, list):
-                code_info["function_count"] = len(functions)
+            if functions:
+                sizes = [
+                    f.get("size", 0)
+                    for f in functions
+                    if isinstance(f, dict) and f.get("size", 0) > 0
+                ]
+                if sizes:
+                    code_info["avg_function_size"] = sum(sizes) / len(sizes)
+                    code_info["min_function_size"] = min(sizes)
+                    code_info["max_function_size"] = max(sizes)
 
-                # Analyze function characteristics
-                if len(functions) > 0:
-                    # Ensure each function is a dict
-                    sizes = [
-                        f.get("size", 0)
-                        for f in functions
-                        if isinstance(f, dict) and f.get("size", 0) > 0
-                    ]
-                    if sizes:
-                        code_info["avg_function_size"] = sum(sizes) / len(sizes)
-                        code_info["min_function_size"] = min(sizes)
-                        code_info["max_function_size"] = max(sizes)
-            else:
-                code_info["function_count"] = 0
-
-            # Check for NOP sleds or padding
-            nop_count = (
-                len(safe_cmd(self.r2, f"/c nop @ {vaddr}").strip().split("\n"))
-                if safe_cmd(self.r2, f"/c nop @ {vaddr}").strip()
-                else 0
-            )
-
-            if nop_count > size / 100:  # More than 1% NOPs
-                code_info["excessive_nops"] = True
-                code_info["nop_ratio"] = nop_count / (size / 4)  # Approximate instruction count
+            # Check for NOP sleds or padding without expensive global searches
+            nop_count, sample_size = self._count_nops_in_section(vaddr, size)
+            if sample_size > 0:
+                code_info["nop_sample_size"] = sample_size
+                code_info["nop_count"] = nop_count
+                code_info["nop_ratio"] = nop_count / sample_size
+                if nop_count > sample_size / 100:  # >1% of sampled bytes
+                    code_info["excessive_nops"] = True
 
         except Exception as e:
             logger.error(f"Error analyzing code section: {e}")
 
         return code_info
+
+    def _get_functions_in_section(self, vaddr: int, size: int) -> list[dict[str, Any]]:
+        if size <= 0:
+            return []
+        if self._functions_cache is None:
+            self._functions_cache = self._cmd_list("aflj")
+        functions = self._functions_cache or []
+        end = vaddr + size
+        filtered: list[dict[str, Any]] = []
+        for func in functions:
+            if not isinstance(func, dict):
+                continue
+            addr = func.get("offset", func.get("addr"))
+            if isinstance(addr, int) and vaddr <= addr < end:
+                filtered.append(func)
+        return filtered
+
+    def _count_nops_in_section(self, vaddr: int, size: int) -> tuple[int, int]:
+        arch = self._get_arch()
+        if not arch or size <= 0:
+            return 0, 0
+        if arch not in {"x86", "x86_64", "i386", "amd64"}:
+            return 0, 0
+
+        read_size = min(size, 1024 * 1024)
+        data = self.adapter.read_bytes(vaddr, read_size)
+        if not data:
+            return 0, 0
+        return data.count(b"\x90"), len(data)
+
+    def _get_arch(self) -> str | None:
+        if self._arch is not None:
+            return self._arch
+        try:
+            info = self.adapter.get_file_info() if self.adapter is not None else {}
+            arch = info.get("arch") if isinstance(info, dict) else None
+            self._arch = str(arch).lower() if arch else None
+        except Exception:
+            self._arch = None
+        return self._arch
 
     def get_section_summary(self) -> dict[str, Any]:
         """Get summary of all sections"""
@@ -449,7 +443,7 @@ class SectionAnalyzer(BaseAnalyzer):
             if sections_info:
                 summary["total_sections"] = len(sections_info)
 
-                total_entropy = 0
+                total_entropy = 0.0
                 flag_counts: dict[str, int] = {}
 
                 for section in sections_info:
@@ -462,6 +456,15 @@ class SectionAnalyzer(BaseAnalyzer):
             logger.error(f"Error getting section summary: {e}")
 
         return summary
+
+    def _cmd(self, command: str) -> str:
+        return cmd_helper(self.adapter, self.r2, command)
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _update_summary_for_section(
         self,
@@ -476,7 +479,7 @@ class SectionAnalyzer(BaseAnalyzer):
         if section.get("suspicious_indicators"):
             summary["suspicious_sections"] += 1
 
-        entropy = section.get("entropy", 0)
+        entropy = float(section.get("entropy", 0.0) or 0.0)
         if entropy > 7.0:
             summary["high_entropy_sections"] += 1
 

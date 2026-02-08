@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-Converters Between Dict and Pydantic Models
-
-Utilities to convert between traditional dict results and type-safe Pydantic models,
-ensuring backward compatibility and seamless migration.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Converters between dict results and schema models."""
 
 import logging
 from typing import Any, TypeVar
@@ -62,7 +54,6 @@ def dict_to_model(data: dict[str, Any], model_class: type[TModel], strict: bool 
 
 def model_to_dict(
     model: BaseModel,
-    include_none: bool = False,
     by_alias: bool = False,
     exclude_none: bool = True,
 ) -> dict[str, Any]:
@@ -71,7 +62,6 @@ def model_to_dict(
 
     Args:
         model: Pydantic model instance
-        include_none: Include fields with None values (deprecated, use exclude_none)
         by_alias: Use field aliases instead of field names
         exclude_none: Exclude fields with None values (recommended)
 
@@ -88,10 +78,6 @@ def model_to_dict(
         >>> print(data["hash_type"])
         'ssdeep'
     """
-    # Handle deprecated include_none parameter
-    if include_none:
-        exclude_none = False
-
     return model.model_dump(exclude_none=exclude_none, by_alias=by_alias)
 
 

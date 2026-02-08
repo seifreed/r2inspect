@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""
-Format Analyzer Pydantic Schemas
-
-Schemas for binary format analyzers (PE, ELF, Mach-O)
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Binary format analyzer schemas."""
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -14,24 +7,7 @@ from .base import AnalysisResultBase
 
 
 class SectionInfo(BaseModel):
-    """
-    Information about a binary section.
-
-    Represents a single section in a PE, ELF, or Mach-O binary.
-
-    Attributes:
-        name: Section name (e.g., ".text", ".data")
-        virtual_address: Virtual address in memory
-        virtual_size: Virtual size in memory
-        raw_size: Raw size on disk
-        entropy: Section entropy (0.0-8.0)
-        permissions: Permission flags (e.g., "r-x")
-        is_executable: Whether section is executable
-        is_writable: Whether section is writable
-        is_readable: Whether section is readable
-        flags: Raw permission flags
-        suspicious_indicators: List of suspicious characteristics
-    """
+    """Information about a binary section."""
 
     name: str = Field(..., description="Section name")
 
@@ -78,15 +54,7 @@ class SectionInfo(BaseModel):
         return len(self.suspicious_indicators) > 0
 
     def has_permission(self, permission: str) -> bool:
-        """
-        Check if section has a specific permission.
-
-        Args:
-            permission: Permission to check ('r', 'w', or 'x')
-
-        Returns:
-            True if section has the permission
-        """
+        """Check if section has a specific permission."""
         perm_map = {
             "r": self.is_readable,
             "w": self.is_writable,
@@ -96,22 +64,7 @@ class SectionInfo(BaseModel):
 
 
 class SecurityFeatures(BaseModel):
-    """
-    Security features detected in binary.
-
-    Attributes:
-        aslr: Address Space Layout Randomization enabled
-        dep: Data Execution Prevention (NX) enabled
-        nx: No Execute bit set (ELF)
-        seh: Structured Exception Handling enabled
-        guard_cf: Control Flow Guard enabled
-        authenticode: Authenticode signature present
-        stack_canary: Stack canary protection enabled
-        pie: Position Independent Executable (ELF)
-        relro: RELRO protection enabled (ELF)
-        rpath: RPATH present (ELF)
-        runpath: RUNPATH present (ELF)
-    """
+    """Security features detected in a binary."""
 
     # PE security features
     aslr: bool = Field(False, description="ASLR enabled")
@@ -133,37 +86,14 @@ class SecurityFeatures(BaseModel):
         return [field_name for field_name, value in self.model_dump().items() if value is True]
 
     def security_score(self) -> int:
-        """
-        Calculate security score (0-100) based on enabled features.
-
-        Returns:
-            Security score as integer
-        """
+        """Calculate security score (0-100) based on enabled features."""
         enabled = len(self.get_enabled_features())
         total = len(self.model_fields)
         return int((enabled / total) * 100) if total > 0 else 0
 
 
 class FormatAnalysisResult(AnalysisResultBase):
-    """
-    Result from format analyzers (PE, ELF, Mach-O).
-
-    Represents the analysis of binary file format information.
-
-    Attributes:
-        format: Binary format (PE, ELF, Mach-O, PE32, PE32+, ELF32, ELF64)
-        architecture: CPU architecture (x86, x64, arm, etc.)
-        bits: Architecture bit width (32 or 64)
-        endian: Endianness (little, big)
-        machine: Machine type
-        type: Binary type (exe, dll, shared object, etc.)
-        entry_point: Entry point address
-        image_base: Image base address
-        sections: List of sections
-        security_features: Security features detected
-        compile_time: Compilation timestamp
-        compiler: Compiler information
-    """
+    """Result from format analyzers (PE, ELF, Mach-O)."""
 
     format: str = Field(..., description="Binary format (PE, ELF, Mach-O)")
 

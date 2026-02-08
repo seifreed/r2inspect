@@ -28,7 +28,7 @@ def measure_end_to_end():
     print("Phase 1: Import")
     print("-" * 80)
     import_start = time.perf_counter()
-    from r2inspect import R2Inspector
+    from r2inspect import create_inspector
 
     import_time = time.perf_counter() - import_start
     print(f"Import time: {import_time * 1000:.2f} ms")
@@ -38,7 +38,7 @@ def measure_end_to_end():
     print("Phase 2: R2Inspector Initialization")
     print("-" * 80)
     init_start = time.perf_counter()
-    inspector = R2Inspector(test_file, verbose=False)
+    inspector = create_inspector(test_file, verbose=False)
     init_time = time.perf_counter() - init_start
     print(f"Initialization time: {init_time * 1000:.2f} ms")
     print()
@@ -60,8 +60,12 @@ def measure_end_to_end():
     print("SUMMARY")
     print("=" * 80)
     total_time = import_time + init_time + analysis_time
-    print(f"Import:         {import_time * 1000:8.2f} ms ({import_time / total_time * 100:5.1f}%)")
-    print(f"Initialization: {init_time * 1000:8.2f} ms ({init_time / total_time * 100:5.1f}%)")
+    print(
+        f"Import:         {import_time * 1000:8.2f} ms ({import_time / total_time * 100:5.1f}%)"
+    )
+    print(
+        f"Initialization: {init_time * 1000:8.2f} ms ({init_time / total_time * 100:5.1f}%)"
+    )
     print(
         f"Analysis:       {analysis_time * 1000:8.2f} ms ({analysis_time / total_time * 100:5.1f}%)"
     )

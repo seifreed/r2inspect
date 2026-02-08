@@ -69,7 +69,7 @@ class FileValidator:
 
             return self._is_readable()
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"Error validating file {self.filename}: {e}")
             return False
 
@@ -81,7 +81,10 @@ class FileValidator:
             True if file exists, False otherwise
         """
         if self.file_path.exists():
-            return True
+            if self.file_path.is_file():
+                return True
+            logger.error(f"Path is not a file: {self.filename}")
+            return False
 
         logger.error(f"File does not exist: {self.filename}")
         return False

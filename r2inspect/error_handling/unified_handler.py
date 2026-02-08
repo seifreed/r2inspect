@@ -61,7 +61,7 @@ class CircuitBreakerState:
             # HALF_OPEN state allows one request
             return True
 
-    def record_success(self):
+    def record_success(self) -> None:
         """Record successful execution"""
         with self.lock:
             if self.state == CircuitState.HALF_OPEN:
@@ -69,7 +69,7 @@ class CircuitBreakerState:
             self.failure_count = 0
             self.last_failure_time = None
 
-    def record_failure(self):
+    def record_failure(self) -> None:
         """Record failed execution"""
         with self.lock:
             self.failure_count += 1
@@ -270,7 +270,7 @@ def handle_errors(policy: ErrorPolicy) -> Callable:
         func_id = f"{func.__module__}.{func.__qualname__}"
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 # Select execution strategy based on policy
                 match policy.strategy:
@@ -302,7 +302,7 @@ def handle_errors(policy: ErrorPolicy) -> Callable:
     return decorator
 
 
-def reset_circuit_breakers():
+def reset_circuit_breakers() -> None:
     """Reset all circuit breakers to closed state"""
     with _circuit_lock:
         for circuit in _circuit_breakers.values():
