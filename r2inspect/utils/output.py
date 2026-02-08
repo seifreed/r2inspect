@@ -125,7 +125,7 @@ class OutputFormatter:
 
     def _extract_csv_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Extract specific fields for CSV export"""
-        csv_row = {}
+        csv_row: dict[str, Any] = {}
 
         try:
             self._add_file_info(csv_row, data)
@@ -161,23 +161,28 @@ class OutputFormatter:
 
     def _extract_compile_time(self, data: dict[str, Any]) -> str:
         if "pe_info" in data and "compile_time" in data["pe_info"]:
-            return data["pe_info"]["compile_time"]
+            value = data["pe_info"]["compile_time"]
+            return str(value) if value else ""
         if "elf_info" in data and "compile_time" in data["elf_info"]:
-            return data["elf_info"]["compile_time"]
+            value = data["elf_info"]["compile_time"]
+            return str(value) if value else ""
         if "macho_info" in data and "compile_time" in data["macho_info"]:
-            return data["macho_info"]["compile_time"]
+            value = data["macho_info"]["compile_time"]
+            return str(value) if value else ""
         if "file_info" in data and "compile_time" in data["file_info"]:
-            return data["file_info"]["compile_time"]
+            value = data["file_info"]["compile_time"]
+            return str(value) if value else ""
         return ""
 
     def _extract_imphash(self, data: dict[str, Any]) -> str:
         if "pe_info" in data and "imphash" in data["pe_info"]:
-            return data["pe_info"]["imphash"]
+            value = data["pe_info"]["imphash"]
+            return str(value) if value else ""
         return ""
 
     def _add_ssdeep(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
         ssdeep_info = data.get("ssdeep", {})
-        csv_row["ssdeep_hash"] = ssdeep_info.get("ssdeep_hash", "")
+        csv_row["ssdeep_hash"] = ssdeep_info.get("hash_value", "")
 
     def _add_tlsh(self, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
         tlsh_info = data.get("tlsh", {})
@@ -297,37 +302,6 @@ class OutputFormatter:
         except Exception:
             return file_type
 
-    def _flatten_results(self, data: dict[str, Any], prefix: str = "") -> list[dict[str, Any]]:
-        """Flatten nested dictionary for CSV export (legacy method, kept for compatibility)"""
-        rows = []
-
-        try:
-            for key, value in data.items():
-                current_prefix = f"{prefix}.{key}" if prefix else key
-                rows.extend(self._flatten_value(value, current_prefix))
-
-        except Exception as e:
-            rows.append({"field": "error", "value": f"Flattening failed: {str(e)}"})
-
-        return rows
-
-    def _flatten_value(self, value: Any, prefix: str) -> list[dict[str, Any]]:
-        """Flatten a single value based on its type"""
-        if isinstance(value, dict):
-            return self._flatten_results(value, prefix)
-        elif isinstance(value, list):
-            return self._flatten_list(value, prefix)
-        else:
-            return [{"field": prefix, "value": str(value)}]
-
-    def _flatten_list(self, items: list, prefix: str) -> list[dict[str, Any]]:
-        """Flatten a list of items"""
-        rows = []
-        for i, item in enumerate(items):
-            item_prefix = f"{prefix}[{i}]"
-            rows.extend(self._flatten_value(item, item_prefix))
-        return rows
-
     def format_table(self, data: dict[str, Any], title: str = "Analysis Results") -> Table:
         """Format data as a Rich table"""
         table = Table(title=title, show_header=True)
@@ -358,7 +332,7 @@ class OutputFormatter:
             table.add_row(
                 section.get("name", "Unknown"),
                 str(section.get("raw_size", 0)),
-                section.get("flags", ""),
+                str(section.get("flags", "")),
                 f"{section.get('entropy', 0):.2f}",
                 suspicious,
             )

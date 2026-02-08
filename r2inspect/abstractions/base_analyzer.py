@@ -1,144 +1,30 @@
 #!/usr/bin/env python3
-"""
-Base Analyzer Abstract Base Class
-
-This module provides the foundational interface for all r2inspect analyzers.
-It implements a flexible, dependency-injection-friendly base class that enforces
-consistent structure across the entire analyzer ecosystem while supporting
-diverse initialization patterns.
-
-The BaseAnalyzer establishes:
-- Unified analyze() method interface for all analyzers
-- Flexible constructor supporting multiple dependency injection patterns
-- Common utility methods for logging, result formatting, and metadata
-- Integration with AnalysisResult for standardized output
-- Compatibility with existing HashingStrategy template method pattern
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Base analyzer interface and shared utilities."""
 
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from ..utils.logger import get_logger
-from .analysis_result import AnalysisResult
 
 logger = get_logger(__name__)
 
 
 class BaseAnalyzer(ABC):
-    """
-    Abstract base class for all r2inspect analyzers.
-
-    This class provides a unified interface and common functionality for all
-    analyzers in the r2inspect ecosystem. It supports multiple constructor
-    patterns through flexible dependency injection while enforcing consistent
-    analyze() method semantics.
-
-    Design Philosophy:
-        - Flexibility: Support diverse analyzer requirements through **kwargs
-        - Consistency: Enforce uniform analyze() interface across all implementations
-        - Utility: Provide common helper methods to reduce code duplication
-        - Integration: Work seamlessly with AnalyzerRegistry and AnalysisResult
-        - Extensibility: Easy to subclass without breaking existing implementations
-
-    Constructor Patterns Supported:
-        1. r2 + config: Most format analyzers (PEAnalyzer, ELFAnalyzer)
-        2. r2 only: Simple analyzers (AuthenticodeAnalyzer, OverlayAnalyzer)
-        3. r2 + filepath: Hash/similarity analyzers (BinlexAnalyzer, SimHashAnalyzer)
-        4. filepath + r2 (optional): Hashing strategy pattern (SSDeepAnalyzer)
-        5. r2 + config + filepath: Complex analyzers (YaraAnalyzer, PEAnalyzer)
-
-    Common Attributes:
-        r2: Optional r2pipe instance for binary analysis
-        config: Optional configuration object
-        filepath: Optional Path to the file being analyzed
-        name: Analyzer name (derived from class name)
-        category: Analyzer category (must be set by subclass)
-        supported_formats: Set of supported file formats (empty = all formats)
-
-    Abstract Methods:
-        analyze(): Primary analysis method returning dict[str, Any]
-
-    Optional Override Methods:
-        get_name(): Return analyzer name (default: class name in snake_case)
-        get_category(): Return analyzer category (default: "unknown")
-        get_description(): Return analyzer description
-        supports_format(): Check if analyzer supports a file format
-        is_available(): Check if analyzer dependencies are available
-
-    Example Usage:
-        >>> class CustomAnalyzer(BaseAnalyzer):
-        ...     def __init__(self, r2, config):
-        ...         super().__init__(r2=r2, config=config)
-        ...
-        ...     def analyze(self) -> dict[str, Any]:
-        ...         result = self._init_result_structure()
-        ...         # Perform analysis...
-        ...         result["data"] = self._extract_data()
-        ...         return result
-        ...
-        ...     def get_category(self) -> str:
-        ...         return "metadata"
-        ...
-        ...     def supports_format(self, file_format: str) -> bool:
-        ...         return file_format.upper() in {"PE", "PE32", "PE32+"}
-
-    Integration with HashingStrategy:
-        HashingStrategy subclasses should NOT inherit from BaseAnalyzer directly
-        since HashingStrategy already provides a complete template method pattern.
-        Instead, HashingStrategy can be viewed as a specialized BaseAnalyzer
-        for the hashing domain.
-
-    Integration with Registry:
-        The AnalyzerRegistry stores analyzer classes and metadata. When instantiating
-        analyzers from the registry, use the flexible constructor:
-
-        >>> analyzer_class = registry.get_analyzer_class("pe_analyzer")
-        >>> analyzer = analyzer_class(r2=r2_instance, config=config_obj, filepath=path)
-    """
+    """Abstract base class for analyzers with shared helpers."""
 
     def __init__(
         self,
-        r2: Any | None = None,
+        adapter: Any | None = None,
         config: Any | None = None,
         filepath: Any | None = None,
         **kwargs: Any,
     ):
-        """
-        Initialize the base analyzer with flexible dependency injection.
-
-        This constructor accepts common dependencies as named parameters and
-        stores any additional parameters via **kwargs for subclass access.
-        This pattern supports all existing analyzer constructor signatures.
-
-        Args:
-            r2: Optional r2pipe instance for binary analysis
-            config: Optional configuration object (varies by analyzer)
-            filepath: Optional file path (str or Path) to the binary being analyzed
-            **kwargs: Additional analyzer-specific parameters
-
-        Example:
-            >>> # Pattern 1: r2 + config
-            >>> analyzer = PEAnalyzer(r2=r2_instance, config=config)
-            >>>
-            >>> # Pattern 2: r2 only
-            >>> analyzer = AuthenticodeAnalyzer(r2=r2_instance)
-            >>>
-            >>> # Pattern 3: r2 + filepath
-            >>> analyzer = BinlexAnalyzer(r2=r2_instance, filepath="/path/to/binary")
-            >>>
-            >>> # Pattern 4: filepath + optional r2
-            >>> analyzer = SSDeepAnalyzer(filepath="/path/to/binary", r2=None)
-            >>>
-            >>> # Pattern 5: All parameters
-            >>> analyzer = YaraAnalyzer(r2=r2_instance, config=config, filepath=path)
-        """
-        # Core dependencies - these are the most common across all analyzers
-        self.r2: Any = r2
+        """Initialize base analyzer with adapter/config/filepath."""
+        self.adapter: Any = adapter
+        self.r2: Any = adapter
         self.config: Any = config
 
         # Normalize filepath to Path object if provided
@@ -411,60 +297,6 @@ class BaseAnalyzer(ABC):
         # Subclasses should override to check dependencies
         return True
 
-    def to_analysis_result(
-        self, analysis_dict: dict[str, Any], file_format: str = "unknown"
-    ) -> AnalysisResult:
-        """
-        Convert analysis dictionary to standardized AnalysisResult.
-
-        This utility method converts the dictionary returned by analyze()
-        into a standardized AnalysisResult object for consistency across
-        the r2inspect framework.
-
-        Args:
-            analysis_dict: Dictionary returned by analyze()
-            file_format: Detected file format (PE, ELF, Mach-O, etc.)
-
-        Returns:
-            AnalysisResult object with analysis information populated
-
-        Raises:
-            ValueError: If filepath is not set or analysis_dict is invalid
-
-        Example:
-            >>> def analyze(self) -> dict[str, Any]:
-            ...     result = self._init_result_structure()
-            ...     # ... perform analysis ...
-            ...     return result
-            >>>
-            >>> # Convert to AnalysisResult for pipeline integration
-            >>> analysis_dict = analyzer.analyze()
-            >>> analysis_result = analyzer.to_analysis_result(
-            ...     analysis_dict, file_format="PE"
-            ... )
-        """
-        if not self.filepath:
-            raise ValueError("Cannot create AnalysisResult: filepath not set")
-
-        result = AnalysisResult(
-            file_path=self.filepath,
-            file_format=file_format,
-            execution_time=analysis_dict.get("execution_time"),
-        )
-
-        # Add error if present
-        if analysis_dict.get("error"):
-            result.add_error(analysis_dict["error"], context=self.get_name())
-
-        # Add warning if not available
-        if not analysis_dict.get("available"):
-            result.add_warning(
-                f"{self.get_name()} analyzer not available or analysis failed",
-                context=self.get_name(),
-            )
-
-        return result
-
     def _log_debug(self, message: str) -> None:
         """
         Log a debug message with analyzer context.
@@ -513,7 +345,7 @@ class BaseAnalyzer(ABC):
         """
         logger.error(f"[{self.get_name()}] {message}")
 
-    def _measure_execution_time(self, func):
+    def _measure_execution_time(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """
         Decorator to measure execution time of analysis methods.
 
@@ -533,7 +365,7 @@ class BaseAnalyzer(ABC):
             ...     pass
         """
 
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
             result = func(*args, **kwargs)
             elapsed = time.time() - start_time

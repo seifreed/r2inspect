@@ -21,6 +21,8 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+from typing import Any
+
 from rich.console import Console
 
 from ..utils.output import OutputFormatter
@@ -28,12 +30,12 @@ from ..utils.output import OutputFormatter
 console = Console()
 
 
-def show_strings_only(inspector):
+def show_strings_only(inspector: Any) -> None:
     """
     Show only strings analysis.
 
     Args:
-        inspector: R2Inspector instance
+        inspector: Inspector instance
     """
     console.print("[bold green]Extracting strings...[/bold green]")
     strings = inspector.get_strings()
@@ -48,18 +50,18 @@ def _print_help() -> None:
     )
 
 
-def _show_info_table(title: str, data: dict, formatter: OutputFormatter) -> None:
+def _show_info_table(title: str, data: dict[str, Any], formatter: OutputFormatter) -> None:
     console.print(formatter.format_table(data, title))
 
 
-def run_interactive_mode(inspector, options):
+def run_interactive_mode(inspector: Any, options: dict[str, Any]) -> None:
     """
     Run interactive analysis mode.
 
     Provides a command-line interface for exploring binary analysis.
 
     Args:
-        inspector: R2Inspector instance
+        inspector: Inspector instance
         options: Analysis options dictionary
     """
     # Import here to avoid circular dependency

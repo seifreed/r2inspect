@@ -21,16 +21,24 @@ GNU General Public License for more details.
 Author: Marc Rivero Lopez
 """
 
+from typing import Any
+
 from .policies import ErrorHandlingStrategy, ErrorPolicy
 from .presets import FAIL_FAST_POLICY, FALLBACK_POLICY, RETRY_POLICY, SAFE_POLICY
-from .unified_handler import handle_errors
 
 __all__ = [
     "ErrorHandlingStrategy",
     "ErrorPolicy",
-    "handle_errors",
     "SAFE_POLICY",
     "RETRY_POLICY",
     "FAIL_FAST_POLICY",
     "FALLBACK_POLICY",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "handle_errors":
+        from .unified_handler import handle_errors
+
+        return handle_errors
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

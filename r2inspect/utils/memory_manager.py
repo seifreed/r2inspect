@@ -7,12 +7,16 @@ import gc
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import psutil
 
 from .logger import get_logger
+
+if TYPE_CHECKING:
+    from ..interfaces import MemoryMonitorLike
 
 logger = get_logger(__name__)
 
@@ -117,7 +121,7 @@ class MemoryMonitor:
                 logger.error(f"Error checking memory: {e}")
                 return self._get_error_stats()
 
-    def _handle_warning_memory(self, stats: dict[str, Any]):
+    def _handle_warning_memory(self, stats: dict[str, Any]) -> None:
         """Handle warning memory threshold"""
         self.memory_warnings += 1
         logger.warning(
@@ -135,7 +139,7 @@ class MemoryMonitor:
             except Exception as e:
                 logger.error(f"Error in warning callback: {e}")
 
-    def _handle_critical_memory(self, stats: dict[str, Any]):
+    def _handle_critical_memory(self, stats: dict[str, Any]) -> None:
         """Handle critical memory threshold"""
         logger.error(
             f"Critical memory usage: {stats['process_memory_mb']:.1f}MB "
@@ -152,7 +156,7 @@ class MemoryMonitor:
             except Exception as e:
                 logger.error(f"Error in critical callback: {e}")
 
-    def _trigger_gc(self, aggressive: bool = False):
+    def _trigger_gc(self, aggressive: bool = False) -> None:
         """Trigger garbage collection"""
         if aggressive:
             # Multiple GC passes for aggressive cleanup
@@ -284,7 +288,7 @@ class MemoryMonitor:
 class MemoryAwareAnalyzer:
     """Base class for memory-aware analyzers"""
 
-    def __init__(self, memory_monitor: MemoryMonitor | None = None):
+    def __init__(self, memory_monitor: "MemoryMonitorLike | None" = None):
         self.memory_monitor = memory_monitor or MemoryMonitor()
 
     def should_skip_analysis(
@@ -311,10 +315,10 @@ class MemoryAwareAnalyzer:
 
     def safe_large_operation(
         self,
-        operation,
+        operation: Callable[[], Any],
         estimated_memory_mb: float,
         operation_name: str = "operation",
-    ):
+    ) -> Any | None:
         """
         Safely execute a large operation with memory monitoring
 
@@ -387,7 +391,7 @@ def check_memory_limits(file_size_bytes: int = 0, estimated_analysis_mb: float =
     )
 
 
-def configure_memory_limits(**kwargs):
+def configure_memory_limits(**kwargs: Any) -> None:
     """Configure global memory limits"""
     global global_memory_monitor
 
@@ -400,7 +404,7 @@ def configure_memory_limits(**kwargs):
             logger.warning(f"Unknown memory limit: {key}")
 
 
-def cleanup_memory():
+def cleanup_memory() -> dict[str, Any]:
     """Force memory cleanup"""
     global_memory_monitor._trigger_gc(aggressive=True)
     return global_memory_monitor.check_memory(force=True)

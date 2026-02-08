@@ -166,7 +166,7 @@ class MagicByteDetector:
         },
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.cache: dict[str, dict[str, Any]] = {}
 
     def detect_file_type(self, file_path: str) -> dict[str, Any]:
@@ -182,7 +182,8 @@ class MagicByteDetector:
         path = Path(file_path)
 
         # Check cache first
-        cache_key = f"{path}:{path.stat().st_mtime}"
+        mtime = path.stat().st_mtime if path.exists() else 0
+        cache_key = f"{path}:{mtime}"
         if cache_key in self.cache:
             return self.cache[cache_key]
 
@@ -385,6 +386,7 @@ class MagicByteDetector:
         else:
             endian = "Unknown"
 
+        architecture = "Unknown"
         # Machine type (offset 18-19 for 32-bit, adjusted for 64-bit)
         machine_offset = 18
         if len(header) > machine_offset + 1:
@@ -405,8 +407,6 @@ class MagicByteDetector:
             }
 
             architecture = arch_map.get(machine, f"Unknown-{machine:04x}")
-        else:
-            architecture = "Unknown"
 
         return {"architecture": architecture, "bits": bits, "endianness": endian}
 
@@ -493,6 +493,7 @@ class MagicByteDetector:
                 "endianness": "Unknown",
             }
 
+        architecture = "Unknown"
         # CPU type is at offset 4
         if len(header) >= 8:
             cpu_type = struct.unpack("<I" if endian == "Little" else ">I", header[4:8])[0]
@@ -507,8 +508,6 @@ class MagicByteDetector:
             }
 
             architecture = cpu_map.get(cpu_type, f"Unknown-{cpu_type:08x}")
-        else:
-            architecture = "Unknown"
 
         return {"architecture": architecture, "bits": bits, "endianness": endian}
 

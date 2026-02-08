@@ -1,22 +1,9 @@
 #!/usr/bin/env python3
-"""
-r2inspect Core Pipeline Builder - Constructs analysis pipelines
-
-This module provides the PipelineBuilder class that constructs analysis
-pipelines based on configuration and options.
-
-Architecture:
-    - Builder Pattern: Fluent interface for pipeline construction
-    - Strategy Pattern: Different pipeline compositions for different analyses
-
-Copyright (C) 2025 Marc Rivero Lopez
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Pipeline builder for composing analysis stages."""
 
 from typing import Any
 
-from ..adapters.r2pipe_adapter import R2PipeAdapter
-from ..config import Config
+from ..interfaces import AnalyzerBackend, ConfigLike
 from ..pipeline.analysis_pipeline import AnalysisPipeline
 from ..pipeline.stages import (
     DetectionStage,
@@ -28,7 +15,6 @@ from ..pipeline.stages import (
     MetadataStage,
     SecurityStage,
 )
-from ..registry.analyzer_registry import AnalyzerRegistry
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -50,9 +36,9 @@ class PipelineBuilder:
 
     def __init__(
         self,
-        adapter: R2PipeAdapter,
-        registry: AnalyzerRegistry,
-        config: Config,
+        adapter: AnalyzerBackend,
+        registry: Any,
+        config: ConfigLike,
         filename: str,
     ):
         """
@@ -70,7 +56,11 @@ class PipelineBuilder:
         self.filename = filename
 
     def _add_stage_to_pipeline(
-        self, pipeline: AnalysisPipeline, stage_class: type, *args, **kwargs
+        self,
+        pipeline: AnalysisPipeline,
+        stage_class: type[Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         Add a stage to the pipeline with configured timeout.
@@ -85,7 +75,7 @@ class PipelineBuilder:
             **kwargs: Keyword arguments to pass to the stage constructor
         """
         stage = stage_class(*args, **kwargs)
-        stage.timeout = self.config.get("pipeline", "stage_timeout", None)
+        stage.timeout = self.config.typed_config.pipeline.stage_timeout
         pipeline.add_stage(stage)
 
     def build(self, options: dict[str, Any]) -> AnalysisPipeline:
@@ -102,69 +92,42 @@ class PipelineBuilder:
             Configured AnalysisPipeline ready for execution
         """
         # Determine max workers from config
-        max_workers = self.config.get("pipeline", "max_workers", 4)
+        max_workers = self.config.typed_config.pipeline.max_workers
         pipeline = AnalysisPipeline(max_workers=max_workers)
 
-        # Stage 1: File information (always required)
-        self._add_stage_to_pipeline(pipeline, FileInfoStage, self.adapter, self.filename)
+        stage_specs: list[tuple[type[Any], tuple[Any, ...], dict[str, Any]]] = [
+            (FileInfoStage, (self.adapter, self.filename), {}),
+            (FormatDetectionStage, (self.adapter, self.filename), {}),
+            (
+                FormatAnalysisStage,
+                (self.registry, self.adapter, self.config, self.filename),
+                {},
+            ),
+            (
+                MetadataStage,
+                (self.registry, self.adapter, self.config, self.filename, options),
+                {},
+            ),
+            (
+                SecurityStage,
+                (self.registry, self.adapter, self.config, self.filename),
+                {},
+            ),
+            (
+                HashingStage,
+                (self.registry, self.adapter, self.config, self.filename),
+                {},
+            ),
+            (
+                DetectionStage,
+                (self.registry, self.adapter, self.config, self.filename, options),
+                {},
+            ),
+            (IndicatorStage, (), {}),
+        ]
 
-        # Stage 2: Format detection (always required)
-        self._add_stage_to_pipeline(pipeline, FormatDetectionStage, self.adapter, self.filename)
-
-        # Stage 3: Format-specific analysis (conditional based on detected format)
-        self._add_stage_to_pipeline(
-            pipeline,
-            FormatAnalysisStage,
-            self.registry,
-            self.adapter,
-            self.config,
-            self.filename,
-        )
-
-        # Stage 4: Metadata extraction (sections, imports, exports, strings, functions)
-        self._add_stage_to_pipeline(
-            pipeline,
-            MetadataStage,
-            self.registry,
-            self.adapter,
-            self.config,
-            self.filename,
-            options,
-        )
-
-        # Stage 5: Security analysis (exploit mitigations, signatures)
-        self._add_stage_to_pipeline(
-            pipeline,
-            SecurityStage,
-            self.registry,
-            self.adapter,
-            self.config,
-            self.filename,
-        )
-
-        # Stage 6: Hashing (fuzzy hashing, similarity detection)
-        self._add_stage_to_pipeline(
-            pipeline,
-            HashingStage,
-            self.registry,
-            self.adapter,
-            self.config,
-            self.filename,
-        )
-
-        # Stage 7: Detection (packer, crypto, anti-analysis, YARA)
-        self._add_stage_to_pipeline(
-            pipeline,
-            DetectionStage,
-            self.registry,
-            self.adapter,
-            self.config,
-            self.filename,
-            options,
-        )
-
-        # Stage 8: Indicator generation (suspicious patterns)
-        self._add_stage_to_pipeline(pipeline, IndicatorStage)
+        for stage_class, args, kwargs in stage_specs:
+            self._add_stage_to_pipeline(pipeline, stage_class, *args, **kwargs)
 
         logger.debug(f"Built pipeline with {len(pipeline)} stages")
         return pipeline

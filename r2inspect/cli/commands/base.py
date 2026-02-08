@@ -30,17 +30,36 @@ from ...config import Config
 from ...utils.logger import get_logger, setup_logger
 
 
-def configure_quiet_logging(quiet: bool) -> None:
-    """Configure logging and warnings when quiet mode is requested."""
-    if not quiet:
-        return
-
+def configure_logging_levels(verbose: bool, quiet: bool) -> None:
+    """Configure logging levels based on verbosity settings."""
     import logging
     import warnings
 
-    warnings.filterwarnings("ignore")
+    if quiet:
+        warnings.filterwarnings("ignore")
+        logging.getLogger("r2pipe").setLevel(logging.CRITICAL)
+        logging.getLogger("r2inspect").setLevel(logging.WARNING)
+        logging.getLogger("r2inspect.modules").setLevel(logging.WARNING)
+        logging.getLogger("r2inspect.pipeline").setLevel(logging.WARNING)
+        return
+
+    level = logging.INFO if verbose else logging.WARNING
+    logging.getLogger("r2inspect").setLevel(level)
+    logging.getLogger("r2inspect.modules").setLevel(level)
+    logging.getLogger("r2inspect.pipeline").setLevel(level)
+
+
+def configure_quiet_logging(quiet: bool) -> None:
+    """Configure logging for quiet mode only."""
+    import logging
+
+    if not quiet:
+        return
+
     logging.getLogger("r2pipe").setLevel(logging.CRITICAL)
     logging.getLogger("r2inspect").setLevel(logging.WARNING)
+    logging.getLogger("r2inspect.modules").setLevel(logging.WARNING)
+    logging.getLogger("r2inspect.pipeline").setLevel(logging.WARNING)
 
 
 def apply_thread_settings(config: Config, threads: int | None) -> None:
@@ -50,8 +69,7 @@ def apply_thread_settings(config: Config, threads: int | None) -> None:
 
     try:
         t = int(threads)
-        config.set("pipeline", "max_workers", t)
-        config.set("pipeline", "parallel_execution", bool(t > 1))
+        config.apply_overrides({"pipeline": {"max_workers": t, "parallel_execution": bool(t > 1)}})
     except Exception:
         # Keep configuration unchanged if conversion fails
         return
@@ -102,7 +120,7 @@ class CommandContext:
         console = Console()
         logger = setup_logger(thread_safe=thread_safe)
 
-        configure_quiet_logging(quiet)
+        configure_logging_levels(verbose, quiet)
 
         return cls(
             console=console,
@@ -202,7 +220,7 @@ class Command(ABC):
         Configure analysis options dictionary.
 
         Consolidates optional analysis parameters into a standardized dictionary
-        format expected by R2Inspector.analyze().
+        format expected by inspector.analyze().
 
         Args:
             yara: Path to custom YARA rules directory

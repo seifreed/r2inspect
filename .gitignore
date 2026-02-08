@@ -242,12 +242,17 @@ results/
 analysis_results/
 r2inspect_batch_results/
 *.json
+*.json.tmp
+*.tmp.json
+*.jsonl
 *.csv
 !example_output.json
 !samples/fixtures/expected/*.json
 
 # Development tools and configurations
 .claude/
+claude.md
+CLAUDE.md
 .qlty/
 qlty.toml
 .ruff.toml

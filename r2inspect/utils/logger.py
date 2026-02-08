@@ -14,23 +14,32 @@ _logger_lock = threading.Lock()
 _loggers_initialized = set()
 
 
+def _handler_is_closed(handler: logging.Handler) -> bool:
+    stream = getattr(handler, "stream", None)
+    return bool(stream is not None and getattr(stream, "closed", False))
+
+
 def setup_logger(
     name: str = "r2inspect", level: int = logging.INFO, thread_safe: bool = True
 ) -> logging.Logger:
     """Setup thread-safe logger with console and file handlers"""
 
     with _logger_lock:
-        # Check if logger already initialized
-        if name in _loggers_initialized:
-            return logging.getLogger(name)
-
         logger = logging.getLogger(name)
         logger.setLevel(level)
 
-        # Avoid duplicate handlers
+        # Reinitialize if handlers exist but are closed (e.g., after logging.shutdown)
         if logger.handlers:
-            _loggers_initialized.add(name)
-            return logger
+            if any(_handler_is_closed(handler) for handler in logger.handlers):
+                for handler in list(logger.handlers):
+                    try:
+                        handler.close()
+                    finally:
+                        logger.removeHandler(handler)
+                _loggers_initialized.discard(name)
+            else:
+                _loggers_initialized.add(name)
+                return logger
 
         # Thread-safe console handler
         console_handler = logging.StreamHandler(
@@ -96,18 +105,22 @@ def get_logger(name: str = "r2inspect") -> logging.Logger:
     return logging.getLogger(name)
 
 
-def configure_batch_logging():
+def configure_batch_logging() -> None:
     """Configure logging for batch processing to reduce noise"""
     with _logger_lock:
         # Set higher log levels for batch processing
+        logging.getLogger("r2inspect").setLevel(logging.WARNING)
         logging.getLogger("r2inspect.core").setLevel(logging.WARNING)
+        logging.getLogger("r2inspect.pipeline").setLevel(logging.WARNING)
         logging.getLogger("r2inspect.modules").setLevel(logging.WARNING)
         logging.getLogger("r2inspect.utils").setLevel(logging.WARNING)
 
 
-def reset_logging_levels():
+def reset_logging_levels() -> None:
     """Reset logging levels to normal"""
     with _logger_lock:
+        logging.getLogger("r2inspect").setLevel(logging.INFO)
         logging.getLogger("r2inspect.core").setLevel(logging.INFO)
+        logging.getLogger("r2inspect.pipeline").setLevel(logging.INFO)
         logging.getLogger("r2inspect.modules").setLevel(logging.INFO)
         logging.getLogger("r2inspect.utils").setLevel(logging.INFO)

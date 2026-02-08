@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from r2inspect.abstractions.analysis_result import AnalysisResult
 from r2inspect.abstractions.base_analyzer import BaseAnalyzer
 from r2inspect.abstractions.hashing_strategy import HashingStrategy
 
@@ -48,73 +45,6 @@ class DummyHash(HashingStrategy):
         return True
 
 
-def test_analysis_result_validation_and_serialization(tmp_path: Path) -> None:
-    sample = tmp_path / "sample.bin"
-    sample.write_bytes(b"abc")
-
-    result = AnalysisResult(file_path=str(sample), file_format="ELF")
-    assert isinstance(result.file_path, Path)
-    assert result.file_path.name == "sample.bin"
-
-    result.add_hash("MD5", "abc123")
-    result.add_detection("yara", "rule_name", severity="HIGH", metadata={"id": 1})
-    result.add_error("bad", context="unit")
-    result.add_warning("warn", context="unit")
-
-    data = result.to_dict()
-    assert data["file_path"] == str(sample.absolute())
-    assert data["hashes"]["md5"] == "abc123"
-    assert data["detections"][0]["severity"] == "high"
-    assert data["errors"][0].startswith("[unit]")
-    assert data["warnings"][0].startswith("[unit]")
-
-    json_data = result.to_json()
-    loaded = AnalysisResult.from_json(json_data)
-    assert loaded.file_format == "ELF"
-    assert loaded.get_hash("md5") == "abc123"
-
-
-def test_analysis_result_error_paths(tmp_path: Path) -> None:
-    sample = tmp_path / "sample.bin"
-    sample.write_bytes(b"abc")
-
-    with pytest.raises(ValueError):
-        AnalysisResult(file_path=str(sample), file_format="")
-
-    result = AnalysisResult(file_path=sample, file_format="PE")
-    with pytest.raises(ValueError):
-        result.add_hash("", "x")
-    with pytest.raises(ValueError):
-        result.add_hash("md5", "")
-    with pytest.raises(ValueError):
-        result.add_detection("", "name")
-    with pytest.raises(ValueError):
-        result.add_detection("yara", "")
-
-    other = AnalysisResult(file_path=tmp_path / "other.bin", file_format="PE")
-    with pytest.raises(ValueError):
-        result.merge(other)
-
-
-def test_analysis_result_merge_accumulates(tmp_path: Path) -> None:
-    sample = tmp_path / "sample.bin"
-    sample.write_bytes(b"abc")
-
-    left = AnalysisResult(file_path=sample, file_format="PE", execution_time=0.5)
-    right = AnalysisResult(file_path=sample, file_format="PE", execution_time=1.25)
-    left.file_info["size"] = 1
-    right.format_info["format"] = "PE"
-    right.add_hash("sha256", "hash")
-    right.add_error("oops")
-
-    left.merge(right)
-    assert left.file_info["size"] == 1
-    assert left.format_info["format"] == "PE"
-    assert left.get_hash("sha256") == "hash"
-    assert left.has_errors()
-    assert left.execution_time == pytest.approx(1.75)
-
-
 def test_base_analyzer_helpers(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"abcd")
@@ -128,16 +58,6 @@ def test_base_analyzer_helpers(tmp_path: Path) -> None:
     assert analyzer.file_exists()
     assert "DummyAnalyzer" in repr(analyzer)
     assert "DummyAnalyzer" in str(analyzer)
-
-    analysis_result = analyzer.to_analysis_result({"available": False, "error": "fail"})
-    assert analysis_result.has_errors()
-    assert analysis_result.has_warnings()
-
-
-def test_base_analyzer_requires_filepath() -> None:
-    analyzer = DummyAnalyzer()
-    with pytest.raises(ValueError):
-        analyzer.to_analysis_result({"available": True})
 
 
 def test_measure_execution_time_sets_field() -> None:

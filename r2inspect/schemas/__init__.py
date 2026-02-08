@@ -1,48 +1,5 @@
 #!/usr/bin/env python3
-"""
-r2inspect Schemas
-
-Type-safe result schemas for all r2inspect analyzers using both Pydantic models
-and Python dataclasses. This provides validation, IDE support, and seamless
-dict <-> model conversion.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-
-Usage:
-    # Import Pydantic schemas
-    from r2inspect.schemas import HashAnalysisResult, FormatAnalysisResult
-
-    # Create typed result
-    result = HashAnalysisResult(
-        available=True,
-        hash_type="ssdeep",
-        hash_value="3:abc:def"
-    )
-
-    # Convert dict to model
-    from r2inspect.schemas import ResultConverter
-    model = ResultConverter.convert_result("ssdeep", result_dict)
-
-    # Convert model to dict
-    from r2inspect.schemas import model_to_dict
-    data = model_to_dict(result)
-
-    # Import dataclass schemas
-    from r2inspect.schemas.results import (
-        FileInfo,
-        HashingResult,
-        SecurityFeatures,
-        AnalysisResult,
-    )
-
-    # Create typed result with dataclasses
-    file_info = FileInfo(name="sample.exe", size=1024)
-    result = AnalysisResult(file_info=file_info)
-
-    # Convert to dict
-    data = result.to_dict()
-"""
+"""Type-safe result schemas for r2inspect analyzers."""
 
 # Base schemas
 from .base import AnalysisResultBase, FileInfoBase

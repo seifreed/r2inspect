@@ -8,7 +8,7 @@ def test_config_creates_default_file(tmp_path):
     config = Config(str(config_path))
 
     assert config_path.exists()
-    assert config.get("general", "max_strings") == 1000
+    assert config.typed_config.general.max_strings == 1000
 
 
 def test_config_loads_and_merges_user_config(tmp_path):
@@ -18,19 +18,18 @@ def test_config_loads_and_merges_user_config(tmp_path):
     config_path.write_text('{"general": {"max_strings": 42}, "custom": {"x": 1}}')
     config.load_config()
 
-    assert config.get("general", "max_strings") == 42
-    assert config.get("custom", "x") == 1
+    assert config.typed_config.general.max_strings == 42
+    assert config.to_dict()["custom"]["x"] == 1
 
 
-def test_config_set_updates_typed_config(tmp_path):
+def test_config_apply_overrides_updates_typed_config(tmp_path):
     config_path = tmp_path / "config.json"
     config = Config(str(config_path))
 
-    config.set("pipeline", "max_workers", 8)
-    config.set("pipeline", "parallel_execution", True)
+    config.apply_overrides({"pipeline": {"max_workers": 8, "parallel_execution": True}})
 
-    assert config.get("pipeline", "max_workers") == 8
-    assert config.get("pipeline", "parallel_execution") is True
+    assert config.typed_config.pipeline.max_workers == 8
+    assert config.typed_config.pipeline.parallel_execution is True
 
 
 def test_config_load_invalid_values_fallbacks(tmp_path):

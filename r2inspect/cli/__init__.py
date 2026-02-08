@@ -22,6 +22,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import importlib
+from typing import Any
 
 MODULE_BATCH_PROCESSING = "r2inspect.cli.batch_processing"
 MODULE_BATCH_OUTPUT = "r2inspect.cli.batch_output"
@@ -99,7 +100,7 @@ _LAZY_ATTRS: dict[str, tuple[str, str | None]] = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name not in _LAZY_ATTRS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     module_name, attr = _LAZY_ATTRS[name]
@@ -111,7 +112,7 @@ def __dir__() -> list[str]:
     return sorted(list(globals().keys()) + list(_LAZY_ATTRS.keys()))
 
 
-def main():  # Entry point shim for console_scripts
+def main() -> None:  # Entry point shim for console_scripts
     """CLI entry point compatible with pyproject console script.
 
     Delegates to the Click-based CLI defined in r2inspect.cli_main.

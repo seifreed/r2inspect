@@ -1,112 +1,34 @@
 #!/usr/bin/env python3
-# mypy: ignore-errors
-"""
-Import Analysis Module using r2pipe
-"""
+"""Import analysis module."""
 
 import re
 from collections import Counter
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj
+from .domain_helpers import clamp_score
+from .import_domain import (
+    NETWORK_CATEGORY,
+    assess_api_risk,
+    build_api_categories,
+    categorize_apis,
+    find_max_risk_score,
+    find_suspicious_patterns,
+    risk_level_from_score,
+)
 
 logger = get_logger(__name__)
 
-NETWORK_CATEGORY = "Network/Internet"
-
 
 class ImportAnalyzer(BaseAnalyzer):
-    """Import table analysis using radare2"""
+    """Import table analysis using backend data."""
 
-    # API risk dictionaries: maps API name to (score, tag)
-    # High-risk injection/manipulation APIs (80-100 points)
-    INJECTION_APIS: dict[str, tuple[int, str]] = {
-        "CreateRemoteThread": (95, "Remote Thread Injection"),
-        "WriteProcessMemory": (90, "Process Memory Manipulation"),
-        "VirtualAllocEx": (85, "Remote Memory Allocation"),
-        "SetThreadContext": (90, "Thread Context Manipulation"),
-        "QueueUserAPC": (85, "APC Injection"),
-        "NtMapViewOfSection": (90, "Section Mapping Injection"),
-    }
-
-    # Anti-analysis APIs (70-90 points)
-    ANTI_ANALYSIS_APIS: dict[str, tuple[int, str]] = {
-        "IsDebuggerPresent": (75, "Anti-Debug"),
-        "CheckRemoteDebuggerPresent": (80, "Remote Debug Detection"),
-        "NtQueryInformationProcess": (85, "Process Information Query"),
-        "QueryPerformanceCounter": (60, "Timing Check"),
-        "GetTickCount": (50, "Timing Check"),
-        "OutputDebugString": (65, "Debug String Check"),
-    }
-
-    # Cryptography APIs (50-80 points)
-    CRYPTO_APIS: dict[str, tuple[int, str]] = {
-        "CryptEncrypt": (70, "Data Encryption"),
-        "CryptDecrypt": (65, "Data Decryption"),
-        "CryptCreateHash": (55, "Hash Creation"),
-        "BCryptEncrypt": (75, "Modern Encryption"),
-        "CryptGenKey": (60, "Key Generation"),
-    }
-
-    # Persistence APIs (60-80 points)
-    PERSISTENCE_APIS: dict[str, tuple[int, str]] = {
-        "CreateService": (80, "Service Creation"),
-        "SetWindowsHookEx": (75, "Hook Installation"),
-        "RegSetValueEx": (65, "Registry Modification"),
-        "CopyFile": (40, "File Copy"),
-        "MoveFile": (35, "File Move"),
-    }
-
-    # Network APIs (40-70 points)
-    NETWORK_APIS: dict[str, tuple[int, str]] = {
-        "URLDownloadToFile": (70, "File Download"),
-        "InternetOpen": (50, "Internet Access"),
-        "WinHttpSendRequest": (60, "HTTP Request"),
-        "socket": (45, "Network Socket"),
-        "connect": (50, "Network Connection"),
-    }
-
-    # Process/Thread APIs (50-80 points)
-    PROCESS_APIS: dict[str, tuple[int, str]] = {
-        "CreateProcess": (65, "Process Creation"),
-        "OpenProcess": (60, "Process Access"),
-        "TerminateProcess": (70, "Process Termination"),
-        "CreateThread": (45, "Thread Creation"),
-        "SuspendThread": (55, "Thread Suspension"),
-    }
-
-    # Memory APIs (40-70 points)
-    MEMORY_APIS: dict[str, tuple[int, str]] = {
-        "VirtualAlloc": (50, "Memory Allocation"),
-        "VirtualProtect": (65, "Memory Protection Change"),
-        "HeapAlloc": (30, "Heap Allocation"),
-        "MapViewOfFile": (55, "File Mapping"),
-    }
-
-    # Dynamic loading APIs (30-60 points)
-    LOADING_APIS: dict[str, tuple[int, str]] = {
-        "LoadLibrary": (45, "Dynamic Library Loading"),
-        "GetProcAddress": (50, "Function Address Resolution"),
-        "FreeLibrary": (25, "Library Unloading"),
-    }
-
-    # All API risk categories combined for iteration
-    ALL_RISK_API_CATEGORIES: tuple[str, ...] = (
-        "INJECTION_APIS",
-        "ANTI_ANALYSIS_APIS",
-        "CRYPTO_APIS",
-        "PERSISTENCE_APIS",
-        "NETWORK_APIS",
-        "PROCESS_APIS",
-        "MEMORY_APIS",
-        "LOADING_APIS",
-    )
-
-    def __init__(self, r2, config):
-        super().__init__(r2=r2, config=config)
+    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+        super().__init__(adapter=adapter, config=config)
         self._setup_api_categories()
+        self._risk_categories = build_api_categories()
 
     def get_category(self) -> str:
         return "metadata"
@@ -117,7 +39,7 @@ class ImportAnalyzer(BaseAnalyzer):
     def supports_format(self, file_format: str) -> bool:
         return file_format.upper() in {"PE", "PE32", "PE32+", "DLL", "EXE"}
 
-    def _setup_api_categories(self):
+    def _setup_api_categories(self) -> None:
         """Initialize API categorization data"""
         # Categorized suspicious APIs
         self.api_categories = {
@@ -324,10 +246,13 @@ class ImportAnalyzer(BaseAnalyzer):
         return "LOW"
 
     def _count_suspicious_indicators(self, result: dict[str, Any]) -> int:
+        api_analysis = result.get("api_analysis", {})
+        obfuscation = result.get("obfuscation", {})
+        anomalies = result.get("anomalies", {})
         return (
-            len(result["api_analysis"].get("suspicious_apis", []))
-            + len(result["obfuscation"].get("indicators", []))
-            + result["anomalies"].get("count", 0)
+            len(api_analysis.get("suspicious_apis", []))
+            + len(obfuscation.get("indicators", []))
+            + int(anomalies.get("count", 0))
         )
 
     def get_imports(self) -> list[dict[str, Any]]:
@@ -336,7 +261,7 @@ class ImportAnalyzer(BaseAnalyzer):
 
         try:
             # Get imports from radare2
-            imports = safe_cmdj(self.r2, "iij")
+            imports = self._cmdj("iij", [])
 
             if imports:
                 for imp in imports:
@@ -385,44 +310,14 @@ class ImportAnalyzer(BaseAnalyzer):
 
     def _calculate_risk_score(self, func_name: str) -> dict[str, Any]:
         """Calculate detailed risk score (0-100) with specific tags"""
-        max_score, tags = self._find_max_risk_score(func_name)
-        risk_level = self._determine_risk_level(max_score)
+        max_score, tags = find_max_risk_score(func_name, self._risk_categories)
+        risk_level = risk_level_from_score(max_score)
 
         return {
             "risk_score": max_score,
             "risk_level": risk_level,
             "risk_tags": tags,
         }
-
-    def _find_max_risk_score(self, func_name: str) -> tuple[int, list[str]]:
-        """Find the maximum risk score and associated tags for a function name."""
-        max_score = 0
-        tags: list[str] = []
-
-        for category_name in self.ALL_RISK_API_CATEGORIES:
-            api_dict = getattr(self, category_name)
-            for api_name, (score, tag) in api_dict.items():
-                if api_name in func_name:
-                    if score > max_score:
-                        max_score = score
-                        tags = [tag]
-                    elif score == max_score:
-                        tags.append(tag)
-
-        return max_score, tags
-
-    def _determine_risk_level(self, score: int) -> str:
-        """Determine risk level string based on numeric score."""
-        if score >= 80:
-            return "Critical"
-        elif score >= 65:
-            return "High"
-        elif score >= 45:
-            return "Medium"
-        elif score >= 25:
-            return "Low"
-        else:
-            return "Minimal"
 
     def _get_function_description(self, func_name: str) -> str:
         """Get description for common functions"""
@@ -476,128 +371,22 @@ class ImportAnalyzer(BaseAnalyzer):
                 stats["library_distribution"] = dict(Counter(libraries))
                 stats["unique_libraries"] = len(set(libraries))
 
-                # Find suspicious patterns
-                stats["suspicious_patterns"] = self._find_suspicious_patterns(imports)
+                stats["suspicious_patterns"] = find_suspicious_patterns(imports)
 
         except Exception as e:
             logger.error(f"Error getting import statistics: {e}")
 
         return stats
 
-    def _find_suspicious_patterns(self, imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Find suspicious import patterns"""
-        patterns = []
-
-        try:
-            import_names = [imp["name"] for imp in imports]
-            categories = [imp["category"] for imp in imports]
-
-            # Check for DLL injection pattern
-            injection_apis = [
-                "VirtualAllocEx",
-                "WriteProcessMemory",
-                "CreateRemoteThread",
-            ]
-            injection_count = sum(
-                1 for name in import_names if any(api in name for api in injection_apis)
-            )
-
-            if injection_count >= 2:
-                patterns.append(
-                    {
-                        "pattern": "DLL Injection",
-                        "description": "APIs commonly used for DLL injection detected",
-                        "severity": "High",
-                        "count": injection_count,
-                    }
-                )
-
-            # Check for process hollowing pattern
-            hollowing_apis = [
-                "CreateProcess",
-                "VirtualAllocEx",
-                "WriteProcessMemory",
-                "SetThreadContext",
-                "ResumeThread",
-            ]
-            hollowing_count = sum(
-                1 for name in import_names if any(api in name for api in hollowing_apis)
-            )
-
-            if hollowing_count >= 3:
-                patterns.append(
-                    {
-                        "pattern": "Process Hollowing",
-                        "description": "APIs commonly used for process hollowing detected",
-                        "severity": "High",
-                        "count": hollowing_count,
-                    }
-                )
-
-            # Check for keylogging pattern
-            keylog_apis = ["SetWindowsHookEx", "GetAsyncKeyState", "GetKeyState"]
-            keylog_count = sum(
-                1 for name in import_names if any(api in name for api in keylog_apis)
-            )
-
-            if keylog_count >= 1:
-                patterns.append(
-                    {
-                        "pattern": "Keylogging",
-                        "description": "APIs commonly used for keylogging detected",
-                        "severity": "Medium",
-                        "count": keylog_count,
-                    }
-                )
-
-            # Check for network communication
-            network_count = categories.count(NETWORK_CATEGORY)
-            if network_count > 5:
-                patterns.append(
-                    {
-                        "pattern": "Heavy Network Usage",
-                        "description": f"Many network-related APIs ({network_count})",
-                        "severity": "Medium",
-                        "count": network_count,
-                    }
-                )
-
-            # Check for anti-analysis
-            anti_count = categories.count("Anti-Analysis")
-            if anti_count > 0:
-                patterns.append(
-                    {
-                        "pattern": "Anti-Analysis",
-                        "description": f"Anti-analysis APIs detected ({anti_count})",
-                        "severity": "High",
-                        "count": anti_count,
-                    }
-                )
-
-            # Check for excessive crypto usage
-            crypto_count = categories.count("Cryptography")
-            if crypto_count > 3:
-                patterns.append(
-                    {
-                        "pattern": "Heavy Cryptography",
-                        "description": f"Many cryptographic APIs ({crypto_count})",
-                        "severity": "Medium",
-                        "count": crypto_count,
-                    }
-                )
-
-        except Exception as e:
-            logger.error(f"Error finding suspicious patterns: {e}")
-
-        return patterns
-
     def get_missing_imports(self) -> list[str]:
-        """Detect potentially missing imports (APIs called but not imported)"""
         missing = []
 
         try:
             # Get all string references that look like API calls
-            strings = safe_cmdj(self.r2, "izj")
+            if self.adapter is not None and hasattr(self.adapter, "get_strings"):
+                strings = self.adapter.get_strings()
+            else:
+                strings = self._cmdj("izj", [])
             imported_apis = [imp["name"] for imp in self.get_imports()]
 
             if strings:
@@ -628,62 +417,24 @@ class ImportAnalyzer(BaseAnalyzer):
         return False
 
     def analyze_api_usage(self, imports: list[dict]) -> dict[str, Any]:
-        """Analyze API usage patterns"""
         try:
             if not imports:
                 return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
 
-            categories = self._categorize_apis(imports)
-            suspicious_apis, risk_score = self._assess_api_risk(categories)
+            categories = categorize_apis(imports, self.api_categories)
+            suspicious_apis, risk_score = assess_api_risk(categories)
 
             return {
                 "categories": categories,
                 "suspicious_apis": suspicious_apis,
-                "risk_score": min(risk_score, 100),
+                "risk_score": clamp_score(risk_score),
             }
 
         except Exception as e:
             logger.error(f"Error analyzing API usage: {e}")
             return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
 
-    def _categorize_apis(self, imports: list[dict]) -> dict[str, Any]:
-        categories: dict[str, Any] = {}
-        for category, apis in self.api_categories.items():
-            category_count = 0
-            category_apis = []
-            for imp in imports:
-                api_name = imp.get("name", "")
-                if any(api.lower() in api_name.lower() for api in apis):
-                    category_count += 1
-                    category_apis.append(api_name)
-            if category_count > 0:
-                categories[category] = {"count": category_count, "apis": category_apis}
-        return categories
-
-    def _assess_api_risk(self, categories: dict[str, Any]) -> tuple[list[str], int]:
-        suspicious_apis: list[str] = []
-        risk_score = 0
-        if categories.get("Anti-Analysis", {}).get("count", 0) >= 2:
-            suspicious_apis.append("Multiple anti-debug APIs detected")
-            risk_score += 20
-        if categories.get("DLL Injection", {}).get("count", 0) >= 3:
-            suspicious_apis.append("DLL injection pattern detected")
-            risk_score += 30
-        process_count = categories.get("Process/Thread Management", {}).get("count", 0)
-        memory_count = categories.get("Memory Management", {}).get("count", 0)
-        if process_count >= 3 and memory_count >= 3:
-            suspicious_apis.append("Process manipulation pattern detected")
-            risk_score += 25
-        if categories.get("Registry", {}).get("count", 0) >= 4:
-            suspicious_apis.append("Extensive registry manipulation")
-            risk_score += 15
-        if categories.get(NETWORK_CATEGORY, {}).get("count", 0) >= 3:
-            suspicious_apis.append("Network communication capabilities")
-            risk_score += 10
-        return suspicious_apis, risk_score
-
     def detect_api_obfuscation(self, imports: list[dict]) -> dict[str, Any]:
-        """Detect API obfuscation techniques"""
         try:
             obfuscation_indicators = []
 
@@ -743,7 +494,6 @@ class ImportAnalyzer(BaseAnalyzer):
             return {"detected": False, "indicators": [], "score": 0}
 
     def analyze_dll_dependencies(self, dlls: list[str]) -> dict[str, Any]:
-        """Analyze DLL dependencies"""
         try:
             if not dlls:
                 return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
@@ -809,10 +559,10 @@ class ImportAnalyzer(BaseAnalyzer):
             logger.error(f"Error analyzing DLL dependencies: {e}")
             return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
-    def detect_import_anomalies(self, imports: list[dict]) -> dict[str, Any]:
+    def detect_import_anomalies(self, imports: list[dict[str, Any]]) -> dict[str, Any]:
         """Detect anomalies in import table"""
         try:
-            anomalies = []
+            anomalies: list[dict[str, Any]] = []
 
             if not imports:
                 anomalies.append(
@@ -839,7 +589,7 @@ class ImportAnalyzer(BaseAnalyzer):
                 )
 
             # Check for imports from unusual DLLs
-            unusual_dlls = []
+            unusual_dlls: list[str] = []
             for imp in imports:
                 dll = imp.get("dll", "").lower()
                 if (
@@ -847,7 +597,13 @@ class ImportAnalyzer(BaseAnalyzer):
                     and dll not in unusual_dlls
                     and not any(
                         common in dll
-                        for common in ["kernel32", "user32", "advapi32", "ntdll", "msvcrt"]
+                        for common in [
+                            "kernel32",
+                            "user32",
+                            "advapi32",
+                            "ntdll",
+                            "msvcrt",
+                        ]
                     )
                 ):
                     unusual_dlls.append(dll)
@@ -882,7 +638,7 @@ class ImportAnalyzer(BaseAnalyzer):
         """Check for import forwarding"""
         try:
             # Look for forwarded imports in strings
-            strings = safe_cmdj(self.r2, "izj")
+            strings = self._cmdj("izj", [])
             if not strings:
                 return {"detected": False, "forwards": []}
 
@@ -908,3 +664,6 @@ class ImportAnalyzer(BaseAnalyzer):
         except Exception as e:
             logger.error(f"Error checking import forwarding: {e}")
             return {"detected": False, "forwards": []}
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)

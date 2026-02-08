@@ -10,11 +10,29 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, TypedDict
 
 from .logger import get_logger
 
 logger = get_logger(__name__)
+
+
+class RetryStats(TypedDict):
+    total_retries: int
+    successful_retries: int
+    failed_after_retries: int
+    commands_retried: dict[str, int]
+    error_types_retried: dict[str, int]
+
+
+def _init_retry_stats() -> RetryStats:
+    return {
+        "total_retries": 0,
+        "successful_retries": 0,
+        "failed_after_retries": 0,
+        "commands_retried": {},
+        "error_types_retried": {},
+    }
 
 
 class RetryStrategy(Enum):
@@ -55,7 +73,7 @@ class RetryManager:
     """Manages retry logic for r2pipe commands and other operations"""
 
     # Default retry configurations for different command types
-    DEFAULT_CONFIGS = {
+    DEFAULT_CONFIGS: dict[str, RetryConfig] = {
         "analysis": RetryConfig(
             max_attempts=3, base_delay=0.2, strategy=RetryStrategy.EXPONENTIAL_BACKOFF
         ),
@@ -121,14 +139,8 @@ class RetryManager:
         "extra data: line 1 column 2",
     ]
 
-    def __init__(self):
-        self.retry_stats = {
-            "total_retries": 0,
-            "successful_retries": 0,
-            "failed_after_retries": 0,
-            "commands_retried": {},
-            "error_types_retried": {},
-        }
+    def __init__(self) -> None:
+        self.retry_stats: RetryStats = _init_retry_stats()
         self.lock = threading.Lock()
 
     def is_retryable_command(self, command: str) -> bool:
@@ -174,11 +186,11 @@ class RetryManager:
 
     def retry_operation(
         self,
-        operation: Callable,
-        *args,
+        operation: Callable[..., Any],
+        *args: Any,
         command_type: str = "generic",
         config: RetryConfig | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """
         Execute operation with retry logic
@@ -234,7 +246,7 @@ class RetryManager:
                 logger.debug(f"Operation succeeded on attempt {attempt}")
 
     def _handle_retry_exception(
-        self, e: Exception, attempt: int, config: RetryConfig, kwargs: dict
+        self, e: Exception, attempt: int, config: RetryConfig, kwargs: dict[str, Any]
     ) -> bool:
         """Handle exception during retry operation. Returns True if should continue retrying."""
         if not self.is_retryable_error(e):
@@ -252,7 +264,7 @@ class RetryManager:
         self._wait_for_retry(attempt, config)
         return True
 
-    def _update_retry_stats(self, e: Exception, attempt: int, kwargs: dict) -> None:
+    def _update_retry_stats(self, e: Exception, attempt: int, kwargs: dict[str, Any]) -> None:
         """Update retry statistics"""
         with self.lock:
             if attempt == 1:
@@ -291,23 +303,17 @@ class RetryManager:
                 "error_types_retried": dict(self.retry_stats["error_types_retried"]),
             }
 
-    def reset_stats(self):
+    def reset_stats(self) -> None:
         """Reset retry statistics"""
         with self.lock:
-            self.retry_stats = {
-                "total_retries": 0,
-                "successful_retries": 0,
-                "failed_after_retries": 0,
-                "commands_retried": {},
-                "error_types_retried": {},
-            }
+            self.retry_stats = _init_retry_stats()
 
 
 def retry_on_failure(
     command_type: str = "generic",
     config: RetryConfig | None = None,
     auto_retry: bool = True,
-):
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator for automatic retry on failure
 
@@ -317,9 +323,9 @@ def retry_on_failure(
         auto_retry: Whether to automatically retry on known unstable commands
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Extract command from args/kwargs if available
             command = None
             if len(args) >= 2 and isinstance(args[1], str):
@@ -360,13 +366,13 @@ def get_retry_stats() -> dict[str, Any]:
     return global_retry_manager.get_stats()
 
 
-def reset_retry_stats():
+def reset_retry_stats() -> None:
     """Reset global retry statistics"""
     global_retry_manager.reset_stats()
     logger.info("Retry statistics have been reset")
 
 
-def configure_retry_for_command(command_type: str, config: RetryConfig):
+def configure_retry_for_command(command_type: str, config: RetryConfig) -> None:
     """Configure retry behavior for specific command type"""
     global_retry_manager.DEFAULT_CONFIGS[command_type] = config
     logger.info(f"Updated retry configuration for {command_type}")
@@ -374,7 +380,7 @@ def configure_retry_for_command(command_type: str, config: RetryConfig):
 
 # Convenient function for retrying r2pipe operations
 def retry_r2_operation(
-    operation: Callable,
+    operation: Callable[[str], Any],
     command: str,
     command_type: str = "generic",
 ) -> Any:
@@ -390,7 +396,7 @@ def retry_r2_operation(
         Operation result
     """
 
-    def _execute():
+    def _execute(**_kwargs: Any) -> Any:
         return operation(command)
 
     return global_retry_manager.retry_operation(

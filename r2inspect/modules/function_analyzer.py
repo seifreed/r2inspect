@@ -1,18 +1,18 @@
-# mypy: ignore-errors
-"""
-Function Analysis Module for r2inspect
+"""Function-level analysis helpers."""
 
-This module provides function-level analysis capabilities including:
-- MACHOC hash generation (based on Polichombr's approach)
-- Function similarity analysis
-- Instruction pattern extraction
-"""
-
-import hashlib
 import logging
+from pathlib import Path
 from typing import Any
 
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
+from ..core.constants import VERY_LARGE_FILE_THRESHOLD_MB
+from ..utils.command_helpers import cmd as cmd_helper
+from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..utils.command_helpers import cmdj as cmdj_helper
+from .function_domain import (
+    extract_mnemonics_from_ops,
+    extract_mnemonics_from_text,
+    machoc_hash_from_mnemonics,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 class FunctionAnalyzer:
     """Analyzer for function-level analysis and hashing"""
 
-    def __init__(self, r2_instance):
-        self.r2 = r2_instance
-        self.functions_cache = None
+    def __init__(
+        self, adapter: Any, config: Any | None = None, filename: str | None = None
+    ) -> None:
+        self.adapter = adapter
+        self.r2 = adapter
+        self.config = config
+        self._file_size_mb = self._get_file_size_mb(filename)
+        self.functions_cache: list[dict[str, Any]] | None = None
 
     def analyze_functions(self) -> dict[str, Any]:
         """
@@ -73,15 +78,40 @@ class FunctionAnalyzer:
         """Get all functions from the binary"""
         try:
             if self.functions_cache is None:
-                # Ensure analysis is complete
-                self.r2.cmd("aaa")
-                self.functions_cache = safe_cmd_list(self.r2, "aflj")
+                # Prefer existing analysis results before triggering heavy analysis.
+                functions = self._cmd_list("aflj")
+                if not functions:
+                    if self._should_run_full_analysis():
+                        self._cmd("aaa")
+                    else:
+                        self._cmd("aa")
+                    functions = self._cmd_list("aflj")
+                self.functions_cache = functions
 
             return self.functions_cache or []
 
         except Exception as e:
             logger.error(f"Error getting functions: {str(e)}")
             return []
+
+    def _get_file_size_mb(self, filename: str | None) -> float | None:
+        if not filename:
+            return None
+        try:
+            return Path(filename).stat().st_size / (1024 * 1024)
+        except OSError:
+            return None
+
+    def _should_run_full_analysis(self) -> bool:
+        try:
+            if self.config and getattr(self.config, "typed_config", None):
+                if self.config.typed_config.analysis.deep_analysis:
+                    return True
+        except Exception:
+            pass
+        if self._file_size_mb is not None:
+            return self._file_size_mb <= VERY_LARGE_FILE_THRESHOLD_MB
+        return True
 
     def _generate_machoc_hashes(self, functions: list[dict[str, Any]]) -> dict[str, str]:
         """
@@ -96,7 +126,7 @@ class FunctionAnalyzer:
         Returns:
             Dict mapping function names to their MACHOC hashes
         """
-        machoc_hashes = {}
+        machoc_hashes: dict[str, str] = {}
         failed_functions = 0
 
         logger.debug(f"Starting MACHOC hash generation for {len(functions)} functions")
@@ -126,7 +156,7 @@ class FunctionAnalyzer:
 
     def _process_single_function_hash(
         self, func: dict[str, Any], index: int, total: int
-    ) -> tuple | None:
+    ) -> tuple[str, str] | None:
         """Process a single function to generate its MACHOC hash"""
         func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
         func_offset = func.get("addr")
@@ -140,19 +170,17 @@ class FunctionAnalyzer:
             f"Processing function {index + 1}/{total}: {func_name} at 0x{func_offset:x} (size: {func_size})"
         )
 
-        # Seek to function
-        self.r2.cmd(f"s {func_offset}")
-
         # Extract mnemonics using multiple methods
-        mnemonics = self._extract_function_mnemonics(func_name, func_size)
+        mnemonics = self._extract_function_mnemonics(func_name, func_size, func_offset)
 
         if not mnemonics:
             logger.warning(f"No mnemonics found for function {func_name} (size: {func_size})")
             return None
 
         # Generate MACHOC hash
-        mnemonic_signature = ",".join(mnemonics)
-        machoc_hash = hashlib.sha256(mnemonic_signature.encode("utf-8")).hexdigest()
+        machoc_hash = machoc_hash_from_mnemonics(mnemonics)
+        if not machoc_hash:
+            return None
 
         logger.debug(
             f"Generated MACHOC hash for {func_name}: {machoc_hash[:16]}... ({len(mnemonics)} mnemonics)"
@@ -160,32 +188,38 @@ class FunctionAnalyzer:
 
         return func_name, machoc_hash
 
-    def _extract_function_mnemonics(self, func_name: str, func_size: int) -> list[str]:
+    def _extract_function_mnemonics(
+        self, func_name: str, func_size: int, func_addr: int
+    ) -> list[str]:
         """Extract mnemonics from function using multiple methods"""
         # Try method 1: pdfj
-        mnemonics = self._try_pdfj_extraction(func_name)
+        mnemonics = self._try_pdfj_extraction(func_name, func_addr)
         if mnemonics:
             return mnemonics
 
         # Try method 2: pdj with size limit
         if func_size > 0:
-            mnemonics = self._try_pdj_extraction(func_name, func_size)
+            mnemonics = self._try_pdj_extraction(func_name, func_size, func_addr)
             if mnemonics:
                 return mnemonics
 
         # Try method 3: basic pdj
-        mnemonics = self._try_basic_pdj_extraction(func_name)
+        mnemonics = self._try_basic_pdj_extraction(func_name, func_addr)
         if mnemonics:
             return mnemonics
 
         # Try method 4: text-based pi command
-        return self._try_pi_extraction(func_name)
+        return self._try_pi_extraction(func_name, func_addr)
 
-    def _try_pdfj_extraction(self, func_name: str) -> list[str]:
+    def _try_pdfj_extraction(self, func_name: str, func_addr: int) -> list[str]:
         """Try extracting mnemonics using pdfj command"""
         try:
-            disasm = safe_cmdj(self.r2, "pdfj", {})
-            if disasm and "ops" in disasm:
+            disasm = (
+                self.adapter.get_disasm(address=func_addr)
+                if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+                else self._cmdj(f"pdfj @ {func_addr}", {})
+            )
+            if isinstance(disasm, dict) and "ops" in disasm:
                 logger.debug(
                     f"pdfj succeeded for {func_name}, got {len(disasm['ops'])} instructions"
                 )
@@ -194,11 +228,15 @@ class FunctionAnalyzer:
             logger.debug(f"pdfj failed for {func_name}: {str(e)}")
         return []
 
-    def _try_pdj_extraction(self, func_name: str, func_size: int) -> list[str]:
+    def _try_pdj_extraction(self, func_name: str, func_size: int, func_addr: int) -> list[str]:
         """Try extracting mnemonics using pdj with size limit"""
         try:
             max_instructions = min(func_size // 4, 1000)
-            disasm_list = safe_cmd_list(self.r2, f"pdj {max_instructions}")
+            disasm_list = (
+                self.adapter.get_disasm(address=func_addr, size=max_instructions)
+                if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+                else self._cmd_list(f"pdj {max_instructions} @ {func_addr}")
+            )
             if isinstance(disasm_list, list):
                 logger.debug(f"pdj succeeded for {func_name}, got {len(disasm_list)} instructions")
                 return self._extract_mnemonics_from_ops(disasm_list)
@@ -206,10 +244,14 @@ class FunctionAnalyzer:
             logger.debug(f"pdj failed for {func_name}: {str(e)}")
         return []
 
-    def _try_basic_pdj_extraction(self, func_name: str) -> list[str]:
+    def _try_basic_pdj_extraction(self, func_name: str, func_addr: int) -> list[str]:
         """Try extracting mnemonics using basic pdj"""
         try:
-            disasm_list = safe_cmd_list(self.r2, "pdj 50")
+            disasm_list = (
+                self.adapter.get_disasm(address=func_addr, size=50)
+                if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+                else self._cmd_list(f"pdj 50 @ {func_addr}")
+            )
             if isinstance(disasm_list, list):
                 logger.debug(
                     f"Basic pdj succeeded for {func_name}, got {len(disasm_list)} instructions"
@@ -219,36 +261,21 @@ class FunctionAnalyzer:
             logger.debug(f"Basic pdj failed for {func_name}: {str(e)}")
         return []
 
-    def _try_pi_extraction(self, func_name: str) -> list[str]:
+    def _try_pi_extraction(self, func_name: str, func_addr: int) -> list[str]:
         """Try extracting mnemonics using pi command"""
         try:
-            instructions_text = self.r2.cmd("pi 100")
+            instructions_text = self._cmd(f"pi 100 @ {func_addr}")
             if instructions_text and instructions_text.strip():
                 lines = instructions_text.strip().split("\n")
                 logger.debug(f"pi succeeded for {func_name}, got {len(lines)} instruction lines")
-                mnemonics = []
-                for line in lines:
-                    line = line.strip()
-                    if line:
-                        mnemonic = line.split()[0]
-                        if mnemonic:
-                            mnemonics.append(mnemonic)
-                return mnemonics
+                return extract_mnemonics_from_text(instructions_text)
         except Exception as e:
             logger.debug(f"pi failed for {func_name}: {str(e)}")
         return []
 
-    def _extract_mnemonics_from_ops(self, ops: list[dict]) -> list[str]:
+    def _extract_mnemonics_from_ops(self, ops: list[dict[str, Any]]) -> list[str]:
         """Extract mnemonics from operation list"""
-        mnemonics = []
-        for op in ops:
-            if isinstance(op, dict) and "opcode" in op:
-                opcode = op["opcode"]
-                if opcode and opcode.strip():
-                    mnemonic = opcode.strip().split()[0]
-                    if mnemonic:
-                        mnemonics.append(mnemonic)
-        return mnemonics
+        return extract_mnemonics_from_ops(ops)
 
     def _generate_function_stats(self, functions: list[dict[str, Any]]) -> dict[str, Any]:
         """Generate statistics about functions"""
@@ -260,7 +287,7 @@ class FunctionAnalyzer:
             total_functions = len(functions)
             sizes = [func.get("size", 0) for func in functions if func.get("size")]
 
-            stats = {
+            stats: dict[str, Any] = {
                 "total_functions": total_functions,
                 "functions_with_size": len(sizes),
             }
@@ -276,7 +303,7 @@ class FunctionAnalyzer:
                 )
 
             # Function types/categories
-            function_types = {}
+            function_types: dict[str, int] = {}
             for func in functions:
                 func_type = func.get("type", "unknown")
                 function_types[func_type] = function_types.get(func_type, 0) + 1
@@ -285,8 +312,11 @@ class FunctionAnalyzer:
 
             # Top functions by size (if available)
             if sizes:
-                functions_with_sizes = [
-                    (f.get("name", f"func_{f.get('offset', '?')}"), f.get("size", 0))
+                functions_with_sizes: list[tuple[str, int]] = [
+                    (
+                        str(f.get("name", f"func_{f.get('offset', '?')}")),
+                        int(f.get("size", 0)),
+                    )
                     for f in functions
                     if f.get("size")
                 ]
@@ -310,7 +340,7 @@ class FunctionAnalyzer:
             Dict mapping MACHOC hashes to lists of function names that share that hash
         """
         try:
-            hash_to_functions = {}
+            hash_to_functions: dict[str, list[str]] = {}
 
             for func_name, machoc_hash in machoc_hashes.items():
                 if machoc_hash not in hash_to_functions:
@@ -343,7 +373,7 @@ class FunctionAnalyzer:
             similarities = self.get_function_similarity(machoc_hashes)
 
             # Generate summary
-            summary = {
+            summary: dict[str, Any] = {
                 "total_functions_hashed": len(machoc_hashes),
                 "unique_machoc_hashes": len(set(machoc_hashes.values())),
                 "duplicate_function_groups": len(similarities),
@@ -355,7 +385,7 @@ class FunctionAnalyzer:
                 summary["similarities"] = similarities
 
                 # Most common patterns
-                pattern_counts = [
+                pattern_counts: list[tuple[int, str]] = [
                     (len(funcs), hash_val[:16]) for hash_val, funcs in similarities.items()
                 ]
                 pattern_counts.sort(reverse=True)
@@ -374,23 +404,26 @@ class FunctionAnalyzer:
             if not func_addr:
                 return 0
 
-            # Seek to function
-            self.r2.cmd(f"s {func_addr}")
+            cfg_info = (
+                self.adapter.get_cfg(func_addr)
+                if self.adapter is not None and hasattr(self.adapter, "get_cfg")
+                else self._cmdj(f"agj @ {func_addr}", {})
+            )
 
-            # Force JSON output format
-            self.r2.cmd("e scr.html=false")
-
-            # Get control flow graph information
-            cfg_info = safe_cmdj(self.r2, "agj", {})
-
-            if not cfg_info or not isinstance(cfg_info, list):
+            if not cfg_info:
                 return 0
 
-            # For each basic block, count edges
-            edges = 0
-            nodes = len(cfg_info)
+            if isinstance(cfg_info, list):
+                blocks = cfg_info
+            elif isinstance(cfg_info, dict) and "blocks" in cfg_info:
+                blocks = cfg_info.get("blocks", [])
+            else:
+                return 0
 
-            for block in cfg_info:
+            edges = 0
+            nodes = len(blocks)
+
+            for block in blocks:
                 if isinstance(block, dict) and "jump" in block:
                     edges += 1
                 if isinstance(block, dict) and "fail" in block:
@@ -404,6 +437,15 @@ class FunctionAnalyzer:
         except Exception as e:
             logger.debug(f"Error calculating cyclomatic complexity: {e}")
             return 0
+
+    def _cmd(self, command: str) -> str:
+        return cmd_helper(self.adapter, self.r2, command)
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _classify_function_type(self, func_name: str, func: dict[str, Any]) -> str:
         """Classify function type based on name and characteristics"""
@@ -434,8 +476,8 @@ class FunctionAnalyzer:
                 return 0.0
 
             mean = sum(values) / len(values)
-            variance = sum((x - mean) ** 2 for x in values) / len(values)
-            return variance**0.5
+            variance: float = sum((x - mean) ** 2 for x in values) / len(values)
+            return float(variance**0.5)
 
         except Exception:
             return 0.0
@@ -443,7 +485,7 @@ class FunctionAnalyzer:
     def _analyze_function_coverage(self, functions: list[dict[str, Any]]) -> dict[str, Any]:
         """Analyze function coverage and detection quality"""
         try:
-            coverage = {
+            coverage: dict[str, Any] = {
                 "total_functions": len(functions),
                 "functions_with_size": 0,
                 "functions_with_blocks": 0,

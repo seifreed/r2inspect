@@ -35,12 +35,12 @@ FATAL_EXCEPTIONS: set[type[BaseException]] = {
 }
 
 
-def _empty_list():
+def _empty_list() -> list[Any]:
     """Return empty list (for mutable default)"""
     return []
 
 
-def _empty_dict():
+def _empty_dict() -> dict[str, Any]:
     """Return empty dict (for mutable default)"""
     return {}
 

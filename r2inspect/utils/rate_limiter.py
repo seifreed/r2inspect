@@ -26,7 +26,7 @@ class TokenBucket:
         """
         self.capacity = capacity
         self.refill_rate = refill_rate
-        self.tokens = capacity
+        self.tokens: float = float(capacity)
         self.last_refill = time.time()
         self.lock = threading.Lock()
 
@@ -60,14 +60,14 @@ class TokenBucket:
             # Small sleep to prevent busy waiting
             time.sleep(0.01)
 
-    def _refill(self):
+    def _refill(self) -> None:
         """Refill tokens based on elapsed time"""
         now = time.time()
         elapsed = now - self.last_refill
 
         # Add tokens based on elapsed time
         new_tokens = elapsed * self.refill_rate
-        self.tokens = min(self.capacity, self.tokens + new_tokens)
+        self.tokens = min(float(self.capacity), self.tokens + new_tokens)
         self.last_refill = now
 
 
@@ -125,19 +125,19 @@ class AdaptiveRateLimiter:
 
         return self.bucket.acquire(tokens=1, timeout=timeout)
 
-    def record_success(self):
+    def record_success(self) -> None:
         """Record successful operation"""
         with self.lock:
             self.success_window.append(time.time())
             self._adjust_rate()
 
-    def record_error(self, _error_type: str = "unknown"):
+    def record_error(self, _error_type: str = "unknown") -> None:
         """Record failed operation"""
         with self.lock:
             self.error_window.append(time.time())
             self._adjust_rate()
 
-    def _check_system_load(self):
+    def _check_system_load(self) -> None:
         """Check system load and adjust rate accordingly"""
         now = time.time()
 
@@ -166,7 +166,7 @@ class AdaptiveRateLimiter:
             with self.lock:
                 self.current_rate = max(self.min_rate, self.current_rate * 0.9)
 
-    def _adjust_rate(self):
+    def _adjust_rate(self) -> None:
         """Adjust rate based on recent error rate"""
         now = time.time()
         recent_window = 60.0  # Look at last 60 seconds
@@ -290,7 +290,7 @@ class BatchRateLimiter:
             self.semaphore.release()
             raise
 
-    def release_success(self):
+    def release_success(self) -> None:
         """Release after successful processing"""
         if isinstance(self.rate_limiter, AdaptiveRateLimiter):
             self.rate_limiter.record_success()
@@ -300,7 +300,7 @@ class BatchRateLimiter:
 
         self.semaphore.release()
 
-    def release_error(self, error_type: str = "unknown"):
+    def release_error(self, error_type: str = "unknown") -> None:
         """Release after failed processing"""
         if isinstance(self.rate_limiter, AdaptiveRateLimiter):
             self.rate_limiter.record_error(error_type)
@@ -331,7 +331,7 @@ class BatchRateLimiter:
         return base_stats
 
 
-def cleanup_memory():
+def cleanup_memory() -> dict[str, float] | None:
     """Force garbage collection to free memory"""
     gc.collect()
 

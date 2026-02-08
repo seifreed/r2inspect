@@ -13,11 +13,11 @@ Legend:
 ## Phase 0 - Test foundations
 
 - [x] Create `tests/` layout with pytest discovery (`tests/unit`, `tests/integration`, `tests/e2e`, `tests/fixtures`)
-- [ ] Add `tests/conftest.py` with shared fixtures (temp dirs, sample binaries, fake r2pipe, deterministic clock)
-- [ ] Add CI-friendly markers (`unit`, `integration`, `slow`, `requires_r2`, `requires_*`)
-- [ ] Add minimal smoke test to ensure pytest discovery works
-- [ ] Define golden-output strategy (snapshots or JSON fixtures)
-- [ ] Document how to run tests locally and in CI
+- [x] Add `tests/conftest.py` with shared fixtures (temp dirs, sample binaries, fake r2pipe, deterministic clock)
+- [x] Add CI-friendly markers (`unit`, `integration`, `slow`, `requires_r2`, `requires_*`)
+- [x] Add minimal smoke test to ensure pytest discovery works
+- [x] Define golden-output strategy (snapshots or JSON fixtures)
+- [x] Document how to run tests locally and in CI
 
 ## Phase 1 - Core unit tests (fast, no external deps)
 
@@ -31,8 +31,8 @@ Legend:
 
 ### Pipeline
 
-- [ ] `r2inspect/pipeline/analysis_pipeline.py` dependency resolution, skip logic, error handling
-- [ ] `r2inspect/pipeline/stages.py` hashing/detection/format stage behavior with stub analyzers
+- [x] `r2inspect/pipeline/analysis_pipeline.py` dependency resolution, skip logic, error handling
+- [x] `r2inspect/pipeline/stages.py` hashing/detection/format stage behavior with stub analyzers
 
 ### Adapters
 
@@ -41,7 +41,7 @@ Legend:
 
 ### Registry and lazy loading
 
-- [ ] `r2inspect/registry/analyzer_registry.py` registration modes, metadata extraction, dependency order
+- [x] `r2inspect/registry/analyzer_registry.py` registration modes, metadata extraction, dependency order
 - [x] `r2inspect/registry/default_registry.py` ensures expected analyzers registered
 - [x] `r2inspect/lazy_loader.py` caching behavior, load failures, stats
 
@@ -118,6 +118,98 @@ Each analyzer should have unit tests that validate:
 - [x] `r2inspect/modules/crypto_analyzer.py`
 - [x] `r2inspect/modules/yara_analyzer.py` (mock yara hits)
 
+## Phase X - Clean architecture pending analyzers (IO + heuristics mixed)
+
+- [x] `r2inspect/modules/tlsh_analyzer.py`
+- [x] `r2inspect/modules/binlex_analyzer.py`
+- [x] `r2inspect/modules/simhash_analyzer.py`
+- [x] `r2inspect/modules/bindiff_analyzer.py`
+- [x] `r2inspect/modules/ccbhash_analyzer.py`
+- [x] `r2inspect/modules/section_analyzer.py`
+- [x] `r2inspect/modules/rich_header_analyzer.py`
+- [x] `r2inspect/modules/elf_analyzer.py`
+- [x] `r2inspect/modules/string_analyzer.py`
+- [x] `r2inspect/modules/macho_analyzer.py`
+- [x] `r2inspect/modules/pe_resources.py`
+- [x] `r2inspect/modules/function_analyzer.py`
+- [x] `r2inspect/modules/overlay_analyzer.py`
+- [x] `r2inspect/modules/export_analyzer.py`
+- [x] `r2inspect/modules/compiler_detector.py`
+- [x] `r2inspect/modules/elf_security.py`
+- [x] `r2inspect/modules/authenticode_analyzer.py`
+- [x] `r2inspect/modules/impfuzzy_analyzer.py`
+- [x] `r2inspect/modules/anti_analysis.py`
+- [x] `r2inspect/modules/exploit_mitigation_analyzer.py`
+- [x] `r2inspect/modules/pe_imports.py`
+- [x] `r2inspect/modules/binbloom_analyzer.py`
+- [x] `r2inspect/modules/resource_analyzer.py`
+- [x] `r2inspect/modules/import_analyzer.py`
+- [x] `r2inspect/modules/packer_detector.py`
+- [x] `r2inspect/modules/telfhash_analyzer.py`
+- [x] `r2inspect/modules/pe_security.py`
+- [x] `r2inspect/modules/yara_analyzer.py`
+
+## Phase X+ - Clean architecture (conceptual) hardening
+
+### Qué aún rompe “estricta” (conceptual)
+
+- [x] Separación dominio/IO en analyzers: mover lógica a domain services y dejar analyzers como orquestadores.
+- [x] Core sin infraestructura: sacar creación/inyectado de backends fuera del core y depender solo de interfaces.
+
+### Posibles mejoras adicionales (sin perder funcionalidad)
+
+- [x] Extraer más lógica pura a helpers de dominio en analyzers complejos (strings/heurísticas).
+- [x] Unificar patrones repetidos (search/entropy/scoring) en helpers comunes si aparece duplicación.
+- [x] Recortar docstrings largos restantes en módulos verbosos.
+
+### Plan concreto (archivos y pasos)
+
+#### Fase A — Separación dominio/IO por áreas (sin romper API)
+
+- [x] `r2inspect/modules/*_analyzer.py`: identificar IO directo restante (`execute_command`, `_cmd*`) y mover parseo/heurísticas a `r2inspect/modules/*_domain.py`.
+- [x] `r2inspect/modules/elf_analyzer.py`: mover `_read_section`, `_find_section` a `elf_domain.py` como funciones puras (input: secciones/bytes/strings).
+- [x] `r2inspect/modules/macho_analyzer.py`: mover construcción de `sections`/`load_commands` a `macho_domain.py`.
+- [x] `r2inspect/modules/pe_analyzer.py`: mover postprocesado de `resource_info`/`version_info` a `pe_info_domain.py`.
+- [x] `r2inspect/modules/import_analyzer.py`: mover `_find_suspicious_patterns`/`_assess_api_risk` a `import_domain.py`.
+- [x] `r2inspect/modules/anti_analysis.py`: mover patrones/heurísticas a `anti_analysis_domain.py` (input: listas/strings ya extraídas).
+
+#### Fase B — Backend/Adapter rico (menos comandos crudos)
+
+- [x] `r2inspect/interfaces/binary_analyzer.py`: añadir métodos de alto nivel (ej. `get_strings`, `get_functions`, `get_disasm`, `get_cfg`).
+- [x] `r2inspect/adapters/r2pipe_adapter.py`: implementar esos métodos con caching.
+- [x] `r2inspect/modules/*_analyzer.py`: sustituir `execute_command`/`_cmd*` por métodos de adapter cuando existan.
+
+#### Fase C — Core sin infraestructura
+
+- [x] `r2inspect/core/factory.py`: mover toda creación de adapter/registry/pipeline_builder aquí (ya existe; consolidar uso).
+- [x] `r2inspect/core/inspector.py`: depender solo de interfaces y objetos ya inyectados (sin construir nada).
+- [x] `r2inspect/cli/*`: usar `create_inspector()` para construir desde CLI y eliminar rutas de compat en core.
+
+#### Fase D — Helpers compartidos y deduplicación
+
+- [x] `r2inspect/modules/search_helpers.py`: centralizar TODO search (`/c`, `/x`) y usar desde analyzers.
+- [x] `r2inspect/modules/domain_helpers.py`: consolidar entropy/scoring utilidades duplicadas.
+- [x] `r2inspect/modules/*_domain.py`: revisar duplicaciones de parseo (strings, imports, sections) y unificar.
+
+#### Fase E — Limpieza final
+
+- [x] `r2inspect/modules/*.py`: recortar docstrings largos restantes (mantener intención, eliminar redundancias).
+- [x] `r2inspect/config_schemas/*.py`: compactar docstrings y comentarios largos que ya no aportan.
+
+#### Fase F — Calidad extra (opcional)
+
+- [x] Convenciones/estilo: normalizar naming, estructura de módulos y consistencia de logging.
+  - [x] Unificar prefijos y nombres de métodos (`_cmd/_cmdj/_cmd_list` vs `execute_command`).
+  - [x] Alinear nombres de resultados (`results`, `result`, `analysis`) y claves de salida entre analyzers.
+  - [x] Normalizar mensajes de logging (niveles y formato) en `modules/` y `core/`.
+- [x] Tipos: reforzar typing en interfaces y adapters.
+  - [x] `r2inspect/interfaces/*`: añadir Protocols más específicos (retornos concretos).
+  - [x] `r2inspect/adapters/r2pipe_adapter.py`: tipar cachés, helpers y `execute_command` con `Literal`/`TypedDict` cuando aplique.
+  - [x] Analyzers: tipar retornos y estructuras clave con `TypedDict` (solo donde aporta claridad).
+- [x] Documentación técnica: actualizar docs internas a la nueva arquitectura.
+  - [x] `README.md` y `docs/*`: reflejar `create_inspector` + DI + adapter.
+  - [x] Añadir diagrama simple de capas (core/domain/adapters/cli).
+
 ### Hashing/similarity analyzers
 
 - [x] `r2inspect/modules/ssdeep_analyzer.py`
@@ -181,3 +273,38 @@ Each analyzer should have unit tests that validate:
 - [x] CLI workflows validated
 - [x] Critical failure paths validated
 - [x] Coverage target met and stable in CI
+
+## Phase 36 - Clean architecture strictness (remaining)
+
+### A. Adapter purity (remove direct r2/safe_cmd in analyzers)
+
+- [x] `r2inspect/modules/bindiff_analyzer.py`: replace direct `r2.cmd*`/`safe_cmd*` with adapter high-level methods (`get_functions`, `get_strings`, `get_cfg`, `get_disasm`, `read_bytes`).
+- [x] `r2inspect/modules/tlsh_analyzer.py`: replace `safe_cmd*` uses for sections/functions/bytes with adapter methods.
+- [x] `r2inspect/modules/rich_header_analyzer.py`: replace direct `r2.cmd` seek/read with adapter helpers or new adapter methods.
+- [x] `r2inspect/modules/compiler_detector.py`: replace direct `r2.cmd/cmdj` uses with adapter methods (`get_strings`, `get_imports`, `get_sections`, `get_symbols`).
+- [x] `r2inspect/modules/function_analyzer.py`: replace direct `cmd/cmdj` usage with adapter disasm/CFG helpers.
+- [x] `r2inspect/modules/section_analyzer.py`: replace inline `/c` search and raw cmd access with adapter search helpers.
+- [x] `r2inspect/modules/simhash_analyzer.py`: replace direct `cmd/cmdj` usage with adapter disasm/strings helpers.
+- [x] `r2inspect/modules/pe_resources.py`: replace raw `_cmd/_cmdj` with adapter helpers.
+- [x] `r2inspect/modules/pe_security.py`: replace raw `_cmd` with adapter helpers.
+- [x] `r2inspect/modules/elf_security.py`: replace raw `_cmd` with adapter helpers.
+
+### B. Interface purity (remove generic execute_command escape hatches)
+
+- [x] `r2inspect/interfaces/binary_analyzer.py`: remove or deprecate `execute_command` from the protocol to force high-level access only.
+- [x] `r2inspect/modules/*`: remove any fallback to `execute_command` for analyzers that can use adapter methods.
+
+### C. Core isolation (move r2 session outside core)
+
+- [x] `r2inspect/core/r2_session.py`: move r2pipe lifecycle into adapters/infrastructure layer; core should only depend on an interface.
+- [x] `r2inspect/core/inspector.py`: remove any direct r2 session knowledge (construct via DI only).
+
+### D. Domain extraction (final)
+
+- [x] `r2inspect/modules/rich_header_analyzer.py`: extract remaining pure parsing into `rich_header_domain.py`.
+- [x] `r2inspect/modules/bindiff_analyzer.py`: extract similarity/scoring helpers into `bindiff_domain.py` and remove inline scoring math.
+
+### E. Clean code consistency sweep
+
+- [x] Normalize remaining `_cmd/_cmdj` wrappers to shared helpers where needed.
+- [x] Trim any remaining long docstrings in large modules (rich_header, bindiff, simhash).

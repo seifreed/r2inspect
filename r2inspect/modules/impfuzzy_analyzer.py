@@ -1,26 +1,13 @@
 #!/usr/bin/env python3
-# mypy: ignore-errors
-"""
-Impfuzzy Analyzer Module
-
-This module calculates impfuzzy hash from import API of PE files.
-Impfuzzy is a fuzzy hash that's more tolerant to small changes compared to imphash.
-
-Based on research from JPCERT/CC:
-- https://github.com/JPCERTCC/impfuzzy
-- https://www.jpcert.or.jp/magazine/acreport-impfuzzy.html
-- http://blog.jpcert.or.jp/2016/05/classifying-mal-a988.html
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Impfuzzy hash calculation for PE imports."""
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, cast
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj
+from ..utils.ssdeep_loader import get_ssdeep
 
 logger = get_logger(__name__)
 
@@ -44,7 +31,7 @@ except ImportError:
 class ImpfuzzyAnalyzer(HashingStrategy):
     """Impfuzzy hash calculation from PE import table"""
 
-    def __init__(self, r2_instance, filepath: str):
+    def __init__(self, adapter: Any, filepath: str) -> None:
         """
         Initialize Impfuzzy analyzer.
 
@@ -53,7 +40,8 @@ class ImpfuzzyAnalyzer(HashingStrategy):
             filepath: Path to the PE file being analyzed
         """
         # Initialize parent with filepath
-        super().__init__(filepath=filepath, r2_instance=r2_instance)
+        super().__init__(filepath=filepath, r2_instance=adapter)
+        self.adapter: Any = adapter
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
@@ -119,7 +107,7 @@ class ImpfuzzyAnalyzer(HashingStrategy):
         """
         logger.debug(f"Starting detailed impfuzzy analysis for {self.filepath}")
 
-        results = {
+        results: dict[str, Any] = {
             "available": False,
             "impfuzzy_hash": None,
             "import_count": 0,
@@ -208,7 +196,7 @@ class ImpfuzzyAnalyzer(HashingStrategy):
 
             # Check via r2pipe
             try:
-                info_cmd = safe_cmdj(self.r2, "ij", {})
+                info_cmd = self._cmdj("ij", {})
                 if info_cmd and "bin" in info_cmd:
                     bin_format = info_cmd["bin"].get("format", "").lower()
                     if "pe" in bin_format:
@@ -223,7 +211,7 @@ class ImpfuzzyAnalyzer(HashingStrategy):
             logger.error(f"Error checking if file is PE: {e}")
             return False
 
-    def _extract_imports(self) -> list[dict[str, Any | None]]:
+    def _extract_imports(self) -> list[dict[str, Any]]:
         """
         Extract imports from PE file using r2pipe.
 
@@ -232,26 +220,39 @@ class ImpfuzzyAnalyzer(HashingStrategy):
         """
         try:
             # Get import information in JSON format
-            imports = safe_cmdj(self.r2, "iij", [])
+            imports: list[dict[str, Any]] = []
+            if self.adapter is not None and hasattr(self.adapter, "get_imports"):
+                raw_imports = self.adapter.get_imports()
+            else:
+                raw_imports = self._cmdj("iij", [])
+
+            if isinstance(raw_imports, list):
+                imports = [imp for imp in raw_imports if isinstance(imp, dict)]
+            elif isinstance(raw_imports, dict):
+                imports = [raw_imports]
 
             if not imports:
                 logger.debug("No imports found with 'iij' command")
                 # Try alternative command
-                imports = safe_cmdj(self.r2, "ii", [])
-                if isinstance(imports, dict):
-                    # Convert single import to list
-                    imports = [imports]
+                raw_imports = self._cmdj("ii", [])
+                if isinstance(raw_imports, list):
+                    imports = [imp for imp in raw_imports if isinstance(imp, dict)]
+                elif isinstance(raw_imports, dict):
+                    imports = [raw_imports]
 
             if not imports:
                 logger.debug("No imports found with any method")
-                return None
+                return []
 
             logger.debug(f"Extracted {len(imports)} import entries")
             return imports
 
         except Exception as e:
             logger.error(f"Error extracting imports: {e}")
-            return None
+            return []
+
+    def _cmdj(self, command: str, default: Any | None = None) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
 
     def _process_imports(self, imports_data: list[dict[str, Any]]) -> list[str]:
         """
@@ -263,16 +264,11 @@ class ImpfuzzyAnalyzer(HashingStrategy):
         Returns:
             List of strings in format "dll.function"
         """
-        processed_imports = []
+        processed_imports: list[str] = []
         dll_funcs = defaultdict(list)
 
         try:
             for imp in imports_data:
-                # Skip if import is not a dictionary (malformed data)
-                if not isinstance(imp, dict):
-                    logger.debug(f"Skipping malformed import data: {type(imp)} - {imp}")
-                    continue
-
                 # Extract DLL name
                 dll = (
                     imp.get("libname")
@@ -345,12 +341,11 @@ class ImpfuzzyAnalyzer(HashingStrategy):
 
         try:
             # pyimpfuzzy uses ssdeep comparison internally
-            import ssdeep
-
-            return ssdeep.compare(hash1, hash2)
-        except ImportError:
-            logger.warning("ssdeep library required for impfuzzy comparison")
-            return None
+            ssdeep_module = get_ssdeep()
+            if ssdeep_module is None:
+                logger.warning("ssdeep library required for impfuzzy comparison")
+                return None
+            return cast(int, ssdeep_module.compare(hash1, hash2))
         except Exception as e:
             logger.warning(f"Impfuzzy comparison failed: {e}")
             return None
@@ -380,7 +375,7 @@ class ImpfuzzyAnalyzer(HashingStrategy):
             return None
 
         try:
-            return pyimpfuzzy.get_impfuzzy(filepath)
+            return cast(str | None, pyimpfuzzy.get_impfuzzy(filepath))
         except Exception as e:
             logger.error(f"Error calculating impfuzzy from file: {e}")
             return None

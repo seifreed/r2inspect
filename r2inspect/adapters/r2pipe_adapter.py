@@ -1,49 +1,13 @@
 #!/usr/bin/env python3
-"""
-R2Pipe Adapter Implementation
+"""R2Pipe adapter implementation."""
 
-This module provides the R2PipeAdapter class that implements the
-BinaryAnalyzerInterface Protocol for radare2/r2pipe backend.
-
-The adapter serves as a translation layer between the generic Protocol
-interface and the concrete r2pipe implementation, providing:
-- Type-safe method signatures
-- Robust error handling
-- Response validation and sanitization
-- Consistent data transformation
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-
-Architecture:
-    The adapter follows the Adapter pattern (Gang of Four) to provide
-    a consistent interface to the r2pipe backend. It uses composition
-    rather than inheritance to maintain loose coupling.
-
-Design Principles Applied:
-    - Single Responsibility: Adapter only handles r2pipe translation
-    - Dependency Inversion: Depends on Protocol abstraction
-    - Open/Closed: Extensible without modification
-    - Interface Segregation: Implements focused Protocol interface
-
-Usage:
-    >>> from r2inspect.adapters import R2PipeAdapter
-    >>> import r2pipe
-    >>>
-    >>> r2 = r2pipe.open("/path/to/binary")
-    >>> adapter = R2PipeAdapter(r2)
-    >>>
-    >>> # Use through Protocol interface
-    >>> info = adapter.get_file_info()
-    >>> sections = adapter.get_sections()
-    >>> data = adapter.read_bytes(0x401000, 256)
-"""
-
+import os
 from typing import Any, cast
 
 from ..interfaces import BinaryAnalyzerInterface
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import safe_cmd, safe_cmd_dict, safe_cmd_list, safe_cmdj
+from ..utils.r2_suppress import silent_cmdj
 from .validation import (
     is_valid_r2_response,
     sanitize_r2_output,
@@ -54,42 +18,15 @@ from .validation import (
 
 logger = get_logger(__name__)
 
+CommandOutput = str | dict[str, Any] | list[Any] | None
+
 
 class R2PipeAdapter:
-    """
-    Adapter for radare2/r2pipe backend implementing BinaryAnalyzerInterface.
+    """Adapter for radare2/r2pipe backend implementing BinaryAnalyzerInterface."""
 
-    This adapter provides a clean, type-safe interface to radare2 functionality,
-    abstracting away r2pipe-specific details and providing consistent error
-    handling and data validation.
+    thread_safe = False
 
-    The class implements the BinaryAnalyzerInterface Protocol through structural
-    subtyping (duck typing with type hints), meaning it satisfies the Protocol
-    contract without explicitly inheriting from it.
-
-    Attributes:
-        _r2: The r2pipe instance for command execution
-
-    Example:
-        >>> import r2pipe
-        >>> from r2inspect.adapters import R2PipeAdapter
-        >>> from r2inspect.interfaces import BinaryAnalyzerInterface
-        >>>
-        >>> r2 = r2pipe.open("sample.exe")
-        >>> adapter = R2PipeAdapter(r2)
-        >>>
-        >>> # Verify Protocol compliance
-        >>> assert isinstance(adapter, BinaryAnalyzerInterface)
-        >>>
-        >>> # Use adapter methods
-        >>> file_info = adapter.get_file_info()
-        >>> print(f"Architecture: {file_info.get('arch')}")
-        >>>
-        >>> imports = adapter.get_imports()
-        >>> print(f"Found {len(imports)} imports")
-    """
-
-    def __init__(self, r2_instance):
+    def __init__(self, r2_instance: Any) -> None:
         """
         Initialize the R2Pipe adapter.
 
@@ -109,8 +46,15 @@ class R2PipeAdapter:
             raise ValueError("r2_instance cannot be None")
 
         self._r2 = r2_instance
-        self._cache: dict[str, Any] = {}
+        self._cache: dict[str, CommandOutput] = {}
         logger.debug("R2PipeAdapter initialized successfully")
+
+    def cmd(self, command: str) -> str:
+        result = self._r2.cmd(command)
+        return result if isinstance(result, str) else str(result)
+
+    def cmdj(self, command: str) -> Any:
+        return silent_cmdj(self._r2, command, None)
 
     def _cached_query(
         self,
@@ -118,6 +62,8 @@ class R2PipeAdapter:
         data_type: str = "list",
         default: list | dict | None = None,
         error_msg: str = "",
+        *,
+        cache: bool = True,
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """
         Execute r2 command with caching and validation.
@@ -141,7 +87,8 @@ class R2PipeAdapter:
             >>> sections = self._cached_query("iSj", "list",
             ...     error_msg="No sections found")
         """
-        if cmd in self._cache:
+        self._maybe_force_error("_cached_query")
+        if cache and cmd in self._cache:
             cached = self._cache[cmd]
             if data_type == "list":
                 return cast(list[dict[str, Any]], cached)
@@ -150,10 +97,10 @@ class R2PipeAdapter:
         result: Any
         default_value: Any
         if data_type == "list":
-            result = safe_cmd_list(self._r2, cmd)
+            result = safe_cmd_list(self, cmd)
             default_value = default if default is not None else []
         else:
-            result = safe_cmd_dict(self._r2, cmd)
+            result = safe_cmd_dict(self, cmd)
             default_value = default if default is not None else {}
 
         validated = validate_r2_data(result, data_type)
@@ -164,7 +111,8 @@ class R2PipeAdapter:
                 return cast(list[dict[str, Any]], default_value)
             return cast(dict[str, Any], default_value)
 
-        self._cache[cmd] = validated
+        if cache:
+            self._cache[cmd] = validated
         if data_type == "list":
             return cast(list[dict[str, Any]], validated)
         return cast(dict[str, Any], validated)
@@ -195,9 +143,10 @@ class R2PipeAdapter:
             ...     print(f"Format: {info['bintype']}")
         """
         try:
+            self._maybe_force_error("get_file_info")
             if "ij" in self._cache:
                 return cast(dict[str, Any], self._cache["ij"])
-            info = safe_cmd_dict(self._r2, "ij")
+            info = safe_cmd_dict(self, "ij")
             validated = validate_r2_data(info, "dict")
 
             if not is_valid_r2_response(validated):
@@ -449,6 +398,269 @@ class R2PipeAdapter:
             logger.error(f"Error retrieving functions: {e}")
             return []
 
+    def get_functions_at(self, address: int) -> list[dict[str, Any]]:
+        """Retrieve functions at a given address using 'aflj @ <addr>'."""
+        try:
+            self._maybe_force_error("get_functions_at")
+            cmd = f"aflj @ {address}"
+            data = safe_cmdj(self, cmd, [])
+            validated = validate_r2_data(data, "list")
+            return cast(list[dict[str, Any]], validated) if validated else []
+        except Exception as e:
+            logger.error(f"Error retrieving functions at {hex(address)}: {e}")
+            return []
+
+    def get_disasm(self, address: int | None = None, size: int | None = None) -> Any:
+        """
+        Retrieve disassembly as JSON.
+
+        Uses 'pdfj' for function disassembly or 'pdj <size>' for a byte range.
+        Optional address uses radare2's '@' seek syntax.
+        """
+        try:
+            self._maybe_force_error("get_disasm")
+            if size is None:
+                cmd = "pdfj"
+                data_type = "dict"
+            else:
+                cmd = f"pdj {size}"
+                data_type = "list"
+            if address is not None:
+                cmd = f"{cmd} @ {address}"
+            return self._cached_query(
+                cmd,
+                data_type,
+                error_msg=f"No disassembly found for '{cmd}'",
+                cache=address is None,
+            )
+        except Exception as e:
+            logger.error(f"Error retrieving disassembly: {e}")
+            return []
+
+    def get_cfg(self, address: int | None = None) -> Any:
+        """
+        Retrieve a control-flow graph as JSON.
+
+        Uses 'agj' with optional '@ <address>' seek syntax.
+        """
+        try:
+            self._maybe_force_error("get_cfg")
+            cmd = "agj"
+            if address is not None:
+                cmd = f"{cmd} @ {address}"
+            return self._cached_query(
+                cmd,
+                "list",
+                error_msg=f"No CFG data found for '{cmd}'",
+                cache=address is None,
+            )
+        except Exception as e:
+            logger.error(f"Error retrieving CFG: {e}")
+            return {}
+
+    def analyze_all(self) -> str:
+        """Run full analysis (aaa)."""
+        try:
+            self._maybe_force_error("analyze_all")
+            return safe_cmd(self, "aaa", "")
+        except Exception as e:
+            logger.error(f"Error running analysis: {e}")
+            return ""
+
+    def get_info_text(self) -> str:
+        """Return textual info output (i)."""
+        try:
+            self._maybe_force_error("get_info_text")
+            return safe_cmd(self, "i", "")
+        except Exception as e:
+            logger.error(f"Error retrieving info text: {e}")
+            return ""
+
+    def get_dynamic_info_text(self) -> str:
+        """Return dynamic info output (id)."""
+        try:
+            self._maybe_force_error("get_dynamic_info_text")
+            return safe_cmd(self, "id", "")
+        except Exception as e:
+            logger.error(f"Error retrieving dynamic info text: {e}")
+            return ""
+
+    def get_entropy_pattern(self) -> str:
+        """Return entropy pattern output (p=e 100)."""
+        try:
+            self._maybe_force_error("get_entropy_pattern")
+            return safe_cmd(self, "p=e 100", "")
+        except Exception as e:
+            logger.error(f"Error retrieving entropy pattern: {e}")
+            return ""
+
+    def get_pe_version_info_text(self) -> str:
+        """Return PE version info text output (iR~version)."""
+        try:
+            self._maybe_force_error("get_pe_version_info_text")
+            return safe_cmd(self, "iR~version", "")
+        except Exception as e:
+            logger.error(f"Error retrieving PE version info text: {e}")
+            return ""
+
+    def get_pe_security_text(self) -> str:
+        """Return PE security info text (iHH)."""
+        try:
+            self._maybe_force_error("get_pe_security_text")
+            return safe_cmd(self, "iHH", "")
+        except Exception as e:
+            logger.error(f"Error retrieving PE security text: {e}")
+            return ""
+
+    def get_header_text(self) -> str:
+        """Return header text output (ih)."""
+        try:
+            self._maybe_force_error("get_header_text")
+            return safe_cmd(self, "ih", "")
+        except Exception as e:
+            logger.error(f"Error retrieving header text: {e}")
+            return ""
+
+    def get_headers_json(self) -> Any:
+        """Return header JSON output (ihj)."""
+        try:
+            self._maybe_force_error("get_headers_json")
+            return safe_cmdj(self, "ihj", None)
+        except Exception as e:
+            logger.error(f"Error retrieving header JSON: {e}")
+            return None
+
+    def get_strings_basic(self) -> list[dict[str, Any]]:
+        """Return basic strings list (izj)."""
+        try:
+            return cast(
+                list[dict[str, Any]],
+                self._cached_query(
+                    "izj",
+                    "list",
+                    error_msg="No strings found or invalid response from 'izj'",
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Error retrieving basic strings: {e}")
+            return []
+
+    def get_strings_text(self) -> str:
+        """Return raw strings text output (izz~..)."""
+        try:
+            self._maybe_force_error("get_strings_text")
+            return safe_cmd(self, "izz~..", "")
+        except Exception as e:
+            logger.error(f"Error retrieving strings text: {e}")
+            return ""
+
+    def get_strings_filtered(self, command: str) -> str:
+        """Return filtered strings output (iz~...)."""
+        try:
+            self._maybe_force_error("get_strings_filtered")
+            return safe_cmd(self, command, "")
+        except Exception as e:
+            logger.error(f"Error retrieving filtered strings: {e}")
+            return ""
+
+    def get_entry_info(self) -> list[dict[str, Any]]:
+        """Return entry point info (iej)."""
+        try:
+            self._maybe_force_error("get_entry_info")
+            data = safe_cmdj(self, "iej", [])
+            validated = validate_r2_data(data, "list")
+            return cast(list[dict[str, Any]], validated) if validated else []
+        except Exception as e:
+            logger.error(f"Error retrieving entry info: {e}")
+            return []
+
+    def get_pe_header(self) -> dict[str, Any]:
+        """Return PE header info (ihj) as dict when possible."""
+        try:
+            self._maybe_force_error("get_pe_header")
+            data = safe_cmdj(self, "ihj", {})
+            if isinstance(data, list) and data:
+                return {"headers": data}
+            if isinstance(data, dict):
+                return data
+            return {}
+        except Exception as e:
+            logger.error(f"Error retrieving PE header: {e}")
+            return {}
+
+    def get_pe_optional_header(self) -> dict[str, Any]:
+        """Return PE optional header info (iHj)."""
+        try:
+            self._maybe_force_error("get_pe_optional_header")
+            data = safe_cmdj(self, "iHj", {})
+            validated = validate_r2_data(data, "dict")
+            return cast(dict[str, Any], validated) if validated else {}
+        except Exception as e:
+            logger.error(f"Error retrieving PE optional header: {e}")
+            return {}
+
+    def get_data_directories(self) -> list[dict[str, Any]]:
+        """Return data directories info (iDj)."""
+        try:
+            self._maybe_force_error("get_data_directories")
+            data = safe_cmdj(self, "iDj", [])
+            validated = validate_r2_data(data, "list")
+            return cast(list[dict[str, Any]], validated) if validated else []
+        except Exception as e:
+            logger.error(f"Error retrieving data directories: {e}")
+            return []
+
+    def get_resources_info(self) -> list[dict[str, Any]]:
+        """Return resources info (iRj)."""
+        try:
+            self._maybe_force_error("get_resources_info")
+            data = safe_cmdj(self, "iRj", [])
+            validated = validate_r2_data(data, "list")
+            return cast(list[dict[str, Any]], validated) if validated else []
+        except Exception as e:
+            logger.error(f"Error retrieving resources info: {e}")
+            return []
+
+    def get_function_info(self, address: int) -> list[dict[str, Any]]:
+        """Return function info (afij @ address)."""
+        try:
+            self._maybe_force_error("get_function_info")
+            cmd = f"afij @ {address}"
+            data = safe_cmdj(self, cmd, [])
+            validated = validate_r2_data(data, "list")
+            return cast(list[dict[str, Any]], validated) if validated else []
+        except Exception as e:
+            logger.error(f"Error retrieving function info: {e}")
+            return []
+
+    def get_disasm_text(self, address: int | None = None, size: int | None = None) -> str:
+        """Return textual disassembly (pi) for a region."""
+        try:
+            self._maybe_force_error("get_disasm_text")
+            cmd = "pi" if size is None else f"pi {size}"
+            if address is not None:
+                cmd = f"{cmd} @ {address}"
+            return safe_cmd(self, cmd, "")
+        except Exception as e:
+            logger.error(f"Error retrieving disasm text: {e}")
+            return ""
+
+    def search_hex_json(self, pattern: str) -> list[dict[str, Any]]:
+        """Return hex search results in JSON (/xj)."""
+        try:
+            self._maybe_force_error("search_hex_json")
+            data = safe_cmdj(self, f"/xj {pattern}", [])
+            validated = validate_r2_data(data, "list")
+            return cast(list[dict[str, Any]], validated) if validated else []
+        except Exception as e:
+            logger.error(f"Error searching hex pattern JSON: {e}")
+            return []
+
+    def read_bytes_list(self, address: int, size: int) -> list[int]:
+        """Read raw bytes and return a list of ints."""
+        data = self.read_bytes(address, size)
+        return list(data) if data else []
+
     def read_bytes(self, address: int, size: int) -> bytes:
         """
         Read raw bytes from a specific address.
@@ -481,6 +693,7 @@ class R2PipeAdapter:
             ...     print("Valid PE signature")
         """
         try:
+            self._maybe_force_error("read_bytes")
             # Validate inputs
             valid_address = validate_address(address)
             valid_size = validate_size(size)
@@ -488,7 +701,7 @@ class R2PipeAdapter:
             # Execute p8 command to read hex bytes
             # Format: "p8 <size> @ <address>"
             cmd = f"p8 {valid_size} @ {valid_address}"
-            hex_data = safe_cmd(self._r2, cmd, "")
+            hex_data = safe_cmd(self, cmd, "")
 
             if not hex_data or not is_valid_r2_response(hex_data):
                 logger.warning(
@@ -514,77 +727,23 @@ class R2PipeAdapter:
             logger.error(f"Error reading bytes from address {hex(address)}: {e}")
             return b""
 
-    def execute_command(self, cmd: str) -> Any:
-        """
-        Execute an analyzer-specific command.
-
-        This method provides a generic interface for executing radare2 commands
-        that may not be exposed through the standard Protocol methods. It
-        automatically detects whether to use JSON or text output based on
-        command suffix.
-
-        Commands ending with 'j' are treated as JSON commands and use cmdj().
-        All other commands use cmd() for text output.
-
-        Args:
-            cmd: Radare2 command string to execute
-
-        Returns:
-            Command output with type depending on command:
-                - Dict or List for JSON commands (ending with 'j')
-                - str for text commands
-                - None if command fails
-
-        Example:
-            >>> # Execute JSON command
-            >>> file_info = adapter.execute_command("ij")
-            >>> assert isinstance(file_info, dict)
-            >>>
-            >>> # Execute text command
-            >>> disasm = adapter.execute_command("pd 10")
-            >>> assert isinstance(disasm, str)
-            >>>
-            >>> # Get binary info with custom command
-            >>> bin_info = adapter.execute_command("iIj")
-            >>> print(f"Compiler: {bin_info.get('compiler', 'unknown')}")
-        """
+    def search_text(self, pattern: str) -> str:
+        """Search for text patterns using r2 /c."""
         try:
-            if not cmd:
-                logger.warning("Empty command provided to execute_command")
-                return None
-
-            # Sanitize command (remove potential injection attempts)
-            cmd = cmd.strip()
-
-            # Detect JSON vs text command
-            if cmd.endswith("j"):
-                # JSON command
-                result = safe_cmdj(self._r2, cmd, None)
-
-                if result is None:
-                    logger.debug(f"Command '{cmd}' returned None")
-                    return None
-
-                # Validate based on result type
-                if isinstance(result, dict):
-                    return validate_r2_data(result, "dict")
-                elif isinstance(result, list):
-                    return validate_r2_data(result, "list")
-                else:
-                    return result
-            else:
-                # Text command
-                result = safe_cmd(self._r2, cmd, "")
-
-                if not result:
-                    logger.debug(f"Command '{cmd}' returned empty result")
-                    return ""
-
-                return sanitize_r2_output(result)
-
+            self._maybe_force_error("search_text")
+            return safe_cmd(self, f"/c {pattern}")
         except Exception as e:
-            logger.error(f"Error executing command '{cmd}': {e}")
-            return None
+            logger.error(f"Error searching text pattern: {e}")
+            return ""
+
+    def search_hex(self, hex_pattern: str) -> str:
+        """Search for hex patterns using r2 /x."""
+        try:
+            self._maybe_force_error("search_hex")
+            return safe_cmd(self, f"/x {hex_pattern}")
+        except Exception as e:
+            logger.error(f"Error searching hex pattern: {e}")
+            return ""
 
     def __repr__(self) -> str:
         """Return string representation of the adapter."""
@@ -593,3 +752,14 @@ class R2PipeAdapter:
     def __str__(self) -> str:
         """Return human-readable string representation."""
         return "R2PipeAdapter for radare2 binary analysis"
+
+    def _maybe_force_error(self, method: str) -> None:
+        forced = os.environ.get("R2INSPECT_FORCE_ADAPTER_ERROR", "")
+        if not forced:
+            return
+        lowered = forced.strip().lower()
+        if lowered in {"1", "true", "yes", "all", "*"}:
+            raise RuntimeError("Forced adapter error")
+        methods = {item.strip() for item in forced.split(",") if item.strip()}
+        if method in methods:
+            raise RuntimeError("Forced adapter error")

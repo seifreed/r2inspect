@@ -1,51 +1,12 @@
 #!/usr/bin/env python3
-"""
-Binary Analyzer Protocol Interface
-
-This module defines the Protocol interface for binary analyzers, providing
-structural subtyping (duck typing with type hints) for any component that
-analyzes binary files through radare2 or similar tools.
-
-Using Protocol instead of ABC allows for flexible implementation without
-requiring inheritance, enabling integration with existing codebases and
-third-party libraries.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Protocol interface for binary analyzers."""
 
 from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
 class BinaryAnalyzerInterface(Protocol):
-    """
-    Protocol defining the interface for binary file analyzers.
-
-    This protocol establishes a contract for any binary analysis component
-    that provides information extraction capabilities. Classes implementing
-    this protocol can be used interchangeably without inheritance requirements.
-
-    The @runtime_checkable decorator enables isinstance() and issubclass()
-    checks at runtime, facilitating dynamic type validation.
-
-    All methods must be implemented by conforming classes. Methods should
-    handle errors gracefully and return empty collections rather than None
-    when no data is available.
-
-    Example:
-        >>> class R2Analyzer:
-        ...     def __init__(self, r2_instance):
-        ...         self.r2 = r2_instance
-        ...
-        ...     def get_file_info(self) -> dict[str, Any]:
-        ...         return self.r2.cmdj("ij")
-        ...
-        ...     # ... implement other methods ...
-        >>>
-        >>> analyzer = R2Analyzer(r2_instance)
-        >>> assert isinstance(analyzer, BinaryAnalyzerInterface)
-    """
+    """Protocol defining the binary analysis interface."""
 
     def get_file_info(self) -> dict[str, Any]:
         """
@@ -160,6 +121,114 @@ class BinaryAnalyzerInterface(Protocol):
         """
         ...
 
+    def get_strings(self) -> list[dict[str, Any]]:
+        """Return extracted strings with metadata (address, length, encoding)."""
+        ...
+
+    def get_functions(self) -> list[dict[str, Any]]:
+        """Return discovered functions with addresses and sizes."""
+        ...
+
+    def get_functions_at(self, address: int) -> list[dict[str, Any]]:
+        """Return functions at a given address (aflj @ addr)."""
+        ...
+
+    def get_disasm(self, address: int | None = None, size: int | None = None) -> Any:
+        """Return disassembly for a region (or current seek)."""
+        ...
+
+    def get_cfg(self, address: int | None = None) -> Any:
+        """Return control-flow graph data for a function or current seek."""
+        ...
+
+    def analyze_all(self) -> str:
+        """Run analysis (aaa) and return raw output."""
+        ...
+
+    def get_info_text(self) -> str:
+        """Return textual file info from r2 (i)."""
+        ...
+
+    def get_dynamic_info_text(self) -> str:
+        """Return dynamic info text (id)."""
+        ...
+
+    def get_entropy_pattern(self) -> str:
+        """Return entropy pattern text (p=e 100)."""
+        ...
+
+    def get_pe_version_info_text(self) -> str:
+        """Return PE version info text (iR~version)."""
+        ...
+
+    def get_pe_security_text(self) -> str:
+        """Return PE security info text (iHH)."""
+        ...
+
+    def get_header_text(self) -> str:
+        """Return header text output (ih)."""
+        ...
+
+    def get_headers_json(self) -> Any:
+        """Return header JSON output (ihj)."""
+        ...
+
+    def get_strings_basic(self) -> list[dict[str, Any]]:
+        """Return basic strings (izj)."""
+        ...
+
+    def get_strings_text(self) -> str:
+        """Return raw string listing text (izz~..)."""
+        ...
+
+    def get_strings_filtered(self, command: str) -> str:
+        """Return filtered strings output (iz~...)."""
+        ...
+
+    def get_entry_info(self) -> list[dict[str, Any]]:
+        """Return entry point info (iej)."""
+        ...
+
+    def get_pe_header(self) -> dict[str, Any]:
+        """Return PE header info (ihj) as a dict when possible."""
+        ...
+
+    def get_pe_optional_header(self) -> dict[str, Any]:
+        """Return PE optional header info (iHj)."""
+        ...
+
+    def get_data_directories(self) -> list[dict[str, Any]]:
+        """Return data directories info (iDj)."""
+        ...
+
+    def get_resources_info(self) -> list[dict[str, Any]]:
+        """Return resources info (iRj)."""
+        ...
+
+    def get_function_info(self, address: int) -> list[dict[str, Any]]:
+        """Return function info for an address (afij @ addr)."""
+        ...
+
+    def get_disasm_text(self, address: int | None = None, size: int | None = None) -> str:
+        """Return textual disassembly (pi) for a region."""
+        ...
+
+    def search_text(self, pattern: str) -> str:
+        """Search for text patterns using r2 /c."""
+        ...
+
+    def search_hex(self, hex_pattern: str) -> str:
+        """Search for hex patterns using r2 /x."""
+        ...
+
+    def search_hex_json(self, pattern: str) -> list[dict[str, Any]]:
+        """Return hex search results in JSON (/xj)."""
+        ...
+
+    def read_bytes_list(self, address: int, size: int) -> list[int]:
+        """Read raw bytes as a list of ints."""
+        ...
+
     def read_bytes(self, address: int, size: int) -> bytes:
         """
         Read raw bytes from a specific address.
@@ -183,32 +252,6 @@ class BinaryAnalyzerInterface(Protocol):
         Example:
             >>> data = analyzer.read_bytes(0x401000, 16)
             >>> print(data.hex())  # Print as hexadecimal
-        """
-        ...
-
-    def execute_command(self, cmd: str) -> Any:
-        """
-        Execute an analyzer-specific command.
-
-        This method provides a generic interface for executing commands
-        specific to the underlying analysis tool (e.g., radare2 commands).
-        It enables advanced users to leverage tool-specific functionality
-        not exposed through the standard protocol methods.
-
-        Args:
-            cmd: Command string to execute
-
-        Returns:
-            Command output. Type varies based on command and tool:
-            - String for text output
-            - Dict for JSON output
-            - List for array output
-            - None if command produces no output or fails
-
-        Example:
-            >>> # radare2 example
-            >>> functions = analyzer.execute_command("aflj")  # Returns list[Dict]
-            >>> info = analyzer.execute_command("ij")  # Returns Dict
         """
         ...
 

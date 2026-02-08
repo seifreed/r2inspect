@@ -262,6 +262,7 @@ add-ignore = [
 
 [tool.coverage.run]
 source = ["r2inspect"]
+parallel = true
 omit = [
     "*/tests/*",
     "*/__init__.py",
