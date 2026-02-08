@@ -1,35 +1,13 @@
 #!/usr/bin/env python3
-"""
-SimHash Analyzer Module
-
-This module implements SimHash-based binary similarity analysis using both strings and opcodes.
-SimHash is a locality-sensitive hash function that maps high-dimensional features to a fixed-size
-hash while preserving similarity relationships. It's particularly useful for:
-
-- Detecting similar binaries with small variations
-- Clustering functions or binaries by structural similarity
-- Efficient similarity matching at scale
-- Malware family identification and variant detection
-
-The implementation extracts features from:
-1. Strings (function context and embedded data)
-2. Instruction mnemonics (structural patterns)
-3. Function-level patterns (per-function hashing)
-4. Binary-wide signatures (global similarity)
-
-Based on Charikar's SimHash algorithm for near-duplicate detection.
-Reference: https://en.wikipedia.org/wiki/SimHash
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""SimHash-based binary similarity analysis."""
 
 from collections import Counter
 from typing import Any, cast
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..utils.command_helpers import cmd_list as cmd_list_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
+from .string_classification import classify_string_type
 
 logger = get_logger(__name__)
 
@@ -48,37 +26,22 @@ except ImportError:
 class SimHashAnalyzer(HashingStrategy):
     """SimHash-based binary similarity analysis"""
 
-    def __init__(self, r2_instance, filepath: str):
-        """
-        Initialize SimHash analyzer.
-
-        Args:
-            r2_instance: Active r2pipe instance
-            filepath: Path to the binary file being analyzed
-        """
+    def __init__(self, adapter: Any, filepath: str) -> None:
+        """Initialize SimHash analyzer."""
         # Initialize parent with filepath
-        super().__init__(filepath=filepath, r2_instance=r2_instance)
+        super().__init__(filepath=filepath, r2_instance=adapter)
+        self.adapter: Any = adapter
         self.min_string_length = 4  # Minimum string length to consider
         self.max_instructions_per_function = 500  # Limit instructions per function
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
-        """
-        Check if simhash library is available.
-
-        Returns:
-            Tuple of (is_available, error_message)
-        """
+        """Check if the simhash library is available."""
         if SimHashAnalyzer.is_available():
             return True, None
         return False, "simhash library not available. Install with: pip install simhash"
 
     def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
-        """
-        Calculate combined SimHash for the binary from strings and opcodes.
-
-        Returns:
-            Tuple of (hash_value, method_used, error_message)
-        """
+        """Calculate combined SimHash from strings and opcodes."""
         try:
             # Extract features
             strings_features = self._extract_string_features()
@@ -102,24 +65,11 @@ class SimHashAnalyzer(HashingStrategy):
             return None, None, f"SimHash calculation failed: {str(e)}"
 
     def _get_hash_type(self) -> str:
-        """
-        Return the hash type identifier.
-
-        Returns:
-            Hash type string
-        """
+        """Return the hash type identifier."""
         return "simhash"
 
     def analyze_detailed(self) -> dict[str, Any]:
-        """
-        Perform detailed SimHash analysis on the binary.
-
-        This method provides separate string-based, opcode-based, and combined
-        SimHash analysis in addition to the combined hash provided by analyze().
-
-        Returns:
-            Dictionary containing detailed SimHash analysis results
-        """
+        """Run detailed SimHash analysis with separate feature sets."""
         if not SIMHASH_AVAILABLE:
             return {
                 "available": False,
@@ -237,17 +187,12 @@ class SimHashAnalyzer(HashingStrategy):
         return results
 
     def _extract_string_features(self) -> list[str]:
-        """
-        Extract string features from the binary.
-
-        Returns:
-            List of string features
-        """
+        """Extract string features from the binary."""
         string_features: list[str] = []
 
         try:
             # Extract strings using r2pipe
-            strings_data = safe_cmd_list(self.r2, "izj")
+            strings_data = self._get_strings_data()
 
             if isinstance(strings_data, list):
                 self._collect_string_features(strings_data, string_features)
@@ -283,24 +228,19 @@ class SimHashAnalyzer(HashingStrategy):
             string_features.append(f"STRTYPE:{string_type}")
 
     def _extract_opcodes_features(self) -> list[str]:
-        """
-        Extract opcode/instruction features from the binary.
-
-        Returns:
-            List of opcode features
-        """
+        """Extract opcode/instruction features from the binary."""
         opcode_features: list[str] = []
 
         try:
             # Analysis is performed at core initialization
 
             # Extract all functions
-            functions = safe_cmd_list(self.r2, "aflj")
+            functions = self._get_functions()
 
             if not functions:
                 logger.debug("No functions found for opcode extraction, trying alternative methods")
                 # Try alternative function discovery
-                functions = safe_cmd_list(self.r2, "afl")
+                functions = self._cmd_list("afl")
                 if not functions:
                     return []
 
@@ -314,10 +254,7 @@ class SimHashAnalyzer(HashingStrategy):
                 func_name = func.get("name", f"func_{func_addr}")
 
                 # Seek to function and extract instructions
-                self.r2.cmd(f"s {func_addr}")
-
-                # Get function instructions
-                func_opcodes = self._extract_function_opcodes(func_name)
+                func_opcodes = self._extract_function_opcodes(func_addr, func_name)
                 if func_opcodes:
                     opcode_features.extend(func_opcodes)
                     logger.debug(f"Extracted {len(func_opcodes)} opcodes from {func_name}")
@@ -337,17 +274,12 @@ class SimHashAnalyzer(HashingStrategy):
             return []
 
     def _extract_function_features(self) -> dict[str, dict[str, Any]]:
-        """
-        Extract per-function SimHash features.
-
-        Returns:
-            Dictionary of function features with SimHash values
-        """
+        """Extract per-function SimHash features."""
         function_features = {}
 
         try:
             # Extract all functions
-            functions = safe_cmd_list(self.r2, "aflj")
+            functions = self._get_functions()
 
             if not functions:
                 return {}
@@ -361,9 +293,7 @@ class SimHashAnalyzer(HashingStrategy):
                 func_size = func.get("size", 0)
 
                 # Extract features for this specific function
-                self.r2.cmd(f"s {func_addr}")
-
-                func_opcodes = self._extract_function_opcodes(func_name)
+                func_opcodes = self._extract_function_opcodes(func_addr, func_name)
                 if not func_opcodes:
                     continue
 
@@ -391,26 +321,24 @@ class SimHashAnalyzer(HashingStrategy):
             logger.debug(f"Error extracting function features: {e}")
             return {}
 
-    def _extract_function_opcodes(self, func_name: str) -> list[str]:
-        """
-        Extract opcodes from a specific function.
-
-        Args:
-            func_name: Function name for logging
-
-        Returns:
-            List of opcode features
-        """
+    def _extract_function_opcodes(self, func_addr: int, func_name: str) -> list[str]:
+        """Extract opcodes from a specific function."""
         opcodes: list[str] = []
 
         try:
-            disasm = safe_cmdj(self.r2, "pdfj", {})
-            if disasm and "ops" in disasm:
-                return self._extract_opcodes_from_ops(disasm["ops"])
+            if self.adapter is None or not hasattr(self.adapter, "get_disasm"):
+                return opcodes
+            disasm = self.adapter.get_disasm(address=func_addr)
+            ops = self._extract_ops_from_disasm(disasm)
+            if ops:
+                return self._extract_opcodes_from_ops(ops)
 
-            disasm_list = safe_cmd_list(self.r2, f"pdj {self.max_instructions_per_function}")
-            if isinstance(disasm_list, list):
-                return self._extract_opcodes_from_ops(disasm_list)
+            disasm_range = self.adapter.get_disasm(
+                address=func_addr, size=self.max_instructions_per_function
+            )
+            ops = self._extract_ops_from_disasm(disasm_range)
+            if ops:
+                return self._extract_opcodes_from_ops(ops)
 
         except Exception as e:
             logger.debug(f"Error extracting opcodes from function {func_name}: {e}")
@@ -441,7 +369,7 @@ class SimHashAnalyzer(HashingStrategy):
             return None
         prev_op = ops[index - 1]
         if isinstance(prev_op, dict) and "mnemonic" in prev_op:
-            return prev_op["mnemonic"].strip().lower()
+            return str(prev_op["mnemonic"]).strip().lower()
         return None
 
     def _extract_data_section_strings(self) -> list[str]:
@@ -449,7 +377,7 @@ class SimHashAnalyzer(HashingStrategy):
         data_strings: list[str] = []
 
         try:
-            sections = safe_cmd_list(self.r2, "iSj")
+            sections = self._get_sections()
             if isinstance(sections, list):
                 for section in sections:
                     self._append_data_section_string(section, data_strings)
@@ -466,10 +394,11 @@ class SimHashAnalyzer(HashingStrategy):
         section_size = section.get("size", 0)
         if not (section_addr and section_size):
             return
-        self.r2.cmd(f"s {section_addr}")
-        section_strings = self.r2.cmd(f"ps {min(section_size, 1024)}")
-        if section_strings and len(section_strings.strip()) >= self.min_string_length:
-            data_strings.append(f"DATASTR:{section_strings.strip()}")
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
+            return
+        data = self.adapter.read_bytes(section_addr, min(section_size, 1024))
+        for value in self._extract_printable_strings(data):
+            data_strings.append(f"DATASTR:{value}")
 
     def _is_useful_string(self, string_value: str) -> bool:
         """Check if a string is useful for SimHash analysis."""
@@ -490,6 +419,45 @@ class SimHashAnalyzer(HashingStrategy):
         printable_ratio = sum(1 for c in string_value if c.isprintable()) / len(string_value)
         return printable_ratio > 0.8
 
+    def _get_strings_data(self) -> list[Any]:
+        if self.adapter is not None and hasattr(self.adapter, "get_strings"):
+            return cast(list[Any], self.adapter.get_strings())
+        return cmd_list_helper(self.adapter, self.r2, "izzj")
+
+    def _get_functions(self) -> list[dict[str, Any]]:
+        if self.adapter is not None and hasattr(self.adapter, "get_functions"):
+            return cast(list[dict[str, Any]], self.adapter.get_functions())
+        return cmd_list_helper(self.adapter, self.r2, "aflj")
+
+    def _get_sections(self) -> list[dict[str, Any]]:
+        if self.adapter is not None and hasattr(self.adapter, "get_sections"):
+            return cast(list[dict[str, Any]], self.adapter.get_sections())
+        return cmd_list_helper(self.adapter, self.r2, "iSj")
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
+
+    def _extract_ops_from_disasm(self, disasm: Any) -> list[Any]:
+        if isinstance(disasm, dict) and isinstance(disasm.get("ops"), list):
+            return cast(list[Any], disasm["ops"])
+        if isinstance(disasm, list):
+            return disasm
+        return []
+
+    def _extract_printable_strings(self, data: bytes) -> list[str]:
+        strings: list[str] = []
+        current: list[str] = []
+        for byte in data:
+            if 32 <= byte <= 126:
+                current.append(chr(byte))
+                continue
+            if len(current) >= self.min_string_length:
+                strings.append("".join(current))
+            current = []
+        if len(current) >= self.min_string_length:
+            strings.append("".join(current))
+        return strings
+
     def _get_length_category(self, length: int) -> str:
         """Categorize string length."""
         if length < 8:
@@ -503,31 +471,7 @@ class SimHashAnalyzer(HashingStrategy):
 
     def _classify_string_type(self, string_value: str) -> str | None:
         """Classify string type for feature extraction."""
-        import re
-
-        # URL pattern
-        if re.match(r"https?://", string_value, re.IGNORECASE):
-            return "url"
-
-        # File path pattern
-        if re.match(r"[a-z]:\\|/", string_value, re.IGNORECASE):
-            return "path"
-
-        # Registry key pattern
-        if re.match(r"HKEY_|SOFTWARE\\|SYSTEM\\", string_value, re.IGNORECASE):
-            return "registry"
-
-        # API or function name pattern
-        if re.match(r"^[A-Z][\\w]*[A-Z]", string_value):
-            return "api"
-
-        # Error message pattern
-        if any(
-            word in string_value.lower() for word in ["error", "failed", "exception", "invalid"]
-        ):
-            return "error"
-
-        return None
+        return classify_string_type(string_value)
 
     def _classify_opcode_type(self, mnemonic: str) -> str | None:
         """Classify opcode type for feature extraction."""
@@ -572,16 +516,7 @@ class SimHashAnalyzer(HashingStrategy):
     def _find_similar_functions(
         self, function_features: dict[str, dict[str, Any]], max_distance: int = 10
     ) -> list[dict[str, Any]]:
-        """
-        Find groups of similar functions based on SimHash distance.
-
-        Args:
-            function_features: Dictionary of function features
-            max_distance: Maximum Hamming distance for similarity
-
-        Returns:
-            List of similar function groups
-        """
+        """Find groups of similar functions based on SimHash distance."""
         try:
             if not SIMHASH_AVAILABLE:
                 return []
@@ -639,16 +574,7 @@ class SimHashAnalyzer(HashingStrategy):
     def calculate_similarity(
         self, other_simhash_value: int, hash_type: str = "combined"
     ) -> dict[str, Any]:
-        """
-        Calculate similarity between this binary and another SimHash value.
-
-        Args:
-            other_simhash_value: SimHash value to compare against
-            hash_type: Type of hash to use ('combined', 'strings', 'opcodes')
-
-        Returns:
-            Dictionary with similarity metrics
-        """
+        """Calculate similarity between this binary and another SimHash value."""
         if not SIMHASH_AVAILABLE:
             return {"error": "simhash library not available"}
 
@@ -703,26 +629,7 @@ class SimHashAnalyzer(HashingStrategy):
 
     @staticmethod
     def compare_hashes(hash1: str | int, hash2: str | int) -> int | None:
-        """
-        Compare two SimHash values and return Hamming distance.
-
-        SimHash comparison uses Hamming distance where lower values indicate
-        greater similarity. A distance of 0 means identical hashes.
-
-        Args:
-            hash1: First SimHash value (hex string like '0x1234abcd')
-            hash2: Second SimHash value (hex string like '0x1234abcd')
-
-        Returns:
-            Hamming distance (0-64 for 64-bit hash, lower is more similar) or None if comparison fails
-
-        Example:
-            >>> hash1 = "0x1a2b3c4d"
-            >>> hash2 = "0x1a2b3c5d"
-            >>> distance = SimHashAnalyzer.compare_hashes(hash1, hash2)
-            >>> if distance is not None and distance <= 5:
-            ...     print("Very similar")
-        """
+        """Compare two SimHash values and return the Hamming distance."""
         if not SIMHASH_AVAILABLE:
             return None
 
@@ -747,25 +654,12 @@ class SimHashAnalyzer(HashingStrategy):
 
     @staticmethod
     def is_available() -> bool:
-        """
-        Check if SimHash library is available.
-
-        Returns:
-            True if simhash library can be imported, False otherwise
-        """
+        """Return True when simhash can be imported."""
         return SIMHASH_AVAILABLE
 
     @staticmethod
     def calculate_simhash_from_file(filepath: str) -> dict[str, Any] | None:
-        """
-        Calculate SimHash directly from a file path.
-
-        Args:
-            filepath: Path to the binary file
-
-        Returns:
-            SimHash analysis results or None if calculation fails
-        """
+        """Calculate SimHash directly from a file path."""
         try:
             import r2pipe
 

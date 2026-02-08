@@ -23,22 +23,31 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from rich.console import Console
 
+from ..error_handling.unified_handler import get_circuit_breaker_stats
 from ..utils.error_handler import get_error_stats, reset_error_stats
 from ..utils.output import OutputFormatter
-from ..utils.r2_helpers import get_circuit_breaker_stats, get_retry_stats
+from ..utils.retry_manager import get_retry_stats
 
 console = Console()
 
 
-def run_analysis(inspector, options, output_json, output_csv, output_file, verbose=False):
+def run_analysis(
+    inspector: Any,
+    options: dict[str, Any],
+    output_json: bool,
+    output_csv: bool,
+    output_file: str | Path | None,
+    verbose: bool = False,
+) -> dict[str, Any]:
     """
     Run complete analysis and display results.
 
     Args:
-        inspector: R2Inspector instance
+        inspector: Inspector instance
         options: Analysis options dictionary
         output_json: Whether to output JSON
         output_csv: Whether to output CSV
@@ -56,7 +65,7 @@ def run_analysis(inspector, options, output_json, output_csv, output_file, verbo
     print_status_if_appropriate(output_json, output_csv, output_file)
 
     # Perform analysis
-    results = inspector.analyze(**options)
+    results = cast(dict[str, Any], inspector.analyze(**options))
 
     # Add statistics to results
     add_statistics_to_results(results)
@@ -67,7 +76,9 @@ def run_analysis(inspector, options, output_json, output_csv, output_file, verbo
     return results
 
 
-def print_status_if_appropriate(output_json, output_csv, output_file):
+def print_status_if_appropriate(
+    output_json: bool, output_csv: bool, output_file: str | Path | None
+) -> None:
     """
     Print status message if appropriate based on output options.
 
@@ -80,7 +91,7 @@ def print_status_if_appropriate(output_json, output_csv, output_file):
         console.print("[bold green]Starting analysis...[/bold green]")
 
 
-def add_statistics_to_results(results):
+def add_statistics_to_results(results: dict[str, Any]) -> None:
     """
     Add error, retry, and circuit breaker statistics to results.
 
@@ -101,7 +112,7 @@ def add_statistics_to_results(results):
         results["circuit_breaker_statistics"] = circuit_stats
 
 
-def has_circuit_breaker_data(circuit_stats):
+def has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
     """
     Check if circuit breaker statistics contain any meaningful data.
 
@@ -114,13 +125,25 @@ def has_circuit_breaker_data(circuit_stats):
     if not circuit_stats:
         return False
 
-    for k, v in circuit_stats.items():
+    for _, v in circuit_stats.items():
         if isinstance(v, int | float) and v > 0:
             return True
+        if isinstance(v, dict):
+            for nested in v.values():
+                if isinstance(nested, int | float) and nested > 0:
+                    return True
+                if isinstance(nested, str) and nested.lower() != "closed":
+                    return True
     return False
 
 
-def output_results(results, output_json, output_csv, output_file, verbose):
+def output_results(
+    results: dict[str, Any],
+    output_json: bool,
+    output_csv: bool,
+    output_file: str | Path | None,
+    verbose: bool,
+) -> None:
     """
     Output results in the appropriate format.
 
@@ -144,7 +167,7 @@ def output_results(results, output_json, output_csv, output_file, verbose):
         output_console_results(results, verbose)
 
 
-def output_json_results(formatter, output_file):
+def output_json_results(formatter: OutputFormatter, output_file: str | Path | None) -> None:
     """
     Output results in JSON format.
 
@@ -161,7 +184,7 @@ def output_json_results(formatter, output_file):
         print(json_output)
 
 
-def output_csv_results(formatter, output_file):
+def output_csv_results(formatter: OutputFormatter, output_file: str | Path | None) -> None:
     """
     Output results in CSV format.
 
@@ -178,7 +201,7 @@ def output_csv_results(formatter, output_file):
         print(csv_output)
 
 
-def output_console_results(results, verbose):
+def output_console_results(results: dict[str, Any], verbose: bool) -> None:
     """
     Output results to console with optional verbose statistics.
 
@@ -203,7 +226,12 @@ def output_console_results(results, verbose):
             display_performance_statistics(retry_stats, circuit_stats)
 
 
-def setup_single_file_output(output_json, output_csv, output, filename):
+def setup_single_file_output(
+    output_json: bool,
+    output_csv: bool,
+    output: str | Path | None,
+    filename: str,
+) -> str | Path | None:
     """
     Setup output file for single file mode.
 
@@ -233,7 +261,7 @@ def setup_single_file_output(output_json, output_csv, output, filename):
     return output
 
 
-def setup_analysis_options(yara, sanitized_xor):
+def setup_analysis_options(yara: str | None, sanitized_xor: str | None) -> dict[str, Any]:
     """
     Setup analysis options with all modules enabled by default.
 
@@ -254,7 +282,7 @@ def setup_analysis_options(yara, sanitized_xor):
     }
 
 
-def handle_main_error(e, verbose):
+def handle_main_error(e: Exception, verbose: bool) -> None:
     """
     Handle errors in main function.
 

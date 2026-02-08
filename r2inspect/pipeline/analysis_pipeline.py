@@ -1,18 +1,4 @@
-"""
-Analysis Pipeline implementation for r2inspect.
-
-This module provides the core pipeline components for orchestrating
-analysis stages in a flexible, maintainable way.
-
-Supports both sequential and parallel execution modes with automatic
-dependency resolution for optimal performance.
-
-This file defines the unified AnalysisStage base class used by
-concrete stages (see stages.py) and the AnalysisPipeline orchestrator.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Pipeline orchestration for analysis stages."""
 
 import logging
 import threading
@@ -26,25 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class AnalysisStage:
-    """
-    Represents a single stage in the analysis pipeline.
-
-    Concrete stages should subclass this class and implement _execute(context),
-    storing their output under context['results'][<key>] as needed.
-
-    Attributes:
-        name: Unique identifier for the stage
-        description: Human-readable description
-        optional: Whether this stage is optional
-        dependencies: Stage names that must complete before this stage
-        condition: Callable that returns True if stage should execute
-        timeout: Optional timeout in seconds for this stage (parallel mode only)
-    """
+    """Represents a single stage in the analysis pipeline."""
 
     def __init__(
         self,
         name: str,
-        analyzer: Callable[[], dict[str, Any]] | None = None,
         description: str = "",
         optional: bool = True,
         *,
@@ -59,9 +31,6 @@ class AnalysisStage:
         self.dependencies: list[str] = dependencies or []
         self.condition = condition
         self.timeout = timeout
-        # Backward-compat convenience mode (callable-based stage)
-        self._analyzer = analyzer if callable(analyzer) else None
-        self.analyzer = self._analyzer
         self.metadata: dict[str, Any] = metadata or {}
 
     def can_execute(self, completed_stages: set[str]) -> bool:
@@ -77,14 +46,8 @@ class AnalysisStage:
             return False
 
     def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
-        """Default execution for callable-based stages or override in subclass."""
-        if self._analyzer is None:
-            raise NotImplementedError
-        try:
-            result = self._analyzer()
-        except Exception as e:  # Safety
-            return {self.name: {"success": False, "error": str(e)}}
-        return {self.name: result}
+        """Default execution for stages; override in subclass."""
+        raise NotImplementedError
 
     def execute(self, context: dict[str, Any]) -> dict[str, Any]:
         if not self.should_execute(context):
@@ -102,12 +65,7 @@ class AnalysisStage:
 
 
 class ThreadSafeContext:
-    """
-    Thread-safe context wrapper for parallel stage execution.
-
-    Provides synchronized access to shared context data when multiple
-    stages execute concurrently.
-    """
+    """Thread-safe context wrapper for parallel stage execution."""
 
     def __init__(self, initial_data: dict[str, Any] | None = None):
         """
@@ -166,38 +124,7 @@ class ThreadSafeContext:
 
 
 class AnalysisPipeline:
-    """
-    Configurable pipeline for orchestrating multiple analysis stages.
-
-    The pipeline supports both sequential and parallel execution modes.
-    In parallel mode, stages without dependencies execute concurrently
-    using ThreadPoolExecutor for improved performance on I/O-bound workloads.
-
-    Parallel Execution:
-        The pipeline automatically detects independent stages and executes
-        them in parallel while respecting dependency constraints. This can
-        significantly reduce analysis time for binaries with multiple
-        independent analyzers.
-
-    Example (Sequential):
-        >>> pipeline = AnalysisPipeline()
-        >>> pipeline.add_stage(AnalysisStage("file_info", get_file_info))
-        >>> pipeline.add_stage(AnalysisStage("pe_info", get_pe_info,
-        ...                                   condition=lambda ctx: ctx.get("format") == "PE"))
-        >>> results = pipeline.execute({"format": "PE"})
-
-    Example (Parallel):
-        >>> pipeline = AnalysisPipeline(max_workers=4)
-        >>> pipeline.add_stage(AnalysisStage("file_info", get_file_info))
-        >>> pipeline.add_stage(AnalysisStage("format", get_format, dependencies=["file_info"]))
-        >>> pipeline.add_stage(AnalysisStage("hashes", get_hashes, dependencies=["file_info"]))
-        >>> results = pipeline.execute(parallel=True)  # file_info runs first, then format and hashes in parallel
-
-    Attributes:
-        stages: List of analysis stages in the pipeline
-        max_workers: Maximum number of parallel workers (None = CPU count)
-        _execution_count: Number of times pipeline has been executed
-    """
+    """Configurable pipeline for orchestrating analysis stages."""
 
     def __init__(self, max_workers: int | None = None):
         """
@@ -350,7 +277,19 @@ class AnalysisPipeline:
         """Determine effective worker count for parallel execution."""
         import os
 
-        return self.max_workers if self.max_workers is not None else min(4, os.cpu_count() or 1)
+        configured = (
+            self.max_workers if self.max_workers is not None else min(4, os.cpu_count() or 1)
+        )
+        cap_text = os.getenv("R2INSPECT_MAX_WORKERS", "").strip()
+        if not cap_text:
+            return configured
+        try:
+            cap = int(cap_text)
+        except ValueError:
+            return configured
+        if cap <= 0:
+            return configured
+        return min(configured, cap)
 
     def _get_ready_stages(
         self,
@@ -421,6 +360,31 @@ class AnalysisPipeline:
             future_to_stage[future] = stage
         return future_to_stage
 
+    @staticmethod
+    def _merge_stage_results(ts_context: ThreadSafeContext, stage_result: dict[str, Any]) -> None:
+        """Merge stage results into the thread-safe context."""
+        if not stage_result:
+            return
+        ts_context.update(
+            {
+                "results": {
+                    **ts_context.get("results", {}),
+                    **stage_result,
+                }
+            }
+        )
+
+    @staticmethod
+    def _stage_success(result: dict[str, Any], stage_name: str) -> bool:
+        """Return True if a stage result is successful."""
+        entry = result.get(stage_name)
+        return not (isinstance(entry, dict) and entry.get("success") is False)
+
+    @staticmethod
+    def _error_result(stage_name: str, message: str) -> dict[str, Any]:
+        """Create a standard error result payload."""
+        return {stage_name: {"error": message, "success": False}}
+
     def _collect_futures(
         self,
         future_to_stage: dict[Any, AnalysisStage],
@@ -436,15 +400,7 @@ class AnalysisPipeline:
             stage = future_to_stage[future]
             try:
                 stage_result, success = future.result()
-                if stage_result:
-                    ts_context.update(
-                        {
-                            "results": {
-                                **ts_context.get("results", {}),
-                                **stage_result,
-                            }
-                        }
-                    )
+                self._merge_stage_results(ts_context, stage_result)
                 with completed_lock:
                     completed.add(stage.name)
                 remaining.remove(stage)
@@ -460,15 +416,8 @@ class AnalysisPipeline:
                     completed.add(stage.name)
                 remaining.remove(stage)
                 failed_count += 1
-                error_result = {stage.name: {"error": str(e), "success": False}}
-                ts_context.update(
-                    {
-                        "results": {
-                            **ts_context.get("results", {}),
-                            **error_result,
-                        }
-                    }
-                )
+                error_result = self._error_result(stage.name, str(e))
+                self._merge_stage_results(ts_context, error_result)
         return {"executed": executed_count, "failed": failed_count}
 
     def _execute_stage_with_timeout(
@@ -493,34 +442,23 @@ class AnalysisPipeline:
                 future = timeout_executor.submit(stage.execute, context)
                 try:
                     result = future.result(timeout=stage.timeout)
-                    success = not (
-                        isinstance(result.get(stage.name), dict)
-                        and result[stage.name].get("success") is False
-                    )
+                    success = self._stage_success(result, stage.name)
                     return result, success
                 except FuturesTimeoutError:
                     logger.error(f"Stage '{stage.name}' timed out after {stage.timeout}s")
-                    return {
-                        stage.name: {
-                            "error": f"Timeout after {stage.timeout}s",
-                            "success": False,
-                        }
-                    }, False
+                    return self._error_result(stage.name, f"Timeout after {stage.timeout}s"), False
                 except Exception as e:
                     logger.error(f"Stage '{stage.name}' raised exception: {e}")
-                    return {stage.name: {"error": str(e), "success": False}}, False
+                    return self._error_result(stage.name, str(e)), False
         else:
             # Execute without timeout
             try:
                 result = stage.execute(context)
-                success = not (
-                    isinstance(result.get(stage.name), dict)
-                    and result[stage.name].get("success") is False
-                )
+                success = self._stage_success(result, stage.name)
                 return result, success
             except Exception as e:
                 logger.error(f"Stage '{stage.name}' raised exception: {e}")
-                return {stage.name: {"error": str(e), "success": False}}, False
+                return self._error_result(stage.name, str(e)), False
 
     def execute(
         self, options: dict[str, Any] | None = None, parallel: bool = False

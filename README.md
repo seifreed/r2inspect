@@ -72,7 +72,7 @@ pip install -e .
 
 ### Requirements
 
-- Python 3.8+
+- Python 3.13+
 - radare2 installed and in PATH
 - libmagic (for file type detection)
 
@@ -132,15 +132,26 @@ r2inspect --yara /path/to/rules malware.exe
 ## Python Library
 
 ```python
-from r2inspect import R2Inspector
+from r2inspect import create_inspector
 from r2inspect.config import Config
 
 config = Config()
-with R2Inspector("malware.exe", config=config) as inspector:
+with create_inspector("malware.exe", config=config) as inspector:
     results = inspector.analyze()
     pe_info = inspector.get_pe_info()
     imports = inspector.get_imports()
 ```
+
+## Architecture (high level)
+
+Use `create_inspector` to build a ready-to-run inspector with adapter, registry, and pipeline wiring. The core depends on interfaces; adapters provide r2pipe-backed data access, while analyzers focus on analysis and domain helpers.
+
+```
+CLI -> create_inspector -> R2Inspector -> AnalysisPipeline -> analyzers
+                                      -> Adapter (r2pipe) -> radare2
+```
+
+See `docs/architecture.md` for a short overview of the layers and extension points.
 
 ---
 

@@ -77,7 +77,7 @@ Examples:
 
     >>> from r2inspect.registry import get_format_specific_analyzers
     >>>
-    >>> # Get only ELF-compatible analyzers
+    >>> # Get only ELF analyzers
     >>> elf_registry = get_format_specific_analyzers("ELF")
     >>> for analyzer_info in elf_registry.list_analyzers():
     ...     print(f"{analyzer_info['name']}: {analyzer_info['description']}")

@@ -1,34 +1,5 @@
 #!/usr/bin/env python3
-"""
-Dataclass-based Analysis Result Schemas
-
-This module provides dataclasses for type-safe analysis results using Python's
-dataclasses module. These complement the existing Pydantic schemas by offering
-a lighter-weight alternative with built-in dict conversion.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-
-Usage:
-    from r2inspect.schemas.results import (
-        FileInfo,
-        HashingResult,
-        SecurityFeatures,
-        AnalysisResult,
-    )
-
-    # Create typed result
-    file_info = FileInfo(
-        name="malware.exe",
-        path="/path/to/malware.exe",
-        size=1024,
-        md5="abc123...",
-        sha256="def456...",
-    )
-
-    # Convert to dict
-    data = file_info.to_dict()
-"""
+"""Dataclass-based result schemas for analysis output."""
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -597,8 +568,7 @@ def from_dict(data: dict[str, Any]) -> AnalysisResult:
     """
     Create an AnalysisResult from a dictionary.
 
-    This is useful for deserializing analysis results from JSON or
-    converting legacy dict-based results.
+    This is useful for deserializing analysis results from JSON.
 
     Args:
         data: Dictionary containing analysis data

@@ -73,8 +73,8 @@ def test_configure_quiet_logging_sets_levels():
 def test_apply_thread_settings_updates_config(tmp_path):
     config = Config(str(tmp_path / "config.json"))
     apply_thread_settings(config, 1)
-    assert config.get("pipeline", "max_workers") == 1
-    assert config.get("pipeline", "parallel_execution") is False
+    assert config.typed_config.pipeline.max_workers == 1
+    assert config.typed_config.pipeline.parallel_execution is False
 
 
 def test_command_context_create_uses_config(tmp_path):

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import r2pipe
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.export_analyzer import ExportAnalyzer
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
@@ -25,10 +27,15 @@ def _config(tmp_path: Path) -> Config:
     return Config(str(tmp_path / "r2inspect_phase7.json"))
 
 
+def _open_adapter(path: str) -> tuple[Any, R2PipeAdapter]:
+    r2 = r2pipe.open(path)
+    return r2, R2PipeAdapter(r2)
+
+
 def test_import_analyzer_handles_empty_and_ordinal_only(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = ImportAnalyzer(r2, _config(tmp_path))
+        analyzer = ImportAnalyzer(adapter, _config(tmp_path))
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -43,9 +50,9 @@ def test_import_analyzer_handles_empty_and_ordinal_only(tmp_path: Path) -> None:
             if entry.get("name") in {"", "unknown"}:
                 assert entry.get("ordinal", 0) > 0
 
-    r2 = r2pipe.open(BAD_PE_FIXTURE)
+    r2, adapter = _open_adapter(BAD_PE_FIXTURE)
     try:
-        analyzer = ImportAnalyzer(r2, _config(tmp_path))
+        analyzer = ImportAnalyzer(adapter, _config(tmp_path))
         empty_result = analyzer.analyze()
     finally:
         r2.quit()
@@ -58,9 +65,9 @@ def test_import_analyzer_handles_empty_and_ordinal_only(tmp_path: Path) -> None:
 
 
 def test_export_analyzer_defaults_and_stats(tmp_path: Path) -> None:
-    r2 = r2pipe.open(ELF_FIXTURE)
+    r2, adapter = _open_adapter(ELF_FIXTURE)
     try:
-        analyzer = ExportAnalyzer(r2, _config(tmp_path))
+        analyzer = ExportAnalyzer(adapter, _config(tmp_path))
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -77,9 +84,9 @@ def test_export_analyzer_defaults_and_stats(tmp_path: Path) -> None:
 
 
 def test_section_analyzer_permissions_and_entropy(tmp_path: Path) -> None:
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = SectionAnalyzer(r2, _config(tmp_path))
+        analyzer = SectionAnalyzer(adapter, _config(tmp_path))
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -100,9 +107,9 @@ def test_section_analyzer_permissions_and_entropy(tmp_path: Path) -> None:
 
 
 def test_function_analyzer_basic_and_empty() -> None:
-    r2 = r2pipe.open(ELF_FIXTURE)
+    r2, adapter = _open_adapter(ELF_FIXTURE)
     try:
-        analyzer = FunctionAnalyzer(r2)
+        analyzer = FunctionAnalyzer(adapter)
         result = analyzer.analyze_functions()
     finally:
         r2.quit()
@@ -114,9 +121,9 @@ def test_function_analyzer_basic_and_empty() -> None:
         assert isinstance(hash_value, str)
         assert len(hash_value) == 64
 
-    r2 = r2pipe.open(TINY_FIXTURE)
+    r2, adapter = _open_adapter(TINY_FIXTURE)
     try:
-        analyzer = FunctionAnalyzer(r2)
+        analyzer = FunctionAnalyzer(adapter)
         empty_result = analyzer.analyze_functions()
     finally:
         r2.quit()
@@ -131,9 +138,9 @@ def test_string_analyzer_min_length_and_decode_errors(tmp_path: Path) -> None:
     config.set("strings", "min_length", 8)
     config.set("strings", "max_length", 64)
 
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = StringAnalyzer(r2, config)
+        analyzer = StringAnalyzer(adapter, config)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -142,9 +149,9 @@ def test_string_analyzer_min_length_and_decode_errors(tmp_path: Path) -> None:
     for string_value in result["strings"]:
         assert 8 <= len(string_value) <= 64
 
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = StringAnalyzer(r2, config)
+        analyzer = StringAnalyzer(adapter, config)
         assert analyzer._decode_base64("!!not-base64!!") is None
         assert analyzer._decode_hex("zzzz") is None
     finally:
@@ -152,9 +159,9 @@ def test_string_analyzer_min_length_and_decode_errors(tmp_path: Path) -> None:
 
 
 def test_resource_analyzer_malformed_and_binary_extraction() -> None:
-    r2 = r2pipe.open(BAD_PE_FIXTURE)
+    r2, adapter = _open_adapter(BAD_PE_FIXTURE)
     try:
-        analyzer = ResourceAnalyzer(r2)
+        analyzer = ResourceAnalyzer(adapter)
         result = analyzer.analyze()
     finally:
         r2.quit()
@@ -162,9 +169,9 @@ def test_resource_analyzer_malformed_and_binary_extraction() -> None:
     assert result["has_resources"] is False
     assert result.get("resources", []) == []
 
-    r2 = r2pipe.open(PE_FIXTURE)
+    r2, adapter = _open_adapter(PE_FIXTURE)
     try:
-        analyzer = ResourceAnalyzer(r2)
+        analyzer = ResourceAnalyzer(adapter)
         resource_info = {"offset": 0x100, "size": 64, "entropy": 0.0, "hashes": {}}
         analyzer._analyze_resource_data(resource_info)
     finally:

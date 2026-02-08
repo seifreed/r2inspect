@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-r2inspect Analysis Modules
-"""
+"""r2inspect analysis modules."""
 
 from .anti_analysis import AntiAnalysisDetector
 from .binbloom_analyzer import BinbloomAnalyzer

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from r2inspect.config import Config
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.factory import create_inspector
 from r2inspect.registry.default_registry import create_default_registry
 
 pytestmark = pytest.mark.requires_r2
@@ -32,7 +32,7 @@ def _minimal_options() -> dict:
 
 def _analyze(path: str, config: Config | None = None) -> dict:
     cfg = config or Config(str(Path("/tmp") / "r2inspect_edge_config.json"))
-    with R2Inspector(path, config=cfg, verbose=False) as inspector:
+    with create_inspector(path, config=cfg, verbose=False) as inspector:
         return inspector.analyze(**_minimal_options())
 
 

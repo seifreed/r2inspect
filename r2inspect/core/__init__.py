@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""
-r2inspect Core Package - Main analysis engine components
-
-This package provides the core components for binary analysis:
-- R2Inspector: Main analysis facade class
-- FileValidator: File validation logic
-- R2Session: r2pipe session management
-- Constants: File validation and analysis thresholds
-
-For backward compatibility, R2Inspector is re-exported at the package level.
-
-Copyright (C) 2025 Marc Rivero Lopez
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Core analysis components for r2inspect."""
 
 from .constants import (
     HUGE_FILE_THRESHOLD_MB,
@@ -25,7 +12,6 @@ from .constants import (
 from .file_validator import FileValidator
 from .inspector import R2Inspector
 from .pipeline_builder import PipelineBuilder
-from .r2_session import R2Session
 from .result_aggregator import ResultAggregator
 
 __all__ = [
@@ -33,7 +19,6 @@ __all__ = [
     "R2Inspector",
     # Component classes
     "FileValidator",
-    "R2Session",
     "PipelineBuilder",
     "ResultAggregator",
     # Constants

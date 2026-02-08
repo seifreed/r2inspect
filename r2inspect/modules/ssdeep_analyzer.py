@@ -1,25 +1,4 @@
-"""
-SSDeep (Fuzzy Hashing) Analyzer Module
-
-This module provides fuzzy hashing capabilities using ssdeep for approximate
-file similarity detection. It supports both the Python ssdeep library and
-system binary as fallback.
-
-Copyright (C) 2025 Marc Rivero López
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-"""
+"""SSDeep fuzzy hashing and comparison."""
 
 import os
 import shutil
@@ -28,19 +7,13 @@ import tempfile
 from pathlib import Path
 from typing import Any, cast
 
-# Try to import ssdeep library, fallback to system binary if not available
-try:
-    import ssdeep
-
-    SSDEEP_LIBRARY_AVAILABLE = True
-except ImportError:
-    SSDEEP_LIBRARY_AVAILABLE = False
-
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..security.validators import FileValidator
 from ..utils.logger import get_logger
+from ..utils.ssdeep_loader import get_ssdeep
 
 logger = get_logger(__name__)
+SSDEEP_LIBRARY_AVAILABLE = get_ssdeep() is not None
 
 
 class SSDeepAnalyzer(HashingStrategy):
@@ -49,62 +22,16 @@ class SSDeepAnalyzer(HashingStrategy):
     def __init__(
         self,
         filepath: str,
-        r2_instance=None,
+        r2_instance: Any | None = None,
         max_file_size: int = 100 * 1024 * 1024,
         min_file_size: int = 1,
-    ):
+    ) -> None:
         super().__init__(
             filepath=filepath,
             r2_instance=r2_instance,
             max_file_size=max_file_size,
             min_file_size=min_file_size,
         )
-        self.ssdeep_hash: str | None = None
-        self.method_used: str | None = None
-
-    def analyze(self):
-        """Override to provide backward-compatible key names (ssdeep_hash)."""
-        base = super().analyze()
-        self.ssdeep_hash = base.get("hash_value")
-        self.method_used = base.get("method_used")
-        # Map generic keys to legacy-friendly ones
-        if base.get("hash_value"):
-            base["ssdeep_hash"] = base["hash_value"]
-        else:
-            base.setdefault("ssdeep_hash", None)
-        return base
-
-    def _analyze_with_library(self) -> dict[str, Any]:
-        """Run analysis using the Python ssdeep library only."""
-        if not SSDEEP_LIBRARY_AVAILABLE:
-            raise ImportError("ssdeep library not available")
-
-        try:
-            with open(self.filepath, "rb") as f:
-                file_content = f.read()
-            ssdeep_hash = ssdeep.hash(file_content)
-            self.ssdeep_hash = ssdeep_hash
-            self.method_used = "python_library"
-            return {
-                "available": True,
-                "method_used": "python_library",
-                "ssdeep_hash": ssdeep_hash,
-                "error": None,
-            }
-        except Exception as e:
-            raise RuntimeError(f"ssdeep library analysis failed: {e}")
-
-    def _analyze_with_binary(self) -> dict[str, Any]:
-        """Run analysis using the ssdeep system binary only."""
-        ssdeep_hash, method = self._calculate_with_binary()
-        self.ssdeep_hash = ssdeep_hash
-        self.method_used = method
-        return {
-            "available": True,
-            "method_used": method,
-            "ssdeep_hash": ssdeep_hash,
-            "error": None,
-        }
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
@@ -129,17 +56,18 @@ class SSDeepAnalyzer(HashingStrategy):
             Tuple of (hash_value, method_used, error_message)
         """
         # Try Python library first
-        if SSDEEP_LIBRARY_AVAILABLE:
+        ssdeep_module = get_ssdeep()
+        if ssdeep_module is not None:
             try:
                 with open(self.filepath, "rb") as f:
                     file_content = f.read()
-                ssdeep_hash = ssdeep.hash(file_content)
+                ssdeep_hash = ssdeep_module.hash(file_content)
                 logger.debug(f"SSDeep hash calculated using Python library: {ssdeep_hash}")
                 return ssdeep_hash, "python_library", None
             except OSError:
                 # Fall back to hash_from_file if direct read fails
                 try:
-                    ssdeep_hash = ssdeep.hash_from_file(str(self.filepath))
+                    ssdeep_hash = ssdeep_module.hash_from_file(str(self.filepath))
                     logger.debug(f"SSDeep hash calculated using hash_from_file: {ssdeep_hash}")
                     return ssdeep_hash, "python_library", None
                 except Exception as lib_error:
@@ -275,10 +203,11 @@ class SSDeepAnalyzer(HashingStrategy):
 
     @staticmethod
     def _compare_with_library(hash1: str, hash2: str) -> int | None:
-        if not SSDEEP_LIBRARY_AVAILABLE:
+        ssdeep_module = get_ssdeep()
+        if ssdeep_module is None:
             return None
         try:
-            return cast(int, ssdeep.compare(hash1, hash2))
+            return cast(int, ssdeep_module.compare(hash1, hash2))
         except Exception as e:
             logger.warning(f"SSDeep comparison failed with library: {e}")
             return None
@@ -353,7 +282,7 @@ class SSDeepAnalyzer(HashingStrategy):
         Returns:
             True if SSDeep is available, False otherwise
         """
-        if SSDEEP_LIBRARY_AVAILABLE:
+        if get_ssdeep() is not None:
             return True
 
         # Check system binary

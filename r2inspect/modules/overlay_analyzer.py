@@ -1,39 +1,43 @@
-# mypy: ignore-errors
-"""
-Overlay data analyzer module using radare2.
-Analyzes data appended after the PE structure.
-"""
+"""Overlay data analyzer."""
 
 import hashlib
-import logging
-import math
-from typing import Any
+from typing import Any, TypedDict, cast
 
-from ..utils.r2_helpers import safe_cmd, safe_cmdj
-from ..utils.r2_suppress import silent_cmdj
+from ..utils.command_helpers import cmdj as cmdj_helper
+from ..utils.logger import get_logger
+from .domain_helpers import entropy_from_ints
+from .string_extraction import extract_ascii_from_bytes
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+
+class OverlayResult(TypedDict):
+    available: bool
+    has_overlay: bool
+    overlay_offset: int
+    overlay_size: int
+    overlay_entropy: float
+    overlay_hashes: dict[str, str]
+    patterns_found: list[dict[str, Any]]
+    potential_type: str
+    suspicious_indicators: list[dict[str, Any]]
+    extracted_strings: list[str]
+    file_size: int
+    pe_end: int
+    embedded_files: list[dict[str, Any]]
+    error: str
 
 
 class OverlayAnalyzer:
-    """Analyzes overlay data in PE files."""
+    """Analyze overlay data in PE files."""
 
-    def __init__(self, r2):
-        """
-        Initialize the Overlay analyzer.
+    def __init__(self, adapter: Any) -> None:
+        """Initialize the analyzer."""
+        self.adapter = adapter
+        self.r2 = adapter
 
-        Args:
-            r2: Radare2 instance
-        """
-        self.r2 = r2
-
-    def analyze(self) -> dict[str, Any]:
-        """
-        Analyze overlay data in the PE file.
-
-        Returns:
-            Dictionary containing overlay information
-        """
+    def analyze(self) -> OverlayResult:
+        """Analyze overlay data."""
         result = self._default_result()
 
         try:
@@ -56,11 +60,16 @@ class OverlayAnalyzer:
 
         except Exception as e:
             logger.error(f"Error analyzing overlay data: {e}")
-            return {"has_overlay": False, "error": str(e)}
+            result = self._default_result()
+            result["available"] = False
+            result["has_overlay"] = False
+            result["error"] = str(e)
+            return result
 
     @staticmethod
-    def _default_result() -> dict[str, Any]:
+    def _default_result() -> OverlayResult:
         return {
+            "available": True,
             "has_overlay": False,
             "overlay_offset": 0,
             "overlay_size": 0,
@@ -70,10 +79,14 @@ class OverlayAnalyzer:
             "potential_type": "unknown",
             "suspicious_indicators": [],
             "extracted_strings": [],
+            "file_size": 0,
+            "pe_end": 0,
+            "embedded_files": [],
+            "error": "",
         }
 
     def _get_file_size(self) -> int | None:
-        file_info = silent_cmdj(self.r2, "ij", {})
+        file_info = self._cmdj("ij", {})
         if not isinstance(file_info, dict):
             return None
         file_size = file_info.get("core", {}).get("size", 0)
@@ -98,7 +111,7 @@ class OverlayAnalyzer:
 
     @staticmethod
     def _populate_overlay_metadata(
-        result: dict[str, Any], file_size: int, pe_end: int, overlay_size: int
+        result: OverlayResult, file_size: int, pe_end: int, overlay_size: int
     ) -> None:
         result["has_overlay"] = True
         result["overlay_offset"] = pe_end
@@ -120,7 +133,7 @@ class OverlayAnalyzer:
             return 0
 
     def _get_sections(self) -> list[dict[str, Any]]:
-        sections = silent_cmdj(self.r2, "iSj", [])
+        sections = self._cmdj("iSj", [])
         if not isinstance(sections, list):
             return []
         return [section for section in sections if isinstance(section, dict)]
@@ -135,7 +148,7 @@ class OverlayAnalyzer:
         return max_end
 
     def _extend_end_with_certificate(self, max_end: int) -> int:
-        data_dirs = silent_cmdj(self.r2, "iDj", [])
+        data_dirs = self._cmdj("iDj", [])
         if not isinstance(data_dirs, list):
             return max_end
         for dd in data_dirs:
@@ -147,12 +160,12 @@ class OverlayAnalyzer:
                 max_end = max(max_end, cert_offset + cert_size)
         return max_end
 
-    def _analyze_overlay_content(self, result: dict[str, Any], offset: int, size: int):
+    def _analyze_overlay_content(self, result: OverlayResult, offset: int, size: int) -> None:
         """Analyze the content of the overlay data."""
         try:
             # Read first part of overlay for analysis (limit to 64KB)
             read_size = min(size, 65536)
-            overlay_data = silent_cmdj(self.r2, f"pxj {read_size} @ {offset}", [])
+            overlay_data = self._cmdj(f"pxj {read_size} @ {offset}", [])
 
             if not overlay_data:
                 return
@@ -192,29 +205,12 @@ class OverlayAnalyzer:
             logger.error(f"Error analyzing overlay content: {e}")
 
     def _calculate_entropy(self, data: list[int]) -> float:
-        """Calculate Shannon entropy of data."""
-        if not data:
-            return 0.0
-
-        # Count byte frequencies
-        freq = {}
-        for byte in data:
-            freq[byte] = freq.get(byte, 0) + 1
-
-        # Calculate entropy
-        entropy = 0.0
-        data_len = len(data)
-
-        for count in freq.values():
-            if count > 0:
-                probability = count / data_len
-                entropy -= probability * math.log2(probability)
-
-        return round(entropy, 4)
+        """Calculate Shannon entropy."""
+        return round(entropy_from_ints(data), 4)
 
     def _check_patterns(self, data: list[int]) -> list[dict[str, Any]]:
         """Check for known patterns in overlay data."""
-        patterns = []
+        patterns: list[dict[str, Any]] = []
 
         # Check for installer patterns
         installer_sigs = [
@@ -249,7 +245,8 @@ class OverlayAnalyzer:
         ]
 
         for sig in installer_sigs:
-            if self._find_pattern(data, sig["pattern"]):
+            pattern = cast(list[int], sig["pattern"])
+            if self._find_pattern(data, pattern):
                 patterns.append({"type": "installer", "name": sig["name"], "confidence": "high"})
 
         # Check for encryption/compression patterns
@@ -285,7 +282,7 @@ class OverlayAnalyzer:
 
         return patterns
 
-    def _determine_overlay_type(self, patterns: list[dict], data: list[int]) -> str:
+    def _determine_overlay_type(self, patterns: list[dict[str, Any]], data: list[int]) -> str:
         """Determine the most likely type of overlay data."""
         if not patterns:
             # Check entropy to guess type
@@ -303,13 +300,13 @@ class OverlayAnalyzer:
                 return f"installer ({pattern['name']})"
 
         # Check other types
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for pattern in patterns:
             ptype = pattern["type"]
             type_counts[ptype] = type_counts.get(ptype, 0) + 1
 
         if type_counts:
-            return max(type_counts, key=type_counts.get)
+            return max(type_counts, key=lambda key: type_counts[key])
 
         return "unknown"
 
@@ -344,14 +341,15 @@ class OverlayAnalyzer:
         ]
 
         for sig in file_sigs:
-            positions = self._find_all_patterns(data, sig["magic"])
+            magic = cast(list[int], sig["magic"])
+            positions = self._find_all_patterns(data, magic)
             for pos in positions:
                 signatures.append(
                     {
                         "type": sig["name"],
                         "offset": pos,
                         "extension": sig["extension"],
-                        "magic": "".join([f"{b:02X}" for b in sig["magic"]]),
+                        "magic": "".join([f"{b:02X}" for b in magic]),
                     }
                 )
 
@@ -373,31 +371,12 @@ class OverlayAnalyzer:
         unique_bytes = len(set(data[:256]))
         return unique_bytes > 240  # Almost all bytes are unique
 
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
     def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
         """Extract readable strings from data."""
-        strings = []
-        current_string = []
-
-        for byte in data:
-            # Ensure byte is an integer
-            try:
-                byte_val = int(byte) if not isinstance(byte, int) else byte
-            except (ValueError, TypeError):
-                continue
-
-            # Check if byte is printable ASCII
-            if 0x20 <= byte_val <= 0x7E:
-                current_string.append(chr(byte_val))
-            else:
-                if len(current_string) >= min_length:
-                    strings.append("".join(current_string))
-                current_string = []
-
-        # Don't forget the last string
-        if len(current_string) >= min_length:
-            strings.append("".join(current_string))
-
-        return strings[:50]  # Limit to first 50 strings
+        return extract_ascii_from_bytes(data, min_length=min_length, limit=50)
 
     def _find_pattern(self, data: list[int], pattern: list[int]) -> bool:
         """Find a byte pattern in data."""
@@ -420,9 +399,9 @@ class OverlayAnalyzer:
                 positions.append(i)
         return positions
 
-    def _check_suspicious_indicators(self, result: dict[str, Any]):
+    def _check_suspicious_indicators(self, result: OverlayResult) -> None:
         """Check for suspicious indicators in overlay data."""
-        suspicious = []
+        suspicious: list[dict[str, Any]] = []
 
         self._check_large_overlay(result, suspicious)
         self._check_entropy(result, suspicious)
@@ -432,7 +411,7 @@ class OverlayAnalyzer:
 
         result["suspicious_indicators"] = suspicious
 
-    def _check_large_overlay(self, result: dict[str, Any], suspicious: list[dict[str, Any]]):
+    def _check_large_overlay(self, result: OverlayResult, suspicious: list[dict[str, Any]]) -> None:
         if result["overlay_size"] > 1024 * 1024:
             suspicious.append(
                 {
@@ -442,7 +421,7 @@ class OverlayAnalyzer:
                 }
             )
 
-    def _check_entropy(self, result: dict[str, Any], suspicious: list[dict[str, Any]]):
+    def _check_entropy(self, result: OverlayResult, suspicious: list[dict[str, Any]]) -> None:
         if result["overlay_entropy"] > 7.5:
             suspicious.append(
                 {
@@ -452,7 +431,9 @@ class OverlayAnalyzer:
                 }
             )
 
-    def _check_embedded_executables(self, result: dict[str, Any], suspicious: list[dict[str, Any]]):
+    def _check_embedded_executables(
+        self, result: OverlayResult, suspicious: list[dict[str, Any]]
+    ) -> None:
         for embedded in result.get("embedded_files", []):
             if embedded.get("type") in ["PE", "ELF"]:
                 suspicious.append(
@@ -463,7 +444,7 @@ class OverlayAnalyzer:
                     }
                 )
 
-    def _check_autoit(self, result: dict[str, Any], suspicious: list[dict[str, Any]]):
+    def _check_autoit(self, result: OverlayResult, suspicious: list[dict[str, Any]]) -> None:
         for pattern in result.get("patterns_found", []):
             if pattern.get("name") == "AutoIt":
                 suspicious.append(
@@ -474,7 +455,9 @@ class OverlayAnalyzer:
                     }
                 )
 
-    def _check_suspicious_strings(self, result: dict[str, Any], suspicious: list[dict[str, Any]]):
+    def _check_suspicious_strings(
+        self, result: OverlayResult, suspicious: list[dict[str, Any]]
+    ) -> None:
         suspicious_strings = [
             "cmd.exe",
             "powershell",

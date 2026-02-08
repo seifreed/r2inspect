@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
-"""
-Binlex Analyzer Module
-
-This module implements Binlex-style byte-level lexical hashing for function analysis.
-Binlex creates signatures based on n-grams of instruction mnemonics, which is useful for:
-- Function similarity detection
-- Malware family clustering
-- Variant analysis across different compilation environments
-
-Based on the Binlex approach for lexical analysis of binary functions.
-"""
+"""Binlex lexical analysis for function similarity."""
 
 import hashlib
 from collections import Counter, defaultdict
-from typing import Any
+from typing import Any, TypedDict
 
+from ..utils.command_helpers import cmd as cmd_helper
+from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
+from .similarity_scoring import jaccard_similarity
 
 logger = get_logger(__name__)
 
@@ -25,37 +18,37 @@ HTML_NBSP = "&nbsp;"
 HTML_AMP = "&amp;"
 
 
+class BinlexResult(TypedDict):
+    available: bool
+    function_signatures: dict[str, dict[int, dict[str, Any]]]
+    ngram_sizes: list[int]
+    total_functions: int
+    analyzed_functions: int
+    unique_signatures: dict[int, int]
+    similar_functions: dict[int, list[dict[str, Any]]]
+    binary_signature: dict[int, str] | None
+    top_ngrams: dict[int, list[tuple[str, int]]]
+    error: str | None
+
+
 class BinlexAnalyzer:
-    """Binlex-style lexical analysis of binary functions"""
+    """Lexical function similarity analysis."""
 
-    def __init__(self, r2_instance, filepath: str):
-        """
-        Initialize Binlex analyzer.
-
-        Args:
-            r2_instance: Active r2pipe instance
-            filepath: Path to the binary file being analyzed
-        """
-        self.r2 = r2_instance
+    def __init__(self, adapter: Any, filepath: str) -> None:
+        """Initialize analyzer state."""
+        self.adapter = adapter
+        self.r2 = adapter
         self.filepath = filepath
         self.default_ngram_size = 3  # Default n-gram size
 
-    def analyze(self, ngram_sizes: list[int] | None = None) -> dict[str, Any]:
-        """
-        Perform Binlex analysis on all functions in the binary.
-
-        Args:
-            ngram_sizes: List of n-gram sizes to analyze (default: [2, 3, 4])
-
-        Returns:
-            Dictionary containing Binlex analysis results
-        """
+    def analyze(self, ngram_sizes: list[int] | None = None) -> BinlexResult:
+        """Run Binlex analysis for all functions."""
         if ngram_sizes is None:
             ngram_sizes = [2, 3, 4]
 
         logger.debug(f"Starting Binlex analysis for {self.filepath}")
 
-        results: dict[str, Any] = {
+        results: BinlexResult = {
             "available": False,
             "function_signatures": {},
             "ngram_sizes": ngram_sizes,
@@ -221,10 +214,11 @@ class BinlexAnalyzer:
         """
         try:
             # Ensure analysis is complete
-            self.r2.cmd("aaa")
+            if self.adapter is not None and hasattr(self.adapter, "analyze_all"):
+                self.adapter.analyze_all()
 
             # Get function list
-            functions = safe_cmd_list(self.r2, "aflj")
+            functions = self._cmd_list("aflj")
 
             if not functions:
                 logger.debug("No functions found with 'aflj' command")
@@ -258,11 +252,8 @@ class BinlexAnalyzer:
             Dictionary with analysis results for each n-gram size
         """
         try:
-            # Seek to function
-            self.r2.cmd(f"s {func_addr}")
-
             # Extract instruction tokens
-            tokens = self._extract_instruction_tokens(func_name)
+            tokens = self._extract_instruction_tokens(func_addr, func_name)
             if not tokens:
                 logger.debug(f"No tokens found for function {func_name}")
                 return None
@@ -298,7 +289,7 @@ class BinlexAnalyzer:
             logger.debug(f"Error analyzing function {func_name}: {e}")
             return None
 
-    def _extract_instruction_tokens(self, func_name: str) -> list[str]:
+    def _extract_instruction_tokens(self, func_addr: int, func_name: str) -> list[str]:
         """
         Extract instruction tokens (mnemonics) from current function.
 
@@ -309,15 +300,15 @@ class BinlexAnalyzer:
             List of instruction mnemonics
         """
         try:
-            tokens = self._extract_tokens_from_pdfj(func_name)
+            tokens = self._extract_tokens_from_pdfj(func_addr, func_name)
             if tokens:
                 return tokens
 
-            tokens = self._extract_tokens_from_pdj(func_name)
+            tokens = self._extract_tokens_from_pdj(func_addr, func_name)
             if tokens:
                 return tokens
 
-            tokens = self._extract_tokens_from_text(func_name)
+            tokens = self._extract_tokens_from_text(func_addr, func_name)
             if tokens:
                 return tokens
 
@@ -326,8 +317,12 @@ class BinlexAnalyzer:
 
         return []
 
-    def _extract_tokens_from_pdfj(self, func_name: str) -> list[str]:
-        disasm = safe_cmdj(self.r2, "pdfj", {})
+    def _extract_tokens_from_pdfj(self, func_addr: int, func_name: str) -> list[str]:
+        disasm = (
+            self.adapter.get_disasm(address=func_addr)
+            if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+            else self._cmdj("pdfj", {})
+        )
         if not disasm or "ops" not in disasm:
             return []
         tokens = self._extract_tokens_from_ops(disasm["ops"])
@@ -335,8 +330,12 @@ class BinlexAnalyzer:
             logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdfj")
         return tokens
 
-    def _extract_tokens_from_pdj(self, func_name: str) -> list[str]:
-        disasm_list = safe_cmd_list(self.r2, "pdj 200")
+    def _extract_tokens_from_pdj(self, func_addr: int, func_name: str) -> list[str]:
+        disasm_list = (
+            self.adapter.get_disasm(address=func_addr, size=200)
+            if self.adapter is not None and hasattr(self.adapter, "get_disasm")
+            else self._cmd_list("pdj 200")
+        )
         if not isinstance(disasm_list, list):
             return []
         tokens = self._extract_tokens_from_ops(disasm_list)
@@ -344,8 +343,12 @@ class BinlexAnalyzer:
             logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdj")
         return tokens
 
-    def _extract_tokens_from_text(self, func_name: str) -> list[str]:
-        instructions_text = self.r2.cmd("pi 100")
+    def _extract_tokens_from_text(self, func_addr: int, func_name: str) -> list[str]:
+        instructions_text = (
+            self.adapter.get_disasm_text(address=func_addr, size=100)
+            if self.adapter is not None and hasattr(self.adapter, "get_disasm_text")
+            else self._cmd("pi 100")
+        )
         if not instructions_text or not instructions_text.strip():
             return []
         tokens: list[str] = []
@@ -374,7 +377,7 @@ class BinlexAnalyzer:
 
     def _extract_mnemonic_from_op(self, op: dict[str, Any]) -> str | None:
         mnemonic = op.get("mnemonic")
-        if mnemonic:
+        if isinstance(mnemonic, str) and mnemonic:
             return mnemonic
         opcode = op.get("opcode")
         if isinstance(opcode, str):
@@ -382,6 +385,15 @@ class BinlexAnalyzer:
             if opcode:
                 return opcode.split()[0]
         return None
+
+    def _cmd(self, command: str) -> str:
+        return cmd_helper(self.adapter, self.r2, command)
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _normalize_mnemonic(self, mnemonic: str | None) -> str | None:
         if not mnemonic:
@@ -471,31 +483,13 @@ class BinlexAnalyzer:
         return binary_signatures
 
     def compare_functions(self, func1_sig: str, func2_sig: str) -> bool:
-        """
-        Compare two function signatures for exact match.
-
-        Args:
-            func1_sig: First function signature
-            func2_sig: Second function signature
-
-        Returns:
-            True if signatures match exactly
-        """
+        """Compare two function signatures for exact match."""
         return func1_sig == func2_sig
 
     def get_function_similarity_score(
         self, func1_ngrams: list[str], func2_ngrams: list[str]
     ) -> float:
-        """
-        Calculate similarity score between two functions based on n-gram overlap.
-
-        Args:
-            func1_ngrams: N-grams from first function
-            func2_ngrams: N-grams from second function
-
-        Returns:
-            Similarity score between 0.0 and 1.0
-        """
+        """Calculate similarity score between two functions based on n-gram overlap."""
         try:
             set1 = set(func1_ngrams)
             set2 = set(func2_ngrams)
@@ -506,11 +500,7 @@ class BinlexAnalyzer:
             if not set1 or not set2:
                 return 0.0  # One empty
 
-            # Jaccard similarity
-            intersection = len(set1.intersection(set2))
-            union = len(set1.union(set2))
-
-            return intersection / union if union > 0 else 0.0
+            return jaccard_similarity(set1, set2)
 
         except Exception as e:
             logger.error(f"Error calculating similarity score: {e}")
@@ -530,7 +520,7 @@ class BinlexAnalyzer:
     @staticmethod
     def calculate_binlex_from_file(
         filepath: str, ngram_sizes: list[int] | None = None
-    ) -> dict[str, Any | None] | None:
+    ) -> BinlexResult | None:
         """
         Calculate Binlex signatures directly from a file path.
 

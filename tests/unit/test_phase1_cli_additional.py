@@ -43,7 +43,7 @@ def test_display_results_renders_core_sections(capsys):
         },
         "pe_info": {"imphash": "abcd", "sections": [".text", ".data"]},
         "security": {"nx": True, "aslr": False},
-        "ssdeep": {"available": True, "ssdeep_hash": "3:abc", "method_used": "native"},
+        "ssdeep": {"available": True, "hash_value": "3:abc", "method_used": "native"},
         "tlsh": {"available": False, "error": "not installed"},
         "telfhash": {
             "available": True,

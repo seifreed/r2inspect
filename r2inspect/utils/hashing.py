@@ -7,6 +7,8 @@ import hashlib
 import os
 from typing import cast
 
+from .ssdeep_loader import get_ssdeep
+
 
 def calculate_hashes(file_path: str) -> dict[str, str]:
     """Calculate various hashes for a file"""
@@ -74,10 +76,9 @@ def calculate_imphash(imports: list) -> str | None:
 def calculate_ssdeep(file_path: str) -> str | None:
     """Calculate ssdeep fuzzy hash (requires ssdeep library)"""
     try:
-        import ssdeep
-
-        return cast(str | None, ssdeep.hash_from_file(file_path))
-    except ImportError:
-        return None
+        ssdeep_module = get_ssdeep()
+        if ssdeep_module is None:
+            return None
+        return cast(str | None, ssdeep_module.hash_from_file(file_path))
     except Exception:
         return None

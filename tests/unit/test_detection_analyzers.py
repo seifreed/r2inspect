@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 from r2inspect.modules.compiler_detector import CompilerDetector
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
@@ -23,6 +24,11 @@ class ConfigStub:
     def __init__(self, entropy_threshold=7.0, yara_path=None):
         self._entropy_threshold = entropy_threshold
         self._yara_path = yara_path
+        self.typed_config = type(
+            "TypedConfig",
+            (),
+            {"packer": type("PackerConfig", (), {"entropy_threshold": entropy_threshold})()},
+        )()
 
     def get(self, section, key, default=None):
         if section == "packer" and key == "entropy_threshold":
@@ -47,7 +53,7 @@ def test_packer_detector_evidence_triggers_detection():
             "iij": [],
         },
     )
-    detector = PackerDetector(r2, ConfigStub(entropy_threshold=7.0))
+    detector = PackerDetector(R2PipeAdapter(r2), ConfigStub(entropy_threshold=7.0))
     result = detector.detect()
 
     assert result["is_packed"] is True
@@ -72,7 +78,7 @@ def test_anti_analysis_detects_multiple_indicators():
             ],
         },
     )
-    detector = AntiAnalysisDetector(r2, ConfigStub())
+    detector = AntiAnalysisDetector(R2PipeAdapter(r2), ConfigStub())
     result = detector.detect()
 
     assert result["anti_debug"] is True
@@ -99,7 +105,7 @@ def test_compiler_detector_gcc_detection():
             "isj": [{"name": "__libc_start_main"}],
         },
     )
-    detector = CompilerDetector(r2, ConfigStub())
+    detector = CompilerDetector(R2PipeAdapter(r2), ConfigStub())
     result = detector.detect_compiler()
 
     assert result["detected"] is True
@@ -120,7 +126,7 @@ def test_crypto_analyzer_detects_api_and_constants():
             "izj": [],
         },
     )
-    analyzer = CryptoAnalyzer(r2, ConfigStub())
+    analyzer = CryptoAnalyzer(R2PipeAdapter(r2), ConfigStub())
     result = analyzer.detect()
 
     assert any(const["type"] == "md5_h" for const in result["constants"])

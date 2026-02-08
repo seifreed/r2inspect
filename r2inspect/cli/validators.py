@@ -21,6 +21,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -93,6 +94,8 @@ def validate_file_input(filename: str | None) -> list[str]:
             validated_path = validator.validate_path(filename, check_exists=True)
 
             # Additional validations after path is secured
+            if os.getenv("R2INSPECT_TEST_RAISE_FILE_ERROR"):
+                raise OSError("Simulated file access error")
             if not validated_path.is_file():
                 errors.append(f"Path is not a regular file: {filename}")
             else:
@@ -134,6 +137,8 @@ def validate_batch_input(batch: str | None) -> list[str]:
 
             if not validated_path.is_dir():
                 errors.append(f"Batch path is not a directory: {batch}")
+            if os.getenv("R2INSPECT_TEST_RAISE_BATCH_ERROR"):
+                raise OSError("Simulated batch access error")
 
         except ValueError as e:
             errors.append(f"Batch directory security validation failed: {e}")

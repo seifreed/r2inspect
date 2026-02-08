@@ -1,27 +1,11 @@
 #!/usr/bin/env python3
-"""
+"""YARA analysis module."""
 
 from __future__ import annotations
-YARA Analysis Module
-
-Copyright (C) 2025 Marc Rivero López
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-"""
 
 import os
 import signal
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -31,8 +15,9 @@ except Exception:  # pragma: no cover - optional dependency
     yara = None
 
 from ..security.validators import FileValidator
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmdj
+from .yara_defaults import DEFAULT_YARA_RULES
 
 logger = get_logger(__name__)
 
@@ -51,7 +36,7 @@ class TimeoutException(Exception):
     pass
 
 
-def timeout_handler(signum, frame):
+def timeout_handler(signum: int, frame: Any) -> None:
     """Signal handler for compilation timeout."""
     raise TimeoutException("YARA compilation timed out")
 
@@ -62,10 +47,18 @@ _COMPILED_CACHE: dict[str, Any] = {}
 class YaraAnalyzer:
     """YARA rules analysis"""
 
-    def __init__(self, r2, config, filepath=None):
-        self.r2 = r2
+    def __init__(
+        self,
+        adapter: Any,
+        config: Any | None = None,
+        filepath: str | None = None,
+    ) -> None:
+        self.adapter = adapter
+        self.r2 = adapter
+        if config is None:
+            raise ValueError("config must be provided")
         self.config = config
-        self.rules_path = config.get_yara_rules_path()
+        self.rules_path = str(config.get_yara_rules_path())
         self.filepath = filepath  # Store filepath directly to avoid r2 dependency
 
     def scan(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
@@ -99,16 +92,16 @@ class YaraAnalyzer:
     def _resolve_file_path(self) -> str | None:
         file_path = self.filepath
         if not file_path:
-            file_info = safe_cmdj(self.r2, "ij", {})
+            file_info = self._cmdj("ij", {})
             if file_info and "core" in file_info:
-                file_path = file_info["core"].get("file", "")
+                file_path = str(file_info["core"].get("file", ""))
         if not file_path or not os.path.exists(file_path):
             logger.debug(f"File not accessible for YARA scan: {file_path}")
             return None
         return file_path
 
     def _resolve_rules_path(self, custom_rules_path: str | None) -> str | None:
-        rules_path = custom_rules_path or self.rules_path
+        rules_path = custom_rules_path or self.rules_path or ""
         if os.path.exists(rules_path):
             return rules_path
         logger.info(f"YARA rules path not found: {rules_path}. Creating defaults.")
@@ -237,7 +230,7 @@ class YaraAnalyzer:
             try:
                 validator.validate_yara_rule_content(content, YARA_MAX_RULE_SIZE)
             except ValueError as e:
-                logger.info(f"Skipping YARA rule due to validation {rule_file}: {e}")
+                logger.debug(f"Skipping YARA rule due to validation {rule_file}: {e}")
                 return None
 
             return content
@@ -257,7 +250,7 @@ class YaraAnalyzer:
 
     def _compile_sources_with_timeout(self, rules_dict: dict[str, str]) -> yara.Rules | None:
         try:
-            if hasattr(signal, "SIGALRM"):
+            if hasattr(signal, "SIGALRM") and threading.current_thread() is threading.main_thread():
                 old_handler = signal.signal(signal.SIGALRM, timeout_handler)
                 signal.alarm(YARA_COMPILE_TIMEOUT)
                 try:
@@ -270,7 +263,7 @@ class YaraAnalyzer:
                 finally:
                     signal.signal(signal.SIGALRM, old_handler)
             else:
-                logger.info("YARA compilation timeout not available on this platform")
+                logger.debug("YARA compilation timeout not available on this platform")
                 return yara.compile(sources=rules_dict)
         except yara.SyntaxError as e:
             logger.error(f"YARA syntax error: {e}")
@@ -323,72 +316,16 @@ class YaraAnalyzer:
 
         return matches
 
-    def create_default_rules(self):
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def create_default_rules(self) -> None:
         """Create default YARA rules if none exist"""
         try:
             rules_dir = Path(self.rules_path)
             rules_dir.mkdir(parents=True, exist_ok=True)
 
-            # Create basic malware detection rules
-            default_rules = {
-                "packer_detection.yar": """
-rule UPX_Packer
-{
-    strings:
-        $upx1 = "UPX!"
-        $upx2 = "$Info: This file is packed with the UPX"
-    condition:
-        any of ($upx*)
-}
-
-rule Generic_Packer
-{
-    strings:
-        $s1 = "This program cannot be run in DOS mode"
-        $s2 = "PE"
-        $packer1 = { 60 BE ?? ?? ?? ?? 8D BE ?? ?? ?? ?? }  // Common packer stub
-        $packer2 = { 55 8B EC 83 EC ?? 53 56 57 }
-    condition:
-        all of ($s*) and filesize < 100KB and any of ($packer*)
-}
-""",
-                "suspicious_apis.yar": """
-rule Suspicious_Process_APIs
-{
-    strings:
-        $api1 = "CreateRemoteThread"
-        $api2 = "WriteProcessMemory"
-        $api3 = "VirtualAllocEx"
-        $api4 = "SetThreadContext"
-    condition:
-        2 of ($api*)
-}
-
-rule Anti_Debug_APIs
-{
-    strings:
-        $api1 = "IsDebuggerPresent"
-        $api2 = "CheckRemoteDebuggerPresent"
-        $api3 = "OutputDebugString"
-    condition:
-        any of ($api*)
-}
-""",
-                "crypto_detection.yar": """
-rule Crypto_Constants
-{
-    strings:
-        $md5_1 = { 01 23 45 67 }
-        $md5_2 = { 89 AB CD EF }
-        $sha1_1 = { 67 45 23 01 }
-        $sha1_2 = { EF CD AB 89 }
-    condition:
-        any of them
-}
-""",
-            }
-
-            for filename, content in default_rules.items():
+            for filename, content in DEFAULT_YARA_RULES.items():
                 rule_file = rules_dir / filename
                 if not rule_file.exists():
                     with open(rule_file, "w") as f:

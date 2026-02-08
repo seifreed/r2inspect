@@ -188,12 +188,14 @@ class BatchCommand(Command):
             quiet: Suppress non-critical output
         """
         # Import batch processing utilities from cli module
-        from .. import (
-            create_batch_summary,
+        from ..batch_output import create_batch_summary
+        from ..batch_processing import (
             display_batch_results,
             display_no_files_message,
+            ensure_batch_shutdown,
             find_files_to_process,
             process_files_parallel,
+            schedule_forced_exit,
             setup_batch_output_directory,
             setup_rate_limiter,
         )
@@ -223,7 +225,7 @@ class BatchCommand(Command):
 
         # Results storage
         all_results: dict[str, dict[str, Any]] = {}
-        failed_files: list[str] = []
+        failed_files: list[tuple[str, str]] = []
 
         # Start timing
         start_time = time.time()
@@ -261,6 +263,8 @@ class BatchCommand(Command):
             verbose,
             output_filename,
         )
+        ensure_batch_shutdown()
+        schedule_forced_exit()
 
     def _configure_batch_logging(self, verbose: bool, quiet: bool) -> None:
         """

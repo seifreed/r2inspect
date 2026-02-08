@@ -16,8 +16,12 @@ the Free Software Foundation, either version 3 of the License, or
 Author: Marc Rivero Lopez
 """
 
+import json
+import os
+import threading
 from typing import Any, cast
 
+from ..core.constants import SUBPROCESS_TIMEOUT_SECONDS
 from ..error_handling import ErrorHandlingStrategy, ErrorPolicy, handle_errors
 from ..error_handling.presets import (
     R2_ANALYSIS_POLICY,
@@ -25,6 +29,7 @@ from ..error_handling.presets import (
     R2_JSON_LIST_POLICY,
     R2_TEXT_POLICY,
 )
+from ..interfaces import R2CommandInterface
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -85,7 +90,9 @@ def _clean_html_entities(item: dict[str, Any]) -> None:
         item["name"] = item["name"].replace("&nbsp;", " ").replace("&amp;", "&")
 
 
-def safe_cmdj(r2_instance: Any, command: str, default: Any | None = None) -> Any | None:
+def safe_cmdj(
+    r2_instance: R2CommandInterface, command: str, default: Any | None = None
+) -> Any | None:
     """
     Safely execute a radare2 JSON command with unified error handling.
 
@@ -105,9 +112,47 @@ def safe_cmdj(r2_instance: Any, command: str, default: Any | None = None) -> Any
 
     @handle_errors(policy)
     def _execute() -> Any:
-        return r2_instance.cmdj(command)
+        raw = _run_cmd_with_timeout(r2_instance, command, default)
+        if not isinstance(raw, str) or not raw.strip():
+            return default
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return default
 
     return _execute()
+
+
+def _run_cmd_with_timeout(
+    r2_instance: R2CommandInterface, command: str, default: Any | None
+) -> Any | None:
+    result: dict[str, Any] = {"value": default, "done": False}
+
+    def _run() -> None:
+        try:
+            result["value"] = r2_instance.cmd(command)
+        except Exception:
+            result["value"] = default
+        finally:
+            result["done"] = True
+
+    timeout_seconds = SUBPROCESS_TIMEOUT_SECONDS
+    env_timeout = os.environ.get("R2INSPECT_CMD_TIMEOUT_SECONDS") if "os" in globals() else None
+    if env_timeout:
+        try:
+            timeout_seconds = float(env_timeout)
+        except ValueError:
+            timeout_seconds = SUBPROCESS_TIMEOUT_SECONDS
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_seconds)
+
+    if not result["done"]:
+        logger.warning("r2 command timed out: %s", command)
+        return default
+
+    return result["value"]
 
 
 def _select_json_policy(command: str, default: Any) -> ErrorPolicy:
@@ -126,7 +171,7 @@ def _select_json_policy(command: str, default: Any) -> ErrorPolicy:
     return R2_JSON_DICT_POLICY
 
 
-def safe_cmd_list(r2_instance: Any, command: str) -> list[dict[str, Any]]:
+def safe_cmd_list(r2_instance: R2CommandInterface, command: str) -> list[dict[str, Any]]:
     """
     Safely execute a radare2 JSON command expecting a list result.
 
@@ -141,7 +186,7 @@ def safe_cmd_list(r2_instance: Any, command: str) -> list[dict[str, Any]]:
     return cast(list[dict[str, Any]], validate_r2_data(result, "list"))
 
 
-def safe_cmd_dict(r2_instance: Any, command: str) -> dict[str, Any]:
+def safe_cmd_dict(r2_instance: R2CommandInterface, command: str) -> dict[str, Any]:
     """
     Safely execute a radare2 JSON command expecting a dict result.
 
@@ -156,7 +201,7 @@ def safe_cmd_dict(r2_instance: Any, command: str) -> dict[str, Any]:
     return cast(dict[str, Any], validate_r2_data(result, "dict"))
 
 
-def safe_cmd(r2_instance: Any, command: str, default: str = "") -> str:
+def safe_cmd(r2_instance: R2CommandInterface, command: str, default: str = "") -> str:
     """
     Safely execute a radare2 command returning text with unified error handling.
 
@@ -171,12 +216,12 @@ def safe_cmd(r2_instance: Any, command: str, default: str = "") -> str:
 
     @handle_errors(R2_TEXT_POLICY)
     def _execute() -> Any:
-        return r2_instance.cmd(command)
+        return _run_cmd_with_timeout(r2_instance, command, default)
 
     return cast(str, _execute())
 
 
-def parse_pe_header_text(r2_instance: Any) -> dict[str, Any] | None:
+def parse_pe_header_text(r2_instance: R2CommandInterface) -> dict[str, Any] | None:
     """
     Parse PE header text output from ih command.
 
@@ -190,12 +235,16 @@ def parse_pe_header_text(r2_instance: Any) -> dict[str, Any] | None:
     """
 
     @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=None))
-    def _parse():
+    def _parse() -> dict[str, Any] | None:
         text_output = safe_cmd(r2_instance, "ih")
         if not text_output:
             return None
 
-        result = {"nt_headers": {}, "file_header": {}, "optional_header": {}}
+        result: dict[str, Any] = {
+            "nt_headers": {},
+            "file_header": {},
+            "optional_header": {},
+        }
         lines = text_output.split("\n")
         current_section = None
 
@@ -255,16 +304,24 @@ def get_pe_headers(r2_instance: Any) -> dict[str, Any] | None:
     """
 
     @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=None))
-    def _get_headers():
+    def _get_headers() -> dict[str, Any] | None:
         # Get headers list from ihj
-        headers_list = safe_cmdj(r2_instance, "ihj", [])
+        headers_list = (
+            r2_instance.get_headers_json()
+            if hasattr(r2_instance, "get_headers_json")
+            else safe_cmdj(r2_instance, "ihj", [])
+        )
 
         if not headers_list or not isinstance(headers_list, list):
             # Fallback to parsing text if JSON fails
             return parse_pe_header_text(r2_instance)
 
         # Parse the list into PE header structure
-        result = {"nt_headers": {}, "file_header": {}, "optional_header": {}}
+        result: dict[str, Any] = {
+            "nt_headers": {},
+            "file_header": {},
+            "optional_header": {},
+        }
 
         # Map field names to header sections
         for item in headers_list:
@@ -340,13 +397,17 @@ def get_elf_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
     """
 
     @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=[]))
-    def _get_headers():
+    def _get_headers() -> list[dict[str, Any]]:
         # First try the correct JSON command
         headers = _get_headers_json(r2_instance)
         if headers is not None:
             return headers
 
-        ph_output = safe_cmd(r2_instance, "ih")
+        ph_output = (
+            r2_instance.get_header_text()
+            if hasattr(r2_instance, "get_header_text")
+            else safe_cmd(r2_instance, "ih")
+        )
         if not ph_output:
             return []
 
@@ -356,7 +417,11 @@ def get_elf_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
 
 
 def _get_headers_json(r2_instance: Any) -> list[dict[str, Any]] | None:
-    headers = safe_cmdj(r2_instance, "ihj", None)
+    headers = (
+        r2_instance.get_headers_json()
+        if hasattr(r2_instance, "get_headers_json")
+        else safe_cmdj(r2_instance, "ihj", None)
+    )
     if not headers:
         return None
     if isinstance(headers, dict):
@@ -374,8 +439,6 @@ def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
         if not line or ":" not in line:
             continue
         parts = line.split(":", 1)
-        if len(parts) != 2:
-            continue
         key = parts[0].strip().lower()
         value = parts[1].strip()
         if key in {"type", "flags", "offset", "vaddr", "paddr", "filesz", "memsz"}:
@@ -395,9 +458,13 @@ def get_macho_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
     """
 
     @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=[]))
-    def _get_headers():
+    def _get_headers() -> list[dict[str, Any]]:
         # First try the correct JSON command
-        headers = safe_cmdj(r2_instance, "ihj", None)
+        headers = (
+            r2_instance.get_headers_json()
+            if hasattr(r2_instance, "get_headers_json")
+            else safe_cmdj(r2_instance, "ihj", None)
+        )
         if headers:
             # Convert to list format if needed
             if isinstance(headers, dict):
@@ -406,7 +473,11 @@ def get_macho_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
                 return headers
 
         # Fallback: For Mach-O, try text commands
-        headers_output = safe_cmd(r2_instance, "ih")
+        headers_output = (
+            r2_instance.get_header_text()
+            if hasattr(r2_instance, "get_header_text")
+            else safe_cmd(r2_instance, "ih")
+        )
 
         if not headers_output:
             return []
@@ -416,44 +487,3 @@ def get_macho_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
         return []
 
     return cast(list[dict[str, Any]] | None, _get_headers())
-
-
-# Legacy compatibility functions
-# These maintain backward compatibility with old circuit breaker/retry system
-
-
-def get_circuit_breaker_stats() -> dict[str, Any]:
-    """Get circuit breaker statistics (compatibility wrapper)"""
-    from ..error_handling.unified_handler import get_circuit_breaker_stats
-
-    return get_circuit_breaker_stats()
-
-
-def reset_circuit_breakers():
-    """Reset all circuit breakers (compatibility wrapper)"""
-    from ..error_handling.unified_handler import reset_circuit_breakers
-
-    reset_circuit_breakers()
-    logger.info("All circuit breakers have been reset")
-
-
-def get_retry_stats() -> dict[str, Any]:
-    """
-    Get retry statistics (legacy compatibility)
-
-    Note: The new unified error handling system does not track separate
-    retry statistics. This function returns circuit breaker stats instead.
-    """
-    # Compatibility shim: return circuit breaker stats without emitting warnings
-    return get_circuit_breaker_stats()
-
-
-def reset_retry_stats():
-    """
-    Reset retry statistics (legacy compatibility)
-
-    Note: The new unified error handling system does not have separate
-    retry statistics. This resets circuit breakers instead.
-    """
-    # Compatibility shim: reset circuit breakers without emitting warnings
-    reset_circuit_breakers()

@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""
-ELF Analysis Module using r2pipe
-"""
+"""ELF analysis module."""
 
 import re
-from typing import Any
+from typing import Any, cast
 
 from ..abstractions import BaseAnalyzer
+from ..utils.command_helpers import cmd as cmd_helper
+from ..utils.command_helpers import cmd_list as cmd_list_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import get_elf_headers, safe_cmd_list, safe_cmdj
+from ..utils.r2_helpers import get_elf_headers
+from .elf_domain import (
+    find_section_by_name,
+    parse_build_id_data,
+    parse_comment_compiler_info,
+    parse_dwarf_compile_time,
+    parse_dwarf_info,
+    parse_dwarf_producer,
+)
+from .elf_security import get_security_features as _get_security_features
 
 logger = get_logger(__name__)
 
@@ -16,8 +25,8 @@ logger = get_logger(__name__)
 class ELFAnalyzer(BaseAnalyzer):
     """ELF file analysis using radare2"""
 
-    def __init__(self, r2, config):
-        super().__init__(r2=r2, config=config)
+    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+        super().__init__(adapter=adapter, config=config)
 
     def get_category(self) -> str:
         return "format"
@@ -69,11 +78,11 @@ class ELFAnalyzer(BaseAnalyzer):
 
     def _get_elf_headers(self) -> dict[str, Any]:
         """Extract ELF header information"""
-        info = {}
+        info: dict[str, Any] = {}
 
         try:
             # Get ELF information from radare2
-            elf_info = safe_cmdj(self.r2, "ij", {})
+            elf_info = self.adapter.get_file_info()
 
             if elf_info and "bin" in elf_info:
                 bin_info = elf_info["bin"]
@@ -93,7 +102,7 @@ class ELFAnalyzer(BaseAnalyzer):
 
     def _get_compilation_info(self) -> dict[str, Any]:
         """Get compilation information from various ELF sources"""
-        info = {}
+        info: dict[str, Any] = {}
 
         try:
             # Try to get compilation info from .comment section
@@ -122,11 +131,11 @@ class ELFAnalyzer(BaseAnalyzer):
 
     def _extract_comment_section(self) -> dict[str, Any]:
         """Extract information from .comment section"""
-        info = {}
+        info: dict[str, Any] = {}
 
         try:
-            sections = safe_cmd_list(self.r2, "iSj")
-            comment_section = self._find_section(sections, ".comment")
+            sections = self._cmd_list("iSj")
+            comment_section = find_section_by_name(sections, ".comment")
             if not comment_section:
                 return info
 
@@ -144,11 +153,11 @@ class ELFAnalyzer(BaseAnalyzer):
 
     def _extract_dwarf_info(self) -> dict[str, Any]:
         """Extract compilation info from DWARF debug information"""
-        info = {}
+        info: dict[str, Any] = {}
 
         try:
             # Check if debug info is available
-            debug_info = self.r2.cmd("id")
+            debug_info = cmd_helper(self.adapter, self.r2, "id")
 
             if debug_info and "No debug info" not in debug_info:
                 info.update(self._parse_dwarf_info(debug_info.split("\n")))
@@ -162,8 +171,8 @@ class ELFAnalyzer(BaseAnalyzer):
         """Extract build ID from .note.gnu.build-id section"""
         try:
             # Get sections information
-            sections = safe_cmd_list(self.r2, "iSj")
-            build_id_section = self._find_section(sections, ".note.gnu.build-id")
+            sections = self._cmd_list("iSj")
+            build_id_section = find_section_by_name(sections, ".note.gnu.build-id")
             if not build_id_section:
                 return None
 
@@ -186,7 +195,7 @@ class ELFAnalyzer(BaseAnalyzer):
         sections = []
 
         try:
-            sections_info = safe_cmd_list(self.r2, "iSj")
+            sections_info = self._cmd_list("iSj")
 
             if sections_info:
                 for section in sections_info:
@@ -240,143 +249,38 @@ class ELFAnalyzer(BaseAnalyzer):
 
     def get_security_features(self) -> dict[str, bool]:
         """Check for ELF security features"""
-        features = {
-            "nx": False,
-            "stack_canary": False,
-            "relro": False,
-            "pie": False,
-            "rpath": False,
-            "runpath": False,
-        }
+        return _get_security_features(self.adapter, logger)
 
-        try:
-            self._check_nx(features)
-            self._check_stack_canary(features)
-            dynamic_info = self.r2.cmd("id")
-            self._check_relro(features, dynamic_info)
-            self._check_pie(features)
-            self._check_paths(features, dynamic_info)
-
-        except Exception as e:
-            logger.debug(f"Error checking security features: {e}")
-
-        return features
-
-    def _find_section(self, sections: list[dict[str, Any]], name_substr: str) -> dict | None:
-        name_substr = name_substr.lower()
-        for section in sections or []:
-            if name_substr in section.get("name", "").lower():
-                return section
-        return None
-
-    def _read_section(self, section: dict[str, Any], cmd: str) -> str | None:
+    def _read_section(self, section: dict[str, Any] | None, cmd: str) -> str | None:
+        if not section:
+            return None
+        if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
+            return None
         vaddr = section.get("vaddr", 0)
         size = section.get("size", 0)
         if not vaddr or not size:
             return None
-        self.r2.cmd(f"s {vaddr}")
-        return self.r2.cmd(f"{cmd} {size}")
+        data = cast(bytes, self.adapter.read_bytes(vaddr, size))
+        if cmd == "psz":
+            return data.split(b"\x00", 1)[0].decode(errors="ignore")
+        if cmd == "px":
+            return " ".join(f"{byte:02x}" for byte in data)
+        return data.decode(errors="ignore")
 
     def _parse_comment_compiler_info(self, comment_data: str) -> dict[str, Any]:
-        info: dict[str, Any] = {}
-        compiler_match = re.search(r"GCC:\s*\(([^)]+)\)\s*([0-9.]+)", comment_data)
-        if compiler_match:
-            info["compiler"] = f"GCC {compiler_match.group(2)}"
-            info["compiler_version"] = compiler_match.group(2)
-            info["build_environment"] = compiler_match.group(1)
-        clang_match = re.search(r"clang\s+version\s+([0-9.]+)", comment_data)
-        if clang_match:
-            info["compiler"] = f"Clang {clang_match.group(1)}"
-            info["compiler_version"] = clang_match.group(1)
-        return info
+        return parse_comment_compiler_info(comment_data)
 
     def _parse_dwarf_info(self, dwarf_lines: list[str]) -> dict[str, Any]:
-        info: dict[str, Any] = {}
-        for line in dwarf_lines:
-            producer = self._parse_dwarf_producer(line)
-            if producer:
-                info.update(producer)
-            compile_time = self._parse_dwarf_compile_time(line)
-            if compile_time:
-                info["compile_time"] = compile_time
-        return info
+        return parse_dwarf_info(dwarf_lines)
 
     def _parse_dwarf_producer(self, line: str) -> dict[str, Any] | None:
-        if "DW_AT_producer" not in line:
-            return None
-        producer_match = re.search(r"DW_AT_producer\s*:\s*(.+)", line)
-        if not producer_match:
-            return None
-        producer = producer_match.group(1).strip()
-        info: dict[str, Any] = {"dwarf_producer": producer}
-        if "GNU C" in producer:
-            gcc_match = re.search(r"GNU C\D*([0-9.]+)", producer)
-            if gcc_match:
-                info["compiler"] = f"GCC {gcc_match.group(1)}"
-                info["compiler_version"] = gcc_match.group(1)
-        elif "clang" in producer.lower():
-            clang_match = re.search(r"clang\D*([0-9.]+)", producer)
-            if clang_match:
-                info["compiler"] = f"Clang {clang_match.group(1)}"
-                info["compiler_version"] = clang_match.group(1)
-        return info
+        return parse_dwarf_producer(line)
 
     def _parse_dwarf_compile_time(self, line: str) -> str | None:
-        if "DW_AT_comp_dir" not in line and "compilation" not in line.lower():
-            return None
-        date_match = re.search(r"(\d{4}-\d{2}-\d{2})", line)
-        if not date_match:
-            date_match = re.search(
-                r"(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})",
-                line,
-            )
-        return date_match.group(1) if date_match else None
+        return parse_dwarf_compile_time(line)
 
     def _parse_build_id_data(self, build_id_data: str | None) -> str | None:
-        if not build_id_data:
-            return None
-        for line in build_id_data.split("\n"):
-            if not line.strip():
-                continue
-            hex_match = re.findall(r"([0-9a-fA-F]{2})", line)
-            if len(hex_match) > 4:
-                return "".join(hex_match[4:])
-        return None
+        return parse_build_id_data(build_id_data)
 
-    def _check_nx(self, features: dict[str, bool]) -> None:
-        ph_info = get_elf_headers(self.r2)
-        if not ph_info:
-            return
-        for header in ph_info:
-            if header.get("type") == "GNU_STACK":
-                flags = header.get("flags", "")
-                if "x" not in flags.lower():
-                    features["nx"] = True
-                break
-
-    def _check_stack_canary(self, features: dict[str, bool]) -> None:
-        symbols = safe_cmd_list(self.r2, "isj")
-        if not symbols:
-            return
-        for symbol in symbols:
-            name = symbol.get("name", "")
-            if "__stack_chk_fail" in name or "__stack_chk_guard" in name:
-                features["stack_canary"] = True
-                break
-
-    def _check_relro(self, features: dict[str, bool], dynamic_info: str) -> None:
-        if "BIND_NOW" in dynamic_info:
-            features["relro"] = True
-
-    def _check_pie(self, features: dict[str, bool]) -> None:
-        elf_info = safe_cmdj(self.r2, "ij", {})
-        if elf_info and "bin" in elf_info:
-            elf_type = elf_info["bin"].get("class", "")
-            if "DYN" in elf_type.upper():
-                features["pie"] = True
-
-    def _check_paths(self, features: dict[str, bool], dynamic_info: str) -> None:
-        if "RPATH" in dynamic_info:
-            features["rpath"] = True
-        if "RUNPATH" in dynamic_info:
-            features["runpath"] = True
+    def _cmd_list(self, command: str) -> list[Any]:
+        return cmd_list_helper(self.adapter, self.r2, command)

@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-# mypy: ignore-errors
-"""
-Export Analysis Module using r2pipe
-"""
+"""Export table analysis."""
 
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import safe_cmd_list, safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -16,8 +13,8 @@ logger = get_logger(__name__)
 class ExportAnalyzer(BaseAnalyzer):
     """Export table analysis using radare2"""
 
-    def __init__(self, r2, config):
-        super().__init__(r2=r2, config=config)
+    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+        super().__init__(adapter=adapter, config=config)
 
     def get_category(self) -> str:
         return "metadata"
@@ -54,7 +51,7 @@ class ExportAnalyzer(BaseAnalyzer):
 
         try:
             # Get exports from radare2
-            exports = safe_cmd_list(self.r2, "iEj")
+            exports = self._cmd_list("iEj")
 
             if exports:
                 for exp in exports:
@@ -95,7 +92,7 @@ class ExportAnalyzer(BaseAnalyzer):
 
     def _get_export_characteristics(self, exp: dict[str, Any]) -> dict[str, Any]:
         """Get characteristics of an export"""
-        characteristics = {}
+        characteristics: dict[str, Any] = {}
 
         try:
             name = exp.get("name", "")
@@ -128,7 +125,7 @@ class ExportAnalyzer(BaseAnalyzer):
             # Check if function has code (not just a data export)
             if vaddr > 0:
                 # Try to analyze the function at this address
-                func_info = safe_cmdj(self.r2, f"afij @ {vaddr}", [])
+                func_info = self._cmd_list(f"afij @ {vaddr}")
                 if func_info and len(func_info) > 0:
                     func = func_info[0]
                     # Validate that func is a dictionary before using .get()
@@ -146,6 +143,13 @@ class ExportAnalyzer(BaseAnalyzer):
             logger.error(f"Error getting export characteristics: {e}")
 
         return characteristics
+
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
+    def _cmd_list(self, command: str) -> list[Any]:
+        result = self._cmdj(command, [])
+        return result if isinstance(result, list) else []
 
     def get_export_statistics(self) -> dict[str, Any]:
         """Get statistics about exports"""

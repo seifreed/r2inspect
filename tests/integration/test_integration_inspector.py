@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from r2inspect.config import Config
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.factory import create_inspector
 
 pytestmark = pytest.mark.requires_r2
 
@@ -30,7 +30,7 @@ def _minimal_options() -> dict:
 
 def _analyze(path: str) -> dict:
     config = Config(str(Path("/tmp") / "r2inspect_test_config.json"))
-    with R2Inspector(path, config=config, verbose=False) as inspector:
+    with create_inspector(path, config=config, verbose=False) as inspector:
         return inspector.analyze(**_minimal_options())
 
 

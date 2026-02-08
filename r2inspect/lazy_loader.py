@@ -1,108 +1,69 @@
 #!/usr/bin/env python3
 """
-Lazy Analyzer Loader Module
+Lazy Analyzer Loader Module.
 
-This module provides infrastructure for lazy loading of analyzer modules,
-reducing startup time by deferring imports until first access. This optimization
-can reduce r2inspect startup time by 80-90% while maintaining full backward
-compatibility.
-
-Architecture:
-    - Lazy Import Pattern: Modules loaded on first access, not at startup
-    - LRU Caching: Frequently accessed analyzers cached for fast retrieval
-    - Transparent Proxy: Callers unaware of lazy loading mechanism
-    - Statistics Tracking: Monitor loading patterns for optimization
-
-Performance Characteristics:
-    - First access: O(1) + import cost
-    - Subsequent access: O(1) from cache
-    - Memory: Minimal until analyzer accessed
-    - Thread-safe: Uses importlib's thread-safe import mechanism
-
-Copyright (C) 2025 Marc Rivero López
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
+Provides lazy loading of analyzer classes to defer imports until first access.
 """
 
 import importlib
 import logging
 import sys
 import threading
+from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, cast
+from typing import Any, TypedDict, cast
+
+from .lazy_loader_stats import build_stats as _build_stats
 
 logger = logging.getLogger(__name__)
 
 
+class LoaderStats(TypedDict):
+    load_count: int
+    cache_hits: int
+    cache_misses: int
+    failed_loads: int
+    load_times: dict[str, float]
+
+
+def _init_loader_stats() -> LoaderStats:
+    return {
+        "load_count": 0,
+        "cache_hits": 0,
+        "cache_misses": 0,
+        "failed_loads": 0,
+        "load_times": {},
+    }
+
+
+@dataclass(frozen=True)
+class LazyAnalyzerSpec:
+    """Registration metadata for a lazy analyzer."""
+
+    module_path: str
+    class_name: str
+    category: str | None = None
+    formats: set[str] = field(default_factory=set)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
 class LazyAnalyzerLoader:
-    """
-    Lazy loader for analyzer classes.
+    """Lazy loader for analyzer classes."""
 
-    Analyzer modules are not imported until first access, dramatically
-    reducing startup time and memory footprint. This implementation uses
-    Python's importlib for thread-safe lazy imports and maintains an
-    LRU cache for fast repeated access.
-
-    Performance Impact:
-        - Startup reduction: 80-90% (imports deferred)
-        - Memory reduction: 50-70% (unused analyzers not loaded)
-        - First access overhead: ~5-10ms per analyzer
-        - Subsequent access: <1ms (cached)
-
-    Thread Safety:
-        This implementation is thread-safe. importlib.import_module() is
-        thread-safe, and the internal _cache is protected by a lock.
-
-    Example:
-        >>> loader = LazyAnalyzerLoader()
-        >>> loader.register("pe", "r2inspect.modules.pe_analyzer", "PEAnalyzer")
-        >>> # No import happens yet - startup is fast
-        >>>
-        >>> analyzer_class = loader.get_analyzer_class("pe")
-        >>> # Import happens here on first access
-        >>> analyzer = analyzer_class(r2=r2)
-        >>>
-        >>> # Subsequent access is instant (cached)
-        >>> analyzer_class2 = loader.get_analyzer_class("pe")
-
-    Design Patterns:
-        - Lazy Initialization: Defer expensive operations until needed
-        - Proxy Pattern: Transparent access to underlying classes
-        - Registry Pattern: Central management of analyzer metadata
-        - Cache Pattern: LRU cache for performance optimization
-    """
-
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize lazy loader with empty registry.
 
         The loader maintains two data structures:
-        - _registry: Maps analyzer names to (module_path, class_name, metadata)
+        - _registry: Maps analyzer names to registration metadata
         - _cache: Stores loaded analyzer classes for fast repeated access
         """
-        self._registry: dict[str, tuple] = {}
+        self._registry: dict[str, LazyAnalyzerSpec] = {}
         self._cache: dict[str, type[Any]] = {}
         self._cache_lock = threading.Lock()
 
         # Statistics tracking for optimization analysis
-        self._stats = {
-            "load_count": 0,  # Total number of loads performed
-            "cache_hits": 0,  # Number of cache hits
-            "cache_misses": 0,  # Number of cache misses
-            "failed_loads": 0,  # Number of failed imports
-            "load_times": {},  # Per-analyzer load times
-        }
+        self._stats = _init_loader_stats()
 
     def register(
         self,
@@ -149,19 +110,19 @@ class LazyAnalyzerLoader:
         # Check for duplicate registration with different path
         if name in self._registry:
             existing = self._registry[name]
-            if existing[0] != module_path or existing[1] != class_name:
+            if existing.module_path != module_path or existing.class_name != class_name:
                 logger.warning(
                     f"Analyzer '{name}' already registered with different path. "
-                    f"Overwriting: {existing[0]}.{existing[1]} -> {module_path}.{class_name}"
+                    f"Overwriting: {existing.module_path}.{existing.class_name} "
+                    f"-> {module_path}.{class_name}"
                 )
 
-        # Store registration metadata
-        self._registry[name] = (
-            module_path,
-            class_name,
-            category,
-            formats or set(),
-            metadata or {},
+        self._registry[name] = LazyAnalyzerSpec(
+            module_path=module_path,
+            class_name=class_name,
+            category=category,
+            formats=formats or set(),
+            metadata=metadata or {},
         )
 
         logger.debug(f"Registered lazy analyzer: {name} -> {module_path}.{class_name}")
@@ -206,7 +167,9 @@ class LazyAnalyzerLoader:
         self._stats["cache_misses"] += 1
 
         # Load module (slow path - only happens once per analyzer)
-        module_path, class_name, *_ = self._registry[name]
+        spec = self._registry[name]
+        module_path = spec.module_path
+        class_name = spec.class_name
 
         try:
             import time
@@ -380,7 +343,7 @@ class LazyAnalyzerLoader:
             >>> # Preload all format analyzers
             >>> loader.preload_category("format")
         """
-        names = [name for name, (_, _, cat, _, _) in self._registry.items() if cat == category]
+        names = [name for name, spec in self._registry.items() if spec.category == category]
 
         return self.preload(*names)
 
@@ -409,61 +372,7 @@ class LazyAnalyzerLoader:
             >>> print(f"Cache hit rate: {stats['cache_hit_rate']:.1%}")
             >>> print(f"Lazy ratio: {stats['lazy_ratio']:.1%}")
         """
-        total_accesses = self._stats["cache_hits"] + self._stats["cache_misses"]
-        cache_hit_rate = self._stats["cache_hits"] / total_accesses if total_accesses > 0 else 0.0
-
-        registered_count = len(self._registry)
-        loaded_count = len(self._cache)
-        lazy_ratio = 1 - (loaded_count / registered_count) if registered_count > 0 else 0.0
-
-        return {
-            "registered": registered_count,
-            "loaded": loaded_count,
-            "unloaded": registered_count - loaded_count,
-            "load_count": self._stats["load_count"],
-            "cache_hits": self._stats["cache_hits"],
-            "cache_misses": self._stats["cache_misses"],
-            "failed_loads": self._stats["failed_loads"],
-            "cache_hit_rate": cache_hit_rate,
-            "lazy_ratio": lazy_ratio,
-            "load_times": self._stats["load_times"].copy(),
-        }
-
-    def print_stats(self) -> None:
-        """
-        Print formatted statistics to console.
-
-        Useful for debugging and performance monitoring.
-
-        Example:
-            >>> loader.print_stats()
-            Lazy Loader Statistics
-            =====================
-            Registered analyzers: 27
-            Loaded analyzers:     8
-            Unloaded analyzers:   19
-            ...
-        """
-        stats = self.get_stats()
-
-        print("\nLazy Loader Statistics")
-        print("=" * 50)
-        print(f"Registered analyzers: {stats['registered']}")
-        print(f"Loaded analyzers:     {stats['loaded']}")
-        print(f"Unloaded analyzers:   {stats['unloaded']}")
-        print(f"Load count:           {stats['load_count']}")
-        print(f"Cache hits:           {stats['cache_hits']}")
-        print(f"Cache misses:         {stats['cache_misses']}")
-        print(f"Failed loads:         {stats['failed_loads']}")
-        print(f"Cache hit rate:       {stats['cache_hit_rate']:.1%}")
-        print(f"Lazy ratio:           {stats['lazy_ratio']:.1%}")
-
-        if stats["load_times"]:
-            print("\nLoad Times (ms):")
-            for name, time_ms in sorted(
-                stats["load_times"].items(), key=lambda x: x[1], reverse=True
-            ):
-                print(f"  {name:20s}: {time_ms:6.2f} ms")
+        return _build_stats(self)
 
     def clear_cache(self) -> int:
         """
@@ -499,20 +408,14 @@ class LazyAnalyzerLoader:
         """
         result = {}
 
-        for name, (
-            module_path,
-            class_name,
-            category,
-            formats,
-            metadata,
-        ) in self._registry.items():
+        for name, spec in self._registry.items():
             result[name] = {
-                "module_path": module_path,
-                "class_name": class_name,
-                "category": category,
-                "formats": list(formats),
+                "module_path": spec.module_path,
+                "class_name": spec.class_name,
+                "category": spec.category,
+                "formats": list(spec.formats),
                 "loaded": self.is_loaded(name),
-                "metadata": metadata,
+                "metadata": spec.metadata,
             }
 
         return result

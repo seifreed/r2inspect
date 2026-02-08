@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""
-Hashing Strategy Abstract Base Class
-
-This module provides an abstract base class for implementing hashing analyzers
-using the Template Method design pattern. It enforces consistent structure,
-eliminates code duplication, and provides common functionality for all
-hash-based analyzers.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Template method base for hashing analyzers."""
 
 import os
 import time
@@ -17,31 +7,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from .analysis_result import AnalysisResult
-
 
 class HashingStrategy(ABC):
-    """
-    Abstract base class for hashing strategies using Template Method pattern.
-
-    This class provides a standardized workflow for hash calculation analyzers,
-    eliminating duplication and enforcing consistency across implementations.
-    Subclasses must implement library-specific methods while inheriting common
-    validation, error handling, and result formatting logic.
-
-    The Template Method pattern ensures all hashing analyzers follow the same
-    execution flow:
-    1. Validate file existence and size
-    2. Check library availability
-    3. Calculate hash(es)
-    4. Format and return standardized results
-
-    Attributes:
-        filepath: Path to the file being analyzed
-        r2: Optional r2pipe instance for binary analysis
-        max_file_size: Maximum file size in bytes (default: 100MB)
-        min_file_size: Minimum file size in bytes (default: 1 byte)
-    """
+    """Abstract base class for hashing strategies."""
 
     def __init__(
         self,
@@ -161,16 +129,16 @@ class HashingStrategy(ABC):
         Returns:
             Error message string if validation fails, None if successful
         """
-        # Check file existence
-        if not self._filepath.exists():
-            return f"File does not exist: {self.filepath}"
-
-        # Check if path is a file (not directory)
-        if not self._filepath.is_file():
-            return f"Path is not a regular file: {self.filepath}"
-
-        # Check file size
         try:
+            # Check file existence
+            if not self._filepath.exists():
+                return f"File does not exist: {self.filepath}"
+
+            # Check if path is a file (not directory)
+            if not self._filepath.is_file():
+                return f"Path is not a regular file: {self.filepath}"
+
+            # Check file size
             file_size = self._filepath.stat().st_size
 
             if file_size < self.min_file_size:
@@ -316,55 +284,6 @@ class HashingStrategy(ABC):
             ...         return False
         """
         pass
-
-    def to_analysis_result(
-        self,
-        analysis_dict: dict[str, Any],
-        file_format: str = "unknown",
-    ) -> AnalysisResult:
-        """
-        Convert analysis dictionary to standardized AnalysisResult.
-
-        This utility method converts the dictionary returned by analyze()
-        into a standardized AnalysisResult object for consistency across
-        the r2inspect framework.
-
-        Args:
-            analysis_dict: Dictionary returned by analyze()
-            file_format: Detected file format (PE, ELF, Mach-O, etc.)
-
-        Returns:
-            AnalysisResult object with hash information populated
-        """
-        result = AnalysisResult(
-            file_path=self.filepath,
-            file_format=file_format,
-            execution_time=analysis_dict.get("execution_time"),
-        )
-
-        # Add hash if available
-        if analysis_dict.get("hash_value"):
-            result.add_hash(
-                hash_type=analysis_dict["hash_type"],
-                hash_value=analysis_dict["hash_value"],
-            )
-
-        # Add file info
-        result.file_info["size"] = analysis_dict.get("file_size", 0)
-        result.file_info["hash_method"] = analysis_dict.get("method_used")
-
-        # Add error if present
-        if analysis_dict.get("error"):
-            result.add_error(analysis_dict["error"], context=analysis_dict["hash_type"])
-
-        # Add warning if library not available
-        if not analysis_dict.get("available"):
-            result.add_warning(
-                f"{analysis_dict['hash_type'].upper()} library not available",
-                context=analysis_dict["hash_type"],
-            )
-
-        return result
 
     def get_file_size(self) -> int | None:
         """

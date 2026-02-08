@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-"""
-Security Analyzer Pydantic Schemas
-
-Schemas for security-focused analyzers (exploit mitigation, authenticode, etc.)
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Security analyzer schemas."""
 
 from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from .base import AnalysisResultBase
 
@@ -39,16 +32,7 @@ class SecurityGrade(str, Enum):
 
 
 class SecurityIssue(BaseModel):
-    """
-    A security issue found during analysis.
-
-    Attributes:
-        severity: Severity level (minimal, low, medium, high, critical)
-        description: Human-readable description
-        recommendation: Recommended remediation
-        cwe_id: Common Weakness Enumeration ID
-        cvss_score: CVSS score (0.0-10.0)
-    """
+    """Security issue found during analysis."""
 
     severity: SeverityLevel = Field(..., description="Severity level")
 
@@ -70,16 +54,7 @@ class SecurityIssue(BaseModel):
 
 
 class MitigationInfo(BaseModel):
-    """
-    Information about a security mitigation.
-
-    Attributes:
-        enabled: Whether mitigation is enabled
-        description: Human-readable description
-        details: Additional details
-        note: Additional notes
-        high_entropy: High entropy ASLR (for ASLR mitigation)
-    """
+    """Information about a security mitigation."""
 
     enabled: bool = Field(..., description="Whether mitigation is enabled")
 
@@ -94,15 +69,7 @@ class MitigationInfo(BaseModel):
 
 
 class Recommendation(BaseModel):
-    """
-    Security recommendation.
-
-    Attributes:
-        priority: Priority level (low, medium, high, critical)
-        mitigation: Mitigation name
-        recommendation: Recommended action
-        impact: Impact description
-    """
+    """Security recommendation."""
 
     priority: SeverityLevel = Field(..., description="Priority level")
 
@@ -114,15 +81,7 @@ class Recommendation(BaseModel):
 
 
 class SecurityScore(BaseModel):
-    """
-    Security score information.
-
-    Attributes:
-        score: Numeric score
-        max_score: Maximum possible score
-        percentage: Score as percentage
-        grade: Letter grade (A-F)
-    """
+    """Security score information."""
 
     score: int = Field(..., ge=0, description="Numeric score")
 
@@ -134,7 +93,7 @@ class SecurityScore(BaseModel):
 
     @field_validator("max_score")
     @classmethod
-    def validate_max_score(cls, v: int, info) -> int:
+    def validate_max_score(cls, v: int, info: ValidationInfo) -> int:
         """Validate max_score is not less than score"""
         if "score" in info.data and v < info.data["score"]:
             raise ValueError("max_score cannot be less than score")
@@ -142,23 +101,7 @@ class SecurityScore(BaseModel):
 
 
 class SecurityAnalysisResult(AnalysisResultBase):
-    """
-    Result from security analyzers (exploit mitigation, etc.).
-
-    Represents comprehensive security analysis including mitigations,
-    vulnerabilities, and recommendations.
-
-    Attributes:
-        mitigations: Dictionary of mitigation information
-        features: Dictionary of security features (bool values)
-        score: Security score (0-100)
-        security_score: Detailed security score information
-        issues: List of security issues found
-        recommendations: List of security recommendations
-        vulnerabilities: List of vulnerabilities found
-        dll_characteristics: DLL characteristics information (PE)
-        load_config: Load configuration information (PE)
-    """
+    """Result from security analyzers."""
 
     mitigations: dict[str, MitigationInfo] = Field(
         default_factory=dict, description="Dictionary of mitigation information"
@@ -183,9 +126,11 @@ class SecurityAnalysisResult(AnalysisResultBase):
     )
 
     # PE-specific fields
-    dll_characteristics: dict[str, Any | None] = Field(None, description="DLL characteristics (PE)")
+    dll_characteristics: dict[str, Any | None] | None = Field(
+        None, description="DLL characteristics (PE)"
+    )
 
-    load_config: dict[str, Any | None] = Field(None, description="Load configuration (PE)")
+    load_config: dict[str, Any | None] | None = Field(None, description="Load configuration (PE)")
 
     def get_critical_issues(self) -> list[SecurityIssue]:
         """Get all critical severity issues"""
@@ -204,58 +149,26 @@ class SecurityAnalysisResult(AnalysisResultBase):
         return [name for name, info in self.mitigations.items() if not info.enabled]
 
     def has_mitigation(self, mitigation_name: str) -> bool:
-        """
-        Check if a specific mitigation is enabled.
-
-        Args:
-            mitigation_name: Name of mitigation to check
-
-        Returns:
-            True if mitigation is enabled
-        """
+        """Check if a specific mitigation is enabled."""
         info = self.mitigations.get(mitigation_name)
         return info is not None and info.enabled
 
     def count_issues_by_severity(self) -> dict[str, int]:
-        """
-        Count issues by severity level.
-
-        Returns:
-            Dictionary mapping severity to count
-        """
+        """Count issues by severity level."""
         counts: dict[str, int] = {level.value: 0 for level in SeverityLevel}
         for issue in self.issues:
             counts[issue.severity.value] += 1
         return counts
 
     def is_secure(self, threshold: int = 70) -> bool:
-        """
-        Check if binary meets security threshold.
-
-        Args:
-            threshold: Minimum security score (0-100)
-
-        Returns:
-            True if score >= threshold
-        """
+        """Check if binary meets security threshold."""
         if self.score is None:
             return False
         return self.score >= threshold
 
 
 class AuthenticodeAnalysisResult(AnalysisResultBase):
-    """
-    Result from Authenticode signature analysis.
-
-    Attributes:
-        signed: Whether binary is signed
-        valid: Whether signature is valid
-        signer: Signer information
-        timestamp: Signature timestamp
-        signature_algorithm: Algorithm used for signature
-        digest_algorithm: Algorithm used for digest
-        certificates: List of certificates in chain
-    """
+    """Result from Authenticode signature analysis."""
 
     signed: bool = Field(False, description="Whether binary is signed")
 

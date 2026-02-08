@@ -7,7 +7,7 @@ import psutil
 import pytest
 
 from r2inspect.config import Config
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.factory import create_inspector
 
 pytestmark = [pytest.mark.slow, pytest.mark.requires_r2]
 
@@ -29,7 +29,9 @@ def _minimal_options() -> dict:
 def test_pipeline_timing_baseline(tmp_path: Path) -> None:
     config = _config(tmp_path)
     start = time.perf_counter()
-    with R2Inspector(str(FIXTURES / "hello_pe.exe"), config=config, verbose=False) as inspector:
+    with create_inspector(
+        str(FIXTURES / "hello_pe.exe"), config=config, verbose=False
+    ) as inspector:
         results = inspector.analyze(**_minimal_options())
     elapsed = time.perf_counter() - start
 
@@ -43,7 +45,7 @@ def test_memory_baseline_for_fixture_analysis(tmp_path: Path) -> None:
     process = psutil.Process()
     before_mb = process.memory_info().rss / 1024 / 1024
 
-    with R2Inspector(
+    with create_inspector(
         str(FIXTURES / "edge_high_entropy.bin"), config=config, verbose=False
     ) as inspector:
         inspector.analyze(**_minimal_options())
@@ -56,7 +58,7 @@ def test_regression_edge_cases_do_not_crash(tmp_path: Path) -> None:
     config = _config(tmp_path)
 
     for fixture in ("edge_bad_pe.bin", "edge_tiny.bin"):
-        with R2Inspector(str(FIXTURES / fixture), config=config, verbose=False) as inspector:
+        with create_inspector(str(FIXTURES / fixture), config=config, verbose=False) as inspector:
             results = inspector.analyze(**_minimal_options())
 
         assert "file_info" in results

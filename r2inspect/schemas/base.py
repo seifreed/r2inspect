@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-Base Pydantic Schemas for Type-Safe Results
-
-This module provides the foundational Pydantic models for all r2inspect analyzers,
-ensuring type safety, validation, and IDE support.
-
-Copyright (C) 2025 Marc Rivero López
-Licensed under the GNU General Public License v3.0 (GPLv3)
-"""
+"""Base pydantic schemas for analyzer results."""
 
 from datetime import datetime
 from typing import Any
@@ -56,8 +48,7 @@ class AnalysisResultBase(BaseModel):
     class Config:
         """Pydantic configuration"""
 
-        # Allow extra fields for backward compatibility
-        extra = "allow"
+        extra = "ignore"
         # Use JSON serialization
         json_encoders = {datetime: lambda v: v.isoformat()}
         # Enable validation on assignment
@@ -81,7 +72,7 @@ class AnalysisResultBase(BaseModel):
             return v.lower().strip()
         return v
 
-    def model_dump_safe(self, **kwargs) -> dict[str, Any]:
+    def model_dump_safe(self, **kwargs: Any) -> dict[str, Any]:
         """
         Safely dump model to dict, handling None values appropriately.
 
@@ -93,7 +84,7 @@ class AnalysisResultBase(BaseModel):
         """
         return self.model_dump(exclude_none=True, **kwargs)
 
-    def to_json(self, **kwargs) -> str:
+    def to_json(self, **kwargs: Any) -> str:
         """
         Convert model to JSON string.
 

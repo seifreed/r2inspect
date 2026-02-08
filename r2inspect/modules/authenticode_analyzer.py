@@ -1,31 +1,29 @@
-# mypy: ignore-errors
-"""
-Authenticode signature analyzer module using radare2.
-"""
+"""Authenticode signature analyzer."""
 
 import hashlib
-import logging
 import struct
 from datetime import datetime
 from typing import Any
 
-from ..utils.r2_helpers import safe_cmd, safe_cmdj
+from ..utils.command_helpers import cmdj as cmdj_helper
+from ..utils.logger import get_logger
 from ..utils.r2_suppress import silent_cmdj
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AuthenticodeAnalyzer:
     """Analyzes and verifies Authenticode signatures in PE files."""
 
-    def __init__(self, r2):
+    def __init__(self, adapter: Any) -> None:
         """
         Initialize the Authenticode analyzer.
 
         Args:
             r2: Radare2 instance
         """
-        self.r2 = r2
+        self.adapter = adapter
+        self.r2 = adapter
         self.pe_info = None
 
     def analyze(self) -> dict[str, Any]:
@@ -36,7 +34,8 @@ class AuthenticodeAnalyzer:
             Dictionary containing signature information
         """
         try:
-            result = {
+            result: dict[str, Any] = {
+                "available": True,
                 "has_signature": False,
                 "signature_valid": False,
                 "certificates": [],
@@ -48,6 +47,7 @@ class AuthenticodeAnalyzer:
             }
 
             if not self._has_required_headers():
+                result["available"] = False
                 return result
 
             security_dir = self._get_security_directory()
@@ -78,17 +78,22 @@ class AuthenticodeAnalyzer:
 
         except Exception as e:
             logger.error(f"Error analyzing Authenticode signature: {e}")
-            return {"has_signature": False, "signature_valid": False, "error": str(e)}
+            return {
+                "available": False,
+                "has_signature": False,
+                "signature_valid": False,
+                "error": str(e),
+            }
 
     def _has_required_headers(self) -> bool:
-        pe_header = silent_cmdj(self.r2, "ihj", {})
+        pe_header = self._cmdj("ihj", {})
         if not pe_header:
             return False
-        optional_header = silent_cmdj(self.r2, "iHj", {})
+        optional_header = self._cmdj("iHj", {})
         return bool(optional_header)
 
     def _get_security_directory(self) -> dict[str, Any] | None:
-        data_dirs = silent_cmdj(self.r2, "iDj", [])
+        data_dirs = self._cmdj("iDj", [])
         if not isinstance(data_dirs, list):
             return None
         for dd in data_dirs:
@@ -107,8 +112,7 @@ class AuthenticodeAnalyzer:
 
         result["signature_offset"] = cert_offset
         result["signature_size"] = cert_size
-        self._seek_to_offset(cert_offset)
-        win_cert_data = silent_cmdj(self.r2, f"pxj 8 @ {cert_offset}", [])
+        win_cert_data = self._cmdj(f"pxj 8 @ {cert_offset}", [])
         if not (win_cert_data and len(win_cert_data) >= 8):
             return None
 
@@ -128,12 +132,6 @@ class AuthenticodeAnalyzer:
 
         return cert_info
 
-    def _seek_to_offset(self, offset: int) -> None:
-        try:
-            self.r2.cmd(f"s {offset}")
-        except Exception as exc:
-            logger.debug(f"Failed to seek to cert offset {offset}: {exc}")
-
     def _parse_win_cert_header(self, data: list[int]) -> tuple[int, int, int]:
         cert_length = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)
         cert_revision = data[4] | (data[5] << 8)
@@ -150,17 +148,18 @@ class AuthenticodeAnalyzer:
         }
         return types.get(cert_type, f"UNKNOWN ({hex(cert_type)})")
 
-    def _parse_pkcs7(self, offset: int, size: int) -> dict[str, Any | None]:
+    def _parse_pkcs7(self, offset: int, size: int) -> dict[str, Any] | None:
         """Parse PKCS#7 signature data."""
         try:
-            result = {
+            result: dict[str, Any] = {
                 "signer_info": [],
                 "certificates_chain": [],
                 "digest_algorithm": None,
                 "encryption_algorithm": None,
+                "has_timestamp": False,
             }
 
-            pkcs7_data = silent_cmdj(self.r2, f"pxj {min(size, 1024)} @ {offset}", [])
+            pkcs7_data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])
             if not pkcs7_data:
                 return None
 
@@ -255,11 +254,14 @@ class AuthenticodeAnalyzer:
                 positions.append(i)
         return positions
 
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
+
     def _compute_authenticode_hash(self) -> dict[str, str | None] | None:
         """Compute the Authenticode hash of the PE file."""
         try:
             # Get file size
-            file_info = silent_cmdj(self.r2, "ij", {})
+            file_info = self._cmdj("ij", {})
             if not file_info:
                 return None
 
@@ -268,12 +270,12 @@ class AuthenticodeAnalyzer:
                 return None
 
             # Get PE header offset
-            pe_header = silent_cmdj(self.r2, "ihj", {})
+            pe_header = self._cmdj("ihj", {})
             if not pe_header:
                 return None
 
             # Get checksum field offset (it should be excluded from hash)
-            optional_header = silent_cmdj(self.r2, "iHj", {})
+            optional_header = self._cmdj("iHj", {})
             if not optional_header:
                 return None
 

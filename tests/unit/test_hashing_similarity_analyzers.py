@@ -2,6 +2,7 @@ import hashlib
 
 import pytest
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.binbloom_analyzer import BLOOM_AVAILABLE, BinbloomAnalyzer, BloomFilter
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
@@ -32,7 +33,7 @@ def test_ssdeep_parse_output():
 
 
 def test_telfhash_symbol_filtering_and_names():
-    analyzer = TelfhashAnalyzer(FakeR2(), filepath="/tmp/sample.elf")
+    analyzer = TelfhashAnalyzer(R2PipeAdapter(FakeR2()), filepath="/tmp/sample.elf")
     symbols = [
         {"type": "FUNC", "bind": "GLOBAL", "name": "printf"},
         {"type": "OBJECT", "bind": "WEAK", "name": "data"},
@@ -49,7 +50,7 @@ def test_telfhash_symbol_filtering_and_names():
 def test_impfuzzy_process_imports(tmp_path):
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"MZ" + b"\x00" * 10)
-    analyzer = ImpfuzzyAnalyzer(FakeR2(), filepath=str(sample))
+    analyzer = ImpfuzzyAnalyzer(R2PipeAdapter(FakeR2()), filepath=str(sample))
 
     imports = [
         {"libname": "KERNEL32.dll", "name": "CreateFileA"},
@@ -62,7 +63,7 @@ def test_impfuzzy_process_imports(tmp_path):
 
 
 def test_simhash_helpers():
-    analyzer = SimHashAnalyzer(FakeR2(), filepath="/tmp/sample.bin")
+    analyzer = SimHashAnalyzer(R2PipeAdapter(FakeR2()), filepath="/tmp/sample.bin")
     assert analyzer._get_length_category(4) == "short"
     assert analyzer._get_length_category(10) == "medium"
     assert analyzer._get_length_category(40) == "long"
@@ -79,7 +80,7 @@ def test_simhash_helpers():
 
 
 def test_binlex_similarity_score():
-    analyzer = BinlexAnalyzer(FakeR2(), filepath="/tmp/sample.bin")
+    analyzer = BinlexAnalyzer(R2PipeAdapter(FakeR2()), filepath="/tmp/sample.bin")
     score = analyzer.get_function_similarity_score(["a", "b"], ["b", "c"])
     assert score == 1 / 3
     assert analyzer.compare_functions("sig", "sig") is True
@@ -88,7 +89,7 @@ def test_binlex_similarity_score():
 def test_ccbhash_function_and_binary_hash():
     cfg = [{"edges": [{"src": 1, "dst": 2}, {"src": 2, "dst": 3}], "blocks": []}]
     r2 = FakeR2(cmdj_map={"agj": cfg})
-    analyzer = CCBHashAnalyzer(r2, filepath="/tmp/sample.bin")
+    analyzer = CCBHashAnalyzer(R2PipeAdapter(r2), filepath="/tmp/sample.bin")
 
     expected_canonical = "1->2|2->3"
     expected = hashlib.sha256(expected_canonical.encode("utf-8")).hexdigest()
@@ -103,7 +104,7 @@ def test_ccbhash_function_and_binary_hash():
 
 
 def test_bindiff_helpers():
-    analyzer = BinDiffAnalyzer(FakeR2(), filepath="/tmp/sample.bin")
+    analyzer = BinDiffAnalyzer(R2PipeAdapter(FakeR2()), filepath="/tmp/sample.bin")
     cfg = {"edges": [1, 2, 3], "blocks": [1, 2]}
     assert analyzer._calculate_cyclomatic_complexity(cfg) == 3
 
@@ -140,6 +141,6 @@ def test_tlsh_binary_hash(tmp_path):
 
     sample = tmp_path / "sample.bin"
     sample.write_bytes(bytes(range(256)) * 2)
-    analyzer = TLSHAnalyzer(FakeR2(), filename=str(sample))
+    analyzer = TLSHAnalyzer(R2PipeAdapter(FakeR2()), filename=str(sample))
     value = analyzer._calculate_binary_tlsh()
     assert isinstance(value, str) and value

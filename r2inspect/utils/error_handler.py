@@ -138,7 +138,7 @@ class ErrorClassifier:
         )
 
     @classmethod
-    def _classify_by_inheritance(cls, exception: Exception) -> tuple:
+    def _classify_by_inheritance(cls, exception: Exception) -> tuple[ErrorCategory, ErrorSeverity]:
         """Classify by checking exception inheritance"""
         for exc_type, (category, severity) in cls.EXCEPTION_MAPPING.items():
             if isinstance(exception, exc_type):
@@ -158,7 +158,7 @@ class ErrorClassifier:
         category: ErrorCategory,
         severity: ErrorSeverity,
         context: dict[str, Any],
-    ) -> tuple:
+    ) -> tuple[ErrorCategory, ErrorSeverity]:
         """Adjust classification based on context"""
 
         # Check if this is a critical analysis component
@@ -242,15 +242,15 @@ class ErrorClassifier:
 class ErrorRecoveryManager:
     """Manage error recovery strategies"""
 
-    def __init__(self):
-        self.recovery_strategies = {}
-        self.error_counts = defaultdict(int)
-        self.recent_errors = deque(maxlen=100)
+    def __init__(self) -> None:
+        self.recovery_strategies: dict[ErrorCategory, Callable[[ErrorInfo], Any]] = {}
+        self.error_counts: defaultdict[ErrorCategory, int] = defaultdict(int)
+        self.recent_errors: deque[ErrorInfo] = deque(maxlen=100)
         self.lock = threading.Lock()
 
     def register_recovery_strategy(
         self, category: ErrorCategory, strategy: Callable[[ErrorInfo], Any]
-    ):
+    ) -> None:
         """Register a recovery strategy for an error category"""
         self.recovery_strategies[category] = strategy
 
@@ -287,7 +287,7 @@ class ErrorRecoveryManager:
             # No recovery possible
             return False, None
 
-    def _log_error(self, error_info: ErrorInfo):
+    def _log_error(self, error_info: ErrorInfo) -> None:
         """Log error with appropriate level"""
         error_dict = error_info.to_dict()
 
@@ -328,7 +328,7 @@ def error_handler(
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,
     context: dict[str, Any] | None = None,
     fallback_result: Any = None,
-):
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator for unified error handling
 
@@ -339,9 +339,9 @@ def error_handler(
         fallback_result: Result to return on unrecoverable error
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
 
@@ -379,11 +379,11 @@ def error_handler(
 
 
 def safe_execute(
-    func: Callable,
-    *args,
+    func: Callable[..., Any],
+    *args: Any,
     fallback_result: Any = None,
     context: dict[str, Any] | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Any:
     """
     Safely execute a function with error handling
@@ -417,10 +417,10 @@ def safe_execute(
             return fallback_result
 
 
-def register_recovery_strategies():
+def register_recovery_strategies() -> None:
     """Register default recovery strategies"""
 
-    def memory_recovery(error_info: ErrorInfo):
+    def memory_recovery(error_info: ErrorInfo) -> Any | None:
         """Recovery strategy for memory errors"""
         import gc
 
@@ -430,7 +430,7 @@ def register_recovery_strategies():
         logger.info("Performed aggressive garbage collection")
         return None
 
-    def r2pipe_recovery(error_info: ErrorInfo):
+    def r2pipe_recovery(error_info: ErrorInfo) -> Any | None:
         """Recovery strategy for r2pipe errors"""
         # Return safe defaults based on command type
         context = error_info.context
@@ -439,7 +439,7 @@ def register_recovery_strategies():
         else:
             return ""  # Text command default
 
-    def file_access_recovery(error_info: ErrorInfo):
+    def file_access_recovery(error_info: ErrorInfo) -> Any | None:
         """Recovery strategy for file access errors"""
         logger.warning(f"File access error: {error_info.suggested_action}")
         return None  # Skip the operation
@@ -459,7 +459,7 @@ def get_error_stats() -> dict[str, Any]:
     return global_error_manager.get_error_stats()
 
 
-def reset_error_stats():
+def reset_error_stats() -> None:
     """Reset error statistics"""
     global_error_manager.error_counts.clear()
     global_error_manager.recent_errors.clear()

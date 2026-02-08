@@ -20,22 +20,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .config_schemas.schemas import R2InspectConfig
+from .config_store import ConfigStore
 
 
 class Config:
     """
     Configuration manager for r2inspect.
 
-    This class provides backward compatibility with the legacy dictionary-based
-    configuration API while internally using typed dataclasses for type safety
-    and validation.
-
-    The configuration can be accessed in two ways:
-    1. Legacy API: config.get("section", "key")
-    2. Modern API: config.typed_config.section.key
+    This class maintains a typed configuration for type safety and validation,
+    while storing a full dictionary for persistence.
     """
 
     DEFAULT_CONFIG = {
@@ -103,22 +99,6 @@ class Config:
         """
         return self._typed_config
 
-    @property
-    def config_dict(self) -> dict[str, Any]:
-        """
-        Get the configuration as a dictionary for backward compatibility.
-
-        Returns:
-            dict[str, Any]: Configuration dictionary
-        """
-        # Return full dictionary (including unknown sections like 'pipeline')
-        return dict(self._full_config_dict)
-
-    @property
-    def config(self) -> dict[str, Any]:  # noqa: S1700
-        """Deprecated alias for config_dict to preserve legacy API."""
-        return self.config_dict
-
     def _get_default_config_path(self) -> str:
         """Get default configuration file path"""
         home_dir = Path.home()
@@ -126,24 +106,16 @@ class Config:
         config_dir.mkdir(exist_ok=True)
         return str(config_dir / "config.json")
 
-    def load_config(self):
-        """Load configuration from file"""
-        try:
-            with open(self.config_path) as f:
-                user_config = json.load(f)
-                self._load_from_dict(user_config)
-        except Exception as e:
-            print(f"Warning: Could not load config from {self.config_path}: {e}")
+    def load_config(self) -> None:
+        """Load configuration from file."""
+        loaded = ConfigStore.load(self.config_path)
+        if isinstance(loaded, dict):
+            self._load_from_dict(loaded)
 
-    def _load_from_dict(self, user_config: dict[str, Any]):
-        """
-        Load configuration from dictionary.
-
-        Args:
-            user_config: User configuration dictionary
-        """
-        # Merge user config with defaults (preserve unknown sections)
-        merged_config = json.loads(json.dumps(self.DEFAULT_CONFIG))
+    @staticmethod
+    def _merge_config(defaults: dict[str, Any], user_config: dict[str, Any]) -> dict[str, Any]:
+        """Merge user configuration into defaults, preserving unknown sections."""
+        merged_config = cast(dict[str, Any], json.loads(json.dumps(defaults)))
         for section, settings in user_config.items():
             if section in merged_config:
                 if isinstance(settings, dict) and isinstance(merged_config[section], dict):
@@ -152,6 +124,17 @@ class Config:
                     merged_config[section] = settings
             else:
                 merged_config[section] = settings
+        return merged_config
+
+    def _load_from_dict(self, user_config: dict[str, Any]) -> None:
+        """
+        Load configuration from dictionary.
+
+        Args:
+            user_config: User configuration dictionary
+        """
+        # Merge user config with defaults (preserve unknown sections)
+        merged_config = self._merge_config(self.DEFAULT_CONFIG, user_config)
 
         # Store full merged configuration
         self._full_config_dict = merged_config
@@ -164,52 +147,40 @@ class Config:
             print("Using default configuration")
             self._typed_config = R2InspectConfig.from_dict(self.DEFAULT_CONFIG)
 
-    def save_config(self):
-        """Save configuration to file"""
-        try:
-            config_dir = Path(self.config_path).parent
-            config_dir.mkdir(exist_ok=True)
+    def save_config(self) -> None:
+        """Save configuration to file."""
+        ConfigStore.save(self.config_path, self.to_dict())
 
-            with open(self.config_path, "w") as f:
-                json.dump(self.config_dict, f, indent=2)
-        except Exception as e:
-            print(f"Warning: Could not save config to {self.config_path}: {e}")
-
-    def get(self, section: str, key: str | None = None, default: Any = None):
+    def apply_overrides(self, overrides: dict[str, Any]) -> None:
         """
-        Get configuration value using legacy API.
+        Apply a set of configuration overrides.
 
         Args:
-            section: Configuration section name
-            key: Configuration key within section. If None, returns entire section.
-            default: Default value if key not found
-
-        Returns:
-            Configuration value or default
+            overrides: Mapping of section -> settings to merge.
         """
-        config_dict = self.config_dict
-        if key is None:
-            return config_dict.get(section, default)
-        return config_dict.get(section, {}).get(key, default)
+        config_dict = self.to_dict()
+        for section, settings in overrides.items():
+            if isinstance(settings, dict) and isinstance(config_dict.get(section), dict):
+                config_dict[section].update(settings)
+            else:
+                config_dict[section] = settings
+        self._load_from_dict(config_dict)
 
     def set(self, section: str, key: str, value: Any) -> None:
         """
-        Set configuration value using legacy API.
+        Set a single configuration value.
 
         Args:
-            section: Configuration section name
-            key: Configuration key within section
+            section: Top-level config section name
+            key: Config key within the section
             value: Value to set
         """
-        # Get current config as dict
-        config_dict = self.config_dict
-
-        # Update the dictionary
-        if section not in config_dict:
-            config_dict[section] = {}
-        config_dict[section][key] = value
-
-        # Reload typed config from updated dictionary
+        config_dict = self.to_dict()
+        section_dict = config_dict.get(section)
+        if not isinstance(section_dict, dict):
+            section_dict = {}
+        section_dict[key] = value
+        config_dict[section] = section_dict
         self._load_from_dict(config_dict)
 
     def from_dict(self, config_dict: dict[str, Any]) -> "Config":
@@ -234,7 +205,7 @@ class Config:
         Returns:
             dict[str, Any]: Configuration dictionary
         """
-        return self.config_dict
+        return dict(self._full_config_dict)
 
     def get_yara_rules_path(self) -> str:
         """Get YARA rules directory path"""
@@ -252,14 +223,6 @@ class Config:
     def get_virustotal_api_key(self) -> str:
         """Get VirusTotal API key"""
         return self.typed_config.virustotal.api_key
-
-    def __getitem__(self, key: str) -> Any:
-        """Allow dict-like access"""
-        return self.config_dict[key]
-
-    def __contains__(self, key: str) -> bool:
-        """Allow 'in' operator"""
-        return key in self.config_dict
 
     # PE Analysis configuration properties
     @property

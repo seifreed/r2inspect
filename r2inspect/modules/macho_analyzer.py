@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-# mypy: ignore-errors
-"""
-Mach-O Analysis Module using r2pipe
-"""
+"""Mach-O analysis."""
 
 import re
-from datetime import datetime
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
+from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
-from ..utils.r2_helpers import get_macho_headers, safe_cmdj
+from ..utils.r2_helpers import get_macho_headers
+from .macho_domain import (
+    build_load_commands,
+    build_sections,
+    dylib_timestamp_to_string,
+    estimate_from_sdk_version,
+    platform_from_version_min,
+)
+from .macho_security import get_security_features as _get_security_features
 
 logger = get_logger(__name__)
 
@@ -18,8 +23,8 @@ logger = get_logger(__name__)
 class MachOAnalyzer(BaseAnalyzer):
     """Mach-O file analysis using radare2"""
 
-    def __init__(self, r2, config):
-        super().__init__(r2=r2, config=config)
+    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+        super().__init__(adapter=adapter, config=config)
 
     def get_category(self) -> str:
         return "format"
@@ -75,7 +80,7 @@ class MachOAnalyzer(BaseAnalyzer):
 
         try:
             # Get Mach-O information from radare2
-            macho_info = safe_cmdj(self.r2, "ij")
+            macho_info = self._cmdj("ij", {})
 
             if macho_info and "bin" in macho_info:
                 bin_info = macho_info["bin"]
@@ -137,7 +142,7 @@ class MachOAnalyzer(BaseAnalyzer):
 
         try:
             # Get load commands
-            headers = get_macho_headers(self.r2)
+            headers = get_macho_headers(self.r2) or []
 
             for header in headers:
                 if header.get("type") == "LC_BUILD_VERSION":
@@ -150,8 +155,7 @@ class MachOAnalyzer(BaseAnalyzer):
                     sdk_version = header.get("sdk", "")
                     if sdk_version:
                         info["sdk_version_info"] = sdk_version
-                        # Could map SDK versions to release dates for estimation
-                        compile_time_estimate = self._estimate_from_sdk_version(sdk_version)
+                        compile_time_estimate = estimate_from_sdk_version(sdk_version)
                         if compile_time_estimate:
                             info["compile_time"] = compile_time_estimate
 
@@ -168,7 +172,7 @@ class MachOAnalyzer(BaseAnalyzer):
 
         try:
             # Get load commands
-            headers = get_macho_headers(self.r2)
+            headers = get_macho_headers(self.r2) or []
 
             for header in headers:
                 header_type = header.get("type", "")
@@ -178,14 +182,9 @@ class MachOAnalyzer(BaseAnalyzer):
                     info["sdk_version"] = header.get("sdk", "Unknown")
 
                     # Map the version min type to platform
-                    if "MACOSX" in header_type:
-                        info["platform"] = "macOS"
-                    elif "IPHONEOS" in header_type:
-                        info["platform"] = "iOS"
-                    elif "TVOS" in header_type:
-                        info["platform"] = "tvOS"
-                    elif "WATCHOS" in header_type:
-                        info["platform"] = "watchOS"
+                    platform = platform_from_version_min(header_type)
+                    if platform:
+                        info["platform"] = platform
 
                     break
 
@@ -200,20 +199,17 @@ class MachOAnalyzer(BaseAnalyzer):
 
         try:
             # Get load commands
-            headers = get_macho_headers(self.r2)
+            headers = get_macho_headers(self.r2) or []
 
             for header in headers:
                 if header.get("type") == "LC_ID_DYLIB":
                     # Extract dylib timestamp
                     timestamp = header.get("timestamp", 0)
-                    if timestamp and timestamp > 0:
-                        # Convert timestamp to readable date
-                        try:
-                            compile_date = datetime.fromtimestamp(timestamp)
-                            info["compile_time"] = compile_date.strftime("%a %b %d %H:%M:%S %Y")
-                            info["dylib_timestamp"] = timestamp
-                        except Exception:
-                            info["dylib_timestamp"] = timestamp
+                    compile_time, raw_timestamp = dylib_timestamp_to_string(timestamp)
+                    if compile_time:
+                        info["compile_time"] = compile_time
+                    if raw_timestamp:
+                        info["dylib_timestamp"] = str(raw_timestamp)
 
                     info["dylib_name"] = header.get("name", "Unknown")
                     info["dylib_version"] = header.get("version", "Unknown")
@@ -230,13 +226,13 @@ class MachOAnalyzer(BaseAnalyzer):
         """Extract UUID from LC_UUID command"""
         try:
             # Get load commands
-            headers = get_macho_headers(self.r2)
+            headers = get_macho_headers(self.r2) or []
 
             for header in headers:
                 if header.get("type") == "LC_UUID":
                     uuid = header.get("uuid", "")
                     if uuid:
-                        return uuid
+                        return str(uuid)
                     break
 
         except Exception as e:
@@ -247,23 +243,7 @@ class MachOAnalyzer(BaseAnalyzer):
     def _estimate_from_sdk_version(self, sdk_version: str) -> str | None:
         """Estimate compilation timeframe from SDK version"""
         try:
-            # Basic mapping of SDK versions to release timeframes
-            # This is a simplified approach - in reality, you'd want a more comprehensive mapping
-            sdk_mappings = {
-                "10.15": "2019",  # macOS Catalina
-                "11.0": "2020",  # macOS Big Sur
-                "12.0": "2021",  # macOS Monterey
-                "13.0": "2022",  # macOS Ventura
-                "14.0": "2023",  # macOS Sonoma
-                "15.0": "2024",  # macOS Sequoia
-            }
-
-            # Extract major.minor version
-            version_match = re.search(r"(\d+\.\d+)", sdk_version)
-            if version_match:
-                version = version_match.group(1)
-                if version in sdk_mappings:
-                    return f"~{sdk_mappings[version]} (SDK {sdk_version})"
+            return estimate_from_sdk_version(sdk_version)
 
         except Exception as e:
             logger.error(f"Error estimating from SDK version: {e}")
@@ -280,17 +260,8 @@ class MachOAnalyzer(BaseAnalyzer):
         commands = []
 
         try:
-            headers = get_macho_headers(self.r2)
-
-            for header in headers:
-                commands.append(
-                    {
-                        "type": header.get("type", "Unknown"),
-                        "size": header.get("size", 0),
-                        "offset": header.get("offset", 0),
-                        "data": header,  # Include full header data
-                    }
-                )
+            headers = get_macho_headers(self.r2) or []
+            commands = build_load_commands(headers)
 
         except Exception as e:
             logger.error(f"Error getting load commands: {e}")
@@ -302,20 +273,11 @@ class MachOAnalyzer(BaseAnalyzer):
         sections = []
 
         try:
-            sections_info = safe_cmdj(self.r2, "iSj")
-
-            for section in sections_info:
-                sections.append(
-                    {
-                        "name": section.get("name", "Unknown"),
-                        "segment": section.get("segment", "Unknown"),
-                        "type": section.get("type", "Unknown"),
-                        "flags": section.get("flags", ""),
-                        "size": section.get("size", 0),
-                        "vaddr": section.get("vaddr", 0),
-                        "paddr": section.get("paddr", 0),
-                    }
-                )
+            if self.adapter is not None and hasattr(self.adapter, "get_sections"):
+                sections_info = self.adapter.get_sections()
+            else:
+                sections_info = []
+            sections = build_sections(sections_info if isinstance(sections_info, list) else [])
 
         except Exception as e:
             logger.error(f"Error getting section info: {e}")
@@ -324,61 +286,7 @@ class MachOAnalyzer(BaseAnalyzer):
 
     def get_security_features(self) -> dict[str, bool]:
         """Check for Mach-O security features"""
-        features = {
-            "pie": False,
-            "nx": False,
-            "stack_canary": False,
-            "arc": False,
-            "encrypted": False,
-            "signed": False,
-        }
+        return _get_security_features(self.adapter, logger)
 
-        try:
-            self._check_pie(features)
-            symbols = safe_cmdj(self.r2, "isj")
-            self._check_stack_canary(features, symbols)
-            self._check_arc(features, symbols)
-            headers = get_macho_headers(self.r2)
-            self._check_encryption(features, headers)
-            self._check_code_signature(features, headers)
-            features["nx"] = True
-
-        except Exception as e:
-            logger.error(f"Error checking security features: {e}")
-
-        return features
-
-    def _check_pie(self, features: dict[str, bool]) -> None:
-        macho_info = safe_cmdj(self.r2, "ij")
-        if macho_info and "bin" in macho_info:
-            file_type = macho_info["bin"].get("filetype", "")
-            if "DYLIB" in file_type.upper() or "PIE" in file_type.upper():
-                features["pie"] = True
-
-    def _check_stack_canary(self, features: dict[str, bool], symbols: list[dict[str, Any]]):
-        for symbol in symbols or []:
-            name = symbol.get("name", "")
-            if "___stack_chk_fail" in name or "___stack_chk_guard" in name:
-                features["stack_canary"] = True
-                break
-
-    def _check_arc(self, features: dict[str, bool], symbols: list[dict[str, Any]]):
-        for symbol in symbols or []:
-            name = symbol.get("name", "")
-            if "_objc_" in name and ("retain" in name or "release" in name):
-                features["arc"] = True
-                break
-
-    def _check_encryption(self, features: dict[str, bool], headers: list[dict[str, Any]]):
-        for header in headers or []:
-            if header.get("type") in {"LC_ENCRYPTION_INFO", "LC_ENCRYPTION_INFO_64"}:
-                cryptid = header.get("cryptid", 0)
-                if cryptid > 0:
-                    features["encrypted"] = True
-                break
-
-    def _check_code_signature(self, features: dict[str, bool], headers: list[dict[str, Any]]):
-        for header in headers or []:
-            if header.get("type") == "LC_CODE_SIGNATURE":
-                features["signed"] = True
-                break
+    def _cmdj(self, command: str, default: Any) -> Any:
+        return cmdj_helper(self.adapter, self.r2, command, default)
