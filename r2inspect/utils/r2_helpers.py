@@ -69,6 +69,23 @@ def safe_cmdj(
     return _execute()
 
 
+def safe_cmdj_any(
+    r2_instance: R2CommandInterface, command: str, default: Any | None = None
+) -> Any | None:
+    """
+    Safely execute a radare2 JSON command using cmdj when available.
+
+    This prefers cmdj() for native JSON output, falling back to safe_cmdj()
+    which parses JSON from cmd() output if cmdj fails.
+    """
+    if hasattr(r2_instance, "cmdj"):
+        try:
+            return r2_instance.cmdj(command)
+        except Exception:
+            pass
+    return safe_cmdj(r2_instance, command, default)
+
+
 def _run_cmd_with_timeout(
     r2_instance: R2CommandInterface, command: str, default: Any | None
 ) -> Any | None:
