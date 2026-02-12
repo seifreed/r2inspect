@@ -93,15 +93,8 @@ def _init_magic() -> tuple[Any, Any] | None:
             console.print("[yellow]Falling back to file extension detection[/yellow]")
             return None
 
-    if not magic_adapter.available:
-        console.print("[yellow]python-magic not available; skipping magic-based detection[/yellow]")
-        return None
-    try:
-        return magic_adapter.create_detectors()
-    except Exception as e:
-        console.print(f"[red]Error initializing magic: {e}[/red]")
-        console.print("[yellow]Falling back to file extension detection[/yellow]")
-        return None
+    console.print("[yellow]python-magic not available; skipping magic-based detection[/yellow]")
+    return None
 
 
 def _is_executable_signature(mime_type: str, description: str) -> bool:
