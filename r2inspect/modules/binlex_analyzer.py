@@ -3,8 +3,9 @@
 
 import hashlib
 from collections import Counter, defaultdict
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
+from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..adapters.r2pipe_context import open_r2pipe
 from ..utils.logger import get_logger
@@ -19,6 +20,7 @@ HTML_AMP = "&amp;"
 
 class BinlexResult(TypedDict):
     available: bool
+    analyzer: str
     function_signatures: dict[str, dict[int, dict[str, Any]]]
     ngram_sizes: list[int]
     total_functions: int
@@ -28,37 +30,40 @@ class BinlexResult(TypedDict):
     binary_signature: dict[int, str] | None
     top_ngrams: dict[int, list[tuple[str, int]]]
     error: str | None
+    execution_time: float
 
 
-class BinlexAnalyzer(CommandHelperMixin):
+class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Lexical function similarity analysis."""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
         """Initialize analyzer state."""
-        self.adapter = adapter
-        self.r2 = adapter
-        self.filepath = filepath
+        super().__init__(adapter=adapter, filepath=filepath)
         self.default_ngram_size = 3  # Default n-gram size
 
-    def analyze(self, ngram_sizes: list[int] | None = None) -> BinlexResult:
+    def analyze(self, ngram_sizes: list[int] | None = None) -> BinlexResult:  # type: ignore[override]
         """Run Binlex analysis for all functions."""
         if ngram_sizes is None:
             ngram_sizes = [2, 3, 4]
 
         logger.debug(f"Starting Binlex analysis for {self.filepath}")
 
-        results: BinlexResult = {
-            "available": False,
-            "function_signatures": {},
-            "ngram_sizes": ngram_sizes,
-            "total_functions": 0,
-            "analyzed_functions": 0,
-            "unique_signatures": {},
-            "similar_functions": {},
-            "binary_signature": None,
-            "top_ngrams": {},
-            "error": None,
-        }
+        results = cast(
+            BinlexResult,
+            self._init_result_structure(
+                {
+                    "function_signatures": {},
+                    "ngram_sizes": ngram_sizes,
+                    "total_functions": 0,
+                    "analyzed_functions": 0,
+                    "unique_signatures": {},
+                    "similar_functions": {},
+                    "binary_signature": None,
+                    "top_ngrams": {},
+                    "error": None,
+                }
+            ),
+        )
 
         try:
             # Extract all functions
