@@ -23,7 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from pathlib import Path
 from typing import Any
 
-from ...error_handling.stats import reset_error_stats
+from ...application.use_cases import AnalyzeBinaryUseCase
 from ...factory import create_inspector
 from . import analysis_output
 from .base import Command, apply_thread_settings
@@ -127,17 +127,11 @@ class AnalyzeCommand(Command):
             output_file: Output file path
             verbose: Verbose output flag
         """
-        # Reset error statistics for clean analysis
-        reset_error_stats()
-
         # Print status if appropriate
         self._print_status_if_needed(output_json, output_csv, output_file)
 
         # Perform analysis
-        results = inspector.analyze(**options)
-
-        # Add statistics to results
-        self._add_statistics_to_results(results)
+        results = AnalyzeBinaryUseCase().run(inspector, options)
 
         # Output results in appropriate format
         self._output_results(
@@ -161,10 +155,6 @@ class AnalyzeCommand(Command):
             output_csv,
             output_file,
         )
-
-    def _add_statistics_to_results(self, results: dict[str, Any]) -> None:
-        """Add error, retry, and circuit breaker statistics to results."""
-        analysis_output.add_statistics_to_results(results)
 
     def _output_results(
         self,
