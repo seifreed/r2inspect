@@ -34,14 +34,11 @@ from .display_sections import (
     _display_bindiff,
     _display_binlex,
     _display_ccbhash,
-    _display_circuit_breaker_statistics,
     _display_file_info,
     _display_impfuzzy,
     _display_indicators,
     _display_machoc_functions,
-    _display_most_retried_commands,
     _display_pe_info,
-    _display_retry_statistics,
     _display_rich_header,
     _display_security,
     _display_simhash,
@@ -49,4 +46,9 @@ from .display_sections import (
     _display_telfhash,
     _display_tlsh,
     _format_simhash_hex,
+)
+from .display_statistics import (
+    _display_circuit_breaker_statistics,
+    _display_most_retried_commands,
+    _display_retry_statistics,
 )
