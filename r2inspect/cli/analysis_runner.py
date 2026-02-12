@@ -30,6 +30,7 @@ from rich.console import Console
 from ..application.analysis_service import default_analysis_service
 from ..application.use_cases import AnalyzeBinaryUseCase
 from ..utils.output import OutputFormatter
+from .commands import analysis_output
 
 console = Console()
 
@@ -73,16 +74,8 @@ def run_analysis(
 def print_status_if_appropriate(
     output_json: bool, output_csv: bool, output_file: str | Path | None
 ) -> None:
-    """
-    Print status message if appropriate based on output options.
-
-    Args:
-        output_json: Whether JSON output is enabled
-        output_csv: Whether CSV output is enabled
-        output_file: Output file path
-    """
-    if not output_json and not output_csv or (output_json or output_csv) and output_file:
-        console.print("[bold green]Starting analysis...[/bold green]")
+    """Print status message if appropriate based on output options."""
+    analysis_output.print_status_if_needed(console, output_json, output_csv, output_file)
 
 
 def add_statistics_to_results(results: dict[str, Any]) -> None:
@@ -115,86 +108,23 @@ def output_results(
     output_file: str | Path | None,
     verbose: bool,
 ) -> None:
-    """
-    Output results in the appropriate format.
-
-    Args:
-        results: Analysis results dictionary
-        output_json: Whether to output JSON
-        output_csv: Whether to output CSV
-        output_file: Output file path
-        verbose: Enable verbose output
-    """
-    # Import here to avoid circular dependency
-    from .display import display_error_statistics, display_performance_statistics, display_results
-
-    formatter = OutputFormatter(results)
-
-    if output_json:
-        output_json_results(formatter, output_file)
-    elif output_csv:
-        output_csv_results(formatter, output_file)
-    else:
-        output_console_results(results, verbose)
+    """Output results in the appropriate format."""
+    analysis_output.output_results(results, output_json, output_csv, output_file, verbose, console)
 
 
 def output_json_results(formatter: OutputFormatter, output_file: str | Path | None) -> None:
-    """
-    Output results in JSON format.
-
-    Args:
-        formatter: OutputFormatter instance
-        output_file: Output file path (or None for stdout)
-    """
-    json_output = formatter.to_json()
-    if output_file:
-        with open(output_file, "w") as f:
-            f.write(json_output)
-        console.print(f"[green]JSON results saved to: {output_file}[/green]")
-    else:
-        print(json_output)
+    """Output results in JSON format."""
+    analysis_output._output_json_results(formatter, output_file, console)
 
 
 def output_csv_results(formatter: OutputFormatter, output_file: str | Path | None) -> None:
-    """
-    Output results in CSV format.
-
-    Args:
-        formatter: OutputFormatter instance
-        output_file: Output file path (or None for stdout)
-    """
-    csv_output = formatter.to_csv()
-    if output_file:
-        with open(output_file, "w") as f:
-            f.write(csv_output)
-        console.print(f"[green]CSV results saved to: {output_file}[/green]")
-    else:
-        print(csv_output)
+    """Output results in CSV format."""
+    analysis_output._output_csv_results(formatter, output_file, console)
 
 
 def output_console_results(results: dict[str, Any], verbose: bool) -> None:
-    """
-    Output results to console with optional verbose statistics.
-
-    Args:
-        results: Analysis results dictionary
-        verbose: Enable verbose output with statistics
-    """
-    # Import here to avoid circular dependency
-    from .display import display_error_statistics, display_performance_statistics, display_results
-
-    display_results(results)
-
-    if verbose:
-        error_stats = results.get("error_statistics", {})
-        if error_stats.get("total_errors", 0) > 0:
-            display_error_statistics(error_stats)
-
-        retry_stats = results.get("retry_statistics", {})
-        circuit_stats = results.get("circuit_breaker_statistics", {})
-
-        if retry_stats.get("total_retries", 0) > 0 or has_circuit_breaker_data(circuit_stats):
-            display_performance_statistics(retry_stats, circuit_stats)
+    """Output results to console with optional verbose statistics."""
+    analysis_output._output_console_results(results, verbose)
 
 
 def setup_single_file_output(
