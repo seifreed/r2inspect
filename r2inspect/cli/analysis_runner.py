@@ -27,10 +27,13 @@ from typing import Any, cast
 
 from rich.console import Console
 
-from ..error_handling.unified_handler import get_circuit_breaker_stats
-from ..utils.error_handler import get_error_stats, reset_error_stats
+from ..error_handling.stats import (
+    get_circuit_breaker_stats,
+    get_error_stats,
+    get_retry_stats,
+    reset_error_stats,
+)
 from ..utils.output import OutputFormatter
-from ..utils.retry_manager import get_retry_stats
 
 console = Console()
 
