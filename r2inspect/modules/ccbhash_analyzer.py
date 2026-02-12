@@ -6,7 +6,7 @@ from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..application.analyzer_runner import run_analyzer_on_file
+from ..utils.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
