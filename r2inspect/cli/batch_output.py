@@ -31,6 +31,7 @@ from typing import Any
 from rich.console import Console
 from rich.table import Table
 
+from ..application.batch_discovery import find_files_by_extensions as core_find_files_by_extensions
 from ..application.batch_stats import (  # noqa: F401
     collect_batch_statistics,
     update_compiler_stats,
@@ -169,15 +170,8 @@ def find_files_to_process(
 
 
 def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool) -> list[Path]:
-    """Find files by specified extensions"""
-    files_to_process: list[Path] = []
-    ext_list = [ext.strip().lower() for ext in extensions.split(",")]
-
-    for ext in ext_list:
-        pattern = f"**/*.{ext}" if recursive else f"*.{ext}"
-        files_to_process.extend(batch_path.glob(pattern))
-
-    return files_to_process
+    """Find files by specified extensions."""
+    return core_find_files_by_extensions(batch_path, extensions, recursive)
 
 
 def display_no_files_message(auto_detect: bool, extensions: str | None) -> None:
