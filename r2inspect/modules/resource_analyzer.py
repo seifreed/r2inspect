@@ -25,62 +25,9 @@ class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def analyze(self) -> dict[str, Any]:
         """Analyze PE resources."""
-        try:
-            result: dict[str, Any] = self._init_result_structure(
-                {
-                    "has_resources": False,
-                    "resource_directory": None,
-                    "total_resources": 0,
-                    "total_size": 0,
-                    "resource_types": [],
-                    "resources": [],
-                    "version_info": None,
-                    "manifest": None,
-                    "icons": [],
-                    "strings": [],
-                    "suspicious_resources": [],
-                    "statistics": {},
-                }
-            )
-            result["available"] = True
+        from .resource_analysis import run_resource_analysis
 
-            # Get resource directory from data directories
-            resource_dir = self._get_resource_directory()
-            if not resource_dir:
-                return result
-
-            result["has_resources"] = True
-            result["resource_directory"] = resource_dir
-
-            # Parse resource tree using radare2
-            resources = self._parse_resources()
-            if resources:
-                result["resources"] = resources
-                result["total_resources"] = len(resources)
-
-                # Analyze different resource types
-                self._analyze_resource_types(result, resources)
-
-                # Extract specific resource information
-                self._extract_version_info(result, resources)
-                self._extract_manifest(result, resources)
-                self._extract_icons(result, resources)
-                self._extract_strings(result, resources)
-
-                # Calculate statistics
-                self._calculate_statistics(result, resources)
-
-                # Check for suspicious resources
-                self._check_suspicious_resources(result, resources)
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error analyzing resources: {e}")
-            result["available"] = False
-            result["has_resources"] = False
-            result["error"] = str(e)
-            return result
+        return run_resource_analysis(self, logger)
 
     def _get_resource_directory(self) -> dict[str, Any] | None:
         """Get resource directory information."""

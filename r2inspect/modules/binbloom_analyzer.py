@@ -59,99 +59,19 @@ class BinbloomAnalyzer(CommandHelperMixin, BaseAnalyzer):
         self, capacity: int | None = None, error_rate: float | None = None
     ) -> BinbloomResult:
         """Analyze functions using Bloom filters."""
-        result = cast(
+        from .binbloom_analysis import run_binbloom_analysis
+
+        return cast(
             BinbloomResult,
-            self._init_result_structure(
-                {
-                    "library_available": True,
-                    "function_blooms": {},
-                    "function_signatures": {},
-                    "total_functions": 0,
-                    "analyzed_functions": 0,
-                    "capacity": capacity or self.default_capacity,
-                    "error_rate": error_rate or self.default_error_rate,
-                    "binary_bloom": None,
-                    "binary_signature": None,
-                    "similar_functions": [],
-                    "unique_signatures": 0,
-                    "bloom_stats": {},
-                    "error": None,
-                }
+            run_binbloom_analysis(
+                analyzer=self,
+                capacity=capacity,
+                error_rate=error_rate,
+                bloom_available=BLOOM_AVAILABLE,
+                log_debug=logger.debug,
+                log_error=logger.error,
             ),
         )
-
-        if not BLOOM_AVAILABLE:
-            return cast(
-                BinbloomResult,
-                self._mark_unavailable(
-                    cast(dict[str, Any], result),
-                    "pybloom-live library not installed",
-                    library_available=False,
-                ),
-            )
-
-        if capacity is None:
-            capacity = self.default_capacity
-        if error_rate is None:
-            error_rate = self.default_error_rate
-
-        logger.debug(f"Starting Binbloom analysis for {self.filepath}")
-
-        results = result
-
-        try:
-            # Extract all functions
-            functions = self._extract_functions()
-            if not functions:
-                results["error"] = "No functions found in binary"
-                logger.debug("No functions found in binary")
-                return results
-
-            results["total_functions"] = len(functions)
-            logger.debug(f"Found {len(functions)} functions to analyze")
-
-            function_blooms, function_signatures, all_instructions, analyzed_count = (
-                self._collect_function_blooms(functions, capacity, error_rate)
-            )
-
-            if not function_blooms:
-                results["error"] = "No functions could be analyzed for Binbloom"
-                logger.debug("No functions could be analyzed for Binbloom")
-                return results
-
-            # Analyze results
-            results["available"] = True
-            results["function_blooms"] = self._serialize_blooms(function_blooms)
-            results["function_signatures"] = function_signatures
-            results["analyzed_functions"] = analyzed_count
-
-            # Calculate unique signatures
-            signatures = self._collect_unique_signatures(function_signatures)
-            results["unique_signatures"] = len(signatures)
-
-            # Find similar functions (same signature)
-            similar_functions = self._find_similar_functions(function_signatures)
-            results["similar_functions"] = similar_functions
-
-            # Create binary-wide Bloom filter
-            self._add_binary_bloom(results, all_instructions, capacity, error_rate)
-
-            # Calculate Bloom filter statistics
-            bloom_stats = self._calculate_bloom_stats(function_blooms, capacity, error_rate)
-            results["bloom_stats"] = bloom_stats
-
-            logger.debug(
-                f"Binbloom analysis completed: {analyzed_count}/{len(functions)} functions analyzed"
-            )
-            logger.debug(
-                f"Found {len(signatures)} unique signatures, {len(similar_functions)} similar function groups"
-            )
-
-        except Exception as e:
-            logger.error(f"Binbloom analysis failed: {e}")
-            results["error"] = str(e)
-
-        return results
 
     def _collect_function_blooms(
         self, functions: list[dict[str, Any]], capacity: int, error_rate: float
