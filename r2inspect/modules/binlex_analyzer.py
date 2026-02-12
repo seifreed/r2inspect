@@ -7,7 +7,7 @@ from typing import Any, TypedDict, cast
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..adapters.r2pipe_context import open_r2_adapter
+from ..application.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 from .similarity_scoring import jaccard_similarity
 
@@ -526,11 +526,7 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             Binlex analysis results or None if calculation fails
         """
-        try:
-            with open_r2_adapter(filepath) as adapter:
-                analyzer = BinlexAnalyzer(adapter, filepath)
-                return analyzer.analyze(ngram_sizes)
-
-        except Exception as e:
-            logger.error(f"Error calculating Binlex from file: {e}")
-            return None
+        result = run_analyzer_on_file(BinlexAnalyzer, filepath, ngram_sizes)
+        if result is None:
+            logger.error("Error calculating Binlex from file")
+        return result

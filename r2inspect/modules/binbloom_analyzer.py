@@ -11,7 +11,7 @@ from typing import Any, TypedDict, cast
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..adapters.r2pipe_context import open_r2_adapter
+from ..application.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -785,11 +785,7 @@ class BinbloomAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             Binbloom analysis results or None if calculation fails
         """
-        try:
-            with open_r2_adapter(filepath) as adapter:
-                analyzer = BinbloomAnalyzer(adapter, filepath)
-                return analyzer.analyze(capacity, error_rate)
-
-        except Exception as e:
-            logger.error(f"Error calculating Binbloom from file: {e}")
-            return None
+        result = run_analyzer_on_file(BinbloomAnalyzer, filepath, capacity, error_rate)
+        if result is None:
+            logger.error("Error calculating Binbloom from file")
+        return result

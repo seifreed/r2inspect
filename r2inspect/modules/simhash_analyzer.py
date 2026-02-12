@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..adapters.r2pipe_context import open_r2_adapter
+from ..application.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 from .string_classification import classify_string_type
 
@@ -658,11 +658,7 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
     @staticmethod
     def calculate_simhash_from_file(filepath: str) -> dict[str, Any] | None:
         """Calculate SimHash directly from a file path."""
-        try:
-            with open_r2_adapter(filepath) as adapter:
-                analyzer = SimHashAnalyzer(adapter, filepath)
-                return analyzer.analyze()
-
-        except Exception as e:
-            logger.error(f"Error calculating SimHash from file: {e}")
-            return None
+        result = run_analyzer_on_file(SimHashAnalyzer, filepath)
+        if result is None:
+            logger.error("Error calculating SimHash from file")
+        return result
