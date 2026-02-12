@@ -52,6 +52,7 @@ from ..application.batch_stats import (  # noqa: F401
     update_packer_stats,
 )
 from ..application.options import build_analysis_options
+from ..application.use_cases import AnalyzeBinaryUseCase
 from ..factory import create_inspector
 from ..utils.logger import get_logger
 from ..utils.output import OutputFormatter
@@ -187,7 +188,7 @@ def process_single_file(
             verbose=False,
         ) as inspector:
             analysis_options = {**options, "batch_mode": True}
-            results = inspector.analyze(**analysis_options)
+            results = AnalyzeBinaryUseCase().run(inspector, analysis_options)
             results["filename"] = str(file_path)
             results["relative_path"] = str(file_path.relative_to(batch_path))
 
