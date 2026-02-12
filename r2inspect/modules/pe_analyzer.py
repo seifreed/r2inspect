@@ -51,7 +51,7 @@ class PEAnalyzer(BaseAnalyzer):
             }
         )
 
-        try:
+        with self._analysis_context(result, error_message="PE analysis failed"):
             self._log_info("Starting PE analysis")
 
             filepath_str = str(self.filepath) if self.filepath is not None else None
@@ -79,12 +79,7 @@ class PEAnalyzer(BaseAnalyzer):
 
             self._run_optional_analyzers(result, registry)
 
-            result["available"] = True
             self._log_info("PE analysis completed successfully")
-
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"PE analysis failed: {e}")
 
         return result
 
