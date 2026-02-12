@@ -4,6 +4,27 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
 
+from .format import SectionInfo, SecurityFeatures
+
+
+def _default_security_features() -> SecurityFeatures:
+    return SecurityFeatures(
+        aslr=False,
+        dep=False,
+        seh=False,
+        guard_cf=False,
+        authenticode=False,
+        nx=False,
+        stack_canary=False,
+        canary=False,
+        pie=False,
+        relro=False,
+        rpath=False,
+        runpath=False,
+        fortify=False,
+        high_entropy_va=False,
+    )
+
 
 @dataclass
 class FileInfo:
@@ -78,125 +99,6 @@ class HashingResult:
         """Check if a specific hash type has a value."""
         value = getattr(self, hash_type, "")
         return bool(value and value.strip())
-
-
-@dataclass
-class SecurityFeatures:
-    """
-    Security features detected in the binary.
-
-    Represents exploit mitigations and security characteristics.
-
-    Attributes:
-        nx: No Execute / DEP enabled
-        pie: Position Independent Executable
-        canary: Stack canary protection
-        relro: Relocation Read-Only (none, partial, full)
-        aslr: Address Space Layout Randomization
-        seh: Structured Exception Handling (PE)
-        guard_cf: Control Flow Guard (PE)
-        authenticode: Authenticode signature present (PE)
-        fortify: Fortify source enabled (ELF)
-        rpath: RPATH present (ELF) - can be security issue
-        runpath: RUNPATH present (ELF)
-        high_entropy_va: High entropy VA enabled (ASLR enhancement)
-    """
-
-    nx: bool = False
-    pie: bool = False
-    canary: bool = False
-    relro: str = ""
-    aslr: bool = False
-    seh: bool = False
-    guard_cf: bool = False
-    authenticode: bool = False
-    fortify: bool = False
-    rpath: bool = False
-    runpath: bool = False
-    high_entropy_va: bool = False
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary representation."""
-        return asdict(self)
-
-    def get_enabled_features(self) -> list[str]:
-        """Get list of enabled security features."""
-        enabled = []
-        for name, value in asdict(self).items():
-            if isinstance(value, bool) and value:
-                enabled.append(name)
-            elif name == "relro" and value in ("partial", "full"):
-                enabled.append(f"relro_{value}")
-        return enabled
-
-    def security_score(self) -> int:
-        """
-        Calculate a basic security score (0-100).
-
-        Higher score indicates better security posture.
-        """
-        score = 0
-        weights = {
-            "nx": 15,
-            "pie": 15,
-            "canary": 15,
-            "aslr": 15,
-            "guard_cf": 10,
-            "seh": 5,
-            "authenticode": 10,
-            "fortify": 5,
-            "high_entropy_va": 5,
-        }
-
-        for feature, weight in weights.items():
-            if getattr(self, feature, False):
-                score += weight
-
-        # RELRO scoring
-        if self.relro == "full":
-            score += 5
-        elif self.relro == "partial":
-            score += 2
-
-        return min(score, 100)
-
-
-@dataclass
-class SectionInfo:
-    """
-    Information about a binary section.
-
-    Attributes:
-        name: Section name (e.g., .text, .data)
-        virtual_address: Virtual address in memory
-        virtual_size: Size in memory
-        raw_size: Size on disk
-        entropy: Section entropy (0.0-8.0)
-        permissions: Permission string (e.g., r-x)
-        is_executable: Whether section is executable
-        is_writable: Whether section is writable
-        is_readable: Whether section is readable
-        suspicious_indicators: List of suspicious characteristics
-    """
-
-    name: str = ""
-    virtual_address: int = 0
-    virtual_size: int = 0
-    raw_size: int = 0
-    entropy: float = 0.0
-    permissions: str = ""
-    is_executable: bool = False
-    is_writable: bool = False
-    is_readable: bool = False
-    suspicious_indicators: list[str] = field(default_factory=list)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary representation."""
-        return asdict(self)
-
-    def is_suspicious(self) -> bool:
-        """Check if section has any suspicious indicators."""
-        return len(self.suspicious_indicators) > 0
 
 
 @dataclass
@@ -450,7 +352,7 @@ class AnalysisResult:
 
     file_info: FileInfo = field(default_factory=FileInfo)
     hashing: HashingResult = field(default_factory=HashingResult)
-    security: SecurityFeatures = field(default_factory=SecurityFeatures)
+    security: SecurityFeatures = field(default_factory=_default_security_features)
     imports: list[ImportInfo] = field(default_factory=list)
     exports: list[ExportInfo] = field(default_factory=list)
     sections: list[SectionInfo] = field(default_factory=list)

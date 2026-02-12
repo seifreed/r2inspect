@@ -62,6 +62,10 @@ class SectionInfo(BaseModel):
         }
         return perm_map.get(permission.lower(), False)
 
+    def to_dict(self) -> dict[str, object]:
+        """Convert to dictionary representation."""
+        return self.model_dump()
+
 
 class SecurityFeatures(BaseModel):
     """Security features detected in a binary."""
@@ -76,20 +80,58 @@ class SecurityFeatures(BaseModel):
     # ELF security features
     nx: bool = Field(False, description="NX bit set (ELF)")
     stack_canary: bool = Field(False, description="Stack canary enabled")
+    canary: bool = Field(False, description="Stack canary protection (alias)")
     pie: bool = Field(False, description="PIE enabled (ELF)")
-    relro: bool = Field(False, description="RELRO enabled (ELF)")
+    relro: str | bool = Field(False, description="RELRO enabled (ELF)")
     rpath: bool = Field(False, description="RPATH present (ELF)")
     runpath: bool = Field(False, description="RUNPATH present (ELF)")
+    fortify: bool = Field(False, description="Fortify source enabled (ELF)")
+    high_entropy_va: bool = Field(False, description="High entropy VA enabled")
 
     def get_enabled_features(self) -> list[str]:
         """Get list of enabled security features"""
-        return [field_name for field_name, value in self.model_dump().items() if value is True]
+        enabled: list[str] = []
+        for field_name, value in self.model_dump().items():
+            if field_name == "relro":
+                if isinstance(value, str) and value in ("partial", "full"):
+                    enabled.append(f"relro_{value}")
+                elif value is True:
+                    enabled.append("relro")
+                continue
+            if value is True:
+                enabled.append(field_name)
+        return enabled
 
     def security_score(self) -> int:
-        """Calculate security score (0-100) based on enabled features."""
-        enabled = len(self.get_enabled_features())
-        total = len(self.model_fields)
-        return int((enabled / total) * 100) if total > 0 else 0
+        """Calculate a basic security score (0-100)."""
+        score = 0
+        weights = {
+            "nx": 15,
+            "pie": 15,
+            "canary": 15,
+            "aslr": 15,
+            "guard_cf": 10,
+            "seh": 5,
+            "authenticode": 10,
+            "fortify": 5,
+            "high_entropy_va": 5,
+        }
+
+        for feature, weight in weights.items():
+            if getattr(self, feature, False):
+                score += weight
+
+        # RELRO scoring
+        if self.relro == "full":
+            score += 5
+        elif self.relro == "partial" or self.relro is True:
+            score += 2
+
+        return min(score, 100)
+
+    def to_dict(self) -> dict[str, object]:
+        """Convert to dictionary representation."""
+        return self.model_dump()
 
 
 class FormatAnalysisResult(AnalysisResultBase):
