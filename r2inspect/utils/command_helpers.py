@@ -129,16 +129,34 @@ def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
     return None
 
 
+def _cmd_fallback(_r2: Any, command: str) -> str:
+    if _r2 is None or not hasattr(_r2, "cmd"):
+        return ""
+    result = _r2.cmd(command)
+    return result if isinstance(result, str) else str(result)
+
+
+def _cmdj_fallback(_r2: Any, command: str, default: Any) -> Any:
+    if _r2 is None or not hasattr(_r2, "cmdj"):
+        return default
+    try:
+        return _r2.cmdj(command)
+    except Exception:
+        return default
+
+
 def cmd(adapter: Any, _r2: Any, command: str) -> str:
     adapter_result = _maybe_use_adapter(adapter, command)
-    return adapter_result if isinstance(adapter_result, str) else ""
+    if isinstance(adapter_result, str):
+        return adapter_result
+    return _cmd_fallback(_r2, command)
 
 
 def cmdj(adapter: Any, _r2: Any, command: str, default: Any) -> Any:
     adapter_result = _maybe_use_adapter(adapter, command)
     if adapter_result is not None:
         return adapter_result
-    return default
+    return _cmdj_fallback(_r2, command, default)
 
 
 def cmd_list(adapter: Any, _r2: Any, command: str) -> list[Any]:
