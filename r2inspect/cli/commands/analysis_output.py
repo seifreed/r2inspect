@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ...application.analysis_service import default_analysis_service
 from ...error_handling.stats import get_circuit_breaker_stats, get_error_stats, get_retry_stats
 from ...utils.output import OutputFormatter
 
@@ -27,16 +28,7 @@ def print_status_if_needed(
 
 def add_statistics_to_results(results: dict[str, Any]) -> None:
     """Add error, retry, and circuit breaker statistics to results."""
-    error_stats, retry_stats, circuit_stats = _collect_statistics()
-
-    if error_stats.get("total_errors", 0) > 0:
-        results["error_statistics"] = error_stats
-
-    if retry_stats.get("total_retries", 0) > 0:
-        results["retry_statistics"] = retry_stats
-
-    if _has_circuit_breaker_data(circuit_stats):
-        results["circuit_breaker_statistics"] = circuit_stats
+    default_analysis_service.add_statistics(results)
 
 
 def output_results(
@@ -65,13 +57,7 @@ def _output_json_results(
 ) -> None:
     """Output results in JSON format."""
     json_output = formatter.to_json()
-
-    if output_file:
-        with open(output_file, "w") as f:
-            f.write(json_output)
-        console.print(f"[green]JSON results saved to: {output_file}[/green]")
-    else:
-        print(json_output)
+    _write_output(json_output, output_file, console, "JSON")
 
 
 def _output_csv_results(
@@ -81,13 +67,7 @@ def _output_csv_results(
 ) -> None:
     """Output results in CSV format."""
     csv_output = formatter.to_csv()
-
-    if output_file:
-        with open(output_file, "w") as f:
-            f.write(csv_output)
-        console.print(f"[green]CSV results saved to: {output_file}[/green]")
-    else:
-        print(csv_output)
+    _write_output(csv_output, output_file, console, "CSV")
 
 
 def _output_console_results(
@@ -105,7 +85,6 @@ def _output_console_results(
 
 def _display_verbose_statistics() -> None:
     """Display verbose error and performance statistics."""
-    from ..analysis_runner import has_circuit_breaker_data
     from ..display import display_error_statistics, display_performance_statistics
 
     error_stats, retry_stats, circuit_stats = _collect_statistics()
@@ -113,7 +92,9 @@ def _display_verbose_statistics() -> None:
     if error_stats["total_errors"] > 0:
         display_error_statistics(error_stats)
 
-    if retry_stats.get("total_retries", 0) > 0 or has_circuit_breaker_data(circuit_stats):
+    if retry_stats.get("total_retries", 0) > 0 or default_analysis_service.has_circuit_breaker_data(
+        circuit_stats
+    ):
         display_performance_statistics(retry_stats, circuit_stats)
 
 
@@ -125,13 +106,15 @@ def _collect_statistics() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any
     return error_stats, retry_stats, circuit_stats
 
 
-def _has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
-    """Check if circuit breaker statistics contain meaningful data."""
-    if not circuit_stats:
-        return False
-
-    for _, value in circuit_stats.items():
-        if isinstance(value, int | float) and value > 0:
-            return True
-
-    return False
+def _write_output(
+    content: str,
+    output_file: str | Path | None,
+    console: Any,
+    label: str,
+) -> None:
+    if output_file:
+        with open(output_file, "w") as f:
+            f.write(content)
+        console.print(f"[green]{label} results saved to: {output_file}[/green]")
+    else:
+        print(content)
