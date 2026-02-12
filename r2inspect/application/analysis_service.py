@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, cast
 
 from ..error_handling.stats import (
@@ -11,6 +12,7 @@ from ..error_handling.stats import (
     get_retry_stats,
     reset_error_stats,
 )
+from ..schemas import ResultConverter
 
 
 class AnalysisService:
@@ -36,6 +38,15 @@ class AnalysisService:
         if self.has_circuit_breaker_data(circuit_stats):
             results["circuit_breaker_statistics"] = circuit_stats
 
+    def validate_results(self, results: dict[str, Any]) -> None:
+        if not self._should_validate_schemas():
+            return
+        registered = ResultConverter.list_registered_schemas()
+        for analyzer_name in registered:
+            payload = results.get(analyzer_name)
+            if isinstance(payload, dict):
+                ResultConverter.convert_result(analyzer_name, payload, strict=False)
+
     @staticmethod
     def has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
         if not circuit_stats:
@@ -51,6 +62,11 @@ class AnalysisService:
                     if isinstance(nested, str) and nested.lower() != "closed":
                         return True
         return False
+
+    @staticmethod
+    def _should_validate_schemas() -> bool:
+        flag = os.getenv("R2INSPECT_VALIDATE_SCHEMAS", "").strip().lower()
+        return flag in {"1", "true", "yes"}
 
 
 default_analysis_service = AnalysisService()

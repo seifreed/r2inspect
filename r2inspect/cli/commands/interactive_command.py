@@ -22,6 +22,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Any
 
+from ...application.use_cases import AnalyzeBinaryUseCase
 from ...factory import create_inspector
 from ...utils.output import OutputFormatter
 from .base import Command
@@ -218,7 +219,13 @@ class InteractiveCommand(Command):
             display_results: Display function for results
         """
         self.context.console.print("[bold green]Running full analysis...[/bold green]")
-        results = inspector.analyze(**options)
+        results = AnalyzeBinaryUseCase().run(
+            inspector,
+            options,
+            reset_stats=False,
+            include_statistics=False,
+            validate_schemas=False,
+        )
         display_results(results)
 
     def _cmd_strings(self, inspector: Any) -> None:
