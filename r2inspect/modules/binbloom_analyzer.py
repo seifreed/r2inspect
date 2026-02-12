@@ -11,7 +11,7 @@ from typing import Any, TypedDict, cast
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..application.analyzer_runner import run_analyzer_on_file
+from ..utils.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from ..abstractions import BaseAnalyzer
 from ..adapters.file_system import default_file_system
-from ..application.analyzer_runner import run_analyzer_on_file
+from ..utils.analyzer_runner import run_analyzer_on_file
 from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 from .rich_header_debug import RichHeaderDebugMixin
