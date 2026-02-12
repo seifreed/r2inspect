@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from ..abstractions import BaseAnalyzer
 from ..adapters.file_system import default_file_system
-from ..adapters.r2pipe_context import open_r2pipe
+from ..adapters.r2pipe_context import open_r2_adapter
 from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 from .rich_header_debug import RichHeaderDebugMixin
@@ -615,8 +615,8 @@ class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin, BaseAnalyz
     def calculate_richpe_hash_from_file(filepath: str) -> str | None:
         """Calculate RichPE hash directly from a file path."""
         try:
-            with open_r2pipe(filepath) as r2:
-                analyzer = RichHeaderAnalyzer(r2, filepath)
+            with open_r2_adapter(filepath) as adapter:
+                analyzer = RichHeaderAnalyzer(adapter, filepath)
                 results = analyzer.analyze()
                 return results.get("richpe_hash")
 
