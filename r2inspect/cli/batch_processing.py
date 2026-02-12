@@ -34,20 +34,15 @@ from typing import Any
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
+from ..adapters.magic_adapter import MagicAdapter
+from ..application.options import build_analysis_options
 from ..factory import create_inspector
 from ..utils.logger import get_logger
 from ..utils.output import OutputFormatter
 
-magic: Any | None
-try:
-    import magic as _magic
-
-    magic = _magic
-except Exception:  # pragma: no cover - optional dependency
-    magic = None
-
 console = Console()
 logger = get_logger(__name__)
+magic_adapter = MagicAdapter()
 
 EXECUTABLE_SIGNATURES = {
     "application/x-dosexec",
@@ -72,11 +67,11 @@ EXECUTABLE_DESCRIPTIONS = (
 
 
 def _init_magic() -> tuple[Any, Any] | None:
-    if magic is None:
+    if not magic_adapter.available:
         console.print("[yellow]python-magic not available; skipping magic-based detection[/yellow]")
         return None
     try:
-        return magic.Magic(mime=True), magic.Magic()
+        return magic_adapter.create_detectors()
     except Exception as e:
         console.print(f"[red]Error initializing magic: {e}[/red]")
         console.print("[yellow]Falling back to file extension detection[/yellow]")
@@ -513,14 +508,7 @@ def setup_single_file_output(
 
 def setup_analysis_options(yara: str | None, sanitized_xor: str | None) -> dict[str, Any]:
     """Setup analysis options with all modules enabled by default"""
-    return {
-        "detect_packer": True,
-        "detect_crypto": True,
-        "detect_av": True,
-        "full_analysis": True,
-        "custom_yara": yara,
-        "xor_search": sanitized_xor,
-    }
+    return build_analysis_options(yara, sanitized_xor)
 
 
 def display_rate_limiter_stats(rate_stats: dict[str, Any]) -> None:
