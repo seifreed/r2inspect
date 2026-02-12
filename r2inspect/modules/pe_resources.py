@@ -12,7 +12,8 @@ def get_resource_info(adapter: Any, logger: Any) -> list[dict[str, Any]]:
     resources: list[dict[str, Any]] = []
 
     try:
-        res_info = cmdj_helper(adapter, None, "iRj", [])
+        getter = getattr(adapter, "get_resources_info", None)
+        res_info = getter() if callable(getter) else cmdj_helper(adapter, None, "iRj", [])
         if res_info:
             resources.extend(normalize_resource_entries(res_info))
     except Exception as exc:
@@ -25,7 +26,8 @@ def get_version_info(adapter: Any, logger: Any) -> dict[str, str]:
     version_info: dict[str, str] = {}
 
     try:
-        version_result = cmd_helper(adapter, None, "iR~version")
+        getter = getattr(adapter, "get_pe_version_info_text", None)
+        version_result = getter() if callable(getter) else cmd_helper(adapter, None, "iR~version")
         if version_result:
             version_info = parse_version_info_text(version_result)
     except Exception as exc:

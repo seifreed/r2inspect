@@ -257,6 +257,31 @@ class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin, BaseAnalyz
             return False
         return is_pe_file(self.filepath, self.adapter, self.r2, logger=logger)
 
+    def _check_magic_bytes(self) -> bool:
+        """Check file magic bytes for MZ header."""
+        try:
+            if not self.filepath:
+                return False
+            magic = default_file_system.read_bytes(self.filepath, size=2)
+            if magic == b"MZ":
+                logger.debug("Found MZ header - likely PE file")
+                return True
+        except Exception as exc:
+            logger.debug(f"Could not read file magic bytes: {exc}")
+        return False
+
+    def _bin_info_has_pe(self, bin_info: dict[str, Any]) -> bool:
+        """Check bin info format/class for PE."""
+        bin_format = bin_info.get("format", "").lower()
+        if "pe" in bin_format:
+            logger.debug("PE detected via 'ij' format field")
+            return True
+        bin_class = bin_info.get("class", "").lower()
+        if "pe" in bin_class:
+            logger.debug("PE detected via 'ij' class field")
+            return True
+        return False
+
     def _extract_rich_header(self) -> dict[str, Any] | None:
         """
         Extract Rich Header from PE file using direct file analysis.

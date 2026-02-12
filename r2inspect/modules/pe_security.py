@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..utils.command_helpers import cmd as cmd_helper
 from ..utils.r2_helpers import get_pe_headers
 
 
@@ -23,7 +22,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         _apply_security_flags_from_header(features, pe_header, logger)
 
         if not any(features.values()):
-            security_info = cmd_helper(adapter, None, "iHH")
+            security_info = _get_pe_security_text(adapter)
             _apply_security_flags_from_text(features, security_info)
 
         _apply_authenticode_feature(features, pe_header)
@@ -70,6 +69,16 @@ def _apply_security_flags_from_text(features: dict[str, bool], security_info: st
         features["seh"] = True
     if "GUARD_CF" in security_info:
         features["guard_cf"] = True
+
+
+def _get_pe_security_text(adapter: Any) -> str:
+    getter = getattr(adapter, "get_pe_security_text", None)
+    if callable(getter):
+        result = getter()
+        return result if isinstance(result, str) else str(result)
+    from ..utils.command_helpers import cmd as cmd_helper
+
+    return cmd_helper(adapter, None, "iHH")
 
 
 def _apply_authenticode_feature(
