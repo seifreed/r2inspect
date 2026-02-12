@@ -21,8 +21,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import csv
-import json
 import os
 import sys
 import threading
@@ -35,10 +33,24 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
 from ..adapters.magic_adapter import MagicAdapter
+from ..application.batch_stats import (  # noqa: F401
+    collect_batch_statistics,
+    update_compiler_stats,
+    update_crypto_stats,
+    update_file_type_stats,
+    update_indicator_stats,
+    update_packer_stats,
+)
 from ..application.options import build_analysis_options
 from ..factory import create_inspector
 from ..utils.logger import get_logger
 from ..utils.output import OutputFormatter
+from .batch_output import (  # noqa: F401
+    create_json_batch_summary,
+    determine_csv_file_path,
+    get_csv_fieldnames,
+    write_csv_results,
+)
 
 console = Console()
 logger = get_logger(__name__)
@@ -556,171 +568,6 @@ def handle_main_error(e: Exception, verbose: bool) -> None:
 
         traceback.print_exc()
     sys.exit(1)
-
-
-def get_csv_fieldnames() -> list[str]:
-    """Get CSV fieldnames for batch output"""
-    return [
-        "name",
-        "size",
-        "compile_time",
-        "file_type",
-        "md5",
-        "sha1",
-        "sha256",
-        "sha512",
-        "imphash",
-        "ssdeep_hash",
-        "tlsh_binary",
-        "tlsh_text_section",
-        "tlsh_functions_with_hash",
-        "telfhash",
-        "telfhash_symbols_used",
-        "rich_header_xor_key",
-        "rich_header_checksum",
-        "richpe_hash",
-        "rich_header_compilers",
-        "rich_header_entries",
-        "compiler",
-        "compiler_version",
-        "compiler_confidence",
-        "imports",
-        "exports",
-        "sections",
-        "anti_debug",
-        "anti_vm",
-        "anti_sandbox",
-        "yara_matches",
-        "num_functions",
-        "num_unique_machoc",
-        "num_duplicate_functions",
-        "num_imports",
-        "num_exports",
-        "num_sections",
-    ]
-
-
-def write_csv_results(csv_file: Path, all_results: dict[str, dict[str, Any]]) -> None:
-    """Write analysis results to CSV file"""
-    with open(csv_file, "w", newline="", encoding="utf-8") as f:
-        fieldnames = get_csv_fieldnames()
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-
-        for file_key, result in all_results.items():
-            formatter = OutputFormatter(result)
-            csv_data = formatter._extract_csv_data(result)
-            writer.writerow(csv_data)
-
-
-def determine_csv_file_path(output_path: Path, timestamp: str) -> tuple[Path, str]:
-    """Determine the CSV file path based on output configuration"""
-    if output_path.suffix == ".csv":
-        # User provided specific CSV filename
-        return output_path, output_path.name
-    else:
-        # User provided directory, create CSV with timestamp
-        csv_filename = f"r2inspect_{timestamp}.csv"
-        csv_file = output_path / csv_filename
-        return csv_file, csv_filename
-
-
-def update_packer_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
-    """Update packer statistics"""
-    if "packer_info" in result and result["packer_info"].get("detected"):
-        stats["packers_detected"].append(
-            {
-                "file": file_key,
-                "packer": result["packer_info"].get("name", "Unknown"),
-            }
-        )
-
-
-def update_crypto_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
-    """Update crypto pattern statistics"""
-    if "crypto_info" in result and result["crypto_info"]:
-        for crypto in result["crypto_info"]:
-            stats["crypto_patterns"].append({"file": file_key, "pattern": crypto})
-
-
-def update_indicator_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
-    """Update suspicious indicator statistics"""
-    if "indicators" in result and result["indicators"]:
-        stats["suspicious_indicators"].extend(
-            [{"file": file_key, **indicator} for indicator in result["indicators"]]
-        )
-
-
-def update_file_type_stats(stats: dict[str, Any], result: dict[str, Any]) -> None:
-    """Update file type and architecture statistics"""
-    if "file_info" in result:
-        file_type = result["file_info"].get("file_type", "Unknown")
-        stats["file_types"][file_type] = stats["file_types"].get(file_type, 0) + 1
-
-        architecture = result["file_info"].get("architecture", "Unknown")
-        stats["architectures"][architecture] = stats["architectures"].get(architecture, 0) + 1
-
-
-def update_compiler_stats(stats: dict[str, Any], result: dict[str, Any]) -> None:
-    """Update compiler statistics"""
-    if "compiler" in result:
-        compiler_info = result["compiler"]
-        compiler_name = compiler_info.get("compiler", "Unknown")
-        if compiler_info.get("detected", False):
-            stats["compilers"][compiler_name] = stats["compilers"].get(compiler_name, 0) + 1
-
-
-def collect_batch_statistics(all_results: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    """Collect statistics from batch analysis results"""
-    stats: dict[str, Any] = {
-        "packers_detected": [],
-        "crypto_patterns": [],
-        "suspicious_indicators": [],
-        "file_types": {},
-        "architectures": {},
-        "compilers": {},
-    }
-
-    for file_key, result in all_results.items():
-        update_packer_stats(stats, file_key, result)
-        update_crypto_stats(stats, file_key, result)
-        update_indicator_stats(stats, file_key, result)
-        update_file_type_stats(stats, result)
-        update_compiler_stats(stats, result)
-
-    return stats
-
-
-def create_json_batch_summary(
-    all_results: dict[str, dict[str, Any]],
-    failed_files: list[tuple[str, str]],
-    output_path: Path,
-    timestamp: str,
-) -> str:
-    """Create JSON batch summary file"""
-    from datetime import datetime
-
-    summary = {
-        "batch_summary": {
-            "total_files": len(all_results) + len(failed_files),
-            "successful_analyses": len(all_results),
-            "failed_analyses": len(failed_files),
-            "timestamp": datetime.now().isoformat(),
-            "processed_files": list(all_results.keys()),
-        },
-        "results": all_results,
-        "failed_files": [{"file": f[0], "error": f[1]} for f in failed_files],
-    }
-
-    # Add aggregated statistics
-    summary["statistics"] = collect_batch_statistics(all_results)
-
-    # Save batch summary JSON
-    summary_file = output_path / f"r2inspect_batch_{timestamp}.json"
-    with open(summary_file, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2, default=str)
-
-    return f"{summary_file.name} + individual JSONs"
 
 
 def find_files_to_process(
