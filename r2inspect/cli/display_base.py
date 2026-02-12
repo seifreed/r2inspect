@@ -185,7 +185,7 @@ def display_performance_statistics(
     """Display retry and circuit breaker statistics in verbose mode"""
     _get_console().print("\n[bold cyan]Performance Statistics[/bold cyan]")
 
-    from .display_sections import _display_circuit_breaker_statistics, _display_retry_statistics
+    from .display_statistics import _display_circuit_breaker_statistics, _display_retry_statistics
 
     _display_retry_statistics(retry_stats)
     _display_circuit_breaker_statistics(circuit_stats)
