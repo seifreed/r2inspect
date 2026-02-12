@@ -55,6 +55,12 @@ from .batch_output import (  # noqa: F401
 console = Console()
 logger = get_logger(__name__)
 magic_adapter = MagicAdapter()
+_magic: Any | None
+try:
+    import magic as _magic
+except Exception:
+    _magic = None
+magic: Any | None = _magic
 
 EXECUTABLE_SIGNATURES = {
     "application/x-dosexec",
@@ -79,6 +85,14 @@ EXECUTABLE_DESCRIPTIONS = (
 
 
 def _init_magic() -> tuple[Any, Any] | None:
+    if magic is not None:
+        try:
+            return magic.Magic(mime=True), magic.Magic()
+        except Exception as e:
+            console.print(f"[red]Error initializing magic: {e}[/red]")
+            console.print("[yellow]Falling back to file extension detection[/yellow]")
+            return None
+
     if not magic_adapter.available:
         console.print("[yellow]python-magic not available; skipping magic-based detection[/yellow]")
         return None
