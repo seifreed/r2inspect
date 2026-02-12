@@ -7,7 +7,7 @@ from typing import Any, cast
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..abstractions.result_builder import init_result, mark_unavailable
-from ..application.analyzer_runner import run_analyzer_on_file
+from ..utils.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 from .string_classification import classify_string_type
 
