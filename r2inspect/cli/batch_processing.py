@@ -43,6 +43,7 @@ from ..application.batch_discovery import is_elf_executable as core_is_elf_execu
 from ..application.batch_discovery import is_macho_executable as core_is_macho_executable
 from ..application.batch_discovery import is_pe_executable as core_is_pe_executable
 from ..application.batch_discovery import is_script_executable as core_is_script_executable
+from ..application.batch_service import BatchDependencies, default_batch_service
 from ..application.batch_stats import (  # noqa: F401
     collect_batch_statistics,
     update_compiler_stats,
@@ -601,76 +602,52 @@ def run_batch_analysis(
     quiet: bool = False,
 ) -> None:
     """Run batch analysis on multiple files in a directory"""
-    batch_path = Path(batch_dir)
 
-    # Find files to process
-    files_to_process = find_files_to_process(
-        batch_path, auto_detect, extensions, recursive, verbose, quiet
-    )
+    def _display_found_files(count: int, thread_count: int) -> None:
+        if quiet:
+            return
+        console.print(f"[bold green]Found {count} files to process[/bold green]")
+        console.print(f"[blue]Using {thread_count} parallel threads[/blue]")
 
-    if not files_to_process:
-        display_no_files_message(auto_detect, extensions)
-        return
-
-    if not quiet:
-        console.print(f"[bold green]Found {len(files_to_process)} files to process[/bold green]")
-        console.print(f"[blue]Using {threads} parallel threads[/blue]")
-
-    # Configure logging for batch processing
-    if not verbose:
-        from ..utils.logger import configure_batch_logging
-
-        configure_batch_logging()
-
-    # If quiet mode, suppress even more logging
-    if quiet:
+    def _configure_quiet_logging() -> None:
         import logging as _logging
 
         _logging.getLogger("r2inspect").setLevel(_logging.CRITICAL)
         _logging.getLogger("r2inspect.modules").setLevel(_logging.CRITICAL)
 
-    # Setup output directory
-    output_path = setup_batch_output_directory(output_dir, output_json, output_csv)
+    def _configure_batch_logging() -> None:
+        from ..utils.logger import configure_batch_logging
 
-    # Results storage
-    all_results: dict[str, dict[str, Any]] = {}
-    failed_files: list[tuple[str, str]] = []
+        configure_batch_logging()
 
-    # Start timing
-    start_time = time.time()
-
-    # Process files in parallel
-    rate_limiter = setup_rate_limiter(threads, verbose)
-    process_files_parallel(
-        files_to_process,
-        all_results,
-        failed_files,
-        output_path,
-        batch_path,
-        config_obj,
-        options,
-        output_json,
-        threads,
-        rate_limiter,
-    )
-
-    # Calculate elapsed time
-    elapsed_time = time.time() - start_time
-
-    # Create summary report and get output filename
     from .batch_output import create_batch_summary
 
-    output_filename = create_batch_summary(
-        all_results, failed_files, output_path, output_json, output_csv
+    deps = BatchDependencies(
+        find_files_to_process=find_files_to_process,
+        display_no_files_message=display_no_files_message,
+        setup_output_directory=setup_batch_output_directory,
+        setup_rate_limiter=setup_rate_limiter,
+        process_files_parallel=process_files_parallel,
+        create_batch_summary=create_batch_summary,
+        display_batch_results=display_batch_results,
+        display_found_files=_display_found_files,
+        configure_batch_logging=_configure_batch_logging,
+        configure_quiet_logging=_configure_quiet_logging,
+        now=time.time,
     )
 
-    # Display final results
-    display_batch_results(
-        all_results,
-        failed_files,
-        elapsed_time,
-        files_to_process,
-        rate_limiter,
-        verbose,
-        output_filename,
+    default_batch_service.run_batch_analysis(
+        batch_dir=batch_dir,
+        options=options,
+        output_json=output_json,
+        output_csv=output_csv,
+        output_dir=output_dir,
+        recursive=recursive,
+        extensions=extensions,
+        verbose=verbose,
+        config_obj=config_obj,
+        auto_detect=auto_detect,
+        threads=threads,
+        quiet=quiet,
+        deps=deps,
     )

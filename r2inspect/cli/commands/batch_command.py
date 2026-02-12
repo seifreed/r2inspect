@@ -20,8 +20,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import time
-from pathlib import Path
 from typing import Any
 
 from .base import Command, apply_thread_settings
@@ -187,81 +185,27 @@ class BatchCommand(Command):
             threads: Number of parallel threads
             quiet: Suppress non-critical output
         """
-        # Import batch processing utilities from cli module
-        from ..batch_output import create_batch_summary
         from ..batch_processing import (
-            display_batch_results,
-            display_no_files_message,
             ensure_batch_shutdown,
-            find_files_to_process,
-            process_files_parallel,
+            run_batch_analysis,
             schedule_forced_exit,
-            setup_batch_output_directory,
-            setup_rate_limiter,
         )
 
-        batch_path = Path(batch_dir)
-
-        # Find files to process
-        files_to_process = find_files_to_process(
-            batch_path, auto_detect, extensions, recursive, verbose, quiet
-        )
-
-        if not files_to_process:
-            display_no_files_message(auto_detect, extensions)
-            return
-
-        if not quiet:
-            self.context.console.print(
-                f"[bold green]Found {len(files_to_process)} files to process[/bold green]"
-            )
-            self.context.console.print(f"[blue]Using {threads} parallel threads[/blue]")
-
-        # Configure logging for batch processing
         self._configure_batch_logging(verbose, quiet)
 
-        # Setup output directory
-        output_path = setup_batch_output_directory(output_dir, output_json, output_csv)
-
-        # Results storage
-        all_results: dict[str, dict[str, Any]] = {}
-        failed_files: list[tuple[str, str]] = []
-
-        # Start timing
-        start_time = time.time()
-
-        # Process files in parallel
-        rate_limiter = setup_rate_limiter(threads, verbose)
-        process_files_parallel(
-            files_to_process,
-            all_results,
-            failed_files,
-            output_path,
-            batch_path,
-            config_obj,
-            options,
-            output_json,
-            threads,
-            rate_limiter,
-        )
-
-        # Calculate elapsed time
-        elapsed_time = time.time() - start_time
-
-        # Create summary report and get output filename
-        output_filename = create_batch_summary(
-            all_results, failed_files, output_path, output_json, output_csv
-        )
-
-        # Display final results
-        display_batch_results(
-            all_results,
-            failed_files,
-            elapsed_time,
-            files_to_process,
-            rate_limiter,
-            verbose,
-            output_filename,
+        run_batch_analysis(
+            batch_dir=batch_dir,
+            options=options,
+            output_json=output_json,
+            output_csv=output_csv,
+            output_dir=output_dir,
+            recursive=recursive,
+            extensions=extensions,
+            verbose=verbose,
+            config_obj=config_obj,
+            auto_detect=auto_detect,
+            threads=threads,
+            quiet=quiet,
         )
         ensure_batch_shutdown()
         schedule_forced_exit()
