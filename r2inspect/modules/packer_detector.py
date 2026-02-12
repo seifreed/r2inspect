@@ -3,9 +3,7 @@
 
 from typing import Any, cast
 
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from .packer_helpers import (
     analyze_entropy,
@@ -20,7 +18,7 @@ from .search_helpers import search_hex, search_text
 logger = get_logger(__name__)
 
 
-class PackerDetector:
+class PackerDetector(CommandHelperMixin):
     """Packer detection using radare2 and entropy analysis"""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -244,17 +242,8 @@ class PackerDetector:
             return cast(dict[str, Any], self.adapter.get_file_info())
         return cast(dict[str, Any], self._cmdj("ij", {}))
 
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
-
     def _read_bytes(self, addr: int, size: int) -> bytes:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
             return cast(bytes, self.adapter.read_bytes(addr, size))
         hex_data = self._cmd(f"p8 {size} @ {addr}")
         return bytes.fromhex(hex_data) if hex_data else b""
-
-    def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)

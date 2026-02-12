@@ -4,16 +4,14 @@
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from .domain_helpers import STANDARD_PE_SECTIONS, shannon_entropy, suspicious_section_name_indicator
 
 logger = get_logger(__name__)
 
 
-class SectionAnalyzer(BaseAnalyzer):
+class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Section analysis using backend data."""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -456,15 +454,6 @@ class SectionAnalyzer(BaseAnalyzer):
             logger.error(f"Error getting section summary: {e}")
 
         return summary
-
-    def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _update_summary_for_section(
         self,

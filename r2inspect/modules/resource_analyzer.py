@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.hashing import calculate_hashes_for_bytes
 from ..utils.logger import get_logger
 from .domain_helpers import entropy_from_ints
@@ -12,7 +12,7 @@ from .string_extraction import split_null_terminated
 logger = get_logger(__name__)
 
 
-class ResourceAnalyzer:
+class ResourceAnalyzer(CommandHelperMixin):
     """Analyzes resources in PE files."""
 
     # Resource type constants
@@ -605,10 +605,6 @@ class ResourceAnalyzer:
                 }
             ]
         return []
-
-    def _cmdj(self, command: str, default: Any | None = None) -> Any:
-        fallback = default if default is not None else []
-        return cmdj_helper(self.adapter, self.r2, command, fallback)
 
     def _find_pattern(self, data: list[int], pattern: list[int]) -> int:
         """Find a byte pattern in data. Returns position or -1 if not found."""
