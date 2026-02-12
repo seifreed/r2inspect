@@ -7,8 +7,9 @@ import base64
 import hashlib
 import json
 from collections import defaultdict
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
+from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..adapters.r2pipe_context import open_r2pipe
 from ..utils.logger import get_logger
@@ -28,6 +29,7 @@ except ImportError:
 
 class BinbloomResult(TypedDict):
     available: bool
+    analyzer: str
     library_available: bool
     function_blooms: dict[str, Any]
     function_signatures: dict[str, Any]
@@ -41,40 +43,48 @@ class BinbloomResult(TypedDict):
     unique_signatures: int
     bloom_stats: dict[str, Any]
     error: str | None
+    execution_time: float
 
 
-class BinbloomAnalyzer(CommandHelperMixin):
+class BinbloomAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Bloom filter-based function analysis."""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
         """Initialize analyzer state."""
-        self.adapter = adapter
-        self.r2 = adapter
-        self.filepath = filepath
+        super().__init__(adapter=adapter, filepath=filepath)
         self.default_capacity = 256  # Default Bloom filter capacity
         self.default_error_rate = 0.001  # 0.1% false positive rate
 
-    def analyze(
+    def analyze(  # type: ignore[override]
         self, capacity: int | None = None, error_rate: float | None = None
     ) -> BinbloomResult:
         """Analyze functions using Bloom filters."""
+        result = cast(
+            BinbloomResult,
+            self._init_result_structure(
+                {
+                    "library_available": True,
+                    "function_blooms": {},
+                    "function_signatures": {},
+                    "total_functions": 0,
+                    "analyzed_functions": 0,
+                    "capacity": capacity or self.default_capacity,
+                    "error_rate": error_rate or self.default_error_rate,
+                    "binary_bloom": None,
+                    "binary_signature": None,
+                    "similar_functions": [],
+                    "unique_signatures": 0,
+                    "bloom_stats": {},
+                    "error": None,
+                }
+            ),
+        )
+
         if not BLOOM_AVAILABLE:
-            return {
-                "library_available": False,
-                "available": False,
-                "function_blooms": {},
-                "function_signatures": {},
-                "total_functions": 0,
-                "analyzed_functions": 0,
-                "capacity": capacity or self.default_capacity,
-                "error_rate": error_rate or self.default_error_rate,
-                "binary_bloom": None,
-                "binary_signature": None,
-                "similar_functions": [],
-                "unique_signatures": 0,
-                "bloom_stats": {},
-                "error": "pybloom-live library not installed",
-            }
+            result["library_available"] = False
+            result["available"] = False
+            result["error"] = "pybloom-live library not installed"
+            return result
 
         if capacity is None:
             capacity = self.default_capacity
@@ -83,22 +93,26 @@ class BinbloomAnalyzer(CommandHelperMixin):
 
         logger.debug(f"Starting Binbloom analysis for {self.filepath}")
 
-        results: BinbloomResult = {
-            "available": False,
-            "library_available": True,
-            "function_blooms": {},
-            "function_signatures": {},
-            "total_functions": 0,
-            "analyzed_functions": 0,
-            "capacity": capacity,
-            "error_rate": error_rate,
-            "binary_bloom": None,
-            "binary_signature": None,
-            "similar_functions": [],
-            "unique_signatures": 0,
-            "bloom_stats": {},
-            "error": None,
-        }
+        results = cast(
+            BinbloomResult,
+            self._init_result_structure(
+                {
+                    "library_available": True,
+                    "function_blooms": {},
+                    "function_signatures": {},
+                    "total_functions": 0,
+                    "analyzed_functions": 0,
+                    "capacity": capacity,
+                    "error_rate": error_rate,
+                    "binary_bloom": None,
+                    "binary_signature": None,
+                    "similar_functions": [],
+                    "unique_signatures": 0,
+                    "bloom_stats": {},
+                    "error": None,
+                }
+            ),
+        )
 
         try:
             # Extract all functions

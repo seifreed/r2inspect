@@ -4,6 +4,7 @@
 import struct
 from typing import Any, cast
 
+from ..abstractions import BaseAnalyzer
 from ..adapters.file_system import default_file_system
 from ..adapters.r2pipe_context import open_r2pipe
 from ..utils.command_helpers import cmdj as cmdj_helper
@@ -33,7 +34,7 @@ except ImportError:
     logger.debug("pefile library not available, using r2pipe fallback")
 
 
-class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin):
+class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin, BaseAnalyzer):
     """Rich Header extraction and analysis for PE files"""
 
     def __init__(
@@ -44,25 +45,24 @@ class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin):
     ) -> None:
         if adapter is None:
             adapter = r2_instance
-        self.adapter = adapter
-        self.r2 = adapter
-        self.filepath = filepath
+        super().__init__(adapter=adapter, filepath=filepath)
 
     def analyze(self) -> dict[str, Any]:
         """Run Rich Header analysis on a PE file."""
         logger.debug(f"Starting Rich Header analysis for {self.filepath}")
 
-        results: dict[str, Any] = {
-            "available": False,
-            "rich_header": None,
-            "compilers": [],
-            "xor_key": None,
-            "checksum": None,
-            "richpe_hash": None,
-            "error": None,
-            "is_pe": False,
-            "method_used": None,
-        }
+        results: dict[str, Any] = self._init_result_structure(
+            {
+                "rich_header": None,
+                "compilers": [],
+                "xor_key": None,
+                "checksum": None,
+                "richpe_hash": None,
+                "error": None,
+                "is_pe": False,
+                "method_used": None,
+            }
+        )
 
         try:
             # Check if file is PE

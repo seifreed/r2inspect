@@ -5,6 +5,7 @@ import struct
 from datetime import datetime
 from typing import Any
 
+from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from ..utils.r2_suppress import silent_cmdj
@@ -12,7 +13,7 @@ from ..utils.r2_suppress import silent_cmdj
 logger = get_logger(__name__)
 
 
-class AuthenticodeAnalyzer(CommandHelperMixin):
+class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Analyzes and verifies Authenticode signatures in PE files."""
 
     def __init__(self, adapter: Any) -> None:
@@ -22,8 +23,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin):
         Args:
             r2: Radare2 instance
         """
-        self.adapter = adapter
-        self.r2 = adapter
+        super().__init__(adapter=adapter)
         self.pe_info = None
 
     def analyze(self) -> dict[str, Any]:
@@ -34,17 +34,19 @@ class AuthenticodeAnalyzer(CommandHelperMixin):
             Dictionary containing signature information
         """
         try:
-            result: dict[str, Any] = {
-                "available": True,
-                "has_signature": False,
-                "signature_valid": False,
-                "certificates": [],
-                "timestamp": None,
-                "signature_offset": None,
-                "signature_size": None,
-                "security_directory": None,
-                "errors": [],
-            }
+            result: dict[str, Any] = self._init_result_structure(
+                {
+                    "has_signature": False,
+                    "signature_valid": False,
+                    "certificates": [],
+                    "timestamp": None,
+                    "signature_offset": None,
+                    "signature_size": None,
+                    "security_directory": None,
+                    "errors": [],
+                }
+            )
+            result["available"] = True
 
             if not self._has_required_headers():
                 result["available"] = False
@@ -78,12 +80,11 @@ class AuthenticodeAnalyzer(CommandHelperMixin):
 
         except Exception as e:
             logger.error(f"Error analyzing Authenticode signature: {e}")
-            return {
-                "available": False,
-                "has_signature": False,
-                "signature_valid": False,
-                "error": str(e),
-            }
+            result["available"] = False
+            result["has_signature"] = False
+            result["signature_valid"] = False
+            result["error"] = str(e)
+            return result
 
     def _has_required_headers(self) -> bool:
         pe_header = self._cmdj("ihj", {})
