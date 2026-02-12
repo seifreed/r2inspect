@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ..adapters.magic_adapter import MagicAdapter
 from ..interfaces import AnalyzerBackend
 from ..registry.analyzer_registry import AnalyzerRegistry
 from ..utils.analyzer_factory import create_analyzer
@@ -14,13 +15,8 @@ from ..utils.logger import get_logger
 from ..utils.magic_detector import detect_file_type
 from .analysis_pipeline import AnalysisStage
 
-magic: Any | None
-try:
-    import magic as _magic
-
-    magic = _magic
-except Exception:  # pragma: no cover - optional dependency
-    magic = None
+_magic_adapter = MagicAdapter()
+_magic_detectors = _magic_adapter.create_detectors()
 
 logger = get_logger(__name__)
 
@@ -45,9 +41,10 @@ class FileInfoStage(AnalysisStage):
         info["path"] = str(self.file_path.absolute())
         info["name"] = self.file_path.name
 
-        if magic is not None:
-            info["mime_type"] = magic.from_file(self.filename, mime=True)
-            info["file_type"] = magic.from_file(self.filename)
+        if _magic_detectors is not None:
+            mime_magic, desc_magic = _magic_detectors
+            info["mime_type"] = mime_magic.from_file(self.filename)
+            info["file_type"] = desc_magic.from_file(self.filename)
         else:
             info["mime_type"] = None
             info["file_type"] = None
@@ -155,9 +152,10 @@ class FormatDetectionStage(AnalysisStage):
         return None
 
     def _detect_via_basic_magic(self) -> str | None:
-        if magic is None:
+        if _magic_detectors is None:
             return None
-        file_type = magic.from_file(self.filename).lower()
+        _, desc_magic = _magic_detectors
+        file_type = desc_magic.from_file(self.filename).lower()
 
         if "pe32" in file_type or "ms-dos" in file_type:
             return "PE"
