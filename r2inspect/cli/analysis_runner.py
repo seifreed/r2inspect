@@ -23,16 +23,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from rich.console import Console
 
-from ..error_handling.stats import (
-    get_circuit_breaker_stats,
-    get_error_stats,
-    get_retry_stats,
-    reset_error_stats,
-)
+from ..application.analysis_service import default_analysis_service
 from ..utils.output import OutputFormatter
 
 console = Console()
@@ -63,12 +58,12 @@ def run_analysis(
     # Import here to avoid circular dependency
     from .display import display_error_statistics, display_performance_statistics, display_results
 
-    reset_error_stats()
+    default_analysis_service.reset_stats()
 
     print_status_if_appropriate(output_json, output_csv, output_file)
 
     # Perform analysis
-    results = cast(dict[str, Any], inspector.analyze(**options))
+    results = default_analysis_service.execute(inspector, options)
 
     # Add statistics to results
     add_statistics_to_results(results)
@@ -101,18 +96,7 @@ def add_statistics_to_results(results: dict[str, Any]) -> None:
     Args:
         results: Results dictionary to augment
     """
-    error_stats = get_error_stats()
-    retry_stats = get_retry_stats()
-    circuit_stats = get_circuit_breaker_stats()
-
-    if error_stats["total_errors"] > 0:
-        results["error_statistics"] = error_stats
-
-    if retry_stats.get("total_retries", 0) > 0:
-        results["retry_statistics"] = retry_stats
-
-    if has_circuit_breaker_data(circuit_stats):
-        results["circuit_breaker_statistics"] = circuit_stats
+    default_analysis_service.add_statistics(results)
 
 
 def has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
@@ -125,19 +109,7 @@ def has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
     Returns:
         True if there is meaningful data, False otherwise
     """
-    if not circuit_stats:
-        return False
-
-    for _, v in circuit_stats.items():
-        if isinstance(v, int | float) and v > 0:
-            return True
-        if isinstance(v, dict):
-            for nested in v.values():
-                if isinstance(nested, int | float) and nested > 0:
-                    return True
-                if isinstance(nested, str) and nested.lower() != "closed":
-                    return True
-    return False
+    return default_analysis_service.has_circuit_breaker_data(circuit_stats)
 
 
 def output_results(
@@ -218,14 +190,14 @@ def output_console_results(results: dict[str, Any], verbose: bool) -> None:
     display_results(results)
 
     if verbose:
-        error_stats = get_error_stats()
-        if error_stats["total_errors"] > 0:
+        error_stats = results.get("error_statistics", {})
+        if error_stats.get("total_errors", 0) > 0:
             display_error_statistics(error_stats)
 
-        retry_stats = get_retry_stats()
-        circuit_stats = get_circuit_breaker_stats()
+        retry_stats = results.get("retry_statistics", {})
+        circuit_stats = results.get("circuit_breaker_statistics", {})
 
-        if retry_stats["total_retries"] > 0 or has_circuit_breaker_data(circuit_stats):
+        if retry_stats.get("total_retries", 0) > 0 or has_circuit_breaker_data(circuit_stats):
             display_performance_statistics(retry_stats, circuit_stats)
 
 
