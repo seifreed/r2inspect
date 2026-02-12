@@ -253,6 +253,7 @@ r2inspect_batch_results/
 .claude/
 claude.md
 CLAUDE.md
+AGENTS.md
 .qlty/
 qlty.toml
 .ruff.toml
@@ -385,6 +386,7 @@ test_batch.py
 *_test.csv
 !tests/
 !tests/**
+tests/**/__pycache__/
 
 # Test coverage
 .coverage
