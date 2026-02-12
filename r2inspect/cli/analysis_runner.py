@@ -28,6 +28,7 @@ from typing import Any
 from rich.console import Console
 
 from ..application.analysis_service import default_analysis_service
+from ..application.use_cases import AnalyzeBinaryUseCase
 from ..utils.output import OutputFormatter
 
 console = Console()
@@ -58,15 +59,10 @@ def run_analysis(
     # Import here to avoid circular dependency
     from .display import display_error_statistics, display_performance_statistics, display_results
 
-    default_analysis_service.reset_stats()
-
     print_status_if_appropriate(output_json, output_csv, output_file)
 
     # Perform analysis
-    results = default_analysis_service.execute(inspector, options)
-
-    # Add statistics to results
-    add_statistics_to_results(results)
+    results = AnalyzeBinaryUseCase().run(inspector, options)
 
     # Output results in appropriate format
     output_results(results, output_json, output_csv, output_file, verbose)

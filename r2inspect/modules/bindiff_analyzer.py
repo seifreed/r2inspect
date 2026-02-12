@@ -5,6 +5,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from ..adapters.file_system import default_file_system
 from ..utils.command_helpers import cmd as cmd_helper
 from ..utils.logger import get_logger
 from .bindiff_domain import (
@@ -267,10 +268,9 @@ class BinDiffAnalyzer:
 
             # Calculate rolling hash for similarity
             try:
-                with open(self.filepath, "rb") as f:
-                    data = f.read(8192)  # Read first 8KB
-                    if data:
-                        features["rolling_hash"] = calculate_rolling_hash(data)
+                data = default_file_system.read_bytes(self.filepath, size=8192)
+                if data:
+                    features["rolling_hash"] = calculate_rolling_hash(data)
             except Exception as exc:
                 logger.debug(f"Failed to compute rolling hash: {exc}")
 

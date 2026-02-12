@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..adapters.file_system import default_file_system
 from ..security.validators import FileValidator
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
@@ -59,8 +60,7 @@ class SSDeepAnalyzer(HashingStrategy):
         ssdeep_module = get_ssdeep()
         if ssdeep_module is not None:
             try:
-                with open(self.filepath, "rb") as f:
-                    file_content = f.read()
+                file_content = default_file_system.read_bytes(self.filepath)
                 ssdeep_hash = ssdeep_module.hash(file_content)
                 logger.debug(f"SSDeep hash calculated using Python library: {ssdeep_hash}")
                 return ssdeep_hash, "python_library", None

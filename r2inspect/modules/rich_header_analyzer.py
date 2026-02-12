@@ -4,6 +4,7 @@
 import struct
 from typing import Any, cast
 
+from ..adapters.file_system import default_file_system
 from ..adapters.r2pipe_context import open_r2pipe
 from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
@@ -272,11 +273,10 @@ class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin):
         try:
             if not self.filepath:
                 return False
-            with open(self.filepath, "rb") as f:
-                magic = f.read(2)
-                if magic == b"MZ":
-                    logger.debug("Found MZ header - likely PE file")
-                    return True
+            magic = default_file_system.read_bytes(self.filepath, size=2)
+            if magic == b"MZ":
+                logger.debug("Found MZ header - likely PE file")
+                return True
         except Exception as e:
             logger.debug(f"Could not read file magic bytes: {e}")
         return False
@@ -465,8 +465,7 @@ class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin):
         try:
             if not self.filepath:
                 return None
-            with open(self.filepath, "rb") as f:
-                return f.read()
+            return default_file_system.read_bytes(self.filepath)
         except Exception as e:
             logger.debug(f"Could not read file bytes: {e}")
             return None
