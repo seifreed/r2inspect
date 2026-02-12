@@ -23,16 +23,38 @@ Author: Marc Rivero Lopez
 
 from typing import Any
 
+from .classifier import (
+    ErrorCategory,
+    ErrorClassifier,
+    ErrorInfo,
+    ErrorRecoveryManager,
+    ErrorSeverity,
+    error_handler,
+    get_error_stats,
+    global_error_manager,
+    reset_error_stats,
+    safe_execute,
+)
 from .policies import ErrorHandlingStrategy, ErrorPolicy
 from .presets import FAIL_FAST_POLICY, FALLBACK_POLICY, RETRY_POLICY, SAFE_POLICY
 
 __all__ = [
+    "ErrorCategory",
+    "ErrorClassifier",
+    "ErrorInfo",
+    "ErrorRecoveryManager",
+    "ErrorSeverity",
+    "error_handler",
     "ErrorHandlingStrategy",
     "ErrorPolicy",
     "SAFE_POLICY",
     "RETRY_POLICY",
     "FAIL_FAST_POLICY",
     "FALLBACK_POLICY",
+    "get_error_stats",
+    "global_error_manager",
+    "reset_error_stats",
+    "safe_execute",
 ]
 
 
