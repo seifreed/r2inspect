@@ -32,10 +32,16 @@ from typing import Any
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
+from ..application.batch_discovery import _is_executable_signature as core_is_executable_signature
 from ..application.batch_discovery import (
     check_executable_signature as core_check_executable_signature,
 )
+from ..application.batch_discovery import discover_executables_by_magic
 from ..application.batch_discovery import find_files_by_extensions as core_find_files_by_extensions
+from ..application.batch_discovery import is_elf_executable as core_is_elf_executable
+from ..application.batch_discovery import is_macho_executable as core_is_macho_executable
+from ..application.batch_discovery import is_pe_executable as core_is_pe_executable
+from ..application.batch_discovery import is_script_executable as core_is_script_executable
 from ..application.batch_service import BatchDependencies, default_batch_service
 from ..application.batch_stats import (  # noqa: F401
     collect_batch_statistics,
@@ -50,14 +56,6 @@ from ..application.use_cases import AnalyzeBinaryUseCase
 from ..factory import create_inspector
 from ..utils.logger import get_logger
 from ..utils.output import OutputFormatter
-from .batch_discovery import _is_executable_signature as _cli_is_executable_signature
-from .batch_discovery import (
-    find_executable_files_by_magic,
-    is_elf_executable,
-    is_macho_executable,
-    is_pe_executable,
-    is_script_executable,
-)
 from .batch_output import (  # noqa: F401
     create_json_batch_summary,
     determine_csv_file_path,
@@ -68,15 +66,12 @@ from .batch_output import (  # noqa: F401
 console = Console()
 logger = get_logger(__name__)
 
-
-def check_executable_signature(file_path: Path) -> bool:
-    """Check for executable signatures in file header (PE, ELF, Mach-O)"""
-    return core_check_executable_signature(file_path)
-
-
-def _is_executable_signature(mime_type: str, description: str) -> bool:
-    """Check for executable signatures based on mime and description."""
-    return _cli_is_executable_signature(mime_type, description)
+_magic: Any | None
+try:
+    import magic as _magic
+except Exception:
+    _magic = None
+magic: Any | None = _magic
 
 
 def setup_rate_limiter(threads: int, verbose: bool) -> Any:
@@ -98,6 +93,64 @@ def setup_rate_limiter(threads: int, verbose: bool) -> Any:
         )
 
     return rate_limiter
+
+
+def check_executable_signature(file_path: Path) -> bool:
+    """Check for executable signatures in file header (PE, ELF, Mach-O)"""
+    return core_check_executable_signature(file_path)
+
+
+def _is_executable_signature(mime_type: str, description: str) -> bool:
+    """Check for executable signatures based on mime and description."""
+    return core_is_executable_signature(mime_type, description)
+
+
+def is_pe_executable(header: bytes, file_handle: Any) -> bool:
+    return core_is_pe_executable(header, file_handle)
+
+
+def is_elf_executable(header: bytes) -> bool:
+    return core_is_elf_executable(header)
+
+
+def is_macho_executable(header: bytes) -> bool:
+    return core_is_macho_executable(header)
+
+
+def is_script_executable(header: bytes) -> bool:
+    return core_is_script_executable(header)
+
+
+def find_executable_files_by_magic(
+    directory: str | Path, recursive: bool = False, verbose: bool = False
+) -> list[Path]:
+    """Find executable files using magic bytes detection (PE, ELF, Mach-O, etc.)"""
+    files, init_errors, file_errors, scanned = discover_executables_by_magic(
+        directory,
+        recursive=recursive,
+        magic_module=magic,
+    )
+
+    for message in init_errors:
+        if message.startswith("Error initializing magic:"):
+            console.print(f"[red]{message}[/red]")
+            console.print("[yellow]Falling back to file extension detection[/yellow]")
+        else:
+            console.print(f"[yellow]{message}[/yellow]")
+        return []
+
+    if verbose:
+        console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
+
+    for file_path, error in file_errors:
+        if verbose:
+            console.print(f"[yellow]Error checking {file_path}: {error}[/yellow]")
+
+    if verbose:
+        for file_path in files:
+            console.print(f"[green]Found executable: {file_path}[/green]")
+
+    return files
 
 
 def process_single_file(
