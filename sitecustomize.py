@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import importlib
 import os
+from types import ModuleType
 
 
 if os.getenv("COVERAGE_PROCESS_START"):
+    coverage_module: ModuleType | None = None
     try:
-        import coverage
+        coverage_module = importlib.import_module("coverage")
     except Exception:
-        coverage = None
-    if coverage is not None:
+        coverage_module = None
+    if coverage_module is not None:
         try:
-            coverage.process_startup()
+            coverage_module.process_startup()
         except Exception:
             pass

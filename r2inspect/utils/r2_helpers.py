@@ -136,7 +136,7 @@ def _run_cmd_with_timeout(
         finally:
             result["done"] = True
 
-    timeout_seconds = SUBPROCESS_TIMEOUT_SECONDS
+    timeout_seconds: float = float(SUBPROCESS_TIMEOUT_SECONDS)
     env_timeout = os.environ.get("R2INSPECT_CMD_TIMEOUT_SECONDS") if "os" in globals() else None
     if env_timeout:
         try:
