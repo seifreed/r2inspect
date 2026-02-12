@@ -12,6 +12,7 @@ except ImportError:
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..adapters.file_system import default_file_system
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
 
@@ -225,9 +226,8 @@ class TelfhashAnalyzer(CommandHelperMixin, HashingStrategy):
 
     def _has_elf_magic(self) -> bool:
         try:
-            with open(self.filepath, "rb") as f:
-                magic = f.read(4)
-                return magic == b"\x7fELF"
+            magic = default_file_system.read_bytes(self.filepath, size=4)
+            return magic == b"\x7fELF"
         except Exception as exc:
             logger.debug(f"Failed to read ELF magic bytes: {exc}")
             return False

@@ -15,6 +15,7 @@ except Exception:  # pragma: no cover - optional dependency
     yara = None
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
+from ..adapters.file_system import default_file_system
 from ..security.validators import FileValidator
 from ..utils.logger import get_logger
 from .yara_defaults import DEFAULT_YARA_RULES
@@ -220,8 +221,11 @@ class YaraAnalyzer(CommandHelperMixin):
                 )
                 return None
 
-            with open(validated_rule, encoding="utf-8", errors="ignore") as f:
-                content = f.read().strip()
+            content = default_file_system.read_text(
+                validated_rule,
+                encoding="utf-8",
+                errors="ignore",
+            ).strip()
 
             if not content:
                 logger.info(f"Skipping empty YARA file: {rule_file}")
@@ -325,8 +329,7 @@ class YaraAnalyzer(CommandHelperMixin):
             for filename, content in DEFAULT_YARA_RULES.items():
                 rule_file = rules_dir / filename
                 if not rule_file.exists():
-                    with open(rule_file, "w") as f:
-                        f.write(content)
+                    default_file_system.write_text(rule_file, content)
 
         except Exception as e:
             logger.error(f"Error creating default rules: {e}")

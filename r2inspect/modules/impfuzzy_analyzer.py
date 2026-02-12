@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..adapters.file_system import default_file_system
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
 
@@ -186,11 +187,10 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, HashingStrategy):
         try:
             # Check file magic bytes directly first (most reliable)
             try:
-                with open(self.filepath, "rb") as f:
-                    magic = f.read(2)
-                    if magic == b"MZ":
-                        logger.debug("Found MZ header - likely PE file")
-                        return True
+                magic = default_file_system.read_bytes(self.filepath, size=2)
+                if magic == b"MZ":
+                    logger.debug("Found MZ header - likely PE file")
+                    return True
             except Exception as e:
                 logger.debug(f"Could not read file magic bytes: {e}")
 

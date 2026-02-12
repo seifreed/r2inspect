@@ -11,6 +11,7 @@ except ImportError:
     TLSH_AVAILABLE = False
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..adapters.file_system import default_file_system
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -166,8 +167,7 @@ class TLSHAnalyzer(HashingStrategy):
         try:
             # Read directly from filesystem to avoid r2 hex conversion overhead
             max_size = 10 * 1024 * 1024  # 10MB cap
-            with open(self.filepath, "rb") as f:
-                data = f.read(max_size)
+            data = default_file_system.read_bytes(self.filepath, size=max_size)
             if not data or len(data) < self.TLSH_MIN_DATA_SIZE:
                 return None
             return cast(str | None, tlsh.hash(data))
