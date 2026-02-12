@@ -5,6 +5,7 @@ from collections import Counter
 from typing import Any, cast
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..adapters.r2pipe_context import open_r2pipe
 from ..utils.command_helpers import cmd_list as cmd_list_helper
 from ..utils.logger import get_logger
 from .string_classification import classify_string_type
@@ -661,9 +662,7 @@ class SimHashAnalyzer(HashingStrategy):
     def calculate_simhash_from_file(filepath: str) -> dict[str, Any] | None:
         """Calculate SimHash directly from a file path."""
         try:
-            import r2pipe
-
-            with r2pipe.open(filepath, flags=["-2"]) as r2:
+            with open_r2pipe(filepath) as r2:
                 analyzer = SimHashAnalyzer(r2, filepath)
                 return analyzer.analyze()
 
