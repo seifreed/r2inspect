@@ -11,8 +11,8 @@ from .config import Config
 from .core.file_validator import FileValidator
 from .core.inspector import R2Inspector
 from .core.pipeline_builder import PipelineBuilder
-from .core.r2_session import R2Session
 from .core.result_aggregator import ResultAggregator
+from .infrastructure.r2_session import R2Session
 from .interfaces import MemoryMonitorLike
 from .registry.default_registry import create_default_registry
 from .utils.memory_manager import global_memory_monitor

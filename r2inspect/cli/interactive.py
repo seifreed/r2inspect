@@ -65,6 +65,7 @@ def run_interactive_mode(inspector: Any, options: dict[str, Any]) -> None:
         options: Analysis options dictionary
     """
     # Import here to avoid circular dependency
+    from ..application.use_cases import AnalyzeBinaryUseCase
     from .display import display_results
 
     console.print("[bold blue]Interactive Mode - r2inspect[/bold blue]")
@@ -81,7 +82,13 @@ def run_interactive_mode(inspector: Any, options: dict[str, Any]) -> None:
     formatter = OutputFormatter({})
 
     def _cmd_analyze() -> None:
-        results = inspector.analyze(**options)
+        results = AnalyzeBinaryUseCase().run(
+            inspector,
+            options,
+            reset_stats=False,
+            include_statistics=False,
+            validate_schemas=False,
+        )
         display_results(results)
 
     def _cmd_strings() -> None:
