@@ -173,7 +173,10 @@ class BinDiffAnalyzer:
 
         try:
             # Analyze functions
-            cmd_helper(self.adapter, self.r2, "aaa")
+            if self.adapter and hasattr(self.adapter, "analyze_all"):
+                self.adapter.analyze_all()
+            else:
+                cmd_helper(self.adapter, self.r2, "aaa")
 
             # Get function list
             functions = self.adapter.get_functions() if self.adapter else []
@@ -262,7 +265,10 @@ class BinDiffAnalyzer:
 
         try:
             # Get entropy info
-            entropy_info = cmd_helper(self.adapter, self.r2, "p=e 100")
+            if self.adapter and hasattr(self.adapter, "get_entropy_pattern"):
+                entropy_info = self.adapter.get_entropy_pattern()
+            else:
+                entropy_info = cmd_helper(self.adapter, self.r2, "p=e 100")
             if entropy_info:
                 features["entropy_pattern"] = entropy_info.strip()
 

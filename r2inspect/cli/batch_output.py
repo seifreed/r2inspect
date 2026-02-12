@@ -273,66 +273,22 @@ def run_batch_analysis(
     threads: int = 10,
     quiet: bool = False,
 ) -> None:
-    """Run batch analysis on multiple files in a directory"""
-    batch_path = Path(batch_dir)
+    """Run batch analysis on multiple files in a directory."""
+    from .batch_processing import run_batch_analysis as _run_batch_analysis
 
-    prepared = _prepare_batch_run(
-        batch_path,
-        auto_detect,
-        extensions,
-        recursive,
-        verbose,
-        quiet,
-        output_dir,
-        output_json,
-        output_csv,
-        threads,
-    )
-    if prepared is None:
-        return
-    files_to_process, output_path = prepared
-
-    all_results, failed_files = _init_batch_results()
-
-    # Start timing
-    import time
-
-    start_time = time.time()
-
-    # Process files in parallel
-    from .batch_processing import display_batch_results, process_files_parallel, setup_rate_limiter
-
-    rate_limiter = setup_rate_limiter(threads, verbose)
-    process_files_parallel(
-        files_to_process,
-        all_results,
-        failed_files,
-        output_path,
-        batch_path,
-        config_obj,
-        options,
-        output_json,
-        threads,
-        rate_limiter,
-    )
-
-    # Calculate elapsed time
-    elapsed_time = time.time() - start_time
-
-    # Create summary report and get output filename
-    output_filename = create_batch_summary(
-        all_results, failed_files, output_path, output_json, output_csv
-    )
-
-    # Display final results
-    display_batch_results(
-        all_results,
-        failed_files,
-        elapsed_time,
-        files_to_process,
-        rate_limiter,
-        verbose,
-        output_filename,
+    _run_batch_analysis(
+        batch_dir=batch_dir,
+        options=options,
+        output_json=output_json,
+        output_csv=output_csv,
+        output_dir=output_dir,
+        recursive=recursive,
+        extensions=extensions,
+        verbose=verbose,
+        config_obj=config_obj,
+        auto_detect=auto_detect,
+        threads=threads,
+        quiet=quiet,
     )
 
 
