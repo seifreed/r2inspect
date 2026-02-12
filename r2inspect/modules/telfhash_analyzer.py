@@ -12,7 +12,7 @@ except ImportError:
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..adapters.file_system import default_file_system
+from ..utils.file_type import is_elf_file
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
 
@@ -197,39 +197,13 @@ class TelfhashAnalyzer(CommandHelperMixin, HashingStrategy):
         try:
             if self.r2 is None:
                 return False
+            if is_elf_file(self.filepath, self.adapter, self.r2, logger=logger):
+                return True
             info_cmd = self._cmdj("ij", {})
-            if self._is_elf_in_r2_info():
-                return True
-            if self._is_elf_in_bin_info(info_cmd):
-                return True
-            if self._has_elf_magic():
-                return True
             return self._has_elf_symbols(info_cmd)
 
         except Exception as e:
             logger.error(f"Error checking if file is ELF: {e}")
-            return False
-
-    def _is_elf_in_r2_info(self) -> bool:
-        info_text = self._cmd("i")
-        return "elf" in info_text.lower()
-
-    @staticmethod
-    def _is_elf_in_bin_info(info_cmd: dict[str, Any] | None) -> bool:
-        if not info_cmd or "bin" not in info_cmd:
-            return False
-        bin_info = info_cmd["bin"]
-        for key in ("format", "type", "class"):
-            if "elf" in str(bin_info.get(key, "")).lower():
-                return True
-        return False
-
-    def _has_elf_magic(self) -> bool:
-        try:
-            magic = default_file_system.read_bytes(self.filepath, size=4)
-            return magic == b"\x7fELF"
-        except Exception as exc:
-            logger.debug(f"Failed to read ELF magic bytes: {exc}")
             return False
 
     def _has_elf_symbols(self, info_cmd: dict[str, Any] | None) -> bool:

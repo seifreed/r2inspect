@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..adapters.file_system import default_file_system
+from ..utils.file_type import is_pe_file
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
 
@@ -184,32 +184,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, HashingStrategy):
         Returns:
             True if file is PE, False otherwise
         """
-        try:
-            # Check file magic bytes directly first (most reliable)
-            try:
-                magic = default_file_system.read_bytes(self.filepath, size=2)
-                if magic == b"MZ":
-                    logger.debug("Found MZ header - likely PE file")
-                    return True
-            except Exception as e:
-                logger.debug(f"Could not read file magic bytes: {e}")
-
-            # Check via r2pipe
-            try:
-                info_cmd = self._cmdj("ij", {})
-                if info_cmd and "bin" in info_cmd:
-                    bin_format = info_cmd["bin"].get("format", "").lower()
-                    if "pe" in bin_format:
-                        logger.debug("PE detected via r2pipe")
-                        return True
-            except Exception as e:
-                logger.debug(f"Error checking PE via r2pipe: {e}")
-
-            return False
-
-        except Exception as e:
-            logger.error(f"Error checking if file is PE: {e}")
-            return False
+        return is_pe_file(self.filepath, self.adapter, self.r2, logger=logger)
 
     def _extract_imports(self) -> list[dict[str, Any]]:
         """

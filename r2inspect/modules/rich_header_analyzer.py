@@ -8,6 +8,7 @@ from ..abstractions import BaseAnalyzer
 from ..adapters.file_system import default_file_system
 from ..utils.analyzer_runner import run_analyzer_on_file
 from ..utils.command_helpers import cmdj as cmdj_helper
+from ..utils.file_type import is_pe_file
 from ..utils.logger import get_logger
 from .rich_header_debug import RichHeaderDebugMixin
 from .rich_header_defaults import DANS_PATTERNS, RICH_PATTERNS
@@ -251,71 +252,10 @@ class RichHeaderAnalyzer(RichHeaderDebugMixin, RichHeaderSearchMixin, BaseAnalyz
         Returns:
             True if file is PE, False otherwise
         """
-        try:
-            if not self.r2:
-                logger.error("r2 instance is None")
-                return False
-
-            if self._check_magic_bytes():
-                return True
-
-            if self._check_info_command():
-                return True
-
-            return self._check_bin_info()
-
-        except Exception as e:
-            logger.error(f"Error checking if file is PE: {e}")
+        if not self.r2:
+            logger.error("r2 instance is None")
             return False
-
-    def _check_magic_bytes(self) -> bool:
-        """Check file magic bytes for MZ header."""
-        try:
-            if not self.filepath:
-                return False
-            magic = default_file_system.read_bytes(self.filepath, size=2)
-            if magic == b"MZ":
-                logger.debug("Found MZ header - likely PE file")
-                return True
-        except Exception as e:
-            logger.debug(f"Could not read file magic bytes: {e}")
-        return False
-
-    def _check_info_command(self) -> bool:
-        """Check `i` command output for PE marker."""
-        try:
-            info_text = self.adapter.get_info_text() if self.adapter else ""
-            if info_text and "pe" in info_text.lower():
-                logger.debug("PE detected via 'i' command")
-                return True
-        except Exception as e:
-            logger.debug(f"Error with 'i' command: {e}")
-        return False
-
-    def _check_bin_info(self) -> bool:
-        """Check `ij` command output for PE markers."""
-        try:
-            info_cmd = cmdj_helper(self.adapter, self.r2, "ij", {})
-            if not info_cmd or "bin" not in info_cmd:
-                return False
-            bin_info = info_cmd["bin"]
-            if self._bin_info_has_pe(bin_info):
-                return True
-        except Exception as e:
-            logger.debug(f"Error with 'ij' command: {e}")
-        return False
-
-    def _bin_info_has_pe(self, bin_info: dict[str, Any]) -> bool:
-        """Check bin info format/class for PE."""
-        bin_format = bin_info.get("format", "").lower()
-        if "pe" in bin_format:
-            logger.debug("PE detected via 'ij' format field")
-            return True
-        bin_class = bin_info.get("class", "").lower()
-        if "pe" in bin_class:
-            logger.debug("PE detected via 'ij' class field")
-            return True
-        return False
+        return is_pe_file(self.filepath, self.adapter, self.r2, logger=logger)
 
     def _extract_rich_header(self) -> dict[str, Any] | None:
         """
