@@ -10,17 +10,15 @@ try:
 except ImportError:
     TELFHASH_AVAILABLE = False
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
 
 logger = get_logger(__name__)
 
 
-class TelfhashAnalyzer(HashingStrategy):
+class TelfhashAnalyzer(CommandHelperMixin, HashingStrategy):
     """Telfhash analyzer for ELF files."""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -267,15 +265,6 @@ class TelfhashAnalyzer(HashingStrategy):
         except Exception as e:
             logger.error(f"Failed to extract symbols: {e}")
             return []
-
-    def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _filter_symbols_for_telfhash(self, symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """

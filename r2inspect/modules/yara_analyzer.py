@@ -14,8 +14,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     yara = None
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..security.validators import FileValidator
-from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 from .yara_defaults import DEFAULT_YARA_RULES
 
@@ -44,7 +44,7 @@ def timeout_handler(signum: int, frame: Any) -> None:
 _COMPILED_CACHE: dict[str, Any] = {}
 
 
-class YaraAnalyzer:
+class YaraAnalyzer(CommandHelperMixin):
     """YARA rules analysis"""
 
     def __init__(
@@ -315,9 +315,6 @@ class YaraAnalyzer:
             logger.error(f"Error processing YARA matches: {e}")
 
         return matches
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
 
     def create_default_rules(self) -> None:
         """Create default YARA rules if none exist"""

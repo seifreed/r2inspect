@@ -5,10 +5,8 @@ import hashlib
 from collections import Counter, defaultdict
 from typing import Any, TypedDict
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..adapters.r2pipe_context import open_r2pipe
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 from .similarity_scoring import jaccard_similarity
 
@@ -32,7 +30,7 @@ class BinlexResult(TypedDict):
     error: str | None
 
 
-class BinlexAnalyzer:
+class BinlexAnalyzer(CommandHelperMixin):
     """Lexical function similarity analysis."""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -386,15 +384,6 @@ class BinlexAnalyzer:
             if opcode:
                 return opcode.split()[0]
         return None
-
-    def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _normalize_mnemonic(self, mnemonic: str | None) -> str | None:
         if not mnemonic:

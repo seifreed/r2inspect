@@ -5,14 +5,14 @@ import struct
 from datetime import datetime
 from typing import Any
 
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from ..utils.r2_suppress import silent_cmdj
 
 logger = get_logger(__name__)
 
 
-class AuthenticodeAnalyzer:
+class AuthenticodeAnalyzer(CommandHelperMixin):
     """Analyzes and verifies Authenticode signatures in PE files."""
 
     def __init__(self, adapter: Any) -> None:
@@ -253,9 +253,6 @@ class AuthenticodeAnalyzer:
             if data[i : i + pattern_len] == pattern:
                 positions.append(i)
         return positions
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
 
     def _compute_authenticode_hash(self) -> dict[str, str | None] | None:
         """Compute the Authenticode hash of the PE file."""

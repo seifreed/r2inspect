@@ -4,10 +4,9 @@
 import hashlib
 from typing import Any
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..adapters.r2pipe_context import open_r2pipe
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +15,7 @@ NO_FUNCTIONS_FOUND = "No functions found in binary"
 NO_FUNCTIONS_ANALYZED = "No functions could be analyzed for CCBHash"
 
 
-class CCBHashAnalyzer(HashingStrategy):
+class CCBHashAnalyzer(CommandHelperMixin, HashingStrategy):
     """CCBHash calculation from function Control Flow Graphs"""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -381,12 +380,6 @@ class CCBHashAnalyzer(HashingStrategy):
         except Exception as e:
             logger.error(f"Error getting CCBHash for function {func_name}: {e}")
             return None
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
 
     @staticmethod
     def compare_hashes(hash1: str, hash2: str) -> bool | None:

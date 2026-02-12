@@ -6,7 +6,7 @@ from collections import Counter
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from .domain_helpers import clamp_score
 from .import_categories import get_api_categories
@@ -23,7 +23,7 @@ from .import_domain import (
 logger = get_logger(__name__)
 
 
-class ImportAnalyzer(BaseAnalyzer):
+class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Import table analysis using backend data."""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -532,6 +532,3 @@ class ImportAnalyzer(BaseAnalyzer):
         except Exception as e:
             logger.error(f"Error checking import forwarding: {e}")
             return {"detected": False, "forwards": []}
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)

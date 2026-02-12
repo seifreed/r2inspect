@@ -2,7 +2,7 @@
 
 from typing import Any, TypedDict, cast
 
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.hashing import calculate_hashes_for_bytes
 from ..utils.logger import get_logger
 from .domain_helpers import entropy_from_ints
@@ -28,7 +28,7 @@ class OverlayResult(TypedDict):
     error: str
 
 
-class OverlayAnalyzer:
+class OverlayAnalyzer(CommandHelperMixin):
     """Analyze overlay data in PE files."""
 
     def __init__(self, adapter: Any) -> None:
@@ -366,9 +366,6 @@ class OverlayAnalyzer:
         # Check for repeating patterns (encrypted data usually doesn't have them)
         unique_bytes = len(set(data[:256]))
         return unique_bytes > 240  # Almost all bytes are unique
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
 
     def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
         """Extract readable strings from data."""
