@@ -32,7 +32,17 @@ from typing import Any
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
-from ..adapters.magic_adapter import MagicAdapter
+from ..application.batch_discovery import _is_executable_signature as core_is_executable_signature
+from ..application.batch_discovery import (
+    check_executable_signature as core_check_executable_signature,
+)
+from ..application.batch_discovery import discover_executables_by_magic
+from ..application.batch_discovery import find_files_by_extensions as core_find_files_by_extensions
+from ..application.batch_discovery import init_magic_detectors
+from ..application.batch_discovery import is_elf_executable as core_is_elf_executable
+from ..application.batch_discovery import is_macho_executable as core_is_macho_executable
+from ..application.batch_discovery import is_pe_executable as core_is_pe_executable
+from ..application.batch_discovery import is_script_executable as core_is_script_executable
 from ..application.batch_stats import (  # noqa: F401
     collect_batch_statistics,
     update_compiler_stats,
@@ -54,7 +64,6 @@ from .batch_output import (  # noqa: F401
 
 console = Console()
 logger = get_logger(__name__)
-magic_adapter = MagicAdapter()
 _magic: Any | None
 try:
     import magic as _magic
@@ -62,148 +71,78 @@ except Exception:
     _magic = None
 magic: Any | None = _magic
 
-EXECUTABLE_SIGNATURES = {
-    "application/x-dosexec",
-    "application/x-msdownload",
-    "application/x-executable",
-    "application/x-sharedlib",
-    "application/x-pie-executable",
-    "application/octet-stream",
-}
-
-EXECUTABLE_DESCRIPTIONS = (
-    "PE32 executable",
-    "PE32+ executable",
-    "MS-DOS executable",
-    "Microsoft Portable Executable",
-    "ELF",
-    "Mach-O",
-    "executable",
-    "shared object",
-    "dynamically linked",
-)
-
 
 def _init_magic() -> tuple[Any, Any] | None:
-    if magic is not None:
-        try:
-            return magic.Magic(mime=True), magic.Magic()
-        except Exception as e:
-            console.print(f"[red]Error initializing magic: {e}[/red]")
-            console.print("[yellow]Falling back to file extension detection[/yellow]")
-            return None
-
-    console.print("[yellow]python-magic not available; skipping magic-based detection[/yellow]")
-    return None
+    if magic is None:
+        console.print("[yellow]python-magic not available; skipping magic-based detection[/yellow]")
+        return None
+    try:
+        return init_magic_detectors(magic)
+    except Exception as e:
+        console.print(f"[red]Error initializing magic: {e}[/red]")
+        console.print("[yellow]Falling back to file extension detection[/yellow]")
+        return None
 
 
 def _is_executable_signature(mime_type: str, description: str) -> bool:
-    if mime_type in EXECUTABLE_SIGNATURES:
-        return True
-    return any(desc in description for desc in EXECUTABLE_DESCRIPTIONS)
-
-
-def _iter_files(directory: Path, recursive: bool) -> list[Path]:
-    return list(directory.rglob("*")) if recursive else list(directory.glob("*"))
+    return core_is_executable_signature(mime_type, description)
 
 
 def find_executable_files_by_magic(
     directory: str | Path, recursive: bool = False, verbose: bool = False
 ) -> list[Path]:
     """Find executable files using magic bytes detection (PE, ELF, Mach-O, etc.)"""
-    executable_files: list[Path] = []
-    directory = Path(directory)
+    files, init_errors, file_errors, scanned = discover_executables_by_magic(
+        directory,
+        recursive=recursive,
+        magic_module=magic,
+    )
 
-    magic_tuple = _init_magic()
-    if magic_tuple is None:
+    for message in init_errors:
+        if message.startswith("Error initializing magic:"):
+            console.print(f"[red]{message}[/red]")
+            console.print("[yellow]Falling back to file extension detection[/yellow]")
+        else:
+            console.print(f"[yellow]{message}[/yellow]")
         return []
-    mime_magic, desc_magic = magic_tuple
-
-    regular_files = [f for f in _iter_files(directory, recursive) if f.is_file()]
 
     if verbose:
-        console.print(
-            f"[blue]Scanning {len(regular_files)} files for executable signatures...[/blue]"
-        )
+        console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
 
-    for file_path in regular_files:
-        try:
-            if file_path.stat().st_size < 64:
-                continue
+    for file_path, error in file_errors:
+        if verbose:
+            console.print(f"[yellow]Error checking {file_path}: {error}[/yellow]")
 
-            mime_type = mime_magic.from_file(str(file_path))
-            description = desc_magic.from_file(str(file_path))
-        except Exception as e:
-            if verbose:
-                console.print(f"[yellow]Error checking {file_path}: {e}[/yellow]")
-            continue
+    if verbose:
+        for file_path in files:
+            console.print(f"[green]Found executable: {file_path}[/green]")
 
-        if _is_executable_signature(mime_type, description):
-            executable_files.append(file_path)
-            if verbose:
-                console.print(f"[green]Found executable: {file_path}[/green]")
-
-    return executable_files
+    return files
 
 
 def check_executable_signature(file_path: Path) -> bool:
     """Check for executable signatures in file header (PE, ELF, Mach-O)"""
-    try:
-        with open(file_path, "rb") as f:
-            header = f.read(64)
-            if len(header) < 4:
-                return False
-
-            # Check signatures
-            return (
-                is_pe_executable(header, f)
-                or is_elf_executable(header)
-                or is_macho_executable(header)
-                or is_script_executable(header)
-            )
-
-    except Exception:
-        return False
+    return core_check_executable_signature(file_path)
 
 
 def is_pe_executable(header: bytes, file_handle: Any) -> bool:
     """Check if file has PE (Windows) executable signature"""
-    if header[:2] != b"MZ":
-        return False
-
-    if len(header) >= 64:
-        try:
-            pe_offset = int.from_bytes(header[60:64], byteorder="little")
-            file_handle.seek(pe_offset)
-            pe_signature = file_handle.read(4)
-            if pe_signature == b"PE\x00\x00":
-                return True
-        except (OSError, ValueError):
-            # Failed to read PE header - not a valid PE file
-            pass
-    return True  # MZ header is good enough indication
+    return core_is_pe_executable(header, file_handle)
 
 
 def is_elf_executable(header: bytes) -> bool:
     """Check if file has ELF (Linux/Unix) executable signature"""
-    return header[:4] == b"\x7fELF"
+    return core_is_elf_executable(header)
 
 
 def is_macho_executable(header: bytes) -> bool:
     """Check if file has Mach-O (macOS) executable signature"""
-    mach_o_magics = [
-        b"\xfe\xed\xfa\xce",  # 32-bit big endian
-        b"\xce\xfa\xed\xfe",  # 32-bit little endian
-        b"\xfe\xed\xfa\xcf",  # 64-bit big endian
-        b"\xcf\xfa\xed\xfe",  # 64-bit little endian
-        b"\xca\xfe\xba\xbe",  # Universal binary
-    ]
-    return header[:4] in mach_o_magics
+    return core_is_macho_executable(header)
 
 
 def is_script_executable(header: bytes) -> bool:
     """Check if file has script shebang"""
-    return header[:2] == b"#!"
+    return core_is_script_executable(header)
 
 
 def setup_rate_limiter(threads: int, verbose: bool) -> Any:
@@ -604,14 +543,7 @@ def find_files_to_process(
 
 def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool) -> list[Path]:
     """Find files by specified extensions"""
-    files_to_process: list[Path] = []
-    ext_list = [ext.strip().lower() for ext in extensions.split(",")]
-
-    for ext in ext_list:
-        pattern = f"**/*.{ext}" if recursive else f"*.{ext}"
-        files_to_process.extend(batch_path.glob(pattern))
-
-    return files_to_process
+    return core_find_files_by_extensions(batch_path, extensions, recursive)
 
 
 def display_no_files_message(auto_detect: bool, extensions: str | None) -> None:
