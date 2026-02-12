@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """SimHash-based binary similarity analysis."""
 
-from collections import Counter
 from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
@@ -72,122 +71,19 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
 
     def analyze_detailed(self) -> dict[str, Any]:
         """Run detailed SimHash analysis with separate feature sets."""
-        if not SIMHASH_AVAILABLE:
-            result = init_result(
-                additional_fields={"library_available": False},
-                include_execution_time=False,
-            )
-            return mark_unavailable(result, "simhash library not installed")
+        from .simhash_detailed import run_detailed_simhash_analysis
 
-        logger.debug(f"Starting detailed SimHash analysis for {self.filepath}")
-
-        results: dict[str, Any] = init_result(
-            additional_fields={
-                "library_available": True,
-                "binary_simhash": None,
-                "strings_simhash": None,
-                "opcodes_simhash": None,
-                "combined_simhash": None,
-                "function_simhashes": {},
-                "total_functions": 0,
-                "analyzed_functions": 0,
-                "feature_stats": {},
-                "similarity_groups": [],
-            },
-            include_execution_time=False,
+        return run_detailed_simhash_analysis(
+            filepath=self.filepath,
+            simhash_available=SIMHASH_AVAILABLE,
+            no_features_error=NO_FEATURES_ERROR,
+            extract_string_features=self._extract_string_features,
+            extract_opcodes_features=self._extract_opcodes_features,
+            extract_function_features=self._extract_function_features,
+            find_similar_functions=self._find_similar_functions,
+            log_debug=logger.debug,
+            log_error=logger.error,
         )
-
-        try:
-            # Extract features
-            strings_features = self._extract_string_features()
-            opcodes_features = self._extract_opcodes_features()
-            function_features = self._extract_function_features()
-
-            if not strings_features and not opcodes_features:
-                results["error"] = NO_FEATURES_ERROR
-                logger.debug(NO_FEATURES_ERROR)
-                return results
-
-            # Calculate different SimHash variants
-            results["available"] = True
-
-            # Strings-only SimHash
-            if strings_features:
-                strings_simhash = Simhash(strings_features)
-                results["strings_simhash"] = {
-                    "hash": strings_simhash.value,
-                    "hex": hex(strings_simhash.value),
-                    "binary": bin(strings_simhash.value),
-                    "feature_count": len(strings_features),
-                }
-
-            # Opcodes-only SimHash
-            if opcodes_features:
-                opcodes_simhash = Simhash(opcodes_features)
-                results["opcodes_simhash"] = {
-                    "hash": opcodes_simhash.value,
-                    "hex": hex(opcodes_simhash.value),
-                    "binary": bin(opcodes_simhash.value),
-                    "feature_count": len(opcodes_features),
-                }
-
-            # Combined SimHash (strings + opcodes)
-            combined_features = strings_features + opcodes_features
-            if combined_features:
-                combined_simhash = Simhash(combined_features)
-                results["combined_simhash"] = {
-                    "hash": combined_simhash.value,
-                    "hex": hex(combined_simhash.value),
-                    "binary": bin(combined_simhash.value),
-                    "feature_count": len(combined_features),
-                }
-                results["binary_simhash"] = results[
-                    "combined_simhash"
-                ]  # Alias for binary-wide hash
-
-            # Function-level SimHashes
-            if function_features:
-                results["function_simhashes"] = function_features
-                results["total_functions"] = len(
-                    [f for f in function_features.values() if f.get("simhash")]
-                )
-                results["analyzed_functions"] = len(
-                    [f for f in function_features.values() if f.get("simhash")]
-                )
-
-                # Find similar functions
-                similar_groups = self._find_similar_functions(function_features)
-                results["similarity_groups"] = similar_groups
-
-            # Feature statistics
-            feature_stats: dict[str, Any] = {
-                "total_strings": len(strings_features),
-                "total_opcodes": len(opcodes_features),
-                "total_features": len(combined_features),
-                "unique_strings": len(set(strings_features)) if strings_features else 0,
-                "unique_opcodes": len(set(opcodes_features)) if opcodes_features else 0,
-            }
-
-            # Add frequency analysis
-            if combined_features:
-                feature_counter = Counter(combined_features)
-                feature_stats["most_common_features"] = feature_counter.most_common(10)
-                feature_stats["feature_diversity"] = len(set(combined_features)) / len(
-                    combined_features
-                )
-
-            results["feature_stats"] = feature_stats
-
-            logger.debug(f"SimHash analysis completed: {len(combined_features)} total features")
-            logger.debug(
-                f"Binary SimHash: {hex(combined_simhash.value) if combined_features else 'N/A'}"
-            )
-
-        except Exception as e:
-            logger.error(f"SimHash analysis failed: {e}")
-            results["error"] = str(e)
-
-        return results
 
     def _extract_string_features(self) -> list[str]:
         """Extract string features from the binary."""
