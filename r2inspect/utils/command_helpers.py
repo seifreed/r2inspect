@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .r2_helpers import safe_cmd, safe_cmdj_any
+
 
 def _parse_address(command: str) -> tuple[str, int | None]:
     if "@" not in command:
@@ -132,17 +134,13 @@ def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
 def _cmd_fallback(_r2: Any, command: str) -> str:
     if _r2 is None or not hasattr(_r2, "cmd"):
         return ""
-    result = _r2.cmd(command)
-    return result if isinstance(result, str) else str(result)
+    return safe_cmd(_r2, command, "")
 
 
 def _cmdj_fallback(_r2: Any, command: str, default: Any) -> Any:
-    if _r2 is None or not hasattr(_r2, "cmdj"):
+    if _r2 is None or not hasattr(_r2, "cmd"):
         return default
-    try:
-        return _r2.cmdj(command)
-    except Exception:
-        return default
+    return safe_cmdj_any(_r2, command, default)
 
 
 def cmd(adapter: Any, _r2: Any, command: str) -> str:
