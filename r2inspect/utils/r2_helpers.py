@@ -21,6 +21,7 @@ import os
 import threading
 from typing import Any, cast
 
+from ..adapters.validation import validate_r2_data
 from ..core.constants import SUBPROCESS_TIMEOUT_SECONDS
 from ..error_handling import ErrorHandlingStrategy, ErrorPolicy, handle_errors
 from ..error_handling.presets import (
@@ -33,61 +34,6 @@ from ..interfaces import R2CommandInterface
 from .logger import get_logger
 
 logger = get_logger(__name__)
-
-
-def validate_r2_data(data: Any, expected_type: str = "dict") -> Any:
-    """
-    Validate and clean r2 data to prevent type errors
-
-    Args:
-        data: The data to validate
-        expected_type: 'dict' or 'list'
-
-    Returns:
-        Cleaned/validated data or appropriate default
-    """
-    if expected_type == "dict":
-        return _validate_dict_data(data)
-    elif expected_type == "list":
-        return _validate_list_data(data)
-    else:
-        return data
-
-
-def _validate_dict_data(data: Any) -> dict[str, Any]:
-    """Validate dictionary data"""
-    if isinstance(data, dict):
-        return data
-    else:
-        logger.debug(f"Expected dict but got {type(data)}: {data}")
-        return {}
-
-
-def _validate_list_data(data: Any) -> list[dict[str, Any]]:
-    """Validate and clean list data"""
-    if isinstance(data, list):
-        return _clean_list_items(data)
-    else:
-        logger.debug(f"Expected list but got {type(data)}: {data}")
-        return []
-
-
-def _clean_list_items(data: list[Any]) -> list[dict[str, Any]]:
-    """Clean list items and filter out malformed entries"""
-    cleaned = []
-    for item in data:
-        if isinstance(item, dict):
-            _clean_html_entities(item)
-            cleaned.append(item)
-        else:
-            logger.debug(f"Filtering out malformed list item: {type(item)} - {item}")
-    return cleaned
-
-
-def _clean_html_entities(item: dict[str, Any]) -> None:
-    """Clean HTML entities from item names"""
-    if "name" in item and isinstance(item["name"], str):
-        item["name"] = item["name"].replace("&nbsp;", " ").replace("&amp;", "&")
 
 
 def safe_cmdj(

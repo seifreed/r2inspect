@@ -11,6 +11,7 @@ from ..utils.logger import get_logger
 from .domain_helpers import clamp_score
 from .import_categories import get_api_categories
 from .import_domain import (
+    NETWORK_CATEGORY,
     assess_api_risk,
     build_api_categories,
     categorize_apis,
