@@ -282,13 +282,13 @@ class AnalyzerRegistry(AnalyzerRegistryQueries):
         category_enum = self._parse_category(category_str)
 
         # Create metadata
-        metadata = AnalyzerMetadata(
+        metadata = self._build_metadata(
             name=extracted_name,
             analyzer_class=type(analyzer_instance),
             category=category_enum,
             file_formats=formats,
             required=required,
-            dependencies=dependencies or set(),
+            dependencies=dependencies,
             description=description,
         )
 
@@ -408,7 +408,7 @@ class AnalyzerRegistry(AnalyzerRegistryQueries):
         )
         category = self._ensure_category(analyzer_class, category)
 
-        metadata = AnalyzerMetadata(
+        metadata = self._build_metadata(
             name=name,
             analyzer_class=analyzer_class,
             category=category,
@@ -424,6 +424,28 @@ class AnalyzerRegistry(AnalyzerRegistryQueries):
         """Validate analyzer registration name."""
         if not name:
             raise ValueError("Analyzer name cannot be empty")
+
+    def _build_metadata(
+        self,
+        *,
+        name: str,
+        analyzer_class: type,
+        category: AnalyzerCategory,
+        file_formats: set[str] | None,
+        required: bool,
+        dependencies: set[str] | None,
+        description: str,
+    ) -> AnalyzerMetadata:
+        """Create analyzer metadata with consistent defaults."""
+        return AnalyzerMetadata(
+            name=name,
+            analyzer_class=analyzer_class,
+            category=category,
+            file_formats=file_formats,
+            required=required,
+            dependencies=dependencies,
+            description=description,
+        )
 
     def _resolve_registration_mode(
         self,
