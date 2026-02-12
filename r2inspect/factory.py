@@ -13,6 +13,7 @@ from .core.inspector import R2Inspector
 from .core.pipeline_builder import PipelineBuilder
 from .core.r2_session import R2Session
 from .core.result_aggregator import ResultAggregator
+from .interfaces import MemoryMonitorLike
 from .registry.default_registry import create_default_registry
 from .utils.memory_manager import global_memory_monitor
 
@@ -33,9 +34,11 @@ def create_inspector(
     filename: str,
     config: Config | None = None,
     verbose: bool = False,
+    memory_monitor: MemoryMonitorLike | None = None,
 ) -> R2Inspector:
     """Create an R2Inspector with default dependencies."""
     cfg = config or Config()
+    monitor = memory_monitor or global_memory_monitor
     validator = FileValidator(filename)
     if not validator.validate():
         raise ValueError(f"File validation failed: {filename}")
@@ -56,7 +59,7 @@ def create_inspector(
             config_factory=Config,
             file_validator_factory=lambda _: validator,
             result_aggregator_factory=ResultAggregator,
-            memory_monitor=global_memory_monitor,
+            memory_monitor=monitor,
         )
     except Exception:
         session.close()
