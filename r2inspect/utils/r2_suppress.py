@@ -13,6 +13,7 @@ from typing import Any, Literal, TextIO
 
 from ..interfaces import R2CommandInterface
 from .logger import get_logger
+from .r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
 
@@ -63,27 +64,22 @@ def silent_cmdj(
     Returns:
         JSON result or default value on error
     """
-    import json
-
     # Check if r2_instance is still valid
     if not r2_instance:
         return default
 
-    try:
-        result = _try_cmdj(r2_instance, command, default)
-        if result is not None or result == default:
-            return result
-    except (json.JSONDecodeError, TypeError):
-        pass
-    except Exception as exc:
-        logger.debug("Suppressed unexpected r2pipe error for %s: %s", command, exc)
-        return default
-
-    try:
-        return _try_cmd_parse(r2_instance, command, default)
-    except (OSError, json.JSONDecodeError, TypeError):
-        logger.debug("Suppressed r2pipe command error for %s", command)
-    return default
+    with R2PipeErrorSuppressor():
+        try:
+            result = _try_cmdj(r2_instance, command, default)
+            if result is not None or result == default:
+                return result
+            parsed = _try_cmd_parse(r2_instance, command, default)
+            if parsed is not None or parsed == default:
+                return parsed
+            return safe_cmdj(r2_instance, command, default)
+        except Exception as exc:
+            logger.debug("Suppressed unexpected r2pipe error for %s: %s", command, exc)
+            return default
 
 
 def _try_cmdj(r2_instance: R2CommandInterface, command: str, default: Any | None) -> Any | None:
