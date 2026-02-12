@@ -4,7 +4,6 @@
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..registry import create_default_registry
 from ..utils.logger import get_logger
 from .pe_imports import calculate_imphash as _calculate_imphash
 from .pe_info import get_compilation_info as _get_compilation_info
@@ -74,31 +73,9 @@ class PEAnalyzer(BaseAnalyzer):
             # Calculate imphash
             result["imphash"] = self.calculate_imphash()
 
-            # Get registry for dynamic analyzer lookup
-            registry = create_default_registry()
-
-            self._run_optional_analyzers(result, registry)
-
             self._log_info("PE analysis completed successfully")
 
         return result
-
-    def _run_optional_analyzers(self, result: dict[str, Any], registry: Any) -> None:
-        analyzers = [
-            ("analyze_authenticode", "authenticode", "authenticode"),
-            ("analyze_overlay", "overlay_analyzer", "overlay"),
-            ("analyze_resources", "resource_analyzer", "resources"),
-            ("analyze_mitigations", "exploit_mitigation", "exploit_mitigations"),
-        ]
-
-        for config_key, analyzer_name, result_key in analyzers:
-            if not getattr(self.config, config_key, False):
-                continue
-            analyzer_class = registry.get_analyzer_class(analyzer_name)
-            if not analyzer_class:
-                continue
-            analyzer = analyzer_class(self.adapter)
-            result[result_key] = analyzer.analyze()
 
     def get_security_features(self) -> dict[str, bool]:
         """Check for security features by reading DllCharacteristics flags"""

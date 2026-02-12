@@ -223,6 +223,7 @@ class FormatAnalysisStage(AnalysisStage):
                 filename=self.filename,
             )
             data = analyzer.analyze()
+            self._run_optional_pe_analyzers(data)
             context["results"]["pe_info"] = data
             return {"pe_info": data}
         return None
@@ -246,3 +247,25 @@ class FormatAnalysisStage(AnalysisStage):
             context["results"]["macho_info"] = data
             return {"macho_info": data}
         return None
+
+    def _run_optional_pe_analyzers(self, pe_info: dict[str, Any]) -> None:
+        analyzers = [
+            ("analyze_authenticode", "authenticode", "authenticode"),
+            ("analyze_overlay", "overlay_analyzer", "overlay"),
+            ("analyze_resources", "resource_analyzer", "resources"),
+            ("analyze_mitigations", "exploit_mitigation", "exploit_mitigations"),
+        ]
+
+        for config_key, analyzer_name, result_key in analyzers:
+            if not getattr(self.config, config_key, False):
+                continue
+            analyzer_class = self.registry.get_analyzer_class(analyzer_name)
+            if not analyzer_class:
+                continue
+            analyzer = create_analyzer(
+                analyzer_class,
+                adapter=self.adapter,
+                config=self.config,
+                filename=self.filename,
+            )
+            pe_info[result_key] = analyzer.analyze()
