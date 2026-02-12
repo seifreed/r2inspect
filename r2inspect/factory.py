@@ -54,7 +54,7 @@ def create_inspector(
                 adapter, registry, cfg, path
             ),
             config_factory=Config,
-            file_validator_factory=FileValidator,
+            file_validator_factory=lambda _: validator,
             result_aggregator_factory=ResultAggregator,
             memory_monitor=global_memory_monitor,
         )

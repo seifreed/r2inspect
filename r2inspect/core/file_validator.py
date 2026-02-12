@@ -42,6 +42,8 @@ class FileValidator:
         """
         self.filename = str(filename)
         self.file_path = Path(filename)
+        self._validated: bool = False
+        self._validation_result: bool = False
 
     def validate(self) -> bool:
         """
@@ -56,21 +58,34 @@ class FileValidator:
         Returns:
             True if all validations pass, False otherwise
         """
+        if self._validated:
+            return self._validation_result
+
         try:
             if not self._file_exists():
+                self._validation_result = False
+                self._validated = True
                 return False
 
             file_size = self._file_size_bytes()
             if not self._is_size_valid(file_size):
+                self._validation_result = False
+                self._validated = True
                 return False
 
             if not self._within_memory_limits(file_size):
+                self._validation_result = False
+                self._validated = True
                 return False
 
-            return self._is_readable()
+            self._validation_result = self._is_readable()
+            self._validated = True
+            return self._validation_result
 
         except Exception as e:  # pragma: no cover
             logger.error(f"Error validating file {self.filename}: {e}")
+            self._validation_result = False
+            self._validated = True
             return False
 
     def _file_exists(self) -> bool:
