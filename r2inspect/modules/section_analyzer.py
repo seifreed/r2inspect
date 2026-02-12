@@ -35,7 +35,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Perform section analysis"""
         result = self._init_result_structure({"total_sections": 0, "sections": [], "summary": {}})
 
-        try:
+        with self._analysis_context(result, error_message="Section analysis failed"):
             self._log_info("Starting section analysis")
             sections = self.analyze_sections()
             summary = self.get_section_summary()
@@ -43,11 +43,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
             result["sections"] = sections
             result["summary"] = summary
             result["total_sections"] = len(sections)
-            result["available"] = True
             self._log_info(f"Analyzed {len(sections)} sections")
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"Section analysis failed: {e}")
 
         return result
 

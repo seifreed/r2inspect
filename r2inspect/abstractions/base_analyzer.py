@@ -3,7 +3,8 @@
 
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -376,6 +377,28 @@ class BaseAnalyzer(ABC):
             return result
 
         return wrapper
+
+    @contextmanager
+    def _analysis_context(
+        self,
+        result: dict[str, Any],
+        *,
+        error_message: str,
+        set_available: bool = True,
+    ) -> Iterator[None]:
+        """
+        Standardize analyzer error handling for top-level analysis.
+
+        This helper centralizes the common try/except pattern while allowing
+        callers to opt out of automatically setting availability.
+        """
+        try:
+            yield
+            if set_available:
+                result["available"] = True
+        except Exception as e:
+            result["error"] = str(e)
+            self._log_error(f"{error_message}: {e}")
 
     def get_file_size(self) -> int | None:
         """

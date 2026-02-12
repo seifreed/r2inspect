@@ -48,16 +48,12 @@ class StringAnalyzer(BaseAnalyzer):
             }
         )
 
-        try:
+        with self._analysis_context(result, error_message="String analysis failed"):
             self._log_info("Starting string analysis")
             strings = self.extract_strings()
             result["strings"] = strings
             result["total_strings"] = len(strings)
-            result["available"] = True
             self._log_info(f"Extracted {len(strings)} strings")
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"String analysis failed: {e}")
 
         return result
 
