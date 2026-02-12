@@ -113,7 +113,7 @@ def test_r2_suppress_and_parse(r2_adapter: R2PipeAdapter) -> None:
 
     # Use a command that is not JSON to trigger parse fallback
     result = silent_cmdj(r2_adapter._r2, "pd 1", None)
-    assert result is None or isinstance(result, (str, list, dict))
+    assert result is None or isinstance(result, str | list | dict)
 
     assert _parse_raw_result("not json") == "not json"
     assert _parse_raw_result("{}") == {}

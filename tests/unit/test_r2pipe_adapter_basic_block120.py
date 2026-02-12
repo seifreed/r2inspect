@@ -40,6 +40,6 @@ def test_r2pipe_adapter_basic_real_fixture():
 
         # read some bytes (may be empty depending on address)
         data = adapter.read_bytes(0, 4)
-        assert isinstance(data, (bytes, bytearray))
+        assert isinstance(data, bytes | bytearray)
     finally:
         r2.quit()

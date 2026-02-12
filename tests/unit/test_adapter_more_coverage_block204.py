@@ -102,7 +102,7 @@ def test_adapter_extra_methods(adapter: R2PipeAdapter) -> None:
     assert isinstance(adapter.get_pe_security_text(), str)
     assert isinstance(adapter.get_header_text(), str)
     headers = adapter.get_headers_json()
-    assert headers is None or isinstance(headers, (dict, list))
+    assert headers is None or isinstance(headers, dict | list)
     assert isinstance(adapter.get_strings_basic(), list)
     assert isinstance(adapter.get_strings_text(), str)
     assert isinstance(adapter.get_strings_filtered("iz~test"), str)
@@ -133,7 +133,7 @@ def test_adapter_search_and_bytes(adapter: R2PipeAdapter) -> None:
     assert isinstance(adapter.search_text("test"), str)
     assert isinstance(adapter.search_hex("90"), str)
     data = adapter.read_bytes(address, 4)
-    assert isinstance(data, (bytes, bytearray))
+    assert isinstance(data, bytes | bytearray)
     assert isinstance(adapter.read_bytes_list(address, 4), list)
 
 

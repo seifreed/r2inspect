@@ -1,9 +1,9 @@
 """PE resource analyzer."""
 
-import hashlib
 from typing import Any
 
 from ..utils.command_helpers import cmdj as cmdj_helper
+from ..utils.hashing import calculate_hashes_for_bytes
 from ..utils.logger import get_logger
 from .domain_helpers import entropy_from_ints
 from .pe_resource_defaults import RESOURCE_TYPES
@@ -252,11 +252,7 @@ class ResourceAnalyzer:
             # Calculate hashes
             try:
                 data_bytes = bytes(data)
-                resource["hashes"] = {
-                    "md5": hashlib.md5(data_bytes, usedforsecurity=False).hexdigest(),
-                    "sha1": hashlib.sha1(data_bytes, usedforsecurity=False).hexdigest(),
-                    "sha256": hashlib.sha256(data_bytes).hexdigest(),
-                }
+                resource["hashes"] = calculate_hashes_for_bytes(data_bytes)
             except Exception as e:
                 logger.debug(f"Error calculating resource hashes: {e}")
                 resource["hashes"] = {}

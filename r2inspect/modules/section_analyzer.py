@@ -22,7 +22,7 @@ class SectionAnalyzer(BaseAnalyzer):
         # Standard PE section names
         self.standard_sections = STANDARD_PE_SECTIONS
         self._arch: str | None = None
-        self._functions_cache: list[dict[str, Any]] | None = None
+        self._functions_cache: list[Any] | None = None
 
     def get_category(self) -> str:
         return "metadata"

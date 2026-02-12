@@ -99,6 +99,13 @@ class TelfhashAnalyzer(HashingStrategy):
         """
         return "telfhash"
 
+    def analyze(self) -> dict[str, Any]:
+        """Run telfhash analysis and include a telfhash field for compatibility."""
+        result = super().analyze()
+        if "telfhash" not in result:
+            result["telfhash"] = result.get("hash_value")
+        return result
+
     def analyze_symbols(self) -> dict[str, Any]:
         """
         Perform detailed telfhash analysis on ELF file including symbol statistics.

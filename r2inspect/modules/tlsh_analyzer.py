@@ -74,6 +74,13 @@ class TLSHAnalyzer(HashingStrategy):
         """
         return "tlsh"
 
+    def analyze(self) -> dict[str, Any]:
+        """Run TLSH analysis and include a binary_tlsh field for compatibility."""
+        result = super().analyze()
+        if "binary_tlsh" not in result:
+            result["binary_tlsh"] = result.get("hash_value")
+        return result
+
     def analyze_sections(self) -> dict[str, Any]:
         """
         Perform detailed TLSH analysis on binary sections and functions.

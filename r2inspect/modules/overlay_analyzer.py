@@ -1,9 +1,9 @@
 """Overlay data analyzer."""
 
-import hashlib
 from typing import Any, TypedDict, cast
 
 from ..utils.command_helpers import cmdj as cmdj_helper
+from ..utils.hashing import calculate_hashes_for_bytes
 from ..utils.logger import get_logger
 from .domain_helpers import entropy_from_ints
 from .string_extraction import extract_ascii_from_bytes
@@ -176,11 +176,7 @@ class OverlayAnalyzer:
             # Calculate hashes of overlay
             try:
                 overlay_bytes = bytes(overlay_data[: min(len(overlay_data), read_size)])
-                result["overlay_hashes"] = {
-                    "md5": hashlib.md5(overlay_bytes, usedforsecurity=False).hexdigest(),
-                    "sha1": hashlib.sha1(overlay_bytes, usedforsecurity=False).hexdigest(),
-                    "sha256": hashlib.sha256(overlay_bytes).hexdigest(),
-                }
+                result["overlay_hashes"] = calculate_hashes_for_bytes(overlay_bytes)
             except Exception as e:
                 logger.debug(f"Error calculating overlay hashes: {e}")
                 result["overlay_hashes"] = {}
