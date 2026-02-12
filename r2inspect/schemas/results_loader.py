@@ -97,6 +97,8 @@ def _load_security(result: AnalysisResult, data: dict[str, Any]) -> None:
         nx=s.get("nx", False),
         pie=s.get("pie", False),
         canary=s.get("canary", False),
+        dep=s.get("dep", False),
+        stack_canary=s.get("stack_canary", False),
         relro=s.get("relro", ""),
         aslr=s.get("aslr", False),
         seh=s.get("seh", False),
@@ -158,6 +160,7 @@ def _load_sections(result: AnalysisResult, data: dict[str, Any]) -> None:
             is_executable=sec.get("is_executable", False),
             is_writable=sec.get("is_writable", False),
             is_readable=sec.get("is_readable", False),
+            flags=sec.get("flags"),
             suspicious_indicators=sec.get("suspicious_indicators", []),
         )
         for sec in sections
