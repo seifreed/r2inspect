@@ -5,7 +5,8 @@ r2inspect CLI Display Base Module
 Shared helpers, constants, and top-level display entry points.
 """
 
-from typing import Any
+import sys
+from typing import IO, Any, cast
 
 from rich.console import Console
 from rich.table import Table
@@ -21,7 +22,28 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     pyfiglet = None
 
-console = Console()
+
+class _StdoutProxy:
+    def write(self, data: str) -> int:
+        return sys.stdout.write(data)
+
+    def flush(self) -> None:
+        sys.stdout.flush()
+
+    def isatty(self) -> bool:
+        return sys.stdout.isatty()
+
+    @property
+    def encoding(self) -> str:
+        return getattr(sys.stdout, "encoding", "utf-8")
+
+    @property
+    def errors(self) -> str:
+        return getattr(sys.stdout, "errors", "strict")
+
+
+console = Console(file=cast(IO[str], _StdoutProxy()))
+DEFAULT_CONSOLE = console
 
 
 def _get_console() -> Console:
@@ -195,6 +217,7 @@ def display_performance_statistics(
 def display_results(results: dict[str, Any]) -> None:
     """Display analysis results in a formatted table"""
     results = normalize_display_results(results)
+    from . import display as display_module
     from .display_sections import (
         _display_binbloom,
         _display_bindiff,

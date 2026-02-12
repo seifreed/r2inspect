@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import shutil
 from pathlib import Path
 
@@ -14,9 +15,7 @@ pytestmark = pytest.mark.requires_r2
 FIXTURE_DIR = Path("samples/fixtures")
 
 
-def test_display_hash_strings_sections_truncation(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
+def test_display_hash_strings_sections_truncation() -> None:
     long_hash = "a" * 80
     results = {
         "bindiff": {
@@ -66,8 +65,14 @@ def test_display_hash_strings_sections_truncation(
         },
     }
 
-    display_mod.display_results(results)
-    output = capsys.readouterr().out
+    buffer = io.StringIO()
+    original_file = display_mod.console.file
+    try:
+        display_mod.console.file = buffer
+        display_mod.display_results(results)
+    finally:
+        display_mod.console.file = original_file
+    output = buffer.getvalue()
 
     assert "Section Names" in output
     assert "... and 5 more" in output
