@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..abstractions.result_builder import init_result, mark_unavailable
 from ..application.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 from .string_classification import classify_string_type
@@ -72,28 +73,29 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
     def analyze_detailed(self) -> dict[str, Any]:
         """Run detailed SimHash analysis with separate feature sets."""
         if not SIMHASH_AVAILABLE:
-            return {
-                "available": False,
-                "error": "simhash library not installed",
-                "library_available": False,
-            }
+            result = init_result(
+                additional_fields={"library_available": False},
+                include_execution_time=False,
+            )
+            return mark_unavailable(result, "simhash library not installed")
 
         logger.debug(f"Starting detailed SimHash analysis for {self.filepath}")
 
-        results: dict[str, Any] = {
-            "available": False,
-            "library_available": True,
-            "binary_simhash": None,
-            "strings_simhash": None,
-            "opcodes_simhash": None,
-            "combined_simhash": None,
-            "function_simhashes": {},
-            "total_functions": 0,
-            "analyzed_functions": 0,
-            "feature_stats": {},
-            "similarity_groups": [],
-            "error": None,
-        }
+        results: dict[str, Any] = init_result(
+            additional_fields={
+                "library_available": True,
+                "binary_simhash": None,
+                "strings_simhash": None,
+                "opcodes_simhash": None,
+                "combined_simhash": None,
+                "function_simhashes": {},
+                "total_functions": 0,
+                "analyzed_functions": 0,
+                "feature_stats": {},
+                "similarity_groups": [],
+            },
+            include_execution_time=False,
+        )
 
         try:
             # Extract features

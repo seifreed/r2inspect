@@ -81,10 +81,14 @@ class BinbloomAnalyzer(CommandHelperMixin, BaseAnalyzer):
         )
 
         if not BLOOM_AVAILABLE:
-            result["library_available"] = False
-            result["available"] = False
-            result["error"] = "pybloom-live library not installed"
-            return result
+            return cast(
+                BinbloomResult,
+                self._mark_unavailable(
+                    cast(dict[str, Any], result),
+                    "pybloom-live library not installed",
+                    library_available=False,
+                ),
+            )
 
         if capacity is None:
             capacity = self.default_capacity
@@ -93,26 +97,7 @@ class BinbloomAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         logger.debug(f"Starting Binbloom analysis for {self.filepath}")
 
-        results = cast(
-            BinbloomResult,
-            self._init_result_structure(
-                {
-                    "library_available": True,
-                    "function_blooms": {},
-                    "function_signatures": {},
-                    "total_functions": 0,
-                    "analyzed_functions": 0,
-                    "capacity": capacity,
-                    "error_rate": error_rate,
-                    "binary_bloom": None,
-                    "binary_signature": None,
-                    "similar_functions": [],
-                    "unique_signatures": 0,
-                    "bloom_stats": {},
-                    "error": None,
-                }
-            ),
-        )
+        results = result
 
         try:
             # Extract all functions

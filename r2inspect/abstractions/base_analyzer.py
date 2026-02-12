@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ..utils.logger import get_logger
+from .result_builder import init_result, mark_unavailable
 
 logger = get_logger(__name__)
 
@@ -116,17 +117,17 @@ class BaseAnalyzer(ABC):
             ...     "hash_type": "ssdeep"
             ... })
         """
-        result = {
-            "available": False,
-            "error": None,
-            "analyzer": self.get_name(),
-            "execution_time": 0.0,
-        }
+        return init_result(self.get_name(), additional_fields)
 
-        if additional_fields:
-            result.update(additional_fields)
-
-        return result
+    def _mark_unavailable(
+        self,
+        result: dict[str, Any],
+        error: str,
+        *,
+        library_available: bool | None = None,
+    ) -> dict[str, Any]:
+        """Mark a result as unavailable with an error message."""
+        return mark_unavailable(result, error, library_available=library_available)
 
     def get_name(self) -> str:
         """
