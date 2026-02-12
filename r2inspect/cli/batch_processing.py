@@ -418,6 +418,7 @@ def schedule_forced_exit(delay: float = 2.0) -> None:
 
 def _flush_coverage_data() -> None:
     """Persist coverage data when running under coverage."""
+    cov: Any | None = None
     try:
         if os.getenv("R2INSPECT_TEST_COVERAGE_IMPORT_ERROR"):
             raise ImportError("Simulated coverage import error")

@@ -46,6 +46,25 @@ def calculate_hashes(file_path: str) -> dict[str, str]:
     return hashes
 
 
+def calculate_hashes_for_bytes(data: bytes, *, include_sha512: bool = False) -> dict[str, str]:
+    """Calculate hashes for an in-memory bytes buffer."""
+    hashes = {"md5": "", "sha1": "", "sha256": ""}
+    if include_sha512:
+        hashes["sha512"] = ""
+
+    try:
+        hashes["md5"] = hashlib.md5(data, usedforsecurity=False).hexdigest()
+        hashes["sha1"] = hashlib.sha1(data, usedforsecurity=False).hexdigest()
+        hashes["sha256"] = hashlib.sha256(data).hexdigest()
+        if include_sha512:
+            hashes["sha512"] = hashlib.sha512(data).hexdigest()
+    except Exception as e:
+        for key in hashes:
+            hashes[key] = f"Error: {str(e)}"
+
+    return hashes
+
+
 def calculate_imphash(imports: list) -> str | None:
     """Calculate import hash (imphash) from imports list"""
     try:

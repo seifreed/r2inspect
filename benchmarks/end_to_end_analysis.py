@@ -60,12 +60,8 @@ def measure_end_to_end():
     print("SUMMARY")
     print("=" * 80)
     total_time = import_time + init_time + analysis_time
-    print(
-        f"Import:         {import_time * 1000:8.2f} ms ({import_time / total_time * 100:5.1f}%)"
-    )
-    print(
-        f"Initialization: {init_time * 1000:8.2f} ms ({init_time / total_time * 100:5.1f}%)"
-    )
+    print(f"Import:         {import_time * 1000:8.2f} ms ({import_time / total_time * 100:5.1f}%)")
+    print(f"Initialization: {init_time * 1000:8.2f} ms ({init_time / total_time * 100:5.1f}%)")
     print(
         f"Analysis:       {analysis_time * 1000:8.2f} ms ({analysis_time / total_time * 100:5.1f}%)"
     )

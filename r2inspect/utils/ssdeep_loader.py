@@ -28,9 +28,9 @@ def get_ssdeep() -> Any | None:
 
     with _import_lock:
         if _ssdeep_module is not None:
-            return _ssdeep_module
+            return _ssdeep_module  # type: ignore[unreachable]
         try:
-            import ssdeep  # type: ignore
+            import ssdeep
 
             _ssdeep_module = ssdeep
             return _ssdeep_module

@@ -96,7 +96,7 @@ exclude = ["tests*", "docs*", "examples*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py313', 'py314']
+target-version = ['py313']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -112,6 +112,7 @@ extend-exclude = '''
   | build
   | dist
   | \.qlty
+  | templates
 )/
 '''
 
@@ -203,17 +204,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_optional = true
-exclude = [
-    "venv",
-    "env",
-    ".venv",
-    "build",
-    "dist",
-    ".qlty",
-    "bench_samples",
-    "benchmarks",
-    "samples",
-]
+exclude = "^(venv|env|\\.venv|build|dist|\\.qlty|bench_samples|benchmarks|samples|templates)/"
 
 [tool.pylint.messages_control]
 max-line-length = 100

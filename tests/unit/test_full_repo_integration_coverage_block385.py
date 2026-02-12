@@ -139,7 +139,7 @@ def test_all_registered_analyzers_run_real(real_adapters) -> None:
         )
         result = _run_analyzer_instance(analyzer)
 
-        assert isinstance(result, (dict, list))
+        assert isinstance(result, dict | list)
         assert result is not None
         executed += 1
 

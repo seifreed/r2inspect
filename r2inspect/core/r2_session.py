@@ -236,7 +236,8 @@ class R2Session:
 
     def _run_cmd_with_timeout(self, command: str, timeout: float) -> bool:
         """Run an r2 command with a timeout, returning True if completed."""
-        if self.r2 is None:
+        r2_instance = self.r2
+        if r2_instance is None:
             return False
         forced = os.environ.get("R2INSPECT_FORCE_CMD_TIMEOUT", "")
         if forced:
@@ -249,7 +250,7 @@ class R2Session:
 
         def _run() -> None:
             try:
-                self.r2.cmd(command)
+                r2_instance.cmd(command)
             except Exception as exc:
                 error["exc"] = exc
             finally:
