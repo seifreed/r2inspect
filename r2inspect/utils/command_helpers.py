@@ -3,21 +3,26 @@
 
 from __future__ import annotations
 
-from typing import Any
+from .r2_helpers import (
+    _handle_bytes,
+    _handle_disasm,
+    _handle_search,
+    _handle_simple,
+    _parse_address,
+    _parse_size,
+    cmd,
+    cmd_list,
+    cmdj,
+)
 
-from .r2_helpers import _handle_bytes, _parse_size
-from .r2_helpers import cmd as _cmd
-from .r2_helpers import cmd_list as _cmd_list
-from .r2_helpers import cmdj as _cmdj
-
-
-def cmd(adapter: Any, _r2: Any, command: str) -> str:
-    return _cmd(adapter, _r2, command)
-
-
-def cmdj(adapter: Any, _r2: Any, command: str, default: Any) -> Any:
-    return _cmdj(adapter, _r2, command, default)
-
-
-def cmd_list(adapter: Any, _r2: Any, command: str) -> list[Any]:
-    return _cmd_list(adapter, _r2, command)
+__all__ = [
+    "_handle_bytes",
+    "_handle_disasm",
+    "_handle_search",
+    "_handle_simple",
+    "_parse_address",
+    "_parse_size",
+    "cmd",
+    "cmd_list",
+    "cmdj",
+]
