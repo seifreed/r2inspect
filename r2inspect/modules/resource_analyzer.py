@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.hashing import calculate_hashes_for_bytes
 from ..utils.logger import get_logger
@@ -12,7 +13,7 @@ from .string_extraction import split_null_terminated
 logger = get_logger(__name__)
 
 
-class ResourceAnalyzer(CommandHelperMixin):
+class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Analyzes resources in PE files."""
 
     # Resource type constants
@@ -20,27 +21,28 @@ class ResourceAnalyzer(CommandHelperMixin):
 
     def __init__(self, adapter: Any) -> None:
         """Initialize the analyzer."""
-        self.adapter = adapter
-        self.r2 = adapter
+        super().__init__(adapter=adapter)
 
     def analyze(self) -> dict[str, Any]:
         """Analyze PE resources."""
         try:
-            result: dict[str, Any] = {
-                "available": True,
-                "has_resources": False,
-                "resource_directory": None,
-                "total_resources": 0,
-                "total_size": 0,
-                "resource_types": [],
-                "resources": [],
-                "version_info": None,
-                "manifest": None,
-                "icons": [],
-                "strings": [],
-                "suspicious_resources": [],
-                "statistics": {},
-            }
+            result: dict[str, Any] = self._init_result_structure(
+                {
+                    "has_resources": False,
+                    "resource_directory": None,
+                    "total_resources": 0,
+                    "total_size": 0,
+                    "resource_types": [],
+                    "resources": [],
+                    "version_info": None,
+                    "manifest": None,
+                    "icons": [],
+                    "strings": [],
+                    "suspicious_resources": [],
+                    "statistics": {},
+                }
+            )
+            result["available"] = True
 
             # Get resource directory from data directories
             resource_dir = self._get_resource_directory()
@@ -75,7 +77,10 @@ class ResourceAnalyzer(CommandHelperMixin):
 
         except Exception as e:
             logger.error(f"Error analyzing resources: {e}")
-            return {"available": False, "has_resources": False, "error": str(e)}
+            result["available"] = False
+            result["has_resources"] = False
+            result["error"] = str(e)
+            return result
 
     def _get_resource_directory(self) -> dict[str, Any] | None:
         """Get resource directory information."""

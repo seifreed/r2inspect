@@ -2,6 +2,7 @@
 
 from typing import Any, TypedDict, cast
 
+from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.hashing import calculate_hashes_for_bytes
 from ..utils.logger import get_logger
@@ -13,6 +14,7 @@ logger = get_logger(__name__)
 
 class OverlayResult(TypedDict):
     available: bool
+    analyzer: str
     has_overlay: bool
     overlay_offset: int
     overlay_size: int
@@ -26,17 +28,17 @@ class OverlayResult(TypedDict):
     pe_end: int
     embedded_files: list[dict[str, Any]]
     error: str
+    execution_time: float
 
 
-class OverlayAnalyzer(CommandHelperMixin):
+class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Analyze overlay data in PE files."""
 
     def __init__(self, adapter: Any) -> None:
         """Initialize the analyzer."""
-        self.adapter = adapter
-        self.r2 = adapter
+        super().__init__(adapter=adapter)
 
-    def analyze(self) -> OverlayResult:
+    def analyze(self) -> OverlayResult:  # type: ignore[override]
         """Analyze overlay data."""
         result = self._default_result()
 
@@ -66,24 +68,28 @@ class OverlayAnalyzer(CommandHelperMixin):
             result["error"] = str(e)
             return result
 
-    @staticmethod
-    def _default_result() -> OverlayResult:
-        return {
-            "available": True,
-            "has_overlay": False,
-            "overlay_offset": 0,
-            "overlay_size": 0,
-            "overlay_entropy": 0.0,
-            "overlay_hashes": {},
-            "patterns_found": [],
-            "potential_type": "unknown",
-            "suspicious_indicators": [],
-            "extracted_strings": [],
-            "file_size": 0,
-            "pe_end": 0,
-            "embedded_files": [],
-            "error": "",
-        }
+    def _default_result(self) -> OverlayResult:
+        return cast(
+            OverlayResult,
+            self._init_result_structure(
+                {
+                    "available": True,
+                    "has_overlay": False,
+                    "overlay_offset": 0,
+                    "overlay_size": 0,
+                    "overlay_entropy": 0.0,
+                    "overlay_hashes": {},
+                    "patterns_found": [],
+                    "potential_type": "unknown",
+                    "suspicious_indicators": [],
+                    "extracted_strings": [],
+                    "file_size": 0,
+                    "pe_end": 0,
+                    "embedded_files": [],
+                    "error": "",
+                }
+            ),
+        )
 
     def _get_file_size(self) -> int | None:
         file_info = self._cmdj("ij", {})
