@@ -6,7 +6,7 @@ from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..adapters.r2pipe_context import open_r2pipe
+from ..adapters.r2pipe_context import open_r2_adapter
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -446,8 +446,8 @@ class CCBHashAnalyzer(CommandHelperMixin, HashingStrategy):
             CCBHash analysis results or None if calculation fails
         """
         try:
-            with open_r2pipe(filepath) as r2:
-                analyzer = CCBHashAnalyzer(r2, filepath)
+            with open_r2_adapter(filepath) as adapter:
+                analyzer = CCBHashAnalyzer(adapter, filepath)
                 return analyzer.analyze()
 
         except Exception as e:
