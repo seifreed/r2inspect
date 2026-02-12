@@ -5,6 +5,7 @@ import hashlib
 from typing import Any
 
 from ..abstractions.hashing_strategy import HashingStrategy
+from ..adapters.r2pipe_context import open_r2pipe
 from ..utils.command_helpers import cmd_list as cmd_list_helper
 from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
@@ -452,9 +453,7 @@ class CCBHashAnalyzer(HashingStrategy):
             CCBHash analysis results or None if calculation fails
         """
         try:
-            import r2pipe
-
-            with r2pipe.open(filepath, flags=["-2"]) as r2:
+            with open_r2pipe(filepath) as r2:
                 analyzer = CCBHashAnalyzer(r2, filepath)
                 return analyzer.analyze()
 
