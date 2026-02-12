@@ -4,10 +4,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..core.constants import VERY_LARGE_FILE_THRESHOLD_MB
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
 from .function_domain import (
     extract_mnemonics_from_ops,
     extract_mnemonics_from_text,
@@ -17,7 +15,7 @@ from .function_domain import (
 logger = logging.getLogger(__name__)
 
 
-class FunctionAnalyzer:
+class FunctionAnalyzer(CommandHelperMixin):
     """Analyzer for function-level analysis and hashing"""
 
     def __init__(
@@ -437,15 +435,6 @@ class FunctionAnalyzer:
         except Exception as e:
             logger.debug(f"Error calculating cyclomatic complexity: {e}")
             return 0
-
-    def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
 
     def _classify_function_type(self, func_name: str, func: dict[str, Any]) -> str:
         """Classify function type based on name and characteristics"""

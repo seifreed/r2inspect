@@ -3,9 +3,7 @@
 
 from typing import Any
 
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from .anti_analysis_domain import (
     ANTI_DEBUG_APIS,
@@ -31,7 +29,7 @@ from .search_helpers import search_text
 logger = get_logger(__name__)
 
 
-class AntiAnalysisDetector:
+class AntiAnalysisDetector(CommandHelperMixin):
     """Anti-analysis techniques detection using a backend interface."""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -365,12 +363,3 @@ class AntiAnalysisDetector:
         if self.adapter is not None and hasattr(self.adapter, "get_strings"):
             return self._coerce_dict_list(self.adapter.get_strings())
         return self._coerce_dict_list(self._cmd_list("izj"))
-
-    def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)

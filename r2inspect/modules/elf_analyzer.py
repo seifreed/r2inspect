@@ -5,8 +5,7 @@ import re
 from typing import Any, cast
 
 from ..abstractions import BaseAnalyzer
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import get_elf_headers
 from .elf_domain import (
@@ -22,7 +21,7 @@ from .elf_security import get_security_features as _get_security_features
 logger = get_logger(__name__)
 
 
-class ELFAnalyzer(BaseAnalyzer):
+class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """ELF file analysis using radare2"""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -157,7 +156,7 @@ class ELFAnalyzer(BaseAnalyzer):
 
         try:
             # Check if debug info is available
-            debug_info = cmd_helper(self.adapter, self.r2, "id")
+            debug_info = self._cmd("id")
 
             if debug_info and "No debug info" not in debug_info:
                 info.update(self._parse_dwarf_info(debug_info.split("\n")))
@@ -281,6 +280,3 @@ class ELFAnalyzer(BaseAnalyzer):
 
     def _parse_build_id_data(self, build_id_data: str | None) -> str | None:
         return parse_build_id_data(build_id_data)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)

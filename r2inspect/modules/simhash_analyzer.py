@@ -4,9 +4,9 @@
 from collections import Counter
 from typing import Any, cast
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..adapters.r2pipe_context import open_r2pipe
-from ..utils.command_helpers import cmd_list as cmd_list_helper
 from ..utils.logger import get_logger
 from .string_classification import classify_string_type
 
@@ -24,7 +24,7 @@ except ImportError:
     Simhash = None
 
 
-class SimHashAnalyzer(HashingStrategy):
+class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
     """SimHash-based binary similarity analysis"""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -423,20 +423,17 @@ class SimHashAnalyzer(HashingStrategy):
     def _get_strings_data(self) -> list[Any]:
         if self.adapter is not None and hasattr(self.adapter, "get_strings"):
             return cast(list[Any], self.adapter.get_strings())
-        return cmd_list_helper(self.adapter, self.r2, "izzj")
+        return self._cmd_list("izzj")
 
     def _get_functions(self) -> list[dict[str, Any]]:
         if self.adapter is not None and hasattr(self.adapter, "get_functions"):
             return cast(list[dict[str, Any]], self.adapter.get_functions())
-        return cmd_list_helper(self.adapter, self.r2, "aflj")
+        return self._cmd_list("aflj")
 
     def _get_sections(self) -> list[dict[str, Any]]:
         if self.adapter is not None and hasattr(self.adapter, "get_sections"):
             return cast(list[dict[str, Any]], self.adapter.get_sections())
-        return cmd_list_helper(self.adapter, self.r2, "iSj")
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
+        return self._cmd_list("iSj")
 
     def _extract_ops_from_disasm(self, disasm: Any) -> list[Any]:
         if isinstance(disasm, dict) and isinstance(disasm.get("ops"), list):

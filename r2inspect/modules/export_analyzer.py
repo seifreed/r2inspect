@@ -4,13 +4,13 @@
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class ExportAnalyzer(BaseAnalyzer):
+class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Export table analysis using radare2"""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -143,13 +143,6 @@ class ExportAnalyzer(BaseAnalyzer):
             logger.error(f"Error getting export characteristics: {e}")
 
         return characteristics
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
-
-    def _cmd_list(self, command: str) -> list[Any]:
-        result = self._cmdj(command, [])
-        return result if isinstance(result, list) else []
 
     def get_export_statistics(self) -> dict[str, Any]:
         """Get statistics about exports"""

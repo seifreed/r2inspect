@@ -4,8 +4,8 @@
 from collections import defaultdict
 from typing import Any, cast
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..utils.command_helpers import cmdj as cmdj_helper
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
 
@@ -28,7 +28,7 @@ except ImportError:
         logger.debug("impfuzzy library not available")
 
 
-class ImpfuzzyAnalyzer(HashingStrategy):
+class ImpfuzzyAnalyzer(CommandHelperMixin, HashingStrategy):
     """Impfuzzy hash calculation from PE import table"""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -250,9 +250,6 @@ class ImpfuzzyAnalyzer(HashingStrategy):
         except Exception as e:
             logger.error(f"Error extracting imports: {e}")
             return []
-
-    def _cmdj(self, command: str, default: Any | None = None) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
 
     def _process_imports(self, imports_data: list[dict[str, Any]]) -> list[str]:
         """

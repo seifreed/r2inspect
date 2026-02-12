@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..utils.logger import get_logger
 from ..utils.r2_helpers import get_macho_headers
 from .macho_domain import (
@@ -20,7 +20,7 @@ from .macho_security import get_security_features as _get_security_features
 logger = get_logger(__name__)
 
 
-class MachOAnalyzer(BaseAnalyzer):
+class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Mach-O file analysis using radare2"""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -287,6 +287,3 @@ class MachOAnalyzer(BaseAnalyzer):
     def get_security_features(self) -> dict[str, bool]:
         """Check for Mach-O security features"""
         return _get_security_features(self.adapter, logger)
-
-    def _cmdj(self, command: str, default: Any) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
