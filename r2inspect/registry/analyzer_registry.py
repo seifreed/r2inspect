@@ -4,12 +4,12 @@
 import inspect
 import logging
 import os
-from importlib import import_module
-from importlib.metadata import entry_points
 from typing import Any, cast
 
 from .categories import AnalyzerCategory
+from .entry_points import EntryPointLoader
 from .metadata import AnalyzerMetadata
+from .metadata_extraction import auto_extract_metadata, extract_metadata_from_class, parse_category
 
 AnalyzerCategory = AnalyzerCategory
 AnalyzerMetadata = AnalyzerMetadata
@@ -157,28 +157,9 @@ class AnalyzerRegistry:
             >>> print(metadata["category"])
             'format'
         """
-        if not self.is_base_analyzer(analyzer_class):
-            raise ValueError(f"{analyzer_class.__name__} does not inherit from BaseAnalyzer")
-
-        try:
-            # Create temporary instance with None parameters
-            temp_instance = analyzer_class(adapter=None, config=None, filepath=None)
-
-            # Extract metadata using BaseAnalyzer methods
-            extracted_name = name or temp_instance.get_name()
-            category_str = temp_instance.get_category()
-            formats = temp_instance.get_supported_formats()
-            description = temp_instance.get_description()
-
-            return {
-                "name": extracted_name,
-                "category": category_str,
-                "formats": formats,
-                "description": description,
-            }
-
-        except Exception as e:
-            raise RuntimeError(f"Failed to extract metadata from {analyzer_class.__name__}: {e}")
+        return extract_metadata_from_class(
+            analyzer_class, is_base_analyzer=self.is_base_analyzer, name=name
+        )
 
     def _parse_category(self, category_value: Any) -> AnalyzerCategory:
         """
@@ -196,23 +177,7 @@ class AnalyzerRegistry:
             ValueError: If category string is invalid
             TypeError: If category type is invalid
         """
-        if isinstance(category_value, AnalyzerCategory):
-            return category_value
-
-        if isinstance(category_value, str):
-            # Try to match string to enum value
-            category_str = category_value.lower()
-            for cat in AnalyzerCategory:
-                if cat.value == category_str:
-                    return cat
-            raise ValueError(
-                f"Unknown category string: {category_value}. "
-                f"Valid categories: {[c.value for c in AnalyzerCategory]}"
-            )
-
-        raise TypeError(
-            f"Category must be AnalyzerCategory enum or string, got {type(category_value)}"
-        )
+        return parse_category(category_value)
 
     def validate_analyzer(self, analyzer_class: type) -> tuple[bool, str | None]:
         """
@@ -563,24 +528,15 @@ class AnalyzerRegistry:
         auto_extract: bool,
     ) -> tuple[AnalyzerCategory | str | None, set[str] | None, str]:
         """Auto-extract metadata from BaseAnalyzer subclasses when enabled."""
-        if not auto_extract or not self.is_base_analyzer(analyzer_class):
-            return category, file_formats, description
-        try:
-            extracted = self.extract_metadata_from_class(analyzer_class, name=name)
-            if category is None:
-                category = self._parse_category(extracted["category"])
-            if file_formats is None:
-                file_formats = extracted["formats"]
-            if not description:
-                description = extracted["description"]
-        except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).warning(
-                f"Auto-extraction failed for {analyzer_class.__name__}: {e}. "
-                f"Using provided metadata."
-            )
-        return category, file_formats, description
+        return auto_extract_metadata(
+            analyzer_class,
+            name=name,
+            category=category,
+            file_formats=file_formats,
+            description=description,
+            auto_extract=auto_extract,
+            is_base_analyzer=self.is_base_analyzer,
+        )
 
     def _ensure_category(
         self, analyzer_class: type, category: AnalyzerCategory | str | None
@@ -724,72 +680,7 @@ class AnalyzerRegistry:
         Returns:
             Number of analyzers (or providers) loaded
         """
-        loaded = 0
-        eps_group = self._get_entry_points_group(group)
-        if not eps_group:
-            return loaded
-
-        for ep in eps_group:
-            loaded += self._handle_entry_point(ep)
-        return loaded
-
-    def _get_entry_points_group(self, group: str) -> list[Any]:
-        """Fetch entry points for a group."""
-        try:
-            return list(entry_points().select(group=group))
-        except Exception:
-            logging.getLogger(__name__).debug("No entry points available")
-            return []
-
-    def _handle_entry_point(self, ep: Any) -> int:
-        """Load and register a single entry point."""
-        try:
-            obj = ep.load()
-        except Exception as e:
-            logging.getLogger(__name__).warning(
-                f"Failed to load entry point '{getattr(ep, 'name', '?')}': {e}"
-            )
-            return 0
-
-        if inspect.isclass(obj):
-            return self._register_entry_point_class(ep, obj)
-
-        if callable(obj):
-            return self._register_entry_point_callable(ep, obj)
-
-        return 0
-
-    def _register_entry_point_callable(self, ep: Any, obj: Any) -> int:
-        """Invoke a callable entry point that self-registers."""
-        try:
-            obj(self)
-            return 1
-        except Exception as e:
-            logging.getLogger(__name__).warning(f"Entry point '{ep.name}' callable failed: {e}")
-            return 0
-
-    def _register_entry_point_class(self, ep: Any, obj: Any) -> int:
-        """Register an analyzer class from an entry point."""
-        try:
-            name = self._derive_entry_point_name(ep, obj)
-            self.register(
-                name=name,
-                analyzer_class=obj,
-                required=False,
-                auto_extract=True,
-                category=self._parse_category("metadata"),
-            )
-            return 1
-        except Exception as e:
-            logging.getLogger(__name__).warning(f"Failed to register entry point '{ep.name}': {e}")
-            return 0
-
-    def _derive_entry_point_name(self, ep: Any, obj: Any) -> str:
-        """Determine analyzer name from entry point class."""
-        if self.is_base_analyzer(obj):
-            meta = self.extract_metadata_from_class(obj)
-            return str(meta["name"])
-        return str(ep.name)
+        return EntryPointLoader(self).load(group)
 
     def get_by_category(self, category: AnalyzerCategory) -> dict[str, type]:
         """
