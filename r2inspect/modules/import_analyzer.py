@@ -61,7 +61,7 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             }
         )
 
-        try:
+        with self._analysis_context(result, error_message="Import analysis failed"):
             self._log_info("Starting import analysis")
 
             # Get basic import information
@@ -97,12 +97,7 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 "suspicious_indicators": suspicious_indicators,
             }
 
-            result["available"] = True
             self._log_info(f"Analyzed {len(imports)} imports from {len(dlls)} DLLs")
-
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"Import analysis failed: {e}")
 
         return result
 

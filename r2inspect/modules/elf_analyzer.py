@@ -48,7 +48,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             }
         )
 
-        try:
+        with self._analysis_context(result, error_message="ELF analysis failed"):
             self._log_info("Starting ELF analysis")
 
             # Get ELF headers information
@@ -66,12 +66,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             # Get security features
             result["security_features"] = self.get_security_features()
 
-            result["available"] = True
             self._log_info("ELF analysis completed successfully")
-
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"ELF analysis failed: {e}")
 
         return result
 

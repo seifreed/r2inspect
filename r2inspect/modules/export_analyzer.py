@@ -29,7 +29,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Perform export analysis"""
         result = self._init_result_structure({"total_exports": 0, "exports": [], "statistics": {}})
 
-        try:
+        with self._analysis_context(result, error_message="Export analysis failed"):
             self._log_info("Starting export analysis")
             exports = self.get_exports()
             stats = self.get_export_statistics()
@@ -37,11 +37,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             result["exports"] = exports
             result["statistics"] = stats
             result["total_exports"] = len(exports)
-            result["available"] = True
             self._log_info(f"Found {len(exports)} exports")
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"Export analysis failed: {e}")
 
         return result
 

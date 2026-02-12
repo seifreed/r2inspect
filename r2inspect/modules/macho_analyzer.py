@@ -47,7 +47,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
             }
         )
 
-        try:
+        with self._analysis_context(result, error_message="Mach-O analysis failed"):
             self._log_info("Starting Mach-O analysis")
 
             # Get Mach-O headers information
@@ -65,12 +65,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
             # Get security features
             result["security_features"] = self.get_security_features()
 
-            result["available"] = True
             self._log_info("Mach-O analysis completed successfully")
-
-        except Exception as e:
-            result["error"] = str(e)
-            self._log_error(f"Mach-O analysis failed: {e}")
 
         return result
 
