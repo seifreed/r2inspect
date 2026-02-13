@@ -5,7 +5,7 @@ import hashlib
 from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy
 from ..utils.analyzer_runner import run_analyzer_on_file
 from ..utils.logger import get_logger
 
@@ -15,7 +15,7 @@ NO_FUNCTIONS_FOUND = "No functions found in binary"
 NO_FUNCTIONS_ANALYZED = "No functions could be analyzed for CCBHash"
 
 
-class CCBHashAnalyzer(CommandHelperMixin, HashingStrategy):
+class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
     """CCBHash calculation from function Control Flow Graphs"""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -26,10 +26,7 @@ class CCBHashAnalyzer(CommandHelperMixin, HashingStrategy):
             r2_instance: Active r2pipe instance
             filepath: Path to the binary file being analyzed
         """
-        # Initialize parent with filepath
-        self.adapter = adapter
-        self.r2 = adapter
-        super().__init__(filepath=filepath, r2_instance=adapter)
+        super().__init__(adapter=adapter, filepath=filepath)
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
