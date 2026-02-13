@@ -10,14 +10,14 @@ try:
 except ImportError:
     TLSH_AVAILABLE = False
 
-from ..abstractions.hashing_strategy import HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy
 from ..adapters.file_system import default_file_system
 from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class TLSHAnalyzer(HashingStrategy):
+class TLSHAnalyzer(R2HashingStrategy):
     """TLSH (Trend Micro Locality Sensitive Hash) analyzer for sections and functions"""
 
     def __init__(self, adapter: Any, filename: str) -> None:
@@ -28,9 +28,7 @@ class TLSHAnalyzer(HashingStrategy):
             r2: Active r2pipe instance for binary analysis
             filename: Path to the binary file being analyzed
         """
-        # Initialize parent with filepath
-        super().__init__(filepath=filename, r2_instance=adapter)
-        self.adapter: Any = adapter
+        super().__init__(adapter=adapter, filepath=filename)
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
