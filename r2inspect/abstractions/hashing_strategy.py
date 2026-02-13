@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from ..domain import HashResult
+
 
 class HashingStrategy(ABC):
     """Abstract base class for hashing strategies."""
@@ -72,50 +74,42 @@ class HashingStrategy(ABC):
         """
         start_time = time.time()
 
-        result = {
-            "available": False,
-            "hash_type": self._get_hash_type(),
-            "hash_value": None,
-            "file_size": 0,
-            "execution_time": 0.0,
-            "error": None,
-            "method_used": None,
-        }
+        result = HashResult(hash_type=self._get_hash_type())
 
         try:
             # Step 1: Validate file
             validation_error = self._validate_file()
             if validation_error:
-                result["error"] = validation_error
-                result["execution_time"] = time.time() - start_time
-                return result
+                result.error = validation_error
+                result.execution_time = time.time() - start_time
+                return result.to_dict()
 
-            result["file_size"] = self._filepath.stat().st_size
+            result.file_size = self._filepath.stat().st_size
 
             # Step 2: Check library availability
             library_available, error_message = self._check_library_availability()
             if not library_available:
-                result["error"] = error_message or "Required library not available"
-                result["execution_time"] = time.time() - start_time
-                return result
+                result.error = error_message or "Required library not available"
+                result.execution_time = time.time() - start_time
+                return result.to_dict()
 
-            result["available"] = True
+            result.available = True
 
             # Step 3: Calculate hash
             hash_value, method_used, error = self._calculate_hash()
             if error:
-                result["error"] = error
+                result.error = error
             else:
-                result["hash_value"] = hash_value
-                result["method_used"] = method_used
+                result.hash_value = hash_value
+                result.method_used = method_used
 
         except Exception as e:
-            result["error"] = f"Unexpected error in {self._get_hash_type()} analysis: {str(e)}"
+            result.error = f"Unexpected error in {self._get_hash_type()} analysis: {str(e)}"
 
         finally:
-            result["execution_time"] = time.time() - start_time
+            result.execution_time = time.time() - start_time
 
-        return result
+        return result.to_dict()
 
     def _validate_file(self) -> str | None:
         """
