@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy
 from ..utils.file_type import is_pe_file
 from ..utils.logger import get_logger
 from ..utils.ssdeep_loader import get_ssdeep
@@ -29,7 +29,7 @@ except ImportError:
         logger.debug("impfuzzy library not available")
 
 
-class ImpfuzzyAnalyzer(CommandHelperMixin, HashingStrategy):
+class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
     """Impfuzzy hash calculation from PE import table"""
 
     def __init__(self, adapter: Any, filepath: str) -> None:
@@ -40,9 +40,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, HashingStrategy):
             r2_instance: Active r2pipe instance
             filepath: Path to the PE file being analyzed
         """
-        # Initialize parent with filepath
-        super().__init__(filepath=filepath, r2_instance=adapter)
-        self.adapter: Any = adapter
+        super().__init__(adapter=adapter, filepath=filepath)
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """

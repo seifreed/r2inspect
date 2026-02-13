@@ -328,3 +328,23 @@ class HashingStrategy(ABC):
             f"max_file_size={self.max_file_size}, "
             f"min_file_size={self.min_file_size})"
         )
+
+
+class R2HashingStrategy(HashingStrategy):
+    """Hashing strategy that standardizes r2 adapter access."""
+
+    def __init__(
+        self,
+        adapter: Any,
+        filepath: str,
+        max_file_size: int = 100 * 1024 * 1024,
+        min_file_size: int = 1,
+    ) -> None:
+        self.adapter = adapter
+        self.r2 = adapter
+        super().__init__(
+            filepath=filepath,
+            r2_instance=adapter,
+            max_file_size=max_file_size,
+            min_file_size=min_file_size,
+        )
