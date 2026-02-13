@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 from ..interfaces import R2CommandInterface
 from ..utils.logger import get_logger
@@ -17,6 +18,8 @@ from .validation import (
 )
 
 logger = get_logger(__name__)
+
+T = TypeVar("T")
 
 
 class R2PipeQueryMixin(R2CommandInterface):
@@ -37,6 +40,34 @@ class R2PipeQueryMixin(R2CommandInterface):
 
     def _maybe_force_error(self, method: str) -> None:
         raise NotImplementedError
+
+    def _safe_query(self, action: Callable[[], T], default: T, error_message: str) -> T:
+        try:
+            return action()
+        except Exception as e:
+            logger.error("%s: %s", error_message, e)
+            return default
+
+    def _safe_cached_query(
+        self,
+        cmd: str,
+        data_type: str,
+        default: list | dict,
+        *,
+        error_msg: str = "",
+        cache: bool = True,
+        error_label: str,
+    ) -> list[dict[str, Any]] | dict[str, Any]:
+        return cast(
+            list[dict[str, Any]] | dict[str, Any],
+            self._safe_query(
+                lambda: self._cached_query(
+                    cmd, data_type, default=default, error_msg=error_msg, cache=cache
+                ),
+                default,
+                f"Error retrieving {error_label}",
+            ),
+        )
 
     def get_file_info(self) -> dict[str, Any]:
         """
@@ -63,7 +94,8 @@ class R2PipeQueryMixin(R2CommandInterface):
             ...     print(f"{info['arch']}-{info['bits']}")
             ...     print(f"Format: {info['bintype']}")
         """
-        try:
+
+        def _execute() -> dict[str, Any]:
             self._maybe_force_error("get_file_info")
             if "ij" in self._cache:
                 return cast(dict[str, Any], self._cache["ij"])
@@ -77,9 +109,7 @@ class R2PipeQueryMixin(R2CommandInterface):
             self._cache["ij"] = validated
             return cast(dict[str, Any], validated)
 
-        except Exception as e:
-            logger.error(f"Error retrieving file info: {e}")
-            return {}
+        return self._safe_query(_execute, {}, "Error retrieving file info")
 
     def get_sections(self) -> list[dict[str, Any]]:
         """
@@ -106,18 +136,16 @@ class R2PipeQueryMixin(R2CommandInterface):
             >>> if text_sections:
             ...     print(f"Code section at: {hex(text_sections[0]['vaddr'])}")
         """
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "iSj",
-                    "list",
-                    error_msg="No sections found or invalid response from 'iSj'",
-                ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving sections: {e}")
-            return []
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "iSj",
+                "list",
+                [],
+                error_msg="No sections found or invalid response from 'iSj'",
+                error_label="sections",
+            ),
+        )
 
     def get_imports(self) -> list[dict[str, Any]]:
         """
@@ -143,18 +171,16 @@ class R2PipeQueryMixin(R2CommandInterface):
             >>> for imp in kernel_imports[:5]:
             ...     print(f"{imp['name']} from {imp['libname']}")
         """
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "iij",
-                    "list",
-                    error_msg="No imports found or invalid response from 'iij'",
-                ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving imports: {e}")
-            return []
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "iij",
+                "list",
+                [],
+                error_msg="No imports found or invalid response from 'iij'",
+                error_label="imports",
+            ),
+        )
 
     def get_exports(self) -> list[dict[str, Any]]:
         """
@@ -180,18 +206,16 @@ class R2PipeQueryMixin(R2CommandInterface):
             ...                 and e.get('type') == 'FUNC']
             >>> print(f"Found {len(public_funcs)} public functions")
         """
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "iEj",
-                    "list",
-                    error_msg="No exports found or invalid response from 'iEj'",
-                ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving exports: {e}")
-            return []
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "iEj",
+                "list",
+                [],
+                error_msg="No exports found or invalid response from 'iEj'",
+                error_label="exports",
+            ),
+        )
 
     def get_symbols(self) -> list[dict[str, Any]]:
         """
@@ -218,18 +242,16 @@ class R2PipeQueryMixin(R2CommandInterface):
             >>> for func in functions[:10]:
             ...     print(f"{func['name']} at {hex(func.get('vaddr', 0))}")
         """
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "isj",
-                    "list",
-                    error_msg="No symbols found or invalid response from 'isj'",
-                ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving symbols: {e}")
-            return []
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "isj",
+                "list",
+                [],
+                error_msg="No symbols found or invalid response from 'isj'",
+                error_label="symbols",
+            ),
+        )
 
     def get_strings(self) -> list[dict[str, Any]]:
         """
@@ -259,18 +281,16 @@ class R2PipeQueryMixin(R2CommandInterface):
             >>> for url_str in urls[:5]:
             ...     print(f"Found URL: {url_str['string']}")
         """
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "izzj",
-                    "list",
-                    error_msg="No strings found or invalid response from 'izzj'",
-                ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving strings: {e}")
-            return []
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "izzj",
+                "list",
+                [],
+                error_msg="No strings found or invalid response from 'izzj'",
+                error_label="strings",
+            ),
+        )
 
     def get_functions(self) -> list[dict[str, Any]]:
         """
@@ -303,33 +323,31 @@ class R2PipeQueryMixin(R2CommandInterface):
             ...                    reverse=True)[:5]:
             ...     print(f"{func['name']}: {func['size']} bytes")
         """
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "aflj",
-                    "list",
-                    error_msg=(
-                        "No functions found or invalid response from 'aflj'. "
-                        "Analysis may not have been performed."
-                    ),
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "aflj",
+                "list",
+                [],
+                error_msg=(
+                    "No functions found or invalid response from 'aflj'. "
+                    "Analysis may not have been performed."
                 ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving functions: {e}")
-            return []
+                error_label="functions",
+            ),
+        )
 
     def get_functions_at(self, address: int) -> list[dict[str, Any]]:
         """Retrieve functions at a given address using 'aflj @ <addr>'."""
-        try:
+
+        def _execute() -> list[dict[str, Any]]:
             self._maybe_force_error("get_functions_at")
             cmd = f"aflj @ {address}"
             data = safe_cmdj(self, cmd, [])
             validated = validate_r2_data(data, "list")
             return cast(list[dict[str, Any]], validated) if validated else []
-        except Exception as e:
-            logger.error(f"Error retrieving functions at {hex(address)}: {e}")
-            return []
+
+        return self._safe_query(_execute, [], f"Error retrieving functions at {hex(address)}")
 
     def get_disasm(self, address: int | None = None, size: int | None = None) -> Any:
         """
@@ -338,7 +356,8 @@ class R2PipeQueryMixin(R2CommandInterface):
         Uses 'pdfj' for function disassembly or 'pdj <size>' for a byte range.
         Optional address uses radare2's '@' seek syntax.
         """
-        try:
+
+        def _execute() -> Any:
             self._maybe_force_error("get_disasm")
             if size is None:
                 cmd = "pdfj"
@@ -354,9 +373,8 @@ class R2PipeQueryMixin(R2CommandInterface):
                 error_msg=f"No disassembly found for '{cmd}'",
                 cache=address is None,
             )
-        except Exception as e:
-            logger.error(f"Error retrieving disassembly: {e}")
-            return []
+
+        return self._safe_query(_execute, [], "Error retrieving disassembly")
 
     def get_cfg(self, address: int | None = None) -> Any:
         """
@@ -364,7 +382,8 @@ class R2PipeQueryMixin(R2CommandInterface):
 
         Uses 'agj' with optional '@ <address>' seek syntax.
         """
-        try:
+
+        def _execute() -> Any:
             self._maybe_force_error("get_cfg")
             cmd = "agj"
             if address is not None:
@@ -375,129 +394,127 @@ class R2PipeQueryMixin(R2CommandInterface):
                 error_msg=f"No CFG data found for '{cmd}'",
                 cache=address is None,
             )
-        except Exception as e:
-            logger.error(f"Error retrieving CFG: {e}")
-            return {}
+
+        return self._safe_query(_execute, {}, "Error retrieving CFG")
 
     def analyze_all(self) -> str:
         """Run full analysis (aaa)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("analyze_all")
             return safe_cmd(self, "aaa", "")
-        except Exception as e:
-            logger.error(f"Error running analysis: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error running analysis")
 
     def get_info_text(self) -> str:
         """Return textual info output (i)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_info_text")
             return safe_cmd(self, "i", "")
-        except Exception as e:
-            logger.error(f"Error retrieving info text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving info text")
 
     def get_dynamic_info_text(self) -> str:
         """Return dynamic info output (id)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_dynamic_info_text")
             return safe_cmd(self, "id", "")
-        except Exception as e:
-            logger.error(f"Error retrieving dynamic info text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving dynamic info text")
 
     def get_entropy_pattern(self) -> str:
         """Return entropy pattern output (p=e 100)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_entropy_pattern")
             return safe_cmd(self, "p=e 100", "")
-        except Exception as e:
-            logger.error(f"Error retrieving entropy pattern: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving entropy pattern")
 
     def get_pe_version_info_text(self) -> str:
         """Return PE version info text output (iR~version)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_pe_version_info_text")
             return safe_cmd(self, "iR~version", "")
-        except Exception as e:
-            logger.error(f"Error retrieving PE version info text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving PE version info text")
 
     def get_pe_security_text(self) -> str:
         """Return PE security info text (iHH)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_pe_security_text")
             return safe_cmd(self, "iHH", "")
-        except Exception as e:
-            logger.error(f"Error retrieving PE security text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving PE security text")
 
     def get_header_text(self) -> str:
         """Return header text output (ih)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_header_text")
             return safe_cmd(self, "ih", "")
-        except Exception as e:
-            logger.error(f"Error retrieving header text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving header text")
 
     def get_headers_json(self) -> Any:
         """Return header JSON output (ihj)."""
-        try:
+
+        def _execute() -> Any:
             self._maybe_force_error("get_headers_json")
             return safe_cmdj(self, "ihj", None)
-        except Exception as e:
-            logger.error(f"Error retrieving header JSON: {e}")
-            return None
+
+        return self._safe_query(_execute, None, "Error retrieving header JSON")
 
     def get_strings_basic(self) -> list[dict[str, Any]]:
         """Return basic strings list (izj)."""
-        try:
-            return cast(
-                list[dict[str, Any]],
-                self._cached_query(
-                    "izj",
-                    "list",
-                    error_msg="No strings found or invalid response from 'izj'",
-                ),
-            )
-        except Exception as e:
-            logger.error(f"Error retrieving basic strings: {e}")
-            return []
+        return cast(
+            list[dict[str, Any]],
+            self._safe_cached_query(
+                "izj",
+                "list",
+                [],
+                error_msg="No strings found or invalid response from 'izj'",
+                error_label="basic strings",
+            ),
+        )
 
     def get_strings_text(self) -> str:
         """Return raw strings text output (izz~..)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_strings_text")
             return safe_cmd(self, "izz~..", "")
-        except Exception as e:
-            logger.error(f"Error retrieving strings text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving strings text")
 
     def get_strings_filtered(self, command: str) -> str:
         """Return filtered strings output (iz~...)."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_strings_filtered")
             return safe_cmd(self, command, "")
-        except Exception as e:
-            logger.error(f"Error retrieving filtered strings: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving filtered strings")
 
     def get_entry_info(self) -> list[dict[str, Any]]:
         """Return entry point info (iej)."""
-        try:
+
+        def _execute() -> list[dict[str, Any]]:
             self._maybe_force_error("get_entry_info")
             data = safe_cmdj(self, "iej", [])
             validated = validate_r2_data(data, "list")
             return cast(list[dict[str, Any]], validated) if validated else []
-        except Exception as e:
-            logger.error(f"Error retrieving entry info: {e}")
-            return []
+
+        return self._safe_query(_execute, [], "Error retrieving entry info")
 
     def get_pe_header(self) -> dict[str, Any]:
         """Return PE header info (ihj) as dict when possible."""
-        try:
+
+        def _execute() -> dict[str, Any]:
             self._maybe_force_error("get_pe_header")
             data = safe_cmdj(self, "ihj", {})
             if isinstance(data, list) and data:
@@ -505,77 +522,76 @@ class R2PipeQueryMixin(R2CommandInterface):
             if isinstance(data, dict):
                 return data
             return {}
-        except Exception as e:
-            logger.error(f"Error retrieving PE header: {e}")
-            return {}
+
+        return self._safe_query(_execute, {}, "Error retrieving PE header")
 
     def get_pe_optional_header(self) -> dict[str, Any]:
         """Return PE optional header info (iHj)."""
-        try:
+
+        def _execute() -> dict[str, Any]:
             self._maybe_force_error("get_pe_optional_header")
             data = safe_cmdj(self, "iHj", {})
             validated = validate_r2_data(data, "dict")
             return cast(dict[str, Any], validated) if validated else {}
-        except Exception as e:
-            logger.error(f"Error retrieving PE optional header: {e}")
-            return {}
+
+        return self._safe_query(_execute, {}, "Error retrieving PE optional header")
 
     def get_data_directories(self) -> list[dict[str, Any]]:
         """Return data directories info (iDj)."""
-        try:
+
+        def _execute() -> list[dict[str, Any]]:
             self._maybe_force_error("get_data_directories")
             data = safe_cmdj(self, "iDj", [])
             validated = validate_r2_data(data, "list")
             return cast(list[dict[str, Any]], validated) if validated else []
-        except Exception as e:
-            logger.error(f"Error retrieving data directories: {e}")
-            return []
+
+        return self._safe_query(_execute, [], "Error retrieving data directories")
 
     def get_resources_info(self) -> list[dict[str, Any]]:
         """Return resources info (iRj)."""
-        try:
+
+        def _execute() -> list[dict[str, Any]]:
             self._maybe_force_error("get_resources_info")
             data = safe_cmdj(self, "iRj", [])
             validated = validate_r2_data(data, "list")
             return cast(list[dict[str, Any]], validated) if validated else []
-        except Exception as e:
-            logger.error(f"Error retrieving resources info: {e}")
-            return []
+
+        return self._safe_query(_execute, [], "Error retrieving resources info")
 
     def get_function_info(self, address: int) -> list[dict[str, Any]]:
         """Return function info (afij @ address)."""
-        try:
+
+        def _execute() -> list[dict[str, Any]]:
             self._maybe_force_error("get_function_info")
             cmd = f"afij @ {address}"
             data = safe_cmdj(self, cmd, [])
             validated = validate_r2_data(data, "list")
             return cast(list[dict[str, Any]], validated) if validated else []
-        except Exception as e:
-            logger.error(f"Error retrieving function info: {e}")
-            return []
+
+        return self._safe_query(_execute, [], "Error retrieving function info")
 
     def get_disasm_text(self, address: int | None = None, size: int | None = None) -> str:
         """Return textual disassembly (pi) for a region."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("get_disasm_text")
             cmd = "pi" if size is None else f"pi {size}"
             if address is not None:
                 cmd = f"{cmd} @ {address}"
             return safe_cmd(self, cmd, "")
-        except Exception as e:
-            logger.error(f"Error retrieving disasm text: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error retrieving disasm text")
 
     def search_hex_json(self, pattern: str) -> list[dict[str, Any]]:
         """Return hex search results in JSON (/xj)."""
-        try:
+
+        def _execute() -> list[dict[str, Any]]:
             self._maybe_force_error("search_hex_json")
             data = safe_cmdj(self, f"/xj {pattern}", [])
             validated = validate_r2_data(data, "list")
             return cast(list[dict[str, Any]], validated) if validated else []
-        except Exception as e:
-            logger.error(f"Error searching hex pattern JSON: {e}")
-            return []
+
+        return self._safe_query(_execute, [], "Error searching hex pattern JSON")
 
     def read_bytes_list(self, address: int, size: int) -> list[int]:
         """Read raw bytes and return a list of ints."""
@@ -650,18 +666,18 @@ class R2PipeQueryMixin(R2CommandInterface):
 
     def search_text(self, pattern: str) -> str:
         """Search for text patterns using r2 /c."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("search_text")
             return safe_cmd(self, f"/c {pattern}")
-        except Exception as e:
-            logger.error(f"Error searching text pattern: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error searching text pattern")
 
     def search_hex(self, hex_pattern: str) -> str:
         """Search for hex patterns using r2 /x."""
-        try:
+
+        def _execute() -> str:
             self._maybe_force_error("search_hex")
             return safe_cmd(self, f"/x {hex_pattern}")
-        except Exception as e:
-            logger.error(f"Error searching hex pattern: {e}")
-            return ""
+
+        return self._safe_query(_execute, "", "Error searching hex pattern")
