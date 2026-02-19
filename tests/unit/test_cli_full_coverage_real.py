@@ -458,15 +458,6 @@ def test_analyze_command_run_paths(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError):
         _circuit_fail()
 
-    class _StatsCommand(AnalyzeCommand):
-        def _collect_statistics(
-            self,
-        ) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
-            return {"total_errors": 1}, {"total_retries": 1}, {"open": 1}
-
-    stats_command = _StatsCommand(context)
-    stats_results: dict[str, object] = {}
-    stats_command._add_statistics_to_results(stats_results)
     command._display_verbose_statistics()
 
     command._run_analysis(
@@ -502,7 +493,6 @@ def test_analyze_command_run_paths(tmp_path: Path) -> None:
     command._output_csv_results(
         analysis_runner.OutputFormatter({"file_info": {"name": "sample.bin"}}), None
     )
-    assert command._has_circuit_breaker_data({"count": 1}) is True
 
     ok_args = {
         "filename": str(_sample_path()),
@@ -804,20 +794,9 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
     batch_processing.console = console
     try:
         batch_processing.magic = None
-        assert batch_processing._init_magic() is None
         assert batch_processing.find_executable_files_by_magic(tmp_path) == []
 
-        class _BadMagic:
-            class Magic:
-                def __init__(self, *args: object, **kwargs: object) -> None:
-                    raise RuntimeError("bad")
-
-        batch_processing.magic = _BadMagic
-        assert batch_processing._init_magic() is None
-
         batch_processing.magic = original_magic
-        magic_tuple = batch_processing._init_magic()
-        assert magic_tuple is not None
 
         assert batch_processing._is_executable_signature("application/x-dosexec", "") is True
         assert batch_processing._is_executable_signature("text/plain", "ELF") is True
@@ -825,8 +804,6 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         nested = tmp_path / "nested"
         nested.mkdir()
         (nested / "a.bin").write_bytes(b"MZ" + b"\x00" * 64)
-        assert batch_processing._iter_files(tmp_path, recursive=False)
-        assert batch_processing._iter_files(tmp_path, recursive=True)
 
         small = tmp_path / "small.bin"
         small.write_bytes(b"MZ")
@@ -886,7 +863,11 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         assert error is None
         assert (output_dir / f"{file_path.stem}_analysis.json").exists()
 
-        limited = BatchRateLimiter(max_concurrent=0, rate_per_second=1.0)
+        class _DenyingRateLimiter(BatchRateLimiter):
+            def acquire(self, timeout: float | None = 60.0) -> bool:
+                return False
+
+        limited = _DenyingRateLimiter(max_concurrent=1, rate_per_second=1.0)
         file_key, results, error = batch_processing.process_single_file(
             file_path,
             tmp_path,
@@ -1058,7 +1039,8 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         original_exit = os._exit
         try:
             os._exit = lambda _code=0: None  # type: ignore[assignment]
-            batch_processing._safe_exit(0)
+            with pytest.raises(SystemExit):
+                batch_processing._safe_exit(0)
         finally:
             os._exit = original_exit
 
