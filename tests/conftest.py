@@ -54,6 +54,9 @@ def cap_test_resources() -> None:
     # Enable test mode - this triggers lightweight analysis in R2Session
     os.environ.setdefault("R2INSPECT_TEST_MODE", "1")
 
+    # Disable forced exit timer so batch tests don't kill the pytest process
+    os.environ.setdefault("R2INSPECT_DISABLE_FORCED_EXIT", "1")
+
     # Limit parallelism to prevent multiple r2 processes from spawning
     os.environ.setdefault("R2INSPECT_MAX_WORKERS", DEFAULT_TEST_MAX_WORKERS)
     os.environ.setdefault("R2INSPECT_MAX_THREADS", DEFAULT_TEST_MAX_THREADS)
