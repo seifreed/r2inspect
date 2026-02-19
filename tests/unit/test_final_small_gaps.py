@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import struct
@@ -15,6 +16,7 @@ import pytest
 
 import r2inspect.pipeline.stages_format as _sf_mod
 import r2inspect.registry.analyzer_registry as _ar_mod
+import r2inspect.utils.analyzer_runner as _arn_mod
 from r2inspect.config import Config
 from r2inspect.config_store import ConfigStore
 from r2inspect.core.inspector_helpers import InspectorExecutionMixin
@@ -89,6 +91,7 @@ def test_memory_aware_analyzer_memory_error_in_operation():
         raise MemoryError("simulated OOM")
 
     analyzer = MemoryAwareAnalyzer()
+    analyzer.memory_monitor.last_check = 0  # force full check so system memory is populated
     result = analyzer.safe_large_operation(_raise_memory_error, estimated_memory_mb=1.0)
     assert result is None
 
@@ -100,6 +103,7 @@ def test_memory_aware_analyzer_exception_in_operation():
         raise RuntimeError("simulated failure")
 
     analyzer = MemoryAwareAnalyzer()
+    analyzer.memory_monitor.last_check = 0  # force full check so system memory is populated
     result = analyzer.safe_large_operation(_raise_runtime_error, estimated_memory_mb=1.0)
     assert result is None
 
@@ -430,13 +434,26 @@ def test_rich_header_extraction_exception_returns_none():
 # 7. utils/analyzer_runner.py - lines 27-31
 # ---------------------------------------------------------------------------
 
-_TINY_BIN = str(Path(__file__).parent.parent.parent / "samples" / "fixtures" / "edge_tiny.bin")
+
+class _FakeR2:
+    """Minimal r2pipe stand-in for analyzer_runner integration tests."""
+
+    def cmd(self, command: str) -> str:
+        return ""
+
+    def cmdj(self, command: str) -> None:
+        return None
+
+
+@contextlib.contextmanager
+def _fake_open_r2_adapter(filepath: str, flags: list[str] | None = None):  # type: ignore[override]
+    from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+
+    yield R2PipeAdapter(_FakeR2())
 
 
 def test_analyzer_runner_calls_analyze_method():
     """Lines 29-30: run_analyzer_on_file calls analyze() when callable."""
-    if not Path(_TINY_BIN).exists():
-        return
 
     class _AnalyzerFactory:
         def __init__(self, adapter: Any, filepath: str) -> None:
@@ -445,20 +462,28 @@ def test_analyzer_runner_calls_analyze_method():
         def analyze(self) -> dict[str, Any]:
             return {"ok": True}
 
-    result = run_analyzer_on_file(_AnalyzerFactory, _TINY_BIN)
-    assert result == {"ok": True} or result is None
+    old = _arn_mod.open_r2_adapter
+    _arn_mod.open_r2_adapter = _fake_open_r2_adapter
+    try:
+        result = run_analyzer_on_file(_AnalyzerFactory, "/tmp/_dummy")
+    finally:
+        _arn_mod.open_r2_adapter = old
+    assert result == {"ok": True}
 
 
 def test_analyzer_runner_returns_none_without_analyze_method():
     """Line 31: run_analyzer_on_file returns None when no analyze attribute."""
-    if not Path(_TINY_BIN).exists():
-        return
 
     class _NoAnalyzeFactory:
         def __init__(self, adapter: Any, filepath: str) -> None:
             pass
 
-    result = run_analyzer_on_file(_NoAnalyzeFactory, _TINY_BIN)
+    old = _arn_mod.open_r2_adapter
+    _arn_mod.open_r2_adapter = _fake_open_r2_adapter
+    try:
+        result = run_analyzer_on_file(_NoAnalyzeFactory, "/tmp/_dummy")
+    finally:
+        _arn_mod.open_r2_adapter = old
     assert result is None
 
 
