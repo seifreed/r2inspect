@@ -2,7 +2,7 @@
 """Security analyzer schemas."""
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator
 from .base import AnalysisResultBase
 
 
-class SeverityLevel(str, Enum):
+class SeverityLevel(StrEnum):
     """Security issue severity levels"""
 
     MINIMAL = "minimal"
@@ -20,7 +20,7 @@ class SeverityLevel(str, Enum):
     CRITICAL = "critical"
 
 
-class SecurityGrade(str, Enum):
+class SecurityGrade(StrEnum):
     """Security assessment grades"""
 
     A = "A"
