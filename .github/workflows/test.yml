@@ -69,7 +69,6 @@ jobs:
       - name: Test installation (Windows)
         if: runner.os == 'Windows'
         run: |
-          pip install -e . --no-build-isolation
           python -c "import r2inspect, sys; print(r2inspect.__version__)"
 
       - name: Run tests with coverage (unit + fast)
