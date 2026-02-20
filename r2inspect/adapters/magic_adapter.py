@@ -24,4 +24,7 @@ class MagicAdapter:
     def create_detectors(self) -> tuple[Any, Any] | None:
         if self._magic is None:
             return None
-        return self._magic.Magic(mime=True), self._magic.Magic()
+        try:
+            return self._magic.Magic(mime=True), self._magic.Magic()
+        except Exception:
+            return None
