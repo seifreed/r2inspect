@@ -21,7 +21,7 @@ try:
     from pybloom_live import BloomFilter
 
     BLOOM_AVAILABLE = True
-except ImportError:  # pragma: no cover
+except ImportError:
     logger.warning("pybloom-live not available. Install with: pip install pybloom-live")
     BLOOM_AVAILABLE = False
     BloomFilter = None
