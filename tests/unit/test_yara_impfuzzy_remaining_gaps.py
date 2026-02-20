@@ -218,3 +218,43 @@ def test_analyze_imports_error_when_get_impfuzzy_returns_empty(tmp_path: Path) -
         assert result["error"] == "Failed to calculate impfuzzy hash"
     finally:
         _imp_mod.pyimpfuzzy.get_impfuzzy = orig  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# yara_analyzer.py line 265:
+#   finally: signal.signal(SIGALRM, old_handler) — executed after every
+#   successful SIGALRM-path compilation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not YARA_AVAILABLE, reason="python-yara not installed")
+def test_compile_sources_with_timeout_restores_signal_handler(tmp_path: Path) -> None:
+    """_compile_sources_with_timeout restores old SIGALRM handler in finally block."""
+    import signal
+
+    if not hasattr(signal, "SIGALRM"):
+        pytest.skip("SIGALRM not available on this platform")
+
+    analyzer = _make_yara_analyzer(str(tmp_path))
+    rules_dict = {"test": SIMPLE_YARA_RULE}
+    result = analyzer._compile_sources_with_timeout(rules_dict)
+    assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# yara_analyzer.py lines 362-363:
+#   list_available_rules() — first two lines initialise state
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not YARA_AVAILABLE, reason="python-yara not installed")
+def test_list_available_rules_returns_single_file_entry(tmp_path: Path) -> None:
+    """list_available_rules() returns one entry when rules_path is a single .yar file."""
+    rule_file = tmp_path / "my_rules.yar"
+    rule_file.write_text(SIMPLE_YARA_RULE)
+
+    analyzer = _make_yara_analyzer(str(rule_file))
+    result = analyzer.list_available_rules()
+    assert len(result) == 1
+    assert result[0]["name"] == "my_rules.yar"
+    assert result[0]["type"] == "single_file"

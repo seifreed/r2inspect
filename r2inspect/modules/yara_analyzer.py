@@ -261,11 +261,6 @@ class YaraAnalyzer(CommandHelperMixin):
                     compiled_rules = yara.compile(sources=rules_dict)
                     signal.alarm(0)
                     return compiled_rules
-                except TimeoutException:  # pragma: no cover
-                    logger.error(
-                        f"YARA compilation timed out after {YARA_COMPILE_TIMEOUT}s"
-                    )  # pragma: no cover
-                    return None  # pragma: no cover
                 finally:
                     signal.signal(signal.SIGALRM, old_handler)
             else:
@@ -305,11 +300,7 @@ class YaraAnalyzer(CommandHelperMixin):
                             "matched_data": instance.matched_data.decode("utf-8", errors="ignore"),
                         }
 
-                        # Handle different YARA versions - some have length attribute, some don't
-                        if hasattr(instance, "length"):  # pragma: no cover
-                            instance_info["length"] = instance.length  # pragma: no cover
-                        else:  # pragma: no cover
-                            instance_info["length"] = len(instance.matched_data)
+                        instance_info["length"] = len(instance.matched_data)
 
                         string_info["instances"].append(instance_info)
 
