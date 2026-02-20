@@ -62,10 +62,20 @@ from .batch_workers import _cap_threads_for_execution, process_files_parallel, p
 console = Console()
 logger = get_logger(__name__)
 
-# Import magic at module level, but only on non-Windows platforms.
-# python-magic-bin on Windows can cause access violations or hang indefinitely.
-magic: Any | None = None
-if sys.platform != "win32":
+_MAGIC_UNINITIALIZED = object()
+magic: Any = _MAGIC_UNINITIALIZED
+
+
+def _resolve_magic_module() -> Any | None:
+    """Resolve python-magic lazily to avoid import-time native crashes on Windows."""
+    global magic
+    if magic is not _MAGIC_UNINITIALIZED:
+        return magic
+
+    if sys.platform == "win32":
+        magic = None
+        return None
+
     try:
         import magic as _magic_import
 
@@ -73,9 +83,13 @@ if sys.platform != "win32":
     except Exception:
         magic = None
 
+    return magic
+
 
 def _init_magic() -> tuple[Any, Any] | None:
     """Initialize magic detectors using the module-level magic import."""
+    if magic is _MAGIC_UNINITIALIZED:
+        return None
     if magic is None:
         return None
     try:
@@ -135,10 +149,11 @@ def find_executable_files_by_magic(
     directory: str | Path, recursive: bool = False, verbose: bool = False
 ) -> list[Path]:
     """Find executable files using magic bytes detection (PE, ELF, Mach-O, etc.)"""
+    magic_module = _resolve_magic_module()
     files, init_errors, file_errors, scanned = discover_executables_by_magic(
         directory,
         recursive=recursive,
-        magic_module=magic,
+        magic_module=magic_module,
     )
 
     for message in init_errors:
