@@ -304,3 +304,29 @@ def test_inspector_analyze_uses_execute_with_progress_when_callback_provided() -
     # The progress callback must have been invoked for each stage
     assert len(progress_calls) >= 1
     assert progress_calls[0][0] == "simple"
+
+
+# ---------------------------------------------------------------------------
+# 11. utils/analyzer_factory.py lines 61-62 – TypeError continue in candidates loop
+# ---------------------------------------------------------------------------
+
+
+class _SingleArgAnalyzer:
+    """Analyzer that accepts exactly one positional argument."""
+
+    def __init__(self, x: Any) -> None:
+        self._x = x
+
+
+def test_create_analyzer_candidates_loop_continue_on_type_error() -> None:
+    """Lines 61-62: multi-arg candidates raise TypeError and are skipped via continue.
+
+    With backend='b', config='c', filename='f' all non-None:
+    - kwargs build finds no matching param name for 'x' → kwargs={}
+    - analyzer_class(**{}) → TypeError (missing x) → inner except, passes
+    - Candidates (b,c,f), (b,c), (b,f), (f,b) each have 2+ args → TypeError → lines 61-62
+    - Candidate (f,) succeeds → returns _SingleArgAnalyzer('f')
+    """
+    result = create_analyzer(_SingleArgAnalyzer, adapter="b", config="c", filename="f")
+    assert isinstance(result, _SingleArgAnalyzer)
+    assert result._x == "f"
