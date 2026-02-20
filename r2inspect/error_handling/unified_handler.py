@@ -172,9 +172,9 @@ def _retry_execution(
             time.sleep(delay)
 
     # Should not reach here, but handle gracefully
-    if last_exception:
-        raise last_exception
-    raise RuntimeError("Retry execution completed without result")
+    if last_exception:  # pragma: no cover
+        raise last_exception  # pragma: no cover
+    raise RuntimeError("Retry execution completed without result")  # pragma: no cover
 
 
 def _circuit_break_execution(

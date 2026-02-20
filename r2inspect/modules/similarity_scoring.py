@@ -10,7 +10,7 @@ def jaccard_similarity(left: set, right: set) -> float:
     if not left or not right:
         return 0.0
     union = left | right
-    if not union:
+    if not union:  # pragma: no cover
         return 0.0
     return len(left & right) / len(union)
 

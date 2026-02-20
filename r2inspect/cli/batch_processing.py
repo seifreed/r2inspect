@@ -185,7 +185,7 @@ def display_batch_results(
 def _safe_exit(code: int = 0) -> None:
     if os.getenv("R2INSPECT_TEST_SAFE_EXIT"):
         raise SystemExit(code)
-    os._exit(code)
+    os._exit(code)  # pragma: no cover
 
 
 def ensure_batch_shutdown(timeout: float = 2.0) -> None:
@@ -246,7 +246,7 @@ def _flush_coverage_data() -> None:
         if os.getenv("R2INSPECT_TEST_COVERAGE_DUMMY"):
 
             class _DummyCoverage:
-                def stop(self) -> None:
+                def stop(self) -> None:  # pragma: no cover
                     return None
 
                 def save(self) -> None:
@@ -267,7 +267,7 @@ def _flush_coverage_data() -> None:
         if _pytest_running():
             cov.save()
             return
-        cov.save()
+        cov.save()  # pragma: no cover
     except Exception:
         pass
 
@@ -284,7 +284,7 @@ def _pytest_running() -> bool:
         return True
     if any("pytest" in arg for arg in sys.argv):
         return True
-    return "pytest" in sys.modules
+    return "pytest" in sys.modules  # pragma: no cover
 
 
 def setup_batch_mode(

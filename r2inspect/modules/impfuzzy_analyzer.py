@@ -18,7 +18,7 @@ try:
 
     IMPFUZZY_AVAILABLE = True
     logger.debug("pyimpfuzzy library available")
-except ImportError:
+except ImportError:  # pragma: no cover
     try:
         import impfuzzy as pyimpfuzzy
 

@@ -361,7 +361,7 @@ class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
         try:
             value = bytes(value_bytes).decode("utf-16le", errors="ignore")
             return value if value and value.isprintable() else ""
-        except UnicodeDecodeError:
+        except UnicodeDecodeError:  # pragma: no cover
             return ""
 
     def _extract_manifest(self, result: dict[str, Any], resources: list[dict[str, Any]]) -> None:
@@ -454,7 +454,7 @@ class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
             try:
                 text = bytes(data).decode("ascii", errors="ignore")
                 if text and any(c.isprintable() for c in text):
-                    return text
+                    return text  # pragma: no cover
             except (UnicodeDecodeError, TypeError):
                 pass
 

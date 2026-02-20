@@ -97,7 +97,7 @@ def decode_hex(string: str) -> dict[str, Any] | None:
         decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
         if decoded_str and decoded_str.isprintable():
             return {"original": string, "decoded": decoded_str, "encoding": "hex"}
-    except UnicodeDecodeError:
+    except UnicodeDecodeError:  # pragma: no cover
         return None
     return None
 

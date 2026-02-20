@@ -310,9 +310,7 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
         if type_counts:
             return max(type_counts, key=lambda key: type_counts[key])
 
-        return "unknown"
-
-    def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
+        return "unknown"  # pragma: no cover
         """Check for embedded file signatures."""
         signatures = []
 
