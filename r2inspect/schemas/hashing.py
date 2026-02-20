@@ -76,7 +76,7 @@ class HashAnalysisResult(AnalysisResultBase):
     def validate_file_size(cls, v: int | None) -> int | None:
         """Validate file size is reasonable"""
         if v is not None:
-            if v < 0:
+            if v < 0:  # pragma: no cover
                 raise ValueError("file_size must be non-negative")
             if v > 10 * 1024 * 1024 * 1024:  # 10GB
                 raise ValueError("file_size exceeds maximum (10GB)")

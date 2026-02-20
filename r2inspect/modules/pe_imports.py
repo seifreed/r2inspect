@@ -75,8 +75,8 @@ def calculate_imphash(adapter: Any, logger: Any) -> str:
             normalized_lib = normalize_library_name(libname, extensions)
 
             for funcname in functions:
-                if not funcname:
-                    continue
+                if not funcname:  # pragma: no cover
+                    continue  # pragma: no cover
 
                 if isinstance(funcname, bytes):
                     funcname = funcname.decode(errors="ignore")

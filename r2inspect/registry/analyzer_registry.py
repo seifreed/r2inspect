@@ -217,7 +217,7 @@ class AnalyzerRegistry(AnalyzerRegistryQueries):
                     return False, "analyze() method is not implemented (still abstract)"
 
         # Check if class is instantiable (has __init__)
-        if not hasattr(analyzer_class, "__init__"):
+        if not hasattr(analyzer_class, "__init__"):  # pragma: no cover
             return False, "Analyzer class must have __init__ method"
 
         return True, None
