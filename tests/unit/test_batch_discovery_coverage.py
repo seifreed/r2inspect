@@ -2,8 +2,11 @@
 
 import io
 import struct
+import sys
 import tempfile
 from pathlib import Path
+
+import pytest
 
 from r2inspect.application.batch_discovery import (
     _is_executable_signature,
@@ -18,8 +21,8 @@ from r2inspect.application.batch_discovery import (
     is_script_executable,
 )
 
-
 # _is_executable_signature tests
+
 
 def test_is_executable_signature_known_mime():
     assert _is_executable_signature("application/x-dosexec", "") is True
@@ -58,10 +61,13 @@ def test_is_executable_signature_not_executable():
 
 
 def test_is_executable_signature_dynamically_linked_desc():
-    assert _is_executable_signature("application/unknown", "dynamically linked shared object") is True
+    assert (
+        _is_executable_signature("application/unknown", "dynamically linked shared object") is True
+    )
 
 
 # _iter_files tests
+
 
 def test_iter_files_non_recursive():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -96,12 +102,14 @@ def test_iter_files_recursive():
 
 # init_magic_detectors tests
 
+
 def test_init_magic_detectors_none():
     result = init_magic_detectors(None)
     assert result is None
 
 
 # discover_executables_by_magic tests
+
 
 def test_discover_executables_by_magic_no_magic():
     result = discover_executables_by_magic("/tmp", magic_module=None)
@@ -125,6 +133,7 @@ def test_discover_executables_by_magic_invalid_magic_module():
 
 
 # check_executable_signature tests
+
 
 def test_check_executable_signature_pe():
     with tempfile.NamedTemporaryFile(suffix=".exe", delete=False) as f:
@@ -200,6 +209,7 @@ def test_check_executable_signature_nonexistent():
 
 # is_pe_executable tests
 
+
 def test_is_pe_executable_valid_mz_with_pe():
     header = bytearray(64)
     header[0:2] = b"MZ"
@@ -234,6 +244,7 @@ def test_is_pe_executable_short_header():
 
 # is_elf_executable tests
 
+
 def test_is_elf_executable_valid():
     assert is_elf_executable(b"\x7fELF" + b"\x00" * 60) is True
 
@@ -247,6 +258,7 @@ def test_is_elf_executable_pe_header():
 
 
 # is_macho_executable tests
+
 
 def test_is_macho_executable_feedface():
     assert is_macho_executable(b"\xfe\xed\xfa\xce" + b"\x00" * 60) is True
@@ -274,6 +286,7 @@ def test_is_macho_executable_invalid():
 
 # is_script_executable tests
 
+
 def test_is_script_executable_valid():
     assert is_script_executable(b"#!/usr/bin/env python3\n" + b"\x00" * 42) is True
 
@@ -291,6 +304,7 @@ def test_is_script_executable_not_shebang():
 
 
 # find_files_by_extensions tests
+
 
 def test_find_files_by_extensions_single_ext():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -370,8 +384,10 @@ def test_find_files_by_extensions_no_match():
 
 # Additional test for OSError path in is_pe_executable (lines 121-122)
 
+
 def test_is_pe_executable_seek_raises():
     """is_pe_executable returns True if seek raises OSError (MZ header present)."""
+
     class BrokenSeekFile:
         def seek(self, pos: int) -> None:
             raise OSError("seek failed")
@@ -383,6 +399,7 @@ def test_is_pe_executable_seek_raises():
     header = bytearray(64)
     header[0:2] = b"MZ"
     import struct
+
     struct.pack_into("<I", header, 60, 9999)  # bogus PE offset
     result = is_pe_executable(bytes(header), BrokenSeekFile())
     # Returns True because MZ is present (fallthrough after OSError)
@@ -391,6 +408,8 @@ def test_is_pe_executable_seek_raises():
 
 # Tests for discover_executables_by_magic with a real magic module (lines 69-87)
 
+
+@pytest.mark.skipif(sys.platform == "win32", reason="python-magic-bin may hang on Windows")
 def test_discover_executables_by_magic_with_magic_module():
     """Test full discovery path when python-magic is available."""
     import magic as magic_module
@@ -414,6 +433,7 @@ def test_discover_executables_by_magic_with_magic_module():
         # normal.txt is not executable, so executables might be empty
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="python-magic-bin may hang on Windows")
 def test_discover_executables_by_magic_finds_elf():
     """Test that ELF files are found by magic."""
     import magic as magic_module
@@ -423,7 +443,9 @@ def test_discover_executables_by_magic_finds_elf():
 
         # Create a minimal ELF file (large enough to read)
         elf_file = p / "test.elf"
-        elf_header = b"\x7fELF" + b"\x02\x01\x01\x00" + b"\x00" * 8 + b"\x02\x00\x3e\x00" + b"\x00" * 44
+        elf_header = (
+            b"\x7fELF" + b"\x02\x01\x01\x00" + b"\x00" * 8 + b"\x02\x00\x3e\x00" + b"\x00" * 44
+        )
         elf_file.write_bytes(elf_header)
 
         executables, init_errors, file_errors, total = discover_executables_by_magic(
@@ -434,6 +456,7 @@ def test_discover_executables_by_magic_finds_elf():
         assert total >= 1
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="python-magic-bin may hang on Windows")
 def test_discover_executables_by_magic_file_error_handling():
     """Test that file errors are captured in file_errors list."""
     import magic as magic_module
