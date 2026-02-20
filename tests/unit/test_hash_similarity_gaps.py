@@ -20,7 +20,14 @@ import subprocess
 import tempfile
 
 import pytest
-import ssdeep as ssdeep_lib
+
+try:
+    import ssdeep as ssdeep_lib
+
+    SSDEEP_AVAILABLE = True
+except ImportError:
+    ssdeep_lib = None  # type: ignore[assignment]
+    SSDEEP_AVAILABLE = False
 
 import r2inspect.modules.rich_header_analyzer as rha_mod
 import r2inspect.modules.ssdeep_analyzer as ssdeep_mod
@@ -188,6 +195,7 @@ class _FailCleanupTempDir:
         raise RuntimeError("deliberate cleanup failure for lines 250-251")
 
 
+@pytest.mark.skipif(not SSDEEP_AVAILABLE, reason="ssdeep not installed")
 def test_compare_with_binary_cleanup_exception() -> None:
     """Lines 250-251: exception from temp_dir.cleanup() is caught and logged."""
     # Create a real ssdeep hash to compare
