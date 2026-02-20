@@ -109,6 +109,9 @@ def cap_test_resources() -> None:
 def cleanup_r2_processes():
     """Cleanup any orphaned radare2 processes after each test."""
     yield
+    # radare2 does not run on Windows; skip the expensive process scan there
+    if sys.platform == "win32":
+        return
     # Post-test cleanup
     try:
         import psutil
