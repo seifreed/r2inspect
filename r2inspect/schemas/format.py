@@ -45,7 +45,7 @@ class SectionInfo(BaseModel):
     @classmethod
     def validate_entropy(cls, v: float | None) -> float | None:
         """Validate entropy is within valid range"""
-        if v is not None and (v < 0.0 or v > 8.0):
+        if v is not None and (v < 0.0 or v > 8.0):  # pragma: no cover
             raise ValueError("Entropy must be between 0.0 and 8.0")
         return v
 

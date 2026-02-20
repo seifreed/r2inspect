@@ -292,7 +292,7 @@ def calculate_overall_similarity(
         "behavioral": 0.15,
     }
     total_weight = sum(weights.values())
-    if total_weight <= 0:
+    if total_weight <= 0:  # pragma: no cover
         return 0.0
     weighted = (
         structural * weights["structural"]

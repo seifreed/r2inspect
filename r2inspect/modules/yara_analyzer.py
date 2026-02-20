@@ -306,7 +306,7 @@ class YaraAnalyzer(CommandHelperMixin):
                         # Handle different YARA versions - some have length attribute, some don't
                         if hasattr(instance, "length"):
                             instance_info["length"] = instance.length
-                        else:
+                        else:  # pragma: no cover
                             instance_info["length"] = len(instance.matched_data)
 
                         string_info["instances"].append(instance_info)

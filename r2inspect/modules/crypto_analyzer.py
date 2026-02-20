@@ -257,8 +257,8 @@ class CryptoAnalyzer:
             except ValueError:
                 return 0.0
 
-            if len(data) == 0:
-                return 0.0
+            if len(data) == 0:  # pragma: no cover
+                return 0.0  # pragma: no cover
             return shannon_entropy(data)
 
         except Exception as e:

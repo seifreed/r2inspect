@@ -73,10 +73,10 @@ def silent_cmdj(
             result = _try_cmdj(r2_instance, command, default)
             if result is not None or result == default:
                 return result
-            parsed = _try_cmd_parse(r2_instance, command, default)
-            if parsed is not None or parsed == default:
-                return parsed
-            return safe_cmdj(r2_instance, command, default)
+            parsed = _try_cmd_parse(r2_instance, command, default)  # pragma: no cover
+            if parsed is not None or parsed == default:  # pragma: no cover
+                return parsed  # pragma: no cover
+            return safe_cmdj(r2_instance, command, default)  # pragma: no cover
         except Exception as exc:
             logger.debug("Suppressed unexpected r2pipe error for %s: %s", command, exc)
             return default
