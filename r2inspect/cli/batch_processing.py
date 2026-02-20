@@ -62,13 +62,6 @@ from .batch_workers import _cap_threads_for_execution, process_files_parallel, p
 console = Console()
 logger = get_logger(__name__)
 
-_magic: Any | None
-try:
-    import magic as _magic
-except Exception:
-    _magic = None
-magic: Any | None = _magic
-
 
 def setup_rate_limiter(threads: int, verbose: bool) -> Any:
     """Setup rate limiter for batch processing"""
@@ -121,10 +114,14 @@ def find_executable_files_by_magic(
     directory: str | Path, recursive: bool = False, verbose: bool = False
 ) -> list[Path]:
     """Find executable files using magic bytes detection (PE, ELF, Mach-O, etc.)"""
+    try:
+        import magic as _magic_module
+    except Exception:
+        _magic_module = None
     files, init_errors, file_errors, scanned = discover_executables_by_magic(
         directory,
         recursive=recursive,
-        magic_module=magic,
+        magic_module=_magic_module,
     )
 
     for message in init_errors:
