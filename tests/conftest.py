@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import os
-import resource
 import sys
 from pathlib import Path
+
+try:
+    import resource as _resource
+except ImportError:
+    _resource = None  # type: ignore[assignment]
 
 import pytest
 
@@ -80,23 +84,23 @@ def cap_test_resources() -> None:
         as_limit = str(DEFAULT_TEST_MEMORY_LIMIT_MB)
 
     # Apply CPU time limit
-    if cpu_limit:
+    if cpu_limit and _resource is not None:
         try:
             seconds = int(cpu_limit)
             if seconds > 0:
-                resource.setrlimit(resource.RLIMIT_CPU, (seconds, seconds))
+                _resource.setrlimit(_resource.RLIMIT_CPU, (seconds, seconds))
         except (ValueError, OSError):
             pass
 
     # Apply memory (address space) limit
-    if as_limit:
+    if as_limit and _resource is not None:
         try:
             mb = int(as_limit)
             if mb > 0:
                 bytes_limit = mb * 1024 * 1024
                 # RLIMIT_AS may not be available on all platforms
-                if hasattr(resource, "RLIMIT_AS"):
-                    resource.setrlimit(resource.RLIMIT_AS, (bytes_limit, bytes_limit))
+                if hasattr(_resource, "RLIMIT_AS"):
+                    _resource.setrlimit(_resource.RLIMIT_AS, (bytes_limit, bytes_limit))
         except (ValueError, OSError):
             pass
 
