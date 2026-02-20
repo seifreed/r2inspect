@@ -287,8 +287,8 @@ def decode_rich_header(encoded_data: bytes, xor_key: int) -> list[dict[str, Any]
             if i + 8 > len(encoded_data):
                 break
             entry_bytes = encoded_data[i : i + 8]
-            if len(entry_bytes) < 8:
-                break
+            if len(entry_bytes) < 8:  # pragma: no cover
+                break  # pragma: no cover
             prodid_encoded, count_encoded = struct.unpack("<II", entry_bytes)
             prodid = prodid_encoded ^ xor_key
             count = count_encoded ^ xor_key
