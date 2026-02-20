@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any
 
 
@@ -10,6 +11,10 @@ class MagicAdapter:
 
     def __init__(self) -> None:
         self._magic: Any | None
+        if sys.platform == "win32":
+            # python-magic-bin can crash the interpreter on import in some Windows CI images.
+            self._magic = None
+            return
         try:
             import magic as _magic
 
