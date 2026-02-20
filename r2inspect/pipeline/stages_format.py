@@ -15,8 +15,19 @@ from ..utils.logger import get_logger
 from ..utils.magic_detector import detect_file_type
 from .analysis_pipeline import AnalysisStage
 
-_magic_adapter = MagicAdapter()
-_magic_detectors = _magic_adapter.create_detectors()
+_magic_adapter: MagicAdapter | None = None
+_magic_detectors: tuple[Any, Any] | None = None
+_magic_initialized = False
+
+
+def _get_magic_detectors() -> tuple[Any, Any] | None:
+    global _magic_adapter, _magic_detectors, _magic_initialized
+    if not _magic_initialized:
+        _magic_initialized = True
+        _magic_adapter = MagicAdapter()
+        _magic_detectors = _magic_adapter.create_detectors()
+    return _magic_detectors
+
 
 logger = get_logger(__name__)
 
@@ -41,8 +52,8 @@ class FileInfoStage(AnalysisStage):
         info["path"] = str(self.file_path.absolute())
         info["name"] = self.file_path.name
 
-        if _magic_detectors is not None:
-            mime_magic, desc_magic = _magic_detectors
+        if _get_magic_detectors() is not None:
+            mime_magic, desc_magic = _get_magic_detectors()  # type: ignore[misc]
             info["mime_type"] = mime_magic.from_file(self.filename)
             info["file_type"] = desc_magic.from_file(self.filename)
         else:
@@ -152,9 +163,9 @@ class FormatDetectionStage(AnalysisStage):
         return None
 
     def _detect_via_basic_magic(self) -> str | None:
-        if _magic_detectors is None:
+        if _get_magic_detectors() is None:
             return None
-        _, desc_magic = _magic_detectors
+        _, desc_magic = _get_magic_detectors()  # type: ignore[misc]
         file_type = desc_magic.from_file(self.filename).lower()
 
         if "pe32" in file_type or "ms-dos" in file_type:
