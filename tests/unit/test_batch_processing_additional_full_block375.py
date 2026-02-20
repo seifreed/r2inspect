@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.cli import batch_processing
+from r2inspect.cli import batch_processing, batch_workers
 
 
 class DummyMagic:
@@ -188,7 +188,7 @@ def test_process_files_parallel_empty_results(monkeypatch, tmp_path: Path) -> No
     def fake_process(*_args, **_kwargs):
         return file_path, None, None
 
-    monkeypatch.setattr(batch_processing, "process_single_file", fake_process)
+    monkeypatch.setattr(batch_workers, "process_single_file", fake_process)
     all_results: dict[str, dict] = {}
     failed: list[tuple[str, str]] = []
     batch_processing.process_files_parallel(
@@ -200,7 +200,7 @@ def test_process_files_parallel_empty_results(monkeypatch, tmp_path: Path) -> No
     def fake_error(*_args, **_kwargs):
         return file_path, None, "boom"
 
-    monkeypatch.setattr(batch_processing, "process_single_file", fake_error)
+    monkeypatch.setattr(batch_workers, "process_single_file", fake_error)
     all_results = {}
     failed = []
     batch_processing.process_files_parallel(
@@ -212,7 +212,7 @@ def test_process_files_parallel_empty_results(monkeypatch, tmp_path: Path) -> No
     def fake_success(*_args, **_kwargs):
         return file_path, {"file_info": {"name": "one.exe"}}, None
 
-    monkeypatch.setattr(batch_processing, "process_single_file", fake_success)
+    monkeypatch.setattr(batch_workers, "process_single_file", fake_success)
     all_results = {}
     failed = []
     batch_processing.process_files_parallel(

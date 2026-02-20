@@ -62,6 +62,27 @@ from .batch_workers import _cap_threads_for_execution, process_files_parallel, p
 console = Console()
 logger = get_logger(__name__)
 
+# Import magic at module level, but only on non-Windows platforms.
+# python-magic-bin on Windows can cause access violations or hang indefinitely.
+magic: Any | None = None
+if sys.platform != "win32":
+    try:
+        import magic as _magic_import
+
+        magic = _magic_import
+    except Exception:
+        magic = None
+
+
+def _init_magic() -> tuple[Any, Any] | None:
+    """Initialize magic detectors using the module-level magic import."""
+    if magic is None:
+        return None
+    try:
+        return magic.Magic(mime=True), magic.Magic()
+    except Exception:
+        return None
+
 
 def setup_rate_limiter(threads: int, verbose: bool) -> Any:
     """Setup rate limiter for batch processing"""
@@ -114,14 +135,10 @@ def find_executable_files_by_magic(
     directory: str | Path, recursive: bool = False, verbose: bool = False
 ) -> list[Path]:
     """Find executable files using magic bytes detection (PE, ELF, Mach-O, etc.)"""
-    try:
-        import magic as _magic_module
-    except Exception:
-        _magic_module = None
     files, init_errors, file_errors, scanned = discover_executables_by_magic(
         directory,
         recursive=recursive,
-        magic_module=_magic_module,
+        magic_module=magic,
     )
 
     for message in init_errors:
