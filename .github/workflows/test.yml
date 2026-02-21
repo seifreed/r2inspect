@@ -45,6 +45,7 @@ jobs:
           pip install -e .[dev]
 
       - name: Fetch test binaries
+        shell: bash
         run: |
           git clone --depth 1 https://github.com/seifreed/r2inspect-test-binaries.git test-binaries
           python - <<'PY'
