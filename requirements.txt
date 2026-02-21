@@ -11,7 +11,6 @@ click>=8.1.7
 cryptography>=45.0.2
 requests>=2.32.4
 prettytable>=3.9.0
-ssdeep>=3.4
 py-tlsh>=4.7.0
 telfhash>=0.9.8
 pyimpfuzzy==0.5

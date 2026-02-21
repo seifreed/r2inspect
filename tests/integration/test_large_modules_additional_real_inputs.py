@@ -8,9 +8,10 @@ from r2inspect.factory import create_inspector
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
-from r2inspect.modules.ssdeep_analyzer import SSDEEP_LIBRARY_AVAILABLE, SSDeepAnalyzer
+from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TELFHASH_AVAILABLE, TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
+from r2inspect.utils.ssdeep_loader import get_ssdeep
 
 pytestmark = pytest.mark.requires_r2
 
@@ -69,10 +70,9 @@ def test_hashing_analyzers_real_inputs(samples_dir: Path, tmp_path: Path) -> Non
     ssdeep = SSDeepAnalyzer(str(empty_file))
     ssdeep_result = ssdeep.analyze()
     assert "available" in ssdeep_result
-    if SSDEEP_LIBRARY_AVAILABLE:
-        assert ssdeep_result.get("available") is False or ssdeep_result.get("hash_value") is None
-    else:
-        assert ssdeep_result.get("available") is False
+    assert ssdeep_result.get("available") is False
+    if get_ssdeep() is None and SSDeepAnalyzer.is_available():
+        assert ssdeep_result.get("method_used") in {None, "system_binary"}
 
     with create_inspector(str(pe_sample)) as inspector:
         tlsh = TLSHAnalyzer(inspector.adapter, str(pe_sample))

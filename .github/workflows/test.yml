@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, macos-14, windows-latest]
         python-version: ["3.13", "3.14"]
 
     steps:
@@ -27,16 +27,26 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libmagic-dev
+          sudo apt-get install -y libmagic-dev ssdeep
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install libmagic
+          brew install libmagic ssdeep
 
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $zipUrl = "https://github.com/ssdeep-project/ssdeep/releases/download/release-2.14.1/ssdeep-2.14.1-win32-binary.zip"
+          $zipPath = "$env:RUNNER_TEMP\ssdeep-win32.zip"
+          $extractRoot = "$env:RUNNER_TEMP\ssdeep"
+          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
+          $binDir = Join-Path $extractRoot "ssdeep-2.14.1"
+          "$binDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & "$binDir\ssdeep.exe" -V
           pip install python-magic-bin
 
       - name: Install Python dependencies
@@ -101,11 +111,13 @@ jobs:
         run: |
           pip install -e .
           r2inspect --help
+          ssdeep -V
 
       - name: Test installation (Windows)
         if: runner.os == 'Windows'
         run: |
           python -c "import r2inspect, sys; print(r2inspect.__version__)"
+          ssdeep -V
 
       - name: Run tests with coverage (unit + fast)
         run: |
@@ -116,3 +128,18 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: seifreed/r2inspect
+
+  test-linux-x86-ssdeep-cli:
+    runs-on: ubuntu-latest
+    container:
+      image: i386/python:3.13-slim
+    steps:
+      - name: Install ssdeep on linux/386
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ssdeep
+
+      - name: Validate ssdeep CLI on linux/386
+        run: |
+          ssdeep -V
+          ssdeep -s /etc/hosts
