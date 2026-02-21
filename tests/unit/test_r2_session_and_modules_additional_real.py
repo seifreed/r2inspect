@@ -14,6 +14,7 @@ from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
+from r2inspect.utils.ssdeep_loader import get_ssdeep
 
 pytestmark = [pytest.mark.unit, pytest.mark.requires_r2]
 
@@ -172,6 +173,10 @@ def test_hashing_analyzers_real(samples_dir: Path) -> None:
     ssdeep_result = ssdeep_analyzer.analyze()
     if ssdeep_result["available"]:
         assert ssdeep_result["hash_value"]
+        if get_ssdeep() is None:
+            assert ssdeep_result["method_used"] == "system_binary"
+        else:
+            assert ssdeep_result["method_used"] in {"python_library", "system_binary"}
     else:
         assert ssdeep_result["error"]
 

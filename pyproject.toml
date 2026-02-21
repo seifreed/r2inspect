@@ -67,7 +67,6 @@ docker = [
     "pycparser>=2.21",
     "pyimpfuzzy>=0.1.1",
     "python-tlsh>=4.5.0",
-    "ssdeep>=3.4",
 ]
 
 [project.urls]
