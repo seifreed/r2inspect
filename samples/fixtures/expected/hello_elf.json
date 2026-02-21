@@ -1,9 +1,0 @@
-{
-  "file_format": "ELF",
-  "name": "hello_elf",
-  "size": 1872,
-  "hashes": {
-    "md5": "fbf668f8f360fee2da0c244369b94eb4",
-    "sha256": "39688c91f985915d521bd21983f600817507de4a70cde683ea372eb8472a3a09"
-  }
-}
