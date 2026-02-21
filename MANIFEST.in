@@ -7,16 +7,8 @@ include pyproject.toml
 # Include all YARA rules
 recursive-include r2inspect/rules *.yar *.yara
 
-# Include Docker files for reference
+# Include Docker build file
 include Dockerfile
-include docker-compose.yml
-include DOCKER.md
-include docker-run.sh
-include docker-run.bat
-include test-docker.sh
-
-# Include Makefile
-include Makefile
 
 # Exclude unnecessary files
 global-exclude *.pyc
