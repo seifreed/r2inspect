@@ -8,11 +8,23 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.target.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-13, macos-14, windows-latest]
+        target:
+          - os: ubuntu-latest
+            platform: linux-x64
+            expected_arch: x86_64
+          - os: windows-latest
+            platform: windows-x64
+            expected_arch: x86_64
+          - os: macos-14
+            platform: macos-arm64
+            expected_arch: arm64
+          - os: macos-15-intel
+            platform: macos-x64
+            expected_arch: x86_64
         python-version: ["3.13", "3.14"]
 
     steps:
@@ -22,6 +34,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Validate runner architecture (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          arch="$(uname -m)"
+          echo "Detected architecture: $arch"
+          if [ "$arch" != "${{ matrix.target.expected_arch }}" ]; then
+            echo "Unexpected architecture for ${{ matrix.target.platform }}: expected ${{ matrix.target.expected_arch }}, got $arch"
+            exit 1
+          fi
+
+      - name: Validate runner architecture (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else { "x86" }
+          Write-Host "Detected architecture: $arch"
+          if ($arch -ne "${{ matrix.target.expected_arch }}") {
+            throw "Unexpected architecture for ${{ matrix.target.platform }}: expected ${{ matrix.target.expected_arch }}, got $arch"
+          }
 
       - name: Install system dependencies (Ubuntu)
         if: runner.os == 'Linux'
