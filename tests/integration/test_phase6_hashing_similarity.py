@@ -16,6 +16,7 @@ from r2inspect.modules.simhash_analyzer import SimHashAnalyzer
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSHAnalyzer
+from r2inspect.utils.ssdeep_loader import get_ssdeep
 
 pytestmark = pytest.mark.requires_r2
 
@@ -35,7 +36,10 @@ def test_ssdeep_analyzer_real_binary() -> None:
     if SSDeepAnalyzer.is_available():
         assert result["available"] is True
         assert result["hash_value"]
-        assert result.get("hash_value")
+        if get_ssdeep() is None:
+            assert result["method_used"] == "system_binary"
+        else:
+            assert result["method_used"] in {"python_library", "system_binary"}
     else:
         assert result["available"] is False
         assert "SSDeep not available" in result["error"]

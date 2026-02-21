@@ -81,7 +81,6 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r /tmp/requirements-docker.txt && \
     # Try to install optional packages (may fail, that's OK)
     pip install --no-cache-dir python-tlsh>=4.5.0 || echo "python-tlsh installation failed, will use fallback" && \
-    pip install --no-cache-dir ssdeep>=3.4 || echo "ssdeep installation failed, will use system binary" && \
     # Development packages (only for dev builds)
     if [ "$BUILD_TYPE" = "development" ]; then \
         pip install --no-cache-dir \
