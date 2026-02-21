@@ -51,13 +51,32 @@ jobs:
           from pathlib import Path
           import shutil
 
-          src = Path("test-binaries/fixtures")
+          repo = Path("test-binaries")
           dst = Path("samples/fixtures")
           dst.mkdir(parents=True, exist_ok=True)
-          for item in src.iterdir():
-              if item.is_file():
-                  shutil.copy2(item, dst / item.name)
-          print(f"Copied fixtures from {src} to {dst}")
+          required = {
+              "hello_pe.exe",
+              "hello_elf",
+              "hello_macho",
+              "hello_macho_stripped",
+              "edge_bad_pe.bin",
+              "edge_high_entropy.bin",
+              "edge_packed.bin",
+              "edge_tiny.bin",
+          }
+
+          found = {}
+          for item in repo.rglob("*"):
+              if item.is_file() and item.name in required and item.name not in found:
+                  found[item.name] = item
+
+          missing = sorted(required - found.keys())
+          if missing:
+              raise SystemExit(f"Missing required test binaries: {missing}")
+
+          for name, src in sorted(found.items()):
+              shutil.copy2(src, dst / name)
+          print(f"Copied {len(found)} fixtures from {repo} to {dst}")
           PY
 
       - name: Lint with ruff
