@@ -1,9 +1,0 @@
-{
-  "file_format": "PE",
-  "name": "edge_packed.bin",
-  "size": 1090,
-  "hashes": {
-    "md5": "8b3b297c69965f31f17892a0c8db17a3",
-    "sha256": "aa91ef5653e4c6782ec48e0dec950e8e30cd5ca04c55feeb2ceb2c3ad175fee6"
-  }
-}
