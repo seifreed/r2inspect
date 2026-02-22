@@ -64,19 +64,21 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
             # Parse result based on return type
             hash_value = None
+            message = None
             if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
                 # telfhash returns a list with one dictionary for single file
                 result_dict = telfhash_result[0]
-                hash_value = result_dict.get("telfhash")
-                if result_dict.get("msg") and not hash_value:
-                    return None, None, result_dict.get("msg")
+                hash_value = self._normalize_telfhash_value(result_dict.get("telfhash"))
+                message = cast(str | None, result_dict.get("msg"))
             elif isinstance(telfhash_result, dict):
                 # Extract the actual hash from the result dictionary
-                hash_value = telfhash_result.get("telfhash")
-                if telfhash_result.get("msg") and not hash_value:
-                    return None, None, telfhash_result.get("msg")
+                hash_value = self._normalize_telfhash_value(telfhash_result.get("telfhash"))
+                message = cast(str | None, telfhash_result.get("msg"))
             else:
-                hash_value = cast(str | None, telfhash_result)
+                hash_value = self._normalize_telfhash_value(telfhash_result)
+
+            if message and not hash_value:
+                return None, None, message
 
             if hash_value:
                 logger.debug(f"Telfhash calculated: {hash_value}")
@@ -161,18 +163,20 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
                     # telfhash returns a list with one dictionary for single file
                     result_dict = telfhash_result[0]
-                    results["telfhash"] = result_dict.get("telfhash")
+                    results["telfhash"] = self._normalize_telfhash_value(result_dict.get("telfhash"))
                     if result_dict.get("msg") and not results["telfhash"]:
                         results["error"] = result_dict.get("msg")
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
                 elif isinstance(telfhash_result, dict):
                     # Extract the actual hash from the result dictionary
-                    results["telfhash"] = telfhash_result.get("telfhash")
+                    results["telfhash"] = self._normalize_telfhash_value(
+                        telfhash_result.get("telfhash")
+                    )
                     if telfhash_result.get("msg") and not results["telfhash"]:
                         results["error"] = telfhash_result.get("msg")
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
                 else:
-                    results["telfhash"] = cast(str | None, telfhash_result)
+                    results["telfhash"] = self._normalize_telfhash_value(telfhash_result)
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
 
             except Exception as e:
@@ -336,6 +340,15 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return names
 
     @staticmethod
+    def _normalize_telfhash_value(value: Any) -> str | None:
+        if not isinstance(value, str):
+            return None
+        cleaned = value.strip()
+        if not cleaned or cleaned == "-":
+            return None
+        return cleaned
+
+    @staticmethod
     def compare_hashes(hash1: str, hash2: str) -> int | None:
         """
         Compare two telfhash values and return similarity score.
@@ -401,10 +414,10 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         try:
             result = telfhash(filepath)
             if isinstance(result, list) and len(result) > 0:
-                return cast(str | None, result[0].get("telfhash"))
+                return TelfhashAnalyzer._normalize_telfhash_value(result[0].get("telfhash"))
             elif isinstance(result, dict):
-                return cast(str | None, result.get("telfhash"))
-            return cast(str | None, result)
+                return TelfhashAnalyzer._normalize_telfhash_value(result.get("telfhash"))
+            return TelfhashAnalyzer._normalize_telfhash_value(result)
         except Exception as e:
             logger.warning(f"Failed to calculate telfhash: {e}")
             return None

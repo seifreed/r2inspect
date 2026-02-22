@@ -282,7 +282,7 @@ class TLSHAnalyzer(R2HashingStrategy):
     def find_similar_sections(self, threshold: int = 100) -> list[dict[str, Any]]:
         """Find sections with similar TLSH hashes"""
         try:
-            analysis = self.analyze()
+            analysis = self.analyze_sections()
             if not analysis.get("available"):
                 return []
 
