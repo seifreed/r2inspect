@@ -25,10 +25,51 @@ DEFAULT_TEST_MEMORY_LIMIT_MB = 1024  # 1GB memory limit per test process
 DEFAULT_TEST_CPU_LIMIT_SECONDS = 300  # 5 minute CPU time limit per test session
 
 
-@pytest.fixture
-def samples_dir() -> Path:
-    """Return the path to bundled sample fixtures."""
-    return Path(__file__).resolve().parent.parent / "samples" / "fixtures"
+@pytest.fixture(scope="session")
+def samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Return a legacy-compatible fixtures directory backed by test binaries repo."""
+    repo_root = Path(__file__).resolve().parent.parent
+    configured = os.getenv("R2INSPECT_TEST_BINARIES_DIR", "").strip()
+    candidate_roots = []
+    if configured:
+        candidate_roots.append(Path(configured))
+    candidate_roots.append(repo_root.parent / "r2inspect-test-binaries")
+    candidate_roots.append(repo_root / "samples" / "fixtures")
+
+    source_root = next((path for path in candidate_roots if path.exists()), None)
+    if source_root is None:
+        pytest.skip(
+            "No fixture binaries found. Set R2INSPECT_TEST_BINARIES_DIR or clone "
+            "../r2inspect-test-binaries."
+        )
+
+    if (source_root / "hello_pe.exe").exists():
+        # Legacy in-repo layout already available.
+        return source_root
+
+    # Build a legacy fixtures layout expected by existing tests.
+    legacy_dir = tmp_path_factory.mktemp("legacy_fixtures")
+    mapping = {
+        "hello_pe.exe": source_root / "pe" / "hello_pe.exe",
+        "hello_elf": source_root / "elf" / "hello_elf",
+        "hello_macho": source_root / "mach0" / "hello_macho",
+        "hello_macho_stripped": source_root / "mach0" / "hello_macho_stripped",
+        "edge_tiny.bin": source_root / "edge" / "edge_tiny.bin",
+        "edge_packed.bin": source_root / "edge" / "edge_packed.bin",
+        "edge_bad_pe.bin": source_root / "edge" / "edge_bad_pe.bin",
+        "edge_high_entropy.bin": source_root / "edge" / "edge_high_entropy.bin",
+    }
+
+    for target_name, source_path in mapping.items():
+        if not source_path.exists():
+            continue
+        target_path = legacy_dir / target_name
+        try:
+            target_path.symlink_to(source_path)
+        except OSError:
+            target_path.write_bytes(source_path.read_bytes())
+
+    return legacy_dir
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -102,6 +143,49 @@ def cap_test_resources() -> None:
                 if hasattr(_resource, "RLIMIT_AS"):
                     _resource.setrlimit(_resource.RLIMIT_AS, (bytes_limit, bytes_limit))
         except (ValueError, OSError):
+            pass
+
+
+@pytest.fixture(autouse=True, scope="session")
+def ensure_legacy_samples_tree(samples_dir: Path) -> None:
+    """
+    Ensure legacy samples/fixtures paths exist for tests with hardcoded paths.
+
+    The project migrated binaries out of this repo; this recreates the legacy
+    tree as symlinks (or copies) during test execution only.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    legacy_fixtures = repo_root / "samples" / "fixtures"
+    created = False
+    created_files: list[Path] = []
+
+    if not legacy_fixtures.exists():
+        legacy_fixtures.mkdir(parents=True, exist_ok=True)
+        created = True
+
+    for source in samples_dir.iterdir():
+        target = legacy_fixtures / source.name
+        if target.exists():
+            continue
+        try:
+            target.symlink_to(source)
+        except OSError:
+            target.write_bytes(source.read_bytes())
+        created_files.append(target)
+
+    yield
+
+    for target in created_files:
+        try:
+            target.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    if created:
+        try:
+            legacy_fixtures.rmdir()
+            (legacy_fixtures.parent).rmdir()
+        except OSError:
             pass
 
 

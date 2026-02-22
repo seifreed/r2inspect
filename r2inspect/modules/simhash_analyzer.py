@@ -184,10 +184,13 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
                 return {}
 
             for func in functions:
-                if not isinstance(func, dict) or "offset" not in func:
+                if not isinstance(func, dict):
                     continue
 
-                func_addr = func["offset"]
+                # Accept both radare2 shapes: "offset" and "addr".
+                func_addr = func.get("offset") or func.get("addr")
+                if func_addr is None:
+                    continue
                 func_name = func.get("name", f"func_{func_addr}")
                 func_size = func.get("size", 0)
 
@@ -249,9 +252,17 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
         for i, op in enumerate(ops):
             if i >= self.max_instructions_per_function:
                 break
-            if not isinstance(op, dict) or "mnemonic" not in op:
+            if not isinstance(op, dict):
                 continue
-            mnemonic = op["mnemonic"].strip().lower()
+            mnemonic_value = op.get("mnemonic")
+            if not isinstance(mnemonic_value, str) or not mnemonic_value.strip():
+                opcode_value = op.get("opcode")
+                if isinstance(opcode_value, str) and opcode_value.strip():
+                    mnemonic_value = opcode_value.split()[0]
+                else:
+                    continue
+
+            mnemonic = mnemonic_value.strip().lower()
             if not mnemonic:
                 continue
             opcodes.append(f"OP:{mnemonic}")
@@ -485,6 +496,12 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
             current_hash = None
             if hash_type == "combined" and results.get("combined_simhash"):
                 current_hash = results["combined_simhash"]["hash"]
+            elif hash_type == "combined" and results.get("hash_value"):
+                hash_value = results["hash_value"]
+                if isinstance(hash_value, str):
+                    current_hash = int(hash_value, 16)
+                elif isinstance(hash_value, int):
+                    current_hash = hash_value
             elif hash_type == "strings" and results.get("strings_simhash"):
                 current_hash = results["strings_simhash"]["hash"]
             elif hash_type == "opcodes" and results.get("opcodes_simhash"):

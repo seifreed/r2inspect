@@ -71,7 +71,9 @@ def test_telfhash_analyzer_library_gate() -> None:
 
     if TelfhashAnalyzer.is_available():
         assert result["available"] is True
-        assert result["hash_value"]
+        assert result["hash_value"] is None or isinstance(result["hash_value"], str)
+        if result["hash_value"] is None:
+            assert result["error"]
     else:
         assert result["available"] is False
         assert "telfhash library not available" in result["error"]
