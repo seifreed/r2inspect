@@ -163,7 +163,9 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
                     # telfhash returns a list with one dictionary for single file
                     result_dict = telfhash_result[0]
-                    results["telfhash"] = self._normalize_telfhash_value(result_dict.get("telfhash"))
+                    results["telfhash"] = self._normalize_telfhash_value(
+                        result_dict.get("telfhash")
+                    )
                     if result_dict.get("msg") and not results["telfhash"]:
                         results["error"] = result_dict.get("msg")
                     logger.debug(f"Telfhash calculated: {results['telfhash']}")
