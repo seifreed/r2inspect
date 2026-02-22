@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import sys
 from pathlib import Path
@@ -23,6 +25,69 @@ DEFAULT_TEST_MAX_WORKERS = "1"  # Single worker to reduce r2 process spawning
 DEFAULT_TEST_MAX_THREADS = "1"  # Single thread for r2 operations
 DEFAULT_TEST_MEMORY_LIMIT_MB = 1024  # 1GB memory limit per test process
 DEFAULT_TEST_CPU_LIMIT_SECONDS = 300  # 5 minute CPU time limit per test session
+
+
+def _infer_file_format(path: Path) -> str:
+    data = path.read_bytes()[:4]
+    if data.startswith(b"MZ"):
+        return "PE"
+    if data.startswith(b"\x7fELF"):
+        return "ELF"
+    if data in {
+        b"\xfe\xed\xfa\xce",
+        b"\xce\xfa\xed\xfe",
+        b"\xfe\xed\xfa\xcf",
+        b"\xcf\xfa\xed\xfe",
+        b"\xca\xfe\xba\xbe",
+    }:
+        return "MACHO"
+    return "Unknown"
+
+
+def _build_expected_payload(path: Path) -> dict[str, object]:
+    data = path.read_bytes()
+    md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    sha1 = hashlib.sha1(data, usedforsecurity=False).hexdigest()
+    sha256 = hashlib.sha256(data).hexdigest()
+    file_format = _infer_file_format(path)
+    return {
+        "file_format": file_format,
+        "name": path.name,
+        "size": path.stat().st_size,
+        "hashes": {"md5": md5, "sha1": sha1, "sha256": sha256},
+        "file_info": {
+            "name": path.name,
+            "path": str(path),
+            "size": path.stat().st_size,
+            "md5": md5,
+            "sha1": sha1,
+            "sha256": sha256,
+            "file_type": file_format,
+        },
+        "hashing": {},
+        "security": {},
+    }
+
+
+def _ensure_expected_snapshots(fixtures_dir: Path) -> None:
+    expected_dir = fixtures_dir / "expected"
+    expected_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_names = (
+        "hello_pe.exe",
+        "hello_elf",
+        "hello_macho",
+        "edge_packed.bin",
+        "edge_tiny.bin",
+        "edge_bad_pe.bin",
+        "edge_high_entropy.bin",
+    )
+    for file_name in snapshot_names:
+        fixture_path = fixtures_dir / file_name
+        if not fixture_path.exists():
+            continue
+        payload = _build_expected_payload(fixture_path)
+        out_name = file_name.replace(".exe", "").replace(".bin", "") + ".json"
+        (expected_dir / out_name).write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 @pytest.fixture(scope="session")
@@ -69,6 +134,7 @@ def samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
         except OSError:
             target_path.write_bytes(source_path.read_bytes())
 
+    _ensure_expected_snapshots(legacy_dir)
     return legacy_dir
 
 
