@@ -151,15 +151,18 @@ jobs:
           python -c "import r2inspect, sys; print(r2inspect.__version__)"
           ssdeep -V
 
-      - name: Run tests with coverage (unit + fast)
+      - name: Run tests with coverage
         run: |
-          pytest -m "not requires_r2 and not slow" --cov=r2inspect --cov-report=term-missing --cov-fail-under=60
+          pytest -m "not slow" --cov=r2inspect --cov-report=term-missing --cov-fail-under=60
+          coverage combine
+          coverage xml -o coverage.xml
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: seifreed/r2inspect
+          files: ./coverage.xml
 
   test-linux-x86-ssdeep-cli:
     runs-on: ubuntu-latest
