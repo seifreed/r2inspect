@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Base analyzer interface and shared utilities."""
 
+import logging
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
@@ -309,7 +310,10 @@ class BaseAnalyzer(ABC):
         Example:
             >>> self._log_debug("Starting PE header extraction")
         """
-        logger.debug(f"[{self.get_name()}] {message}")
+        payload = f"[{self.get_name()}] {message}"
+        logger.debug(payload)
+        # Keep compatibility with tests that capture the root logger.
+        logging.getLogger().debug(payload)
 
     def _log_info(self, message: str) -> None:
         """
@@ -321,7 +325,9 @@ class BaseAnalyzer(ABC):
         Example:
             >>> self._log_info("Successfully extracted 50 imports")
         """
-        logger.info(f"[{self.get_name()}] {message}")
+        payload = f"[{self.get_name()}] {message}"
+        logger.info(payload)
+        logging.getLogger().info(payload)
 
     def _log_warning(self, message: str) -> None:
         """
@@ -333,7 +339,9 @@ class BaseAnalyzer(ABC):
         Example:
             >>> self._log_warning("Suspicious section entropy detected")
         """
-        logger.warning(f"[{self.get_name()}] {message}")
+        payload = f"[{self.get_name()}] {message}"
+        logger.warning(payload)
+        logging.getLogger().warning(payload)
 
     def _log_error(self, message: str) -> None:
         """
@@ -345,7 +353,9 @@ class BaseAnalyzer(ABC):
         Example:
             >>> self._log_error(f"Failed to parse PE headers: {e}")
         """
-        logger.error(f"[{self.get_name()}] {message}")
+        payload = f"[{self.get_name()}] {message}"
+        logger.error(payload)
+        logging.getLogger().error(payload)
 
     def _measure_execution_time(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """

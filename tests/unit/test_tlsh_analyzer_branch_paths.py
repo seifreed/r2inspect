@@ -532,8 +532,8 @@ def test_find_similar_sections_first_hash_none_skipped(tmp_path):
         pytest.skip("Could not compute TLSH hash")
 
     class NullFirstAnalyzer(TLSHAnalyzer):
-        def analyze(self):
-            r = super().analyze()
+        def analyze_sections(self):
+            r = super().analyze_sections()
             r["available"] = True
             r["section_tlsh"] = {".null": None, ".text": h}
             return r
@@ -557,8 +557,8 @@ def test_find_similar_sections_second_hash_none_skipped(tmp_path):
         pytest.skip("Could not compute TLSH hash")
 
     class NullSecondAnalyzer(TLSHAnalyzer):
-        def analyze(self):
-            r = super().analyze()
+        def analyze_sections(self):
+            r = super().analyze_sections()
             r["available"] = True
             r["section_tlsh"] = {".text": h, ".null": None}
             return r
@@ -582,8 +582,8 @@ def test_find_similar_sections_identical_sections_pairs(tmp_path):
         pytest.skip("Could not compute TLSH hash")
 
     class TwoHashAnalyzer(TLSHAnalyzer):
-        def analyze(self):
-            r = super().analyze()
+        def analyze_sections(self):
+            r = super().analyze_sections()
             r["available"] = True
             r["section_tlsh"] = {".text": h, ".data": h}
             return r
@@ -610,8 +610,8 @@ def test_find_similar_sections_returns_sorted_by_score(tmp_path):
         pytest.skip("Could not compute TLSH hash")
 
     class MultiHashAnalyzer(TLSHAnalyzer):
-        def analyze(self):
-            r = super().analyze()
+        def analyze_sections(self):
+            r = super().analyze_sections()
             r["available"] = True
             r["section_tlsh"] = {".text": h, ".data": h, ".bss": h}
             return r
@@ -630,7 +630,7 @@ def test_find_similar_sections_exception_returns_empty(tmp_path):
     f.write_bytes(bytes(range(256)) * 10)
 
     class BrokenAnalyzer(TLSHAnalyzer):
-        def analyze(self):
+        def analyze_sections(self):
             raise RuntimeError("forced error")
 
     analyzer = BrokenAnalyzer(adapter=FakeAdapter(), filename=str(f))

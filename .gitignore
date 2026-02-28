@@ -1,0 +1,24 @@
+# GSD / planning artifacts
+.planning/
+
+# Coverage / test artifacts
+.coverage
+coverage.json
+coverage-unit.json
+htmlcov/
+.pytest_cache/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/

@@ -30,7 +30,7 @@ def test_results_dataclasses_methods() -> None:
     assert "relro_full" in enabled
     assert security.security_score() == 95
 
-    section = results_schema.SectionInfo(suspicious_indicators=["packed"])
+    section = results_schema.SectionInfo(name=".packed", suspicious_indicators=["packed"])
     assert section.is_suspicious() is True
 
     anti = results_schema.AntiAnalysisResult(anti_debug=True)

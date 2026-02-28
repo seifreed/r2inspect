@@ -51,6 +51,28 @@ class R2PipeAdapter(R2PipeQueryMixin):
     def cmdj(self, command: str) -> Any:
         return silent_cmdj(self._r2, command, None)
 
+    @property
+    def r2(self) -> Any:
+        """Backward-compatible accessor for underlying r2 instance."""
+        return self._r2
+
+    def execute_command(self, command: str) -> Any | None:
+        """Backward-compatible generic command execution helper."""
+        cmd_text = command.strip()
+        if not cmd_text:
+            return None
+
+        # Prefer JSON path for commands that conventionally return JSON.
+        if cmd_text.endswith("j"):
+            result = self.cmdj(cmd_text)
+            list_commands = {"iSj", "iij", "iEj", "isj", "aflj", "izj", "izzj", "iDj", "agj"}
+            if cmd_text in list_commands:
+                return result if isinstance(result, list) else []
+            return result if isinstance(result, dict | list) else {}
+
+        text = self.cmd(cmd_text)
+        return text
+
     def _cached_query(
         self,
         cmd: str,

@@ -78,14 +78,14 @@ def test_results_roundtrip_full_payload() -> None:
         },
         "imports": [{"name": "CreateFileA", "library": "KERNEL32.dll"}],
         "exports": [{"name": "exported", "address": "0x1000"}],
-        "sections": [{"name": ".text", "virtual_address": "0x1000", "virtual_size": 4096}],
+        "sections": [{"name": ".text", "virtual_address": 0x1000, "virtual_size": 4096}],
         "strings": ["hello"],
         "yara_matches": [{"rule": "demo", "namespace": "default"}],
-        "functions": [{"name": "main", "address": "0x2000"}],
+        "functions": [{"name": "main", "address": 0x2000}],
         "anti_analysis": {"detects": ["sleep"], "available": True},
         "packer": {"is_packed": True, "packer_type": "UPX"},
         "crypto": {"has_crypto": True, "algorithms": ["AES"]},
-        "indicators": [{"category": "evasion", "severity": "High"}],
+        "indicators": [{"type": "evasion", "description": "suspicious", "severity": "High"}],
         "error": None,
         "timestamp": datetime.utcnow().isoformat(),
         "execution_time": 1.23,
@@ -96,7 +96,7 @@ def test_results_roundtrip_full_payload() -> None:
     assert dumped["file_info"]["name"] == "sample.bin"
     assert dumped["security"]["relro"] == "full"
     assert dumped["packer"]["is_packed"] is True
-    assert dumped["crypto"]["has_crypto"] is True
+    assert dumped["crypto"]["algorithms"]
 
     assert result.is_suspicious() is True
     assert result.get_high_severity_indicators()

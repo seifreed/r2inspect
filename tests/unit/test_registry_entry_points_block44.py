@@ -13,6 +13,6 @@ def test_entry_points_noop(monkeypatch):
     def _fake_entry_points():
         return {}
 
-    monkeypatch.setattr("r2inspect.registry.analyzer_registry.entry_points", _fake_entry_points)
+    monkeypatch.setattr("r2inspect.registry.entry_points.entry_points", _fake_entry_points)
     loaded = registry.load_entry_points(group="missing")
     assert loaded == 0

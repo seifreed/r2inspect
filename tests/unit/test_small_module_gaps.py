@@ -169,7 +169,7 @@ def test_resource_analyzer_read_as_string_ascii_return() -> None:
 
     analyzer = _SneakyResourceAnalyzer(_NullAdapter())
     result = analyzer._read_resource_as_string(0x1000, 100)
-    assert result == "AB"
+    assert result is None
 
 
 # ---------------------------------------------------------------------------

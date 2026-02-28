@@ -299,6 +299,8 @@ def test_analyze_imports_ordinal_only_returns_no_processed_imports() -> None:
     """
     if not os.path.exists(_HELLO_PE):
         pytest.skip("hello_pe.exe fixture not found")
+    if not ImpfuzzyAnalyzer.is_available():
+        pytest.skip("pyimpfuzzy backend not available in current environment")
 
     analyzer = ImpfuzzyAnalyzer(adapter=_OrdinalOnlyImportAdapter(), filepath=_HELLO_PE)
     result = analyzer.analyze_imports()
@@ -314,6 +316,8 @@ def test_analyze_imports_success_with_valid_imports() -> None:
     """
     if not os.path.exists(_HELLO_PE):
         pytest.skip("hello_pe.exe fixture not found")
+    if not ImpfuzzyAnalyzer.is_available():
+        pytest.skip("pyimpfuzzy backend not available in current environment")
 
     analyzer = ImpfuzzyAnalyzer(adapter=_ValidImportAdapter(), filepath=_HELLO_PE)
     result = analyzer.analyze_imports()

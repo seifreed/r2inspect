@@ -17,6 +17,7 @@ from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyze
 # Helpers: temporary binary file and adapter stubs
 # ---------------------------------------------------------------------------
 
+
 def _tmp_binary(size: int = 100) -> str:
     """Create a temporary binary file and return its path."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
@@ -42,12 +43,12 @@ class _StringsStubAdapter(_BasicStubAdapter):
 
     def get_strings(self) -> list:
         return [
-            {"string": "http://example.com", "length": 18},   # url type
-            {"string": "HKEY_LOCAL_MACHINE", "length": 18},   # registry type
-            {"string": "LoadLibraryA", "length": 11},          # api type
-            {"string": "C:\\Windows\\System32", "length": 18}, # path type
+            {"string": "http://example.com", "length": 18},  # url type
+            {"string": "HKEY_LOCAL_MACHINE", "length": 18},  # registry type
+            {"string": "LoadLibraryA", "length": 11},  # api type
+            {"string": "C:\\Windows\\System32", "length": 18},  # path type
             {"string": "hello world this is a longer string that qualifies", "length": 50},
-            {"string": "short"},                                 # too short, may be skipped
+            {"string": "short"},  # too short, may be skipped
         ]
 
 
@@ -98,11 +99,13 @@ class _RaisingFunctionAdapter(_BasicStubAdapter):
 # _calculate_hash – exception path (lines 64-66)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_calculate_hash_exception_when_adapter_raises() -> None:
     """Lines 64-66: exception propagated from _extract_string_features is caught."""
     path = _tmp_binary()
     try:
+
         class _ExceptionStringFeatures(SimHashAnalyzer):
             """Subclass where _extract_string_features raises directly."""
 
@@ -127,6 +130,7 @@ def test_calculate_hash_exception_when_adapter_raises() -> None:
 # ---------------------------------------------------------------------------
 # _add_string_feature_set – STRTYPE: feature (line 127)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_add_string_feature_set_appends_strtype_for_classified_string() -> None:
@@ -163,11 +167,13 @@ def test_add_string_feature_set_no_strtype_for_plain_string() -> None:
 # _extract_function_features – exception paths (lines 212-214, 219-221)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_extract_function_features_skips_bad_simhash_entry() -> None:
     """Lines 212-214: exception creating Simhash for a function is caught."""
     path = _tmp_binary()
     try:
+
         class _NoneOpcodeAdapter(_BasicStubAdapter):
             """Returns function with opcodes list that causes Simhash to raise."""
 
@@ -206,6 +212,7 @@ def test_extract_function_features_outer_exception_returns_empty() -> None:
 # _append_data_section_string – read_bytes path (lines 281-282)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_append_data_section_string_reads_bytes_from_data_section() -> None:
     """Lines 281-282: read_bytes is called and printable strings are extracted."""
@@ -239,6 +246,7 @@ def test_append_data_section_string_skips_non_data_sections() -> None:
 # ---------------------------------------------------------------------------
 # _find_similar_functions – happy path (lines 427, 438, 447-448, 452)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_find_similar_functions_groups_identical_hashes() -> None:
@@ -300,9 +308,27 @@ def test_find_similar_functions_skips_already_processed() -> None:
         shared_hash = Simhash(["OP:mov", "OP:add"]).value
 
         func_features = {
-            "fa": {"addr": 0x1000, "size": 10, "simhash": shared_hash, "feature_count": 2, "unique_opcodes": 2},
-            "fb": {"addr": 0x1100, "size": 10, "simhash": shared_hash, "feature_count": 2, "unique_opcodes": 2},
-            "fc": {"addr": 0x1200, "size": 10, "simhash": shared_hash, "feature_count": 2, "unique_opcodes": 2},
+            "fa": {
+                "addr": 0x1000,
+                "size": 10,
+                "simhash": shared_hash,
+                "feature_count": 2,
+                "unique_opcodes": 2,
+            },
+            "fb": {
+                "addr": 0x1100,
+                "size": 10,
+                "simhash": shared_hash,
+                "feature_count": 2,
+                "unique_opcodes": 2,
+            },
+            "fc": {
+                "addr": 0x1200,
+                "size": 10,
+                "simhash": shared_hash,
+                "feature_count": 2,
+                "unique_opcodes": 2,
+            },
         }
 
         groups = analyzer._find_similar_functions(func_features, max_distance=5)
@@ -316,15 +342,16 @@ def test_find_similar_functions_skips_already_processed() -> None:
 # calculate_similarity – full flow (lines 485-524)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_calculate_similarity_returns_error_when_hash_type_not_in_results() -> None:
-    """Lines 478-494: returns error dict when no matching hash type in results."""
+    """Lines 478-537: returns similarity details when combined hash is available."""
     path = _tmp_binary()
     try:
         analyzer = SimHashAnalyzer(adapter=_StringsStubAdapter(), filepath=path)
         result = analyzer.calculate_similarity(12345678, hash_type="combined")
-        assert "error" in result
-        assert "combined" in result["error"]
+        assert "distance" in result
+        assert result["hash_type"] == "combined"
     finally:
         os.unlink(path)
 
@@ -356,9 +383,7 @@ def test_calculate_similarity_identical_hash_returns_identical_level() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         analyzer.analyze()  # prime the hash value
         same_hash = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
 
@@ -376,9 +401,7 @@ def test_calculate_similarity_very_similar() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         base_hash = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
 
         # Use a slightly different hash (flip 1-2 bits) to get small distance
@@ -399,9 +422,7 @@ def test_calculate_similarity_similar_level() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         base_hash = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
         # XOR 8 bits → distance = 8, in range [6, 15] → "similar"
         eight_bits_different = base_hash ^ 0xFF
@@ -420,9 +441,7 @@ def test_calculate_similarity_different_level() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         base_hash = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
         # XOR 30 bits → distance = 30, > 25 → "different"
         thirty_bits_different = base_hash ^ 0x3FFFFFFF
@@ -441,9 +460,7 @@ def test_calculate_similarity_somewhat_similar_level() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         base_hash = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
         # XOR 20 bits → distance = 20, in range [16, 25] → "somewhat_similar"
         twenty_bits_different = base_hash ^ 0xFFFFF  # 20 bits
@@ -462,9 +479,7 @@ def test_calculate_similarity_strings_hash_type() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         h = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
         result = analyzer.calculate_similarity(h, hash_type="strings")
         assert "distance" in result
@@ -480,9 +495,7 @@ def test_calculate_similarity_opcodes_hash_type() -> None:
 
     path = _tmp_binary()
     try:
-        analyzer = _SimHashAnalyzerWithFullResults(
-            adapter=_BasicStubAdapter(), filepath=path
-        )
+        analyzer = _SimHashAnalyzerWithFullResults(adapter=_BasicStubAdapter(), filepath=path)
         h = Simhash(["OP:mov", "OP:add", "OP:ret", "OP:nop"]).value
         result = analyzer.calculate_similarity(h, hash_type="opcodes")
         assert "distance" in result
@@ -526,6 +539,7 @@ def test_calculate_similarity_returns_error_when_not_available() -> None:
 # compare_hashes – exception path (line 547-549)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_compare_hashes_exception_returns_none() -> None:
     """Lines 547-549: exception during hash comparison returns None."""
@@ -559,6 +573,7 @@ def test_compare_hashes_returns_none_for_empty() -> None:
 # ---------------------------------------------------------------------------
 # Full analyze() flow with strings (covers main paths)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")
 def test_analyze_with_classified_strings() -> None:
@@ -600,6 +615,7 @@ def test_analyze_with_functions_provides_opcodes() -> None:
 # ---------------------------------------------------------------------------
 # is_available static method
 # ---------------------------------------------------------------------------
+
 
 def test_is_available_matches_constant() -> None:
     """SimHashAnalyzer.is_available() mirrors the SIMHASH_AVAILABLE constant."""

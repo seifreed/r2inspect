@@ -16,6 +16,7 @@ from .logger import get_logger
 from .r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
+_CMDJ_FAILED = object()
 
 
 class R2PipeErrorSuppressor:
@@ -71,7 +72,9 @@ def silent_cmdj(
     with R2PipeErrorSuppressor():
         try:
             result = _try_cmdj(r2_instance, command, default)
-            if result is not None or result == default:
+            if result is _CMDJ_FAILED:
+                result = None
+            if result is not None or (default is not None and result == default):
                 return result
             parsed = _try_cmd_parse(r2_instance, command, default)  # pragma: no cover
             if parsed is not None or parsed == default:  # pragma: no cover
@@ -89,6 +92,8 @@ def _try_cmdj(r2_instance: R2CommandInterface, command: str, default: Any | None
             return result if result is not None else default
         except OSError:
             return default
+        except Exception:
+            return _CMDJ_FAILED
 
 
 def _try_cmd_parse(

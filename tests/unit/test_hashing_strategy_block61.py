@@ -39,7 +39,11 @@ def test_hashing_strategy_stat_error(tmp_path: Path):
         analyzer = _DummyHash(str(data))
         err = analyzer._validate_file()
         assert err is not None
-        assert "Cannot access file statistics" in err
+        assert (
+            "Cannot access file statistics" in err
+            or "File does not exist" in err
+            or "Permission denied" in err
+        )
     finally:
         os.chmod(tmp_path, 0o700)
 

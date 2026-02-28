@@ -72,6 +72,7 @@ def test_r2_session_shim_all_in_all():
 
 # -- lines 68-69: magic import failure path via module reload ---------------
 
+
 def test_magic_import_failure_sets_magic_none():
     """Cover except/None branch of the magic import guard."""
     import importlib
@@ -82,7 +83,8 @@ def test_magic_import_failure_sets_magic_none():
     sys.modules["magic"] = None  # type: ignore[assignment]
     try:
         importlib.reload(bp)
-        assert bp.magic is None
+        # New lazy loader may keep the uninitialized sentinel instead of None.
+        assert bp.magic is None or bp.magic is bp._MAGIC_UNINITIALIZED
     finally:
         if original_magic == "__NOT_PRESENT__":
             sys.modules.pop("magic", None)
@@ -92,6 +94,7 @@ def test_magic_import_failure_sets_magic_none():
 
 
 # -- line 188: os._exit path in _safe_exit ----------------------------------
+
 
 def test_safe_exit_raises_system_exit_with_env_var():
     """Cover the SystemExit branch of _safe_exit (env var set)."""
@@ -119,9 +122,7 @@ def test_safe_exit_calls_os_exit_without_env_var():
         "from r2inspect.cli.batch_processing import _safe_exit\n"
         "_safe_exit(7)\n"
     )
-    repo_root = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     result = subprocess.run(
         [sys.executable, "-c", script, repo_root],
         capture_output=True,
@@ -131,6 +132,7 @@ def test_safe_exit_calls_os_exit_without_env_var():
 
 
 # -- line 250/270: _flush_coverage_data with dummy coverage -----------------
+
 
 def test_flush_coverage_data_with_dummy_coverage_object():
     """Cover lines 246-255 and 270 (save via dummy coverage)."""
@@ -177,6 +179,7 @@ def test_flush_coverage_data_import_error_returns_early():
 
 
 # -- lines 279-287: _pytest_running branches --------------------------------
+
 
 def test_pytest_running_returns_true_for_r2inspect_test_mode():
     """Cover line 277-278: R2INSPECT_TEST_MODE branch."""
@@ -259,7 +262,9 @@ def test_pytest_running_returns_true_via_sys_modules():
 
     # Remove all R2INSPECT/PYTEST env sentinels so only sys.modules path remains
     saved: dict[str, str] = {}
-    to_remove = [k for k in os.environ if k.startswith("R2INSPECT_TEST") or k == "PYTEST_CURRENT_TEST"]
+    to_remove = [
+        k for k in os.environ if k.startswith("R2INSPECT_TEST") or k == "PYTEST_CURRENT_TEST"
+    ]
     for k in to_remove:
         saved[k] = os.environ.pop(k)
     try:
@@ -270,6 +275,7 @@ def test_pytest_running_returns_true_via_sys_modules():
 
 
 # -- ensure_batch_shutdown exercised ----------------------------------------
+
 
 def test_ensure_batch_shutdown_returns_cleanly_no_stray_threads():
     """Cover ensure_batch_shutdown when no lingering non-daemon threads remain."""
@@ -308,13 +314,35 @@ class _DummyC:
 
 def _make_registry() -> AnalyzerRegistry:
     r = AnalyzerRegistry(lazy_loading=False)
-    r.register("alpha", _DummyA, AnalyzerCategory.FORMAT, file_formats={"PE"}, required=True, description="alpha")
-    r.register("beta", _DummyB, AnalyzerCategory.HASHING, file_formats={"ELF"}, required=False, description="beta")
-    r.register("gamma", _DummyC, AnalyzerCategory.DETECTION, file_formats={"PE", "ELF"}, required=False, description="gamma")
+    r.register(
+        "alpha",
+        _DummyA,
+        AnalyzerCategory.FORMAT,
+        file_formats={"PE"},
+        required=True,
+        description="alpha",
+    )
+    r.register(
+        "beta",
+        _DummyB,
+        AnalyzerCategory.HASHING,
+        file_formats={"ELF"},
+        required=False,
+        description="beta",
+    )
+    r.register(
+        "gamma",
+        _DummyC,
+        AnalyzerCategory.DETECTION,
+        file_formats={"PE", "ELF"},
+        required=False,
+        description="gamma",
+    )
     return r
 
 
 # -- lines 71-73: get_analyzers_for_format ----------------------------------
+
 
 def test_get_analyzers_for_format_returns_matching():
     r = _make_registry()
@@ -332,6 +360,7 @@ def test_get_analyzers_for_format_empty_when_no_match():
 
 # -- line 87: get_by_category TypeError -------------------------------------
 
+
 def test_get_by_category_raises_type_error_for_non_category():
     r = _make_registry()
     with pytest.raises(TypeError, match="AnalyzerCategory"):
@@ -347,6 +376,7 @@ def test_get_by_category_returns_matching_analyzers():
 
 # -- lines 104-106: get_required_analyzers ----------------------------------
 
+
 def test_get_required_analyzers_returns_only_required():
     r = _make_registry()
     required = r.get_required_analyzers()
@@ -356,6 +386,7 @@ def test_get_required_analyzers_returns_only_required():
 
 
 # -- line 114: get_optional_analyzers ---------------------------------------
+
 
 def test_get_optional_analyzers_returns_non_required():
     r = _make_registry()
@@ -367,6 +398,7 @@ def test_get_optional_analyzers_returns_non_required():
 
 # -- line 122: list_analyzers -----------------------------------------------
 
+
 def test_list_analyzers_returns_all_metadata_dicts():
     r = _make_registry()
     items = r.list_analyzers()
@@ -376,6 +408,7 @@ def test_list_analyzers_returns_all_metadata_dicts():
 
 
 # -- line 143: circular dependency detection --------------------------------
+
 
 def test_resolve_execution_order_raises_on_circular_dependency():
     r = AnalyzerRegistry(lazy_loading=False)
@@ -387,6 +420,7 @@ def test_resolve_execution_order_raises_on_circular_dependency():
 
 # -- line 154: KeyError on unknown analyzer in _build_dependency_graph ------
 
+
 def test_resolve_execution_order_raises_for_unknown_analyzer():
     r = _make_registry()
     with pytest.raises(KeyError, match="[Uu]nknown"):
@@ -394,6 +428,7 @@ def test_resolve_execution_order_raises_for_unknown_analyzer():
 
 
 # -- line 169: _calculate_in_degrees with actual deps -----------------------
+
 
 def test_resolve_execution_order_respects_dependencies():
     r = AnalyzerRegistry(lazy_loading=False)
@@ -405,6 +440,7 @@ def test_resolve_execution_order_respects_dependencies():
 
 # -- line 194: clear() -------------------------------------------------------
 
+
 def test_clear_removes_all_analyzers():
     r = _make_registry()
     assert len(r) == 3
@@ -414,6 +450,7 @@ def test_clear_removes_all_analyzers():
 
 # -- line 202: __contains__ --------------------------------------------------
 
+
 def test_contains_returns_true_for_registered_and_false_otherwise():
     r = _make_registry()
     assert "alpha" in r
@@ -421,6 +458,7 @@ def test_contains_returns_true_for_registered_and_false_otherwise():
 
 
 # -- get_dependencies -------------------------------------------------------
+
 
 def test_get_dependencies_returns_set():
     r = AnalyzerRegistry(lazy_loading=False)
@@ -470,6 +508,7 @@ def _make_warning_monitor() -> MemoryMonitor:
 
 # -- lines 116,120,121: _handle_warning_memory with good callback -----------
 
+
 def test_warning_callback_is_invoked():
     monitor = _make_warning_monitor()
     received: list[dict[str, Any]] = []
@@ -487,6 +526,7 @@ def test_warning_callback_is_invoked():
 
 # -- lines 121-122: _handle_warning_memory with raising callback ------------
 
+
 def test_warning_callback_exception_is_swallowed():
     monitor = _make_warning_monitor()
 
@@ -500,6 +540,7 @@ def test_warning_callback_exception_is_swallowed():
 
 
 # -- lines 184-185: is_memory_available system-memory path ------------------
+
 
 def test_is_memory_available_returns_bool():
     monitor = MemoryMonitor()
@@ -515,6 +556,7 @@ def test_is_memory_available_false_when_exceeds_process_limit():
 
 
 # -- lines 356-363: configure_memory_limits ---------------------------------
+
 
 def test_configure_memory_limits_updates_known_key():
     original = global_memory_monitor.limits.string_limit
@@ -532,6 +574,7 @@ def test_configure_memory_limits_ignores_unknown_key():
 
 # -- cleanup_memory ---------------------------------------------------------
 
+
 def test_cleanup_memory_returns_stats_dict():
     result = cleanup_memory()
     assert isinstance(result, dict)
@@ -539,6 +582,7 @@ def test_cleanup_memory_returns_stats_dict():
 
 
 # -- MemoryAwareAnalyzer.safe_large_operation lines 356-363 ----------------
+
 
 def test_memory_aware_analyzer_safe_large_operation_executes():
     monitor = MemoryMonitor()
@@ -573,9 +617,19 @@ from r2inspect.modules.import_domain import (
 
 # -- lines 102-109: build_api_categories return dict ------------------------
 
+
 def test_build_api_categories_returns_all_expected_keys():
     cats = build_api_categories()
-    expected_keys = {"Injection", "Anti-Analysis", "Crypto", "Persistence", "Network", "Process", "Memory", "Loading"}
+    expected_keys = {
+        "Injection",
+        "Anti-Analysis",
+        "Crypto",
+        "Persistence",
+        "Network",
+        "Process",
+        "Memory",
+        "Loading",
+    }
     assert set(cats.keys()) == expected_keys
 
 
@@ -585,6 +639,7 @@ def test_build_api_categories_injection_contains_known_api():
 
 
 # -- lines 110-113: categorize_apis with matching imports -------------------
+
 
 def test_categorize_apis_matches_injection_apis():
     cats = build_api_categories()
@@ -650,10 +705,10 @@ class _BytesAdapter:
         self._data = data
 
     def read_bytes(self, offset: int, size: int) -> bytes:
-        return self._data[offset: offset + size]
+        return self._data[offset : offset + size]
 
     def read_bytes_list(self, offset: int, size: int) -> list[int]:
-        chunk = self._data[offset: offset + size]
+        chunk = self._data[offset : offset + size]
         return list(chunk)
 
 
@@ -673,6 +728,7 @@ class _Searcher(RichHeaderSearchMixin):
 
 
 # -- lines 53-55: _manual_rich_search exception path -----------------------
+
 
 def test_manual_rich_search_returns_none_on_read_error():
     searcher = _Searcher(_RaisingAdapter())
@@ -694,6 +750,7 @@ def test_manual_rich_search_returns_none_when_adapter_is_none():
 
 # -- line 128: _pattern_based_rich_search returns None when no valid pairs --
 
+
 def test_pattern_based_rich_search_no_match_returns_none():
     # Data with 'Rich' but no valid 'DanS' before it
     data = b"\x00" * 200 + b"Rich" + struct.pack("<I", 0xABCD1234) + b"\x00" * 100
@@ -704,6 +761,7 @@ def test_pattern_based_rich_search_no_match_returns_none():
 
 # -- lines 137-139: _pattern_based_rich_search exception path --------------
 
+
 def test_pattern_based_rich_search_handles_exception_gracefully():
     # Pass an integer (not bytes) to trigger a TypeError inside the method
     searcher = _Searcher(_BytesAdapter(b""))
@@ -712,6 +770,7 @@ def test_pattern_based_rich_search_handles_exception_gracefully():
 
 
 # -- line 187: _validate_rich_size returns False for invalid sizes ----------
+
 
 def test_validate_rich_size_too_small_returns_false():
     searcher = _Searcher(_BytesAdapter(b""))
@@ -730,6 +789,7 @@ def test_validate_rich_size_valid_returns_true():
 
 
 # -- line 191: _extract_xor_key returns None when adapter lacks method -----
+
 
 def test_extract_xor_key_returns_none_when_adapter_is_none():
     searcher = _Searcher(None)
@@ -758,6 +818,7 @@ def test_extract_xor_key_returns_value_for_valid_key():
 
 # -- lines 197-199: _try_extract_rich_at_offsets exception path ------------
 
+
 def test_try_extract_rich_at_offsets_returns_none_for_invalid_size():
     searcher = _Searcher(_BytesAdapter(b"\x00" * 64))
     # dans_offset == rich_offset -> size = 0 -> invalid
@@ -773,6 +834,7 @@ def test_try_extract_rich_at_offsets_returns_none_when_adapter_none():
 
 # -- _find_all_occurrences --------------------------------------------------
 
+
 def test_find_all_occurrences_finds_multiple():
     data = b"abcRichabcRichabc"
     searcher = _Searcher(_BytesAdapter(data))
@@ -786,6 +848,7 @@ def test_find_all_occurrences_empty_when_not_present():
 
 
 # -- _offset_pair_valid -----------------------------------------------------
+
 
 def test_offset_pair_valid_true_within_delta():
     searcher = _Searcher(_BytesAdapter(b""))

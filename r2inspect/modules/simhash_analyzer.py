@@ -263,7 +263,7 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
                     continue
 
             mnemonic = mnemonic_value.strip().lower()
-            if not mnemonic:
+            if not mnemonic:  # pragma: no cover - defensive guard after normalization
                 continue
             opcodes.append(f"OP:{mnemonic}")
             op_type = self._classify_opcode_type(mnemonic)

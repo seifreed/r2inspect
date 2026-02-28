@@ -621,3 +621,19 @@ class AnalyzerRegistry(AnalyzerRegistryQueries):
             Number of analyzers (or providers) loaded
         """
         return EntryPointLoader(self).load(group)
+
+    def _handle_entry_point(self, ep: Any) -> int:
+        """Backward-compatible shim for older tests calling the old helper directly."""
+        return EntryPointLoader(self)._handle_entry_point(ep)
+
+    def _register_entry_point_class(self, ep: Any, obj: Any) -> int:
+        """Backward-compatible shim for legacy tests."""
+        return EntryPointLoader(self)._register_entry_point_class(ep, obj)
+
+    def _register_entry_point_callable(self, ep: Any, obj: Any) -> int:
+        """Backward-compatible shim for legacy tests."""
+        return EntryPointLoader(self)._register_entry_point_callable(ep, obj)
+
+    def _derive_entry_point_name(self, ep: Any, obj: Any) -> str:
+        """Backward-compatible shim for legacy tests."""
+        return EntryPointLoader(self)._derive_entry_point_name(ep, obj)

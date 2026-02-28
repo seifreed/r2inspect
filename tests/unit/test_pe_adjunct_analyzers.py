@@ -4,6 +4,7 @@ from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnalyzer
 from r2inspect.modules.export_analyzer import ExportAnalyzer
 from r2inspect.modules.import_analyzer import ImportAnalyzer
+from r2inspect.modules.import_domain import find_suspicious_patterns
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.section_analyzer import SectionAnalyzer
@@ -19,6 +20,10 @@ class FakeR2:
 
     def cmdj(self, command):
         return self._cmdj_map.get(command)
+
+    def read_bytes(self, addr, size):
+        hex_data = self._cmd_map.get(f"p8 {size} @ {addr}", "")
+        return bytes.fromhex(hex_data) if hex_data else b""
 
 
 class DummyConfig:
@@ -86,7 +91,7 @@ def test_import_risk_and_patterns():
         {"name": "WriteProcessMemory", "category": "Memory Management"},
         {"name": "CreateRemoteThread", "category": "Process/Thread Management"},
     ]
-    patterns = analyzer._find_suspicious_patterns(imports)
+    patterns = find_suspicious_patterns(imports)
     assert any(p["pattern"] == "DLL Injection" for p in patterns)
 
 
