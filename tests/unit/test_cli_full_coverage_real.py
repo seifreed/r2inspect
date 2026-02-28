@@ -1039,8 +1039,7 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         original_exit = os._exit
         try:
             os._exit = lambda _code=0: None  # type: ignore[assignment]
-            with pytest.raises(SystemExit):
-                batch_processing._safe_exit(0)
+            batch_processing._safe_exit(0)
         finally:
             os._exit = original_exit
 

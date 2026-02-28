@@ -239,6 +239,8 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
         try:
             for imp in imports_data:
+                if not isinstance(imp, dict):
+                    continue
                 # Extract DLL name
                 dll = (
                     imp.get("libname")

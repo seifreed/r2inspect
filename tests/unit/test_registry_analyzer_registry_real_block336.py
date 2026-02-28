@@ -400,19 +400,21 @@ def test_registry_entry_points_group_load(tmp_path):
 
 
 def test_entry_points_group_exception():
-    from r2inspect.registry import analyzer_registry as registry_module
+    from r2inspect.registry import entry_points as entry_points_module
+    from r2inspect.registry.entry_points import EntryPointLoader
 
     registry = AnalyzerRegistry(lazy_loading=False)
-    original = registry_module.entry_points
+    loader = EntryPointLoader(registry)
+    original = entry_points_module.entry_points
 
     def _boom():
         raise RuntimeError("boom")
 
     try:
-        registry_module.entry_points = _boom
-        assert registry._get_entry_points_group("r2inspect.analyzers") == []
+        entry_points_module.entry_points = _boom
+        assert loader._get_entry_points_group("r2inspect.analyzers") == []
     finally:
-        registry_module.entry_points = original
+        entry_points_module.entry_points = original
 
 
 def test_registry_entry_point_non_callable(tmp_path):

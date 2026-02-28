@@ -99,6 +99,7 @@ def test_r2_session_initial_analysis_branches() -> None:
     try:
         os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aa"
         assert session._perform_initial_analysis(file_size_mb=5.0) is False
+        session._test_mode = False
         os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aaa"
         assert session._perform_initial_analysis(file_size_mb=1.0) is False
     finally:

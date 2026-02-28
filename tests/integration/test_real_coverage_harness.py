@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import signal
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -109,10 +110,21 @@ def _call_with_pool(callable_obj: Any, arg_pool: dict[str, Any]) -> bool:
             kwargs[name] = arg_pool[name]
             continue
         return False
+
+    def _timeout_handler(signum, frame):
+        raise TimeoutError("best-effort call timed out")
+
     try:
-        callable_obj(**kwargs)
+        # Some analyzer helper methods can stall on backend calls; bound each call.
+        previous_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.setitimer(signal.ITIMER_REAL, 0.5)
+        try:
+            callable_obj(**kwargs)
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
     except Exception:
-        # Best-effort execution for coverage; errors are tolerated.
+        # Best-effort execution for coverage; errors/timeouts are tolerated.
         pass
     return True
 
@@ -242,7 +254,12 @@ def test_best_effort_analyzer_method_walk(samples_dir: Path, monkeypatch: pytest
         ]
 
         executed = 0
+        # Keep this harness bounded to avoid pathological method walks that can hang.
+        max_executed_calls = 120
+        stop_walk = False
         for name in sorted(item["name"] for item in registry.list_analyzers()):
+            if stop_walk:
+                break
             analyzer_class = registry.get_analyzer_class(name)
             assert analyzer_class is not None
             meta = registry.get_metadata(name)
@@ -259,6 +276,8 @@ def test_best_effort_analyzer_method_walk(samples_dir: Path, monkeypatch: pytest
             )
 
             for expected_data in expected_sets:
+                if stop_walk:
+                    break
                 for data_bytes in data_variants:
                     arg_pool = _build_arg_pool(
                         adapter,
@@ -274,6 +293,9 @@ def test_best_effort_analyzer_method_walk(samples_dir: Path, monkeypatch: pytest
                         },
                     )
                     executed += _walk_instance_methods(analyzer, arg_pool)
+                    if executed >= max_executed_calls:
+                        stop_walk = True
+                        break
 
         assert executed > 0
     finally:

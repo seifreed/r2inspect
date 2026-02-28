@@ -199,6 +199,8 @@ def test_perform_initial_analysis_paths(tmp_path):
 
     assert session._perform_initial_analysis(LARGE_FILE_THRESHOLD_MB + 1) is True
 
+    # Force production-mode branch so small files execute "aaa"
+    session._test_mode = False
     os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aaa"
     try:
         assert session._perform_initial_analysis(1.0) is False

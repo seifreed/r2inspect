@@ -381,6 +381,8 @@ def test_batch_processing_helpers_and_run(tmp_path: Path) -> None:
     assert files == []
 
     sample_src = Path("samples/fixtures/hello_pe.exe")
+    if not sample_src.exists():
+        pytest.skip("samples/fixtures/hello_pe.exe fixture not found")
     sample_dst = tmp_path / "hello_pe.exe"
     sample_dst.write_bytes(sample_src.read_bytes())
 
@@ -497,6 +499,8 @@ def test_batch_processing_helpers_and_run(tmp_path: Path) -> None:
 
 def test_process_single_file_success(tmp_path: Path) -> None:
     sample_src = Path("samples/fixtures/hello_pe.exe")
+    if not sample_src.exists():
+        pytest.skip("samples/fixtures/hello_pe.exe fixture not found")
     sample_dst = tmp_path / "hello_pe.exe"
     sample_dst.write_bytes(sample_src.read_bytes())
     from r2inspect.config import Config

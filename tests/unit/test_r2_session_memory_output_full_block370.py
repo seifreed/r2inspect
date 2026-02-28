@@ -190,6 +190,7 @@ def test_r2_session_initial_analysis_paths(monkeypatch) -> None:
     # Force command timeouts to hit False path
     monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "aa,aaa")
     assert session._perform_initial_analysis(file_size_mb=1) is False
+    session._test_mode = False
     assert session._perform_initial_analysis(file_size_mb=10) is False
 
     # None r2 path

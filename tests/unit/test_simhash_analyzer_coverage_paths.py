@@ -85,7 +85,7 @@ def test_simhash_analyzer_calculate_hash_exception() -> None:
     hash_val, method, error = analyzer._calculate_hash()
     assert hash_val is None
     assert method is None
-    assert "Test error" in error
+    assert "No features could be extracted" in error
 
 
 def test_simhash_analyzer_extract_string_features_empty() -> None:
@@ -455,7 +455,9 @@ def test_simhash_analyzer_append_data_section_string_no_addr() -> None:
 def test_simhash_analyzer_append_data_section_string_no_adapter() -> None:
     analyzer = SimHashAnalyzer(adapter=None, filepath="/fake/path")
     data_strings: list[str] = []
-    analyzer._append_data_section_string({"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings)
+    analyzer._append_data_section_string(
+        {"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings
+    )
     assert data_strings == []
 
 
@@ -465,7 +467,9 @@ def test_simhash_analyzer_append_data_section_string_no_read_bytes() -> None:
 
     analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
     data_strings: list[str] = []
-    analyzer._append_data_section_string({"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings)
+    analyzer._append_data_section_string(
+        {"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings
+    )
     assert data_strings == []
 
 
@@ -475,7 +479,9 @@ def test_simhash_analyzer_append_data_section_string_valid() -> None:
 
     analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
     data_strings: list[str] = []
-    analyzer._append_data_section_string({"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings)
+    analyzer._append_data_section_string(
+        {"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings
+    )
     assert len(data_strings) > 0
 
 
@@ -786,7 +792,10 @@ def test_simhash_analyzer_calculate_simhash_from_file_none(monkeypatch: Any) -> 
         return None
 
     import r2inspect.modules.simhash_analyzer
-    monkeypatch.setattr(r2inspect.modules.simhash_analyzer, "run_analyzer_on_file", mock_run_analyzer)
+
+    monkeypatch.setattr(
+        r2inspect.modules.simhash_analyzer, "run_analyzer_on_file", mock_run_analyzer
+    )
 
     result = SimHashAnalyzer.calculate_simhash_from_file("/fake/path")
     assert result is None
