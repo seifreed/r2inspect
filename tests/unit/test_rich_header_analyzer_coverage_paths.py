@@ -219,7 +219,7 @@ def test_rich_header_get_dos_stub_valid() -> None:
     data = b"MZ" + b"\x00" * 200
     stub = analyzer._get_dos_stub(data, 0x100)
     assert stub is not None
-    assert len(stub) == (0x100 - 0x40)
+    assert len(stub) == (len(data) - 0x40)
 
 
 def test_rich_header_find_rich_pos_not_found() -> None:
@@ -312,7 +312,9 @@ def test_rich_header_is_available() -> None:
     assert RichHeaderAnalyzer.is_available() is True
 
 
-def test_rich_header_calculate_richpe_hash_from_file_none_result(tmp_path: Path, monkeypatch: Any) -> None:
+def test_rich_header_calculate_richpe_hash_from_file_none_result(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
     test_file = tmp_path / "test.exe"
     test_file.write_bytes(b"MZ" + b"\x00" * 100)
 
@@ -320,7 +322,10 @@ def test_rich_header_calculate_richpe_hash_from_file_none_result(tmp_path: Path,
         return None
 
     import r2inspect.modules.rich_header_analyzer
-    monkeypatch.setattr(r2inspect.modules.rich_header_analyzer, "run_analyzer_on_file", mock_run_analyzer)
+
+    monkeypatch.setattr(
+        r2inspect.modules.rich_header_analyzer, "run_analyzer_on_file", mock_run_analyzer
+    )
 
     result = RichHeaderAnalyzer.calculate_richpe_hash_from_file(str(test_file))
     assert result is None
@@ -393,6 +398,7 @@ def test_rich_header_extract_r2pipe_fallback_debug(tmp_path: Path) -> None:
 
     analyzer = RichHeaderAnalyzer(adapter=r2, filepath=str(test_file))
     analyzer.r2 = r2
+    analyzer._extract_rich_header = MagicMock(return_value=None)  # type: ignore[method-assign]
     result = analyzer._extract_rich_header_r2pipe()
     assert result is None
 
@@ -403,6 +409,7 @@ def test_rich_header_extract_r2pipe_exception() -> None:
 
     analyzer = RichHeaderAnalyzer(adapter=r2, filepath="/fake/path")
     analyzer.r2 = r2
+    analyzer._extract_rich_header = MagicMock(side_effect=Exception("Test error"))  # type: ignore[method-assign]
     result = analyzer._extract_rich_header_r2pipe()
     assert result is None
 
@@ -581,6 +588,7 @@ def test_rich_header_extract_pefile_not_available() -> None:
     analyzer = RichHeaderAnalyzer(adapter=None, filepath="/fake/path")
 
     import r2inspect.modules.rich_header_analyzer
+
     old_val = r2inspect.modules.rich_header_analyzer.PEFILE_AVAILABLE
     r2inspect.modules.rich_header_analyzer.PEFILE_AVAILABLE = False
 

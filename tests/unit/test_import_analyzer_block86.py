@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from r2inspect.config import Config
+from r2inspect.modules.import_domain import find_suspicious_patterns
 from r2inspect.modules.import_analyzer import NETWORK_CATEGORY, ImportAnalyzer
 
 
@@ -35,7 +36,7 @@ def test_import_analyzer_helpers(tmp_path: Path):
     obfuscation = analyzer.detect_api_obfuscation(imports)
     assert obfuscation["detected"] is True
 
-    patterns = analyzer._find_suspicious_patterns(
+    patterns = find_suspicious_patterns(
         [
             {"name": "VirtualAllocEx", "category": "Process/Thread Management"},
             {"name": "WriteProcessMemory", "category": "Process/Thread Management"},

@@ -184,7 +184,7 @@ def test_registry_entry_points(monkeypatch):
     eps = [EP("provider", provider), EP("class", DemoAnalyzer), EP("bad", 123)]
 
     monkeypatch.setattr(
-        "r2inspect.registry.analyzer_registry.entry_points",
+        "r2inspect.registry.entry_points.entry_points",
         lambda: SimpleNamespace(select=lambda group=None: eps),
     )
 

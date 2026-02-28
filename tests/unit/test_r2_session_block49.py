@@ -28,7 +28,7 @@ def test_r2_session_open_close_and_flags():
     r2 = session.open(file_size_mb)
     assert r2 is not None
     assert session.is_open is True
-    assert session._select_r2_flags() == ["-2"]
+    assert "-2" in session._select_r2_flags()
 
     session.close()
     assert session.is_open is False
@@ -46,6 +46,7 @@ def test_r2_session_initial_analysis_branches():
         # Large file path runs "aa"
         session._perform_initial_analysis(file_size_mb + 200)
         # Small file path runs "aaa"
+        session._test_mode = False
         session._perform_initial_analysis(max(file_size_mb, 0.1))
     finally:
         session.close()

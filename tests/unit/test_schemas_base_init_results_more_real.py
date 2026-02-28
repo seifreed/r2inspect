@@ -48,7 +48,7 @@ def test_security_score_valid() -> None:
 
 def test_results_to_dict_helpers_and_timestamp() -> None:
     assert SectionInfo(name="x").to_dict()["name"] == "x"
-    assert SectionInfo(suspicious_indicators=["a"]).is_suspicious() is True
+    assert SectionInfo(name="y", suspicious_indicators=["a"]).is_suspicious() is True
     assert ImportInfo(name="i").to_dict()["name"] == "i"
     assert ExportInfo(name="e").to_dict()["name"] == "e"
     assert YaraMatch(rule="r").to_dict()["rule"] == "r"

@@ -8,8 +8,23 @@ from typing import Any
 
 def run_resource_analysis(analyzer: Any, logger: Any) -> dict[str, Any]:
     """Run resource analysis using the analyzer instance."""
+    result: dict[str, Any] = {
+        "available": False,
+        "has_resources": False,
+        "resource_directory": None,
+        "total_resources": 0,
+        "total_size": 0,
+        "resource_types": [],
+        "resources": [],
+        "version_info": None,
+        "manifest": None,
+        "icons": [],
+        "strings": [],
+        "suspicious_resources": [],
+        "statistics": {},
+    }
     try:
-        result: dict[str, Any] = analyzer._init_result_structure(  # noqa: SLF001
+        result = analyzer._init_result_structure(  # noqa: SLF001
             {
                 "has_resources": False,
                 "resource_directory": None,

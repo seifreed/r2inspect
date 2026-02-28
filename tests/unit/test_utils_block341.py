@@ -297,7 +297,7 @@ def test_r2_suppress_and_helpers() -> None:
 
     r2 = DummyR2(cmdj_value=OSError("bad"), cmd_text='{"b": 2}')
     result = r2_suppress.silent_cmdj(r2, "ij", default=None)
-    assert result is None
+    assert result == {"b": 2}
 
     assert r2_suppress.silent_cmdj(None, "ij", default=[]) == []
 

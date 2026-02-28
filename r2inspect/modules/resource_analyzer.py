@@ -187,6 +187,8 @@ class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _analyze_resource_data(self, resource: dict[str, Any]) -> None:
         """Analyze resource data (entropy, hashes)."""
         try:
+            resource.setdefault("entropy", 0.0)
+            resource.setdefault("hashes", {})
             offset = resource["offset"]
             size = min(resource["size"], 65536)  # Limit to 64KB for analysis
 
@@ -433,29 +435,31 @@ class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
             data = self._cmdj(f"pxj {read_size} @ {offset}", [])
             if not data:
                 return None
+            raw = bytes(data)
 
             # Try to decode as UTF-16 LE first (common for Windows resources)
-            try:
-                text = bytes(data).decode("utf-16le", errors="ignore")
-                if text and any(c.isprintable() for c in text):
-                    return text
-            except (UnicodeDecodeError, TypeError):
-                pass
+            if len(raw) >= 4 and raw.count(0) >= max(2, len(raw) // 8):
+                try:
+                    text = raw.decode("utf-16le", errors="ignore")
+                    if text and any(c.isprintable() for c in text):
+                        return text
+                except (UnicodeDecodeError, TypeError):
+                    pass
 
             # Try UTF-8
             try:
-                text = bytes(data).decode("utf-8", errors="ignore")
+                text = raw.decode("utf-8", errors="ignore")
                 if text and any(c.isprintable() for c in text):
                     return text
-            except (UnicodeDecodeError, TypeError):
+            except (UnicodeDecodeError, TypeError):  # pragma: no cover - defensive decode guard
                 pass
 
             # Try ASCII
             try:
-                text = bytes(data).decode("ascii", errors="ignore")
+                text = raw.decode("ascii", errors="ignore")
                 if text and any(c.isprintable() for c in text):
                     return text  # pragma: no cover
-            except (UnicodeDecodeError, TypeError):
+            except (UnicodeDecodeError, TypeError):  # pragma: no cover - defensive decode guard
                 pass
 
             return None
@@ -482,7 +486,7 @@ class ResourceAnalyzer(CommandHelperMixin, BaseAnalyzer):
             "min_size": min(sizes) if sizes else 0,
             "average_entropy": sum(entropies) / len(entropies) if entropies else 0,
             "max_entropy": max(entropies) if entropies else 0,
-            "unique_types": len({res["type_name"] for res in resources}),
+            "unique_types": len({res.get("type_name", "UNKNOWN") for res in resources}),
         }
 
     def _check_suspicious_resources(

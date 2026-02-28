@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Output formatting utilities for r2inspect."""
 
+import csv
+import io
 import json
 from typing import Any
 
@@ -26,11 +28,67 @@ class OutputFormatter:
 
     def to_csv(self) -> str:
         """Convert results to CSV format with specific fields."""
+        # Preserve historical extension point where subclasses overrode
+        # _extract_csv_data and expected to_csv() to surface CSV Export Failed.
+        try:
+            self._extract_csv_data(self.results)
+        except Exception as e:
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Error", "Message"])
+            writer.writerow(["CSV Export Failed", str(e)])
+            return output.getvalue()
         return self._csv_formatter.to_csv()
 
     def _extract_csv_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """Backward-compatible CSV row extraction for batch output."""
         return self._csv_formatter._extract_csv_data(data)
+
+    def _extract_names_from_list(
+        self,
+        data: dict[str, Any],
+        key: str,
+        name_field: str = "name",
+        separator: str = ", ",
+    ) -> str:
+        """Backward-compatible proxy for list-name extraction."""
+        return self._csv_formatter._extract_names_from_list(data, key, name_field, separator)
+
+    def _extract_imphash(self, data: dict[str, Any]) -> str:
+        """Backward-compatible proxy for imphash extraction."""
+        return self._csv_formatter._extract_imphash(data)
+
+    def _extract_compile_time(self, data: dict[str, Any]) -> str:
+        """Backward-compatible proxy for compile-time extraction."""
+        return self._csv_formatter._extract_compile_time(data)
+
+    def _count_duplicate_machoc(self, machoc_hashes: dict[str, Any]) -> int:
+        """Backward-compatible proxy for machoc duplicate counting."""
+        return self._csv_formatter._count_duplicate_machoc(machoc_hashes)
+
+    def _format_file_size(self, size_bytes: Any) -> str:
+        """Backward-compatible proxy to CSV formatter size formatting."""
+        return self._csv_formatter._format_file_size(size_bytes)
+
+    def _clean_file_type(self, file_type: Any) -> str:
+        """Backward-compatible proxy to CSV formatter file type cleanup."""
+        return self._csv_formatter._clean_file_type(file_type)
+
+    def _flatten_results(self, data: Any, prefix: str = "") -> list[dict[str, str]]:
+        """Backward-compatible flatten helper for nested dict/list structures."""
+        rows: list[dict[str, str]] = []
+        if isinstance(data, dict):
+            for key, value in data.items():
+                next_prefix = f"{prefix}.{key}" if prefix else str(key)
+                rows.extend(self._flatten_results(value, next_prefix))
+            return rows
+        if isinstance(data, list):
+            for idx, value in enumerate(data):
+                next_prefix = f"{prefix}[{idx}]"
+                rows.extend(self._flatten_results(value, next_prefix))
+            return rows
+        rows.append({"field": prefix, "value": str(data)})
+        return rows
 
     def format_table(self, data: dict[str, Any], title: str = "Analysis Results") -> Table:
         """Format data as a Rich table."""

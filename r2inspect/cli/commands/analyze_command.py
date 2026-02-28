@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from ...application.use_cases import AnalyzeBinaryUseCase
+from ...application.analysis_service import default_analysis_service
 from ...factory import create_inspector
 from . import analysis_output
 from .base import Command, apply_thread_settings
@@ -198,9 +199,17 @@ class AnalyzeCommand(Command):
         """Output results to console with optional verbose statistics."""
         analysis_output._output_console_results(results, verbose)
 
+    def _add_statistics_to_results(self, results: dict[str, Any]) -> None:
+        """Compatibility helper kept for older tests and callers."""
+        analysis_output.add_statistics_to_results(results)
+
     def _display_verbose_statistics(self) -> None:
         """Display verbose error and performance statistics."""
         analysis_output._display_verbose_statistics()
+
+    def _has_circuit_breaker_data(self, stats: dict[str, Any]) -> bool:
+        """Compatibility helper kept for tests and legacy callers."""
+        return default_analysis_service.has_circuit_breaker_data(stats)
 
     def _handle_error(self, error: Exception, verbose: bool) -> None:
         """

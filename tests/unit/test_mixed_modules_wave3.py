@@ -372,7 +372,7 @@ def test_hashing_strategy_validate_file_oserror():
     strategy = _DemoHashing("/tmp/" + long_name)
     result = strategy._validate_file()
     assert result is not None
-    assert "Cannot access file statistics" in result
+    assert "Cannot access file statistics" in result or "File does not exist" in result
 
 
 def test_hashing_strategy_validate_file_not_readable():

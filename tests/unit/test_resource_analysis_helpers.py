@@ -12,11 +12,11 @@ def test_run_resource_analysis_no_resources():
         "total_resources": 0,
     }
     analyzer._get_resource_directory.return_value = None
-    
+
     logger = MagicMock()
-    
+
     result = run_resource_analysis(analyzer, logger)
-    
+
     assert result["available"] is True
     assert result["has_resources"] is False
     analyzer._get_resource_directory.assert_called_once()
@@ -36,11 +36,11 @@ def test_run_resource_analysis_with_resources():
         {"type": "icon", "size": 100},
         {"type": "version", "size": 200},
     ]
-    
+
     logger = MagicMock()
-    
+
     result = run_resource_analysis(analyzer, logger)
-    
+
     assert result["available"] is True
     assert result["has_resources"] is True
     assert result["total_resources"] == 2
@@ -59,11 +59,11 @@ def test_run_resource_analysis_empty_resource_list():
     }
     analyzer._get_resource_directory.return_value = {"offset": 0x1000}
     analyzer._parse_resources.return_value = []
-    
+
     logger = MagicMock()
-    
+
     result = run_resource_analysis(analyzer, logger)
-    
+
     assert result["available"] is True
     assert result["has_resources"] is True
     assert result["total_resources"] == 0
@@ -72,13 +72,12 @@ def test_run_resource_analysis_empty_resource_list():
 def test_run_resource_analysis_exception():
     analyzer = MagicMock()
     analyzer._init_result_structure.side_effect = Exception("Init failed")
-    
+
     logger = MagicMock()
-    
-    with pytest.raises(Exception) as exc:
-        run_resource_analysis(analyzer, logger)
-    
-    assert "Init failed" in str(exc.value)
+
+    result = run_resource_analysis(analyzer, logger)
+    assert result["available"] is False
+    assert "Init failed" in result.get("error", "")
 
 
 def test_run_resource_analysis_parse_exception():
@@ -91,8 +90,9 @@ def test_run_resource_analysis_parse_exception():
     }
     analyzer._get_resource_directory.return_value = {"offset": 0x1000}
     analyzer._parse_resources.side_effect = Exception("Parse error")
-    
+
     logger = MagicMock()
-    
-    with pytest.raises(Exception):
-        run_resource_analysis(analyzer, logger)
+
+    result = run_resource_analysis(analyzer, logger)
+    assert result["available"] is False
+    assert "Parse error" in result.get("error", "")

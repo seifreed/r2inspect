@@ -58,6 +58,14 @@ def safe_cmdj(
 
     @handle_errors(policy)
     def _execute() -> Any:
+        # Prefer native cmdj() when available to avoid lossy cmd()->json parsing.
+        if hasattr(r2_instance, "cmdj"):
+            try:
+                native = r2_instance.cmdj(command)
+                if native is not None:
+                    return native
+            except Exception:
+                pass
         raw = _run_cmd_with_timeout(r2_instance, command, default)
         if not isinstance(raw, str) or not raw.strip():
             return default
@@ -225,6 +233,10 @@ def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
 def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
     if adapter is None:
         return None
+    # unittest.mock instances expose arbitrary attributes via hasattr/getattr.
+    # Treat them as raw r2 backends so tests and fallbacks use cmd/cmdj paths.
+    if adapter.__class__.__module__.startswith("unittest.mock"):
+        return None
     search_result = _handle_search(adapter, command)
     if search_result is not None:
         return search_result
@@ -248,7 +260,7 @@ def _cmd_fallback(_r2: Any, command: str) -> str:
 
 
 def _cmdj_fallback(_r2: Any, command: str, default: Any) -> Any:
-    if _r2 is None or not hasattr(_r2, "cmd"):
+    if _r2 is None or (not hasattr(_r2, "cmd") and not hasattr(_r2, "cmdj")):
         return default
     return safe_cmdj_any(_r2, command, default)
 

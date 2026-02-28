@@ -126,7 +126,12 @@ def test_phase2_telfhash_real_elf_and_nonelf_paths(samples_dir: Path) -> None:
         non_elf_analyzer = TelfhashAnalyzer(adapter=pe_adapter, filepath=str(pe_path))
         non_elf_result = non_elf_analyzer.analyze_symbols()
         assert non_elf_result["is_elf"] is False
-        assert "ELF" in (non_elf_result.get("error") or "")
+        error_message = non_elf_result.get("error") or ""
+        if TelfhashAnalyzer.is_available():
+            assert "ELF" in error_message
+        else:
+            assert non_elf_result.get("available") is False
+            assert "not available" in error_message.lower()
     finally:
         pe_session.close()
 

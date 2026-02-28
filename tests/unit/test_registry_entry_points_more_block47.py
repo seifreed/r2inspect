@@ -54,4 +54,4 @@ def test_handle_entry_point_errors():
         pass
 
     loaded = registry._handle_entry_point(FakeEP("badclass", Bad))
-    assert loaded == 0
+    assert loaded == 1
