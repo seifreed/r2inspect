@@ -159,15 +159,45 @@ def format_gate_failures(result: dict[str, Any], retry_command: str) -> str:
     if not failure_groups:
         return "Milestone governance gate passed."
 
+    remediation_steps = {
+        "missing_file": [
+            "Create the canonical milestone audit artifact in .planning.",
+            "Populate frontmatter with milestone, status: passed, and audited timestamp.",
+        ],
+        "invalid_status": [
+            "Set audit frontmatter status exactly to passed.",
+            "Confirm no stale or conflicting status values remain in the audit artifact.",
+        ],
+        "malformed_sections": [
+            "Restore required sections: Scope, Checks, Findings, Remediation.",
+            "Ensure audited frontmatter is valid ISO-8601 UTC format.",
+        ],
+        "stale_audit": [
+            "Re-run milestone audit after roadmap/state updates.",
+            "Update audited timestamp to the latest verification time.",
+        ],
+    }
+
     lines = [
         "Milestone governance gate failed.",
         "",
         "Checklist:",
     ]
+    for failure_type, issues in failure_groups.items():
+        lines.append(f"- Group {failure_type}")
+        for issue in issues:
+            message = str(issue.get("message", "")).strip() or "Issue detected."
+            fix = str(issue.get("fix", "")).strip() or "Apply the remediation checklist."
+            lines.append(f"  - {message}")
+            lines.append(f"    Fix: {fix}")
+    lines.extend(["", "Remediation by failure type:"])
     for failure_type in failure_groups:
-        for issue in failure_groups[failure_type]:
-            lines.append(f"- [{failure_type}] {issue['message']}")
-            lines.append(f"  Fix: {issue['fix']}")
+        lines.append(f"- Group {failure_type}:")
+        for step in remediation_steps.get(
+            failure_type,
+            ["Resolve all listed checklist issues for this group and retry."],
+        ):
+            lines.append(f"  - {step}")
     lines.append("")
     effective_retry = retry_command or str(result.get("retry_command", "")).strip()
     lines.append(f"Retry: {effective_retry}")
