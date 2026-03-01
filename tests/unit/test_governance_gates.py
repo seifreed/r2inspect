@@ -342,6 +342,69 @@ def test_impact_ranked_hints_are_deterministic_for_identical_inputs() -> None:
     assert [item["check_key"] for item in first] == ["missing-alpha", "missing-beta"]
 
 
+def test_impact_ranked_formatter_renders_strict_four_line_blocks() -> None:
+    assert (
+        format_impact_ranked_remediation_hints is not None
+    ), "format_impact_ranked_remediation_hints must be implemented in scripts/governance_gates.py"
+    ranked_hints = [
+        {
+            "rank": 1,
+            "rationale": "severity error (w=3) and blast radius 2; tie-break by check key `missing-alpha`.",
+            "blocking_reason": "Touched requirement id `ALPHA-01` does not exist.",
+            "minimal_fix": "Use an existing requirement id in --requirement-id.",
+            "retry_command": "python scripts/quick_bootstrap.py traceability precheck --scope touched --requirement-id ALPHA-01",
+        }
+    ]
+
+    rendered = format_impact_ranked_remediation_hints(ranked_hints)
+    lines = rendered.splitlines()
+
+    assert len(lines) == 4
+    assert lines[0].startswith("#1 Rationale: ")
+    assert lines[1].startswith("Blocking reason: ")
+    assert lines[2].startswith("Minimal fix: ")
+    assert lines[3].startswith("Retry command: ")
+
+
+def test_impact_ranked_format_output_is_deterministic() -> None:
+    assert (
+        build_impact_ranked_remediation_hints is not None
+    ), "build_impact_ranked_remediation_hints must be implemented in scripts/governance_gates.py"
+    assert (
+        format_impact_ranked_remediation_hints is not None
+    ), "format_impact_ranked_remediation_hints must be implemented in scripts/governance_gates.py"
+    result = {
+        "failure_groups": {
+            "unknown_touched_requirement": [
+                {
+                    "code": "missing-alpha",
+                    "severity": "error",
+                    "message": "Touched requirement id `ALPHA-01` does not exist.",
+                    "fix": "Use a known requirement id.",
+                },
+                {
+                    "code": "missing-beta",
+                    "severity": "error",
+                    "message": "Touched requirement id `BETA-01` does not exist.",
+                    "fix": "Use a known requirement id.",
+                },
+            ]
+        }
+    }
+    ranked = build_impact_ranked_remediation_hints(
+        result,
+        {"rows": []},
+        retry_command="python scripts/quick_bootstrap.py traceability precheck --scope touched --requirement-id ALPHA-01",
+    )
+
+    first = format_impact_ranked_remediation_hints(ranked)
+    second = format_impact_ranked_remediation_hints(ranked)
+
+    assert first == second
+    assert first.splitlines()[0].startswith("#1 Rationale: ")
+    assert "\n\n#2 Rationale: " in first
+
+
 def test_traceability_normalize_phase_aliases_to_canonical_token() -> None:
     assert normalize_phase_id is not None, "_normalize_phase_id must be implemented"
     assert normalize_phase_id("Phase 4") == "4"
