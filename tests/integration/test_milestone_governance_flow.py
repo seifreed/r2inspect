@@ -190,3 +190,53 @@ def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, ca
     assert exit_code == 1
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
     assert "python scripts/quick_bootstrap.py milestone precheck v1.1" not in output
+
+
+def test_milestone_complete_aborts_when_requirements_contract_gate_fails(
+    monkeypatch, tmp_path, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\nstatus: in_progress\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {
+            "passed": False,
+            "failure_groups": {
+                "missing_acceptance_criteria": [{"message": "missing acceptance", "fix": "add"}]
+            },
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+        },
+    )
+    called = {"milestone_gate": False}
+
+    def fake_milestone_gate(_planning_root, _version):
+        called["milestone_gate"] = True
+        return {"passed": True, "failure_groups": {}, "retry_command": "unused"}
+
+    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone_gate)
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 1
+    assert called["milestone_gate"] is False
+    assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
+    assert "status: in_progress" in after
+    assert "| complete | all | blocked |" in after
