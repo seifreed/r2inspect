@@ -317,6 +317,17 @@ def test_milestone_complete_grouped_failures_output_has_grouped_failures_and_rem
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
+    (planning_root / "REQUIREMENTS.md").write_text(
+        (
+            "# Requirements\n\n"
+            "## v1 Requirements\n\n"
+            "#### Requirement\n\n"
+            "- id: REQ-01\n"
+            "- status: Pending\n"
+            "- acceptance_criteria: has criteria\n"
+        ),
+        encoding="utf-8",
+    )
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: unchanged\n", encoding="utf-8")
 
