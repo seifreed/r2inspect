@@ -618,6 +618,35 @@ def main() -> int:
             scope="all",
         )
 
+        traceability_result = evaluate_traceability_drift_gate(
+            planning_root,
+            scope="all",
+        )
+        traceability_retry = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+        traceability_touched_ids = sorted(
+            item.strip()
+            for item in traceability_result.get("touched_requirement_ids", [])
+            if str(item).strip()
+        )
+        if not bool(traceability_result.get("passed", False)):
+            record_traceability_gate_activity(
+                state_path,
+                "complete",
+                False,
+                scope="all",
+                touched_requirement_ids=traceability_touched_ids,
+            )
+            print(format_traceability_drift_failures(traceability_result, traceability_retry))
+            return 1
+
+        record_traceability_gate_activity(
+            state_path,
+            "complete",
+            True,
+            scope="all",
+            touched_requirement_ids=traceability_touched_ids,
+        )
+
         result = evaluate_milestone_governance_gate(planning_root, milestone_version)
         if not bool(result.get("passed", False)):
             retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
@@ -710,6 +739,29 @@ def main() -> int:
             "phase complete",
             True,
             scope="touched",
+        )
+        traceability_result = evaluate_traceability_drift_gate(
+            planning_root,
+            scope="touched",
+            touched_requirement_ids=touched_ids,
+        )
+        if not bool(traceability_result.get("passed", False)):
+            record_traceability_gate_activity(
+                state_path,
+                "phase complete",
+                False,
+                scope="touched",
+                touched_requirement_ids=touched_ids,
+            )
+            print(format_traceability_drift_failures(traceability_result, retry_command))
+            return 1
+
+        record_traceability_gate_activity(
+            state_path,
+            "phase complete",
+            True,
+            scope="touched",
+            touched_requirement_ids=touched_ids,
         )
         delegate = run_transition_delegate(
             "phase complete",
