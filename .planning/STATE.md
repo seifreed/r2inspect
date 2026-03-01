@@ -24,7 +24,7 @@ Milestone: v1.1 Hardening
 Phase: 3 of 3 (Milestone phase range: 2-4, Requirements Contract Enforcement)
 Plan: 03-01 completed
 Status: Phase 3 in progress
-Last activity: 2026-03-01 - requirements precheck gate passed
+Last activity: 2026-03-01 - milestone complete v1.1 gate blocked
 
 Progress: [#######---] 75%
 
@@ -84,4 +84,5 @@ Resume file: None
 
 | Date | Command | Scope | Result |
 |------|---------|-------|--------|
+| 2026-03-01 | complete | all | passed |
 | 2026-03-01 | precheck | all | passed |
