@@ -12,6 +12,10 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 evaluate_milestone_governance_gate = MODULE.evaluate_milestone_governance_gate
 format_gate_failures = MODULE.format_gate_failures
+evaluate_requirements_contract_gate = getattr(MODULE, "evaluate_requirements_contract_gate", None)
+format_requirements_contract_failures = getattr(
+    MODULE, "format_requirements_contract_failures", None
+)
 
 
 REQUIRED_SECTIONS = (
@@ -64,6 +68,55 @@ def _write_roadmap(planning_root: Path) -> Path:
     roadmap_path = planning_root / "ROADMAP.md"
     roadmap_path.write_text("# Roadmap\n", encoding="utf-8")
     return roadmap_path
+
+
+def _write_requirements_contract(
+    planning_root: Path,
+    body: str,
+) -> Path:
+    requirements_path = planning_root / "REQUIREMENTS.md"
+    requirements_path.write_text(body, encoding="utf-8")
+    return requirements_path
+
+
+def _requirements_contract_content(entries: str) -> str:
+    return "\n".join(
+        [
+            "# Requirements: Example",
+            "",
+            "## v1 Requirements",
+            "",
+            "### Group One",
+            "",
+            entries,
+            "",
+            "## v2 Requirements",
+            "",
+            "### Group Two",
+            "",
+            "#### Requirement",
+            "",
+            "- id: V2-01",
+            "- status: Pending",
+            "- acceptance_criteria: Keep v2 parseable.",
+            "",
+            "## Out of Scope",
+            "",
+            "#### Requirement",
+            "",
+            "- id: OOS-01",
+            "- status: Blocked",
+            "- acceptance_criteria: Keep out-of-scope parseable.",
+            "",
+        ]
+    )
+
+
+def _evaluate_requirements(planning_root: Path) -> dict[str, object]:
+    assert (
+        evaluate_requirements_contract_gate is not None
+    ), "evaluate_requirements_contract_gate must be implemented in scripts/governance_gates.py"
+    return evaluate_requirements_contract_gate(planning_root)
 
 
 def test_gate_fails_when_audit_file_missing(tmp_path: Path) -> None:
@@ -153,3 +206,119 @@ def test_formatter_includes_actionable_checklist_and_retry_command(tmp_path: Pat
     assert "Checklist:" in rendered
     assert "Fix:" in rendered
     assert "Retry: gsd-tools milestone complete v1.1" in rendered
+
+
+def test_requirements_gate_fails_on_malformed_entry_structure(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    malformed_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(malformed_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result["passed"] is False
+    assert "malformed_entry" in result["failure_groups"]
+
+
+def test_requirements_gate_fails_on_invalid_id_format(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    invalid_id_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: req-1",
+            "- status: Pending",
+            "- acceptance_criteria: Must fail deterministic ID validation.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(invalid_id_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result["passed"] is False
+    assert "invalid_id_format" in result["failure_groups"]
+    assert result["failure_groups"]["invalid_id_format"][0]["code"] == "invalid_id_format"
+
+
+def test_requirements_gate_fails_on_duplicate_id(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    duplicate_id_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: First entry.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Duplicate entry.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(duplicate_id_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result["passed"] is False
+    assert "duplicate_id" in result["failure_groups"]
+    assert result["failure_groups"]["duplicate_id"][0]["code"] == "duplicate_id"
+
+
+def test_requirements_gate_groups_failures_in_deterministic_order_for_malformed_entry(
+    tmp_path: Path,
+) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    mixed_invalid_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: req-1",
+            "- status: Pending",
+            "- acceptance_criteria: Bad id format.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: First duplicate id.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(mixed_invalid_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result["passed"] is False
+    assert list(result["failure_groups"]) == [
+        "malformed_entry",
+        "invalid_id_format",
+        "duplicate_id",
+    ]
