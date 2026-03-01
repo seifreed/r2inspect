@@ -228,8 +228,6 @@ def evaluate_requirements_contract_gate(
     scope: str = "all",
     touched_requirement_ids: set[str] | None = None,
 ) -> dict[str, Any]:
-    _ = scope
-    _ = touched_requirement_ids
     requirements_path = planning_root / "REQUIREMENTS.md"
     retry_command = "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
     failure_groups: dict[str, list[dict[str, str]]] = {}
@@ -251,8 +249,41 @@ def evaluate_requirements_contract_gate(
     content = requirements_path.read_text(encoding="utf-8")
     entries = _parse_requirement_entries(content)
     seen_ids: set[str] = set()
+    validated_entries: list[tuple[int, dict[str, str]]] = []
 
     for index, entry in enumerate(entries, start=1):
+        requirement_id = entry.get("id", "").strip()
+        if requirement_id and requirement_id not in seen_ids:
+            seen_ids.add(requirement_id)
+        validated_entries.append((index, entry))
+
+    touched_ids = {item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()}
+    if scope == "touched":
+        if not touched_ids:
+            _add_failure(
+                failure_groups,
+                "missing_touched_requirements",
+                "Touched requirements scope requires at least one requirement id.",
+                "Provide one or more --requirement-id values matching REQUIREMENTS.md ids.",
+            )
+            validated_entries = []
+        else:
+            missing_touched = sorted(touched_ids - seen_ids)
+            for missing_id in missing_touched:
+                _add_failure(
+                    failure_groups,
+                    "unknown_touched_requirement",
+                    f"Touched requirement id `{missing_id}` does not exist in REQUIREMENTS.md.",
+                    "Use existing requirement ids or update REQUIREMENTS.md before phase completion.",
+                )
+            validated_entries = [
+                (index, entry)
+                for index, entry in validated_entries
+                if entry.get("id", "").strip() in touched_ids
+            ]
+
+    seen_ids.clear()
+    for index, entry in validated_entries:
         requirement_id = entry.get("id", "").strip()
         status = entry.get("status", "").strip()
         has_acceptance_key = "acceptance_criteria" in entry

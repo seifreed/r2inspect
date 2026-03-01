@@ -464,6 +464,19 @@ def parse_args() -> argparse.Namespace:
     roadmap_revise.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
     roadmap_revise.add_argument("delegate_args", nargs=argparse.REMAINDER)
 
+    phase_parser = subparsers.add_parser("phase")
+    phase_subparsers = phase_parser.add_subparsers(dest="phase_command")
+    phase_complete = phase_subparsers.add_parser("complete")
+    phase_complete.add_argument("--planning-root", default=".planning")
+    phase_complete.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+    phase_complete.add_argument(
+        "--requirement-id",
+        action="append",
+        default=[],
+        help="Touched requirement ID; repeat flag for multiple IDs.",
+    )
+    phase_complete.add_argument("delegate_args", nargs=argparse.REMAINDER)
+
     requirements_parser = subparsers.add_parser("requirements")
     requirements_subparsers = requirements_parser.add_subparsers(dest="requirements_command")
 
@@ -588,6 +601,57 @@ def main() -> int:
         output = {
             "command": f"roadmap {roadmap_command}",
             "passed": True,
+        }
+        print(json.dumps(output, ensure_ascii=True))
+        return 0
+    if command == "phase":
+        phase_command = getattr(args, "phase_command", None)
+        if phase_command != "complete":
+            raise BootstrapError("Missing phase subcommand. Use `complete`.")
+        planning_root = Path(args.planning_root)
+        state_path = Path(args.state_path)
+        touched_ids = {
+            requirement_id.strip()
+            for requirement_id in list(getattr(args, "requirement_id", []) or [])
+            if str(requirement_id).strip()
+        }
+        requirements_result = evaluate_requirements_contract_gate(
+            planning_root,
+            scope="touched",
+            touched_requirement_ids=touched_ids,
+        )
+        retry_command_parts = ["python scripts/quick_bootstrap.py phase complete"]
+        retry_command_parts.extend(f"--requirement-id {requirement_id}" for requirement_id in sorted(touched_ids))
+        retry_command = " ".join(retry_command_parts)
+
+        if not bool(requirements_result.get("passed", False)):
+            record_requirements_gate_activity(
+                state_path,
+                "phase complete",
+                False,
+                scope="touched",
+            )
+            print(format_requirements_contract_failures(requirements_result, retry_command))
+            return 1
+
+        record_requirements_gate_activity(
+            state_path,
+            "phase complete",
+            True,
+            scope="touched",
+        )
+        delegate = run_transition_delegate(
+            "phase complete",
+            list(getattr(args, "delegate_args", []) or []),
+        )
+        if delegate.returncode != 0:
+            detail = (delegate.stderr or "").strip() or (delegate.stdout or "").strip() or "phase transition failed"
+            print(detail)
+            return int(delegate.returncode) if int(delegate.returncode) > 0 else 1
+        output = {
+            "command": "phase complete",
+            "passed": True,
+            "touched_requirement_ids": sorted(touched_ids),
         }
         print(json.dumps(output, ensure_ascii=True))
         return 0
