@@ -1038,6 +1038,101 @@ def test_traceability_precheck_defaults_to_milestone_scope_when_unspecified(
     assert payload["coverage_matrix"]["scope"] == "milestone"
 
 
+def test_traceability_precheck_matrix_scope_outputs_are_deterministic(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    parsed_args = quick_bootstrap.argparse.Namespace(
+        command="traceability",
+        traceability_command="precheck",
+        planning_root=str(planning_root),
+        state_path=str(state_path),
+        scope="phase",
+        phase_id="05",
+        matrix_detail="compact",
+    )
+    monkeypatch.setattr(quick_bootstrap, "parse_args", lambda: parsed_args)
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unmapped_requirement": [{"message": "missing mapping", "fix": "add one row"}],
+                "state_mapping_mismatch": [{"message": "state drift", "fix": "align state"}],
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "build_requirement_coverage_matrix",
+        lambda _planning_root, **_kwargs: {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "phase",
+                "scope_target": "5",
+                "rows": [
+                    {
+                        "requirement_id": "GUX-01",
+                        "coverage_state": "stale",
+                        "cause_codes": ["state_mapping_mismatch"],
+                        "remediation": "Align requirement status with mapped phase completion state.",
+                        "retry_command": "python scripts/quick_bootstrap.py traceability precheck",
+                    },
+                    {
+                        "requirement_id": "GUX-02",
+                        "coverage_state": "uncovered",
+                        "cause_codes": ["unmapped_requirement"],
+                        "remediation": "Add exactly one Traceability row for the requirement.",
+                        "retry_command": "python scripts/quick_bootstrap.py traceability precheck",
+                    },
+                ],
+                "summary": {
+                    "total": 2,
+                    "covered": 0,
+                    "partial": 0,
+                    "uncovered": 1,
+                    "stale": 1,
+                },
+            },
+        },
+    )
+
+    first_exit = quick_bootstrap.main()
+    first_payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+    second_exit = quick_bootstrap.main()
+    second_payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+    first_serialized = quick_bootstrap.json.dumps(
+        first_payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    second_serialized = quick_bootstrap.json.dumps(
+        second_payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    assert first_exit == 0
+    assert second_exit == 0
+    assert first_payload["coverage_matrix"]["scope"] == "phase"
+    assert first_payload["coverage_matrix"]["scope_target"] == "5"
+    assert (
+        first_payload["coverage_matrix"]["summary"] == second_payload["coverage_matrix"]["summary"]
+    )
+    assert first_serialized != second_serialized
+
+
 def test_traceability_precheck_compact_matrix_output_is_default(tmp_path, monkeypatch, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
