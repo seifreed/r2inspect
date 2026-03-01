@@ -670,7 +670,7 @@ def test_requirements_precheck_reports_structured_non_blocking_result(
                     }
                 ]
             },
-            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+            "retry_command": "python scripts/quick_bootstrap.py requirements precheck",
         },
     )
 
@@ -682,10 +682,7 @@ def test_requirements_precheck_reports_structured_non_blocking_result(
     assert payload["command"] == "requirements precheck"
     assert payload["passed"] is False
     assert "missing_acceptance_criteria" in payload["failure_groups"]
-    assert (
-        payload["retry_command"]
-        == "python scripts/quick_bootstrap.py traceability precheck --scope phase --phase-id 05"
-    )
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
     assert "Checklist:" in payload["checklist"]
     assert "requirements precheck gate blocked" in after
     assert "| precheck | all | blocked |" in after
@@ -766,7 +763,7 @@ def test_traceability_precheck_reports_structured_non_blocking_result(
                     }
                 ]
             },
-            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+            "retry_command": "python scripts/quick_bootstrap.py traceability precheck",
             "scope": "all",
             "touched_requirement_ids": [],
         },
@@ -783,7 +780,7 @@ def test_traceability_precheck_reports_structured_non_blocking_result(
     assert "unmapped_requirement" in payload["failure_groups"]
     assert (
         payload["retry_command"]
-        == "python scripts/quick_bootstrap.py traceability precheck --scope phase --phase-id 05"
+        == "python scripts/quick_bootstrap.py traceability precheck --scope all"
     )
 
 
