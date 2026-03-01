@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +36,24 @@ class BootstrapResult:
     retries: int
     plan_path: Path
     summary_path: Path
+
+
+def _load_governance_functions() -> tuple[Callable[[Path, str], dict[str, object]], Callable[[dict[str, object], str], str]]:
+    module_path = Path(__file__).resolve().parent / "governance_gates.py"
+    module_name = "governance_gates"
+    if module_name in sys.modules:
+        module = sys.modules[module_name]
+    else:
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        if spec is None or spec.loader is None:
+            raise BootstrapError(f"Unable to load governance module from {module_path}")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+    return module.evaluate_milestone_governance_gate, module.format_gate_failures
+
+
+evaluate_milestone_governance_gate, format_gate_failures = _load_governance_functions()
 
 
 def slugify(value: str) -> str:
@@ -225,6 +245,26 @@ def close_quick_task(
     return summary_path
 
 
+def record_milestone_gate_activity(
+    state_path: Path,
+    milestone_version: str,
+    gate_command: str,
+    passed: bool,
+) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    status = "passed" if passed else "blocked"
+    line = f"Last activity: {_today_iso()} - milestone {gate_command} {milestone_version} gate {status}"
+    if state_path.exists():
+        text = state_path.read_text(encoding="utf-8")
+    else:
+        text = "# Project State\n"
+    if re.search(r"^Last activity:.*$", text, flags=re.MULTILINE):
+        text = re.sub(r"^Last activity:.*$", line, text, flags=re.MULTILINE)
+    else:
+        text = text.rstrip() + f"\n\n{line}\n"
+    state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
+
+
 def execute_bootstrap(
     objective: str,
     gsd_tools_path: str = DEFAULT_GSD_TOOLS_PATH,
@@ -296,6 +336,20 @@ def parse_args() -> argparse.Namespace:
         default="python scripts/quick_bootstrap.py bootstrap \"<objective>\"",
     )
     close_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
+    milestone_parser = subparsers.add_parser("milestone")
+    milestone_subparsers = milestone_parser.add_subparsers(dest="milestone_command")
+
+    precheck_parser = milestone_subparsers.add_parser("precheck")
+    precheck_parser.add_argument("version", help="Milestone version, e.g., v1.1.")
+    precheck_parser.add_argument("--planning-root", default=".planning")
+    precheck_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
+    complete_parser = milestone_subparsers.add_parser("complete")
+    complete_parser.add_argument("version", help="Milestone version, e.g., v1.1.")
+    complete_parser.add_argument("--planning-root", default=".planning")
+    complete_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
     return parser.parse_args()
 
 
@@ -303,7 +357,7 @@ def main() -> int:
     args = parse_args()
     command = args.command
     if command is None:
-        raise BootstrapError("Missing command. Use `bootstrap` or `close`.")
+        raise BootstrapError("Missing command. Use `bootstrap`, `close`, or `milestone`.")
     if command == "close":
         summary_path = close_quick_task(
             task_dir=Path(args.task_dir),
@@ -315,6 +369,44 @@ def main() -> int:
             state_path=Path(args.state_path),
         )
         print(json.dumps({"summary_path": str(summary_path), "status": args.status}, ensure_ascii=True))
+        return 0
+    if command == "milestone":
+        milestone_command = getattr(args, "milestone_command", None)
+        if milestone_command not in {"precheck", "complete"}:
+            raise BootstrapError("Missing milestone subcommand. Use `precheck` or `complete`.")
+        planning_root = Path(args.planning_root)
+        state_path = Path(args.state_path)
+        milestone_version = args.version
+        result = evaluate_milestone_governance_gate(planning_root, milestone_version)
+
+        if milestone_command == "precheck":
+            record_milestone_gate_activity(state_path, milestone_version, "precheck", bool(result.get("passed", False)))
+            output = {
+                "command": "milestone precheck",
+                "version": milestone_version,
+                "passed": bool(result.get("passed", False)),
+                "failure_groups": result.get("failure_groups", {}),
+                "retry_command": f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}",
+            }
+            print(json.dumps(output, ensure_ascii=True))
+            return 0
+
+        if not bool(result.get("passed", False)):
+            retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            print(format_gate_failures(result, retry_command))
+            return 1
+
+        record_milestone_gate_activity(state_path, milestone_version, "complete", True)
+        print(
+            json.dumps(
+                {
+                    "command": "milestone complete",
+                    "version": milestone_version,
+                    "passed": True,
+                },
+                ensure_ascii=True,
+            )
+        )
         return 0
 
     objective = args.objective
