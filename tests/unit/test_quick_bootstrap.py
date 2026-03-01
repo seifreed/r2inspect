@@ -356,6 +356,17 @@ def test_milestone_complete_grouped_failures_output_has_grouped_failures_and_rem
             "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
         },
     )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
 
     exit_code = quick_bootstrap.main()
     output = capsys.readouterr().out
@@ -1092,6 +1103,17 @@ def test_phase_complete_touched_requirements_delegates_when_gate_passes(
             "passed": True,
             "failure_groups": {},
             "retry_command": "unused",
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+            "scope": "touched",
+            "touched_requirement_ids": ["REQ-03"],
         },
     )
     captured: dict[str, object] = {}
