@@ -253,7 +253,7 @@ def test_milestone_precheck_reports_structured_non_blocking_result(tmp_path, mon
     assert "missing_file" in payload["failure_groups"]
 
 
-def test_milestone_complete_aborts_before_state_mutation_on_gate_failure(
+def test_milestone_complete_aborts_without_false_completion_on_gate_failure(
     tmp_path, monkeypatch, capsys
 ):
     quick_bootstrap = _load_quick_bootstrap()
@@ -261,7 +261,6 @@ def test_milestone_complete_aborts_before_state_mutation_on_gate_failure(
     planning_root.mkdir(parents=True)
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: unchanged\n", encoding="utf-8")
-    before = state_path.read_text(encoding="utf-8")
 
     monkeypatch.setattr(
         quick_bootstrap,
@@ -304,7 +303,9 @@ def test_milestone_complete_aborts_before_state_mutation_on_gate_failure(
 
     assert exit_code == 1
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
-    assert after == before
+    assert "milestone complete v1.1 gate blocked" in after
+    assert "| complete | v1.1 | blocked |" in after
+    assert "milestone complete v1.1 gate passed" not in after
 
 
 def test_milestone_complete_grouped_failures_output_has_grouped_failures_and_remediation(

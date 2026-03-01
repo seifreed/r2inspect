@@ -262,6 +262,35 @@ def record_milestone_gate_activity(
         text = re.sub(r"^Last activity:.*$", line, text, flags=re.MULTILINE)
     else:
         text = text.rstrip() + f"\n\n{line}\n"
+
+    row = f"| {_today_iso()} | {gate_command} | {milestone_version} | {status} |"
+    if "## Milestone Gate Activity" not in text:
+        text = text.rstrip() + (
+            "\n\n## Milestone Gate Activity\n\n"
+            "| Date | Command | Milestone | Result |\n"
+            "|------|---------|-----------|--------|\n"
+            f"{row}\n"
+        )
+    elif row not in text:
+        lines = text.splitlines()
+        inserted = False
+        for idx, current in enumerate(lines):
+            if current.strip() == "|------|---------|-----------|--------|":
+                lines.insert(idx + 1, row)
+                inserted = True
+                break
+        if not inserted:
+            lines.extend(
+                [
+                    "",
+                    "## Milestone Gate Activity",
+                    "",
+                    "| Date | Command | Milestone | Result |",
+                    "|------|---------|-----------|--------|",
+                    row,
+                ]
+            )
+        text = "\n".join(lines)
     state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
 
 
@@ -396,6 +425,7 @@ def main() -> int:
 
         if not bool(result.get("passed", False)):
             retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            record_milestone_gate_activity(state_path, milestone_version, "complete", False)
             print(format_gate_failures(result, retry_command))
             return 1
 
