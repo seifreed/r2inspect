@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: phase_complete
-last_updated: "2026-03-01T13:48:49Z"
+last_updated: "2026-03-01T13:59:29.840Z"
 progress:
   total_phases: 2
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 5
+  completed_plans: 5
 ---
 
 # Project State
@@ -22,31 +22,32 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 Milestone: v1.1 Hardening
 Phase: 3 of 3 (Milestone phase range: 2-4, Requirements Contract Enforcement)
-Plan: 03-02 completed
+Plan: 03-03 completed
 Status: Phase 3 complete
-Last activity: 2026-03-01 - milestone complete v1.1 gate blocked
+Last activity: 2026-03-01 - completed 03-03 verification gap closure
 
 Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 3.5 min
-- Total execution time: 0.2 hours
+- Total plans completed: 5
+- Average duration: 3.2 min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 02 | 2 | 6 min | 3 min |
-| 03 | 1 | 3 min | 3 min |
+| 03 | 3 | 10 min | 3.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (2 min), 02-02 (4 min), 03-01 (3 min), 03-02 (5 min)
+- Last 5 plans: 02-01 (2 min), 02-02 (4 min), 03-01 (3 min), 03-02 (5 min), 03-03 (2 min)
 - Trend: Stable
 - Phase 03 P01: 3 min, 2 tasks, 3 files
 | Phase 03 P02 | 5 min | 3 tasks | 5 files |
+| Phase 03 P03 | 2 min | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Requirements gate runs before milestone governance on milestone complete.
 - [Phase 03]: Transition wrappers delegate only after requirements gate passes; blocked paths are read-only except gate evidence.
 - [Phase 03]: Phase complete enforces scope=touched with explicit requirement IDs and unknown-ID rejection.
+- [Phase 03-requirements-contract-enforcement]: Milestone-complete gate-failure tests assert requirements-gate evidence when requirements validation fails first.
+- [Phase 03-requirements-contract-enforcement]: Grouped milestone failure formatter tests seed valid requirements fixtures to reach milestone governance branches.
 
 ### Pending Todos
 None yet.
@@ -81,7 +84,7 @@ None.
 
 ## Session Continuity
 Last session: 2026-03-01
-Stopped at: Completed 03-02-PLAN.md
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
 
 ## Requirements Gate Activity
