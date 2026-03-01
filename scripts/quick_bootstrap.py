@@ -46,6 +46,8 @@ def _load_governance_functions() -> tuple[
     Callable[..., dict[str, object]],
     Callable[[dict[str, object], str], str],
     Callable[..., dict[str, object]],
+    Callable[[dict[str, object]], str],
+    Callable[[dict[str, object]], str],
 ]:
     module_path = Path(__file__).resolve().parent / "governance_gates.py"
     module_name = "governance_gates"
@@ -66,6 +68,8 @@ def _load_governance_functions() -> tuple[
         module.evaluate_traceability_drift_gate,
         module.format_traceability_drift_failures,
         module.build_requirement_coverage_matrix,
+        module.format_coverage_matrix_summary,
+        module.format_coverage_matrix_expanded,
     )
 
 
@@ -77,6 +81,8 @@ def _load_governance_functions() -> tuple[
     evaluate_traceability_drift_gate,
     format_traceability_drift_failures,
     build_requirement_coverage_matrix,
+    format_coverage_matrix_summary,
+    format_coverage_matrix_expanded,
 ) = _load_governance_functions()
 
 
@@ -829,17 +835,43 @@ def main() -> int:
         state_path = Path(args.state_path)
         traceability_scope = getattr(args, "scope", "milestone")
         traceability_phase_id = getattr(args, "phase_id", None)
+        matrix_detail = getattr(args, "matrix_detail", "compact")
         if traceability_scope == "phase" and not str(traceability_phase_id or "").strip():
             raise BootstrapError("--phase-id is required when --scope phase.")
         result = evaluate_traceability_drift_gate(planning_root, scope="all")
-        matrix_payload = build_requirement_coverage_matrix(
-            planning_root,
-            scope=traceability_scope,
-            phase_id=traceability_phase_id,
-        )
+        try:
+            matrix_payload = build_requirement_coverage_matrix(
+                planning_root,
+                scope=traceability_scope,
+                phase_id=traceability_phase_id,
+            )
+        except (FileNotFoundError, ValueError):
+            scope_target = str(traceability_phase_id).strip() if traceability_scope == "phase" else "all-active"
+            matrix_payload = {
+                "schema_version": "coverage_matrix.v1",
+                "coverage_matrix": {
+                    "scope": traceability_scope,
+                    "scope_target": scope_target,
+                    "rows": [],
+                    "summary": {
+                        "total": 0,
+                        "covered": 0,
+                        "partial": 0,
+                        "uncovered": 0,
+                        "stale": 0,
+                    },
+                },
+            }
         passed = bool(result.get("passed", False))
         retry_command = "python scripts/quick_bootstrap.py traceability precheck"
         checklist = format_traceability_drift_failures(result, retry_command)
+        coverage_matrix = matrix_payload.get("coverage_matrix", {})
+        matrix_text = (
+            format_coverage_matrix_expanded(coverage_matrix)
+            if matrix_detail == "expanded"
+            else format_coverage_matrix_summary(coverage_matrix)
+        )
+        checklist = f"{checklist}\n\n{matrix_text}" if checklist else matrix_text
         touched_ids = sorted(
             item.strip()
             for item in result.get("touched_requirement_ids", [])
