@@ -10,6 +10,7 @@ from typing import Callable
 
 
 DEFAULT_GSD_TOOLS_PATH = str(Path.home() / ".codex/get-shit-done/bin/gsd-tools.cjs")
+DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parent / "quick_templates"
 MIN_CHECKS = 2
 MAX_CHECKS = 3
 
@@ -29,6 +30,8 @@ class BootstrapResult:
     task_dir: Path
     checks: list[str]
     retries: int
+    plan_path: Path
+    summary_path: Path
 
 
 def slugify(value: str) -> str:
@@ -101,12 +104,51 @@ def normalize_task_identity(payload: dict[str, object], objective: str) -> tuple
     return number, slug, normalized_task_dir
 
 
+def _render_template(template: str, context: dict[str, str]) -> str:
+    rendered = template
+    for key, value in context.items():
+        rendered = rendered.replace("{" + key + "}", value)
+    return rendered
+
+
+def create_quick_task(
+    payload: dict[str, object],
+    objective: str,
+    checks: list[str],
+    template_dir: Path = DEFAULT_TEMPLATE_DIR,
+) -> dict[str, Path]:
+    number, slug, task_dir = normalize_task_identity(payload, objective)
+    task_dir.mkdir(parents=True, exist_ok=True)
+
+    plan_template = (template_dir / "PLAN.template.md").read_text(encoding="utf-8")
+    summary_template = (template_dir / "SUMMARY.template.md").read_text(encoding="utf-8")
+    checks_block = "\n".join(f"- {check}" for check in checks)
+
+    context = {
+        "number": str(number),
+        "slug": slug,
+        "objective": objective.strip(),
+        "checks": checks_block,
+        "status": "scaffolded",
+        "blocker": "None",
+        "attempted_commands": "- pending",
+        "continuation_command": f"python scripts/quick_bootstrap.py \"{objective.strip()}\"",
+    }
+
+    plan_path = task_dir / f"{number}-PLAN.md"
+    summary_path = task_dir / f"{number}-SUMMARY.md"
+    plan_path.write_text(_render_template(plan_template, context), encoding="utf-8")
+    summary_path.write_text(_render_template(summary_template, context), encoding="utf-8")
+    return {"task_dir": task_dir, "plan_path": plan_path, "summary_path": summary_path}
+
+
 def execute_bootstrap(
     objective: str,
     gsd_tools_path: str = DEFAULT_GSD_TOOLS_PATH,
     runner: Callable[[str, str], dict[str, object]] = run_init_quick,
     autofix: Callable[[Path], list[str]] = apply_minimal_autofix,
     repo_root: Path | None = None,
+    template_dir: Path = DEFAULT_TEMPLATE_DIR,
 ) -> BootstrapResult:
     clean_objective = objective.strip()
     if not clean_objective:
@@ -123,7 +165,16 @@ def execute_bootstrap(
             checks = build_measurable_checks(clean_objective)
             if not (MIN_CHECKS <= len(checks) <= MAX_CHECKS):
                 raise BootstrapError("Quick intake must include 2-3 measurable checks.")
-            return BootstrapResult(number=number, slug=slug, task_dir=task_dir, checks=checks, retries=attempts)
+            artifacts = create_quick_task(payload, clean_objective, checks, template_dir=template_dir)
+            return BootstrapResult(
+                number=number,
+                slug=slug,
+                task_dir=task_dir,
+                checks=checks,
+                retries=attempts,
+                plan_path=artifacts["plan_path"],
+                summary_path=artifacts["summary_path"],
+            )
         except BootstrapError as exc:
             last_error = exc
             if attempts >= 1:
@@ -159,6 +210,8 @@ def main() -> int:
                 "task_dir": str(result.task_dir),
                 "checks": result.checks,
                 "retries": result.retries,
+                "plan_path": str(result.plan_path),
+                "summary_path": str(result.summary_path),
             },
             ensure_ascii=True,
         )
