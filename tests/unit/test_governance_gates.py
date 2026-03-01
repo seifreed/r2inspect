@@ -17,6 +17,9 @@ format_requirements_contract_failures = getattr(
     MODULE, "format_requirements_contract_failures", None
 )
 evaluate_traceability_drift_gate = getattr(MODULE, "evaluate_traceability_drift_gate", None)
+build_requirement_coverage_matrix = getattr(MODULE, "build_requirement_coverage_matrix", None)
+derive_coverage_state = getattr(MODULE, "_derive_coverage_state", None)
+order_cause_codes = getattr(MODULE, "_order_cause_codes", None)
 normalize_phase_id = getattr(MODULE, "_normalize_phase_id", None)
 
 
@@ -470,6 +473,160 @@ def test_traceability_failure_group_order_includes_state_mapping_mismatch_last(
         "unknown_mapped_phase",
         "state_mapping_mismatch",
     ]
+
+
+def test_coverage_matrix_rows_are_sorted_and_byte_stable(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-10",
+            "- status: Pending",
+            "- acceptance_criteria: Must be deterministically ordered.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-02",
+            "- status: Pending",
+            "- acceptance_criteria: Must be deterministically ordered.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Blocked",
+            "- acceptance_criteria: Blocked requirements are excluded.",
+        ]
+    )
+    traceability_rows = "\n".join(
+        [
+            "| REQ-10 | Phase 5 | Pending |",
+            "| REQ-10 | Phase 9 | Pending |",
+            "| REQ-02 | Phase 9 | Pending |",
+            "| AUX-01 | Phase 5 | Pending |",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Coverage Matrix**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    first = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    second = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    first_rows = first["coverage_matrix"]["rows"]
+    second_rows = second["coverage_matrix"]["rows"]
+
+    assert [row["requirement_id"] for row in first_rows] == ["AUX-01", "REQ-02", "REQ-10"]
+    assert first_rows == second_rows
+
+
+def test_coverage_matrix_cause_ordering_is_canonical(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Cause ordering must be deterministic.",
+        ]
+    )
+    traceability_rows = "\n".join(
+        [
+            "| REQ-01 | Phase 5 | Pending |",
+            "| REQ-01 | Phase 9 | Pending |",
+            "| AUX-01 | Phase 5 | Pending |",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Coverage Matrix**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    rows = {row["requirement_id"]: row for row in result["coverage_matrix"]["rows"]}
+    assert rows["REQ-01"]["cause_codes"] == ["multi_phase_mapping", "unknown_mapped_phase"]
+
+
+def test_coverage_matrix_exclusions_ignore_blocked_and_out_of_scope(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Included in denominator.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-02",
+            "- status: Blocked",
+            "- acceptance_criteria: Excluded from denominator.",
+        ]
+    )
+    traceability_rows = "| REQ-01 | Phase 5 | Pending |"
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "- [ ] **Phase 5: Coverage Matrix**\n", encoding="utf-8"
+    )
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+
+    assert result["coverage_matrix"]["summary"]["total"] == 2
+    assert [row["requirement_id"] for row in result["coverage_matrix"]["rows"]] == [
+        "AUX-01",
+        "REQ-01",
+    ]
+
+
+def test_coverage_matrix_schema_version_is_explicit(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    _write_traceability_fixture(planning_root, "| REQ-01 | Phase 4 | Pending |")
+    _write_traceability_roadmap(planning_root)
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+
+    assert result["schema_version"] == "coverage_matrix.v1"
 
 
 def test_gate_fails_when_audit_file_missing(tmp_path: Path) -> None:
