@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -11,6 +12,8 @@ REQUIRED_AUDIT_SECTIONS = (
     "## Findings",
     "## Remediation",
 )
+REQUIREMENT_ID_PATTERN = re.compile(r"^[A-Z]+-[0-9]{2,}$")
+REQUIREMENTS_ALLOWED_STATUSES = {"Pending", "In Progress", "Complete", "Blocked"}
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -68,6 +71,71 @@ def _ordered_failure_groups(
         if key not in ordered:
             ordered[key] = failure_groups[key]
     return ordered
+
+
+def _ordered_requirements_failure_groups(
+    failure_groups: dict[str, list[dict[str, str]]]
+) -> dict[str, list[dict[str, str]]]:
+    order = (
+        "missing_file",
+        "malformed_entry",
+        "invalid_id_format",
+        "duplicate_id",
+        "invalid_status",
+        "missing_acceptance_criteria",
+    )
+    ordered: dict[str, list[dict[str, str]]] = {}
+    for key in order:
+        if key in failure_groups:
+            ordered[key] = failure_groups[key]
+    for key in sorted(failure_groups):
+        if key not in ordered:
+            ordered[key] = failure_groups[key]
+    return ordered
+
+
+def _parse_requirement_entries(content: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    lines = content.splitlines()
+
+    in_allowed_section = False
+    current_fields: dict[str, str] | None = None
+
+    def flush_current() -> None:
+        if current_fields is not None:
+            entries.append(dict(current_fields))
+
+    for raw_line in lines:
+        line = raw_line.rstrip("\n")
+        stripped = line.strip()
+        if stripped in ("## v1 Requirements", "## v2 Requirements", "## Out of Scope"):
+            flush_current()
+            current_fields = None
+            in_allowed_section = True
+            continue
+        if stripped.startswith("## "):
+            flush_current()
+            current_fields = None
+            in_allowed_section = False
+            continue
+        if not in_allowed_section:
+            continue
+        if stripped == "#### Requirement":
+            flush_current()
+            current_fields = {}
+            continue
+        if current_fields is None:
+            continue
+        if not stripped.startswith("- "):
+            continue
+        payload = stripped[2:]
+        if ":" not in payload:
+            continue
+        key, raw_value = payload.split(":", 1)
+        current_fields[key.strip()] = raw_value.strip().strip("'\"")
+
+    flush_current()
+    return entries
 
 
 def evaluate_milestone_governance_gate(
@@ -151,6 +219,80 @@ def evaluate_milestone_governance_gate(
         "failure_groups": failure_groups,
         "retry_command": retry_command,
         "audit_file": str(audit_path),
+    }
+
+
+def evaluate_requirements_contract_gate(
+    planning_root: Path,
+    *,
+    scope: str = "all",
+    touched_requirement_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    _ = scope
+    _ = touched_requirement_ids
+    requirements_path = planning_root / "REQUIREMENTS.md"
+    retry_command = "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
+    failure_groups: dict[str, list[dict[str, str]]] = {}
+
+    if not requirements_path.exists():
+        _add_failure(
+            failure_groups,
+            "missing_file",
+            f"Missing requirements artifact: {requirements_path}",
+            f"Create {requirements_path} and add canonical requirement entries.",
+        )
+        return {
+            "passed": False,
+            "failure_groups": _ordered_requirements_failure_groups(failure_groups),
+            "retry_command": retry_command,
+            "requirements_file": str(requirements_path),
+        }
+
+    content = requirements_path.read_text(encoding="utf-8")
+    entries = _parse_requirement_entries(content)
+    seen_ids: set[str] = set()
+
+    for index, entry in enumerate(entries, start=1):
+        requirement_id = entry.get("id", "").strip()
+        status = entry.get("status", "").strip()
+        acceptance = entry.get("acceptance_criteria", "").strip()
+
+        if not requirement_id or not status or not acceptance:
+            _add_failure(
+                failure_groups,
+                "malformed_entry",
+                f"Requirement entry #{index} must include id, status, and acceptance_criteria.",
+                "Ensure every `#### Requirement` block defines id/status/acceptance_criteria bullet fields.",
+            )
+            continue
+
+        if not REQUIREMENT_ID_PATTERN.fullmatch(requirement_id):
+            _add_failure(
+                failure_groups,
+                "invalid_id_format",
+                f"Requirement id `{requirement_id}` must match `CAT-NN` format.",
+                "Use uppercase category and numeric suffix with at least two digits (example: REQ-01).",
+            )
+            continue
+
+        if requirement_id in seen_ids:
+            _add_failure(
+                failure_groups,
+                "duplicate_id",
+                f"Requirement id `{requirement_id}` is duplicated.",
+                "Ensure each requirement id is globally unique across active sections.",
+            )
+            continue
+
+        seen_ids.add(requirement_id)
+
+    failure_groups = _ordered_requirements_failure_groups(failure_groups)
+
+    return {
+        "passed": not failure_groups,
+        "failure_groups": failure_groups,
+        "retry_command": retry_command,
+        "requirements_file": str(requirements_path),
     }
 
 
