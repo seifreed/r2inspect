@@ -190,6 +190,24 @@ def _parse_roadmap_phase_catalog(roadmap_content: str) -> set[str]:
     return phase_ids
 
 
+def _parse_roadmap_phase_completion(roadmap_content: str) -> dict[str, bool]:
+    completion: dict[str, bool] = {}
+    for raw_line in roadmap_content.splitlines():
+        line = raw_line.strip()
+        match = re.search(
+            r"^\-\s+\[(?P<marker>[xX ])\].*Phase\s+(?P<phase>[0-9]+(?:\.[0-9]+)?)",
+            line,
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            continue
+        normalized = _normalize_phase_id(match.group("phase"))
+        if not normalized:
+            continue
+        completion[normalized] = match.group("marker").strip().lower() == "x"
+    return completion
+
+
 def _parse_traceability_rows(requirements_content: str) -> tuple[list[dict[str, str]], str | None]:
     lines = requirements_content.splitlines()
     traceability_start = -1
@@ -300,6 +318,19 @@ def _collect_active_requirement_ids(requirements_content: str) -> set[str]:
 
     flush_current()
     return active_ids
+
+
+def _collect_active_requirement_statuses(requirements_content: str) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for entry in _parse_requirement_entries(requirements_content):
+        requirement_id = entry.get("id", "").strip()
+        status = entry.get("status", "").strip()
+        if not requirement_id or not status:
+            continue
+        if requirement_id.startswith("OOS-"):
+            continue
+        statuses[requirement_id] = status
+    return statuses
 
 
 def evaluate_milestone_governance_gate(
@@ -535,8 +566,11 @@ def evaluate_traceability_drift_gate(
         }
 
     requirements_content = requirements_path.read_text(encoding="utf-8")
-    roadmap_phase_catalog = _parse_roadmap_phase_catalog(roadmap_path.read_text(encoding="utf-8"))
+    roadmap_content = roadmap_path.read_text(encoding="utf-8")
+    roadmap_phase_catalog = _parse_roadmap_phase_catalog(roadmap_content)
+    roadmap_phase_completion = _parse_roadmap_phase_completion(roadmap_content)
     active_ids = _collect_active_requirement_ids(requirements_content)
+    active_statuses = _collect_active_requirement_statuses(requirements_content)
     traceability_rows, traceability_error = _parse_traceability_rows(requirements_content)
     if traceability_error:
         _add_failure(
@@ -600,6 +634,34 @@ def evaluate_traceability_drift_gate(
                     f"Active requirement `{requirement_id}` maps to multiple phases: {mapped_list}.",
                     "Keep exactly one canonical phase mapping per active requirement.",
                 )
+
+            requirement_complete = active_statuses.get(requirement_id) == "Complete"
+            for mapped_phase in sorted(mapped_phases):
+                mapped_phase_complete = roadmap_phase_completion.get(mapped_phase)
+                if mapped_phase_complete is None:
+                    continue
+                if requirement_complete and not mapped_phase_complete:
+                    _add_failure(
+                        failure_groups,
+                        "state_mapping_mismatch",
+                        (
+                            f"Requirement `{requirement_id}` is Complete while mapped phase "
+                            f"`{mapped_phase}` is not complete in ROADMAP.md."
+                        ),
+                        "Align requirement status with mapped phase completion state before retrying.",
+                    )
+                    break
+                if mapped_phase_complete and not requirement_complete:
+                    _add_failure(
+                        failure_groups,
+                        "state_mapping_mismatch",
+                        (
+                            f"Requirement `{requirement_id}` is not Complete while mapped phase "
+                            f"`{mapped_phase}` is complete in ROADMAP.md."
+                        ),
+                        "Mark requirement Complete or move mapping to the correct incomplete phase.",
+                    )
+                    break
 
     failure_groups = _ordered_traceability_failure_groups(failure_groups)
     return {
