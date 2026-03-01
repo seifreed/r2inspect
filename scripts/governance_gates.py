@@ -611,6 +611,72 @@ def evaluate_traceability_drift_gate(
     }
 
 
+def format_traceability_drift_failures(result: dict[str, Any], retry_command: str) -> str:
+    failure_groups = result.get("failure_groups", {})
+    if not failure_groups:
+        return "Traceability drift gate passed."
+
+    remediation_steps = {
+        "missing_file": [
+            "Restore missing planning artifacts (REQUIREMENTS.md and ROADMAP.md).",
+            "Re-run traceability precheck after restoring files.",
+        ],
+        "malformed_traceability_table": [
+            "Fix Traceability section header and table schema.",
+            "Ensure Requirement, Phase, and Status columns are present for each row.",
+        ],
+        "missing_touched_requirements": [
+            "Provide one or more --requirement-id values for touched scope checks.",
+            "Use IDs from active v1/v2 requirement blocks.",
+        ],
+        "unknown_touched_requirement": [
+            "Remove unknown requirement IDs from touched scope commands.",
+            "Add requirement entry first if the ID is new.",
+        ],
+        "unmapped_requirement": [
+            "Add exactly one Traceability row for each active requirement in scope.",
+            "Keep requirement IDs aligned with REQUIREMENTS.md entries.",
+        ],
+        "multi_phase_mapping": [
+            "Consolidate each requirement to one canonical phase mapping.",
+            "Remove duplicate Traceability rows for the same requirement.",
+        ],
+        "unknown_mapped_phase": [
+            "Update Traceability rows to only reference phases present in ROADMAP.md.",
+            "Normalize aliases (for example, `Phase 4`) to canonical phase IDs.",
+        ],
+        "state_mapping_mismatch": [
+            "Synchronize STATE/traceability evidence with canonical requirement IDs.",
+            "Re-run precheck after correcting state and traceability mappings.",
+        ],
+    }
+
+    lines = [
+        "Traceability drift gate failed.",
+        "",
+        "Checklist:",
+    ]
+    for failure_type, issues in failure_groups.items():
+        lines.append(f"- Group {failure_type}")
+        for issue in issues:
+            message = str(issue.get("message", "")).strip() or "Issue detected."
+            fix = str(issue.get("fix", "")).strip() or "Apply the remediation checklist."
+            lines.append(f"  - {message}")
+            lines.append(f"    Fix: {fix}")
+    lines.extend(["", "Remediation by failure type:"])
+    for failure_type in failure_groups:
+        lines.append(f"- Group {failure_type}:")
+        for step in remediation_steps.get(
+            failure_type,
+            ["Resolve all listed checklist issues for this group and retry."],
+        ):
+            lines.append(f"  - {step}")
+    lines.append("")
+    effective_retry = retry_command or str(result.get("retry_command", "")).strip()
+    lines.append(f"Retry: {effective_retry}")
+    return "\n".join(lines)
+
+
 def format_requirements_contract_failures(result: dict[str, Any], retry_command: str) -> str:
     failure_groups = result.get("failure_groups", {})
     if not failure_groups:
