@@ -62,7 +62,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md - Build shared traceability/drift evaluator with strict parsing and deterministic ordering.
-- [ ] 04-02-PLAN.md - Wire traceability gate into transition paths and deterministic evidence updates.
+- [x] 04-02-PLAN.md - Wire traceability gate into transition paths and deterministic evidence updates.
 - [ ] 04-03-PLAN.md - Close integration/flow verification gaps for traceability-first completion ordering.
 
 ## Progress

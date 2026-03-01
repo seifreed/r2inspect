@@ -56,13 +56,13 @@
 #### Requirement
 
 - id: TRC-02
-- status: Pending
+- status: Complete
 - acceptance_criteria: Drift validation detects mismatches across `ROADMAP.md`, `REQUIREMENTS.md`, and execution state.
 
 #### Requirement
 
 - id: TRC-03
-- status: Pending
+- status: Complete
 - acceptance_criteria: Phase completion can only pass when requirement traceability links are complete and internally consistent.
 
 ## v2 Requirements
@@ -127,7 +127,7 @@
 | REQ-03 | Phase 3 | Complete |
 | TRC-01 | Phase 4 | Complete |
 | TRC-02 | Phase 4 | Complete |
-| TRC-03 | Phase 4 | Pending |
+| TRC-03 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 9 total
