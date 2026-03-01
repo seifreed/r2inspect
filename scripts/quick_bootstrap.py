@@ -43,6 +43,8 @@ def _load_governance_functions() -> tuple[
     Callable[[dict[str, object], str], str],
     Callable[..., dict[str, object]],
     Callable[[dict[str, object], str], str],
+    Callable[..., dict[str, object]],
+    Callable[[dict[str, object], str], str],
 ]:
     module_path = Path(__file__).resolve().parent / "governance_gates.py"
     module_name = "governance_gates"
@@ -60,6 +62,8 @@ def _load_governance_functions() -> tuple[
         module.format_gate_failures,
         module.evaluate_requirements_contract_gate,
         module.format_requirements_contract_failures,
+        module.evaluate_traceability_drift_gate,
+        module.format_traceability_drift_failures,
     )
 
 
@@ -68,6 +72,8 @@ def _load_governance_functions() -> tuple[
     format_gate_failures,
     evaluate_requirements_contract_gate,
     format_requirements_contract_failures,
+    evaluate_traceability_drift_gate,
+    format_traceability_drift_failures,
 ) = _load_governance_functions()
 
 
@@ -360,6 +366,64 @@ def record_requirements_gate_activity(
     state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
 
 
+def _format_touched_requirement_ids(touched_requirement_ids: set[str] | list[str] | None) -> str:
+    touched = sorted(item.strip() for item in (touched_requirement_ids or []) if str(item).strip())
+    return ", ".join(touched) if touched else "-"
+
+
+def record_traceability_gate_activity(
+    state_path: Path,
+    gate_command: str,
+    passed: bool,
+    *,
+    scope: str = "all",
+    touched_requirement_ids: set[str] | list[str] | None = None,
+) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    status = "passed" if passed else "blocked"
+    touched_ids = _format_touched_requirement_ids(touched_requirement_ids)
+    line = f"Last activity: {_today_iso()} - traceability {gate_command} gate {status}"
+    if state_path.exists():
+        text = state_path.read_text(encoding="utf-8")
+    else:
+        text = "# Project State\n"
+
+    if re.search(r"^Last activity:.*$", text, flags=re.MULTILINE):
+        text = re.sub(r"^Last activity:.*$", line, text, flags=re.MULTILINE)
+    else:
+        text = text.rstrip() + f"\n\n{line}\n"
+
+    row = f"| {_today_iso()} | {gate_command} | {scope} | {touched_ids} | {status} |"
+    if "## Traceability Gate Activity" not in text:
+        text = text.rstrip() + (
+            "\n\n## Traceability Gate Activity\n\n"
+            "| Date | Command | Scope | Touched Requirement IDs | Result |\n"
+            "|------|---------|-------|--------------------------|--------|\n"
+            f"{row}\n"
+        )
+    elif row not in text:
+        lines = text.splitlines()
+        inserted = False
+        for idx, current in enumerate(lines):
+            if current.strip() == "|------|---------|-------|--------------------------|--------|":
+                lines.insert(idx + 1, row)
+                inserted = True
+                break
+        if not inserted:
+            lines.extend(
+                [
+                    "",
+                    "## Traceability Gate Activity",
+                    "",
+                    "| Date | Command | Scope | Touched Requirement IDs | Result |",
+                    "|------|---------|-------|--------------------------|--------|",
+                    row,
+                ]
+            )
+        text = "\n".join(lines)
+    state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
+
+
 def run_transition_delegate(subcommand: str, delegate_args: list[str]):
     command_parts = subcommand.split()
     if len(command_parts) != 2:
@@ -483,6 +547,13 @@ def parse_args() -> argparse.Namespace:
     requirements_precheck = requirements_subparsers.add_parser("precheck")
     requirements_precheck.add_argument("--planning-root", default=".planning")
     requirements_precheck.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
+    traceability_parser = subparsers.add_parser("traceability")
+    traceability_subparsers = traceability_parser.add_subparsers(dest="traceability_command")
+
+    traceability_precheck = traceability_subparsers.add_parser("precheck")
+    traceability_precheck.add_argument("--planning-root", default=".planning")
+    traceability_precheck.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
 
     return parser.parse_args()
 
@@ -676,6 +747,39 @@ def main() -> int:
             "passed": passed,
             "failure_groups": result.get("failure_groups", {}),
             "retry_command": retry_command,
+            "checklist": checklist,
+        }
+        print(json.dumps(output, ensure_ascii=True))
+        return 0
+    if command == "traceability":
+        traceability_command = getattr(args, "traceability_command", None)
+        if traceability_command != "precheck":
+            raise BootstrapError("Missing traceability subcommand. Use `precheck`.")
+        planning_root = Path(args.planning_root)
+        state_path = Path(args.state_path)
+        result = evaluate_traceability_drift_gate(planning_root, scope="all")
+        passed = bool(result.get("passed", False))
+        retry_command = "python scripts/quick_bootstrap.py traceability precheck"
+        checklist = format_traceability_drift_failures(result, retry_command)
+        touched_ids = sorted(
+            item.strip()
+            for item in result.get("touched_requirement_ids", [])
+            if str(item).strip()
+        )
+        record_traceability_gate_activity(
+            state_path,
+            "precheck",
+            passed,
+            scope="all",
+            touched_requirement_ids=touched_ids,
+        )
+        output = {
+            "command": "traceability precheck",
+            "passed": passed,
+            "failure_groups": result.get("failure_groups", {}),
+            "retry_command": retry_command,
+            "scope": "all",
+            "touched_requirement_ids": touched_ids,
             "checklist": checklist,
         }
         print(json.dumps(output, ensure_ascii=True))
