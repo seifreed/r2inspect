@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Governance UX
-status: phase_5_complete
-last_updated: "2026-03-01T18:23:30Z"
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-01T18:25:17.735Z"
 progress:
-  total_phases: 2
+  total_phases: 1
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
