@@ -629,6 +629,168 @@ def test_coverage_matrix_schema_version_is_explicit(tmp_path: Path) -> None:
     assert result["schema_version"] == "coverage_matrix.v1"
 
 
+def test_coverage_matrix_stale_state_overrides_other_causes(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Complete",
+            "- acceptance_criteria: Stale wins over all other causes.",
+        ]
+    )
+    traceability_rows = "\n".join(
+        [
+            "| REQ-01 | Phase 5 | Complete |",
+            "| REQ-01 | Phase 9 | Complete |",
+            "| AUX-01 | Phase 5 | Pending |",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Coverage Matrix**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    rows = {row["requirement_id"]: row for row in result["coverage_matrix"]["rows"]}
+
+    assert "state_mapping_mismatch" in rows["REQ-01"]["cause_codes"]
+    assert rows["REQ-01"]["coverage_state"] == "stale"
+
+
+def test_coverage_matrix_covered_state_when_no_causes(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: No causes means covered.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, "| REQ-01 | Phase 5 | Pending |"),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Coverage Matrix**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    rows = {row["requirement_id"]: row for row in result["coverage_matrix"]["rows"]}
+
+    assert rows["REQ-01"]["cause_codes"] == []
+    assert rows["REQ-01"]["coverage_state"] == "covered"
+
+
+def test_coverage_matrix_partial_state_for_valid_mapping_with_issues(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Valid mapping + issues means partial.",
+        ]
+    )
+    traceability_rows = "\n".join(
+        [
+            "| REQ-01 | Phase 5 | Pending |",
+            "| REQ-01 | Phase 9 | Pending |",
+            "| AUX-01 | Phase 5 | Pending |",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Coverage Matrix**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    rows = {row["requirement_id"]: row for row in result["coverage_matrix"]["rows"]}
+
+    assert rows["REQ-01"]["cause_codes"] == ["multi_phase_mapping", "unknown_mapped_phase"]
+    assert rows["REQ-01"]["coverage_state"] == "partial"
+
+
+def test_coverage_matrix_uncovered_state_for_only_invalid_mappings(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Missing valid mapping means uncovered.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, "| REQ-01 | Phase 9 | Pending |"),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Coverage Matrix**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    rows = {row["requirement_id"]: row for row in result["coverage_matrix"]["rows"]}
+
+    assert rows["REQ-01"]["cause_codes"] == ["unknown_mapped_phase"]
+    assert rows["REQ-01"]["coverage_state"] == "uncovered"
+
+
 def test_gate_fails_when_audit_file_missing(tmp_path: Path) -> None:
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
