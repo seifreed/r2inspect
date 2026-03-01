@@ -996,10 +996,10 @@ def format_impact_ranked_remediation_hints(ranked_hints: list[dict[str, Any]]) -
         blocks.append(
             "\n".join(
                 [
-                    f"Rank {rank}: {rationale}",
+                    f"#{rank} Rationale: {rationale}",
                     f"Blocking reason: {blocking_reason}",
                     f"Minimal fix: {minimal_fix}",
-                    f"Retry: {retry_command}",
+                    f"Retry command: {retry_command}",
                 ]
             )
         )
