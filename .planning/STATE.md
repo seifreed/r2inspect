@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
+milestone: v1.0
 milestone_name: Hardening
-status: in_progress
-last_updated: "2026-03-01T13:14:30Z"
+status: unknown
+last_updated: "2026-03-01T13:16:20.026Z"
 progress:
-  total_phases: 3
+  total_phases: 1
   completed_phases: 1
   total_plans: 2
   completed_plans: 2
