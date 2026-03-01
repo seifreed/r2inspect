@@ -950,9 +950,17 @@ def build_impact_ranked_remediation_hints(
             severity_weight = IMPACT_SEVERITY_WEIGHTS.get(severity, IMPACT_SEVERITY_WEIGHTS["error"])
             check_key = _canonical_check_key(failure_type_key, issue, issue_index)
             blast_radius = max(cause_blast_radius.get(failure_type_key, 0), 1)
-            rank_sort_key = (-severity_weight, -blast_radius, check_key)
             message = str(issue.get("message", "")).strip() or "Traceability check failed."
             fix = str(issue.get("fix", "")).strip() or "Apply the smallest corrective update and rerun."
+            normalized_message = " ".join(message.split())
+            normalized_fix = " ".join(fix.split())
+            rank_sort_key = (
+                -severity_weight,
+                -blast_radius,
+                check_key,
+                normalized_message,
+                normalized_fix,
+            )
             rationale = (
                 f"severity {severity} (w={severity_weight}) and blast radius {blast_radius}; "
                 f"tie-break by check key `{check_key}`."
