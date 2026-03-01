@@ -342,6 +342,52 @@ def test_impact_ranked_hints_are_deterministic_for_identical_inputs() -> None:
     assert [item["check_key"] for item in first] == ["missing-alpha", "missing-beta"]
 
 
+def test_impact_ranked_hints_tie_breaker_uses_canonical_key() -> None:
+    assert (
+        build_impact_ranked_remediation_hints is not None
+    ), "build_impact_ranked_remediation_hints must be implemented in scripts/governance_gates.py"
+    first_result = {
+        "failure_groups": {
+            "unknown_touched_requirement": [
+                {
+                    "code": "dup-check",
+                    "severity": "error",
+                    "message": "B blocker message",
+                    "fix": "Fix B first.",
+                },
+                {
+                    "code": "dup-check",
+                    "severity": "error",
+                    "message": "A blocker message",
+                    "fix": "Fix A first.",
+                },
+            ]
+        }
+    }
+    second_result = {
+        "failure_groups": {
+            "unknown_touched_requirement": list(
+                reversed(first_result["failure_groups"]["unknown_touched_requirement"])
+            )
+        }
+    }
+    coverage_matrix = {"rows": []}
+    retry = "python scripts/quick_bootstrap.py traceability precheck --scope touched --requirement-id ALPHA-01"
+
+    first = build_impact_ranked_remediation_hints(
+        first_result, coverage_matrix, retry_command=retry
+    )
+    second = build_impact_ranked_remediation_hints(
+        second_result, coverage_matrix, retry_command=retry
+    )
+
+    assert [item["check_key"] for item in first] == [item["check_key"] for item in second]
+    assert [item["blocking_reason"] for item in first] == [
+        item["blocking_reason"] for item in second
+    ]
+    assert [item["minimal_fix"] for item in first] == [item["minimal_fix"] for item in second]
+
+
 def test_impact_ranked_formatter_renders_strict_four_line_blocks() -> None:
     assert (
         format_impact_ranked_remediation_hints is not None
