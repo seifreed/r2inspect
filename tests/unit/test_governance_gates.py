@@ -186,6 +186,57 @@ def _write_traceability_roadmap(planning_root: Path) -> None:
     )
 
 
+def _write_traceability_roadmap_with_completion(
+    planning_root: Path,
+    *,
+    phase2_complete: bool = True,
+    phase3_complete: bool = True,
+    phase4_complete: bool = False,
+) -> None:
+    phase2_marker = "x" if phase2_complete else " "
+    phase3_marker = "x" if phase3_complete else " "
+    phase4_marker = "x" if phase4_complete else " "
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "### 🚧 v1.1 Hardening (In Progress)",
+                "",
+                f"- [{phase2_marker}] **Phase 2: Milestone Governance Gates**",
+                f"- [{phase3_marker}] **Phase 3: Requirements Contract Enforcement**",
+                f"- [{phase4_marker}] **Phase 4: Traceability and Drift Enforcement**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_traceability_fixture_with_statuses(
+    planning_root: Path,
+    *,
+    req_status: str,
+    aux_status: str,
+    rows: str,
+) -> None:
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            f"- status: {req_status}",
+            "- acceptance_criteria: Must map to one active phase.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(
+            entries,
+            rows.replace("AUX_STATUS", aux_status),
+        ),
+    )
+
+
 def _evaluate_requirements(planning_root: Path) -> dict[str, object]:
     assert (
         evaluate_requirements_contract_gate is not None
@@ -330,6 +381,94 @@ def test_traceability_ordering_is_deterministic_for_mapping_failures(tmp_path: P
         "unmapped_requirement",
         "multi_phase_mapping",
         "unknown_mapped_phase",
+    ]
+
+
+def test_traceability_detects_requirement_complete_mapped_to_incomplete_phase(
+    tmp_path: Path,
+) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    rows = "\n".join(
+        [
+            "| REQ-01 | Phase 4 | Complete |",
+            "| AUX-01 | Phase 3 | AUX_STATUS |",
+        ]
+    )
+    _write_traceability_fixture_with_statuses(
+        planning_root,
+        req_status="Complete",
+        aux_status="Complete",
+        rows=rows,
+    )
+    _write_traceability_roadmap_with_completion(phase4_complete=False, planning_root=planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert "state_mapping_mismatch" in result["failure_groups"]
+
+
+def test_traceability_detects_phase_complete_with_requirement_not_complete(
+    tmp_path: Path,
+) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    rows = "\n".join(
+        [
+            "| REQ-01 | Phase 3 | Pending |",
+            "| AUX-01 | Phase 4 | AUX_STATUS |",
+        ]
+    )
+    _write_traceability_fixture_with_statuses(
+        planning_root,
+        req_status="Pending",
+        aux_status="Pending",
+        rows=rows,
+    )
+    _write_traceability_roadmap_with_completion(
+        planning_root=planning_root,
+        phase3_complete=True,
+        phase4_complete=False,
+    )
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert "state_mapping_mismatch" in result["failure_groups"]
+
+
+def test_traceability_failure_group_order_includes_state_mapping_mismatch_last(
+    tmp_path: Path,
+) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    rows = "\n".join(
+        [
+            "| REQ-01 | Phase 3 | Complete |",
+            "| REQ-01 | Phase 9 | Complete |",
+        ]
+    )
+    _write_traceability_fixture_with_statuses(
+        planning_root,
+        req_status="Complete",
+        aux_status="Pending",
+        rows=rows,
+    )
+    _write_traceability_roadmap_with_completion(
+        planning_root=planning_root,
+        phase3_complete=False,
+        phase4_complete=False,
+    )
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert list(result["failure_groups"]) == [
+        "unmapped_requirement",
+        "multi_phase_mapping",
+        "unknown_mapped_phase",
+        "state_mapping_mismatch",
     ]
 
 
