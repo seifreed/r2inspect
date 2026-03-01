@@ -46,5 +46,5 @@
 |-------|-----------|----------------|--------|-----------|
 | 1. Quick Stabilization | v1.0 | Complete | Complete | 2026-03-01 |
 | 2-4. Hardening | v1.1 | Complete | Complete | 2026-03-01 |
-| 5. Requirement Coverage Matrix | v1.2 | 1/3 | In Progress | - |
+| 5. Requirement Coverage Matrix | v1.2 | 2/3 | In Progress | - |
 | 6. Impact-Ranked Remediation Hints | v1.2 | 0 | Planned | - |
