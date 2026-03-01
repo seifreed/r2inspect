@@ -305,3 +305,86 @@ def test_milestone_complete_aborts_before_state_mutation_on_gate_failure(
     assert exit_code == 1
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
     assert after == before
+
+
+def test_milestone_complete_grouped_failures_output_has_grouped_failures_and_remediation(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: unchanged\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_milestone_governance_gate",
+        lambda _planning_root, _version: {
+            "passed": False,
+            "failure_groups": {
+                "missing_file": [{"message": "missing", "fix": "create file"}],
+                "invalid_status": [{"message": "status", "fix": "set passed"}],
+                "stale_audit": [{"message": "stale", "fix": "rerun audit"}],
+                "malformed_sections": [{"message": "sections", "fix": "add sections"}],
+            },
+            "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+
+    assert exit_code == 1
+    assert "Remediation by failure type:" in output
+    assert "Group missing_file" in output
+    assert "Group invalid_status" in output
+    assert "Group stale_audit" in output
+    assert "Group malformed_sections" in output
+
+
+def test_milestone_retry_command_is_context_specific_and_single(tmp_path, monkeypatch, capsys):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: unchanged\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_milestone_governance_gate",
+        lambda _planning_root, _version: {
+            "passed": False,
+            "failure_groups": {"invalid_status": [{"message": "status", "fix": "set passed"}]},
+            "retry_command": "python scripts/quick_bootstrap.py milestone precheck v1.1",
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+
+    assert exit_code == 1
+    expected = "Retry: python scripts/quick_bootstrap.py milestone complete v1.1"
+    assert expected in output
+    assert output.count("Retry: ") == 1
