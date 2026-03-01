@@ -1367,6 +1367,70 @@ def test_traceability_precheck_expanded_matrix_includes_remediation_and_retry_co
     assert "retry: python scripts/quick_bootstrap.py traceability precheck" in payload["checklist"]
 
 
+def test_traceability_precheck_retry_command_and_failure_groups_stay_stable_with_matrix(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="milestone",
+            phase_id=None,
+            matrix_detail="compact",
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "state_mapping_mismatch": [{"message": "state drift", "fix": "align state"}],
+                "unmapped_requirement": [{"message": "missing mapping", "fix": "add mapping"}],
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "build_requirement_coverage_matrix",
+        lambda _planning_root, **_kwargs: {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "milestone",
+                "scope_target": "all-active",
+                "rows": [],
+                "summary": {
+                    "total": 0,
+                    "covered": 0,
+                    "partial": 0,
+                    "uncovered": 0,
+                    "stale": 0,
+                },
+            },
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert list(payload["failure_groups"]) == ["state_mapping_mismatch", "unmapped_requirement"]
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
+
+
 def test_milestone_complete_aborts_when_requirements_gate_fails_first(
     tmp_path, monkeypatch, capsys
 ):
