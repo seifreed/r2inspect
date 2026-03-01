@@ -599,7 +599,7 @@ def test_coverage_matrix_is_byte_stable_across_repeated_builds(tmp_path: Path) -
         "GUX-01",
         "GUX-02",
     ]
-    assert first_serialized != second_serialized
+    assert first_serialized == second_serialized
 
 
 def test_coverage_matrix_cause_ordering_is_canonical(tmp_path: Path) -> None:

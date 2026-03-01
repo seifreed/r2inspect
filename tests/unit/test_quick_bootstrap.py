@@ -1130,7 +1130,13 @@ def test_traceability_precheck_matrix_scope_outputs_are_deterministic(
     assert (
         first_payload["coverage_matrix"]["summary"] == second_payload["coverage_matrix"]["summary"]
     )
-    assert first_serialized != second_serialized
+    assert first_serialized == second_serialized
+
+
+def test_traceability_precheck_coverage_matrix_scope_outputs_are_deterministic(
+    tmp_path, monkeypatch, capsys
+):
+    test_traceability_precheck_matrix_scope_outputs_are_deterministic(tmp_path, monkeypatch, capsys)
 
 
 def test_traceability_precheck_compact_matrix_output_is_default(tmp_path, monkeypatch, capsys):
