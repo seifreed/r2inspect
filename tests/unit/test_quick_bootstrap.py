@@ -622,3 +622,115 @@ def test_roadmap_revise_delegates_when_requirements_gate_passes(tmp_path, monkey
     assert captured["subcommand"] == "roadmap revise"
     assert captured["delegate_args"] == ["--focus", "contracts"]
     assert "| revise | all | passed |" in after
+
+
+def test_phase_complete_touched_requirements_aborts_when_gate_fails(tmp_path, monkeypatch, capsys):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="phase",
+            phase_command="complete",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            requirement_id=["REQ-03", "REQ-99"],
+            delegate_args=[],
+        ),
+    )
+    observed: dict[str, object] = {}
+
+    def fake_requirements_gate(_planning_root, **kwargs):
+        observed["scope"] = kwargs.get("scope")
+        observed["touched_requirement_ids"] = kwargs.get("touched_requirement_ids")
+        return {
+            "passed": False,
+            "failure_groups": {
+                "unknown_touched_requirement": [
+                    {
+                        "message": "Touched requirement id `REQ-99` does not exist",
+                        "fix": "Use existing ids",
+                    }
+                ]
+            },
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+        }
+
+    monkeypatch.setattr(
+        quick_bootstrap, "evaluate_requirements_contract_gate", fake_requirements_gate
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "run_transition_delegate",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("delegate should not run")),
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 1
+    assert observed["scope"] == "touched"
+    assert observed["touched_requirement_ids"] == {"REQ-03", "REQ-99"}
+    assert (
+        "Retry: python scripts/quick_bootstrap.py phase complete --requirement-id REQ-03 --requirement-id REQ-99"
+        in output
+    )
+    assert "| phase complete | touched | blocked |" in after
+
+
+def test_phase_complete_touched_requirements_delegates_when_gate_passes(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="phase",
+            phase_command="complete",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            requirement_id=["REQ-03"],
+            delegate_args=["--note", "phase3"],
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+    )
+    captured: dict[str, object] = {}
+
+    def fake_delegate(subcommand, delegate_args):
+        captured["subcommand"] = subcommand
+        captured["delegate_args"] = delegate_args
+        return quick_bootstrap.argparse.Namespace(returncode=0, stdout="done\n", stderr="")
+
+    monkeypatch.setattr(quick_bootstrap, "run_transition_delegate", fake_delegate)
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 0
+    assert payload["command"] == "phase complete"
+    assert payload["passed"] is True
+    assert payload["touched_requirement_ids"] == ["REQ-03"]
+    assert captured["subcommand"] == "phase complete"
+    assert captured["delegate_args"] == ["--note", "phase3"]
+    assert "| phase complete | touched | passed |" in after
