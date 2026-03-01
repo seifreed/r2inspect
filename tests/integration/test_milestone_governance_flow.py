@@ -438,3 +438,113 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
     assert "| complete | all | passed |" in after
     assert "| complete | all | - | blocked |" in after
     assert "| complete | v1.1 | passed |" not in after
+
+
+def test_ranked_remediation_hints_are_additive_to_traceability_precheck_contract(
+    monkeypatch, tmp_path, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\nstatus: in_progress\n", encoding="utf-8")
+
+    args_queue = [
+        quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="milestone",
+            phase_id=None,
+            matrix_detail="expanded",
+        ),
+        quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    ]
+    monkeypatch.setattr(quick_bootstrap, "parse_args", lambda: args_queue.pop(0))
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "state_mapping_mismatch": [{"message": "mismatch", "fix": "align"}],
+                "unmapped_requirement": [{"message": "unmapped", "fix": "map req"}],
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "build_requirement_coverage_matrix",
+        lambda _planning_root, **_kwargs: {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "milestone",
+                "scope_target": "all-active",
+                "rows": [
+                    {
+                        "requirement_id": "GUX-02",
+                        "coverage_state": "stale",
+                        "cause_codes": ["state_mapping_mismatch"],
+                        "remediation": "Align requirement status with mapped phase completion state.",
+                        "retry_command": "python scripts/quick_bootstrap.py traceability precheck",
+                    }
+                ],
+                "summary": {
+                    "total": 1,
+                    "covered": 0,
+                    "partial": 0,
+                    "uncovered": 0,
+                    "stale": 1,
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
+    )
+    called = {"milestone_gate": False}
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_milestone_governance_gate",
+        lambda _planning_root, _version: called.__setitem__("milestone_gate", True)
+        or {
+            "passed": False,
+            "failure_groups": {
+                "missing_file": [{"message": "Missing audit artifact", "fix": "Create audit file."}]
+            },
+            "retry_command": "unused",
+        },
+    )
+
+    precheck_exit = quick_bootstrap.main()
+    precheck_payload = json.loads(capsys.readouterr().out)
+    completion_exit = quick_bootstrap.main()
+    completion_output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert precheck_exit == 0
+    assert precheck_payload["command"] == "traceability precheck"
+    assert precheck_payload["schema_version"] == "coverage_matrix.v1"
+    assert "coverage_matrix" in precheck_payload
+    assert "#1 Rationale:" in precheck_payload["checklist"]
+    assert "Top-ranked blocker baseline: none." in precheck_payload["checklist"]
+    assert "Remediation by failure type:" in precheck_payload["checklist"]
+
+    assert completion_exit == 1
+    assert called["milestone_gate"] is False
+    assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in completion_output
+    assert "| complete | all | passed |" in after
+    assert "| complete | all | - | blocked |" in after
+    assert "| complete | v1.1 | passed |" not in after
