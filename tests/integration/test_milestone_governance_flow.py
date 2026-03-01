@@ -40,6 +40,11 @@ def test_completion_aborts_without_state_mutation_on_gate_failure(monkeypatch, t
             "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
         }
 
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
+    )
     monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_gate)
     monkeypatch.setattr(
         quick_bootstrap,
@@ -76,6 +81,11 @@ def test_completion_records_evidence_when_gate_passes(monkeypatch, tmp_path, cap
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: baseline\n", encoding="utf-8")
 
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
+    )
     monkeypatch.setattr(
         quick_bootstrap,
         "evaluate_milestone_governance_gate",
@@ -119,6 +129,11 @@ def test_blocked_completion_keeps_completion_state_unadvanced(monkeypatch, tmp_p
 
     monkeypatch.setattr(
         quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
         "evaluate_milestone_governance_gate",
         lambda _planning_root, _version: {
             "passed": False,
@@ -156,6 +171,11 @@ def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, ca
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: baseline\n", encoding="utf-8")
 
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
+    )
     monkeypatch.setattr(
         quick_bootstrap,
         "evaluate_milestone_governance_gate",
