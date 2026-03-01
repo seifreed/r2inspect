@@ -15,6 +15,19 @@ REQUIRED_AUDIT_SECTIONS = (
 REQUIREMENT_ID_PATTERN = re.compile(r"^[A-Z]+-[0-9]{2,}$")
 REQUIREMENTS_ALLOWED_STATUSES = {"Pending", "In Progress", "Complete", "Blocked"}
 PHASE_ID_PATTERN = re.compile(r"^[0-9]+(?:\.[0-9]+)?$")
+COVERAGE_MATRIX_SCHEMA_VERSION = "coverage_matrix.v1"
+COVERAGE_CAUSE_ORDER = (
+    "unmapped_requirement",
+    "multi_phase_mapping",
+    "unknown_mapped_phase",
+    "state_mapping_mismatch",
+)
+COVERAGE_REMEDIATION_BY_CAUSE = {
+    "unmapped_requirement": "Add exactly one Traceability row for the requirement.",
+    "multi_phase_mapping": "Keep exactly one canonical phase mapping for the requirement.",
+    "unknown_mapped_phase": "Map only to normalized phase IDs present in ROADMAP.md.",
+    "state_mapping_mismatch": "Align requirement status with mapped phase completion state.",
+}
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -331,6 +344,145 @@ def _collect_active_requirement_statuses(requirements_content: str) -> dict[str,
             continue
         statuses[requirement_id] = status
     return statuses
+
+
+def _collect_coverage_requirement_statuses(requirements_content: str) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for entry in _parse_requirement_entries(requirements_content):
+        requirement_id = entry.get("id", "").strip()
+        status = entry.get("status", "").strip()
+        if not requirement_id or not status:
+            continue
+        if requirement_id.startswith("OOS-") or status == "Blocked":
+            continue
+        statuses[requirement_id] = status
+    return statuses
+
+
+def _order_cause_codes(cause_codes: set[str] | list[str]) -> list[str]:
+    seen = {code.strip() for code in cause_codes if code and code.strip()}
+    ordered: list[str] = []
+    for code in COVERAGE_CAUSE_ORDER:
+        if code in seen:
+            ordered.append(code)
+            seen.remove(code)
+    ordered.extend(sorted(seen))
+    return ordered
+
+
+def _derive_coverage_state(cause_codes: list[str], *, has_valid_mapping: bool) -> str:
+    if "state_mapping_mismatch" in cause_codes:
+        return "stale"
+    if not cause_codes:
+        return "covered"
+    if has_valid_mapping:
+        return "partial"
+    return "uncovered"
+
+
+def build_requirement_coverage_matrix(
+    planning_root: Path,
+    *,
+    scope: str,
+    phase_id: str | None = None,
+) -> dict[str, Any]:
+    if scope not in {"phase", "milestone"}:
+        raise ValueError("scope must be 'phase' or 'milestone'.")
+
+    normalized_phase_id: str | None = None
+    if scope == "phase":
+        if phase_id is None:
+            raise ValueError("phase_id is required when scope='phase'.")
+        normalized_phase_id = _normalize_phase_id(phase_id)
+        if normalized_phase_id is None:
+            raise ValueError(f"phase_id `{phase_id}` is malformed.")
+
+    requirements_path = planning_root / "REQUIREMENTS.md"
+    roadmap_path = planning_root / "ROADMAP.md"
+    requirements_content = requirements_path.read_text(encoding="utf-8")
+    roadmap_content = roadmap_path.read_text(encoding="utf-8")
+
+    active_statuses = _collect_coverage_requirement_statuses(requirements_content)
+    traceability_rows, _ = _parse_traceability_rows(requirements_content)
+    roadmap_phase_catalog = _parse_roadmap_phase_catalog(roadmap_content)
+    roadmap_phase_completion = _parse_roadmap_phase_completion(roadmap_content)
+
+    scoped_requirement_ids = set(active_statuses)
+    if normalized_phase_id is not None:
+        scoped_requirement_ids = {
+            row["requirement_id"]
+            for row in traceability_rows
+            if row["phase"] == normalized_phase_id and row["requirement_id"] in active_statuses
+        }
+
+    phase_mappings: dict[str, set[str]] = {}
+    for row in traceability_rows:
+        requirement_id = row["requirement_id"]
+        if requirement_id not in scoped_requirement_ids:
+            continue
+        phase_mappings.setdefault(requirement_id, set()).add(row["phase"])
+
+    rows: list[dict[str, Any]] = []
+    summary = {
+        "total": 0,
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "stale": 0,
+    }
+    retry_command = "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
+
+    for requirement_id in sorted(scoped_requirement_ids):
+        mapped_phases = sorted(phase_mappings.get(requirement_id, set()))
+        valid_mapped_phases = [phase for phase in mapped_phases if phase in roadmap_phase_catalog]
+        cause_codes: set[str] = set()
+        if not mapped_phases:
+            cause_codes.add("unmapped_requirement")
+        if len(mapped_phases) > 1:
+            cause_codes.add("multi_phase_mapping")
+        if any(phase not in roadmap_phase_catalog for phase in mapped_phases):
+            cause_codes.add("unknown_mapped_phase")
+
+        requirement_complete = active_statuses.get(requirement_id) == "Complete"
+        for mapped_phase in valid_mapped_phases:
+            mapped_phase_complete = roadmap_phase_completion.get(mapped_phase)
+            if mapped_phase_complete is None:
+                continue
+            if requirement_complete != mapped_phase_complete:
+                cause_codes.add("state_mapping_mismatch")
+                break
+
+        ordered_causes = _order_cause_codes(cause_codes)
+        coverage_state = _derive_coverage_state(
+            ordered_causes,
+            has_valid_mapping=bool(valid_mapped_phases),
+        )
+        primary_cause = ordered_causes[0] if ordered_causes else None
+
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_status": active_statuses.get(requirement_id, "Pending"),
+                "mapped_phases": mapped_phases,
+                "coverage_state": coverage_state,
+                "cause_codes": ordered_causes,
+                "primary_cause": primary_cause,
+                "remediation": COVERAGE_REMEDIATION_BY_CAUSE.get(primary_cause, ""),
+                "retry_command": retry_command,
+            }
+        )
+        summary["total"] += 1
+        summary[coverage_state] += 1
+
+    return {
+        "schema_version": COVERAGE_MATRIX_SCHEMA_VERSION,
+        "coverage_matrix": {
+            "scope": scope,
+            "scope_target": normalized_phase_id if normalized_phase_id is not None else "all-active",
+            "rows": rows,
+            "summary": summary,
+        },
+    }
 
 
 def evaluate_milestone_governance_gate(
