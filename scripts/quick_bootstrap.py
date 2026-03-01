@@ -380,13 +380,16 @@ def main() -> int:
         result = evaluate_milestone_governance_gate(planning_root, milestone_version)
 
         if milestone_command == "precheck":
-            record_milestone_gate_activity(state_path, milestone_version, "precheck", bool(result.get("passed", False)))
+            passed = bool(result.get("passed", False))
+            precheck_retry = f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}"
+            record_milestone_gate_activity(state_path, milestone_version, "precheck", passed)
             output = {
                 "command": "milestone precheck",
                 "version": milestone_version,
-                "passed": bool(result.get("passed", False)),
+                "passed": passed,
                 "failure_groups": result.get("failure_groups", {}),
-                "retry_command": f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}",
+                "retry_command": precheck_retry,
+                "checklist": format_gate_failures(result, precheck_retry),
             }
             print(json.dumps(output, ensure_ascii=True))
             return 0
