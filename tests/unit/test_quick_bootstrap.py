@@ -498,6 +498,150 @@ def test_requirements_precheck_uses_shared_requirements_formatter(tmp_path, monk
     assert seen["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
 
 
+def test_traceability_precheck_reports_structured_non_blocking_result(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unmapped_requirement": [
+                    {
+                        "message": "Requirement `TRC-02` missing traceability mapping",
+                        "fix": "Add a Traceability table row",
+                    }
+                ]
+            },
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["command"] == "traceability precheck"
+    assert payload["passed"] is False
+    assert payload["scope"] == "all"
+    assert payload["touched_requirement_ids"] == []
+    assert "unmapped_requirement" in payload["failure_groups"]
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
+
+
+def test_traceability_precheck_non_blocking_blocked_result_records_evidence(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unknown_mapped_phase": [
+                    {
+                        "message": "Requirement `TRC-03` maps to unknown phase `99`",
+                        "fix": "Use a phase from ROADMAP.md",
+                    }
+                ]
+            },
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    _ = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 0
+    assert "traceability precheck gate blocked" in after
+    assert "| precheck | all | - | blocked |" in after
+
+
+def test_traceability_precheck_checklist_includes_grouped_remediation_and_retry_command(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unmapped_requirement": [
+                    {
+                        "message": "Requirement `TRC-02` is missing a traceability mapping",
+                        "fix": "Add one row for TRC-02",
+                    }
+                ]
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert "Remediation by failure type:" in payload["checklist"]
+    assert "Group unmapped_requirement" in payload["checklist"]
+    assert "Retry: python scripts/quick_bootstrap.py traceability precheck" in payload["checklist"]
+
+
 def test_milestone_complete_aborts_when_requirements_gate_fails_first(
     tmp_path, monkeypatch, capsys
 ):
