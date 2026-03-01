@@ -45,6 +45,7 @@ def _load_governance_functions() -> tuple[
     Callable[[dict[str, object], str], str],
     Callable[..., dict[str, object]],
     Callable[[dict[str, object], str], str],
+    Callable[..., dict[str, object]],
 ]:
     module_path = Path(__file__).resolve().parent / "governance_gates.py"
     module_name = "governance_gates"
@@ -64,6 +65,7 @@ def _load_governance_functions() -> tuple[
         module.format_requirements_contract_failures,
         module.evaluate_traceability_drift_gate,
         module.format_traceability_drift_failures,
+        module.build_requirement_coverage_matrix,
     )
 
 
@@ -74,6 +76,7 @@ def _load_governance_functions() -> tuple[
     format_requirements_contract_failures,
     evaluate_traceability_drift_gate,
     format_traceability_drift_failures,
+    build_requirement_coverage_matrix,
 ) = _load_governance_functions()
 
 
@@ -554,6 +557,21 @@ def parse_args() -> argparse.Namespace:
     traceability_precheck = traceability_subparsers.add_parser("precheck")
     traceability_precheck.add_argument("--planning-root", default=".planning")
     traceability_precheck.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+    traceability_precheck.add_argument(
+        "--scope",
+        choices=("phase", "milestone"),
+        default="milestone",
+    )
+    traceability_precheck.add_argument(
+        "--phase-id",
+        help="Required when --scope phase. Accepts canonical numeric IDs like 5 or 05.",
+    )
+    traceability_precheck.add_argument(
+        "--matrix-detail",
+        choices=("compact", "expanded"),
+        default="compact",
+        help="Human-readable matrix detail mode.",
+    )
 
     return parser.parse_args()
 
@@ -809,7 +827,16 @@ def main() -> int:
             raise BootstrapError("Missing traceability subcommand. Use `precheck`.")
         planning_root = Path(args.planning_root)
         state_path = Path(args.state_path)
+        traceability_scope = getattr(args, "scope", "milestone")
+        traceability_phase_id = getattr(args, "phase_id", None)
+        if traceability_scope == "phase" and not str(traceability_phase_id or "").strip():
+            raise BootstrapError("--phase-id is required when --scope phase.")
         result = evaluate_traceability_drift_gate(planning_root, scope="all")
+        matrix_payload = build_requirement_coverage_matrix(
+            planning_root,
+            scope=traceability_scope,
+            phase_id=traceability_phase_id,
+        )
         passed = bool(result.get("passed", False))
         retry_command = "python scripts/quick_bootstrap.py traceability precheck"
         checklist = format_traceability_drift_failures(result, retry_command)
@@ -834,6 +861,10 @@ def main() -> int:
             "touched_requirement_ids": touched_ids,
             "checklist": checklist,
         }
+        if "schema_version" in matrix_payload:
+            output["schema_version"] = matrix_payload["schema_version"]
+        if "coverage_matrix" in matrix_payload:
+            output["coverage_matrix"] = matrix_payload["coverage_matrix"]
         print(json.dumps(output, ensure_ascii=True))
         return 0
 
