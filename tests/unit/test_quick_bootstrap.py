@@ -875,6 +875,169 @@ def test_traceability_precheck_checklist_includes_grouped_remediation_and_retry_
     assert "Retry: python scripts/quick_bootstrap.py traceability precheck" in payload["checklist"]
 
 
+def test_traceability_precheck_scope_phase_requires_phase_id(tmp_path, monkeypatch):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(planning_root / "STATE.md"),
+            scope="phase",
+            phase_id=None,
+            matrix_detail="compact",
+        ),
+    )
+
+    with pytest.raises(quick_bootstrap.BootstrapError, match="--phase-id is required"):
+        quick_bootstrap.main()
+
+
+def test_traceability_precheck_includes_coverage_matrix_for_phase_scope(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="phase",
+            phase_id="05",
+            matrix_detail="compact",
+        ),
+    )
+
+    observed: dict[str, object] = {"calls": 0}
+
+    def fake_matrix_builder(_planning_root, **kwargs):
+        observed["calls"] = int(observed["calls"]) + 1
+        observed["scope"] = kwargs.get("scope")
+        observed["phase_id"] = kwargs.get("phase_id")
+        return {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "phase",
+                "scope_target": "5",
+                "rows": [],
+                "summary": {
+                    "total": 0,
+                    "covered": 0,
+                    "partial": 0,
+                    "uncovered": 0,
+                    "stale": 0,
+                },
+            },
+        }
+
+    monkeypatch.setattr(quick_bootstrap, "build_requirement_coverage_matrix", fake_matrix_builder)
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {"unmapped_requirement": [{"message": "m", "fix": "f"}]},
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert observed["calls"] == 1
+    assert observed["scope"] == "phase"
+    assert observed["phase_id"] == "05"
+    assert payload["schema_version"] == "coverage_matrix.v1"
+    assert payload["coverage_matrix"]["scope"] == "phase"
+    assert payload["coverage_matrix"]["scope_target"] == "5"
+    assert payload["command"] == "traceability precheck"
+    assert payload["failure_groups"] == {"unmapped_requirement": [{"message": "m", "fix": "f"}]}
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
+
+
+def test_traceability_precheck_defaults_to_milestone_scope_when_unspecified(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="milestone",
+            phase_id=None,
+            matrix_detail="compact",
+        ),
+    )
+
+    observed: dict[str, object] = {}
+
+    def fake_matrix_builder(_planning_root, **kwargs):
+        observed["scope"] = kwargs.get("scope")
+        observed["phase_id"] = kwargs.get("phase_id")
+        return {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "milestone",
+                "scope_target": "all-active",
+                "rows": [],
+                "summary": {
+                    "total": 0,
+                    "covered": 0,
+                    "partial": 0,
+                    "uncovered": 0,
+                    "stale": 0,
+                },
+            },
+        }
+
+    monkeypatch.setattr(quick_bootstrap, "build_requirement_coverage_matrix", fake_matrix_builder)
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert observed["scope"] == "milestone"
+    assert observed["phase_id"] is None
+    assert payload["schema_version"] == "coverage_matrix.v1"
+    assert payload["coverage_matrix"]["scope"] == "milestone"
+
+
 def test_milestone_complete_aborts_when_requirements_gate_fails_first(
     tmp_path, monkeypatch, capsys
 ):
