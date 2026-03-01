@@ -16,6 +16,8 @@ evaluate_requirements_contract_gate = getattr(MODULE, "evaluate_requirements_con
 format_requirements_contract_failures = getattr(
     MODULE, "format_requirements_contract_failures", None
 )
+evaluate_traceability_drift_gate = getattr(MODULE, "evaluate_traceability_drift_gate", None)
+normalize_phase_id = getattr(MODULE, "_normalize_phase_id", None)
 
 
 REQUIRED_SECTIONS = (
@@ -112,11 +114,152 @@ def _requirements_contract_content(entries: str) -> str:
     )
 
 
+def _requirements_with_traceability(entries: str, traceability_rows: str) -> str:
+    return "\n".join(
+        [
+            "# Requirements: Example",
+            "",
+            "## v1 Requirements",
+            "",
+            "### Group One",
+            "",
+            entries,
+            "",
+            "## v2 Requirements",
+            "",
+            "### Group Two",
+            "",
+            "#### Requirement",
+            "",
+            "- id: AUX-01",
+            "- status: Pending",
+            "- acceptance_criteria: Keep v2 parseable.",
+            "",
+            "## Out of Scope",
+            "",
+            "#### Requirement",
+            "",
+            "- id: OOS-01",
+            "- status: Blocked",
+            "- acceptance_criteria: Keep out-of-scope parseable.",
+            "",
+            "## Traceability",
+            "",
+            "| Requirement | Phase | Status |",
+            "|-------------|-------|--------|",
+            traceability_rows,
+            "",
+        ]
+    )
+
+
+def _write_traceability_fixture(planning_root: Path, rows: str) -> None:
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Must map to one active phase.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, rows),
+    )
+
+
+def _write_traceability_roadmap(planning_root: Path) -> None:
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "### 🚧 v1.1 Hardening (In Progress)",
+                "",
+                "- [x] **Phase 2: Milestone Governance Gates**",
+                "- [x] **Phase 3: Requirements Contract Enforcement**",
+                "- [ ] **Phase 4: Traceability and Drift Enforcement**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
 def _evaluate_requirements(planning_root: Path) -> dict[str, object]:
     assert (
         evaluate_requirements_contract_gate is not None
     ), "evaluate_requirements_contract_gate must be implemented in scripts/governance_gates.py"
     return evaluate_requirements_contract_gate(planning_root)
+
+
+def _evaluate_traceability(planning_root: Path) -> dict[str, object]:
+    assert (
+        evaluate_traceability_drift_gate is not None
+    ), "evaluate_traceability_drift_gate must be implemented in scripts/governance_gates.py"
+    return evaluate_traceability_drift_gate(planning_root)
+
+
+def test_traceability_normalize_phase_aliases_to_canonical_token() -> None:
+    assert normalize_phase_id is not None, "_normalize_phase_id must be implemented"
+    assert normalize_phase_id("Phase 4") == "4"
+    assert normalize_phase_id("4") == "4"
+    assert normalize_phase_id("04") == "4"
+    assert normalize_phase_id("2.1") == "2.1"
+
+
+def test_traceability_malformed_table_when_traceability_section_missing(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Missing traceability table should fail.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(entries),
+    )
+    _write_traceability_roadmap(planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert "malformed_traceability_table" in result["failure_groups"]
+
+
+def test_traceability_active_scope_excludes_out_of_scope_requirements(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Must map to Phase 4.",
+        ]
+    )
+    traceability_rows = "\n".join(
+        [
+            "| REQ-01 | Phase 4 | Pending |",
+            "| AUX-01 | 4 | Pending |",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    _write_traceability_roadmap(planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is True
+    assert result["failure_groups"] == {}
 
 
 def test_gate_fails_when_audit_file_missing(tmp_path: Path) -> None:
