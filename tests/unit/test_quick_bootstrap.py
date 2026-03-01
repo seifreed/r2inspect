@@ -405,6 +405,228 @@ def test_milestone_retry_command_is_context_specific_and_single(tmp_path, monkey
     assert output.count("Retry: ") == 1
 
 
+def test_phase_complete_traceability_gate_uses_touched_scope_and_rejects_unknown_ids(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="phase",
+            phase_command="complete",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            requirement_id=["REQ-03", "REQ-99"],
+            delegate_args=[],
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root, **_kwargs: {"passed": True, "failure_groups": {}},
+    )
+    observed: dict[str, object] = {}
+
+    def fake_traceability_gate(_planning_root, **kwargs):
+        observed["scope"] = kwargs.get("scope")
+        observed["touched_requirement_ids"] = kwargs.get("touched_requirement_ids")
+        return {
+            "passed": False,
+            "failure_groups": {
+                "unknown_touched_requirement": [
+                    {"message": "REQ-99 unknown", "fix": "remove unknown touched id"}
+                ]
+            },
+            "retry_command": "unused",
+        }
+
+    monkeypatch.setattr(quick_bootstrap, "evaluate_traceability_drift_gate", fake_traceability_gate)
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "run_transition_delegate",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("delegate should not run")),
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 1
+    assert observed["scope"] == "touched"
+    assert observed["touched_requirement_ids"] == {"REQ-03", "REQ-99"}
+    assert (
+        "Retry: python scripts/quick_bootstrap.py phase complete --requirement-id REQ-03 --requirement-id REQ-99"
+        in output
+    )
+    assert output.count("Retry: ") == 1
+    assert "| phase complete | touched | REQ-03, REQ-99 | blocked |" in after
+
+
+def test_phase_complete_traceability_gate_rejects_missing_touched_ids(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="phase",
+            phase_command="complete",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            requirement_id=[],
+            delegate_args=[],
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root, **_kwargs: {"passed": True, "failure_groups": {}},
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "missing_touched_requirements": [
+                    {"message": "missing touched ids", "fix": "pass --requirement-id"}
+                ]
+            },
+            "retry_command": "unused",
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "run_transition_delegate",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("delegate should not run")),
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+
+    assert exit_code == 1
+    assert "Retry: python scripts/quick_bootstrap.py phase complete" in output
+    assert output.count("Retry: ") == 1
+
+
+def test_milestone_complete_traceability_ordering_runs_after_requirements_before_governance(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    order: list[str] = []
+
+    def fake_requirements(_planning_root):
+        order.append("requirements")
+        return {"passed": True, "failure_groups": {}}
+
+    def fake_traceability(_planning_root, **_kwargs):
+        order.append("traceability")
+        return {"passed": True, "failure_groups": {}, "scope": "all", "touched_requirement_ids": []}
+
+    def fake_milestone(_planning_root, _version):
+        order.append("milestone")
+        return {"passed": True, "failure_groups": {}}
+
+    monkeypatch.setattr(quick_bootstrap, "evaluate_requirements_contract_gate", fake_requirements)
+    monkeypatch.setattr(quick_bootstrap, "evaluate_traceability_drift_gate", fake_traceability)
+    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone)
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["passed"] is True
+    assert order == ["requirements", "traceability", "milestone"]
+
+
+def test_milestone_complete_traceability_failure_blocks_and_emits_single_retry(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {"passed": True, "failure_groups": {}},
+    )
+    called = {"milestone_gate": False}
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unmapped_requirement": [
+                    {"message": "TRC-02 missing mapping", "fix": "add mapping"}
+                ]
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+
+    def fake_milestone_gate(_planning_root, _version):
+        called["milestone_gate"] = True
+        return {"passed": True, "failure_groups": {}}
+
+    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone_gate)
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 1
+    assert called["milestone_gate"] is False
+    assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
+    assert output.count("Retry: ") == 1
+    assert "| complete | all | - | blocked |" in after
+
+
 def test_requirements_precheck_reports_structured_non_blocking_result(
     tmp_path, monkeypatch, capsys
 ):
