@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
-status: phase_in_progress
-last_updated: "2026-03-01T13:41:14Z"
+status: phase_complete
+last_updated: "2026-03-01T13:48:49Z"
 progress:
-  total_phases: 3
-  completed_phases: 1
+  total_phases: 2
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -22,18 +22,18 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 Milestone: v1.1 Hardening
 Phase: 3 of 3 (Milestone phase range: 2-4, Requirements Contract Enforcement)
-Plan: 03-01 completed
-Status: Phase 3 in progress
+Plan: 03-02 completed
+Status: Phase 3 complete
 Last activity: 2026-03-01 - milestone complete v1.1 gate blocked
 
-Progress: [#######---] 75%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 3 min
-- Total execution time: 0.15 hours
+- Total plans completed: 4
+- Average duration: 3.5 min
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
@@ -43,9 +43,10 @@ Progress: [#######---] 75%
 | 03 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (2 min), 02-02 (4 min), 03-01 (3 min)
+- Last 5 plans: 02-01 (2 min), 02-02 (4 min), 03-01 (3 min), 03-02 (5 min)
 - Trend: Stable
 - Phase 03 P01: 3 min, 2 tasks, 3 files
+| Phase 03 P02 | 5 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Blocked completion attempts are recorded as gate evidence without advancing milestone completion state.
 - [Phase 03]: Requirement entries are parsed from explicit #### Requirement blocks in v1/v2/Out of Scope for deterministic contract validation.
 - [Phase 03]: Missing acceptance criteria is grouped separately from malformed id/status to keep failure taxonomy stable and actionable.
+- [Phase 03]: Requirements gate runs before milestone governance on milestone complete.
+- [Phase 03]: Transition wrappers delegate only after requirements gate passes; blocked paths are read-only except gate evidence.
+- [Phase 03]: Phase complete enforces scope=touched with explicit requirement IDs and unknown-ID rejection.
 
 ### Pending Todos
 None yet.
@@ -77,7 +81,7 @@ None.
 
 ## Session Continuity
 Last session: 2026-03-01
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
 
 ## Requirements Gate Activity
