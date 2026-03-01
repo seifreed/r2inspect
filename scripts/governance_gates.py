@@ -255,36 +255,49 @@ def evaluate_requirements_contract_gate(
     for index, entry in enumerate(entries, start=1):
         requirement_id = entry.get("id", "").strip()
         status = entry.get("status", "").strip()
+        has_acceptance_key = "acceptance_criteria" in entry
         acceptance = entry.get("acceptance_criteria", "").strip()
 
-        if not requirement_id or not status or not acceptance:
+        if not requirement_id or not status:
             _add_failure(
                 failure_groups,
                 "malformed_entry",
-                f"Requirement entry #{index} must include id, status, and acceptance_criteria.",
-                "Ensure every `#### Requirement` block defines id/status/acceptance_criteria bullet fields.",
+                f"Requirement entry #{index} must include id and status fields.",
+                "Ensure every `#### Requirement` block defines id and status bullet fields.",
             )
-            continue
+        if not has_acceptance_key or not acceptance:
+            _add_failure(
+                failure_groups,
+                "missing_acceptance_criteria",
+                f"Requirement entry #{index} must include a non-empty acceptance_criteria field.",
+                "Add acceptance_criteria with concrete, verifiable behavior for this requirement.",
+            )
 
-        if not REQUIREMENT_ID_PATTERN.fullmatch(requirement_id):
+        if requirement_id and not REQUIREMENT_ID_PATTERN.fullmatch(requirement_id):
             _add_failure(
                 failure_groups,
                 "invalid_id_format",
                 f"Requirement id `{requirement_id}` must match `CAT-NN` format.",
                 "Use uppercase category and numeric suffix with at least two digits (example: REQ-01).",
             )
-            continue
+        elif requirement_id:
+            if requirement_id in seen_ids:
+                _add_failure(
+                    failure_groups,
+                    "duplicate_id",
+                    f"Requirement id `{requirement_id}` is duplicated.",
+                    "Ensure each requirement id is globally unique across active sections.",
+                )
+            else:
+                seen_ids.add(requirement_id)
 
-        if requirement_id in seen_ids:
+        if status and status not in REQUIREMENTS_ALLOWED_STATUSES:
             _add_failure(
                 failure_groups,
-                "duplicate_id",
-                f"Requirement id `{requirement_id}` is duplicated.",
-                "Ensure each requirement id is globally unique across active sections.",
+                "invalid_status",
+                f"Requirement status `{status}` is invalid for entry #{index}.",
+                "Use one of: Pending, In Progress, Complete, Blocked.",
             )
-            continue
-
-        seen_ids.add(requirement_id)
 
     failure_groups = _ordered_requirements_failure_groups(failure_groups)
 
@@ -294,6 +307,64 @@ def evaluate_requirements_contract_gate(
         "retry_command": retry_command,
         "requirements_file": str(requirements_path),
     }
+
+
+def format_requirements_contract_failures(result: dict[str, Any], retry_command: str) -> str:
+    failure_groups = result.get("failure_groups", {})
+    if not failure_groups:
+        return "Requirements contract gate passed."
+
+    remediation_steps = {
+        "missing_file": [
+            "Create .planning/REQUIREMENTS.md with canonical requirement blocks.",
+            "Define id, status, and acceptance_criteria for each entry.",
+        ],
+        "malformed_entry": [
+            "Ensure each `#### Requirement` block includes id and status fields.",
+            "Use canonical bullet format: `- key: value`.",
+        ],
+        "invalid_id_format": [
+            "Rename IDs to `CAT-NN` format (uppercase category + two or more digits).",
+            "Avoid lowercase IDs or one-digit numeric suffixes.",
+        ],
+        "duplicate_id": [
+            "Make each requirement ID globally unique across active sections.",
+            "Update traceability rows if IDs changed.",
+        ],
+        "invalid_status": [
+            "Set status to one of: Pending, In Progress, Complete, Blocked.",
+            "Remove ad-hoc status labels like Done or WIP.",
+        ],
+        "missing_acceptance_criteria": [
+            "Add non-empty acceptance_criteria for every requirement entry.",
+            "Use concrete, verifiable criteria text.",
+        ],
+    }
+
+    lines = [
+        "Requirements contract gate failed.",
+        "",
+        "Checklist:",
+    ]
+    for failure_type, issues in failure_groups.items():
+        lines.append(f"- Group {failure_type}")
+        for issue in issues:
+            message = str(issue.get("message", "")).strip() or "Issue detected."
+            fix = str(issue.get("fix", "")).strip() or "Apply the remediation checklist."
+            lines.append(f"  - {message}")
+            lines.append(f"    Fix: {fix}")
+    lines.extend(["", "Remediation by failure type:"])
+    for failure_type in failure_groups:
+        lines.append(f"- Group {failure_type}:")
+        for step in remediation_steps.get(
+            failure_type,
+            ["Resolve all listed checklist issues for this group and retry."],
+        ):
+            lines.append(f"  - {step}")
+    lines.append("")
+    effective_retry = retry_command or str(result.get("retry_command", "")).strip()
+    lines.append(f"Retry: {effective_retry}")
+    return "\n".join(lines)
 
 
 def format_gate_failures(result: dict[str, Any], retry_command: str) -> str:
