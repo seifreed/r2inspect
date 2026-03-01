@@ -260,3 +260,76 @@ def test_milestone_complete_aborts_when_requirements_contract_gate_blocked(
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
     assert "status: in_progress" in after
     assert "| complete | all | blocked |" in after
+
+
+def test_milestone_complete_blocks_on_traceability_drift_before_milestone_gate(
+    monkeypatch, tmp_path, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text(
+        "# Project State\n\nLast activity: baseline\n\nstatus: in_progress\n",
+        encoding="utf-8",
+    )
+    order: list[str] = []
+    called = {"milestone_gate": False}
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+
+    def fake_requirements_gate(_planning_root):
+        order.append("requirements")
+        return {"passed": True, "failure_groups": {}, "retry_command": "unused"}
+
+    def fake_traceability_gate(_planning_root, **_kwargs):
+        order.append("traceability")
+        return {
+            "passed": False,
+            "failure_groups": {
+                "state_mapping_mismatch": [
+                    {
+                        "message": "TRC-01 complete while mapped phase is not complete",
+                        "fix": "Align requirement status with roadmap completion.",
+                    }
+                ]
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        }
+
+    def fake_milestone_gate(_planning_root, _version):
+        called["milestone_gate"] = True
+        order.append("milestone")
+        return {"passed": True, "failure_groups": {}, "retry_command": "unused"}
+
+    monkeypatch.setattr(
+        quick_bootstrap, "evaluate_requirements_contract_gate", fake_requirements_gate
+    )
+    monkeypatch.setattr(quick_bootstrap, "evaluate_traceability_drift_gate", fake_traceability_gate)
+    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone_gate)
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 1
+    assert order == ["requirements", "traceability"]
+    assert called["milestone_gate"] is False
+    assert output.count("Retry: ") == 1
+    assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
+    assert "status: in_progress" in after
+    assert "| complete | all | passed |" in after
+    assert "| complete | all | - | blocked |" in after
+    assert "| complete | v1.1 | passed |" not in after
