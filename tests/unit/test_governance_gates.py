@@ -96,7 +96,7 @@ def _requirements_contract_content(entries: str) -> str:
             "",
             "#### Requirement",
             "",
-            "- id: V2-01",
+            "- id: AUX-01",
             "- status: Pending",
             "- acceptance_criteria: Keep v2 parseable.",
             "",
@@ -328,3 +328,113 @@ def test_requirements_gate_groups_failures_in_deterministic_order_for_malformed_
         "invalid_id_format",
         "duplicate_id",
     ]
+
+
+def test_requirements_gate_fails_on_invalid_status(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    invalid_status_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Done",
+            "- acceptance_criteria: Invalid status must be blocked.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(invalid_status_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result["passed"] is False
+    assert "invalid_status" in result["failure_groups"]
+    assert result["failure_groups"]["invalid_status"][0]["code"] == "invalid_status"
+
+
+def test_requirements_gate_fails_on_missing_acceptance_criteria(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    missing_acceptance_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: ",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(missing_acceptance_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result["passed"] is False
+    assert "missing_acceptance_criteria" in result["failure_groups"]
+    assert (
+        result["failure_groups"]["missing_acceptance_criteria"][0]["code"]
+        == "missing_acceptance_criteria"
+    )
+
+
+def test_requirements_gate_passed_envelope_is_stable(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    valid_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
+            "- acceptance_criteria: Valid requirement entry.",
+        ]
+    )
+    requirements_path = _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(valid_entries),
+    )
+
+    result = _evaluate_requirements(planning_root)
+
+    assert result == {
+        "passed": True,
+        "failure_groups": {},
+        "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+        "requirements_file": str(requirements_path),
+    }
+
+
+def test_requirements_formatter_includes_checklist_and_retry_command(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    invalid_status_entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Done",
+            "- acceptance_criteria: Invalid status should render remediation.",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_contract_content(invalid_status_entries),
+    )
+    result = _evaluate_requirements(planning_root)
+    assert (
+        format_requirements_contract_failures is not None
+    ), "format_requirements_contract_failures must be implemented in scripts/governance_gates.py"
+
+    rendered = format_requirements_contract_failures(
+        result,
+        "gsd-tools requirements precheck",
+    )
+
+    assert "Requirements contract gate failed." in rendered
+    assert "Checklist:" in rendered
+    assert "Group invalid_status" in rendered
+    assert "Retry: gsd-tools requirements precheck" in rendered
