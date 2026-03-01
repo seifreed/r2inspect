@@ -5,12 +5,14 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
 
 DEFAULT_GSD_TOOLS_PATH = str(Path.home() / ".codex/get-shit-done/bin/gsd-tools.cjs")
 DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parent / "quick_templates"
+DEFAULT_STATE_PATH = Path(".planning/STATE.md")
 MIN_CHECKS = 2
 MAX_CHECKS = 3
 
@@ -142,6 +144,87 @@ def create_quick_task(
     return {"task_dir": task_dir, "plan_path": plan_path, "summary_path": summary_path}
 
 
+def _today_iso() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def update_global_state(state_path: Path, number: int, description: str, status: str) -> None:
+    date = _today_iso()
+    row = f"| {number} | {date} | {description} | {status} |"
+    if state_path.exists():
+        text = state_path.read_text(encoding="utf-8")
+    else:
+        text = (
+            "# Project State\n\n## Quick Tasks Completed\n\n| # | Date | Description | Status |\n"
+            "|---|------|-------------|--------|\n"
+        )
+
+    if row in text:
+        updated = text
+    else:
+        lines = text.splitlines()
+        inserted = False
+        for idx, line in enumerate(lines):
+            if line.strip() == "|---|------|-------------|--------|":
+                lines.insert(idx + 1, row)
+                inserted = True
+                break
+        if not inserted:
+            lines.extend(
+                [
+                    "",
+                    "## Quick Tasks Completed",
+                    "",
+                    "| # | Date | Description | Status |",
+                    "|---|------|-------------|--------|",
+                    row,
+                ]
+            )
+        updated = "\n".join(lines)
+
+    last_activity = f"Last activity: {date} — quick task {number} {status}"
+    if re.search(r"^Last activity:.*$", updated, flags=re.MULTILINE):
+        updated = re.sub(r"^Last activity:.*$", last_activity, updated, flags=re.MULTILINE)
+    else:
+        updated = updated.rstrip() + f"\n\n{last_activity}\n"
+    state_path.write_text(updated if updated.endswith("\n") else f"{updated}\n", encoding="utf-8")
+
+
+def close_quick_task(
+    task_dir: Path,
+    status: str,
+    description: str,
+    blocker: str = "None",
+    attempted_commands: list[str] | None = None,
+    continuation_command: str = "python scripts/quick_bootstrap.py \"<objective>\"",
+    state_path: Path = DEFAULT_STATE_PATH,
+) -> Path:
+    number_prefix = task_dir.name.split("-", 1)[0]
+    if not number_prefix.isdigit():
+        raise BootstrapError(f"Invalid task directory name: {task_dir.name}")
+    number = int(number_prefix)
+    summary_path = task_dir / f"{number}-SUMMARY.md"
+    if not summary_path.exists():
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(f"# Quick Task {number} Summary\n\n## Verification\n- pending\n", encoding="utf-8")
+
+    attempts = attempted_commands or ["- pending"]
+    block = [
+        "",
+        "## Closure Evidence",
+        f"- status: {status}",
+        f"- blocker: {blocker}",
+        "- attempted commands:",
+    ]
+    block.extend(f"  - {cmd}" for cmd in attempts)
+    block.append(f"- continuation command: {continuation_command}")
+    with summary_path.open("a", encoding="utf-8") as handle:
+        handle.write("\n".join(block) + "\n")
+
+    update_global_state(state_path, number=number, description=description, status=status)
+    return summary_path
+
+
 def execute_bootstrap(
     objective: str,
     gsd_tools_path: str = DEFAULT_GSD_TOOLS_PATH,
@@ -182,15 +265,39 @@ def execute_bootstrap(
             autofix(repo)
             attempts += 1
             continue
-    raise BootstrapError(
+    raise_error = BootstrapError(
         f"Bootstrap failed after auto-fix retry. Guidance: {last_error}. "
         "Fix prerequisites and retry the command."
     )
+    raise raise_error
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Bootstrap quick planning task with preflight and retry.")
-    parser.add_argument("objective", help="Quick task objective.")
+    subparsers = parser.add_subparsers(dest="command")
+
+    bootstrap_parser = subparsers.add_parser("bootstrap")
+    bootstrap_parser.add_argument("objective", help="Quick task objective.")
+    bootstrap_parser.add_argument(
+        "--gsd-tools-path",
+        default=DEFAULT_GSD_TOOLS_PATH,
+        help="Path to gsd-tools.cjs.",
+    )
+    bootstrap_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
+    close_parser = subparsers.add_parser("close")
+    close_parser.add_argument("--task-dir", required=True, help="Quick task directory path.")
+    close_parser.add_argument("--status", required=True, choices=["completed", "failed", "scaffolded"])
+    close_parser.add_argument("--description", required=True)
+    close_parser.add_argument("--blocker", default="None")
+    close_parser.add_argument("--attempted-command", action="append", default=[])
+    close_parser.add_argument(
+        "--continuation-command",
+        default="python scripts/quick_bootstrap.py bootstrap \"<objective>\"",
+    )
+    close_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
+    parser.add_argument("objective", nargs="?", help=argparse.SUPPRESS)
     parser.add_argument(
         "--gsd-tools-path",
         default=DEFAULT_GSD_TOOLS_PATH,
@@ -201,7 +308,35 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    result = execute_bootstrap(args.objective, gsd_tools_path=args.gsd_tools_path)
+    command = args.command or "bootstrap"
+    if command == "close":
+        summary_path = close_quick_task(
+            task_dir=Path(args.task_dir),
+            status=args.status,
+            description=args.description,
+            blocker=args.blocker,
+            attempted_commands=args.attempted_command,
+            continuation_command=args.continuation_command,
+            state_path=Path(args.state_path),
+        )
+        print(json.dumps({"summary_path": str(summary_path), "status": args.status}, ensure_ascii=True))
+        return 0
+
+    objective = args.objective
+    if not objective:
+        raise BootstrapError("Objective is required.")
+    result = execute_bootstrap(
+        objective,
+        gsd_tools_path=args.gsd_tools_path,
+    )
+    close_quick_task(
+        task_dir=result.task_dir,
+        status="scaffolded",
+        description=objective,
+        attempted_commands=["node ... init quick ... --raw"],
+        continuation_command=f"python scripts/quick_bootstrap.py bootstrap \"{objective}\"",
+        state_path=Path(args.state_path),
+    )
     print(
         json.dumps(
             {
