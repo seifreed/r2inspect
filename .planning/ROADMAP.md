@@ -58,7 +58,12 @@ Plans:
   1. Operator can confirm every active requirement is mapped to exactly one roadmap phase.
   2. Operator receives explicit drift errors when `ROADMAP.md`, `REQUIREMENTS.md`, and execution state disagree.
   3. Operator cannot pass phase completion checks until traceability links are complete and internally consistent.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 04-01-PLAN.md - Build shared traceability/drift evaluator with strict parsing and deterministic ordering.
+- [ ] 04-02-PLAN.md - Wire traceability gate into transition paths and deterministic evidence updates.
+- [ ] 04-03-PLAN.md - Close integration/flow verification gaps for traceability-first completion ordering.
 
 ## Progress
 
@@ -66,4 +71,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 2. Milestone Governance Gates | v1.1 | Complete    | 2026-03-01 | 2026-03-01 |
 | 3. Requirements Contract Enforcement | Complete | Complete    | 2026-03-01 | 2026-03-01 |
-| 4. Traceability and Drift Enforcement | v1.1 | 0/TBD | Not started | - |
+| 4. Traceability and Drift Enforcement | v1.1 | 1/3 | In Progress | - |
