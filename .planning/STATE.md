@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Hardening
 status: in_progress
-last_updated: "2026-03-01T13:06:00Z"
+last_updated: "2026-03-01T13:14:30Z"
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -22,28 +22,29 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 Milestone: v1.1 Hardening
 Phase: 2 of 3 (Milestone phase range: 2-4, Milestone Governance Gates)
-Plan: 02-02 next
-Status: Plan 02-01 completed
-Last activity: 2026-03-01 - Milestone precheck/complete gate attempts now recorded fail-closed
+Plan: 02-02 completed
+Status: Phase 2 completed
+Last activity: 2026-03-01 - Completed 02-02 milestone precheck/complete governance routing
 
-Progress: [#####-----] 50%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2 min
-- Total execution time: 0.03 hours
+- Total plans completed: 2
+- Average duration: 3 min
+- Total execution time: 0.10 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 1 | 2 min | 2 min |
+| 02 | 2 | 6 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (2 min)
-- Trend: Stable
+- Last 5 plans: 02-01 (2 min), 02-02 (4 min)
+- Trend: Improving
+- Phase 02 P02: 4 min, 3 tasks, 5 files
 
 ## Accumulated Context
 
@@ -55,6 +56,8 @@ Recent decisions affecting current work:
 - [Phase 2-4]: Each v1 requirement maps to exactly one phase to preserve deterministic planning and completion checks.
 - [Phase 02]: Gate validity requires exact status=passed plus required markdown sections.
 - [Phase 02]: Failure groups are returned in canonical order: missing_file, invalid_status, malformed_sections, stale_audit.
+- [Phase 02]: Milestone precheck remains non-blocking while complete is fail-closed on governance failures.
+- [Phase 02]: Blocked completion attempts are recorded as gate evidence without advancing milestone completion state.
 
 ### Pending Todos
 None yet.
@@ -71,5 +74,5 @@ None.
 
 ## Session Continuity
 Last session: 2026-03-01
-Stopped at: Completed 02-01-PLAN.md
-Resume file: .planning/phases/02-milestone-governance-gates/02-02-PLAN.md
+Stopped at: Completed 02-02-PLAN.md
+Resume file: None

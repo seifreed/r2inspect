@@ -15,7 +15,7 @@
 
 **Milestone Goal:** Fortalecer gobernanza y trazabilidad del flujo GSD para evitar cierres de milestone con gaps documentales.
 
-- [ ] **Phase 2: Milestone Governance Gates** - Milestone completion is fail-closed on audit presence, status, and remediation guidance.
+- [x] **Phase 2: Milestone Governance Gates** - Milestone completion is fail-closed on audit presence, status, and remediation guidance.
 - [ ] **Phase 3: Requirements Contract Enforcement** - Active requirements are structurally valid before planning and completion transitions.
 - [ ] **Phase 4: Traceability and Drift Enforcement** - Requirement-to-phase links remain one-to-one and consistent with roadmap and execution state.
 
@@ -33,7 +33,7 @@
 
 Plans:
 - [x] 02-01-PLAN.md - Build shared fail-closed governance gate evaluator and audit contract checks.
-- [ ] 02-02-PLAN.md - Wire precheck/complete enforcement and remediation checklist output.
+- [x] 02-02-PLAN.md - Wire precheck/complete enforcement and remediation checklist output.
 
 ### Phase 3: Requirements Contract Enforcement
 **Goal**: Operators maintain a valid, complete `REQUIREMENTS.md` contract before roadmap and milestone transitions proceed.
@@ -59,6 +59,6 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 2. Milestone Governance Gates | v1.1 | 1/2 | In Progress | - |
+| 2. Milestone Governance Gates | v1.1 | 2/2 | Complete | 2026-03-01 |
 | 3. Requirements Contract Enforcement | v1.1 | 0/TBD | Not started | - |
 | 4. Traceability and Drift Enforcement | v1.1 | 0/TBD | Not started | - |
