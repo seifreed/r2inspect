@@ -1054,7 +1054,13 @@ def test_traceability_precheck_matrix_scope_outputs_are_deterministic(
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
     state_path = planning_root / "STATE.md"
-    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+    state_path.write_text(
+        (
+            "Last activity: baseline\n\n"
+            "<!-- traceability_top_rank_key: state_mapping_mismatch:state drift|align state|0000 -->\n"
+        ),
+        encoding="utf-8",
+    )
 
     parsed_args = quick_bootstrap.argparse.Namespace(
         command="traceability",
@@ -1579,9 +1585,11 @@ def test_traceability_precheck_ranked_hints_are_deterministic_for_unchanged_inpu
 
     assert first_exit == 0
     assert second_exit == 0
-    assert first_payload["checklist"] == second_payload["checklist"]
-    assert "#1 Rationale:" in first_payload["checklist"]
-    assert "#2 Rationale:" in first_payload["checklist"]
+    first_ranked_block = first_payload["checklist"].split("\n\nTop-ranked blocker", 1)[0]
+    second_ranked_block = second_payload["checklist"].split("\n\nTop-ranked blocker", 1)[0]
+    assert first_ranked_block == second_ranked_block
+    assert "#1 Rationale:" in first_ranked_block
+    assert "#2 Rationale:" in first_ranked_block
 
 
 def test_traceability_precheck_retry_command_is_scope_correct_for_phase_scope(
