@@ -389,3 +389,96 @@ def test_milestone_retry_command_is_context_specific_and_single(tmp_path, monkey
     expected = "Retry: python scripts/quick_bootstrap.py milestone complete v1.1"
     assert expected in output
     assert output.count("Retry: ") == 1
+
+
+def test_requirements_precheck_reports_structured_non_blocking_result(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="requirements",
+            requirements_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {
+            "passed": False,
+            "failure_groups": {
+                "missing_acceptance_criteria": [
+                    {
+                        "message": "Requirement entry #1 missing acceptance criteria",
+                        "fix": "Add acceptance_criteria",
+                    }
+                ]
+            },
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 0
+    assert payload["command"] == "requirements precheck"
+    assert payload["passed"] is False
+    assert "missing_acceptance_criteria" in payload["failure_groups"]
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
+    assert "Checklist:" in payload["checklist"]
+    assert "requirements precheck gate blocked" in after
+    assert "| precheck | all | blocked |" in after
+
+
+def test_requirements_precheck_uses_shared_requirements_formatter(tmp_path, monkeypatch, capsys):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: baseline\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="requirements",
+            requirements_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+        },
+    )
+
+    seen: dict[str, str] = {}
+
+    def fake_formatter(result, retry_command):
+        seen["retry_command"] = retry_command
+        return f"formatted:{result.get('passed')}"
+
+    monkeypatch.setattr(quick_bootstrap, "format_requirements_contract_failures", fake_formatter)
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["checklist"] == "formatted:True"
+    assert seen["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
