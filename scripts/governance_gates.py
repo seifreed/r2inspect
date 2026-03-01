@@ -535,9 +535,9 @@ def evaluate_traceability_drift_gate(
         }
 
     requirements_content = requirements_path.read_text(encoding="utf-8")
-    _ = _parse_roadmap_phase_catalog(roadmap_path.read_text(encoding="utf-8"))
+    roadmap_phase_catalog = _parse_roadmap_phase_catalog(roadmap_path.read_text(encoding="utf-8"))
     active_ids = _collect_active_requirement_ids(requirements_content)
-    _, traceability_error = _parse_traceability_rows(requirements_content)
+    traceability_rows, traceability_error = _parse_traceability_rows(requirements_content)
     if traceability_error:
         _add_failure(
             failure_groups,
@@ -547,6 +547,7 @@ def evaluate_traceability_drift_gate(
         )
 
     touched_ids = {item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()}
+    scoped_ids = set(active_ids)
     if scope == "touched":
         if not touched_ids:
             _add_failure(
@@ -562,6 +563,42 @@ def evaluate_traceability_drift_gate(
                     "unknown_touched_requirement",
                     f"Touched requirement id `{requirement_id}` does not exist in active requirements.",
                     "Use requirement ids from v1/v2 requirements or update REQUIREMENTS.md.",
+                )
+        scoped_ids = active_ids & touched_ids
+
+    if not traceability_error:
+        phase_mappings: dict[str, set[str]] = {}
+        for row in traceability_rows:
+            requirement_id = row["requirement_id"]
+            if requirement_id not in scoped_ids:
+                continue
+            phase = row["phase"]
+            phase_mappings.setdefault(requirement_id, set()).add(phase)
+            if phase not in roadmap_phase_catalog:
+                _add_failure(
+                    failure_groups,
+                    "unknown_mapped_phase",
+                    f"Requirement `{requirement_id}` maps to unknown phase `{phase}`.",
+                    "Map requirements only to phases that exist in ROADMAP.md.",
+                )
+
+        for requirement_id in sorted(scoped_ids):
+            mapped_phases = phase_mappings.get(requirement_id, set())
+            if not mapped_phases:
+                _add_failure(
+                    failure_groups,
+                    "unmapped_requirement",
+                    f"Active requirement `{requirement_id}` is missing a traceability phase mapping.",
+                    "Add exactly one Traceability row for every active requirement.",
+                )
+                continue
+            if len(mapped_phases) > 1:
+                mapped_list = ", ".join(sorted(mapped_phases))
+                _add_failure(
+                    failure_groups,
+                    "multi_phase_mapping",
+                    f"Active requirement `{requirement_id}` maps to multiple phases: {mapped_list}.",
+                    "Keep exactly one canonical phase mapping per active requirement.",
                 )
 
     failure_groups = _ordered_traceability_failure_groups(failure_groups)
