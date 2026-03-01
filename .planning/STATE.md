@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Governance UX
-status: roadmap_created
-last_updated: "2026-03-01T18:15:48Z"
+status: phase_5_complete
+last_updated: "2026-03-01T18:23:30Z"
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -21,12 +21,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 Milestone: v1.2 Governance UX
-Phase: 5 (in progress)
-Plan: 05-03 next
-Status: Plan 05-02 completed; traceability precheck now emits scope-selectable deterministic coverage matrix diagnostics
-Last activity: 2026-03-01 - completed 05-02 with task-level commits and summary
+Phase: 6 (planned)
+Plan: 06-01 next
+Status: Plan 05-03 completed; deterministic coverage matrix regression and non-regression governance validation finalized for GUX-01
+Last activity: 2026-03-01 - completed 05-03 with task-level commits and summary
 
-Progress: [#######---] 67%
+Progress: [##########] 100%
 
 ## Milestone Scope (v1.2)
 - GUX-01 -> Phase 5
@@ -46,16 +46,19 @@ None.
 - [Phase 05]: Traceability precheck keeps existing top-level contract keys and appends schema_version and coverage_matrix additively.
 - [Phase 05]: Scope selection uses --scope phase|milestone with mandatory --phase-id validation for phase mode.
 - [Phase 05]: Matrix diagnostics are appended to checklist output in compact mode by default with optional expanded detail mode.
+- [Phase 05]: Determinism checks use normalized JSON serialization (sort_keys + fixed separators) to enforce byte-stability.
+- [Phase 05]: Matrix rollout regressions assert completion remains fail-closed and unaffected by precheck-only visibility additions.
 
 ## Session Continuity
 Last session: 2026-03-01
-Stopped at: Completed 05-02-PLAN.md
-Resume file: .planning/phases/05-requirement-coverage-matrix-gux-01/05-02-SUMMARY.md
+Stopped at: Completed 05-03-PLAN.md
+Resume file: .planning/phases/05-requirement-coverage-matrix-gux-01/05-03-SUMMARY.md
 
 ## Traceability Gate Activity
 
 | Date | Command | Scope | Touched Requirement IDs | Result |
 |------|---------|-------|--------------------------|--------|
+| 2026-03-01 | execute plan 05-03 | matrix determinism + governance non-regression | GUX-01 | completed |
 | 2026-03-01 | precheck | all | - | blocked |
 | 2026-03-01 | execute plan 05-02 | milestone/phase matrix integration | GUX-01 | completed |
 | 2026-03-01 | execute plan 05-01 | milestone+phase matrix domain | GUX-01 | completed |
