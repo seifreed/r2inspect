@@ -64,3 +64,91 @@ def test_bootstrap_retries_once_after_minimal_autofix(tmp_path):
 
     assert calls["count"] == 2
     assert retried["count"] == 1
+
+
+def test_creates_quick_directory_and_plan(tmp_path):
+    quick_bootstrap = _load_quick_bootstrap()
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (template_dir / "PLAN.template.md").write_text(
+        "# Quick Task {number}: {objective}\n\n## Objective\n{objective}\n\n## Steps\n- Step\n\n## Verification\n{checks}\n",
+        encoding="utf-8",
+    )
+    (template_dir / "SUMMARY.template.md").write_text(
+        "# Quick Task {number} Summary\n\n## Verification\n- pending\n\n## Failure Block\nStatus: scaffolded\n",
+        encoding="utf-8",
+    )
+    payload = {
+        "roadmap_exists": True,
+        "planning_exists": True,
+        "task_dir": str(tmp_path / ".planning" / "quick" / "7-sample"),
+        "next_num": 7,
+        "slug": "sample",
+    }
+    checks = quick_bootstrap.build_measurable_checks("Stabilize quick bootstrap")
+    artifacts = quick_bootstrap.create_quick_task(
+        payload, "Stabilize quick bootstrap", checks, template_dir
+    )
+    assert artifacts["task_dir"].name == "7-sample"
+    assert artifacts["plan_path"].exists()
+    plan_text = artifacts["plan_path"].read_text(encoding="utf-8")
+    assert "## Objective" in plan_text
+    assert "## Steps" in plan_text
+    assert "## Verification" in plan_text
+
+
+def test_plan_has_exactly_2_or_3_measurable_checks(tmp_path):
+    quick_bootstrap = _load_quick_bootstrap()
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (template_dir / "PLAN.template.md").write_text(
+        "# Plan\n\n## Verification\n{checks}\n",
+        encoding="utf-8",
+    )
+    (template_dir / "SUMMARY.template.md").write_text("# Summary\n", encoding="utf-8")
+    payload = {
+        "roadmap_exists": True,
+        "planning_exists": True,
+        "task_dir": str(tmp_path / ".planning" / "quick" / "8-checks"),
+        "next_num": 8,
+        "slug": "checks",
+    }
+    checks = quick_bootstrap.build_measurable_checks("Measure bootstrap checks")
+    artifacts = quick_bootstrap.create_quick_task(
+        payload, "Measure bootstrap checks", checks, template_dir
+    )
+    lines = [
+        line.strip()
+        for line in artifacts["plan_path"].read_text(encoding="utf-8").splitlines()
+        if line.strip().startswith("- ")
+    ]
+    assert len(lines) in (2, 3)
+
+
+def test_summary_template_contains_failure_block(tmp_path):
+    quick_bootstrap = _load_quick_bootstrap()
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (template_dir / "PLAN.template.md").write_text("# Plan\n{checks}\n", encoding="utf-8")
+    (template_dir / "SUMMARY.template.md").write_text(
+        "# Summary\n\n## Verification\n- pending\n\n## Failure Block\n- status: {status}\n- blocker: {blocker}\n- attempted commands:\n{attempted_commands}\n- continuation command: {continuation_command}\n",
+        encoding="utf-8",
+    )
+    payload = {
+        "roadmap_exists": True,
+        "planning_exists": True,
+        "task_dir": str(tmp_path / ".planning" / "quick" / "10-summary"),
+        "next_num": 10,
+        "slug": "summary",
+    }
+    checks = quick_bootstrap.build_measurable_checks("Write summary scaffold")
+    artifacts = quick_bootstrap.create_quick_task(
+        payload, "Write summary scaffold", checks, template_dir
+    )
+    summary_text = artifacts["summary_path"].read_text(encoding="utf-8")
+    assert "## Verification" in summary_text
+    assert "## Failure Block" in summary_text
+    assert "status:" in summary_text
+    assert "blocker:" in summary_text
+    assert "attempted commands:" in summary_text
+    assert "continuation command:" in summary_text
