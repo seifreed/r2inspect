@@ -216,7 +216,7 @@ def test_requirements_gate_fails_on_malformed_entry_structure(tmp_path: Path) ->
             "#### Requirement",
             "",
             "- id: REQ-01",
-            "- status: Pending",
+            "- acceptance_criteria: Missing status should be malformed.",
         ]
     )
     _write_requirements_contract(
@@ -312,7 +312,7 @@ def test_requirements_gate_groups_failures_in_deterministic_order_for_malformed_
             "#### Requirement",
             "",
             "- id: REQ-01",
-            "- status: Pending",
+            "- acceptance_criteria: Missing status should be malformed.",
         ]
     )
     _write_requirements_contract(
