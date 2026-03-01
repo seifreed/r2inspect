@@ -9,7 +9,7 @@
 
 - [x] **GOV-01**: Milestone completion fails when the milestone audit artifact is missing.
 - [x] **GOV-02**: Milestone completion fails when audit status is not `passed`.
-- [ ] **GOV-03**: Gate failure output includes actionable remediation steps for the operator.
+- [x] **GOV-03**: Gate failure output includes actionable remediation steps for the operator.
 
 ### Requirements Contract
 
@@ -49,7 +49,7 @@
 |-------------|-------|--------|
 | GOV-01 | Phase 2 | Complete |
 | GOV-02 | Phase 2 | Complete |
-| GOV-03 | Phase 2 | Pending |
+| GOV-03 | Phase 2 | Complete |
 | REQ-01 | Phase 3 | Pending |
 | REQ-02 | Phase 3 | Pending |
 | REQ-03 | Phase 3 | Pending |
