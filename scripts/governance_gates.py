@@ -485,6 +485,63 @@ def build_requirement_coverage_matrix(
     }
 
 
+def format_coverage_matrix_summary(coverage_matrix: dict[str, Any]) -> str:
+    rows = list(coverage_matrix.get("rows", []) or [])
+    summary = dict(coverage_matrix.get("summary", {}) or {})
+    scope = str(coverage_matrix.get("scope", "milestone"))
+    scope_target = str(coverage_matrix.get("scope_target", "all-active"))
+    row_fragments: list[str] = []
+    for row in rows:
+        requirement_id = str(row.get("requirement_id", "")).strip()
+        state = str(row.get("coverage_state", "")).strip() or "unknown"
+        causes = ",".join(str(code).strip() for code in row.get("cause_codes", []) if str(code).strip())
+        if causes:
+            row_fragments.append(f"{requirement_id}:{state}[{causes}]")
+        else:
+            row_fragments.append(f"{requirement_id}:{state}")
+    row_text = "; ".join(row_fragments) if row_fragments else "none"
+    return "\n".join(
+        [
+            "Coverage matrix (compact):",
+            f"- scope: {scope} ({scope_target})",
+            (
+                "- totals: "
+                f"total={int(summary.get('total', 0))}, "
+                f"covered={int(summary.get('covered', 0))}, "
+                f"partial={int(summary.get('partial', 0))}, "
+                f"uncovered={int(summary.get('uncovered', 0))}, "
+                f"stale={int(summary.get('stale', 0))}"
+            ),
+            f"- rows: {row_text}",
+        ]
+    )
+
+
+def format_coverage_matrix_expanded(coverage_matrix: dict[str, Any]) -> str:
+    rows = list(coverage_matrix.get("rows", []) or [])
+    scope = str(coverage_matrix.get("scope", "milestone"))
+    scope_target = str(coverage_matrix.get("scope_target", "all-active"))
+    lines = [
+        "Coverage matrix (expanded):",
+        f"- scope: {scope} ({scope_target})",
+    ]
+    if not rows:
+        lines.append("- rows: none")
+        return "\n".join(lines)
+    for row in rows:
+        requirement_id = str(row.get("requirement_id", "")).strip() or "UNKNOWN"
+        state = str(row.get("coverage_state", "")).strip() or "unknown"
+        cause_codes = [str(code).strip() for code in row.get("cause_codes", []) if str(code).strip()]
+        causes = ", ".join(cause_codes) if cause_codes else "-"
+        remediation = str(row.get("remediation", "")).strip() or "-"
+        retry_command = str(row.get("retry_command", "")).strip() or "-"
+        lines.append(f"- {requirement_id}: {state}")
+        lines.append(f"  cause_codes: {causes}")
+        lines.append(f"  remediation: {remediation}")
+        lines.append(f"  retry: {retry_command}")
+    return "\n".join(lines)
+
+
 def evaluate_milestone_governance_gate(
     planning_root: Path, milestone_version: str
 ) -> dict[str, Any]:
