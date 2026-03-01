@@ -50,7 +50,7 @@
 #### Requirement
 
 - id: TRC-01
-- status: Pending
+- status: Complete
 - acceptance_criteria: Every active requirement is mapped to exactly one roadmap phase.
 
 #### Requirement
