@@ -124,7 +124,7 @@
 | GOV-03 | Phase 2 | Complete |
 | REQ-01 | Phase 3 | Complete |
 | REQ-02 | Phase 3 | Complete |
-| REQ-03 | Phase 3 | Pending |
+| REQ-03 | Phase 3 | Complete |
 | TRC-01 | Phase 4 | Pending |
 | TRC-02 | Phase 4 | Pending |
 | TRC-03 | Phase 4 | Pending |
