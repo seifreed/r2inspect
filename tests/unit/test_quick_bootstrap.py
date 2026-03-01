@@ -682,7 +682,7 @@ def test_requirements_precheck_reports_structured_non_blocking_result(
     assert payload["command"] == "requirements precheck"
     assert payload["passed"] is False
     assert "missing_acceptance_criteria" in payload["failure_groups"]
-    assert payload["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
     assert "Checklist:" in payload["checklist"]
     assert "requirements precheck gate blocked" in after
     assert "| precheck | all | blocked |" in after
@@ -1428,7 +1428,7 @@ def test_traceability_precheck_retry_command_and_failure_groups_stay_stable_with
 
     assert exit_code == 0
     assert list(payload["failure_groups"]) == ["state_mapping_mismatch", "unmapped_requirement"]
-    assert payload["retry_command"] == "python scripts/quick_bootstrap.py requirements precheck"
+    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
 
 
 def test_milestone_complete_aborts_when_requirements_gate_fails_first(

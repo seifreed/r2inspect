@@ -409,10 +409,12 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
         "evaluate_requirements_contract_gate",
         lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
     )
+    called = {"milestone_gate": False}
     monkeypatch.setattr(
         quick_bootstrap,
         "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: {
+        lambda _planning_root, _version: called.__setitem__("milestone_gate", True)
+        or {
             "passed": False,
             "failure_groups": {
                 "missing_file": [{"message": "Missing audit artifact", "fix": "Create audit file."}]
@@ -430,6 +432,9 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
     assert precheck_exit == 0
     assert precheck_payload["schema_version"] == "coverage_matrix.v1"
     assert "coverage_matrix" in precheck_payload
-    assert completion_exit == 0
+    assert completion_exit == 1
+    assert called["milestone_gate"] is False
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in completion_output
-    assert "| complete | v1.1 | blocked |" in after
+    assert "| complete | all | passed |" in after
+    assert "| complete | all | - | blocked |" in after
+    assert "| complete | v1.1 | passed |" not in after
