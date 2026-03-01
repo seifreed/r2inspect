@@ -17,7 +17,7 @@
 
 - [x] **Phase 2: Milestone Governance Gates** - Milestone completion is fail-closed on audit presence, status, and remediation guidance.
 - [x] **Phase 3: Requirements Contract Enforcement** - Active requirements are structurally valid before planning and completion transitions.
-- [ ] **Phase 4: Traceability and Drift Enforcement** - Requirement-to-phase links remain one-to-one and consistent with roadmap and execution state.
+- [x] **Phase 4: Traceability and Drift Enforcement** - Requirement-to-phase links remain one-to-one and consistent with roadmap and execution state.
 
 ## Phase Details
 
@@ -63,7 +63,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md - Build shared traceability/drift evaluator with strict parsing and deterministic ordering.
 - [x] 04-02-PLAN.md - Wire traceability gate into transition paths and deterministic evidence updates.
-- [ ] 04-03-PLAN.md - Close integration/flow verification gaps for traceability-first completion ordering.
+- [x] 04-03-PLAN.md - Close integration/flow verification gaps for traceability-first completion ordering.
 
 ## Progress
 
@@ -71,4 +71,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 2. Milestone Governance Gates | v1.1 | Complete    | 2026-03-01 | 2026-03-01 |
 | 3. Requirements Contract Enforcement | Complete | Complete    | 2026-03-01 | 2026-03-01 |
-| 4. Traceability and Drift Enforcement | v1.1 | 2/3 | In Progress | - |
+| 4. Traceability and Drift Enforcement | v1.1 | Complete | Complete | 2026-03-01 |
