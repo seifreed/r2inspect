@@ -28,6 +28,12 @@ COVERAGE_REMEDIATION_BY_CAUSE = {
     "unknown_mapped_phase": "Map only to normalized phase IDs present in ROADMAP.md.",
     "state_mapping_mismatch": "Align requirement status with mapped phase completion state.",
 }
+IMPACT_SEVERITY_WEIGHTS = {
+    "critical": 4,
+    "error": 3,
+    "warning": 2,
+    "info": 1,
+}
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -880,6 +886,124 @@ def evaluate_traceability_drift_gate(
         "scope": scope,
         "touched_requirement_ids": sorted(touched_ids),
     }
+
+
+def _canonical_check_key(failure_type: str, issue: dict[str, Any], issue_index: int) -> str:
+    raw_code = str(issue.get("code", "")).strip()
+    if raw_code:
+        return raw_code
+    message = " ".join(str(issue.get("message", "")).strip().split())
+    fix = " ".join(str(issue.get("fix", "")).strip().split())
+    return f"{failure_type}:{message}|{fix}|{issue_index:04d}"
+
+
+def _coverage_rows_from_payload(coverage_matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = coverage_matrix.get("rows")
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    nested = coverage_matrix.get("coverage_matrix", {})
+    if isinstance(nested, dict):
+        nested_rows = nested.get("rows")
+        if isinstance(nested_rows, list):
+            return [row for row in nested_rows if isinstance(row, dict)]
+    return []
+
+
+def _cause_blast_radius_map(coverage_matrix: dict[str, Any]) -> dict[str, int]:
+    rows = _coverage_rows_from_payload(coverage_matrix)
+    radius: dict[str, set[str]] = {}
+    for row in rows:
+        requirement_id = str(row.get("requirement_id", "")).strip()
+        if not requirement_id:
+            continue
+        for code in row.get("cause_codes", []) or []:
+            cause_code = str(code).strip()
+            if not cause_code:
+                continue
+            radius.setdefault(cause_code, set()).add(requirement_id)
+        primary_cause = str(row.get("primary_cause", "")).strip()
+        if primary_cause:
+            radius.setdefault(primary_cause, set()).add(requirement_id)
+    return {code: len(requirements) for code, requirements in radius.items()}
+
+
+def build_impact_ranked_remediation_hints(
+    result: dict[str, Any],
+    coverage_matrix: dict[str, Any],
+    *,
+    retry_command: str,
+) -> list[dict[str, Any]]:
+    failure_groups = result.get("failure_groups", {})
+    if not isinstance(failure_groups, dict):
+        return []
+
+    cause_blast_radius = _cause_blast_radius_map(coverage_matrix)
+    ranked_records: list[dict[str, Any]] = []
+    for failure_type, issues in failure_groups.items():
+        if not isinstance(issues, list):
+            continue
+        failure_type_key = str(failure_type).strip()
+        for issue_index, issue in enumerate(issues):
+            if not isinstance(issue, dict):
+                continue
+            severity = str(issue.get("severity", "error")).strip().lower() or "error"
+            severity_weight = IMPACT_SEVERITY_WEIGHTS.get(severity, IMPACT_SEVERITY_WEIGHTS["error"])
+            check_key = _canonical_check_key(failure_type_key, issue, issue_index)
+            blast_radius = max(cause_blast_radius.get(failure_type_key, 0), 1)
+            rank_sort_key = (-severity_weight, -blast_radius, check_key)
+            message = str(issue.get("message", "")).strip() or "Traceability check failed."
+            fix = str(issue.get("fix", "")).strip() or "Apply the smallest corrective update and rerun."
+            rationale = (
+                f"severity {severity} (w={severity_weight}) and blast radius {blast_radius}; "
+                f"tie-break by check key `{check_key}`."
+            )
+            ranked_records.append(
+                {
+                    "_sort_key": rank_sort_key,
+                    "failure_type": failure_type_key,
+                    "severity": severity,
+                    "severity_weight": severity_weight,
+                    "blast_radius": blast_radius,
+                    "check_key": check_key,
+                    "blocking_reason": message,
+                    "minimal_fix": fix,
+                    "retry_command": retry_command,
+                    "rationale": rationale,
+                }
+            )
+
+    ranked_records.sort(key=lambda record: record["_sort_key"])
+    ranked_hints: list[dict[str, Any]] = []
+    for index, record in enumerate(ranked_records, start=1):
+        record.pop("_sort_key", None)
+        record["rank"] = index
+        record["rank_key"] = f"{index:04d}:{record['check_key']}"
+        ranked_hints.append(record)
+    return ranked_hints
+
+
+def format_impact_ranked_remediation_hints(ranked_hints: list[dict[str, Any]]) -> str:
+    if not ranked_hints:
+        return "No impact-ranked remediation hints."
+
+    blocks: list[str] = []
+    for hint in ranked_hints:
+        rank = int(hint.get("rank", 0))
+        rationale = str(hint.get("rationale", "")).strip() or "deterministic impact order."
+        blocking_reason = str(hint.get("blocking_reason", "")).strip() or "Traceability check failed."
+        minimal_fix = str(hint.get("minimal_fix", "")).strip() or "Apply the smallest corrective change."
+        retry_command = str(hint.get("retry_command", "")).strip() or "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
+        blocks.append(
+            "\n".join(
+                [
+                    f"Rank {rank}: {rationale}",
+                    f"Blocking reason: {blocking_reason}",
+                    f"Minimal fix: {minimal_fix}",
+                    f"Retry: {retry_command}",
+                ]
+            )
+        )
+    return "\n\n".join(blocks)
 
 
 def format_traceability_drift_failures(result: dict[str, Any], retry_command: str) -> str:
