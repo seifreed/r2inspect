@@ -296,19 +296,14 @@ def parse_args() -> argparse.Namespace:
         default="python scripts/quick_bootstrap.py bootstrap \"<objective>\"",
     )
     close_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
-
-    parser.add_argument("objective", nargs="?", help=argparse.SUPPRESS)
-    parser.add_argument(
-        "--gsd-tools-path",
-        default=DEFAULT_GSD_TOOLS_PATH,
-        help="Path to gsd-tools.cjs.",
-    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    command = args.command or "bootstrap"
+    command = args.command
+    if command is None:
+        raise BootstrapError("Missing command. Use `bootstrap` or `close`.")
     if command == "close":
         summary_path = close_quick_task(
             task_dir=Path(args.task_dir),
