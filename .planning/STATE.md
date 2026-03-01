@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v1.1
 milestone_name: Hardening
-status: unknown
-last_updated: "2026-03-01T17:32:29.981Z"
+status: milestone_complete
+last_updated: "2026-03-01T17:34:49.872Z"
 progress:
   total_phases: 3
   completed_phases: 3
@@ -17,14 +17,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mantener entregas pequenas, verificables y acumulables.
-**Current focus:** Phase 4 - Traceability and Drift Enforcement
+**Current focus:** Planning next milestone
 
 ## Current Position
 Milestone: v1.1 Hardening
-Phase: 4 of 3 (Milestone phase range: 2-4, Traceability and Drift Enforcement)
-Plan: 3 of 3 complete (04-01, 04-02, 04-03 done)
-Status: Phase 4 complete, ready for milestone transition
-Last activity: 2026-03-01 - completed 04-03 traceability drift coverage plan
+Phase: Complete (phases 2-4 archived)
+Plan: Complete (8/8 plans)
+Status: Milestone archived and ready for next milestone setup
+Last activity: 2026-03-01 - archived v1.1 milestone artifacts
 
 Progress: [##########] 100%
 
@@ -90,6 +90,7 @@ None.
 
 | Date | Command | Milestone | Result |
 |------|---------|-----------|--------|
+| 2026-03-01 | precheck | v1.1 | blocked |
 | 2026-03-01 | precheck | v1.1 | passed |
 | 2026-03-01 | complete | v1.1 | blocked |
 
