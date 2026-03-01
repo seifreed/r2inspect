@@ -125,8 +125,8 @@
 | REQ-01 | Phase 3 | Complete |
 | REQ-02 | Phase 3 | Complete |
 | REQ-03 | Phase 3 | Complete |
-| TRC-01 | Phase 4 | Pending |
-| TRC-02 | Phase 4 | Pending |
+| TRC-01 | Phase 4 | Complete |
+| TRC-02 | Phase 4 | Complete |
 | TRC-03 | Phase 4 | Pending |
 
 **Coverage:**
