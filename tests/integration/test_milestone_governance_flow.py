@@ -58,14 +58,15 @@ def test_completion_aborts_without_state_mutation_on_gate_failure(monkeypatch, t
         lambda _result, retry_command: f"blocked\nRetry: {retry_command}",
     )
 
-    before = state_path.read_text(encoding="utf-8")
     exit_code = quick_bootstrap.main()
     output = capsys.readouterr().out
     after = state_path.read_text(encoding="utf-8")
 
     assert exit_code == 1
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
-    assert before == after
+    assert "milestone complete v1.1 gate blocked" in after
+    assert "| complete | v1.1 | blocked |" in after
+    assert "milestone complete v1.1 gate passed" not in after
 
 
 def test_completion_records_evidence_when_gate_passes(monkeypatch, tmp_path, capsys):
@@ -104,6 +105,48 @@ def test_completion_records_evidence_when_gate_passes(monkeypatch, tmp_path, cap
     assert payload["command"] == "milestone complete"
     assert payload["passed"] is True
     assert "milestone complete v1.1 gate passed" in state_text
+
+
+def test_blocked_completion_keeps_completion_state_unadvanced(monkeypatch, tmp_path, capsys):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text(
+        "# Project State\n\nLast activity: baseline\n\nstatus: in_progress\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_milestone_governance_gate",
+        lambda _planning_root, _version: {
+            "passed": False,
+            "failure_groups": {
+                "invalid_status": [{"message": "status must be passed", "fix": "set status passed"}]
+            },
+            "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+
+    exit_code = quick_bootstrap.main()
+    state_text = state_path.read_text(encoding="utf-8")
+    _ = capsys.readouterr().out
+
+    assert exit_code == 1
+    assert "status: in_progress" in state_text
+    assert "| complete | v1.1 | blocked |" in state_text
 
 
 def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, capsys):

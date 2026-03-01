@@ -24,7 +24,7 @@ Milestone: v1.1 Hardening
 Phase: 2 of 3 (Milestone phase range: 2-4, Milestone Governance Gates)
 Plan: 02-02 next
 Status: Plan 02-01 completed
-Last activity: 2026-03-01 - Completed 02-01 governance gate evaluator with tests
+Last activity: 2026-03-01 - Milestone precheck/complete gate attempts now recorded fail-closed
 
 Progress: [#####-----] 50%
 
@@ -61,6 +61,13 @@ None yet.
 
 ### Blockers/Concerns
 None.
+
+## Milestone Gate Activity
+
+| Date | Command | Milestone | Result |
+|------|---------|-----------|--------|
+| 2026-03-01 | precheck | v1.1 | passed |
+| 2026-03-01 | complete | v1.1 | blocked |
 
 ## Session Continuity
 Last session: 2026-03-01
