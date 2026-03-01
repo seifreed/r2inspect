@@ -19,8 +19,9 @@ Mantener entregas pequenas, verificables y acumulables.
 - ✓ Requirement traceability drift is enforced with deterministic diagnostics — v1.1
 
 ### Active
-- [ ] Define v1.2 milestone requirements and traceability targets
-- [ ] Prioritize governance UX improvements (coverage matrix and ranked remediation hints)
+- [ ] Define v1.2 Governance UX requirements and traceability targets
+- [ ] Implement requirement coverage matrix generation for phase and milestone contexts
+- [ ] Implement ranked remediation hints by impact for gate failures
 
 ### Out of Scope
 - Full ALM platform replication inside the quick workflow
@@ -40,10 +41,19 @@ The governance layer now has deterministic fail-closed ordering: requirements ga
 | Requirements-first then traceability-first transition ordering | Prevent false advancement on partial contract drift | ✓ Good |
 | Canonical phase normalization for traceability matching | Eliminate alias drift (`Phase 4` vs `04` vs `4`) | ✓ Good |
 
+## Current Milestone: v1.2 Governance UX
+
+**Goal:** Improve operator usability on top of existing fail-closed governance by adding clear coverage visibility and prioritized remediation guidance.
+
+**Target features:**
+- Requirement coverage matrix generated for each phase and milestone
+- Ranked remediation hints by impact for failed governance checks
+- Deterministic UX output contracts preserved for test stability
+
 ## Next Milestone Goals
-- Create fresh milestone scope and requirements contract
-- Keep traceability coverage complete from day one of the milestone
-- Extend governance UX only after baseline guarantees stay stable
+- Ship governance UX baseline without relaxing fail-closed semantics
+- Keep requirement/traceability enforcement deterministic while improving operator guidance
+- Maintain small, verifiable phase slices aligned to v1.2 scope
 
 ---
-*Last updated: 2026-03-01 after v1.1 milestone*
+*Last updated: 2026-03-01 after starting v1.2 Governance UX milestone*

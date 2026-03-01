@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Hardening
-status: milestone_complete
-last_updated: "2026-03-01T17:34:49.872Z"
+milestone: v1.2
+milestone_name: Governance UX
+status: defining_requirements
+last_updated: "2026-03-01T17:42:02Z"
 progress:
   total_phases: 3
   completed_phases: 3
@@ -17,14 +17,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mantener entregas pequenas, verificables y acumulables.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.2 Governance UX
 
 ## Current Position
-Milestone: v1.1 Hardening
-Phase: Complete (phases 2-4 archived)
-Plan: Complete (8/8 plans)
-Status: Milestone archived and ready for next milestone setup
-Last activity: 2026-03-01 - archived v1.1 milestone artifacts
+Milestone: v1.2 Governance UX
+Phase: Not started (defining requirements)
+Plan: -
+Status: Defining requirements
+Last activity: 2026-03-01 - milestone v1.2 started
 
 Progress: [##########] 100%
 
