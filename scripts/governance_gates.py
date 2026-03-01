@@ -1006,6 +1006,31 @@ def format_impact_ranked_remediation_hints(ranked_hints: list[dict[str, Any]]) -
     return "\n\n".join(blocks)
 
 
+def build_top_rank_change_note(previous_top_rank_key: str | None, current_top_rank_key: str | None) -> str:
+    current_key = str(current_top_rank_key or "").strip()
+    previous_key = str(previous_top_rank_key or "").strip()
+    if not current_key:
+        return "Top-ranked blocker note: no ranked blockers found in current run."
+    if not previous_key:
+        return (
+            "Top-ranked blocker baseline: none.\n"
+            f"Current top-ranked blocker: `{current_key}`.\n"
+            "Stored current top-ranked blocker for next rerun."
+        )
+    if previous_key == current_key:
+        return (
+            "Top-ranked blocker unchanged.\n"
+            f"Current top-ranked blocker: `{current_key}`.\n"
+            "Run deeper diagnostics for the same blocker before broad changes."
+        )
+    return (
+        "Top-ranked blocker changed.\n"
+        f"Previous top-ranked blocker: `{previous_key}`.\n"
+        f"Current top-ranked blocker: `{current_key}`.\n"
+        "Previous top-ranked blocker was resolved or deprioritized."
+    )
+
+
 def format_traceability_drift_failures(result: dict[str, Any], retry_command: str) -> str:
     failure_groups = result.get("failure_groups", {})
     if not failure_groups:

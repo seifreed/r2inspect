@@ -15,6 +15,7 @@ from typing import Callable
 DEFAULT_GSD_TOOLS_PATH = str(Path.home() / ".codex/get-shit-done/bin/gsd-tools.cjs")
 DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parent / "quick_templates"
 DEFAULT_STATE_PATH = Path(".planning/STATE.md")
+TRACEABILITY_TOP_RANK_MARKER = "<!-- traceability_top_rank_key:"
 MIN_CHECKS = 2
 MAX_CHECKS = 3
 
@@ -50,6 +51,7 @@ def _load_governance_functions() -> tuple[
     Callable[[dict[str, object]], str],
     Callable[..., list[dict[str, object]]],
     Callable[[list[dict[str, object]]], str],
+    Callable[[str | None, str | None], str],
 ]:
     module_path = Path(__file__).resolve().parent / "governance_gates.py"
     module_name = "governance_gates"
@@ -74,6 +76,7 @@ def _load_governance_functions() -> tuple[
         module.format_coverage_matrix_expanded,
         module.build_impact_ranked_remediation_hints,
         module.format_impact_ranked_remediation_hints,
+        module.build_top_rank_change_note,
     )
 
 
@@ -89,6 +92,7 @@ def _load_governance_functions() -> tuple[
     format_coverage_matrix_expanded,
     build_impact_ranked_remediation_hints,
     format_impact_ranked_remediation_hints,
+    build_top_rank_change_note,
 ) = _load_governance_functions()
 
 
@@ -99,6 +103,40 @@ def _build_traceability_retry_command(scope: str, phase_id: str | None) -> str:
         normalized_phase_id = str(phase_id or "").strip()
         parts.extend(["--scope", "phase", "--phase-id", normalized_phase_id])
     return " ".join(parts)
+
+
+def _read_traceability_top_rank_key(state_path: Path) -> str | None:
+    if not state_path.exists():
+        return None
+    text = state_path.read_text(encoding="utf-8")
+    match = re.search(
+        r"^<!-- traceability_top_rank_key:\s*(?P<key>.*?)\s*-->$",
+        text,
+        flags=re.MULTILINE,
+    )
+    if not match:
+        return None
+    value = match.group("key").strip()
+    return value or None
+
+
+def _write_traceability_top_rank_key(state_path: Path, top_rank_key: str | None) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    marker_line = f"{TRACEABILITY_TOP_RANK_MARKER} {str(top_rank_key or '').strip()} -->"
+    if state_path.exists():
+        text = state_path.read_text(encoding="utf-8")
+    else:
+        text = "# Project State\n"
+    if re.search(r"^<!-- traceability_top_rank_key:.*-->$", text, flags=re.MULTILINE):
+        updated = re.sub(
+            r"^<!-- traceability_top_rank_key:.*-->$",
+            marker_line,
+            text,
+            flags=re.MULTILINE,
+        )
+    else:
+        updated = text.rstrip() + f"\n\n{marker_line}\n"
+    state_path.write_text(updated if updated.endswith("\n") else f"{updated}\n", encoding="utf-8")
 
 
 def slugify(value: str) -> str:
@@ -402,6 +440,7 @@ def record_traceability_gate_activity(
     *,
     scope: str = "all",
     touched_requirement_ids: set[str] | list[str] | None = None,
+    top_rank_key: str | None = None,
 ) -> None:
     state_path.parent.mkdir(parents=True, exist_ok=True)
     status = "passed" if passed else "blocked"
@@ -446,6 +485,8 @@ def record_traceability_gate_activity(
             )
         text = "\n".join(lines)
     state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
+    if top_rank_key is not None:
+        _write_traceability_top_rank_key(state_path, top_rank_key)
 
 
 def run_transition_delegate(subcommand: str, delegate_args: list[str]):
@@ -879,11 +920,14 @@ def main() -> int:
             }
         passed = bool(result.get("passed", False))
         retry_command = _build_traceability_retry_command(traceability_scope, traceability_phase_id)
+        previous_top_rank_key = _read_traceability_top_rank_key(state_path)
         ranked_hints = build_impact_ranked_remediation_hints(
             result,
             matrix_payload,
             retry_command=retry_command,
         )
+        current_top_rank_key = str(ranked_hints[0].get("check_key", "")).strip() if ranked_hints else None
+        top_rank_note = build_top_rank_change_note(previous_top_rank_key, current_top_rank_key)
         ranked_hint_text = format_impact_ranked_remediation_hints(ranked_hints)
         grouped_checklist = format_traceability_drift_failures(result, retry_command)
         coverage_matrix = matrix_payload.get("coverage_matrix", {})
@@ -892,7 +936,9 @@ def main() -> int:
             if matrix_detail == "expanded"
             else format_coverage_matrix_summary(coverage_matrix)
         )
-        checklist_parts = [part for part in (ranked_hint_text, grouped_checklist, matrix_text) if part]
+        checklist_parts = [
+            part for part in (ranked_hint_text, top_rank_note, grouped_checklist, matrix_text) if part
+        ]
         checklist = "\n\n".join(checklist_parts)
         touched_ids = sorted(
             item.strip()
@@ -905,6 +951,7 @@ def main() -> int:
             passed,
             scope="all",
             touched_requirement_ids=touched_ids,
+            top_rank_key=current_top_rank_key,
         )
         output = {
             "command": "traceability precheck",
