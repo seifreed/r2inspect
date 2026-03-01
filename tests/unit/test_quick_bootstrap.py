@@ -275,25 +275,27 @@ def test_milestone_complete_aborts_without_false_completion_on_gate_failure(
     )
     monkeypatch.setattr(
         quick_bootstrap,
-        "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: {
+        "evaluate_requirements_contract_gate",
+        lambda _planning_root: {
             "passed": False,
             "failure_groups": {
-                "invalid_status": [
-                    {
-                        "code": "invalid_status",
-                        "severity": "error",
-                        "message": "status must be passed",
-                        "fix": "set status passed",
-                    }
+                "missing_acceptance_criteria": [
+                    {"message": "missing", "fix": "add acceptance_criteria"}
                 ]
             },
-            "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
         },
     )
+    called = {"milestone_gate": False}
+
+    def fake_milestone_gate(_planning_root, _version):
+        called["milestone_gate"] = True
+        return {"passed": True, "failure_groups": {}, "retry_command": "unused"}
+
+    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone_gate)
     monkeypatch.setattr(
         quick_bootstrap,
-        "format_gate_failures",
+        "format_requirements_contract_failures",
         lambda _result, retry_command: f"blocked\nRetry: {retry_command}",
     )
 
@@ -302,10 +304,11 @@ def test_milestone_complete_aborts_without_false_completion_on_gate_failure(
     after = state_path.read_text(encoding="utf-8")
 
     assert exit_code == 1
+    assert called["milestone_gate"] is False
     assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
-    assert "milestone complete v1.1 gate blocked" in after
-    assert "| complete | v1.1 | blocked |" in after
-    assert "milestone complete v1.1 gate passed" not in after
+    assert "requirements complete gate blocked" in after
+    assert "| complete | all | blocked |" in after
+    assert "requirements complete gate passed" not in after
 
 
 def test_milestone_complete_grouped_failures_output_has_grouped_failures_and_remediation(
