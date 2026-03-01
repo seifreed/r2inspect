@@ -38,7 +38,12 @@ class BootstrapResult:
     summary_path: Path
 
 
-def _load_governance_functions() -> tuple[Callable[[Path, str], dict[str, object]], Callable[[dict[str, object], str], str]]:
+def _load_governance_functions() -> tuple[
+    Callable[[Path, str], dict[str, object]],
+    Callable[[dict[str, object], str], str],
+    Callable[..., dict[str, object]],
+    Callable[[dict[str, object], str], str],
+]:
     module_path = Path(__file__).resolve().parent / "governance_gates.py"
     module_name = "governance_gates"
     if module_name in sys.modules:
@@ -50,10 +55,20 @@ def _load_governance_functions() -> tuple[Callable[[Path, str], dict[str, object
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
         spec.loader.exec_module(module)
-    return module.evaluate_milestone_governance_gate, module.format_gate_failures
+    return (
+        module.evaluate_milestone_governance_gate,
+        module.format_gate_failures,
+        module.evaluate_requirements_contract_gate,
+        module.format_requirements_contract_failures,
+    )
 
 
-evaluate_milestone_governance_gate, format_gate_failures = _load_governance_functions()
+(
+    evaluate_milestone_governance_gate,
+    format_gate_failures,
+    evaluate_requirements_contract_gate,
+    format_requirements_contract_failures,
+) = _load_governance_functions()
 
 
 def slugify(value: str) -> str:
@@ -294,6 +309,57 @@ def record_milestone_gate_activity(
     state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
 
 
+def record_requirements_gate_activity(
+    state_path: Path,
+    gate_command: str,
+    passed: bool,
+    *,
+    scope: str = "all",
+) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    status = "passed" if passed else "blocked"
+    line = f"Last activity: {_today_iso()} - requirements {gate_command} gate {status}"
+    if state_path.exists():
+        text = state_path.read_text(encoding="utf-8")
+    else:
+        text = "# Project State\n"
+
+    if re.search(r"^Last activity:.*$", text, flags=re.MULTILINE):
+        text = re.sub(r"^Last activity:.*$", line, text, flags=re.MULTILINE)
+    else:
+        text = text.rstrip() + f"\n\n{line}\n"
+
+    row = f"| {_today_iso()} | {gate_command} | {scope} | {status} |"
+    if "## Requirements Gate Activity" not in text:
+        text = text.rstrip() + (
+            "\n\n## Requirements Gate Activity\n\n"
+            "| Date | Command | Scope | Result |\n"
+            "|------|---------|-------|--------|\n"
+            f"{row}\n"
+        )
+    elif row not in text:
+        lines = text.splitlines()
+        inserted = False
+        for idx, current in enumerate(lines):
+            if current.strip() == "|------|---------|-------|--------|":
+                lines.insert(idx + 1, row)
+                inserted = True
+                break
+        if not inserted:
+            lines.extend(
+                [
+                    "",
+                    "## Requirements Gate Activity",
+                    "",
+                    "| Date | Command | Scope | Result |",
+                    "|------|---------|-------|--------|",
+                    row,
+                ]
+            )
+        text = "\n".join(lines)
+    state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
+
+
 def execute_bootstrap(
     objective: str,
     gsd_tools_path: str = DEFAULT_GSD_TOOLS_PATH,
@@ -379,6 +445,13 @@ def parse_args() -> argparse.Namespace:
     complete_parser.add_argument("--planning-root", default=".planning")
     complete_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
 
+    requirements_parser = subparsers.add_parser("requirements")
+    requirements_subparsers = requirements_parser.add_subparsers(dest="requirements_command")
+
+    requirements_precheck = requirements_subparsers.add_parser("precheck")
+    requirements_precheck.add_argument("--planning-root", default=".planning")
+    requirements_precheck.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+
     return parser.parse_args()
 
 
@@ -440,6 +513,31 @@ def main() -> int:
                 ensure_ascii=True,
             )
         )
+        return 0
+    if command == "requirements":
+        requirements_command = getattr(args, "requirements_command", None)
+        if requirements_command != "precheck":
+            raise BootstrapError("Missing requirements subcommand. Use `precheck`.")
+        planning_root = Path(args.planning_root)
+        state_path = Path(args.state_path)
+        result = evaluate_requirements_contract_gate(planning_root)
+        passed = bool(result.get("passed", False))
+        retry_command = "python scripts/quick_bootstrap.py requirements precheck"
+        checklist = format_requirements_contract_failures(result, retry_command)
+        record_requirements_gate_activity(
+            state_path,
+            "precheck",
+            passed,
+            scope="all",
+        )
+        output = {
+            "command": "requirements precheck",
+            "passed": passed,
+            "failure_groups": result.get("failure_groups", {}),
+            "retry_command": retry_command,
+            "checklist": checklist,
+        }
+        print(json.dumps(output, ensure_ascii=True))
         return 0
 
     objective = args.objective
