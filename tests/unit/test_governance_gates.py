@@ -19,6 +19,12 @@ format_requirements_contract_failures = getattr(
 )
 evaluate_traceability_drift_gate = getattr(MODULE, "evaluate_traceability_drift_gate", None)
 build_requirement_coverage_matrix = getattr(MODULE, "build_requirement_coverage_matrix", None)
+build_impact_ranked_remediation_hints = getattr(
+    MODULE, "build_impact_ranked_remediation_hints", None
+)
+format_impact_ranked_remediation_hints = getattr(
+    MODULE, "format_impact_ranked_remediation_hints", None
+)
 derive_coverage_state = getattr(MODULE, "_derive_coverage_state", None)
 order_cause_codes = getattr(MODULE, "_order_cause_codes", None)
 normalize_phase_id = getattr(MODULE, "_normalize_phase_id", None)
@@ -253,6 +259,87 @@ def _evaluate_traceability(planning_root: Path) -> dict[str, object]:
         evaluate_traceability_drift_gate is not None
     ), "evaluate_traceability_drift_gate must be implemented in scripts/governance_gates.py"
     return evaluate_traceability_drift_gate(planning_root)
+
+
+def test_impact_ranked_builder_orders_by_impact_then_check_key_deterministic() -> None:
+    assert (
+        build_impact_ranked_remediation_hints is not None
+    ), "build_impact_ranked_remediation_hints must be implemented in scripts/governance_gates.py"
+    result = {
+        "failure_groups": {
+            "unknown_mapped_phase": [
+                {
+                    "code": "unknown-mapped-phase",
+                    "severity": "error",
+                    "message": "Requirement REQ-10 maps to unknown phase 99.",
+                    "fix": "Map REQ-10 to a known phase.",
+                }
+            ],
+            "unmapped_requirement": [
+                {
+                    "code": "missing-traceability-row",
+                    "severity": "error",
+                    "message": "Requirement GUX-02 has no traceability row.",
+                    "fix": "Add a traceability row for GUX-02.",
+                }
+            ],
+        }
+    }
+    coverage_matrix = {
+        "rows": [
+            {"requirement_id": "GUX-02", "cause_codes": ["unmapped_requirement"]},
+            {"requirement_id": "REQ-10", "cause_codes": ["unknown_mapped_phase"]},
+            {"requirement_id": "REQ-11", "cause_codes": ["unknown_mapped_phase"]},
+        ]
+    }
+
+    ranked = build_impact_ranked_remediation_hints(
+        result,
+        coverage_matrix,
+        retry_command="python scripts/quick_bootstrap.py traceability precheck --scope milestone",
+    )
+
+    assert [item["rank"] for item in ranked] == [1, 2]
+    assert ranked[0]["failure_type"] == "unknown_mapped_phase"
+    assert ranked[0]["blast_radius"] == 2
+    assert ranked[0]["severity_weight"] == 3
+    assert ranked[1]["failure_type"] == "unmapped_requirement"
+    assert ranked[1]["blast_radius"] == 1
+    assert ranked[0]["rank_key"] < ranked[1]["rank_key"]
+
+
+def test_impact_ranked_hints_are_deterministic_for_identical_inputs() -> None:
+    assert (
+        build_impact_ranked_remediation_hints is not None
+    ), "build_impact_ranked_remediation_hints must be implemented in scripts/governance_gates.py"
+    result = {
+        "failure_groups": {
+            "unknown_touched_requirement": [
+                {
+                    "code": "missing-alpha",
+                    "severity": "error",
+                    "message": "Touched requirement id `ALPHA-01` does not exist.",
+                    "fix": "Use a known requirement id.",
+                },
+                {
+                    "code": "missing-beta",
+                    "severity": "error",
+                    "message": "Touched requirement id `BETA-01` does not exist.",
+                    "fix": "Use a known requirement id.",
+                },
+            ]
+        }
+    }
+    coverage_matrix = {"rows": []}
+    retry = "python scripts/quick_bootstrap.py traceability precheck --scope touched --requirement-id ALPHA-01"
+
+    first = build_impact_ranked_remediation_hints(result, coverage_matrix, retry_command=retry)
+    second = build_impact_ranked_remediation_hints(result, coverage_matrix, retry_command=retry)
+    first_serialized = json.dumps(first, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+    second_serialized = json.dumps(second, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+
+    assert first_serialized == second_serialized
+    assert [item["check_key"] for item in first] == ["missing-alpha", "missing-beta"]
 
 
 def test_traceability_normalize_phase_aliases_to_canonical_token() -> None:
