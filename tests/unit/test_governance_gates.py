@@ -307,6 +307,12 @@ def test_requirements_gate_groups_failures_in_deterministic_order_for_malformed_
             "",
             "- id: REQ-01",
             "- status: Pending",
+            "- acceptance_criteria: Second duplicate id.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: REQ-01",
+            "- status: Pending",
         ]
     )
     _write_requirements_contract(
