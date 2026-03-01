@@ -16,7 +16,7 @@
 **Milestone Goal:** Fortalecer gobernanza y trazabilidad del flujo GSD para evitar cierres de milestone con gaps documentales.
 
 - [x] **Phase 2: Milestone Governance Gates** - Milestone completion is fail-closed on audit presence, status, and remediation guidance.
-- [ ] **Phase 3: Requirements Contract Enforcement** - Active requirements are structurally valid before planning and completion transitions.
+- [x] **Phase 3: Requirements Contract Enforcement** - Active requirements are structurally valid before planning and completion transitions.
 - [ ] **Phase 4: Traceability and Drift Enforcement** - Requirement-to-phase links remain one-to-one and consistent with roadmap and execution state.
 
 ## Phase Details
@@ -43,11 +43,12 @@ Plans:
   1. Operator sees deterministic validation failures when requirement IDs do not match the required stable format.
   2. Operator cannot continue planning when an active requirement is missing status or acceptance criteria.
   3. Operator cannot complete a milestone until requirement definitions pass validation checks.
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md - Define canonical REQUIREMENTS contract and implement deterministic validator.
-- [ ] 03-02-PLAN.md - Wire requirements precheck and fail-closed transition enforcement (roadmap/milestone/phase completion).
+- [x] 03-01-PLAN.md - Define canonical REQUIREMENTS contract and implement deterministic validator.
+- [x] 03-02-PLAN.md - Wire requirements precheck and fail-closed transition enforcement (roadmap/milestone/phase completion).
+- [x] 03-03-PLAN.md - Close verification test gaps for requirements-first milestone complete ordering and grouped failure coverage.
 
 ### Phase 4: Traceability and Drift Enforcement
 **Goal**: Operators can only complete phases and milestones when requirement mapping and cross-artifact consistency remain intact.
@@ -64,5 +65,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 2. Milestone Governance Gates | v1.1 | Complete    | 2026-03-01 | 2026-03-01 |
-| 3. Requirements Contract Enforcement | 1/2 | In Progress|  | - |
+| 3. Requirements Contract Enforcement | Complete | 2026-03-01 | 2026-03-01 | 2026-03-01 |
 | 4. Traceability and Drift Enforcement | v1.1 | 0/TBD | Not started | - |
