@@ -51,8 +51,8 @@ None.
 
 ## Session Continuity
 Last session: 2026-03-01
-Stopped at: Completed 05-03-PLAN.md
-Resume file: .planning/phases/05-requirement-coverage-matrix-gux-01/05-03-SUMMARY.md
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-impact-ranked-remediation-hints-gux-02/06-CONTEXT.md
 
 ## Traceability Gate Activity
 
