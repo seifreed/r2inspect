@@ -207,3 +207,101 @@ def test_failure_closure_writes_blocker_and_continuation(tmp_path):
     assert "blocker: init quick failed" in summary_text
     assert "node gsd-tools init quick" in summary_text
     assert "continuation command: python scripts/quick_bootstrap.py bootstrap" in summary_text
+
+
+def test_milestone_precheck_reports_structured_non_blocking_result(tmp_path, monkeypatch, capsys):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="precheck",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(planning_root / "STATE.md"),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_milestone_governance_gate",
+        lambda _planning_root, _version: {
+            "passed": False,
+            "failure_groups": {
+                "missing_file": [
+                    {
+                        "code": "missing_file",
+                        "severity": "error",
+                        "message": "Missing audit artifact",
+                        "fix": "Create audit file.",
+                    }
+                ]
+            },
+            "retry_command": "python scripts/quick_bootstrap.py milestone precheck v1.1",
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["command"] == "milestone precheck"
+    assert payload["passed"] is False
+    assert "missing_file" in payload["failure_groups"]
+
+
+def test_milestone_complete_aborts_before_state_mutation_on_gate_failure(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("Last activity: unchanged\n", encoding="utf-8")
+    before = state_path.read_text(encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_milestone_governance_gate",
+        lambda _planning_root, _version: {
+            "passed": False,
+            "failure_groups": {
+                "invalid_status": [
+                    {
+                        "code": "invalid_status",
+                        "severity": "error",
+                        "message": "status must be passed",
+                        "fix": "set status passed",
+                    }
+                ]
+            },
+            "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "format_gate_failures",
+        lambda _result, retry_command: f"blocked\nRetry: {retry_command}",
+    )
+
+    exit_code = quick_bootstrap.main()
+    output = capsys.readouterr().out
+    after = state_path.read_text(encoding="utf-8")
+
+    assert exit_code == 1
+    assert "Retry: python scripts/quick_bootstrap.py milestone complete v1.1" in output
+    assert after == before
