@@ -682,7 +682,10 @@ def test_requirements_precheck_reports_structured_non_blocking_result(
     assert payload["command"] == "requirements precheck"
     assert payload["passed"] is False
     assert "missing_acceptance_criteria" in payload["failure_groups"]
-    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
+    assert (
+        payload["retry_command"]
+        == "python scripts/quick_bootstrap.py traceability precheck --scope phase --phase-id 05"
+    )
     assert "Checklist:" in payload["checklist"]
     assert "requirements precheck gate blocked" in after
     assert "| precheck | all | blocked |" in after
@@ -778,7 +781,10 @@ def test_traceability_precheck_reports_structured_non_blocking_result(
     assert payload["scope"] == "all"
     assert payload["touched_requirement_ids"] == []
     assert "unmapped_requirement" in payload["failure_groups"]
-    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
+    assert (
+        payload["retry_command"]
+        == "python scripts/quick_bootstrap.py traceability precheck --scope phase --phase-id 05"
+    )
 
 
 def test_traceability_precheck_non_blocking_blocked_result_records_evidence(
@@ -968,7 +974,10 @@ def test_traceability_precheck_includes_coverage_matrix_for_phase_scope(
     assert payload["coverage_matrix"]["scope_target"] == "5"
     assert payload["command"] == "traceability precheck"
     assert payload["failure_groups"] == {"unmapped_requirement": [{"message": "m", "fix": "f"}]}
-    assert payload["retry_command"] == "python scripts/quick_bootstrap.py traceability precheck"
+    assert (
+        payload["retry_command"]
+        == "python scripts/quick_bootstrap.py traceability precheck --scope phase --phase-id 05"
+    )
 
 
 def test_traceability_precheck_defaults_to_milestone_scope_when_unspecified(
@@ -1635,6 +1644,202 @@ def test_traceability_precheck_retry_command_is_scope_correct_for_phase_scope(
     assert (
         "Retry command: python scripts/quick_bootstrap.py traceability precheck --scope phase --phase-id 06"
         in payload["checklist"]
+    )
+
+
+def test_traceability_precheck_top_rank_note_reports_no_baseline_on_first_run(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("# Project State\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="milestone",
+            phase_id=None,
+            matrix_detail="compact",
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unmapped_requirement": [{"message": "missing mapping", "fix": "add mapping"}]
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "build_requirement_coverage_matrix",
+        lambda _planning_root, **_kwargs: {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "milestone",
+                "scope_target": "all-active",
+                "rows": [],
+                "summary": {"total": 0, "covered": 0, "partial": 0, "uncovered": 0, "stale": 0},
+            },
+        },
+    )
+
+    exit_code = quick_bootstrap.main()
+    payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert "Top-ranked blocker baseline: none." in payload["checklist"]
+    assert "Stored current top-ranked blocker for next rerun." in payload["checklist"]
+
+
+def test_traceability_precheck_top_rank_note_reports_unchanged_on_rerun(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("# Project State\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="milestone",
+            phase_id=None,
+            matrix_detail="compact",
+        ),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": False,
+            "failure_groups": {
+                "unmapped_requirement": [{"message": "missing mapping", "fix": "add mapping"}]
+            },
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "build_requirement_coverage_matrix",
+        lambda _planning_root, **_kwargs: {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "milestone",
+                "scope_target": "all-active",
+                "rows": [],
+                "summary": {"total": 0, "covered": 0, "partial": 0, "uncovered": 0, "stale": 0},
+            },
+        },
+    )
+
+    first_exit = quick_bootstrap.main()
+    _ = capsys.readouterr().out
+    second_exit = quick_bootstrap.main()
+    second_payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert first_exit == 0
+    assert second_exit == 0
+    assert "Top-ranked blocker unchanged" in second_payload["checklist"]
+    assert (
+        "Run deeper diagnostics for the same blocker before broad changes."
+        in second_payload["checklist"]
+    )
+
+
+def test_traceability_precheck_top_rank_note_reports_changed_when_previous_resolved(
+    tmp_path, monkeypatch, capsys
+):
+    quick_bootstrap = _load_quick_bootstrap()
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    state_path = planning_root / "STATE.md"
+    state_path.write_text("# Project State\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "parse_args",
+        lambda: quick_bootstrap.argparse.Namespace(
+            command="traceability",
+            traceability_command="precheck",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+            scope="milestone",
+            phase_id=None,
+            matrix_detail="compact",
+        ),
+    )
+    responses = iter(
+        [
+            {
+                "passed": False,
+                "failure_groups": {
+                    "state_mapping_mismatch": [{"message": "drift", "fix": "align state"}]
+                },
+                "retry_command": "unused",
+                "scope": "all",
+                "touched_requirement_ids": [],
+            },
+            {
+                "passed": False,
+                "failure_groups": {
+                    "unmapped_requirement": [{"message": "missing mapping", "fix": "add mapping"}]
+                },
+                "retry_command": "unused",
+                "scope": "all",
+                "touched_requirement_ids": [],
+            },
+        ]
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: next(responses),
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "build_requirement_coverage_matrix",
+        lambda _planning_root, **_kwargs: {
+            "schema_version": "coverage_matrix.v1",
+            "coverage_matrix": {
+                "scope": "milestone",
+                "scope_target": "all-active",
+                "rows": [],
+                "summary": {"total": 0, "covered": 0, "partial": 0, "uncovered": 0, "stale": 0},
+            },
+        },
+    )
+
+    first_exit = quick_bootstrap.main()
+    _ = capsys.readouterr().out
+    second_exit = quick_bootstrap.main()
+    second_payload = quick_bootstrap.json.loads(capsys.readouterr().out)
+
+    assert first_exit == 0
+    assert second_exit == 0
+    assert "Top-ranked blocker changed" in second_payload["checklist"]
+    assert (
+        "Previous top-ranked blocker was resolved or deprioritized." in second_payload["checklist"]
     )
 
 
