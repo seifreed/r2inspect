@@ -14,6 +14,7 @@ REQUIRED_AUDIT_SECTIONS = (
 )
 REQUIREMENT_ID_PATTERN = re.compile(r"^[A-Z]+-[0-9]{2,}$")
 REQUIREMENTS_ALLOWED_STATUSES = {"Pending", "In Progress", "Complete", "Blocked"}
+PHASE_ID_PATTERN = re.compile(r"^[0-9]+(?:\.[0-9]+)?$")
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -94,6 +95,29 @@ def _ordered_requirements_failure_groups(
     return ordered
 
 
+def _ordered_traceability_failure_groups(
+    failure_groups: dict[str, list[dict[str, str]]]
+) -> dict[str, list[dict[str, str]]]:
+    order = (
+        "missing_file",
+        "malformed_traceability_table",
+        "missing_touched_requirements",
+        "unknown_touched_requirement",
+        "unmapped_requirement",
+        "multi_phase_mapping",
+        "unknown_mapped_phase",
+        "state_mapping_mismatch",
+    )
+    ordered: dict[str, list[dict[str, str]]] = {}
+    for key in order:
+        if key in failure_groups:
+            ordered[key] = failure_groups[key]
+    for key in sorted(failure_groups):
+        if key not in ordered:
+            ordered[key] = failure_groups[key]
+    return ordered
+
+
 def _parse_requirement_entries(content: str) -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     lines = content.splitlines()
@@ -136,6 +160,146 @@ def _parse_requirement_entries(content: str) -> list[dict[str, str]]:
 
     flush_current()
     return entries
+
+
+def _normalize_phase_id(raw_phase: str) -> str | None:
+    normalized = raw_phase.strip()
+    if not normalized:
+        return None
+    phase_match = re.fullmatch(r"(?i)phase\s+([0-9]+(?:\.[0-9]+)?)", normalized)
+    if phase_match:
+        normalized = phase_match.group(1)
+    if not PHASE_ID_PATTERN.fullmatch(normalized):
+        return None
+    if "." in normalized:
+        integer_part, decimal_part = normalized.split(".", 1)
+        return f"{int(integer_part)}.{int(decimal_part)}"
+    return str(int(normalized))
+
+
+def _parse_roadmap_phase_catalog(roadmap_content: str) -> set[str]:
+    phase_ids: set[str] = set()
+    for raw_line in roadmap_content.splitlines():
+        line = raw_line.strip()
+        match = re.search(r"Phase\s+([0-9]+(?:\.[0-9]+)?)", line, flags=re.IGNORECASE)
+        if not match:
+            continue
+        normalized = _normalize_phase_id(match.group(1))
+        if normalized:
+            phase_ids.add(normalized)
+    return phase_ids
+
+
+def _parse_traceability_rows(requirements_content: str) -> tuple[list[dict[str, str]], str | None]:
+    lines = requirements_content.splitlines()
+    traceability_start = -1
+
+    for index, raw_line in enumerate(lines):
+        if raw_line.strip() == "## Traceability":
+            traceability_start = index
+            break
+
+    if traceability_start < 0:
+        return [], "Traceability section `## Traceability` is missing."
+
+    table_lines: list[str] = []
+    for raw_line in lines[traceability_start + 1 :]:
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("## "):
+            break
+        if stripped.startswith("|"):
+            table_lines.append(stripped)
+
+    if len(table_lines) < 2:
+        return [], "Traceability table must include header and delimiter rows."
+
+    expected_header = "| Requirement | Phase | Status |"
+    if table_lines[0] != expected_header:
+        return [], "Traceability table header must be `| Requirement | Phase | Status |`."
+
+    delimiter_cells = [cell.strip() for cell in table_lines[1].strip("|").split("|")]
+    if len(delimiter_cells) != 3:
+        return [], "Traceability table delimiter row must contain exactly 3 columns."
+    if any(not cell or set(cell) != {"-"} for cell in delimiter_cells):
+        return [], "Traceability table delimiter row must use hyphen separators."
+
+    rows: list[dict[str, str]] = []
+    for row_index, raw_row in enumerate(table_lines[2:], start=1):
+        cells = [cell.strip() for cell in raw_row.strip("|").split("|")]
+        if len(cells) != 3:
+            return [], f"Traceability row #{row_index} must contain Requirement, Phase, and Status cells."
+        requirement_id, phase_id, status = cells
+        if not requirement_id:
+            return [], f"Traceability row #{row_index} has blank Requirement value."
+        if not phase_id:
+            return [], f"Traceability row #{row_index} has blank Phase value."
+        normalized_phase = _normalize_phase_id(phase_id)
+        if normalized_phase is None:
+            return [], f"Traceability row #{row_index} phase `{phase_id}` is malformed."
+        rows.append(
+            {
+                "requirement_id": requirement_id,
+                "phase": normalized_phase,
+                "status": status,
+            }
+        )
+
+    if not rows:
+        return [], "Traceability table must include at least one mapping row."
+
+    return rows, None
+
+
+def _collect_active_requirement_ids(requirements_content: str) -> set[str]:
+    active_ids: set[str] = set()
+    lines = requirements_content.splitlines()
+    in_active_section = False
+    current_fields: dict[str, str] | None = None
+
+    def flush_current() -> None:
+        if current_fields is None:
+            return
+        requirement_id = current_fields.get("id", "").strip()
+        if requirement_id:
+            active_ids.add(requirement_id)
+
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        if stripped in ("## v1 Requirements", "## v2 Requirements"):
+            flush_current()
+            current_fields = None
+            in_active_section = True
+            continue
+        if stripped in ("## Out of Scope",):
+            flush_current()
+            current_fields = None
+            in_active_section = False
+            continue
+        if stripped.startswith("## "):
+            flush_current()
+            current_fields = None
+            in_active_section = False
+            continue
+        if not in_active_section:
+            continue
+        if stripped == "#### Requirement":
+            flush_current()
+            current_fields = {}
+            continue
+        if current_fields is None:
+            continue
+        if not stripped.startswith("- "):
+            continue
+        payload = stripped[2:]
+        if ":" not in payload:
+            continue
+        key, raw_value = payload.split(":", 1)
+        current_fields[key.strip()] = raw_value.strip().strip("'\"")
+
+    flush_current()
+    return active_ids
 
 
 def evaluate_milestone_governance_gate(
@@ -337,6 +501,76 @@ def evaluate_requirements_contract_gate(
         "failure_groups": failure_groups,
         "retry_command": retry_command,
         "requirements_file": str(requirements_path),
+    }
+
+
+def evaluate_traceability_drift_gate(
+    planning_root: Path,
+    *,
+    scope: str = "all",
+    touched_requirement_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    requirements_path = planning_root / "REQUIREMENTS.md"
+    roadmap_path = planning_root / "ROADMAP.md"
+    retry_command = "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
+    failure_groups: dict[str, list[dict[str, str]]] = {}
+
+    for artifact in (requirements_path, roadmap_path):
+        if artifact.exists():
+            continue
+        _add_failure(
+            failure_groups,
+            "missing_file",
+            f"Missing traceability artifact: {artifact}",
+            "Restore required planning artifacts before running traceability gate.",
+        )
+
+    if failure_groups:
+        return {
+            "passed": False,
+            "failure_groups": _ordered_traceability_failure_groups(failure_groups),
+            "retry_command": retry_command,
+            "scope": scope,
+            "touched_requirement_ids": sorted(item.strip() for item in (touched_requirement_ids or set()) if item),
+        }
+
+    requirements_content = requirements_path.read_text(encoding="utf-8")
+    _ = _parse_roadmap_phase_catalog(roadmap_path.read_text(encoding="utf-8"))
+    active_ids = _collect_active_requirement_ids(requirements_content)
+    _, traceability_error = _parse_traceability_rows(requirements_content)
+    if traceability_error:
+        _add_failure(
+            failure_groups,
+            "malformed_traceability_table",
+            traceability_error,
+            "Define a valid Traceability table with Requirement, Phase, and Status columns.",
+        )
+
+    touched_ids = {item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()}
+    if scope == "touched":
+        if not touched_ids:
+            _add_failure(
+                failure_groups,
+                "missing_touched_requirements",
+                "Touched requirements scope requires at least one requirement id.",
+                "Provide one or more --requirement-id values matching active requirements.",
+            )
+        else:
+            for requirement_id in sorted(touched_ids - active_ids):
+                _add_failure(
+                    failure_groups,
+                    "unknown_touched_requirement",
+                    f"Touched requirement id `{requirement_id}` does not exist in active requirements.",
+                    "Use requirement ids from v1/v2 requirements or update REQUIREMENTS.md.",
+                )
+
+    failure_groups = _ordered_traceability_failure_groups(failure_groups)
+    return {
+        "passed": not failure_groups,
+        "failure_groups": failure_groups,
+        "retry_command": retry_command,
+        "scope": scope,
+        "touched_requirement_ids": sorted(touched_ids),
     }
 
 
