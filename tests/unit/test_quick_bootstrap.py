@@ -152,3 +152,58 @@ def test_summary_template_contains_failure_block(tmp_path):
     assert "blocker:" in summary_text
     assert "attempted commands:" in summary_text
     assert "continuation command:" in summary_text
+
+
+def test_state_updates_when_closing_task(tmp_path):
+    quick_bootstrap = _load_quick_bootstrap()
+    task_dir = tmp_path / ".planning" / "quick" / "11-state-check"
+    task_dir.mkdir(parents=True)
+    summary = task_dir / "11-SUMMARY.md"
+    summary.write_text("# Summary\n", encoding="utf-8")
+    state_path = tmp_path / ".planning" / "STATE.md"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        "# Project State\n\nLast activity: 2026-01-01 — old\n\n## Quick Tasks Completed\n\n"
+        "| # | Date | Description | Status |\n|---|------|-------------|--------|\n",
+        encoding="utf-8",
+    )
+
+    quick_bootstrap.close_quick_task(
+        task_dir=task_dir,
+        status="completed",
+        description="close task state sync",
+        attempted_commands=["pytest -q"],
+        state_path=state_path,
+    )
+
+    state_text = state_path.read_text(encoding="utf-8")
+    assert "| 11 |" in state_text
+    assert "| close task state sync | completed |" in state_text
+    assert "Last activity:" in state_text
+
+
+def test_failure_closure_writes_blocker_and_continuation(tmp_path):
+    quick_bootstrap = _load_quick_bootstrap()
+    task_dir = tmp_path / ".planning" / "quick" / "12-failure"
+    task_dir.mkdir(parents=True)
+    summary = task_dir / "12-SUMMARY.md"
+    summary.write_text("# Summary\n", encoding="utf-8")
+    state_path = tmp_path / ".planning" / "STATE.md"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text("# Project State\n", encoding="utf-8")
+
+    quick_bootstrap.close_quick_task(
+        task_dir=task_dir,
+        status="failed",
+        description="bootstrap failed",
+        blocker="init quick failed",
+        attempted_commands=["node gsd-tools init quick"],
+        continuation_command='python scripts/quick_bootstrap.py bootstrap "retry objective"',
+        state_path=state_path,
+    )
+
+    summary_text = summary.read_text(encoding="utf-8")
+    assert "status: failed" in summary_text
+    assert "blocker: init quick failed" in summary_text
+    assert "node gsd-tools init quick" in summary_text
+    assert "continuation command: python scripts/quick_bootstrap.py bootstrap" in summary_text
