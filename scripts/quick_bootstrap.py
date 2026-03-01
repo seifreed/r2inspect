@@ -360,6 +360,14 @@ def record_requirements_gate_activity(
     state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
 
 
+def run_transition_delegate(subcommand: str, delegate_args: list[str]):
+    command_parts = subcommand.split()
+    if len(command_parts) != 2:
+        raise BootstrapError(f"Invalid transition subcommand: {subcommand}")
+    cmd = ["node", DEFAULT_GSD_TOOLS_PATH, command_parts[0], command_parts[1], *delegate_args]
+    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+
 def execute_bootstrap(
     objective: str,
     gsd_tools_path: str = DEFAULT_GSD_TOOLS_PATH,
@@ -445,6 +453,17 @@ def parse_args() -> argparse.Namespace:
     complete_parser.add_argument("--planning-root", default=".planning")
     complete_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
 
+    roadmap_parser = subparsers.add_parser("roadmap")
+    roadmap_subparsers = roadmap_parser.add_subparsers(dest="roadmap_command")
+    roadmap_create = roadmap_subparsers.add_parser("create")
+    roadmap_create.add_argument("--planning-root", default=".planning")
+    roadmap_create.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+    roadmap_create.add_argument("delegate_args", nargs=argparse.REMAINDER)
+    roadmap_revise = roadmap_subparsers.add_parser("revise")
+    roadmap_revise.add_argument("--planning-root", default=".planning")
+    roadmap_revise.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+    roadmap_revise.add_argument("delegate_args", nargs=argparse.REMAINDER)
+
     requirements_parser = subparsers.add_parser("requirements")
     requirements_subparsers = requirements_parser.add_subparsers(dest="requirements_command")
 
@@ -479,9 +498,9 @@ def main() -> int:
         planning_root = Path(args.planning_root)
         state_path = Path(args.state_path)
         milestone_version = args.version
-        result = evaluate_milestone_governance_gate(planning_root, milestone_version)
 
         if milestone_command == "precheck":
+            result = evaluate_milestone_governance_gate(planning_root, milestone_version)
             passed = bool(result.get("passed", False))
             precheck_retry = f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}"
             record_milestone_gate_activity(state_path, milestone_version, "precheck", passed)
@@ -496,6 +515,26 @@ def main() -> int:
             print(json.dumps(output, ensure_ascii=True))
             return 0
 
+        requirements_result = evaluate_requirements_contract_gate(planning_root)
+        if not bool(requirements_result.get("passed", False)):
+            retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            record_requirements_gate_activity(
+                state_path,
+                "complete",
+                False,
+                scope="all",
+            )
+            print(format_requirements_contract_failures(requirements_result, retry_command))
+            return 1
+
+        record_requirements_gate_activity(
+            state_path,
+            "complete",
+            True,
+            scope="all",
+        )
+
+        result = evaluate_milestone_governance_gate(planning_root, milestone_version)
         if not bool(result.get("passed", False)):
             retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
             record_milestone_gate_activity(state_path, milestone_version, "complete", False)
@@ -513,6 +552,44 @@ def main() -> int:
                 ensure_ascii=True,
             )
         )
+        return 0
+    if command == "roadmap":
+        roadmap_command = getattr(args, "roadmap_command", None)
+        if roadmap_command not in {"create", "revise"}:
+            raise BootstrapError("Missing roadmap subcommand. Use `create` or `revise`.")
+        planning_root = Path(args.planning_root)
+        state_path = Path(args.state_path)
+        requirements_result = evaluate_requirements_contract_gate(planning_root)
+        retry_command = f"python scripts/quick_bootstrap.py roadmap {roadmap_command}"
+        if not bool(requirements_result.get("passed", False)):
+            record_requirements_gate_activity(
+                state_path,
+                roadmap_command,
+                False,
+                scope="all",
+            )
+            print(format_requirements_contract_failures(requirements_result, retry_command))
+            return 1
+
+        record_requirements_gate_activity(
+            state_path,
+            roadmap_command,
+            True,
+            scope="all",
+        )
+        delegate = run_transition_delegate(
+            f"roadmap {roadmap_command}",
+            list(getattr(args, "delegate_args", []) or []),
+        )
+        if delegate.returncode != 0:
+            detail = (delegate.stderr or "").strip() or (delegate.stdout or "").strip() or "roadmap transition failed"
+            print(detail)
+            return int(delegate.returncode) if int(delegate.returncode) > 0 else 1
+        output = {
+            "command": f"roadmap {roadmap_command}",
+            "passed": True,
+        }
+        print(json.dumps(output, ensure_ascii=True))
         return 0
     if command == "requirements":
         requirements_command = getattr(args, "requirements_command", None)

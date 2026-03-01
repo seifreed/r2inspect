@@ -192,7 +192,7 @@ def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, ca
     assert "python scripts/quick_bootstrap.py milestone precheck v1.1" not in output
 
 
-def test_milestone_complete_aborts_when_requirements_contract_gate_fails(
+def test_milestone_complete_aborts_when_requirements_contract_gate_blocked(
     monkeypatch, tmp_path, capsys
 ):
     quick_bootstrap = _load_quick_bootstrap()
