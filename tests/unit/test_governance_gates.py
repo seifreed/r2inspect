@@ -262,6 +262,77 @@ def test_traceability_active_scope_excludes_out_of_scope_requirements(tmp_path: 
     assert result["failure_groups"] == {}
 
 
+def test_traceability_unmapped_requirement_detected(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    _write_traceability_fixture(planning_root, "| REQ-01 | Phase 4 | Pending |")
+    _write_traceability_roadmap(planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert "unmapped_requirement" in result["failure_groups"]
+
+
+def test_traceability_multi_phase_mapping_detected(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    rows = "\n".join(
+        [
+            "| REQ-01 | Phase 3 | Pending |",
+            "| REQ-01 | Phase 4 | Pending |",
+            "| AUX-01 | Phase 4 | Pending |",
+        ]
+    )
+    _write_traceability_fixture(planning_root, rows)
+    _write_traceability_roadmap(planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert "multi_phase_mapping" in result["failure_groups"]
+
+
+def test_traceability_unknown_mapped_phase_detected(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    rows = "\n".join(
+        [
+            "| REQ-01 | Phase 9 | Pending |",
+            "| AUX-01 | Phase 4 | Pending |",
+        ]
+    )
+    _write_traceability_fixture(planning_root, rows)
+    _write_traceability_roadmap(planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert "unknown_mapped_phase" in result["failure_groups"]
+
+
+def test_traceability_ordering_is_deterministic_for_mapping_failures(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    rows = "\n".join(
+        [
+            "| REQ-01 | Phase 9 | Pending |",
+            "| REQ-01 | Phase 4 | Pending |",
+        ]
+    )
+    _write_traceability_fixture(planning_root, rows)
+    _write_traceability_roadmap(planning_root)
+
+    result = _evaluate_traceability(planning_root)
+
+    assert result["passed"] is False
+    assert list(result["failure_groups"]) == [
+        "unmapped_requirement",
+        "multi_phase_mapping",
+        "unknown_mapped_phase",
+    ]
+
+
 def test_gate_fails_when_audit_file_missing(tmp_path: Path) -> None:
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
