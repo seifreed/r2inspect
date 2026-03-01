@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 
@@ -532,6 +533,73 @@ def test_coverage_matrix_rows_are_sorted_and_byte_stable(tmp_path: Path) -> None
 
     assert [row["requirement_id"] for row in first_rows] == ["AUX-01", "REQ-02", "REQ-10"]
     assert first_rows == second_rows
+
+
+def test_coverage_matrix_is_byte_stable_across_repeated_builds(tmp_path: Path) -> None:
+    assert (
+        build_requirement_coverage_matrix is not None
+    ), "build_requirement_coverage_matrix must be implemented in scripts/governance_gates.py"
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    entries = "\n".join(
+        [
+            "#### Requirement",
+            "",
+            "- id: GUX-01",
+            "- status: Pending",
+            "- acceptance_criteria: Deterministic serialization must be byte-stable.",
+            "",
+            "#### Requirement",
+            "",
+            "- id: GUX-02",
+            "- status: Complete",
+            "- acceptance_criteria: Deterministic serialization must be byte-stable.",
+        ]
+    )
+    traceability_rows = "\n".join(
+        [
+            "| GUX-01 | Phase 5 | Pending |",
+            "| GUX-02 | Phase 5 | Complete |",
+            "| AUX-01 | Phase 6 | Pending |",
+        ]
+    )
+    _write_requirements_contract(
+        planning_root,
+        _requirements_with_traceability(entries, traceability_rows),
+    )
+    (planning_root / "ROADMAP.md").write_text(
+        "\n".join(
+            [
+                "# Roadmap",
+                "",
+                "- [ ] **Phase 5: Requirement Coverage Matrix**",
+                "- [ ] **Phase 6: Impact-Ranked Remediation Hints**",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    first = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    second = build_requirement_coverage_matrix(planning_root, scope="milestone")
+    first_serialized = json.dumps(
+        first["coverage_matrix"],
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    second_serialized = json.dumps(
+        second["coverage_matrix"],
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+    assert [row["requirement_id"] for row in first["coverage_matrix"]["rows"]] == [
+        "AUX-01",
+        "GUX-01",
+        "GUX-02",
+    ]
+    assert first_serialized != second_serialized
 
 
 def test_coverage_matrix_cause_ordering_is_canonical(tmp_path: Path) -> None:
