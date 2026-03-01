@@ -48,6 +48,8 @@ def _load_governance_functions() -> tuple[
     Callable[..., dict[str, object]],
     Callable[[dict[str, object]], str],
     Callable[[dict[str, object]], str],
+    Callable[..., list[dict[str, object]]],
+    Callable[[list[dict[str, object]]], str],
 ]:
     module_path = Path(__file__).resolve().parent / "governance_gates.py"
     module_name = "governance_gates"
@@ -70,6 +72,8 @@ def _load_governance_functions() -> tuple[
         module.build_requirement_coverage_matrix,
         module.format_coverage_matrix_summary,
         module.format_coverage_matrix_expanded,
+        module.build_impact_ranked_remediation_hints,
+        module.format_impact_ranked_remediation_hints,
     )
 
 
@@ -83,7 +87,18 @@ def _load_governance_functions() -> tuple[
     build_requirement_coverage_matrix,
     format_coverage_matrix_summary,
     format_coverage_matrix_expanded,
+    build_impact_ranked_remediation_hints,
+    format_impact_ranked_remediation_hints,
 ) = _load_governance_functions()
+
+
+def _build_traceability_retry_command(scope: str, phase_id: str | None) -> str:
+    parts = ["python scripts/quick_bootstrap.py traceability precheck"]
+    normalized_scope = str(scope).strip().lower()
+    if normalized_scope == "phase":
+        normalized_phase_id = str(phase_id or "").strip()
+        parts.extend(["--scope", "phase", "--phase-id", normalized_phase_id])
+    return " ".join(parts)
 
 
 def slugify(value: str) -> str:
@@ -863,15 +878,22 @@ def main() -> int:
                 },
             }
         passed = bool(result.get("passed", False))
-        retry_command = "python scripts/quick_bootstrap.py traceability precheck"
-        checklist = format_traceability_drift_failures(result, retry_command)
+        retry_command = _build_traceability_retry_command(traceability_scope, traceability_phase_id)
+        ranked_hints = build_impact_ranked_remediation_hints(
+            result,
+            matrix_payload,
+            retry_command=retry_command,
+        )
+        ranked_hint_text = format_impact_ranked_remediation_hints(ranked_hints)
+        grouped_checklist = format_traceability_drift_failures(result, retry_command)
         coverage_matrix = matrix_payload.get("coverage_matrix", {})
         matrix_text = (
             format_coverage_matrix_expanded(coverage_matrix)
             if matrix_detail == "expanded"
             else format_coverage_matrix_summary(coverage_matrix)
         )
-        checklist = f"{checklist}\n\n{matrix_text}" if checklist else matrix_text
+        checklist_parts = [part for part in (ranked_hint_text, grouped_checklist, matrix_text) if part]
+        checklist = "\n\n".join(checklist_parts)
         touched_ids = sorted(
             item.strip()
             for item in result.get("touched_requirement_ids", [])
