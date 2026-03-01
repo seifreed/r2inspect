@@ -43,7 +43,11 @@ Plans:
   1. Operator sees deterministic validation failures when requirement IDs do not match the required stable format.
   2. Operator cannot continue planning when an active requirement is missing status or acceptance criteria.
   3. Operator cannot complete a milestone until requirement definitions pass validation checks.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md - Define canonical REQUIREMENTS contract and implement deterministic validator.
+- [ ] 03-02-PLAN.md - Wire requirements precheck and fail-closed transition enforcement (roadmap/milestone/phase completion).
 
 ### Phase 4: Traceability and Drift Enforcement
 **Goal**: Operators can only complete phases and milestones when requirement mapping and cross-artifact consistency remain intact.
@@ -60,5 +64,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 2. Milestone Governance Gates | v1.1 | Complete    | 2026-03-01 | 2026-03-01 |
-| 3. Requirements Contract Enforcement | v1.1 | 0/TBD | Not started | - |
+| 3. Requirements Contract Enforcement | 1/2 | In Progress|  | - |
 | 4. Traceability and Drift Enforcement | v1.1 | 0/TBD | Not started | - |
