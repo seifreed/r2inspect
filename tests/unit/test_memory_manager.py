@@ -1,6 +1,6 @@
 import time
 
-from r2inspect.utils.memory_manager import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
+from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
 
 
 def test_validate_file_and_section_size():

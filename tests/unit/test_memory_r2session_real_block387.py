@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.r2_session import R2Session
-from r2inspect.utils.memory_manager import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
+from r2inspect.infrastructure.r2_session import R2Session
+from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
 
 
 def _make_fat_macho(path: Path, arch_values: list[int]) -> None:

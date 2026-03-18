@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 
-from r2inspect.utils.magic_detector import (
+from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
     detect_file_type,
     get_file_threat_level,

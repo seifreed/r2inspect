@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -296,7 +296,7 @@ def test_results_dataclasses_and_from_dict() -> None:
         "crypto": {"algorithms": [{"name": "aes"}]},
         "indicators": [{"type": "Packer", "description": "d", "severity": "Low"}],
         "error": "err",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.0,
     }
     loaded = from_dict(data)
@@ -321,7 +321,7 @@ def test_results_dataclasses_and_from_dict() -> None:
     assert isinstance(invalid_ts.timestamp, datetime)
 
     ts_holder = AnalysisResult()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     _load_timestamp(ts_holder, {"timestamp": now})
     assert ts_holder.timestamp == now
 

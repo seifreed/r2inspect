@@ -19,9 +19,9 @@ from r2inspect.cli.validators import (
 )
 from r2inspect.error_handling.policies import ErrorHandlingStrategy, ErrorPolicy
 from r2inspect.error_handling.unified_handler import handle_errors, reset_circuit_breakers
-from r2inspect.utils.error_handler import reset_error_stats, safe_execute
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.retry_manager import global_retry_manager, reset_retry_stats
+from r2inspect.error_handling.classifier import reset_error_stats, safe_execute
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.retry_manager import global_retry_manager, reset_retry_stats
 
 
 class _DummyInspector:

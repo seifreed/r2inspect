@@ -97,7 +97,14 @@ def test_registry_execution_order():
     assert order[-1] == "dummy"
 
 
-def test_registry_env_lazy_loading(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_LAZY_LOADING", "0")
-    registry = AnalyzerRegistry(lazy_loading=None)
-    assert registry._lazy_loading is False
+def test_registry_env_lazy_loading():
+    old_val = os.environ.get("R2INSPECT_LAZY_LOADING")
+    try:
+        os.environ["R2INSPECT_LAZY_LOADING"] = "0"
+        registry = AnalyzerRegistry(lazy_loading=None)
+        assert registry._lazy_loading is False
+    finally:
+        if old_val is None:
+            os.environ.pop("R2INSPECT_LAZY_LOADING", None)
+        else:
+            os.environ["R2INSPECT_LAZY_LOADING"] = old_val

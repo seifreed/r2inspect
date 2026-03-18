@@ -54,6 +54,7 @@ class SyntheticAdapter:
 
 class NoReadBytesAdapter:
     """Adapter without read_bytes / read_bytes_list methods."""
+
     pass
 
 
@@ -75,6 +76,7 @@ class TestableRichSearch(RichHeaderSearchMixin):
 
 
 # --- _find_all_occurrences ---
+
 
 def test_find_all_occurrences_single_match():
     searcher = TestableRichSearch()
@@ -99,6 +101,7 @@ def test_find_all_occurrences_no_match():
 
 # --- _offset_pair_valid ---
 
+
 def test_offset_pair_valid_true():
     searcher = TestableRichSearch()
     assert searcher._offset_pair_valid(10, 50, 512) is True
@@ -122,6 +125,7 @@ def test_offset_pair_valid_equal():
 
 # --- _find_rich_positions ---
 
+
 def test_find_rich_positions_found():
     searcher = TestableRichSearch()
     data = b"\x00" * 20 + b"Rich" + b"\x00" * 10 + b"Rich" + b"\x00" * 10
@@ -137,7 +141,15 @@ def test_find_rich_positions_not_found():
     assert positions == []
 
 
+def test_find_rich_positions_includes_last_valid_offset():
+    searcher = TestableRichSearch()
+    data = b"xxxxRich" + struct.pack("<I", 0x12345678)
+    positions = searcher._find_rich_positions(data)
+    assert positions == [4]
+
+
 # --- _is_valid_rich_key ---
+
 
 def test_is_valid_rich_key_valid():
     searcher = TestableRichSearch()
@@ -170,12 +182,21 @@ def test_is_valid_rich_key_out_of_bounds():
 
 # --- _find_dans_before_rich ---
 
+
 def test_find_dans_before_rich_found():
     searcher = TestableRichSearch()
     data = bytearray(200)
     data[10:14] = b"DanS"
     result = searcher._find_dans_before_rich(bytes(data), 100)
     assert result == 10
+
+
+def test_find_dans_candidates_before_rich_returns_all_matches():
+    searcher = TestableRichSearch()
+    data = bytearray(200)
+    data[10:14] = b"DanS"
+    data[40:44] = b"DanS"
+    assert searcher._find_dans_candidates_before_rich(bytes(data), 100) == [10, 40]
 
 
 def test_find_dans_before_rich_not_found():
@@ -195,7 +216,28 @@ def test_find_dans_before_rich_outside_window():
     assert result is None
 
 
+def test_pattern_based_search_tries_later_dans_after_earlier_false_positive():
+    xor_key = 0x12345678
+    data = bytearray(256)
+    # Earlier false-positive DanS block with invalid decoded entry.
+    data[32:36] = b"DanS"
+    data[36:44] = struct.pack("<II", 0 ^ xor_key, 0 ^ xor_key)
+    # Later valid DanS block for the same Rich signature.
+    prodid = 0x00930001
+    count = 3
+    data[108:112] = b"DanS"
+    data[112:120] = struct.pack("<II", prodid ^ xor_key, count ^ xor_key)
+    data[120:124] = b"Rich"
+    data[124:128] = struct.pack("<I", xor_key)
+
+    searcher = TestableRichSearch(adapter=SyntheticAdapter(bytes(data)))
+    result = searcher._pattern_based_rich_search(bytes(data))
+    assert result is not None
+    assert result["entries"][0]["prodid"] == prodid
+
+
 # --- _validate_rich_size ---
+
 
 def test_validate_rich_size_valid():
     searcher = TestableRichSearch()
@@ -216,6 +258,7 @@ def test_validate_rich_size_too_large():
 
 
 # --- _read_manual_search_bytes ---
+
 
 def test_read_manual_search_bytes_no_adapter():
     searcher = TestableRichSearch(adapter=None)
@@ -246,6 +289,7 @@ def test_read_manual_search_bytes_with_data():
 
 # --- _find_signature_offsets ---
 
+
 def test_find_signature_offsets_found():
     searcher = TestableRichSearch()
     data = b"\x00" * 10 + b"DanS" + b"\x00" * 20 + b"Rich" + b"\x00" * 10
@@ -271,6 +315,7 @@ def test_find_signature_offsets_no_dans():
 
 
 # --- _extract_xor_key ---
+
 
 def test_extract_xor_key_no_adapter():
     searcher = TestableRichSearch(adapter=None)
@@ -307,6 +352,7 @@ def test_extract_xor_key_valid():
 
 
 # --- _extract_encoded_data ---
+
 
 def test_extract_encoded_data_no_adapter():
     searcher = TestableRichSearch(adapter=None)
@@ -346,6 +392,7 @@ def test_extract_encoded_data_too_short():
 
 # --- _try_extract_rich_at_offsets ---
 
+
 def test_try_extract_rich_at_offsets_valid():
     data, dans_offset, rich_offset, xor_key_int = _build_synthetic_rich_header_data()
     searcher = TestableRichSearch(adapter=SyntheticAdapter(bytes(data)))
@@ -379,6 +426,7 @@ def test_try_extract_rich_at_offsets_no_adapter():
 
 # --- _manual_rich_search ---
 
+
 def test_manual_rich_search_no_adapter():
     searcher = TestableRichSearch(adapter=None)
     result = searcher._manual_rich_search()
@@ -409,6 +457,7 @@ def test_manual_rich_search_with_valid_header():
 
 
 # --- _pattern_based_rich_search ---
+
 
 def test_pattern_based_rich_search_no_rich_positions():
     searcher = TestableRichSearch()
@@ -451,13 +500,12 @@ def test_pattern_based_rich_search_valid():
 
 # --- _try_signature_pairs ---
 
+
 def test_try_signature_pairs_valid_pair():
     data, dans_offset, rich_offset, xor_key_int = _build_synthetic_rich_header_data()
     padded = bytes(data) + b"\x00" * (2048 - len(data))
     searcher = TestableRichSearch(adapter=SyntheticAdapter(padded))
-    result = searcher._try_signature_pairs(
-        [rich_offset], [dans_offset], b"Rich", b"DanS"
-    )
+    result = searcher._try_signature_pairs([rich_offset], [dans_offset], b"Rich", b"DanS")
     assert result is not None
 
 
@@ -479,6 +527,7 @@ def test_try_signature_pairs_no_valid_extraction():
 
 # --- Additional exception handling paths ---
 
+
 class ExplodingAdapter:
     """Adapter where read_bytes raises an exception."""
 
@@ -498,6 +547,7 @@ def test_manual_rich_search_exception_returns_none():
 
 def test_pattern_based_rich_search_exception_returns_none():
     """Exception in _pattern_based_rich_search is caught and returns None."""
+
     class BrokenRichSearch(TestableRichSearch):
         def _find_rich_positions(self, data: bytes) -> list[int]:
             raise RuntimeError("simulated error")
@@ -509,13 +559,17 @@ def test_pattern_based_rich_search_exception_returns_none():
 
 # Test _try_extract_rich_at_offsets paths: encoded_data is None (line 187)
 
+
 def test_try_extract_rich_at_offsets_no_encoded_data():
     """When _extract_encoded_data returns None, method returns None."""
+
     class XorKeyOnlyAdapter:
         """Provides XOR key but not encoded data."""
+
         def read_bytes_list(self, offset: int, size: int) -> list[int]:
             if size == 4:
                 import struct
+
                 return list(struct.pack("<I", 0x12345678))
             return []  # Returns empty list for encoded data -> None
 
@@ -527,9 +581,11 @@ def test_try_extract_rich_at_offsets_no_encoded_data():
 
 # Test _try_extract_rich_at_offsets: valid entries but validate_decoded_entries fails (line 191)
 
+
 def test_try_extract_rich_at_offsets_invalid_decoded_entries():
     """When decoded entries fail validation, method returns None."""
     import struct
+
     # XOR key that decodes to count=0 (so entries are rejected by validate_decoded_entries)
     xor_key_int = 0xDEADBEEF
     # Encode with count=0 after XOR: enc_count = 0 ^ xor_key = xor_key
@@ -539,10 +595,10 @@ def test_try_extract_rich_at_offsets_invalid_decoded_entries():
     data = bytearray(256)
     dans_offset = 16
     rich_offset = 32
-    data[dans_offset:dans_offset + 4] = b"\x00" * 4
-    data[dans_offset + 4:dans_offset + 12] = struct.pack("<II", enc_prodid, enc_count)
-    data[rich_offset:rich_offset + 4] = b"Rich"
-    data[rich_offset + 4:rich_offset + 8] = struct.pack("<I", xor_key_int)
+    data[dans_offset : dans_offset + 4] = b"\x00" * 4
+    data[dans_offset + 4 : dans_offset + 12] = struct.pack("<II", enc_prodid, enc_count)
+    data[rich_offset : rich_offset + 4] = b"Rich"
+    data[rich_offset + 4 : rich_offset + 8] = struct.pack("<I", xor_key_int)
 
     searcher = TestableRichSearch(adapter=SyntheticAdapter(bytes(data)))
     result = searcher._try_extract_rich_at_offsets(dans_offset, rich_offset)
@@ -551,8 +607,10 @@ def test_try_extract_rich_at_offsets_invalid_decoded_entries():
 
 # Test _try_extract_rich_at_offsets exception path (lines 197-199)
 
+
 def test_try_extract_rich_at_offsets_exception_returns_none():
     """Exception inside _try_extract_rich_at_offsets is caught."""
+
     class ThrowingAdapter:
         def read_bytes_list(self, offset: int, size: int) -> list[int]:
             raise ValueError("Simulated error in read_bytes_list")

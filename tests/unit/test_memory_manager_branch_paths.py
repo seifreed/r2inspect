@@ -6,7 +6,7 @@ import gc
 
 import pytest
 
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,
@@ -259,7 +259,7 @@ def test_is_memory_available_true_for_small_amount():
     limits = MemoryLimits(max_process_memory_mb=999999)
     monitor = MemoryMonitor(limits)
     monitor.check_memory(force=True)  # Populate system_memory_available_mb in cache
-    monitor.check_interval = 9999.0   # Keep interval high so next call uses cached stats
+    monitor.check_interval = 9999.0  # Keep interval high so next call uses cached stats
     # Force a new full check to include system_memory_available_mb
     monitor.last_check = 0.0
     assert monitor.is_memory_available(0.001) is True
@@ -356,14 +356,20 @@ def test_limit_collection_size_exact_max():
 
 def test_set_callbacks_assigns_warning_callback():
     monitor = MemoryMonitor()
-    cb = lambda s: None
+
+    def cb(s):
+        return None
+
     monitor.set_callbacks(warning_callback=cb)
     assert monitor.warning_callback is cb
 
 
 def test_set_callbacks_assigns_critical_callback():
     monitor = MemoryMonitor()
-    cb = lambda s: None
+
+    def cb(s):
+        return None
+
     monitor.set_callbacks(critical_callback=cb)
     assert monitor.critical_callback is cb
 

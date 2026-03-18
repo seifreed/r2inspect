@@ -15,14 +15,14 @@ from r2inspect.error_handling.unified_handler import (
     handle_errors,
     reset_circuit_breakers,
 )
-from r2inspect.utils.error_handler import (
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorInfo,
     ErrorSeverity,
     global_error_manager,
     reset_error_stats,
 )
-from r2inspect.utils.retry_manager import (
+from r2inspect.infrastructure.retry_manager import (
     RetryableError,
     RetryConfig,
     RetryStrategy,

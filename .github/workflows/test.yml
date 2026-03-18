@@ -151,9 +151,18 @@ jobs:
           python -c "import r2inspect, sys; print(r2inspect.__version__)"
           ssdeep -V
 
-      - name: Run tests with coverage
+      - name: Run integration tests with explicit coverage gate
         run: |
-          pytest -m "not slow" --cov=r2inspect --cov-report=term-missing --cov-fail-under=60
+          python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
+          echo "::notice::Running: python scripts/ci_run_integration_coverage_gate.py --threshold 70 --max-modules 200 --append-notes --notes-path coverage-notes.md"
+          python scripts/ci_run_integration_coverage_gate.py --threshold 70 --max-modules 200 --output .coverage-gate/low_coverage_modules.json --append-notes --notes-path coverage-notes.md
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit -m "not slow"
+
+      - name: Export combined coverage
+        run: |
           coverage combine
           coverage xml -o coverage.xml
 

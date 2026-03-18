@@ -43,7 +43,7 @@ def test_validate_r2_data_dict_with_html_entities():
     data = {"name": "test&nbsp;&amp;&lt;&gt;", "value": "a&quot;b&#39;c"}
     result = validate_r2_data(data, "dict")
     assert result["name"] == "test &<>"
-    assert result["value"] == 'a"b\'c'
+    assert result["value"] == "a\"b'c"
 
 
 def test_validate_r2_data_list_valid():

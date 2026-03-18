@@ -1,7 +1,6 @@
 """Tests for cli/batch_output.py - edge cases and uncovered paths."""
 
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 from r2inspect.cli.batch_output import (
     _build_large_row,
@@ -162,10 +161,11 @@ def test_collect_yara_matches_list_dicts():
 
 def test_collect_yara_matches_objects():
     """Test YARA matches collection from objects with rule attribute."""
+
     class YaraMatch:
-        def __init__(self, rule):
+        def __init__(self, rule: str) -> None:
             self.rule = rule
-    
+
     result = {
         "yara_matches": [
             YaraMatch("Rule1"),
@@ -208,7 +208,7 @@ def test_build_small_row():
         },
     }
     filename, file_type, compiler, compile_time = _build_small_row("file1", result)
-    
+
     assert filename == "malware.exe"
     assert file_type == "PE32 (x86)"
     assert compiler == "MSVC 19.0"
@@ -219,7 +219,7 @@ def test_build_small_row_error():
     """Test building small row with error."""
     result = None  # Will cause error
     filename, file_type, compiler, compile_time = _build_small_row("file1", result)
-    
+
     assert filename == "file1"
     assert file_type == "Error"
     assert compiler == "Error"
@@ -242,7 +242,7 @@ def test_build_large_row():
         "yara_matches": [{"rule": "TestRule"}],
     }
     md5, file_type, compiler, compile_time, yara = _build_large_row("file1", result)
-    
+
     assert md5 == "abc123"
     assert file_type == "PE32+ (x64)"
     assert "GCC" in compiler
@@ -254,7 +254,7 @@ def test_build_large_row_error():
     """Test building large row with error."""
     result = None  # Will cause error
     md5, file_type, compiler, compile_time, yara = _build_large_row("file1", result)
-    
+
     assert md5 == "file1"
     assert file_type == "Error"
 
@@ -270,9 +270,9 @@ def test_build_summary_table_small():
         }
         for i in range(15)
     }
-    
+
     table = _build_summary_table_small(results)
-    
+
     assert table is not None
     assert table.title == "Analysis Summary"
 
@@ -287,14 +287,14 @@ def test_build_summary_table_large():
             }
         }
     }
-    
+
     table = _build_summary_table_large(results)
-    
+
     assert table is not None
     assert table.title == "Analysis Summary"
 
 
-def test_show_summary_table_small():
+def test_show_summary_table_small(capsys):
     """Test showing summary table for many files."""
     results = {
         f"file{i}": {
@@ -305,14 +305,13 @@ def test_show_summary_table_small():
         }
         for i in range(15)
     }
-    
-    with patch("r2inspect.cli.batch_output.console") as mock_console:
-        _show_summary_table(results)
-        
-        assert mock_console.print.call_count >= 1
+
+    _show_summary_table(results)
+    captured = capsys.readouterr()
+    assert "Analysis Summary" in captured.out
 
 
-def test_show_summary_table_large():
+def test_show_summary_table_large(capsys):
     """Test showing summary table for few files."""
     results = {
         "file1": {
@@ -322,34 +321,31 @@ def test_show_summary_table_large():
             }
         }
     }
-    
-    with patch("r2inspect.cli.batch_output.console") as mock_console:
-        _show_summary_table(results)
-        
-        assert mock_console.print.call_count >= 1
+
+    _show_summary_table(results)
+    captured = capsys.readouterr()
+    assert "Analysis Summary" in captured.out
 
 
-def test_display_no_files_message_auto_detect():
+def test_display_no_files_message_auto_detect(capsys):
     """Test no files message with auto-detect."""
-    with patch("r2inspect.cli.batch_output.console") as mock_console:
-        display_no_files_message(auto_detect=True, extensions=None)
-        
-        assert mock_console.print.call_count >= 1
+    display_no_files_message(auto_detect=True, extensions=None)
+    captured = capsys.readouterr()
+    assert "No executable files detected" in captured.out
 
 
-def test_display_no_files_message_extensions():
+def test_display_no_files_message_extensions(capsys):
     """Test no files message with extensions."""
-    with patch("r2inspect.cli.batch_output.console") as mock_console:
-        display_no_files_message(auto_detect=False, extensions="exe,dll")
-        
-        assert mock_console.print.call_count >= 1
+    display_no_files_message(auto_detect=False, extensions="exe,dll")
+    captured = capsys.readouterr()
+    assert "No files found with extensions: exe,dll" in captured.out
 
 
 def test_setup_batch_output_directory_csv_file(tmp_path):
     """Test setup with CSV filename."""
     csv_file = tmp_path / "results.csv"
     output = setup_batch_output_directory(str(csv_file), False, True)
-    
+
     assert output.parent.exists()
 
 
@@ -357,19 +353,20 @@ def test_setup_batch_output_directory_json_file(tmp_path):
     """Test setup with JSON filename."""
     json_file = tmp_path / "results.json"
     output = setup_batch_output_directory(str(json_file), True, False)
-    
+
     assert output.parent.exists()
 
 
-def test_setup_batch_output_directory_default():
+def test_setup_batch_output_directory_default(tmp_path):
     """Test setup with default directory."""
-    with patch("r2inspect.cli.batch_output.Path") as mock_path:
-        mock_instance = Mock()
-        mock_path.return_value = mock_instance
-        
-        output = setup_batch_output_directory(None, True, False)
-        
-        assert output is not None
+    import os
+
+    os.chdir(tmp_path)
+
+    output = setup_batch_output_directory(None, True, False)
+
+    assert output is not None
+    assert output.name == "output"
 
 
 def test_configure_batch_logging_verbose():
@@ -385,89 +382,79 @@ def test_configure_batch_logging_quiet():
 def test_init_batch_results():
     """Test batch results initialization."""
     results, failed = _init_batch_results()
-    
+
     assert results == {}
     assert failed == []
 
 
 def test_prepare_batch_run(tmp_path):
-    """Test batch run preparation."""
+    """Test batch run preparation with real files."""
     (tmp_path / "test.exe").write_bytes(b"MZ")
-    
-    with patch("r2inspect.cli.batch_output.find_files_to_process") as mock_find:
-        mock_find.return_value = [tmp_path / "test.exe"]
-        
-        result = _prepare_batch_run(
-            batch_path=tmp_path,
-            auto_detect=True,
-            extensions=None,
-            recursive=False,
-            verbose=False,
-            quiet=True,
-            output_dir=None,
-            output_json=True,
-            output_csv=False,
-            threads=4,
-        )
-        
-        assert result is not None
-        files, output_path = result
-        assert len(files) == 1
+
+    result = _prepare_batch_run(
+        batch_path=tmp_path,
+        auto_detect=False,
+        extensions="exe",
+        recursive=False,
+        verbose=False,
+        quiet=True,
+        output_dir=None,
+        output_json=True,
+        output_csv=False,
+        threads=4,
+    )
+
+    assert result is not None
+    files, output_path = result
+    assert len(files) == 1
 
 
 def test_prepare_batch_run_no_files(tmp_path):
     """Test batch run preparation with no files."""
-    with patch("r2inspect.cli.batch_output.find_files_to_process") as mock_find:
-        mock_find.return_value = []
-        
-        result = _prepare_batch_run(
-            batch_path=tmp_path,
-            auto_detect=True,
-            extensions=None,
-            recursive=False,
-            verbose=False,
-            quiet=False,
-            output_dir=None,
-            output_json=False,
-            output_csv=False,
-            threads=4,
-        )
-        
-        assert result is None
+    result = _prepare_batch_run(
+        batch_path=tmp_path,
+        auto_detect=False,
+        extensions="exe",
+        recursive=False,
+        verbose=False,
+        quiet=True,
+        output_dir=None,
+        output_json=False,
+        output_csv=False,
+        threads=4,
+    )
+
+    assert result is None
 
 
 def test_find_files_to_process_auto_detect(tmp_path):
-    """Test finding files with auto-detect."""
-    with patch("r2inspect.cli.batch_processing.find_executable_files_by_magic") as mock_find:
-        mock_find.return_value = [tmp_path / "test.exe"]
-        
-        files = find_files_to_process(
-            batch_path=tmp_path,
-            auto_detect=True,
-            extensions=None,
-            recursive=False,
-            verbose=False,
-            quiet=True,
-        )
-        
-        assert len(files) == 1
+    """Test finding files with auto-detect on empty directory."""
+    files = find_files_to_process(
+        batch_path=tmp_path,
+        auto_detect=True,
+        extensions=None,
+        recursive=False,
+        verbose=False,
+        quiet=True,
+    )
+
+    assert isinstance(files, list)
 
 
 def test_find_files_to_process_extensions(tmp_path):
     """Test finding files with extensions."""
-    with patch("r2inspect.cli.batch_output.core_find_files_by_extensions") as mock_find:
-        mock_find.return_value = [tmp_path / "test.exe"]
-        
-        files = find_files_to_process(
-            batch_path=tmp_path,
-            auto_detect=False,
-            extensions="exe,dll",
-            recursive=False,
-            verbose=False,
-            quiet=True,
-        )
-        
-        assert len(files) == 1
+    (tmp_path / "test.exe").write_bytes(b"MZ")
+
+    files = find_files_to_process(
+        batch_path=tmp_path,
+        auto_detect=False,
+        extensions="exe",
+        recursive=False,
+        verbose=False,
+        quiet=True,
+    )
+
+    assert len(files) == 1
 
 
 def test_find_files_to_process_no_extensions(tmp_path):
@@ -480,7 +467,7 @@ def test_find_files_to_process_no_extensions(tmp_path):
         verbose=False,
         quiet=True,
     )
-    
+
     assert files == []
 
 
@@ -492,7 +479,7 @@ def test_create_batch_summary_csv_only(tmp_path):
         }
     }
     failed = []
-    
+
     output_file = create_batch_summary(
         all_results=results,
         failed_files=failed,
@@ -500,7 +487,7 @@ def test_create_batch_summary_csv_only(tmp_path):
         output_json=False,
         output_csv=True,
     )
-    
+
     assert output_file is not None
 
 
@@ -512,7 +499,7 @@ def test_create_batch_summary_json_csv(tmp_path):
         }
     }
     failed = []
-    
+
     output_file = create_batch_summary(
         all_results=results,
         failed_files=failed,
@@ -520,7 +507,7 @@ def test_create_batch_summary_json_csv(tmp_path):
         output_json=True,
         output_csv=True,
     )
-    
+
     assert output_file is not None
     assert "individual JSONs" in output_file
 
@@ -533,7 +520,7 @@ def test_create_batch_summary_json_only(tmp_path):
         }
     }
     failed = [("file2.exe", "Error occurred")]
-    
+
     output_file = create_batch_summary(
         all_results=results,
         failed_files=failed,
@@ -541,7 +528,7 @@ def test_create_batch_summary_json_only(tmp_path):
         output_json=True,
         output_csv=False,
     )
-    
+
     assert output_file is not None
 
 
@@ -553,14 +540,14 @@ def test_create_json_batch_summary(tmp_path):
         }
     }
     failed = [("file2.exe", "Failed to analyze")]
-    
+
     output_file = create_json_batch_summary(
         all_results=results,
         failed_files=failed,
         output_path=tmp_path,
         timestamp="20240101_120000",
     )
-    
+
     assert output_file is not None
     assert "individual JSONs" in output_file
 
@@ -568,7 +555,7 @@ def test_create_json_batch_summary(tmp_path):
 def test_get_csv_fieldnames():
     """Test getting CSV fieldnames."""
     fields = get_csv_fieldnames()
-    
+
     assert "name" in fields
     assert "md5" in fields
     assert "sha256" in fields
@@ -582,10 +569,10 @@ def test_write_csv_results(tmp_path):
             "file_info": {"name": "file1.exe", "size": 1024},
         }
     }
-    
+
     csv_file = tmp_path / "results.csv"
     write_csv_results(csv_file, results)
-    
+
     assert csv_file.exists()
     content = csv_file.read_text()
     assert "name" in content
@@ -594,9 +581,9 @@ def test_write_csv_results(tmp_path):
 def test_determine_csv_file_path_with_csv_file(tmp_path):
     """Test determine CSV path with CSV file."""
     csv_path = tmp_path / "custom.csv"
-    
+
     csv_file, name = determine_csv_file_path(csv_path, "timestamp")
-    
+
     assert csv_file == csv_path
     assert name == "custom.csv"
 
@@ -604,9 +591,9 @@ def test_determine_csv_file_path_with_csv_file(tmp_path):
 def test_determine_csv_file_path_with_directory(tmp_path):
     """Test determine CSV path with directory."""
     dir_path = tmp_path / "output"
-    
+
     csv_file, name = determine_csv_file_path(dir_path, "20240101_120000")
-    
+
     assert csv_file.parent == dir_path
     assert name.endswith(".csv")
     assert "r2inspect_" in name

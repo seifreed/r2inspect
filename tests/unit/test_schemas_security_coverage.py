@@ -160,12 +160,12 @@ def test_hash_analysis_result_normalizes_hash_type() -> None:
 
 
 def test_hash_analysis_result_invalid_hash_type() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         HashAnalysisResult(available=True, hash_type="md5")
 
 
 def test_hash_analysis_result_invalid_file_size() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         HashAnalysisResult(available=True, hash_type="ssdeep", file_size=-1)
 
 
@@ -216,12 +216,12 @@ def test_security_issue_strips_description() -> None:
 
 
 def test_security_issue_empty_description_raises() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         SecurityIssue(severity=SeverityLevel.LOW, description="")
 
 
 def test_security_issue_whitespace_only_description_raises() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         SecurityIssue(severity=SeverityLevel.LOW, description="   ")
 
 
@@ -231,7 +231,7 @@ def test_security_issue_cvss_valid() -> None:
 
 
 def test_security_issue_cvss_out_of_range_raises() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         SecurityIssue(severity=SeverityLevel.LOW, description="d", cvss_score=11.0)
 
 
@@ -241,7 +241,7 @@ def test_security_issue_cwe_id_valid() -> None:
 
 
 def test_security_issue_cwe_id_zero_raises() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         SecurityIssue(severity=SeverityLevel.LOW, description="d", cwe_id=0)
 
 
@@ -262,7 +262,7 @@ def test_security_score_valid() -> None:
 
 
 def test_security_score_max_less_than_score_raises() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         SecurityScore(score=90, max_score=80, percentage=90.0, grade=SecurityGrade.A)
 
 
@@ -351,7 +351,7 @@ def test_security_analysis_result_is_secure_no_score() -> None:
 
 
 def test_security_analysis_result_score_out_of_range_raises() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, KeyError)):
         SecurityAnalysisResult(available=True, score=150)
 
 
@@ -423,7 +423,7 @@ def test_file_validator_too_long_path_raises() -> None:
 
 def test_file_validator_allowed_directory_valid(tmp_path: Path) -> None:
     f = tmp_path / "file.bin"
-    f.write_bytes(b"\xFF" * 50)
+    f.write_bytes(b"\xff" * 50)
     validator = FileValidator(allowed_directory=tmp_path)
     resolved = validator.validate_path(str(f))
     assert resolved.parent == tmp_path.resolve()
@@ -433,7 +433,7 @@ def test_file_validator_outside_allowed_directory_raises(tmp_path: Path) -> None
     allowed = tmp_path / "allowed"
     allowed.mkdir()
     f = tmp_path / "outside.bin"
-    f.write_bytes(b"\xFF" * 50)
+    f.write_bytes(b"\xff" * 50)
     validator = FileValidator(allowed_directory=allowed)
     with pytest.raises(ValueError, match="outside allowed directory"):
         validator.validate_path(str(f))
@@ -469,7 +469,7 @@ def test_file_validator_invalid_allowed_directory_raises() -> None:
 
 def test_validate_file_for_analysis_valid(tmp_path: Path) -> None:
     f = tmp_path / "test.bin"
-    f.write_bytes(b"\xDE\xAD\xBE\xEF" * 10)
+    f.write_bytes(b"\xde\xad\xbe\xef" * 10)
     result = validate_file_for_analysis(str(f))
     assert result == f.resolve()
 

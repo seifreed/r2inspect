@@ -40,8 +40,14 @@ def test_pipeline_builder_build_contains_all_expected_stages() -> None:
     pipeline = builder.build({})
     stages = pipeline.list_stages()
     expected = [
-        "file_info", "format_detection", "format_analysis",
-        "metadata", "security", "hashing", "detection", "indicators",
+        "file_info",
+        "format_detection",
+        "format_analysis",
+        "metadata",
+        "security",
+        "hashing",
+        "detection",
+        "indicators",
     ]
     for name in expected:
         assert name in stages

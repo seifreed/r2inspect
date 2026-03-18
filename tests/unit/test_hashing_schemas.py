@@ -30,65 +30,47 @@ def test_hash_analysis_result_hash_type_required():
 
 
 def test_hash_analysis_result_ssdeep():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="ssdeep")
     assert result.hash_type == "ssdeep"
 
 
 def test_hash_analysis_result_tlsh():
-    result = HashAnalysisResult(
-        available=True, hash_value="T1234", hash_type="tlsh"
-    )
+    result = HashAnalysisResult(available=True, hash_value="T1234", hash_type="tlsh")
     assert result.hash_type == "tlsh"
 
 
 def test_hash_analysis_result_impfuzzy():
-    result = HashAnalysisResult(
-        available=True, hash_value="fuzzy:hash", hash_type="impfuzzy"
-    )
+    result = HashAnalysisResult(available=True, hash_value="fuzzy:hash", hash_type="impfuzzy")
     assert result.hash_type == "impfuzzy"
 
 
 def test_hash_analysis_result_ccbhash():
-    result = HashAnalysisResult(
-        available=True, hash_value="ccb123", hash_type="ccbhash"
-    )
+    result = HashAnalysisResult(available=True, hash_value="ccb123", hash_type="ccbhash")
     assert result.hash_type == "ccbhash"
 
 
 def test_hash_analysis_result_simhash():
-    result = HashAnalysisResult(
-        available=True, hash_value="sim123", hash_type="simhash"
-    )
+    result = HashAnalysisResult(available=True, hash_value="sim123", hash_type="simhash")
     assert result.hash_type == "simhash"
 
 
 def test_hash_analysis_result_telfhash():
-    result = HashAnalysisResult(
-        available=True, hash_value="telf123", hash_type="telfhash"
-    )
+    result = HashAnalysisResult(available=True, hash_value="telf123", hash_type="telfhash")
     assert result.hash_type == "telfhash"
 
 
 def test_hash_analysis_result_invalid_hash_type():
     with pytest.raises(ValidationError):
-        HashAnalysisResult(
-            available=True, hash_value="test", hash_type="invalid"
-        )
+        HashAnalysisResult(available=True, hash_value="test", hash_type="invalid")
 
 
 def test_hash_analysis_result_hash_type_case_insensitive():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="SSDEEP"
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="SSDEEP")
     assert result.hash_type == "ssdeep"
 
 
 def test_hash_analysis_result_hash_type_strip():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="  tlsh  "
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="  tlsh  ")
     assert result.hash_type == "tlsh"
 
 
@@ -167,9 +149,7 @@ def test_hash_analysis_result_file_size_positive():
 
 
 def test_hash_analysis_result_file_size_zero():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="ssdeep", file_size=0
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="ssdeep", file_size=0)
     assert result.file_size == 0
 
 
@@ -211,37 +191,27 @@ def test_hash_analysis_result_file_size_none():
 
 
 def test_hash_analysis_result_is_valid_hash():
-    result = HashAnalysisResult(
-        available=True, hash_value="3:abc:def", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="3:abc:def", hash_type="ssdeep")
     assert result.is_valid_hash() is True
 
 
 def test_hash_analysis_result_is_valid_hash_empty():
-    result = HashAnalysisResult(
-        available=True, hash_value="", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="", hash_type="ssdeep")
     assert result.is_valid_hash() is False
 
 
 def test_hash_analysis_result_is_valid_hash_none():
-    result = HashAnalysisResult(
-        available=True, hash_value=None, hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value=None, hash_type="ssdeep")
     assert result.is_valid_hash() is False
 
 
 def test_hash_analysis_result_is_valid_hash_whitespace():
-    result = HashAnalysisResult(
-        available=True, hash_value="   ", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="   ", hash_type="ssdeep")
     assert result.is_valid_hash() is False
 
 
 def test_hash_analysis_result_is_valid_hash_with_spaces():
-    result = HashAnalysisResult(
-        available=True, hash_value=" test ", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value=" test ", hash_type="ssdeep")
     assert result.is_valid_hash() is True
 
 
@@ -268,18 +238,14 @@ def test_hash_analysis_result_serialization():
 
 
 def test_hash_analysis_result_model_dump_safe():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="ssdeep")
     data = result.model_dump_safe()
     assert "hash_value" in data
     assert "error" not in data
 
 
 def test_hash_analysis_result_to_json():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="ssdeep")
     json_str = result.to_json()
     assert "hash_value" in json_str
     assert "ssdeep" in json_str
@@ -306,9 +272,7 @@ def test_hash_analysis_result_all_fields():
 
 
 def test_hash_analysis_result_inherited_validation():
-    result = HashAnalysisResult(
-        available=True, hash_value="test", hash_type="ssdeep"
-    )
+    result = HashAnalysisResult(available=True, hash_value="test", hash_type="ssdeep")
     with pytest.raises(ValidationError):
         result.execution_time = -1.0
 

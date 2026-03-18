@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 
 
 def _sample_path() -> Path:
@@ -91,25 +91,29 @@ def test_r2_session_basic_info_and_cmd_timeout() -> None:
 def test_r2_session_initial_analysis_branches() -> None:
     sample = _sample_path()
     session = R2Session(str(sample))
-    session.open(file_size_mb=1.0)
-
-    assert session._perform_initial_analysis(file_size_mb=100000.0) is True
-
-    original = os.environ.get("R2INSPECT_FORCE_CMD_TIMEOUT")
     try:
-        os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aa"
-        assert session._perform_initial_analysis(file_size_mb=5.0) is False
-        session._test_mode = False
-        os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aaa"
-        assert session._perform_initial_analysis(file_size_mb=1.0) is False
-    finally:
-        if original is None:
-            os.environ.pop("R2INSPECT_FORCE_CMD_TIMEOUT", None)
-        else:
-            os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = original
+        session.open(file_size_mb=1.0)
 
-    session.r2 = None
-    assert session._perform_initial_analysis(file_size_mb=1.0) is True
+        assert session._perform_initial_analysis(file_size_mb=100000.0) is True
+
+        original = os.environ.get("R2INSPECT_FORCE_CMD_TIMEOUT")
+        try:
+            os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aa"
+            assert session._perform_initial_analysis(file_size_mb=5.0) is False
+            session._test_mode = False
+            os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = "aaa"
+            assert session._perform_initial_analysis(file_size_mb=1.0) is False
+        finally:
+            if original is None:
+                os.environ.pop("R2INSPECT_FORCE_CMD_TIMEOUT", None)
+            else:
+                os.environ["R2INSPECT_FORCE_CMD_TIMEOUT"] = original
+
+        session.close()
+        assert session.is_open is False
+        assert session._perform_initial_analysis(file_size_mb=1.0) is True
+    finally:
+        session.close()
 
 
 @pytest.mark.unit

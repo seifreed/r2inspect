@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.utils import command_helpers
+import r2inspect.infrastructure.command_helpers as command_helpers
 
 
 class DummyAdapter:

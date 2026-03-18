@@ -1,13 +1,13 @@
 import hashlib
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from r2inspect.core.constants import MIN_EXECUTABLE_SIZE_BYTES, MIN_HEADER_SIZE_BYTES
+from r2inspect.domain.constants import MIN_EXECUTABLE_SIZE_BYTES, MIN_HEADER_SIZE_BYTES
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.modules.anti_analysis_helpers import (
     add_simple_evidence,
@@ -47,9 +47,9 @@ from r2inspect.schemas.security import (
     SecurityScore,
     SeverityLevel,
 )
-from r2inspect.utils.analyzer_factory import create_analyzer, run_analysis_method
-from r2inspect.utils.command_helpers import cmd, cmd_list, cmdj
-from r2inspect.utils.error_handler import (
+from r2inspect.core.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.infrastructure.command_helpers import cmd, cmd_list, cmdj
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorClassifier,
     ErrorSeverity,
@@ -58,8 +58,8 @@ from r2inspect.utils.error_handler import (
     reset_error_stats,
     safe_execute,
 )
-from r2inspect.utils.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,
@@ -517,7 +517,7 @@ def test_schema_format_hashing_security_results() -> None:
         "crypto": {"algorithms": [{"name": "aes"}]},
         "indicators": [{"type": "Packer", "severity": "High"}],
         "error": "boom",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.5,
     }
     loaded = from_dict(data)

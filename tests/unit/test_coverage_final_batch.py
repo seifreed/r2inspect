@@ -8,11 +8,11 @@ from typing import Any
 
 import r2inspect.modules.ccbhash_analyzer as _ccb_mod
 import r2inspect.modules.impfuzzy_analyzer as _imp_mod
-import r2inspect.utils.hashing as _hash_mod
+import r2inspect.infrastructure.hashing as _hash_mod
 from r2inspect.config import Config
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 from r2inspect.modules.packer_detector import PackerDetector
-from r2inspect.modules.rich_header_domain import decode_rich_header
+from r2inspect.domain.services.rich_header import decode_rich_header
 
 # ---------------------------------------------------------------------------
 # Shared adapter

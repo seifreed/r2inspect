@@ -8,24 +8,28 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.utils import ssdeep_loader
-from r2inspect.utils.analyzer_factory import create_analyzer, run_analysis_method
-from r2inspect.utils.circuit_breaker import CircuitBreaker, CircuitState, r2_circuit_breaker
-from r2inspect.utils.command_helpers import _handle_bytes, _parse_size
-from r2inspect.utils.error_handler import (
+import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
+from r2inspect.core.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.infrastructure.circuit_breaker import (
+    CircuitBreaker,
+    CircuitState,
+    r2_circuit_breaker,
+)
+from r2inspect.infrastructure.command_helpers import _handle_bytes, _parse_size
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorClassifier,
     ErrorInfo,
     global_error_manager,
 )
-from r2inspect.utils.hashing import calculate_ssdeep
-from r2inspect.utils.magic_detector import MagicByteDetector
-from r2inspect.utils.memory_manager import MemoryAwareAnalyzer, MemoryMonitor
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.r2_helpers import get_macho_headers
-from r2inspect.utils.r2_suppress import silent_cmdj
-from r2inspect.utils.rate_limiter import cleanup_memory
-from r2inspect.utils.retry_manager import RetryManager
+from r2inspect.infrastructure.hashing import calculate_ssdeep
+from r2inspect.infrastructure.magic_detector import MagicByteDetector
+from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryMonitor
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.r2_helpers import get_macho_headers
+from r2inspect.infrastructure.r2_suppress import silent_cmdj
+from r2inspect.infrastructure.rate_limiter import cleanup_memory
+from r2inspect.infrastructure.retry_manager import RetryManager
 
 
 class _SigError:

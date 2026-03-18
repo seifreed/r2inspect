@@ -4,7 +4,7 @@ from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
-from r2inspect.utils.memory_manager import global_memory_monitor
+from r2inspect.infrastructure.memory import global_memory_monitor
 
 FIXTURE = Path("samples/fixtures/hello_pe.exe")
 

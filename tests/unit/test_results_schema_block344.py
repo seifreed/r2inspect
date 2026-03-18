@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas import results
 
@@ -161,6 +161,6 @@ def test_results_from_dict_minimal_and_timestamp_handling() -> None:
     bad_ts = results.from_dict({"timestamp": "not-a-date"})
     assert isinstance(bad_ts.timestamp, datetime)
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     with_dt = results.from_dict({"timestamp": now})
     assert with_dt.timestamp == now

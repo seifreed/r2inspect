@@ -1,3 +1,5 @@
+import pytest
+
 #!/usr/bin/env python3
 """Comprehensive tests for string_domain module."""
 
@@ -31,7 +33,9 @@ def test_filter_strings_removes_unprintable():
     strings = ["hello\x00world", "clean", "test\x01\x02"]
     result = filter_strings(strings, min_length=3, max_length=20)
     assert "clean" in result
-    filtered_first = [s for s in result if "hello" in s][0] if any("hello" in s for s in result) else None
+    filtered_first = (
+        [s for s in result if "hello" in s][0] if any("hello" in s for s in result) else None
+    )
     if filtered_first:
         assert "\x00" not in filtered_first
 
@@ -126,13 +130,13 @@ def test_xor_string_single_char():
 def test_build_xor_matches_basic():
     search_string = "test"
     calls = []
-    
+
     def mock_search_hex(pattern):
         calls.append(pattern)
-        if pattern == "test".encode().hex():
+        if pattern == b"test".hex():
             return "0x00401000 match"
         return ""
-    
+
     matches = build_xor_matches(search_string, mock_search_hex)
     assert isinstance(matches, list)
     assert len(calls) == 255
@@ -140,12 +144,12 @@ def test_build_xor_matches_basic():
 
 def test_build_xor_matches_with_results():
     search_string = "A"
-    
+
     def mock_search_hex(pattern):
         if pattern == xor_string("A", 42).encode().hex():
             return "0x00401000 found"
         return ""
-    
+
     matches = build_xor_matches(search_string, mock_search_hex)
     matched = [m for m in matches if m["xor_key"] == 42]
     assert len(matched) == 1
@@ -155,10 +159,10 @@ def test_build_xor_matches_with_results():
 
 def test_build_xor_matches_no_results():
     search_string = "test"
-    
+
     def mock_search_hex(pattern):
         return ""
-    
+
     matches = build_xor_matches(search_string, mock_search_hex)
     assert matches == []
 
@@ -368,11 +372,12 @@ def test_suspicious_patterns_all_defined():
 
 def test_suspicious_patterns_are_valid_regex():
     import re
+
     for pattern_name, pattern in SUSPICIOUS_PATTERNS.items():
         try:
             re.compile(pattern)
         except re.error:
-            assert False, f"Invalid regex pattern for {pattern_name}"
+            pytest.fail(f"Invalid regex pattern for {pattern_name}")
 
 
 def test_filter_strings_preserves_printable():
@@ -393,12 +398,12 @@ def test_xor_string_reversible():
 
 def test_build_xor_matches_contains_metadata():
     search_string = "A"
-    
+
     def mock_search_hex(pattern):
         if pattern == xor_string("A", 10).encode().hex():
             return "0x00401000 match"
         return ""
-    
+
     matches = build_xor_matches(search_string, mock_search_hex)
     matched = [m for m in matches if m["xor_key"] == 10]
     assert len(matched) == 1

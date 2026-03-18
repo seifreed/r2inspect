@@ -7,15 +7,19 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.utils.logger import configure_batch_logging, reset_logging_levels, setup_logger
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.rate_limiter import (
+from r2inspect.infrastructure.logging import (
+    configure_batch_logging,
+    reset_logging_levels,
+    setup_logger,
+)
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.rate_limiter import (
     AdaptiveRateLimiter,
     BatchRateLimiter,
     TokenBucket,
     cleanup_memory,
 )
-from r2inspect.utils.retry_manager import (
+from r2inspect.infrastructure.retry_manager import (
     RetryConfig,
     RetryManager,
     RetryStrategy,

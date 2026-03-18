@@ -121,6 +121,7 @@ def test_impfuzzy_compare_hashes_none_inputs() -> None:
 
 def test_impfuzzy_compare_hashes_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     import r2inspect.modules.impfuzzy_analyzer as mod
+
     original = mod.IMPFUZZY_AVAILABLE
     monkeypatch.setattr(mod, "IMPFUZZY_AVAILABLE", False)
     assert ImpfuzzyAnalyzer.compare_hashes("abc", "abc") is None
@@ -135,6 +136,7 @@ def test_impfuzzy_calculate_from_nonexistent_file() -> None:
 
 def test_impfuzzy_calculate_from_file_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     import r2inspect.modules.impfuzzy_analyzer as mod
+
     monkeypatch.setattr(mod, "IMPFUZZY_AVAILABLE", False)
     assert ImpfuzzyAnalyzer.calculate_impfuzzy_from_file("/any/file.exe") is None
 
@@ -489,9 +491,11 @@ def test_ccbhash_build_canonical_fallback() -> None:
 
 
 def test_ccbhash_calculate_binary_ccbhash_empty() -> None:
-    path = Path("/tmp/fake.bin")  # not used for this static-like method
+    _path = Path("/tmp/fake.bin")  # not used for this static-like method
     # Needs an instance but calculation is deterministic from dict
-    import tempfile, os
+    import tempfile
+    import os
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
         f.write(b"\x00" * 10)
         tmp = f.name
@@ -503,7 +507,9 @@ def test_ccbhash_calculate_binary_ccbhash_empty() -> None:
 
 
 def test_ccbhash_calculate_binary_ccbhash_with_data() -> None:
-    import tempfile, os
+    import tempfile
+    import os
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
         f.write(b"\x00" * 10)
         tmp = f.name
@@ -521,7 +527,9 @@ def test_ccbhash_calculate_binary_ccbhash_with_data() -> None:
 
 
 def test_ccbhash_find_similar_functions_none() -> None:
-    import tempfile, os
+    import tempfile
+    import os
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
         f.write(b"\x00" * 10)
         tmp = f.name
@@ -538,7 +546,9 @@ def test_ccbhash_find_similar_functions_none() -> None:
 
 
 def test_ccbhash_find_similar_functions_with_match() -> None:
-    import tempfile, os
+    import tempfile
+    import os
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
         f.write(b"\x00" * 10)
         tmp = f.name

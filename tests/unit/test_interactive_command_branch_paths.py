@@ -16,6 +16,7 @@ from r2inspect.cli.commands.interactive_command import InteractiveCommand
 # Minimal inspector stub - no mocks
 # ---------------------------------------------------------------------------
 
+
 class InspectorStub:
     """In-memory inspector that satisfies all InteractiveCommand method calls."""
 
@@ -80,6 +81,7 @@ def _sample_path() -> Path:
 # _display_welcome
 # ---------------------------------------------------------------------------
 
+
 def test_display_welcome_prints_available_commands() -> None:
     cmd = _make_cmd()
     buf = io.StringIO()
@@ -94,6 +96,7 @@ def test_display_welcome_prints_available_commands() -> None:
 # ---------------------------------------------------------------------------
 # _should_exit
 # ---------------------------------------------------------------------------
+
 
 def test_should_exit_returns_true_for_quit() -> None:
     cmd = _make_cmd()
@@ -123,6 +126,7 @@ def test_should_exit_returns_false_for_empty_string() -> None:
 # ---------------------------------------------------------------------------
 # _execute_interactive_command - dispatch to handlers
 # ---------------------------------------------------------------------------
+
 
 def test_execute_interactive_command_unknown_prints_error() -> None:
     cmd = _make_cmd()
@@ -192,6 +196,7 @@ def test_execute_interactive_command_sections_prints_sections() -> None:
 # ---------------------------------------------------------------------------
 # _cmd_* methods called directly
 # ---------------------------------------------------------------------------
+
 
 def test_cmd_strings_iterates_all_strings() -> None:
     cmd = _make_cmd()
@@ -278,6 +283,7 @@ def test_cmd_analyze_passes_results_to_display_function() -> None:
 # _handle_error
 # ---------------------------------------------------------------------------
 
+
 def test_handle_error_non_verbose_prints_friendly_message() -> None:
     cmd = _make_cmd()
     buf = io.StringIO()
@@ -300,6 +306,7 @@ def test_handle_error_verbose_prints_full_error() -> None:
 # ---------------------------------------------------------------------------
 # execute() - error path (invalid file)
 # ---------------------------------------------------------------------------
+
 
 def test_execute_invalid_file_non_verbose_returns_one() -> None:
     cmd = _make_cmd()
@@ -338,6 +345,7 @@ def test_execute_invalid_file_verbose_returns_one() -> None:
 # ---------------------------------------------------------------------------
 # execute() - success path (real sample with immediate EOF on stdin)
 # ---------------------------------------------------------------------------
+
 
 def test_execute_with_real_sample_exits_cleanly_on_eof() -> None:
     sample = _sample_path()

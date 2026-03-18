@@ -12,7 +12,7 @@ from r2inspect.adapters.file_system import FileSystemAdapter, default_file_syste
 @pytest.fixture
 def temp_file():
     """Create a temporary test file."""
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
+    with tempfile.NamedTemporaryFile(delete=False, mode="w") as f:
         f.write("Hello World\nLine 2\nLine 3")
         return f.name
 
@@ -20,8 +20,8 @@ def temp_file():
 @pytest.fixture
 def temp_binary_file():
     """Create a temporary binary test file."""
-    with tempfile.NamedTemporaryFile(delete=False, mode='wb') as f:
-        f.write(b"\x00\x01\x02\x03\xFF\xFE\xFD\xFC")
+    with tempfile.NamedTemporaryFile(delete=False, mode="wb") as f:
+        f.write(b"\x00\x01\x02\x03\xff\xfe\xfd\xfc")
         return f.name
 
 
@@ -122,7 +122,7 @@ def test_read_bytes_with_offset_nonzero(temp_binary_file):
     """Test read_bytes with non-zero offset."""
     adapter = FileSystemAdapter()
     content = adapter.read_bytes(temp_binary_file, offset=4)
-    assert b"\xFF\xFE\xFD\xFC" in content
+    assert b"\xff\xfe\xfd\xfc" in content
 
 
 def test_read_bytes_with_offset_and_size(temp_binary_file):
@@ -130,7 +130,7 @@ def test_read_bytes_with_offset_and_size(temp_binary_file):
     adapter = FileSystemAdapter()
     content = adapter.read_bytes(temp_binary_file, size=4, offset=2)
     assert len(content) == 4
-    assert content == b"\x02\x03\xFF\xFE"
+    assert content == b"\x02\x03\xff\xfe"
 
 
 def test_read_bytes_offset_at_end(temp_binary_file):
@@ -157,118 +157,118 @@ def test_read_bytes_default_offset(temp_binary_file):
 
 def test_write_text_basic():
     """Test basic text writing."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(path, "Test content")
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         content = f.read()
     assert content == "Test content"
 
 
 def test_write_text_with_string_path():
     """Test write_text with string path."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(str(path), "Test content")
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         content = f.read()
     assert content == "Test content"
 
 
 def test_write_text_with_path_object():
     """Test write_text with Path object."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = Path(f.name)
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(path, "Test content")
-    
+
     assert path.read_text() == "Test content"
 
 
 def test_write_text_overwrites_existing():
     """Test that write_text overwrites existing content."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         f.write("Old content")
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(path, "New content")
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         content = f.read()
     assert content == "New content"
 
 
 def test_write_text_multiline():
     """Test write_text with multiline content."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     content = "Line 1\nLine 2\nLine 3"
     adapter.write_text(path, content)
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         read_content = f.read()
     assert read_content == content
 
 
 def test_write_text_utf8_encoding():
     """Test write_text with utf-8 encoding."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(path, "Unicode: 中文 العربية", encoding="utf-8")
-    
-    with open(path, 'r', encoding='utf-8') as f:
+
+    with open(path, encoding="utf-8") as f:
         content = f.read()
     assert "中文" in content
 
 
 def test_write_text_custom_encoding():
     """Test write_text with custom encoding."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(path, "Test", encoding="utf-8")
-    
-    with open(path, 'r', encoding='utf-8') as f:
+
+    with open(path, encoding="utf-8") as f:
         content = f.read()
     assert content == "Test"
 
 
 def test_write_text_empty_string():
     """Test write_text with empty string."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
     adapter.write_text(path, "")
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         content = f.read()
     assert content == ""
 
 
 def test_write_text_with_special_chars():
     """Test write_text with special characters."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     adapter = FileSystemAdapter()
-    content = 'Special: "quotes" \'apostrophe\' \\ backslash'
+    content = "Special: \"quotes\" 'apostrophe' \\ backslash"
     adapter.write_text(path, content)
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         read_content = f.read()
     assert read_content == content
 
@@ -292,12 +292,12 @@ def test_default_file_system_read_bytes(temp_binary_file):
 
 def test_default_file_system_write_text():
     """Test default_file_system.write_text()."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
         path = f.name
-    
+
     default_file_system.write_text(path, "Test content")
-    
-    with open(path, 'r') as f:
+
+    with open(path) as f:
         content = f.read()
     assert content == "Test content"
 

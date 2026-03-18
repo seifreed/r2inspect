@@ -1,18 +1,23 @@
 import os
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-import r2inspect.__main__ as r2_main
 from r2inspect import config_store
 from r2inspect.security import validators
 
 
-def test_main_entrypoint_version_exit(monkeypatch) -> None:
-    monkeypatch.setattr(sys, "argv", ["r2inspect", "--version"])
-    exit_code = r2_main.main()
-    assert exit_code == 0
+def test_main_entrypoint_version_exit() -> None:
+    """Invoke r2inspect --version via subprocess to avoid mutating sys.argv."""
+    result = subprocess.run(
+        [sys.executable, "-m", "r2inspect", "--version"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0
 
 
 def test_config_store_load_and_save(tmp_path, capsys) -> None:

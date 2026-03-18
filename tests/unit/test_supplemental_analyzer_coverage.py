@@ -46,7 +46,9 @@ class OverlayAdapter:
         overlay_bytes: list[int] | None = None,
     ) -> None:
         self._file_size = file_size
-        self._sections = sections if sections is not None else [{"name": ".text", "paddr": 0, "size": 8000}]
+        self._sections = (
+            sections if sections is not None else [{"name": ".text", "paddr": 0, "size": 8000}]
+        )
         self._data_dirs = data_dirs if data_dirs is not None else []
         self._overlay_bytes = overlay_bytes  # None means return a default
 
@@ -300,17 +302,29 @@ class TestOverlayAnalyzer:
         """Line 97, 161-166: potential_type derived from recognized pattern."""
         analyzer = OverlayAnalyzer(OverlayAdapterAutoIt())
         result = analyzer.analyze()
-        assert "installer" in result["potential_type"].lower() or result["potential_type"] != "unknown"
+        assert (
+            "installer" in result["potential_type"].lower() or result["potential_type"] != "unknown"
+        )
 
     def test_default_result_structure(self) -> None:
         """Verify _default_result() keys are all present."""
         analyzer = OverlayAnalyzer(OverlayAdapterZeroSize())
         result = analyzer.analyze()
         for key in (
-            "available", "has_overlay", "overlay_offset", "overlay_size",
-            "overlay_entropy", "overlay_hashes", "patterns_found", "potential_type",
-            "suspicious_indicators", "extracted_strings", "file_size", "pe_end",
-            "embedded_files", "error",
+            "available",
+            "has_overlay",
+            "overlay_offset",
+            "overlay_size",
+            "overlay_entropy",
+            "overlay_hashes",
+            "patterns_found",
+            "potential_type",
+            "suspicious_indicators",
+            "extracted_strings",
+            "file_size",
+            "pe_end",
+            "embedded_files",
+            "error",
         ):
             assert key in result
 
@@ -324,9 +338,11 @@ class CCBHashAdapter:
     """Stub adapter that returns one function with a simple CFG."""
 
     def __init__(self, cfg: list[dict] | None = None) -> None:
-        self._cfg = cfg if cfg is not None else [
-            {"edges": [{"src": 0x1000, "dst": 0x1020}, {"src": 0x1020, "dst": 0x1040}]}
-        ]
+        self._cfg = (
+            cfg
+            if cfg is not None
+            else [{"edges": [{"src": 0x1000, "dst": 0x1020}, {"src": 0x1020, "dst": 0x1040}]}]
+        )
 
     def get_functions(self) -> list[dict[str, Any]]:
         return [{"name": "main", "addr": 0x1000, "size": 100}]
@@ -499,25 +515,45 @@ class BinDiffAdapter:
             "core": {"format": "PE", "size": 50000},
             "bin": {"arch": "x86", "bits": 32, "endian": "little"},
         }
-        self._sections = sections if sections is not None else [
-            {"name": ".text", "size": 0x2000, "perm": "rx"},
-            {"name": ".data", "size": 0x1000, "perm": "rw"},
-        ]
-        self._imports = imports if imports is not None else [
-            {"name": "CreateFile", "libname": "kernel32.dll"},
-            {"name": "VirtualAlloc", "libname": "kernel32.dll"},
-        ]
-        self._exports = exports if exports is not None else [
-            {"name": "MyExport"},
-        ]
-        self._functions = functions if functions is not None else [
-            {"name": "main", "offset": 0x1000, "size": 200},
-        ]
-        self._strings = strings if strings is not None else [
-            {"string": "http://malware.example.com"},
-            {"string": "HKEY_LOCAL_MACHINE"},
-            {"string": "CreateProcess"},
-        ]
+        self._sections = (
+            sections
+            if sections is not None
+            else [
+                {"name": ".text", "size": 0x2000, "perm": "rx"},
+                {"name": ".data", "size": 0x1000, "perm": "rw"},
+            ]
+        )
+        self._imports = (
+            imports
+            if imports is not None
+            else [
+                {"name": "CreateFile", "libname": "kernel32.dll"},
+                {"name": "VirtualAlloc", "libname": "kernel32.dll"},
+            ]
+        )
+        self._exports = (
+            exports
+            if exports is not None
+            else [
+                {"name": "MyExport"},
+            ]
+        )
+        self._functions = (
+            functions
+            if functions is not None
+            else [
+                {"name": "main", "offset": 0x1000, "size": 200},
+            ]
+        )
+        self._strings = (
+            strings
+            if strings is not None
+            else [
+                {"string": "http://malware.example.com"},
+                {"string": "HKEY_LOCAL_MACHINE"},
+                {"string": "CreateProcess"},
+            ]
+        )
 
     def get_file_info(self) -> dict[str, Any]:
         return self._file_info
@@ -1040,9 +1076,7 @@ class TestPackerDetector:
     def test_calculate_heuristic_score_high(self) -> None:
         """_calculate_heuristic_score returns float in [0,1]."""
         pd = self._make(PackerAdapter())
-        entropy_results = {
-            "summary": {"high_entropy_ratio": 0.8, "high_entropy_sections": 2}
-        }
+        entropy_results = {"summary": {"high_entropy_ratio": 0.8, "high_entropy_sections": 2}}
         section_results = {
             "suspicious_sections": ["s1"],
             "section_count": 2,

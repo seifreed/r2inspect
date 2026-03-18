@@ -6,7 +6,7 @@ import pytest
 
 from r2inspect.config import Config
 from r2inspect.factory import create_inspector
-from r2inspect.utils import command_helpers
+import r2inspect.infrastructure.command_helpers as command_helpers
 
 pytestmark = pytest.mark.requires_r2
 

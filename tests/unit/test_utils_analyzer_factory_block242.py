@@ -1,4 +1,4 @@
-from r2inspect.utils.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.core.analyzer_factory import create_analyzer, run_analysis_method
 
 
 class AnalyzerWithKw:

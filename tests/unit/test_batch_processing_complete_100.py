@@ -1,43 +1,52 @@
 """Comprehensive tests for batch_processing.py - 100% coverage target."""
 
-from unittest.mock import Mock, patch, MagicMock
+from pathlib import Path
+
+from r2inspect.cli.batch_paths import (
+    setup_analysis_options,
+    setup_batch_mode,
+)
 
 
-def test_batch_processing_init():
-    """Test BatchProcessing initialization."""
-    # Basic initialization test
-    obj = Mock()
-    assert obj is not None
+def test_batch_processing_setup_analysis_options():
+    """Test setup_analysis_options builds correct dict."""
+    options = setup_analysis_options(yara="/rules", sanitized_xor="ff")
+    assert isinstance(options, dict)
+    assert options.get("custom_yara") == "/rules" or "yara" in str(options)
 
 
-def test_batch_processing_basic_functionality():
-    """Test basic functionality of batch_processing."""
-    # Placeholder for basic functionality test
-    assert True
+def test_batch_processing_setup_analysis_options_none():
+    """Test setup_analysis_options with None values."""
+    options = setup_analysis_options(yara=None, sanitized_xor=None)
+    assert isinstance(options, dict)
 
 
-def test_batch_processing_error_handling():
-    """Test error handling in batch_processing."""
-    # Placeholder for error handling test
-    try:
-        # Simulate error condition
-        pass
-    except Exception:
-        pass
-    assert True
+def test_batch_processing_setup_batch_mode():
+    """Test setup_batch_mode returns expected tuple."""
+    recursive, auto_detect, output = setup_batch_mode(
+        batch="/tmp",
+        extensions=None,
+        output_json=True,
+        output_csv=False,
+        output=None,
+    )
+    assert isinstance(recursive, bool)
+    assert isinstance(auto_detect, bool)
+
+
+def test_batch_processing_setup_batch_mode_with_output():
+    """Test setup_batch_mode with custom output."""
+    recursive, auto_detect, output = setup_batch_mode(
+        batch="/tmp",
+        extensions=".exe,.dll",
+        output_json=False,
+        output_csv=True,
+        output="/custom/output",
+    )
+    assert output == "/custom/output"
 
 
 def test_batch_processing_edge_cases():
-    """Test edge cases in batch_processing."""
-    # Placeholder for edge case testing
-    assert True
-
-
-def test_batch_processing_integration():
-    """Test integration scenarios for batch_processing."""
-    # Placeholder for integration test
-    assert True
-
-
-# Additional coverage tests would go here
-# These are stubs to ensure files exist and pass
+    """Test edge cases in batch processing setup."""
+    options = setup_analysis_options(yara="", sanitized_xor="")
+    assert isinstance(options, dict)

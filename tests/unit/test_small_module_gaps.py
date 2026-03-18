@@ -63,7 +63,7 @@ def test_r2_suppress_silent_cmdj_lines_76_78() -> None:
     _try_cmd_parse then returns default, so we return parsed at line 78.
     Covers lines 76, 77, 78.
     """
-    import r2inspect.utils.r2_suppress as _sup
+    import r2inspect.infrastructure.r2_suppress as _sup
 
     orig_try_cmdj = _sup._try_cmdj
     # Force _try_cmdj to return None so that lines 76-79 become reachable
@@ -83,7 +83,7 @@ def test_r2_suppress_silent_cmdj_line_79() -> None:
     Patch both _try_cmdj and _try_cmd_parse to return None so that
     the final return safe_cmdj(...) on line 79 is reached.
     """
-    import r2inspect.utils.r2_suppress as _sup
+    import r2inspect.infrastructure.r2_suppress as _sup
 
     orig_try_cmdj = _sup._try_cmdj
     orig_try_cmd_parse = _sup._try_cmd_parse
@@ -370,7 +370,7 @@ def test_calculate_ssdeep_returns_none_when_get_ssdeep_is_none() -> None:
     Patch get_ssdeep to return None so calculate_ssdeep short-circuits and
     returns None at line 100.
     """
-    import r2inspect.utils.hashing as _hash_mod
+    import r2inspect.infrastructure.hashing as _hash_mod
 
     orig = _hash_mod.get_ssdeep  # type: ignore[attr-defined]
     _hash_mod.get_ssdeep = lambda: None  # type: ignore[attr-defined]
@@ -405,7 +405,7 @@ def test_rich_header_decode_truncated_entry_line_291() -> None:
     Use a TruncatingBytes object so that entry_bytes is only 4 bytes long,
     triggering the safety ``break`` at line 291.
     """
-    from r2inspect.modules.rich_header_domain import decode_rich_header
+    from r2inspect.domain.services.rich_header import decode_rich_header
 
     # 24 bytes is enough for range(4, 20, 8) = [4, 12] → first iteration hits line 291
     encoded_data = _TruncatingBytes(bytes(24))

@@ -2,14 +2,14 @@ import time
 
 import pytest
 
-from r2inspect.utils import command_helpers
-from r2inspect.utils.circuit_breaker import (
+import r2inspect.infrastructure.command_helpers as command_helpers
+from r2inspect.infrastructure.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerError,
     CircuitState,
     R2CommandCircuitBreaker,
 )
-from r2inspect.utils.rate_limiter import (
+from r2inspect.infrastructure.rate_limiter import (
     AdaptiveRateLimiter,
     BatchRateLimiter,
     TokenBucket,

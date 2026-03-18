@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.utils.output_csv import CsvOutputFormatter
+from r2inspect.cli.output_csv import CsvOutputFormatter
 
 
 # ---------------------------------------------------------------------------

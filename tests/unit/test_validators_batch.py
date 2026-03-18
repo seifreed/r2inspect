@@ -2,13 +2,12 @@
 """
 Comprehensive tests for r2inspect/cli/validators.py module.
 Tests input validation, security checks, and error handling.
-Coverage target: 100% (currently 14%)
+
+NO mocks, NO @patch. Uses real tmp_path, real os.environ, real objects.
 """
 
 import os
-import sys
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -77,11 +76,18 @@ def test_validate_file_input_simulated_error(tmp_path):
     """Test file access error handling"""
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"data")
-    
-    with patch.dict(os.environ, {"R2INSPECT_TEST_RAISE_FILE_ERROR": "1"}):
+
+    old_val = os.environ.get("R2INSPECT_TEST_RAISE_FILE_ERROR")
+    try:
+        os.environ["R2INSPECT_TEST_RAISE_FILE_ERROR"] = "1"
         errors = validate_file_input(str(sample))
         assert len(errors) > 0
         assert "access error" in errors[0].lower()
+    finally:
+        if old_val is None:
+            os.environ.pop("R2INSPECT_TEST_RAISE_FILE_ERROR", None)
+        else:
+            os.environ["R2INSPECT_TEST_RAISE_FILE_ERROR"] = old_val
 
 
 def test_validate_file_input_none():
@@ -113,10 +119,17 @@ def test_validate_batch_input_not_a_directory(tmp_path):
 
 def test_validate_batch_input_simulated_error(tmp_path):
     """Test batch directory access error handling"""
-    with patch.dict(os.environ, {"R2INSPECT_TEST_RAISE_BATCH_ERROR": "1"}):
+    old_val = os.environ.get("R2INSPECT_TEST_RAISE_BATCH_ERROR")
+    try:
+        os.environ["R2INSPECT_TEST_RAISE_BATCH_ERROR"] = "1"
         errors = validate_batch_input(str(tmp_path))
         assert len(errors) > 0
         assert "access error" in errors[0].lower()
+    finally:
+        if old_val is None:
+            os.environ.pop("R2INSPECT_TEST_RAISE_BATCH_ERROR", None)
+        else:
+            os.environ["R2INSPECT_TEST_RAISE_BATCH_ERROR"] = old_val
 
 
 def test_validate_batch_input_none():
@@ -138,9 +151,9 @@ def test_validate_output_input_readonly_file(tmp_path):
     output_file = tmp_path / "readonly.json"
     output_file.write_text("{}")
     output_file.chmod(0o444)
-    
+
     errors = validate_output_input(str(output_file))
-    if os.name != 'nt':
+    if os.name != "nt":
         assert len(errors) > 0
         assert "cannot write" in errors[0].lower()
 
@@ -445,7 +458,7 @@ def test_validate_input_mode_both_provided(tmp_path):
     """Test validation fails when both filename and batch are provided"""
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"data")
-    
+
     with pytest.raises(SystemExit) as exc_info:
         validate_input_mode(str(sample), str(tmp_path))
     assert exc_info.value.code == 1
@@ -502,7 +515,7 @@ def test_validate_inputs_all_valid(tmp_path):
     yara_dir.mkdir()
     config_file = tmp_path / "config.json"
     config_file.write_text("{}")
-    
+
     errors = validate_inputs(
         filename=str(sample),
         batch=None,
@@ -510,7 +523,7 @@ def test_validate_inputs_all_valid(tmp_path):
         yara=str(yara_dir),
         config=str(config_file),
         extensions="exe,dll",
-        threads=10
+        threads=10,
     )
     assert errors == []
 
@@ -524,7 +537,7 @@ def test_validate_inputs_multiple_errors(tmp_path):
         yara=str(tmp_path / "missing_yara"),
         config=str(tmp_path / "missing.json"),
         extensions="invalid@#$",
-        threads=100
+        threads=100,
     )
     assert len(errors) >= 4
 
@@ -538,6 +551,6 @@ def test_validate_inputs_all_none():
         yara=None,
         config=None,
         extensions=None,
-        threads=None
+        threads=None,
     )
     assert errors == []

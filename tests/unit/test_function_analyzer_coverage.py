@@ -356,7 +356,12 @@ def test_process_single_function_hash_empty_machoc():
 
 
 def test_process_single_function_hash_success():
-    ops = [{"opcode": "push ebp"}, {"opcode": "mov ebp, esp"}, {"opcode": "pop ebp"}, {"opcode": "ret"}]
+    ops = [
+        {"opcode": "push ebp"},
+        {"opcode": "mov ebp, esp"},
+        {"opcode": "pop ebp"},
+        {"opcode": "ret"},
+    ]
     adapter = DisasmDictAdapter(ops)
     analyzer = FunctionAnalyzer(adapter)
     func = {"name": "my_func", "addr": 0x4000, "size": 16}
@@ -605,8 +610,11 @@ def test_get_function_similarity_exception_returns_empty():
     adapter = MinimalAdapter()
     analyzer = FunctionAnalyzer(adapter)
     # Invoke the real method with non-iterable to trigger exception
-    result = FunctionAnalyzer.get_function_similarity.__wrapped__ if hasattr(
-        FunctionAnalyzer.get_function_similarity, "__wrapped__") else None
+    _result = (
+        FunctionAnalyzer.get_function_similarity.__wrapped__
+        if hasattr(FunctionAnalyzer.get_function_similarity, "__wrapped__")
+        else None
+    )
 
     # Test the exception path by subclassing
     class RaisingAnalyzer(FunctionAnalyzer):

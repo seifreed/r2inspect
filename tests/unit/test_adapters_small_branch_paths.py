@@ -16,6 +16,7 @@ from r2inspect.adapters.file_system import FileSystemAdapter
 # magic_adapter.py
 # ---------------------------------------------------------------------------
 
+
 def test_magic_adapter_available_false_when_magic_not_importable() -> None:
     """MagicAdapter.available returns False when python-magic is not importable."""
     original = sys.modules.get("magic", _SENTINEL := object())
@@ -74,9 +75,32 @@ def test_magic_adapter_available_true_when_magic_is_importable() -> None:
     assert isinstance(adapter.available, bool)
 
 
+def test_magic_adapter_windows_branch_disables_magic() -> None:
+    original_platform = sys.platform
+    try:
+        sys.platform = "win32"
+        adapter = MagicAdapter()
+    finally:
+        sys.platform = original_platform
+    assert adapter.available is False
+    assert adapter.create_detectors() is None
+
+
+def test_magic_adapter_create_detectors_exception_returns_none() -> None:
+    class _BrokenMagicModule:
+        class Magic:
+            def __init__(self, *args, **kwargs):
+                raise RuntimeError("boom")
+
+    adapter = MagicAdapter()
+    adapter._magic = _BrokenMagicModule()
+    assert adapter.create_detectors() is None
+
+
 # ---------------------------------------------------------------------------
 # file_system.py
 # ---------------------------------------------------------------------------
+
 
 def test_read_bytes_with_offset_reads_from_offset(tmp_path: Path) -> None:
     """FileSystemAdapter.read_bytes reads correctly when offset is non-zero."""
@@ -108,6 +132,7 @@ def test_read_text_reads_file_content(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # r2pipe_context.py
 # ---------------------------------------------------------------------------
+
 
 def test_open_r2pipe_yields_r2_session(samples_dir: Path) -> None:
     """open_r2pipe context manager executes; L19 (yield r2) is covered."""

@@ -9,7 +9,7 @@ from rich.table import Table
 
 from r2inspect.cli import display as display_module
 from r2inspect.cli import display_base, display_sections, interactive, presenter
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 class _DummyInspector:

@@ -11,7 +11,7 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.registry.default_registry import create_default_registry
 
 

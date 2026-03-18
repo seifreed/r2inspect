@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
 
 
 def test_retry_manager_retries_then_succeeds():

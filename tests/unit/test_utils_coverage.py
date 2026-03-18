@@ -83,6 +83,7 @@ class _StubR2WithJSON:
 
     def cmd(self, command: str) -> str:
         import json
+
         return json.dumps(self._payload)
 
     def cmdj(self, command: str) -> Any:
@@ -95,7 +96,7 @@ class _StubR2WithJSON:
 
 
 def test_is_pe_file_mz_header_returns_true(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     pe = tmp_path / "sample.exe"
     pe.write_bytes(b"MZ" + b"\x90" * 100)
@@ -103,7 +104,7 @@ def test_is_pe_file_mz_header_returns_true(tmp_path: Path) -> None:
 
 
 def test_is_pe_file_info_text_contains_pe(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     f = tmp_path / "sample.bin"
     f.write_bytes(b"\x00" * 10)
@@ -111,7 +112,7 @@ def test_is_pe_file_info_text_contains_pe(tmp_path: Path) -> None:
 
 
 def test_is_pe_file_file_info_format_field(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     f = tmp_path / "sample.bin"
     f.write_bytes(b"\x00" * 10)
@@ -119,7 +120,7 @@ def test_is_pe_file_file_info_format_field(tmp_path: Path) -> None:
 
 
 def test_is_pe_file_file_info_class_field(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     f = tmp_path / "sample.bin"
     f.write_bytes(b"\x00" * 10)
@@ -127,7 +128,7 @@ def test_is_pe_file_file_info_class_field(tmp_path: Path) -> None:
 
 
 def test_is_pe_file_no_indicators_returns_false(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     f = tmp_path / "sample.bin"
     f.write_bytes(b"\x00" * 10)
@@ -135,19 +136,19 @@ def test_is_pe_file_no_indicators_returns_false(tmp_path: Path) -> None:
 
 
 def test_is_pe_file_none_filepath_uses_adapter() -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     assert is_pe_file(None, _StubAdapterPEInfoText(), _StubR2()) is True
 
 
 def test_is_pe_file_none_filepath_no_indicators() -> None:
-    from r2inspect.utils.file_type import is_pe_file
+    from r2inspect.infrastructure.file_type import is_pe_file
 
     assert is_pe_file(None, _StubAdapterEmpty(), _StubR2()) is False
 
 
 def test_is_elf_file_info_text_contains_elf(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_elf_file
+    from r2inspect.infrastructure.file_type import is_elf_file
 
     f = tmp_path / "sample.elf"
     f.write_bytes(b"\x00" * 10)
@@ -155,7 +156,7 @@ def test_is_elf_file_info_text_contains_elf(tmp_path: Path) -> None:
 
 
 def test_is_elf_file_file_info_format_field(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_elf_file
+    from r2inspect.infrastructure.file_type import is_elf_file
 
     f = tmp_path / "sample.bin"
     f.write_bytes(b"\x00" * 10)
@@ -163,7 +164,7 @@ def test_is_elf_file_file_info_format_field(tmp_path: Path) -> None:
 
 
 def test_is_elf_file_magic_bytes(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_elf_file
+    from r2inspect.infrastructure.file_type import is_elf_file
 
     f = tmp_path / "sample.elf"
     f.write_bytes(b"\x7fELF" + b"\x00" * 60)
@@ -171,7 +172,7 @@ def test_is_elf_file_magic_bytes(tmp_path: Path) -> None:
 
 
 def test_is_elf_file_no_indicators_returns_false(tmp_path: Path) -> None:
-    from r2inspect.utils.file_type import is_elf_file
+    from r2inspect.infrastructure.file_type import is_elf_file
 
     f = tmp_path / "sample.bin"
     f.write_bytes(b"\x00" * 10)
@@ -179,61 +180,61 @@ def test_is_elf_file_no_indicators_returns_false(tmp_path: Path) -> None:
 
 
 def test_bin_info_has_pe_format() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_pe
+    from r2inspect.infrastructure.file_type import _bin_info_has_pe
 
     assert _bin_info_has_pe({"format": "pe", "class": "PE32"}) is True
 
 
 def test_bin_info_has_pe_class() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_pe
+    from r2inspect.infrastructure.file_type import _bin_info_has_pe
 
     assert _bin_info_has_pe({"format": "unknown", "class": "PE64"}) is True
 
 
 def test_bin_info_has_pe_case_insensitive() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_pe
+    from r2inspect.infrastructure.file_type import _bin_info_has_pe
 
     assert _bin_info_has_pe({"format": "PE32+", "class": ""}) is True
 
 
 def test_bin_info_has_pe_false() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_pe
+    from r2inspect.infrastructure.file_type import _bin_info_has_pe
 
     assert _bin_info_has_pe({"format": "elf", "class": "ELF64"}) is False
 
 
 def test_bin_info_has_pe_empty() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_pe
+    from r2inspect.infrastructure.file_type import _bin_info_has_pe
 
     assert _bin_info_has_pe({}) is False
 
 
 def test_bin_info_has_elf_format() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_elf
+    from r2inspect.infrastructure.file_type import _bin_info_has_elf
 
     assert _bin_info_has_elf({"format": "elf", "type": "EXEC", "class": "ELF64"}) is True
 
 
 def test_bin_info_has_elf_type() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_elf
+    from r2inspect.infrastructure.file_type import _bin_info_has_elf
 
     assert _bin_info_has_elf({"format": "unknown", "type": "elf64", "class": ""}) is True
 
 
 def test_bin_info_has_elf_class() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_elf
+    from r2inspect.infrastructure.file_type import _bin_info_has_elf
 
     assert _bin_info_has_elf({"format": "unknown", "type": "EXEC", "class": "elf"}) is True
 
 
 def test_bin_info_has_elf_false() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_elf
+    from r2inspect.infrastructure.file_type import _bin_info_has_elf
 
     assert _bin_info_has_elf({"format": "pe", "type": "EXEC", "class": "PE32"}) is False
 
 
 def test_bin_info_has_elf_empty() -> None:
-    from r2inspect.utils.file_type import _bin_info_has_elf
+    from r2inspect.infrastructure.file_type import _bin_info_has_elf
 
     assert _bin_info_has_elf({}) is False
 
@@ -244,7 +245,7 @@ def test_bin_info_has_elf_empty() -> None:
 
 
 def test_calculate_hashes_known_data(tmp_path: Path) -> None:
-    from r2inspect.utils.hashing import calculate_hashes
+    from r2inspect.infrastructure.hashing import calculate_hashes
 
     data = b"r2inspect-unit-test"
     f = tmp_path / "test.bin"
@@ -258,7 +259,7 @@ def test_calculate_hashes_known_data(tmp_path: Path) -> None:
 
 
 def test_calculate_hashes_empty_file(tmp_path: Path) -> None:
-    from r2inspect.utils.hashing import calculate_hashes
+    from r2inspect.infrastructure.hashing import calculate_hashes
 
     f = tmp_path / "empty.bin"
     f.write_bytes(b"")
@@ -268,14 +269,14 @@ def test_calculate_hashes_empty_file(tmp_path: Path) -> None:
 
 
 def test_calculate_hashes_nonexistent_file(tmp_path: Path) -> None:
-    from r2inspect.utils.hashing import calculate_hashes
+    from r2inspect.infrastructure.hashing import calculate_hashes
 
     result = calculate_hashes(str(tmp_path / "missing.bin"))
     assert result == {"md5": "", "sha1": "", "sha256": "", "sha512": ""}
 
 
 def test_calculate_hashes_for_bytes_basic() -> None:
-    from r2inspect.utils.hashing import calculate_hashes_for_bytes
+    from r2inspect.infrastructure.hashing import calculate_hashes_for_bytes
 
     data = b"hello"
     result = calculate_hashes_for_bytes(data)
@@ -285,7 +286,7 @@ def test_calculate_hashes_for_bytes_basic() -> None:
 
 
 def test_calculate_hashes_for_bytes_with_sha512() -> None:
-    from r2inspect.utils.hashing import calculate_hashes_for_bytes
+    from r2inspect.infrastructure.hashing import calculate_hashes_for_bytes
 
     data = b"hello"
     result = calculate_hashes_for_bytes(data, include_sha512=True)
@@ -294,14 +295,14 @@ def test_calculate_hashes_for_bytes_with_sha512() -> None:
 
 
 def test_calculate_hashes_for_bytes_empty() -> None:
-    from r2inspect.utils.hashing import calculate_hashes_for_bytes
+    from r2inspect.infrastructure.hashing import calculate_hashes_for_bytes
 
     result = calculate_hashes_for_bytes(b"")
     assert result["md5"] == hashlib.md5(b"", usedforsecurity=False).hexdigest()
 
 
 def test_calculate_hashes_for_bytes_no_sha512_by_default() -> None:
-    from r2inspect.utils.hashing import calculate_hashes_for_bytes
+    from r2inspect.infrastructure.hashing import calculate_hashes_for_bytes
 
     result = calculate_hashes_for_bytes(b"data")
     assert "sha512" not in result
@@ -360,7 +361,7 @@ def _make_full_result() -> dict[str, Any]:
 
 
 def test_csv_output_contains_header_row() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "name" in csv_text
@@ -368,28 +369,28 @@ def test_csv_output_contains_header_row() -> None:
 
 
 def test_csv_output_contains_filename() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "sample.exe" in csv_text
 
 
 def test_csv_output_imphash() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "deadbeef" in csv_text
 
 
 def test_csv_output_file_size_formatted() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "KB" in csv_text or "2" in csv_text
 
 
 def test_csv_output_section_count_stripped_from_file_type() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "5 sections" not in csv_text
@@ -397,21 +398,21 @@ def test_csv_output_section_count_stripped_from_file_type() -> None:
 
 
 def test_csv_output_compile_time() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "2023-01-01" in csv_text
 
 
 def test_csv_output_rich_header_compilers() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "MSVC" in csv_text
 
 
 def test_csv_output_empty_dict() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter({}).to_csv()
     assert isinstance(csv_text, str)
@@ -419,14 +420,14 @@ def test_csv_output_empty_dict() -> None:
 
 
 def test_csv_output_anti_analysis_flags() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     csv_text = CsvOutputFormatter(_make_full_result()).to_csv()
     assert "True" in csv_text
 
 
 def test_csv_output_duplicate_machoc_count() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     formatter = CsvOutputFormatter(_make_full_result())
     data = formatter._extract_csv_data(_make_full_result())
@@ -436,7 +437,7 @@ def test_csv_output_duplicate_machoc_count() -> None:
 
 
 def test_csv_output_counts() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     formatter = CsvOutputFormatter(_make_full_result())
     data = formatter._extract_csv_data(_make_full_result())
@@ -446,35 +447,35 @@ def test_csv_output_counts() -> None:
 
 
 def test_format_file_size_zero() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     fmt = CsvOutputFormatter({})
     assert fmt._format_file_size(0) == "0 B"
 
 
 def test_format_file_size_bytes() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     fmt = CsvOutputFormatter({})
     assert fmt._format_file_size(512) == "512 B"
 
 
 def test_format_file_size_kb() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     fmt = CsvOutputFormatter({})
     assert "KB" in fmt._format_file_size(1024)
 
 
 def test_format_file_size_mb() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     fmt = CsvOutputFormatter({})
     assert "MB" in fmt._format_file_size(1024 * 1024)
 
 
 def test_clean_file_type_removes_section_count() -> None:
-    from r2inspect.utils.output_csv import CsvOutputFormatter
+    from r2inspect.cli.output_csv import CsvOutputFormatter
 
     fmt = CsvOutputFormatter({})
     result = fmt._clean_file_type("PE32 executable, 7 sections")
@@ -488,7 +489,7 @@ def test_clean_file_type_removes_section_count() -> None:
 
 
 def test_r2pipe_error_suppressor_redirects_and_restores() -> None:
-    from r2inspect.utils.r2_suppress import R2PipeErrorSuppressor
+    from r2inspect.infrastructure.r2_suppress import R2PipeErrorSuppressor
 
     original_stderr = sys.stderr
     original_stdout = sys.stdout
@@ -502,15 +503,14 @@ def test_r2pipe_error_suppressor_redirects_and_restores() -> None:
 
 
 def test_r2pipe_error_suppressor_does_not_swallow_exceptions() -> None:
-    from r2inspect.utils.r2_suppress import R2PipeErrorSuppressor
+    from r2inspect.infrastructure.r2_suppress import R2PipeErrorSuppressor
 
-    with pytest.raises(ValueError):
-        with R2PipeErrorSuppressor():
-            raise ValueError("should propagate")
+    with pytest.raises(ValueError), R2PipeErrorSuppressor():
+        raise ValueError("should propagate")
 
 
 def test_suppress_r2pipe_errors_context_manager() -> None:
-    from r2inspect.utils.r2_suppress import suppress_r2pipe_errors
+    from r2inspect.infrastructure.r2_suppress import suppress_r2pipe_errors
 
     original_stderr = sys.stderr
     with suppress_r2pipe_errors():
@@ -519,14 +519,14 @@ def test_suppress_r2pipe_errors_context_manager() -> None:
 
 
 def test_silent_cmdj_none_instance_returns_default() -> None:
-    from r2inspect.utils.r2_suppress import silent_cmdj
+    from r2inspect.infrastructure.r2_suppress import silent_cmdj
 
     result = silent_cmdj(None, "ij", default=[])
     assert result == []
 
 
 def test_silent_cmdj_valid_instance_returns_data() -> None:
-    from r2inspect.utils.r2_suppress import silent_cmdj
+    from r2inspect.infrastructure.r2_suppress import silent_cmdj
 
     r2 = _StubR2WithJSON({"format": "pe"})
     result = silent_cmdj(r2, "ij", default={})
@@ -535,20 +535,20 @@ def test_silent_cmdj_valid_instance_returns_data() -> None:
 
 
 def test_parse_raw_result_valid_json() -> None:
-    from r2inspect.utils.r2_suppress import _parse_raw_result
+    from r2inspect.infrastructure.r2_suppress import _parse_raw_result
 
     assert _parse_raw_result('{"key": 1}') == {"key": 1}
 
 
 def test_parse_raw_result_invalid_json_long_string() -> None:
-    from r2inspect.utils.r2_suppress import _parse_raw_result
+    from r2inspect.infrastructure.r2_suppress import _parse_raw_result
 
     result = _parse_raw_result("not json but long enough")
     assert result == "not json but long enough"
 
 
 def test_parse_raw_result_short_invalid_returns_none() -> None:
-    from r2inspect.utils.r2_suppress import _parse_raw_result
+    from r2inspect.infrastructure.r2_suppress import _parse_raw_result
 
     # 2-char string fails json parsing and len <= 2 → returns None
     assert _parse_raw_result("ab") is None
@@ -600,14 +600,14 @@ class _MultiParamAnalyzer:
 
 
 def test_create_analyzer_no_args() -> None:
-    from r2inspect.utils.analyzer_factory import create_analyzer
+    from r2inspect.core.analyzer_factory import create_analyzer
 
     inst = create_analyzer(_NoArgAnalyzer)
     assert isinstance(inst, _NoArgAnalyzer)
 
 
 def test_create_analyzer_with_adapter() -> None:
-    from r2inspect.utils.analyzer_factory import create_analyzer
+    from r2inspect.core.analyzer_factory import create_analyzer
 
     stub = _StubAdapter()
     inst = create_analyzer(_AdapterAnalyzer, adapter=stub)
@@ -616,7 +616,7 @@ def test_create_analyzer_with_adapter() -> None:
 
 
 def test_create_analyzer_with_adapter_and_config() -> None:
-    from r2inspect.utils.analyzer_factory import create_analyzer
+    from r2inspect.core.analyzer_factory import create_analyzer
 
     stub = _StubAdapter()
     cfg = {"opt": True}
@@ -626,7 +626,7 @@ def test_create_analyzer_with_adapter_and_config() -> None:
 
 
 def test_create_analyzer_with_filename() -> None:
-    from r2inspect.utils.analyzer_factory import create_analyzer
+    from r2inspect.core.analyzer_factory import create_analyzer
 
     inst = create_analyzer(_FilenameAnalyzer, filename="/tmp/test.bin")
     assert isinstance(inst, _FilenameAnalyzer)
@@ -634,7 +634,7 @@ def test_create_analyzer_with_filename() -> None:
 
 
 def test_create_analyzer_multi_param() -> None:
-    from r2inspect.utils.analyzer_factory import create_analyzer
+    from r2inspect.core.analyzer_factory import create_analyzer
 
     stub = _StubAdapter()
     inst = create_analyzer(_MultiParamAnalyzer, adapter=stub, config={}, filename="f.bin")
@@ -642,7 +642,7 @@ def test_create_analyzer_multi_param() -> None:
 
 
 def test_run_analysis_method_analyze() -> None:
-    from r2inspect.utils.analyzer_factory import run_analysis_method
+    from r2inspect.core.analyzer_factory import run_analysis_method
 
     inst = _NoArgAnalyzer()
     result = run_analysis_method(inst, ("analyze",))
@@ -650,7 +650,7 @@ def test_run_analysis_method_analyze() -> None:
 
 
 def test_run_analysis_method_detect() -> None:
-    from r2inspect.utils.analyzer_factory import run_analysis_method
+    from r2inspect.core.analyzer_factory import run_analysis_method
 
     inst = _AdapterConfigAnalyzer(_StubAdapter(), {})
     result = run_analysis_method(inst, ("analyze", "detect"))
@@ -658,7 +658,7 @@ def test_run_analysis_method_detect() -> None:
 
 
 def test_run_analysis_method_scan() -> None:
-    from r2inspect.utils.analyzer_factory import run_analysis_method
+    from r2inspect.core.analyzer_factory import run_analysis_method
 
     inst = _FilenameAnalyzer("/tmp/f.bin")
     result = run_analysis_method(inst, ("analyze", "detect", "scan"))
@@ -666,7 +666,7 @@ def test_run_analysis_method_scan() -> None:
 
 
 def test_run_analysis_method_no_match() -> None:
-    from r2inspect.utils.analyzer_factory import run_analysis_method
+    from r2inspect.core.analyzer_factory import run_analysis_method
 
     inst = _NoArgAnalyzer()
     result = run_analysis_method(inst, ("nonexistent",))
@@ -674,7 +674,7 @@ def test_run_analysis_method_no_match() -> None:
 
 
 def test_build_kwargs_r2_name() -> None:
-    from r2inspect.utils.analyzer_factory import _build_kwargs
+    from r2inspect.core.analyzer_factory import _build_kwargs
 
     stub = _StubAdapter()
     kwargs = _build_kwargs(["r2", "config"], stub, {"x": 1}, None)
@@ -683,7 +683,7 @@ def test_build_kwargs_r2_name() -> None:
 
 
 def test_build_kwargs_adapter_name() -> None:
-    from r2inspect.utils.analyzer_factory import _build_kwargs
+    from r2inspect.core.analyzer_factory import _build_kwargs
 
     stub = _StubAdapter()
     kwargs = _build_kwargs(["adapter", "filename"], stub, None, "/f.bin")
@@ -692,7 +692,7 @@ def test_build_kwargs_adapter_name() -> None:
 
 
 def test_build_kwargs_filepath_name() -> None:
-    from r2inspect.utils.analyzer_factory import _build_kwargs
+    from r2inspect.core.analyzer_factory import _build_kwargs
 
     kwargs = _build_kwargs(["filepath"], None, None, "/path/to/file")
     assert kwargs["filepath"] == "/path/to/file"
@@ -704,7 +704,7 @@ def test_build_kwargs_filepath_name() -> None:
 
 
 def test_setup_logger_returns_named_logger() -> None:
-    from r2inspect.utils.logger import setup_logger
+    from r2inspect.infrastructure.logging import setup_logger
 
     lg = setup_logger(name="r2inspect.cov_test", level=logging.DEBUG, thread_safe=False)
     assert lg.name == "r2inspect.cov_test"
@@ -712,7 +712,7 @@ def test_setup_logger_returns_named_logger() -> None:
 
 
 def test_get_logger_returns_same_instance() -> None:
-    from r2inspect.utils.logger import get_logger, setup_logger
+    from r2inspect.infrastructure.logging import get_logger, setup_logger
 
     setup_logger(name="r2inspect.cov_test2", level=logging.INFO, thread_safe=False)
     lg1 = get_logger("r2inspect.cov_test2")
@@ -721,7 +721,7 @@ def test_get_logger_returns_same_instance() -> None:
 
 
 def test_configure_batch_logging_raises_to_warning() -> None:
-    from r2inspect.utils.logger import configure_batch_logging, reset_logging_levels
+    from r2inspect.infrastructure.logging import configure_batch_logging, reset_logging_levels
 
     configure_batch_logging()
     assert logging.getLogger("r2inspect").level == logging.WARNING
@@ -730,7 +730,7 @@ def test_configure_batch_logging_raises_to_warning() -> None:
 
 
 def test_reset_logging_levels_back_to_info() -> None:
-    from r2inspect.utils.logger import configure_batch_logging, reset_logging_levels
+    from r2inspect.infrastructure.logging import configure_batch_logging, reset_logging_levels
 
     configure_batch_logging()
     reset_logging_levels()
@@ -739,7 +739,7 @@ def test_reset_logging_levels_back_to_info() -> None:
 
 
 def test_setup_logger_thread_safe_false() -> None:
-    from r2inspect.utils.logger import setup_logger
+    from r2inspect.infrastructure.logging import setup_logger
 
     lg = setup_logger(name="r2inspect.cov_nts", level=logging.WARNING, thread_safe=False)
     assert lg is not None
@@ -752,14 +752,14 @@ def test_setup_logger_thread_safe_false() -> None:
 
 
 def test_get_ssdeep_returns_module_or_none() -> None:
-    from r2inspect.utils.ssdeep_loader import get_ssdeep
+    from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
     result = get_ssdeep()
     assert result is None or hasattr(result, "hash_from_file")
 
 
 def test_get_ssdeep_is_idempotent() -> None:
-    from r2inspect.utils.ssdeep_loader import get_ssdeep
+    from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
     r1 = get_ssdeep()
     r2 = get_ssdeep()

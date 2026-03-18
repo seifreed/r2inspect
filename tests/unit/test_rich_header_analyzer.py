@@ -1,7 +1,7 @@
 import struct
 
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
-from r2inspect.modules.rich_header_domain import (
+from r2inspect.domain.services.rich_header import (
     decode_rich_header,
     parse_clear_data_entries,
     parse_compiler_entries,

@@ -1,3 +1,5 @@
+import pytest
+
 #!/usr/bin/env python3
 """Unit tests for small utility modules (items 1-11)."""
 
@@ -33,14 +35,13 @@ def test_group_imports_by_library_basic():
 def test_group_imports_by_library_missing_libname():
     imports = [{"name": "SomeFunc"}]
     result = group_imports_by_library(imports)
-    assert "unknown" in result
-    assert "SomeFunc" in result["unknown"]
+    assert result == {}
 
 
 def test_group_imports_by_library_empty_libname():
     imports = [{"name": "Func", "libname": "   "}]
     result = group_imports_by_library(imports)
-    assert "unknown" in result
+    assert result == {}
 
 
 def test_group_imports_by_library_skips_nameless():
@@ -81,9 +82,7 @@ def test_compute_imphash_empty():
 
 def test_compute_imphash_basic():
     strings = ["kernel32.createfile", "ws2_32.connect"]
-    expected = hashlib.md5(
-        ",".join(strings).encode("utf-8"), usedforsecurity=False
-    ).hexdigest()
+    expected = hashlib.md5(",".join(strings).encode("utf-8"), usedforsecurity=False).hexdigest()
     assert compute_imphash(strings) == expected
 
 
@@ -139,7 +138,7 @@ class _ConcreteHasher(HashingStrategy):
 def test_hashing_strategy_raises_empty_filepath():
     try:
         _ConcreteHasher("")
-        assert False, "should have raised"
+        pytest.fail("should have raised")
     except ValueError as exc:
         assert "empty" in str(exc).lower()
 
@@ -147,7 +146,7 @@ def test_hashing_strategy_raises_empty_filepath():
 def test_hashing_strategy_raises_negative_max():
     try:
         _ConcreteHasher("/tmp/x", max_file_size=-1)
-        assert False, "should have raised"
+        pytest.fail("should have raised")
     except ValueError:
         pass
 
@@ -155,7 +154,7 @@ def test_hashing_strategy_raises_negative_max():
 def test_hashing_strategy_raises_min_exceeds_max():
     try:
         _ConcreteHasher("/tmp/x", min_file_size=200, max_file_size=100)
-        assert False, "should have raised"
+        pytest.fail("should have raised")
     except ValueError:
         pass
 
@@ -278,7 +277,7 @@ def test_r2_hashing_strategy_basic(tmp_path):
 # ---------------------------------------------------------------------------
 # 4. function_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.function_domain import (
+from r2inspect.domain.services.function_analysis import (
     extract_mnemonics_from_ops,
     extract_mnemonics_from_text,
     machoc_hash_from_mnemonics,
@@ -568,7 +567,12 @@ def test_detect_algorithms_from_strings_short_string_skipped():
 def test_consolidate_detections_single_type():
     detected = {
         "AES": [
-            {"evidence_type": "String Reference", "evidence": "aes", "confidence": 0.4, "address": "0x0"}
+            {
+                "evidence_type": "String Reference",
+                "evidence": "aes",
+                "confidence": 0.4,
+                "address": "0x0",
+            }
         ]
     }
     result = consolidate_detections(detected)
@@ -580,8 +584,18 @@ def test_consolidate_detections_single_type():
 def test_consolidate_detections_multiple_types_boost():
     detected = {
         "RSA": [
-            {"evidence_type": "String Reference", "evidence": "rsa", "confidence": 0.4, "address": "0x0"},
-            {"evidence_type": "Import Reference", "evidence": "rsa_key", "confidence": 0.6, "address": "0x1"},
+            {
+                "evidence_type": "String Reference",
+                "evidence": "rsa",
+                "confidence": 0.4,
+                "address": "0x0",
+            },
+            {
+                "evidence_type": "Import Reference",
+                "evidence": "rsa_key",
+                "confidence": 0.6,
+                "address": "0x1",
+            },
         ]
     }
     result = consolidate_detections(detected)
@@ -803,7 +817,7 @@ def test_shannon_entropy_all_same():
 
 
 def test_shannon_entropy_two_values():
-    data = b"\x00\xFF" * 50
+    data = b"\x00\xff" * 50
     assert abs(shannon_entropy(data) - 1.0) < 1e-9
 
 

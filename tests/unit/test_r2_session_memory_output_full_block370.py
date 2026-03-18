@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.r2_session import R2Session
-from r2inspect.utils import memory_manager
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.infrastructure.r2_session import R2Session
+import r2inspect.infrastructure.memory as memory_manager
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 class FakeR2:

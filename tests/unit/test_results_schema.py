@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas.results import from_dict
 
@@ -94,7 +94,7 @@ def test_from_dict_full_fields():
         },
         "crypto": {"algorithms": [], "constants": [], "functions": []},
         "indicators": [{"type": "t", "description": "d", "severity": "Low"}],
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.23,
     }
 

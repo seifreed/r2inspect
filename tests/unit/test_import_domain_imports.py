@@ -215,7 +215,10 @@ def test_assess_api_risk_anti_analysis():
 def test_assess_api_risk_dll_injection():
     """Test assessing risk with DLL injection pattern."""
     categories = {
-        "DLL Injection": {"count": 3, "apis": ["CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx"]}
+        "DLL Injection": {
+            "count": 3,
+            "apis": ["CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx"],
+        }
     }
     suspicious, risk = assess_api_risk(categories)
     assert len(suspicious) >= 1
@@ -225,8 +228,14 @@ def test_assess_api_risk_dll_injection():
 def test_assess_api_risk_process_manipulation():
     """Test assessing risk with process manipulation."""
     categories = {
-        "Process/Thread Management": {"count": 3, "apis": ["CreateProcess", "OpenProcess", "TerminateProcess"]},
-        "Memory Management": {"count": 3, "apis": ["VirtualAlloc", "VirtualProtect", "WriteProcessMemory"]}
+        "Process/Thread Management": {
+            "count": 3,
+            "apis": ["CreateProcess", "OpenProcess", "TerminateProcess"],
+        },
+        "Memory Management": {
+            "count": 3,
+            "apis": ["VirtualAlloc", "VirtualProtect", "WriteProcessMemory"],
+        },
     }
     suspicious, risk = assess_api_risk(categories)
     assert len(suspicious) >= 1
@@ -236,7 +245,10 @@ def test_assess_api_risk_process_manipulation():
 def test_assess_api_risk_registry():
     """Test assessing risk with registry manipulation."""
     categories = {
-        "Registry": {"count": 4, "apis": ["RegSetValue", "RegCreateKey", "RegDeleteKey", "RegOpenKey"]}
+        "Registry": {
+            "count": 4,
+            "apis": ["RegSetValue", "RegCreateKey", "RegDeleteKey", "RegOpenKey"],
+        }
     }
     suspicious, risk = assess_api_risk(categories)
     assert len(suspicious) >= 1
@@ -246,7 +258,10 @@ def test_assess_api_risk_registry():
 def test_assess_api_risk_network():
     """Test assessing risk with network capabilities."""
     categories = {
-        NETWORK_CATEGORY: {"count": 3, "apis": ["InternetOpen", "URLDownloadToFile", "WinHttpSendRequest"]}
+        NETWORK_CATEGORY: {
+            "count": 3,
+            "apis": ["InternetOpen", "URLDownloadToFile", "WinHttpSendRequest"],
+        }
     }
     suspicious, risk = assess_api_risk(categories)
     assert len(suspicious) >= 1
@@ -312,10 +327,7 @@ def test_find_suspicious_patterns_keylogging():
 
 def test_find_suspicious_patterns_network():
     """Test finding heavy network usage pattern."""
-    imports = [
-        {"name": f"NetworkAPI{i}", "category": NETWORK_CATEGORY}
-        for i in range(6)
-    ]
+    imports = [{"name": f"NetworkAPI{i}", "category": NETWORK_CATEGORY} for i in range(6)]
     result = find_suspicious_patterns(imports)
     patterns = [p["pattern"] for p in result]
     assert "Heavy Network Usage" in patterns
@@ -333,10 +345,7 @@ def test_find_suspicious_patterns_anti_analysis():
 
 def test_find_suspicious_patterns_crypto():
     """Test finding heavy cryptography pattern."""
-    imports = [
-        {"name": f"CryptAPI{i}", "category": "Cryptography"}
-        for i in range(4)
-    ]
+    imports = [{"name": f"CryptAPI{i}", "category": "Cryptography"} for i in range(4)]
     result = find_suspicious_patterns(imports)
     patterns = [p["pattern"] for p in result]
     assert "Heavy Cryptography" in patterns
@@ -509,10 +518,10 @@ def test_find_suspicious_patterns_all_patterns():
     ]
     imports.extend([{"name": f"NetAPI{i}", "category": NETWORK_CATEGORY} for i in range(6)])
     imports.extend([{"name": f"CryptAPI{i}", "category": "Cryptography"} for i in range(4)])
-    
+
     result = find_suspicious_patterns(imports)
     patterns = [p["pattern"] for p in result]
-    
+
     assert len(patterns) >= 4
     assert "DLL Injection" in patterns or "Process Hollowing" in patterns
 
@@ -520,24 +529,43 @@ def test_find_suspicious_patterns_all_patterns():
 def test_api_categories_complete():
     """Test that build_api_categories returns all expected categories."""
     categories = build_api_categories()
-    expected_keys = ["Injection", "Anti-Analysis", "Crypto", "Persistence", 
-                     "Network", "Process", "Memory", "Loading"]
+    expected_keys = [
+        "Injection",
+        "Anti-Analysis",
+        "Crypto",
+        "Persistence",
+        "Network",
+        "Process",
+        "Memory",
+        "Loading",
+    ]
     for key in expected_keys:
         assert key in categories
 
 
 def test_injection_apis_all_present():
     """Test all documented injection APIs are present."""
-    expected_apis = ["CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx", 
-                     "SetThreadContext", "QueueUserAPC", "NtMapViewOfSection"]
+    expected_apis = [
+        "CreateRemoteThread",
+        "WriteProcessMemory",
+        "VirtualAllocEx",
+        "SetThreadContext",
+        "QueueUserAPC",
+        "NtMapViewOfSection",
+    ]
     for api in expected_apis:
         assert api in INJECTION_APIS
 
 
 def test_anti_analysis_apis_all_present():
     """Test all documented anti-analysis APIs are present."""
-    expected_apis = ["IsDebuggerPresent", "CheckRemoteDebuggerPresent", 
-                     "NtQueryInformationProcess", "QueryPerformanceCounter",
-                     "GetTickCount", "OutputDebugString"]
+    expected_apis = [
+        "IsDebuggerPresent",
+        "CheckRemoteDebuggerPresent",
+        "NtQueryInformationProcess",
+        "QueryPerformanceCounter",
+        "GetTickCount",
+        "OutputDebugString",
+    ]
     for api in expected_apis:
         assert api in ANTI_ANALYSIS_APIS

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.constants import MIN_EXECUTABLE_SIZE_BYTES
+from r2inspect.domain.constants import MIN_EXECUTABLE_SIZE_BYTES
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.utils import memory_manager
+import r2inspect.infrastructure.memory as memory_manager
 
 
 def test_file_validator_basic(tmp_path: Path) -> None:
@@ -27,12 +27,12 @@ def test_file_validator_basic(tmp_path: Path) -> None:
 
 
 def test_memory_limits_and_monitor(tmp_path: Path) -> None:
-    original_limits = memory_manager.global_memory_monitor.limits
+    original_limit = memory_manager.global_memory_monitor.limits.max_file_size_mb
     try:
         memory_manager.configure_memory_limits(max_file_size_mb=0.0001)
         assert memory_manager.check_memory_limits(file_size_bytes=10**6) is False
     finally:
-        memory_manager.global_memory_monitor.limits = original_limits
+        memory_manager.configure_memory_limits(max_file_size_mb=original_limit)
 
     monitor = memory_manager.MemoryMonitor(
         limits=memory_manager.MemoryLimits(

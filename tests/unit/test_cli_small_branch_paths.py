@@ -12,6 +12,7 @@ from r2inspect.cli.display_base import _StdoutProxy
 # version_command.py
 # ---------------------------------------------------------------------------
 
+
 def test_version_command_execute_returns_zero() -> None:
     """VersionCommand.execute displays version info and returns 0."""
     context = CommandContext.create()
@@ -23,6 +24,7 @@ def test_version_command_execute_returns_zero() -> None:
 def test_version_command_displays_version_info(capsys) -> None:
     """VersionCommand._display_version_info outputs author, license, and URL."""
     from r2inspect.__version__ import __author__, __license__, __url__, __version__
+
     context = CommandContext.create()
     cmd = VersionCommand(context=context)
     cmd._display_version_info()
@@ -33,6 +35,7 @@ def test_version_command_displays_version_info(capsys) -> None:
 # ---------------------------------------------------------------------------
 # base.py
 # ---------------------------------------------------------------------------
+
 
 def test_get_config_with_config_path_returns_config_for_path(tmp_path) -> None:
     """Command._get_config returns a Config loaded from the given path when config_path is set."""
@@ -67,9 +70,11 @@ def test_get_config_without_path_returns_context_config() -> None:
 # display_base.py
 # ---------------------------------------------------------------------------
 
+
 def test_stdout_proxy_errors_property() -> None:
     """_StdoutProxy.errors returns the encoding errors attribute from sys.stdout."""
     import sys
+
     proxy = _StdoutProxy()
     result = proxy.errors
     expected = getattr(sys.stdout, "errors", "strict")
@@ -79,6 +84,7 @@ def test_stdout_proxy_errors_property() -> None:
 def test_stdout_proxy_encoding_property() -> None:
     """_StdoutProxy.encoding returns the encoding attribute from sys.stdout."""
     import sys
+
     proxy = _StdoutProxy()
     result = proxy.encoding
     expected = getattr(sys.stdout, "encoding", "utf-8")

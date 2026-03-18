@@ -484,7 +484,15 @@ def test_analyze_symbols_not_elf_branch():
 def test_analyze_symbols_returns_required_keys():
     analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     result = analyzer.analyze_symbols()
-    for key in ("available", "telfhash", "symbol_count", "filtered_symbols", "symbols_used", "error", "is_elf"):
+    for key in (
+        "available",
+        "telfhash",
+        "symbol_count",
+        "filtered_symbols",
+        "symbols_used",
+        "error",
+        "is_elf",
+    ):
         assert key in result
 
 

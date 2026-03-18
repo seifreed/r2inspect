@@ -175,7 +175,7 @@ def test_hashing_strategy_permission_and_stat_error(tmp_path):
         def is_file(self) -> bool:
             return True
 
-        def stat(self, *args, **kwargs):  # noqa: ANN001, ANN002
+        def stat(self, *args, **kwargs):
             raise OSError("boom")
 
     bad = _DummyHash(filepath=str(sample))
@@ -217,7 +217,7 @@ def test_file_validator_paths(tmp_path):
     assert folder_validator._file_exists() is False
     assert folder_validator._is_readable() is False
 
-    from r2inspect.utils import memory_manager
+    import r2inspect.infrastructure.memory as memory_manager
 
     original_limits = memory_manager.global_memory_monitor.limits.max_file_size_mb
     try:

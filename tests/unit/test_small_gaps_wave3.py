@@ -32,6 +32,7 @@ def test_filter_strings_skips_out_of_range():
 def test_decode_base64_non_printable_returns_none():
     # Lines 87-88: except block when decoded bytes are not printable
     import base64
+
     non_printable = bytes(range(128, 256))
     encoded = base64.b64encode(non_printable).decode()
     result = decode_base64(encoded)
@@ -47,9 +48,9 @@ def test_decode_hex_non_utf8_returns_none():
 
 
 # ---------------------------------------------------------------------------
-# 2. r2inspect/utils/analyzer_factory.py - lines 46, 58, 61, 62, 63
+# 2. analyzer_factory - lines 46, 58, 61, 62, 63
 # ---------------------------------------------------------------------------
-from r2inspect.utils.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.core.analyzer_factory import create_analyzer, run_analysis_method
 
 
 def test_create_analyzer_falls_back_to_no_args():
@@ -80,13 +81,12 @@ def test_run_analysis_method_returns_none_when_no_match():
 
 
 # ---------------------------------------------------------------------------
-# 3. r2inspect/utils/analyzer_runner.py - lines 27-31
+# 3. adapters/analyzer_runner.py - import path smoke
 # ---------------------------------------------------------------------------
-import r2inspect.utils.analyzer_runner as _analyzer_runner_mod
+import r2inspect.adapters.analyzer_runner as _analyzer_runner_mod
 
 
 def test_analyzer_runner_module_importable():
-    # Importing the module covers module-level lines
     assert hasattr(_analyzer_runner_mod, "run_analyzer_on_file")
 
 
@@ -171,7 +171,7 @@ def test_metadata_to_dict_includes_category_value():
 # ---------------------------------------------------------------------------
 # 6. r2inspect/utils/r2_suppress.py - lines 76-79
 # ---------------------------------------------------------------------------
-from r2inspect.utils.r2_suppress import R2PipeErrorSuppressor, silent_cmdj
+from r2inspect.infrastructure.r2_suppress import R2PipeErrorSuppressor, silent_cmdj
 
 
 def test_r2_pipe_error_suppressor_context_manager():
@@ -186,14 +186,14 @@ def test_silent_cmdj_none_instance_returns_default():
 
 
 # ---------------------------------------------------------------------------
-# 7. r2inspect/application/analyzer_runner.py - lines 4, 6, 8
+# 7. analyzer_runner shim compatibility
 # ---------------------------------------------------------------------------
-import r2inspect.application.analyzer_runner as _app_runner_mod
+import r2inspect.adapters.analyzer_runner as _app_runner_mod
 
 
 def test_application_analyzer_runner_importable():
     assert hasattr(_app_runner_mod, "run_analyzer_on_file")
-    assert "run_analyzer_on_file" in _app_runner_mod.__all__
+    assert callable(_app_runner_mod.run_analyzer_on_file)
 
 
 # ---------------------------------------------------------------------------
@@ -204,24 +204,28 @@ from r2inspect.core.result_aggregator import _build_file_overview
 
 def test_build_file_overview_includes_compilation_timestamp():
     # Line 43: compilation_timestamp branch
-    overview = _build_file_overview({
-        "file_info": {},
-        "pe_info": {"compilation_timestamp": "2024-01-01"},
-        "rich_header": {},
-    })
+    overview = _build_file_overview(
+        {
+            "file_info": {},
+            "pe_info": {"compilation_timestamp": "2024-01-01"},
+            "rich_header": {},
+        }
+    )
     assert overview["compiled"] == "2024-01-01"
 
 
 def test_build_file_overview_includes_toolset_from_rich_header():
     # Lines 47-48: toolset built from rich_header compilers
-    overview = _build_file_overview({
-        "file_info": {},
-        "pe_info": {},
-        "rich_header": {
-            "available": True,
-            "compilers": [{"compiler_name": "MSVC", "build_number": 1900}],
-        },
-    })
+    overview = _build_file_overview(
+        {
+            "file_info": {},
+            "pe_info": {},
+            "rich_header": {
+                "available": True,
+                "compilers": [{"compiler_name": "MSVC", "build_number": 1900}],
+            },
+        }
+    )
     assert "toolset" in overview
     assert "MSVC" in overview["toolset"][0]
 
@@ -318,7 +322,7 @@ def test_binbloom_analysis_exception_sets_error_key():
 # ---------------------------------------------------------------------------
 # 12. r2inspect/modules/rich_header_domain.py - lines 257, 291, 336
 # ---------------------------------------------------------------------------
-from r2inspect.modules.rich_header_domain import (
+from r2inspect.domain.services.rich_header import (
     decode_rich_header,
     get_compiler_description,
     parse_compiler_entries,
@@ -381,7 +385,7 @@ def test_simhash_analysis_exception_sets_error():
 # ---------------------------------------------------------------------------
 # 14. r2inspect/utils/retry_manager.py - lines 225, 227, 228
 # ---------------------------------------------------------------------------
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
 
 
 def test_retry_manager_raises_after_single_attempt():
@@ -451,7 +455,7 @@ def test_config_store_save_creates_subdirectory():
 def test_inspector_init_infrastructure_raises_without_factories():
     # Line 107: raise ValueError when factories are None
     from r2inspect.core.inspector import R2Inspector
-    from r2inspect.utils.memory_manager import global_memory_monitor
+    from r2inspect.infrastructure.memory import global_memory_monitor
     from r2inspect.config import Config
 
     class FakeAdapter:
@@ -490,9 +494,9 @@ def test_inspector_init_infrastructure_raises_without_factories():
 
 def test_inspector_helpers_importable():
     # Importing covers module-level code; line 82 and 168 are inside methods
-    import r2inspect.core.inspector_helpers as ih
+    import r2inspect.core.inspector as ih
 
-    assert hasattr(ih, "_execute_analyzer") or hasattr(ih, "run_analysis_method")
+    assert hasattr(ih, "InspectorExecutionMixin") or hasattr(ih, "run_analysis_method")
 
 
 # ---------------------------------------------------------------------------
@@ -554,9 +558,9 @@ def test_create_default_registry_returns_populated_registry():
 
 
 # ---------------------------------------------------------------------------
-# 23. r2inspect/utils/output.py - lines 133, 134
+# 23. output formatter - lines 133, 134
 # ---------------------------------------------------------------------------
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 def test_output_formatter_format_summary_catches_exception():
@@ -567,9 +571,9 @@ def test_output_formatter_format_summary_catches_exception():
 
 
 # ---------------------------------------------------------------------------
-# 24. r2inspect/utils/output_csv.py - lines 276, 277
+# 24. output_csv - lines 276, 277
 # ---------------------------------------------------------------------------
-from r2inspect.utils.output_csv import CsvOutputFormatter
+from r2inspect.cli.output_csv import CsvOutputFormatter
 
 
 def test_clean_file_type_strips_section_counts():

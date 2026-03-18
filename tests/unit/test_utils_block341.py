@@ -5,12 +5,20 @@ from types import ModuleType
 
 import pytest
 
-from r2inspect.utils import analyzer_factory, circuit_breaker, command_helpers, error_handler
-from r2inspect.utils import hashing as hashing_utils
-from r2inspect.utils import logger as logger_utils
-from r2inspect.utils import magic_detector, memory_manager
-from r2inspect.utils import output as output_utils
-from r2inspect.utils import r2_helpers, r2_suppress, rate_limiter, retry_manager, ssdeep_loader
+import r2inspect.core.analyzer_factory as analyzer_factory
+import r2inspect.infrastructure.circuit_breaker as circuit_breaker
+import r2inspect.infrastructure.command_helpers as command_helpers
+import r2inspect.error_handling.classifier as error_handler
+import r2inspect.infrastructure.hashing as hashing_utils
+import r2inspect.infrastructure.logging as logger_utils
+import r2inspect.infrastructure.magic_detector as magic_detector
+import r2inspect.infrastructure.memory as memory_manager
+import r2inspect.cli.output_formatters as output_utils
+import r2inspect.infrastructure.r2_helpers as r2_helpers
+import r2inspect.infrastructure.r2_suppress as r2_suppress
+import r2inspect.infrastructure.rate_limiter as rate_limiter
+import r2inspect.infrastructure.retry_manager as retry_manager
+import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
 
 
 class DummyAdapter:

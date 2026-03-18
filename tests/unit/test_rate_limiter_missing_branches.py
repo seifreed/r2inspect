@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from r2inspect.utils.rate_limiter import (
+from r2inspect.infrastructure.rate_limiter import (
     AdaptiveRateLimiter,
     BatchRateLimiter,
     TokenBucket,
@@ -20,6 +20,7 @@ from r2inspect.utils.rate_limiter import (
 # ---------------------------------------------------------------------------
 # TokenBucket
 # ---------------------------------------------------------------------------
+
 
 def test_token_bucket_init_attributes():
     bucket = TokenBucket(capacity=10, refill_rate=5.0)
@@ -68,6 +69,7 @@ def test_token_bucket_refill_does_not_exceed_capacity():
 # AdaptiveRateLimiter – init
 # ---------------------------------------------------------------------------
 
+
 def test_adaptive_rate_limiter_init_defaults():
     rl = AdaptiveRateLimiter()
     assert rl.base_rate == 5.0
@@ -79,8 +81,9 @@ def test_adaptive_rate_limiter_init_defaults():
 
 
 def test_adaptive_rate_limiter_init_custom():
-    rl = AdaptiveRateLimiter(base_rate=10.0, max_rate=50.0, min_rate=1.0,
-                             memory_threshold=0.7, cpu_threshold=0.8)
+    rl = AdaptiveRateLimiter(
+        base_rate=10.0, max_rate=50.0, min_rate=1.0, memory_threshold=0.7, cpu_threshold=0.8
+    )
     assert rl.base_rate == 10.0
     assert rl.max_rate == 50.0
     assert rl.min_rate == 1.0
@@ -89,6 +92,7 @@ def test_adaptive_rate_limiter_init_custom():
 # ---------------------------------------------------------------------------
 # AdaptiveRateLimiter – acquire_permit
 # ---------------------------------------------------------------------------
+
 
 def test_acquire_permit_returns_true_with_capacity():
     rl = AdaptiveRateLimiter(base_rate=100.0, max_rate=200.0, min_rate=1.0)
@@ -108,6 +112,7 @@ def test_acquire_permit_updates_bucket_rate_when_diverged():
 # AdaptiveRateLimiter – record_success / record_error
 # ---------------------------------------------------------------------------
 
+
 def test_record_success_appends_to_success_window():
     rl = AdaptiveRateLimiter(base_rate=5.0)
     initial = len(rl.success_window)
@@ -125,6 +130,7 @@ def test_record_error_appends_to_error_window():
 # ---------------------------------------------------------------------------
 # AdaptiveRateLimiter – _check_system_load
 # ---------------------------------------------------------------------------
+
 
 def test_check_system_load_skips_when_within_interval():
     rl = AdaptiveRateLimiter(base_rate=5.0)
@@ -145,6 +151,7 @@ def test_check_system_load_runs_when_interval_elapsed():
 # ---------------------------------------------------------------------------
 # AdaptiveRateLimiter – _adjust_rate
 # ---------------------------------------------------------------------------
+
 
 def test_adjust_rate_not_enough_data_does_nothing():
     rl = AdaptiveRateLimiter(base_rate=5.0)
@@ -210,6 +217,7 @@ def test_adjust_rate_respects_min_rate_floor():
 # AdaptiveRateLimiter – get_stats
 # ---------------------------------------------------------------------------
 
+
 def test_get_stats_structure():
     rl = AdaptiveRateLimiter(base_rate=5.0)
     stats = rl.get_stats()
@@ -243,6 +251,7 @@ def test_get_stats_recent_error_rate_calculation():
 # ---------------------------------------------------------------------------
 # BatchRateLimiter – adaptive mode
 # ---------------------------------------------------------------------------
+
 
 def test_batch_rate_limiter_adaptive_init():
     limiter = BatchRateLimiter(
@@ -307,6 +316,7 @@ def test_batch_rate_limiter_non_adaptive_release_success():
 # BatchRateLimiter – acquire failure paths
 # ---------------------------------------------------------------------------
 
+
 def test_batch_rate_limiter_semaphore_timeout_returns_false():
     limiter = BatchRateLimiter(
         max_concurrent=1, rate_per_second=50.0, burst_size=10, enable_adaptive=False
@@ -337,6 +347,7 @@ def test_batch_rate_limiter_rate_limit_failure_releases_semaphore():
 # BatchRateLimiter – get_stats
 # ---------------------------------------------------------------------------
 
+
 def test_batch_rate_limiter_get_stats_no_operations():
     limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=50.0)
     stats = limiter.get_stats()
@@ -363,9 +374,7 @@ def test_batch_rate_limiter_get_stats_success_rate():
 
 
 def test_batch_rate_limiter_get_stats_includes_rate_limiter_stats_when_adaptive():
-    limiter = BatchRateLimiter(
-        max_concurrent=2, rate_per_second=50.0, enable_adaptive=True
-    )
+    limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=50.0, enable_adaptive=True)
     stats = limiter.get_stats()
     # AdaptiveRateLimiter stats keys should be present
     assert "current_rate" in stats
@@ -373,9 +382,7 @@ def test_batch_rate_limiter_get_stats_includes_rate_limiter_stats_when_adaptive(
 
 
 def test_batch_rate_limiter_get_stats_no_rate_limiter_stats_when_non_adaptive():
-    limiter = BatchRateLimiter(
-        max_concurrent=2, rate_per_second=50.0, enable_adaptive=False
-    )
+    limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=50.0, enable_adaptive=False)
     stats = limiter.get_stats()
     assert "current_rate" not in stats
 
@@ -383,6 +390,7 @@ def test_batch_rate_limiter_get_stats_no_rate_limiter_stats_when_non_adaptive():
 # ---------------------------------------------------------------------------
 # cleanup_memory
 # ---------------------------------------------------------------------------
+
 
 def test_cleanup_memory_returns_dict_or_none():
     result = cleanup_memory()

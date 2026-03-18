@@ -9,16 +9,18 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.utils.output_json import JsonOutputFormatter
+from r2inspect.cli.output_json import JsonOutputFormatter
 
 
 # ---------------------------------------------------------------------------
 # output_json.py
 # ---------------------------------------------------------------------------
 
+
 def test_json_formatter_serializes_normal_results() -> None:
     """JsonOutputFormatter.to_json returns valid JSON for normal results."""
     import json
+
     formatter = JsonOutputFormatter({"key": "value", "count": 42})
     output = formatter.to_json()
     parsed = json.loads(output)
@@ -28,6 +30,7 @@ def test_json_formatter_serializes_normal_results() -> None:
 def test_json_formatter_handles_serialization_failure() -> None:
     """JsonOutputFormatter.to_json returns error JSON when circular reference detected."""
     import json
+
     circular: dict = {}
     circular["self"] = circular
     formatter = JsonOutputFormatter(circular)
@@ -40,9 +43,10 @@ def test_json_formatter_handles_serialization_failure() -> None:
 # ssdeep_loader.py
 # ---------------------------------------------------------------------------
 
+
 def test_get_ssdeep_returns_module_on_second_call() -> None:
     """get_ssdeep returns cached module on second call without re-importing."""
-    import r2inspect.utils.ssdeep_loader as sl
+    import r2inspect.infrastructure.ssdeep_loader as sl
 
     first = sl.get_ssdeep()
     second = sl.get_ssdeep()
@@ -51,7 +55,7 @@ def test_get_ssdeep_returns_module_on_second_call() -> None:
 
 def test_get_ssdeep_double_check_inside_lock() -> None:
     """get_ssdeep returns cached value when module is set while thread waits for lock."""
-    import r2inspect.utils.ssdeep_loader as sl
+    import r2inspect.infrastructure.ssdeep_loader as sl
 
     original_module = sl._ssdeep_module
 
@@ -70,7 +74,7 @@ def test_get_ssdeep_double_check_inside_lock() -> None:
 
 def test_get_ssdeep_returns_none_when_import_blocked() -> None:
     """get_ssdeep returns None and caches None when ssdeep import is blocked."""
-    import r2inspect.utils.ssdeep_loader as sl
+    import r2inspect.infrastructure.ssdeep_loader as sl
 
     original_module = sl._ssdeep_module
     original_ssdeep_in_sys = sys.modules.get("ssdeep", _SENTINEL := object())
@@ -103,9 +107,10 @@ def test_get_ssdeep_returns_none_when_import_blocked() -> None:
 # analyzer_runner.py
 # ---------------------------------------------------------------------------
 
-def test_run_analyzer_on_file_executes_analyze_with_real_file(samples_dir: Path) -> None:
+
+def test_run_analyzer_on_file_executes_analyze_with_real_file() -> None:
     """run_analyzer_on_file opens adapter and invokes analyze(); lines 27-30 execute."""
-    from r2inspect.utils.analyzer_runner import run_analyzer_on_file
+    from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
 
     class SimpleAnalyzer:
         def __init__(self, adapter, filepath):
@@ -115,7 +120,7 @@ def test_run_analyzer_on_file_executes_analyze_with_real_file(samples_dir: Path)
         def analyze(self):
             return {"completed": True}
 
-    pe_path = samples_dir / "hello_pe.exe"
+    pe_path = Path("samples/fixtures/hello_pe.exe")
     if not pe_path.exists():
         pytest.skip("hello_pe.exe fixture not found")
 
@@ -125,15 +130,15 @@ def test_run_analyzer_on_file_executes_analyze_with_real_file(samples_dir: Path)
     assert result is None or result == {"completed": True}
 
 
-def test_run_analyzer_on_file_returns_none_when_analyze_missing(samples_dir: Path) -> None:
+def test_run_analyzer_on_file_returns_none_when_analyze_missing() -> None:
     """run_analyzer_on_file returns None when the analyzer has no analyze method."""
-    from r2inspect.utils.analyzer_runner import run_analyzer_on_file
+    from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
 
     class NoAnalyzeMethod:
         def __init__(self, adapter, filepath):
             pass
 
-    pe_path = samples_dir / "hello_pe.exe"
+    pe_path = Path("samples/fixtures/hello_pe.exe")
     if not pe_path.exists():
         pytest.skip("hello_pe.exe fixture not found")
 
@@ -143,7 +148,7 @@ def test_run_analyzer_on_file_returns_none_when_analyze_missing(samples_dir: Pat
 
 def test_run_analyzer_on_file_returns_none_on_bad_path() -> None:
     """run_analyzer_on_file returns None when the file path does not exist."""
-    from r2inspect.utils.analyzer_runner import run_analyzer_on_file
+    from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
 
     class SimpleAnalyzer:
         def __init__(self, adapter, filepath):

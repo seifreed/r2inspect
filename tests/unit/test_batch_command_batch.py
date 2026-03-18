@@ -3,30 +3,92 @@
 Comprehensive tests for r2inspect/cli/commands/batch_command.py module.
 Tests batch command execution, error handling, and configuration.
 Coverage target: 100% (currently 16%)
+
+All unittest.mock usage replaced with concrete fakes.
 """
 
+import logging
+from io import StringIO
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
+from rich.console import Console
 
 from r2inspect.cli.commands.batch_command import BatchCommand
+from r2inspect.cli.commands.base import CommandContext
+from r2inspect.config import Config
 
 
-@pytest.fixture
-def batch_command():
-    """Create a BatchCommand instance for testing"""
-    command = BatchCommand()
-    command.context = MagicMock()
-    command.context.console = MagicMock()
-    command.context.logger = MagicMock()
-    return command
+# ---------------------------------------------------------------------------
+# Concrete fakes
+# ---------------------------------------------------------------------------
+
+
+class CaptureConsole:
+    """Console stand-in that records all printed messages."""
+
+    def __init__(self) -> None:
+        self.messages: list[str] = []
+
+    def print(self, message: object = "", **kwargs: Any) -> None:
+        self.messages.append(str(message))
+
+
+class CaptureLogger:
+    """Logger stand-in that records calls by level."""
+
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
+        self.infos: list[str] = []
+
+    def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        self.errors.append(msg)
+
+    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        self.warnings.append(msg)
+
+    def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        self.infos.append(msg)
+
+
+def _make_context() -> CommandContext:
+    """Build a CommandContext wired to capture fakes."""
+    console = CaptureConsole()
+    logger = CaptureLogger()
+    return CommandContext(console=console, logger=logger, config=Config())
+
+
+def _make_batch_command() -> BatchCommand:
+    cmd = BatchCommand()
+    cmd.context = _make_context()
+    return cmd
+
+
+# ---------------------------------------------------------------------------
+# Subclass that intercepts _run_batch_analysis
+# ---------------------------------------------------------------------------
+
+
+class _NoOpBatchCommand(BatchCommand):
+    """BatchCommand that skips the heavy batch runner."""
+
+    def __init__(self, *, raise_on_run: Exception | None = None) -> None:
+        super().__init__()
+        self._raise_on_run = raise_on_run
+        self.run_batch_called = False
+        self.run_batch_kwargs: dict[str, Any] = {}
+
+    def _run_batch_analysis(self, **kwargs: Any) -> None:
+        self.run_batch_called = True
+        self.run_batch_kwargs = kwargs
+        if self._raise_on_run is not None:
+            raise self._raise_on_run
 
 
 @pytest.fixture
 def sample_batch_dir(tmp_path):
-    """Create a sample batch directory with test files"""
     batch_dir = tmp_path / "batch"
     batch_dir.mkdir()
     (batch_dir / "file1.exe").write_bytes(b"MZ" + b"\x00" * 100)
@@ -34,14 +96,19 @@ def sample_batch_dir(tmp_path):
     return batch_dir
 
 
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
 def test_batch_command_initialization():
-    """Test BatchCommand can be initialized"""
     command = BatchCommand()
     assert command is not None
 
 
-def test_execute_basic_success(batch_command, sample_batch_dir):
-    """Test successful batch command execution"""
+def test_execute_basic_success(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -53,16 +120,16 @@ def test_execute_basic_success(batch_command, sample_batch_dir):
         "extensions": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
+    assert cmd.run_batch_called is True
 
 
-def test_execute_with_json_output(batch_command, sample_batch_dir):
-    """Test batch command execution with JSON output"""
+def test_execute_with_json_output(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -72,16 +139,15 @@ def test_execute_with_json_output(batch_command, sample_batch_dir):
         "extensions": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_csv_output(batch_command, sample_batch_dir):
-    """Test batch command execution with CSV output"""
+def test_execute_with_csv_output(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -91,16 +157,15 @@ def test_execute_with_csv_output(batch_command, sample_batch_dir):
         "extensions": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_both_outputs(batch_command, sample_batch_dir):
-    """Test batch command execution with both JSON and CSV output"""
+def test_execute_with_both_outputs(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -110,16 +175,15 @@ def test_execute_with_both_outputs(batch_command, sample_batch_dir):
         "extensions": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_extensions(batch_command, sample_batch_dir):
-    """Test batch command execution with file extensions filter"""
+def test_execute_with_extensions(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -129,19 +193,17 @@ def test_execute_with_extensions(batch_command, sample_batch_dir):
         "output": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_yara(batch_command, sample_batch_dir, tmp_path):
-    """Test batch command execution with custom YARA rules"""
+def test_execute_with_yara(sample_batch_dir, tmp_path):
     yara_dir = tmp_path / "yara"
     yara_dir.mkdir()
-    
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -153,16 +215,15 @@ def test_execute_with_yara(batch_command, sample_batch_dir, tmp_path):
         "extensions": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_xor(batch_command, sample_batch_dir):
-    """Test batch command execution with XOR search"""
+def test_execute_with_xor(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -174,16 +235,15 @@ def test_execute_with_xor(batch_command, sample_batch_dir):
         "extensions": None,
         "threads": 1,
         "verbose": False,
-        "quiet": True
+        "quiet": True,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_verbose(batch_command, sample_batch_dir):
-    """Test batch command execution in verbose mode"""
+def test_execute_with_verbose(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -193,16 +253,15 @@ def test_execute_with_verbose(batch_command, sample_batch_dir):
         "output_csv": False,
         "output": None,
         "extensions": None,
-        "threads": 1
+        "threads": 1,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_with_multiple_threads(batch_command, sample_batch_dir):
-    """Test batch command execution with multiple threads"""
+def test_execute_with_multiple_threads(sample_batch_dir):
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -212,16 +271,15 @@ def test_execute_with_multiple_threads(batch_command, sample_batch_dir):
         "output_json": False,
         "output_csv": False,
         "output": None,
-        "extensions": None
+        "extensions": None,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_keyboard_interrupt(batch_command, sample_batch_dir):
-    """Test batch command handles keyboard interrupt"""
+def test_execute_keyboard_interrupt(sample_batch_dir):
+    cmd = _NoOpBatchCommand(raise_on_run=KeyboardInterrupt())
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -231,17 +289,16 @@ def test_execute_keyboard_interrupt(batch_command, sample_batch_dir):
         "output_csv": False,
         "output": None,
         "extensions": None,
-        "threads": 1
+        "threads": 1,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis', side_effect=KeyboardInterrupt):
-        result = batch_command.execute(args)
-        assert result == 1
-        batch_command.context.console.print.assert_called()
+    result = cmd.execute(args)
+    assert result == 1
+    assert any("interrupted" in m.lower() for m in cmd.context.console.messages)
 
 
-def test_execute_exception_verbose(batch_command, sample_batch_dir):
-    """Test batch command handles exceptions in verbose mode"""
+def test_execute_exception_verbose(sample_batch_dir):
+    cmd = _NoOpBatchCommand(raise_on_run=ValueError("Test error"))
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -251,17 +308,16 @@ def test_execute_exception_verbose(batch_command, sample_batch_dir):
         "output_csv": False,
         "output": None,
         "extensions": None,
-        "threads": 1
+        "threads": 1,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis', side_effect=ValueError("Test error")):
-        result = batch_command.execute(args)
-        assert result == 1
-        batch_command.context.logger.error.assert_called()
+    result = cmd.execute(args)
+    assert result == 1
+    assert len(cmd.context.logger.errors) > 0
 
 
-def test_execute_exception_normal(batch_command, sample_batch_dir):
-    """Test batch command handles exceptions in normal mode"""
+def test_execute_exception_normal(sample_batch_dir):
+    cmd = _NoOpBatchCommand(raise_on_run=RuntimeError("Test error"))
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -271,97 +327,83 @@ def test_execute_exception_normal(batch_command, sample_batch_dir):
         "output_csv": False,
         "output": None,
         "extensions": None,
-        "threads": 1
+        "threads": 1,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis', side_effect=RuntimeError("Test error")):
-        result = batch_command.execute(args)
-        assert result == 1
+    result = cmd.execute(args)
+    assert result == 1
 
 
 def test_setup_batch_mode_default():
-    """Test batch mode setup with defaults"""
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
         _batch="/path/to/batch",
         extensions=None,
         output_json=False,
         output_csv=False,
-        output=None
+        output=None,
     )
-    
     assert recursive is True
     assert auto_detect is True
     assert output_dir is None
 
 
 def test_setup_batch_mode_with_extensions():
-    """Test batch mode setup with extensions"""
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
         _batch="/path/to/batch",
         extensions="exe,dll",
         output_json=False,
         output_csv=False,
-        output=None
+        output=None,
     )
-    
     assert recursive is True
     assert auto_detect is False
     assert output_dir is None
 
 
 def test_setup_batch_mode_json_output():
-    """Test batch mode setup with JSON output"""
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
         _batch="/path/to/batch",
         extensions=None,
         output_json=True,
         output_csv=False,
-        output=None
+        output=None,
     )
-    
     assert recursive is True
     assert auto_detect is True
     assert output_dir == "output"
 
 
 def test_setup_batch_mode_csv_output():
-    """Test batch mode setup with CSV output"""
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
         _batch="/path/to/batch",
         extensions=None,
         output_json=False,
         output_csv=True,
-        output=None
+        output=None,
     )
-    
     assert recursive is True
     assert auto_detect is True
     assert output_dir == "output"
 
 
 def test_setup_batch_mode_custom_output():
-    """Test batch mode setup with custom output directory"""
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
         _batch="/path/to/batch",
         extensions=None,
         output_json=True,
         output_csv=True,
-        output="/custom/output"
+        output="/custom/output",
     )
-    
     assert output_dir == "/custom/output"
 
 
 def test_setup_analysis_options_default():
-    """Test analysis options setup with defaults"""
     command = BatchCommand()
     options = command._setup_analysis_options()
-    
     assert options["detect_packer"] is True
     assert options["detect_crypto"] is True
     assert options["detect_av"] is True
@@ -369,75 +411,62 @@ def test_setup_analysis_options_default():
 
 
 def test_setup_analysis_options_with_yara():
-    """Test analysis options setup with YARA rules"""
     command = BatchCommand()
     options = command._setup_analysis_options(yara="/path/to/yara")
-    
     assert options["custom_yara"] == "/path/to/yara"
 
 
 def test_setup_analysis_options_with_xor():
-    """Test analysis options setup with XOR search"""
     command = BatchCommand()
     options = command._setup_analysis_options(xor="test_xor")
-    
     assert options["xor_search"] == "test_xor"
 
 
 def test_setup_analysis_options_with_both():
-    """Test analysis options setup with both YARA and XOR"""
     command = BatchCommand()
     options = command._setup_analysis_options(yara="/path/to/yara", xor="test_xor")
-    
     assert options["custom_yara"] == "/path/to/yara"
     assert options["xor_search"] == "test_xor"
 
 
 def test_configure_batch_logging_verbose():
-    """Test batch logging configuration in verbose mode"""
     command = BatchCommand()
     command._configure_batch_logging(verbose=True, quiet=False)
 
 
 def test_configure_batch_logging_quiet():
-    """Test batch logging configuration in quiet mode"""
-    import logging
     command = BatchCommand()
     command._configure_batch_logging(verbose=False, quiet=True)
-    
     logger = logging.getLogger("r2inspect")
     assert logger.level == logging.CRITICAL
 
 
 def test_configure_batch_logging_normal():
-    """Test batch logging configuration in normal mode"""
     command = BatchCommand()
     command._configure_batch_logging(verbose=False, quiet=False)
 
 
-def test_handle_error_verbose(batch_command):
-    """Test error handling in verbose mode"""
+def test_handle_error_verbose():
+    cmd = _make_batch_command()
     error = ValueError("Test error message")
-    batch_command._handle_error(error, verbose=True)
-    
-    batch_command.context.logger.error.assert_called()
-    batch_command.context.console.print.assert_called()
+    cmd._handle_error(error, verbose=True)
+    assert len(cmd.context.logger.errors) > 0
+    assert any("Test error" in m for m in cmd.context.console.messages)
 
 
-def test_handle_error_normal(batch_command):
-    """Test error handling in normal mode"""
+def test_handle_error_normal():
+    cmd = _make_batch_command()
     error = RuntimeError("Test error message")
-    batch_command._handle_error(error, verbose=False)
-    
-    batch_command.context.logger.error.assert_called()
-    batch_command.context.console.print.assert_called()
+    cmd._handle_error(error, verbose=False)
+    assert len(cmd.context.logger.errors) > 0
+    assert any("Test error" in m for m in cmd.context.console.messages)
 
 
-def test_execute_with_config_file(batch_command, sample_batch_dir, tmp_path):
-    """Test batch command execution with config file"""
+def test_execute_with_config_file(sample_batch_dir, tmp_path):
     config_file = tmp_path / "config.json"
     config_file.write_text('{"key": "value"}')
-    
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": str(config_file),
@@ -447,19 +476,16 @@ def test_execute_with_config_file(batch_command, sample_batch_dir, tmp_path):
         "output_csv": False,
         "output": None,
         "extensions": None,
-        "threads": 1
+        "threads": 1,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        with patch.object(batch_command, '_get_config', return_value=MagicMock()):
-            result = batch_command.execute(args)
-            assert result == 0
+    result = cmd.execute(args)
+    assert result == 0
 
 
-def test_execute_full_workflow(batch_command, sample_batch_dir, tmp_path):
-    """Test complete batch command workflow"""
+def test_execute_full_workflow(sample_batch_dir, tmp_path):
     output_dir = tmp_path / "output"
-    
+    cmd = _NoOpBatchCommand()
+    cmd.context = _make_context()
     args = {
         "batch": str(sample_batch_dir),
         "config": None,
@@ -471,9 +497,7 @@ def test_execute_full_workflow(batch_command, sample_batch_dir, tmp_path):
         "extensions": "exe,dll",
         "threads": 2,
         "verbose": True,
-        "quiet": False
+        "quiet": False,
     }
-    
-    with patch.object(batch_command, '_run_batch_analysis'):
-        result = batch_command.execute(args)
-        assert result == 0
+    result = cmd.execute(args)
+    assert result == 0

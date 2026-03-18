@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils.error_handler import (
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     error_handler,
     get_error_stats,

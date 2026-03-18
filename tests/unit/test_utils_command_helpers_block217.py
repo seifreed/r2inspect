@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.core.r2_session import R2Session
-from r2inspect.utils import command_helpers
+from r2inspect.infrastructure.r2_session import R2Session
+import r2inspect.infrastructure.command_helpers as command_helpers
 
 
 @pytest.fixture

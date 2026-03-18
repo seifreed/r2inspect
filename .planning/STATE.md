@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_plan: 3
-status: verifying
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-03-01T20:17:23.318Z"
+milestone: v1.4
+milestone_name: v1.4 Governance Operations Hardening
+current_plan: —
+status: in_progress
+stopped_at: defining requirements
+last_updated: "2026-03-01T22:20:00.000Z"
 last_activity: 2026-03-01
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 10
+  completed_phases: 8
+  total_plans: 16
+  completed_plans: 12
+  percent: 75
 ---
 
 # Project State
@@ -21,26 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mantener entregas pequenas, verificables y acumulables.
-**Current focus:** Executing v1.2 Governance UX roadmap phases
+**Current focus:** v1.4 Governance Operations Hardening, requirements defined and ready for planning
 
 ## Current Position
-Milestone: v1.2 Governance UX
-Phase: 6 (complete)
-Plan: 06-03 completed
-Status: Plan 06-03 completed; deterministic ranked tie-break regressions and additive integration safety locked for GUX-02
-Last activity: 2026-03-01 - completed 06-03 with task-level commits and summary
+Milestone: v1.4 Governance Operations Hardening
+Phase: 9 (not started)
+Plan: —
+Status: Requirements-defined, moving to phase planning
+Last activity: 2026-03-01 - opened v1.4 requirements and roadmap
 
-Progress: [########░░] 83%
-**Current Plan:** 3
-**Total Plans in Phase:** 3
-**Status:** Phase complete — ready for verification
+Progress: [██████████] 75%
+**Current Plan:** —
+**Total Plans in Phase:** 0
+**Status:** 0/2 started
 **Last Activity:** 2026-03-01
-**Progress:** [██████████] 100%
+**Progress:** [███████▌] 75%
 
-## Milestone Scope (v1.2)
-- GUX-01 -> Phase 5
-- GUX-02 -> Phase 6
-- Coverage validation: 2/2 mapped (100%)
+## Milestone Scope (v1.4)
+- GOV-01 -> Phase 9
+- GOV-02 -> Phase 9
+- TRC-01 -> Phase 10
+- TRC-02 -> Phase 10
+- Coverage validation: 4/4 mapped (100%)
 
 ## Pending Todos
 None yet.
@@ -49,41 +51,40 @@ None yet.
 None.
 
 ## Decisions
-- Coverage matrix state precedence locked as: stale > covered > partial > uncovered.
-- Coverage matrix derivation must remain pure/read-only against `.planning/*` artifacts.
-- Blocked and out-of-scope requirements are excluded from matrix totals.
-- [Phase 05]: Traceability precheck keeps existing top-level contract keys and appends schema_version and coverage_matrix additively.
-- [Phase 05]: Scope selection uses --scope phase|milestone with mandatory --phase-id validation for phase mode.
-- [Phase 05]: Matrix diagnostics are appended to checklist output in compact mode by default with optional expanded detail mode.
-- [Phase 05]: Determinism checks use normalized JSON serialization (sort_keys + fixed separators) to enforce byte-stability.
-- [Phase 05]: Matrix rollout regressions assert completion remains fail-closed and unaffected by precheck-only visibility additions.
-- [Phase 06]: Rank individual failure issues using severity, blast radius, and canonical check key tie-break ordering.
-- [Phase 06]: Render impact-ranked remediation hints as strict 4-line blocks with explicit retry commands.
-- [Phase 06-impact-ranked-remediation-hints-gux-02]: Use ranked hint check_key as persisted top-rank baseline for rerun comparison.
-- [Phase 06-impact-ranked-remediation-hints-gux-02]: Persist traceability top-rank baseline as additive STATE.md marker to preserve existing readers.
-- [Phase 06]: When rank score and canonical check_key tie, normalized message/fix are deterministic fallback sort keys.
-- [Phase 06]: Ranked-hint rollout safety is enforced with additive precheck contract integration assertions.
+- [Phase 7-8 carryover]: Traceability outputs remain additive with existing consumers preserved.
+- [v1.3 completion]: Governance exception short-circuit remains strictly validated and auditable.
+- [v1.4 intent]: Short-circuit and readonly modes must never weaken fail-closed semantics.
 
 ## Session Continuity
 Last session: 2026-03-01
-Stopped at: Completed 06-03-PLAN.md
-Resume file: .planning/phases/06-impact-ranked-remediation-hints-gux-02/06-03-PLAN.md
-**Last session:** 2026-03-01T20:17:23.316Z
-**Stopped At:** Completed 06-03-PLAN.md
-**Resume file:** .planning/phases/06-impact-ranked-remediation-hints-gux-02/06-03-PLAN.md
+Stopped at: defining requirements
+Resume file: .planning/ROADMAP.md
+**Last session:** 2026-03-01T22:20:00.000Z
+**Stopped At:** defining requirements
+**Resume file:** .planning/ROADMAP.md
 
 ## Traceability Gate Activity
 
 | Date | Command | Scope | Touched Requirement IDs | Result |
 |------|---------|-------|--------------------------|--------|
-| 2026-03-01 | execute plan 06-02 | ranked hint integration + top-rank rerun note | GUX-02 | completed |
-| 2026-03-01 | execute plan 06-01 | impact-ranked deterministic remediation hint domain | GUX-02 | completed |
-| 2026-03-01 | execute plan 05-03 | matrix determinism + governance non-regression | GUX-01 | completed |
+| 2026-03-01 | execute plan 06-02 | ranked hint integration + top-rank rerun note | ATR-02 | completed |
+| 2026-03-01 | execute plan 06-01 | impact-ranked deterministic remediation hint domain | ATR-02 | completed |
+| 2026-03-01 | execute plan 05-03 | matrix determinism + governance non-regression | ATR-01 | completed |
 | 2026-03-01 | precheck | all | - | blocked |
-| 2026-03-01 | execute plan 05-02 | milestone/phase matrix integration | GUX-01 | completed |
-| 2026-03-01 | execute plan 05-01 | milestone+phase matrix domain | GUX-01 | completed |
+| 2026-03-01 | execute plan 05-02 | milestone/phase matrix integration | ATR-01 | completed |
+| 2026-03-01 | execute plan 05-01 | milestone+phase matrix domain | ATR-01 | completed |
+| 2026-03-01 | execute plan 07-01 | governance exception payload and validation | ATR-01 | completed |
+| 2026-03-01 | execute plan 07-02 | governance exception bypass integration | ATR-01 | completed |
+| 2026-03-01 | execute plan 07-03 | governance exception evidence and regression coverage | ATR-01 | completed |
+| 2026-03-01 | execute plan 08-01 | traceability delta model and persistence foundation | ATR-02 | completed |
+| 2026-03-01 | execute plan 08-02 | traceability delta checklist integration | ATR-02 | completed |
+| 2026-03-01 | execute plan 08-03 | delta regression and non-blocking persistence coverage | ATR-02 | completed |
+| 2026-03-01 | define requirements | governance exception retention + readonly persistence controls | GOV-01, GOV-02, TRC-01, TRC-02 | planned |
 
 ## Performance Metrics
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 05 | 3min | 2 tasks | 4 files |
+| Phase 06 P01 | 2min | 2 tasks | 3 files |
+| Phase 06 P02 | 3min | 2 tasks | 4 files |
 | Phase 06 P03 | 4min | 2 tasks | 4 files |

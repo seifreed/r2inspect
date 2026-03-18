@@ -9,6 +9,18 @@ import pytest
 
 from r2inspect import cli_main
 from r2inspect.cli.commands import CommandContext
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
+
+
+@pytest.fixture
+def samples_dir(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 def _make_args(**overrides):

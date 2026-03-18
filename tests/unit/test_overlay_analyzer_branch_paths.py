@@ -62,6 +62,16 @@ class OverlayAdapter:
         return list(self._overlay_bytes[:size])
 
 
+class WeirdTruthyEmptyPatterns:
+    """Truthy iterable with no items to exercise fallback 'unknown' branch."""
+
+    def __bool__(self) -> bool:
+        return True
+
+    def __iter__(self):
+        return iter(())
+
+
 # ---------------------------------------------------------------------------
 # Helper builders
 # ---------------------------------------------------------------------------
@@ -118,13 +128,16 @@ def test_analyze_returns_no_overlay_when_no_sections():
 
 
 def test_analyze_returns_no_overlay_when_pe_end_equals_file_size():
-    """pe_end_int >= file_size => overlay_size <= 0 (lines 115, 56)."""
-    adapter = OverlayAdapter(
-        file_info={"core": {"size": 5000}},
-        sections=[{"paddr": 0, "size": 5000}],
-        data_dirs=[],
-    )
-    result = OverlayAnalyzer(adapter).analyze()
+    """Force overlay_size <= 0 in analyze() to exercise line 56 explicitly."""
+
+    class _NonPositiveOverlayAnalyzer(OverlayAnalyzer):
+        def _get_file_size(self) -> int | None:
+            return 5000
+
+        def _get_valid_pe_end(self, file_size: int) -> int | None:
+            return 6000
+
+    result = _NonPositiveOverlayAnalyzer(OverlayAdapter()).analyze()
     assert result["has_overlay"] is False
 
 
@@ -156,6 +169,17 @@ def test_calculate_pe_end_exception_returns_zero():
     )
     result = OverlayAnalyzer(adapter).analyze()
     assert result["has_overlay"] is False
+
+
+def test_get_valid_pe_end_handles_non_int_value():
+    """_get_valid_pe_end catches ValueError/TypeError while coercing pe_end (lines 112-113)."""
+
+    class _BadPeEndOverlayAnalyzer(OverlayAnalyzer):
+        def _calculate_pe_end(self):
+            return "not_an_int"
+
+    analyzer = _BadPeEndOverlayAnalyzer(OverlayAdapter())
+    assert analyzer._get_valid_pe_end(10000) is None
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +268,36 @@ def test_analyze_overlay_content_hash_calculation_error():
     )
     result = OverlayAnalyzer(adapter).analyze()
     assert isinstance(result["overlay_hashes"], dict)
+
+
+def test_analyze_overlay_content_hash_bytes_conversion_error():
+    """Force bytes(...) ValueError only in hash block to hit lines 186-188."""
+
+    class _HashErrorOverlayAnalyzer(OverlayAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return [300, 301, 302, 303]
+            return default
+
+        def _calculate_entropy(self, data: list[int]) -> float:
+            return 0.0
+
+        def _check_patterns(self, data: list[int]) -> list[dict[str, Any]]:
+            return []
+
+        def _determine_overlay_type(self, patterns: list[dict[str, Any]], data: list[int]) -> str:
+            return "unknown"
+
+        def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
+            return []
+
+        def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
+            return []
+
+    analyzer = _HashErrorOverlayAnalyzer(None)
+    result = analyzer._default_result()
+    analyzer._analyze_overlay_content(result, offset=0, size=4)
+    assert result["overlay_hashes"] == {}
 
 
 def test_analyze_overlay_content_embedded_files_populated():
@@ -384,14 +438,10 @@ def test_determine_overlay_type_config_counted():
 
 
 def test_determine_overlay_type_fallback_unknown():
-    """Empty type_counts returns 'unknown' (line 313)."""
-    # This path is only reachable if patterns is non-empty but
-    # _determine_overlay_type's type_counts ends up empty.
-    # Covered indirectly when patterns have no 'installer' and type_counts is filled.
-    patterns = [{"type": "misc", "name": "test", "confidence": "low"}]
+    """Truthy iterable with no items makes type_counts empty and returns 'unknown' (line 313)."""
     analyzer = OverlayAnalyzer(None)
-    result = analyzer._determine_overlay_type(patterns, [])
-    assert result == "misc"
+    result = analyzer._determine_overlay_type(WeirdTruthyEmptyPatterns(), [])
+    assert result == "unknown"
 
 
 # ---------------------------------------------------------------------------

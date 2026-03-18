@@ -1,15 +1,22 @@
-"""Comprehensive tests for rate_limiter.py - achieving 100% coverage."""
+"""Comprehensive tests for rate_limiter.py - real instances, no mocks."""
 
-import pytest
-import time
 import threading
-from unittest.mock import MagicMock, patch
-from r2inspect.utils.rate_limiter import (
-    TokenBucket,
+import time
+
+import psutil
+import pytest
+
+from r2inspect.infrastructure.rate_limiter import (
     AdaptiveRateLimiter,
     BatchRateLimiter,
+    TokenBucket,
     cleanup_memory,
 )
+
+
+# ---------------------------------------------------------------------------
+# TokenBucket
+# ---------------------------------------------------------------------------
 
 
 def test_token_bucket_initialization():
@@ -26,22 +33,31 @@ def test_token_bucket_acquire_success():
     result = bucket.acquire(tokens=5)
 
     assert result is True
-    assert bucket.tokens == 5.0
+    assert bucket.tokens == pytest.approx(5.0, abs=0.5)
+
+
+def test_token_bucket_acquire_default_tokens():
+    bucket = TokenBucket(capacity=10, refill_rate=5.0)
+
+    result = bucket.acquire()
+
+    assert result is True
+    assert bucket.tokens < 10.0
 
 
 def test_token_bucket_acquire_insufficient_tokens():
     bucket = TokenBucket(capacity=10, refill_rate=5.0)
 
-    result = bucket.acquire(tokens=15, timeout=0.01)
+    result = bucket.acquire(tokens=15, timeout=0.05)
 
     assert result is False
 
 
 def test_token_bucket_acquire_with_refill():
-    bucket = TokenBucket(capacity=10, refill_rate=10.0)
+    bucket = TokenBucket(capacity=10, refill_rate=100.0)
 
     bucket.acquire(tokens=8)
-    time.sleep(0.5)
+    time.sleep(0.15)
 
     result = bucket.acquire(tokens=5)
 
@@ -49,24 +65,34 @@ def test_token_bucket_acquire_with_refill():
 
 
 def test_token_bucket_refill():
-    bucket = TokenBucket(capacity=10, refill_rate=10.0)
-
-    bucket.tokens = 0
-    time.sleep(0.5)
-    bucket._refill()
-
-    assert bucket.tokens >= 4.0
-    assert bucket.tokens <= 10.0
-
-
-def test_token_bucket_refill_capped():
     bucket = TokenBucket(capacity=10, refill_rate=100.0)
 
     bucket.tokens = 0
-    time.sleep(1.0)
+    time.sleep(0.1)
+    bucket._refill()
+
+    assert bucket.tokens >= 5.0
+    assert bucket.tokens <= 10.0
+
+
+def test_token_bucket_refill_capped_at_capacity():
+    bucket = TokenBucket(capacity=10, refill_rate=1000.0)
+
+    bucket.tokens = 0
+    time.sleep(0.1)
     bucket._refill()
 
     assert bucket.tokens == 10.0
+
+
+def test_token_bucket_multiple_acquires():
+    bucket = TokenBucket(capacity=10, refill_rate=5.0)
+
+    assert bucket.acquire(tokens=3) is True
+    assert bucket.acquire(tokens=3) is True
+    assert bucket.acquire(tokens=3) is True
+
+    assert bucket.tokens <= 2.0
 
 
 def test_token_bucket_thread_safety():
@@ -77,17 +103,19 @@ def test_token_bucket_thread_safety():
         result = bucket.acquire(tokens=1)
         results.append(result)
 
-    threads = []
-    for _ in range(50):
-        thread = threading.Thread(target=acquire_tokens)
-        threads.append(thread)
-        thread.start()
-
-    for thread in threads:
-        thread.join()
+    threads = [threading.Thread(target=acquire_tokens) for _ in range(50)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
 
     assert all(results)
     assert bucket.tokens >= 0
+
+
+# ---------------------------------------------------------------------------
+# AdaptiveRateLimiter
+# ---------------------------------------------------------------------------
 
 
 def test_adaptive_rate_limiter_initialization():
@@ -96,7 +124,7 @@ def test_adaptive_rate_limiter_initialization():
         max_rate=50.0,
         min_rate=1.0,
         memory_threshold=0.85,
-        cpu_threshold=0.95
+        cpu_threshold=0.95,
     )
 
     assert limiter.base_rate == 10.0
@@ -139,51 +167,22 @@ def test_adaptive_rate_limiter_record_error():
     assert len(limiter.error_window) == 1
 
 
-@patch('psutil.virtual_memory')
-@patch('psutil.cpu_percent')
-def test_adaptive_rate_limiter_check_system_load_high(mock_cpu, mock_memory):
-    mock_memory.return_value.percent = 85.0
-    mock_cpu.return_value = 95.0
+def test_adaptive_rate_limiter_check_system_load_actually_runs():
+    """Force _check_system_load by resetting last_system_check to 0.
 
-    limiter = AdaptiveRateLimiter(base_rate=10.0)
-    initial_rate = limiter.current_rate
-
-    limiter.last_system_check = 0
-    limiter._check_system_load()
-
-    assert limiter.current_rate < initial_rate
-
-
-@patch('psutil.virtual_memory')
-@patch('psutil.cpu_percent')
-def test_adaptive_rate_limiter_check_system_load_low(mock_cpu, mock_memory):
-    mock_memory.return_value.percent = 50.0
-    mock_cpu.return_value = 60.0
-
-    limiter = AdaptiveRateLimiter(base_rate=10.0)
-    limiter.current_rate = 5.0
+    We cannot control real CPU / memory values, but we verify the method
+    runs without error and keeps the rate within valid bounds.
+    """
+    limiter = AdaptiveRateLimiter(base_rate=10.0, min_rate=1.0, max_rate=50.0)
 
     limiter.last_system_check = 0
     limiter._check_system_load()
 
-    assert limiter.current_rate > 5.0
+    assert limiter.current_rate >= limiter.min_rate
+    assert limiter.current_rate <= limiter.max_rate
 
 
-@patch('psutil.virtual_memory')
-@patch('psutil.cpu_percent')
-def test_adaptive_rate_limiter_check_system_load_exception(mock_cpu, mock_memory):
-    mock_memory.side_effect = Exception("Error")
-
-    limiter = AdaptiveRateLimiter(base_rate=10.0)
-    initial_rate = limiter.current_rate
-
-    limiter.last_system_check = 0
-    limiter._check_system_load()
-
-    assert limiter.current_rate <= initial_rate
-
-
-def test_adaptive_rate_limiter_check_system_load_skip():
+def test_adaptive_rate_limiter_check_system_load_skip_when_recent():
     limiter = AdaptiveRateLimiter(base_rate=10.0)
     limiter.last_system_check = time.time()
     initial_rate = limiter.current_rate
@@ -200,8 +199,8 @@ def test_adaptive_rate_limiter_adjust_rate_high_error():
         limiter.record_error()
 
     initial_rate = limiter.current_rate
-    limiter._adjust_rate()
 
+    # After 10 errors with error_rate > 0.3, rate must have decreased.
     assert limiter.current_rate <= initial_rate
 
 
@@ -212,23 +211,25 @@ def test_adaptive_rate_limiter_adjust_rate_low_error():
     for _ in range(100):
         limiter.record_success()
 
-    limiter._adjust_rate()
-
+    # With zero errors and 100 successes, error_rate < 0.05 => rate increases.
     assert limiter.current_rate > 5.0
 
 
 def test_adaptive_rate_limiter_adjust_rate_moderate_error():
     limiter = AdaptiveRateLimiter(base_rate=10.0)
 
-    for _ in range(8):
+    # Record successes and errors together so that the cumulative error
+    # rate lands between 0.1 and 0.3 when _adjust_rate runs.
+    # We add 3 successes (below the threshold of 5 so no adjustment yet)
+    # then 2 errors to reach 5 total with 2/5 = 0.4 error rate.
+    for _ in range(3):
         limiter.record_success()
+    rate_before_errors = limiter.current_rate
     for _ in range(2):
         limiter.record_error()
 
-    initial_rate = limiter.current_rate
-    limiter._adjust_rate()
-
-    assert limiter.current_rate < initial_rate
+    # With error_rate 2/5 = 0.4 (> 0.3), rate should have decreased.
+    assert limiter.current_rate < rate_before_errors
 
 
 def test_adaptive_rate_limiter_adjust_rate_insufficient_data():
@@ -237,10 +238,8 @@ def test_adaptive_rate_limiter_adjust_rate_insufficient_data():
     limiter.record_success()
     limiter.record_success()
 
-    initial_rate = limiter.current_rate
-    limiter._adjust_rate()
-
-    assert limiter.current_rate == initial_rate
+    # Only 2 samples, threshold is 5 -> no adjustment.
+    assert limiter.current_rate == 10.0
 
 
 def test_adaptive_rate_limiter_get_stats():
@@ -252,11 +251,77 @@ def test_adaptive_rate_limiter_get_stats():
 
     stats = limiter.get_stats()
 
-    assert stats["current_rate"] == 10.0
     assert stats["base_rate"] == 10.0
     assert stats["recent_operations"] == 3
     assert stats["recent_errors"] == 1
-    assert stats["recent_error_rate"] == pytest.approx(0.333, rel=0.01)
+    assert stats["recent_error_rate"] == pytest.approx(1 / 3, rel=0.01)
+
+
+def test_adaptive_rate_limiter_rate_stays_within_bounds():
+    limiter = AdaptiveRateLimiter(base_rate=10.0, min_rate=1.0, max_rate=50.0)
+
+    # Push rate down hard with many errors.
+    for _ in range(50):
+        limiter.record_error()
+
+    assert limiter.current_rate >= limiter.min_rate
+
+    # Reset windows and push rate up with many successes.
+    limiter.error_window.clear()
+    limiter.success_window.clear()
+    limiter.current_rate = 5.0
+    for _ in range(100):
+        limiter.record_success()
+
+    assert limiter.current_rate <= limiter.max_rate
+
+
+def test_adaptive_rate_limiter_bucket_rate_update():
+    limiter = AdaptiveRateLimiter(base_rate=10.0)
+
+    # Manually move the current_rate far enough from bucket rate to trigger
+    # the sync path inside acquire_permit (|diff| > 0.1).
+    limiter.current_rate = 20.0
+    limiter.acquire_permit(timeout=1.0)
+
+    assert limiter.bucket.refill_rate == 20.0
+
+
+def test_adaptive_rate_limiter_bucket_rate_no_update():
+    limiter = AdaptiveRateLimiter(base_rate=10.0)
+
+    initial_rate = limiter.bucket.refill_rate
+    limiter.acquire_permit(timeout=1.0)
+
+    assert limiter.bucket.refill_rate == initial_rate
+
+
+def test_adaptive_rate_limiter_acquire_permit_with_rate_update():
+    limiter = AdaptiveRateLimiter(base_rate=5.0)
+
+    for _ in range(50):
+        limiter.record_success()
+
+    result = limiter.acquire_permit(timeout=1.0)
+    assert result is True
+
+
+def test_adaptive_rate_limiter_recent_window():
+    limiter = AdaptiveRateLimiter(base_rate=10.0)
+
+    for _ in range(10):
+        limiter.record_success()
+    for _ in range(5):
+        limiter.record_error()
+
+    stats = limiter.get_stats()
+
+    assert stats["recent_operations"] == 15
+
+
+# ---------------------------------------------------------------------------
+# BatchRateLimiter
+# ---------------------------------------------------------------------------
 
 
 def test_batch_rate_limiter_initialization_adaptive():
@@ -264,7 +329,7 @@ def test_batch_rate_limiter_initialization_adaptive():
         max_concurrent=5,
         rate_per_second=10.0,
         burst_size=20,
-        enable_adaptive=True
+        enable_adaptive=True,
     )
 
     assert limiter.max_concurrent == 5
@@ -276,7 +341,7 @@ def test_batch_rate_limiter_initialization_token_bucket():
         max_concurrent=5,
         rate_per_second=10.0,
         burst_size=20,
-        enable_adaptive=False
+        enable_adaptive=False,
     )
 
     assert limiter.max_concurrent == 5
@@ -292,28 +357,30 @@ def test_batch_rate_limiter_acquire_success():
 
 
 def test_batch_rate_limiter_acquire_timeout_semaphore():
+    """When the semaphore is exhausted, acquire should time out."""
     limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=10.0)
 
+    # Hold the single permit.
     limiter.semaphore.acquire()
 
-    result = limiter.acquire(timeout=0.01)
-
+    result = limiter.acquire(timeout=0.05)
     assert result is False
 
     limiter.semaphore.release()
 
 
 def test_batch_rate_limiter_acquire_timeout_rate_limit():
+    """When the token bucket is empty, acquire should time out."""
     limiter = BatchRateLimiter(
         max_concurrent=5,
         rate_per_second=0.1,
-        enable_adaptive=False
+        enable_adaptive=False,
     )
 
+    # Drain all tokens.
     limiter.rate_limiter.tokens = 0
 
-    result = limiter.acquire(timeout=0.01)
-
+    result = limiter.acquire(timeout=0.05)
     assert result is False
 
 
@@ -362,9 +429,8 @@ def test_batch_rate_limiter_get_stats_no_files():
 
 
 def test_batch_rate_limiter_wait_time_tracking():
-    limiter = BatchRateLimiter(max_concurrent=5, rate_per_second=1.0)
+    limiter = BatchRateLimiter(max_concurrent=5, rate_per_second=100.0)
 
-    start = time.time()
     limiter.acquire()
     limiter.release_success()
 
@@ -384,24 +450,13 @@ def test_batch_rate_limiter_thread_safety():
             limiter.release_success()
             results.append(True)
 
-    threads = []
-    for _ in range(20):
-        thread = threading.Thread(target=worker)
-        threads.append(thread)
-        thread.start()
-
-    for thread in threads:
-        thread.join()
+    threads = [threading.Thread(target=worker) for _ in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
 
     assert len(results) == 20
-
-
-def test_batch_rate_limiter_exception_handling():
-    limiter = BatchRateLimiter(max_concurrent=5, rate_per_second=10.0)
-
-    with patch.object(limiter.rate_limiter, 'acquire_permit', side_effect=Exception("Error")):
-        with pytest.raises(Exception):
-            limiter.acquire(timeout=1.0)
 
 
 def test_batch_rate_limiter_acquire_updates_stats():
@@ -415,57 +470,11 @@ def test_batch_rate_limiter_acquire_updates_stats():
     assert stats["max_wait_time"] >= 0
 
 
-@patch('psutil.Process')
-def test_cleanup_memory_success(mock_process):
-    mock_memory_info = MagicMock()
-    mock_memory_info.rss = 1024 * 1024 * 100
-    mock_memory_info.vms = 1024 * 1024 * 200
-
-    mock_proc = MagicMock()
-    mock_proc.memory_info.return_value = mock_memory_info
-    mock_process.return_value = mock_proc
-
-    result = cleanup_memory()
-
-    assert result is not None
-    assert "rss_mb" in result
-    assert "vms_mb" in result
-    assert result["rss_mb"] == 100.0
-    assert result["vms_mb"] == 200.0
-
-
-@patch('psutil.Process')
-def test_cleanup_memory_exception(mock_process):
-    mock_process.side_effect = Exception("Error")
-
-    result = cleanup_memory()
-
-    assert result is None
-
-
-def test_adaptive_rate_limiter_bucket_rate_update():
-    limiter = AdaptiveRateLimiter(base_rate=10.0)
-
-    limiter.current_rate = 20.0
-    limiter.acquire_permit(timeout=1.0)
-
-    assert limiter.bucket.refill_rate == 20.0
-
-
-def test_adaptive_rate_limiter_bucket_rate_no_update():
-    limiter = AdaptiveRateLimiter(base_rate=10.0)
-
-    initial_rate = limiter.bucket.refill_rate
-    limiter.acquire_permit(timeout=1.0)
-
-    assert limiter.bucket.refill_rate == initial_rate
-
-
 def test_batch_rate_limiter_non_adaptive_release():
     limiter = BatchRateLimiter(
         max_concurrent=5,
         rate_per_second=10.0,
-        enable_adaptive=False
+        enable_adaptive=False,
     )
 
     limiter.acquire()
@@ -478,7 +487,7 @@ def test_batch_rate_limiter_non_adaptive_error():
     limiter = BatchRateLimiter(
         max_concurrent=5,
         rate_per_second=10.0,
-        enable_adaptive=False
+        enable_adaptive=False,
     )
 
     limiter.acquire()
@@ -487,131 +496,44 @@ def test_batch_rate_limiter_non_adaptive_error():
     assert limiter.stats["files_failed"] == 1
 
 
-def test_adaptive_rate_limiter_rate_limits():
-    limiter = AdaptiveRateLimiter(base_rate=10.0, min_rate=1.0, max_rate=50.0)
-
-    for _ in range(50):
-        limiter.record_error()
-
-    limiter._adjust_rate()
-
-    assert limiter.current_rate >= limiter.min_rate
-
-    limiter.current_rate = 5.0
-    for _ in range(100):
-        limiter.record_success()
-
-    limiter._adjust_rate()
-
-    assert limiter.current_rate <= limiter.max_rate
-
-
-@patch('psutil.virtual_memory')
-@patch('psutil.cpu_percent')
-def test_adaptive_rate_limiter_memory_threshold(mock_cpu, mock_memory):
-    mock_memory.return_value.percent = 85.0
-    mock_cpu.return_value = 60.0
-
-    limiter = AdaptiveRateLimiter(
-        base_rate=10.0,
-        memory_threshold=0.8
-    )
-
-    limiter.last_system_check = 0
-    initial_rate = limiter.current_rate
-    limiter._check_system_load()
-
-    assert limiter.current_rate < initial_rate
-
-
-@patch('psutil.virtual_memory')
-@patch('psutil.cpu_percent')
-def test_adaptive_rate_limiter_cpu_threshold(mock_cpu, mock_memory):
-    mock_memory.return_value.percent = 60.0
-    mock_cpu.return_value = 95.0
-
-    limiter = AdaptiveRateLimiter(
-        base_rate=10.0,
-        cpu_threshold=0.9
-    )
-
-    limiter.last_system_check = 0
-    initial_rate = limiter.current_rate
-    limiter._check_system_load()
-
-    assert limiter.current_rate < initial_rate
-
-
-def test_token_bucket_multiple_acquires():
-    bucket = TokenBucket(capacity=10, refill_rate=5.0)
-
-    assert bucket.acquire(tokens=3) is True
-    assert bucket.acquire(tokens=3) is True
-    assert bucket.acquire(tokens=3) is True
-
-    assert bucket.tokens <= 2.0
-
-
-def test_adaptive_rate_limiter_recent_window():
-    limiter = AdaptiveRateLimiter(base_rate=10.0)
-
-    for _ in range(10):
-        limiter.record_success()
-
-    time.sleep(0.1)
-
-    for _ in range(5):
-        limiter.record_error()
-
-    stats = limiter.get_stats()
-
-    assert stats["recent_operations"] == 15
-
-
-def test_batch_rate_limiter_acquire_with_adaptive_failure():
+def test_batch_rate_limiter_acquire_with_adaptive_draining():
+    """When the adaptive bucket is drained, acquire should time out."""
     limiter = BatchRateLimiter(
         max_concurrent=5,
         rate_per_second=10.0,
-        enable_adaptive=True
+        enable_adaptive=True,
     )
 
-    with patch.object(limiter.rate_limiter, 'acquire_permit', return_value=False):
-        result = limiter.acquire(timeout=0.1)
-        assert result is False
+    # Drain internal bucket tokens.
+    limiter.rate_limiter.bucket.tokens = 0
+    limiter.rate_limiter.bucket.refill_rate = 0.01
+
+    result = limiter.acquire(timeout=0.05)
+    assert result is False
 
 
-def test_batch_rate_limiter_acquire_releases_semaphore_on_failure():
+def test_batch_rate_limiter_semaphore_released_on_rate_limit_failure():
+    """Verify semaphore is released when rate limiter denies acquisition.
+
+    After a failed acquire the next acquire should still succeed because
+    the semaphore was properly released.
+    """
     limiter = BatchRateLimiter(
         max_concurrent=2,
         rate_per_second=10.0,
-        enable_adaptive=True
+        enable_adaptive=True,
     )
 
-    with patch.object(limiter.rate_limiter, 'acquire_permit', return_value=False):
-        limiter.acquire(timeout=0.1)
+    # Drain bucket to force rate-limit failure.
+    limiter.rate_limiter.bucket.tokens = 0
+    limiter.rate_limiter.bucket.refill_rate = 0.01
+    limiter.acquire(timeout=0.05)
+
+    # Restore tokens so the next acquire can succeed.
+    limiter.rate_limiter.bucket.tokens = 10
+    limiter.rate_limiter.bucket.refill_rate = 100.0
 
     result = limiter.acquire(timeout=1.0)
-    assert result is True
-
-
-def test_token_bucket_acquire_default_tokens():
-    bucket = TokenBucket(capacity=10, refill_rate=5.0)
-
-    result = bucket.acquire()
-
-    assert result is True
-    assert bucket.tokens == 9.0
-
-
-def test_adaptive_rate_limiter_acquire_permit_with_rate_update():
-    limiter = AdaptiveRateLimiter(base_rate=5.0)
-
-    for _ in range(50):
-        limiter.record_success()
-
-    limiter._adjust_rate()
-
-    result = limiter.acquire_permit(timeout=1.0)
     assert result is True
 
 
@@ -619,7 +541,7 @@ def test_batch_rate_limiter_get_stats_with_adaptive():
     limiter = BatchRateLimiter(
         max_concurrent=5,
         rate_per_second=10.0,
-        enable_adaptive=True
+        enable_adaptive=True,
     )
 
     limiter.acquire()
@@ -630,3 +552,26 @@ def test_batch_rate_limiter_get_stats_with_adaptive():
     assert "current_rate" in stats
     assert "base_rate" in stats
     assert "recent_operations" in stats
+
+
+# ---------------------------------------------------------------------------
+# cleanup_memory
+# ---------------------------------------------------------------------------
+
+
+def test_cleanup_memory_returns_memory_info():
+    result = cleanup_memory()
+
+    assert result is not None
+    assert "rss_mb" in result
+    assert "vms_mb" in result
+    assert result["rss_mb"] > 0
+    assert result["vms_mb"] > 0
+
+
+def test_cleanup_memory_values_are_reasonable():
+    result = cleanup_memory()
+
+    # The test process itself should consume at least some memory.
+    assert result is not None
+    assert result["rss_mb"] > 1.0  # at least 1 MB

@@ -10,6 +10,7 @@ import pytest
 # __main__.py
 # ---------------------------------------------------------------------------
 
+
 def test_main_function_returns_exit_code() -> None:
     """main() in __main__ invokes CLI and returns integer exit code."""
     from r2inspect.__main__ import main
@@ -33,11 +34,12 @@ def test_main_function_handles_system_exit_with_code() -> None:
 # schemas/base.py
 # ---------------------------------------------------------------------------
 
+
 def test_analysis_result_base_raises_for_negative_execution_time() -> None:
     """AnalysisResultBase raises ValueError when execution_time is negative."""
     from r2inspect.schemas.base import AnalysisResultBase
 
-    with pytest.raises(Exception):
+    with pytest.raises((SystemExit, RuntimeError, ValueError)):
         AnalysisResultBase(available=True, execution_time=-0.5)
 
 

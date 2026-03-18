@@ -4,6 +4,7 @@ import pytest
 
 from r2inspect.abstractions.base_analyzer import BaseAnalyzer
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
+from r2inspect.registry.entry_points import EntryPointLoader
 
 
 class EPAnalyzer(BaseAnalyzer):
@@ -33,11 +34,11 @@ def test_handle_entry_point_callable_and_class():
             category=reg._parse_category("metadata"),
         )
 
-    loaded = registry._handle_entry_point(FakeEP("call", registrar))
+    loaded = EntryPointLoader(registry)._handle_entry_point(FakeEP("call", registrar))
     assert loaded == 1
     assert registry.is_registered("ep") is True
 
-    loaded = registry._handle_entry_point(FakeEP("class", EPAnalyzer))
+    loaded = EntryPointLoader(registry)._handle_entry_point(FakeEP("class", EPAnalyzer))
     assert loaded == 1
 
 
@@ -47,11 +48,11 @@ def test_handle_entry_point_errors():
     def bad_callable(_reg):
         raise RuntimeError("boom")
 
-    loaded = registry._handle_entry_point(FakeEP("bad", bad_callable))
+    loaded = EntryPointLoader(registry)._handle_entry_point(FakeEP("bad", bad_callable))
     assert loaded == 0
 
     class Bad:
         pass
 
-    loaded = registry._handle_entry_point(FakeEP("badclass", Bad))
+    loaded = EntryPointLoader(registry)._handle_entry_point(FakeEP("badclass", Bad))
     assert loaded == 1

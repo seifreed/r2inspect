@@ -6,9 +6,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from r2inspect.utils import command_helpers
-from r2inspect.utils import hashing as hashing_utils
-from r2inspect.utils import r2_suppress, ssdeep_loader
+import r2inspect.infrastructure.command_helpers as command_helpers
+import r2inspect.infrastructure.hashing as hashing_utils
+import r2inspect.infrastructure.r2_suppress as r2_suppress
+import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
 
 
 class _Adapter:

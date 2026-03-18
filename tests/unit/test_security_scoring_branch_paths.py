@@ -10,6 +10,7 @@ from r2inspect.modules.string_extraction import (
 
 # ----- security_scoring tests -----
 
+
 def _make_result(mitigations: dict | None = None, vulnerabilities: list | None = None) -> dict:
     return {
         "mitigations": mitigations or {},
@@ -96,6 +97,7 @@ def test_grade_from_percentage_f_below_60() -> None:
 
 
 # ----- string_extraction tests -----
+
 
 def test_extract_strings_from_entries_none_returns_empty() -> None:
     assert extract_strings_from_entries(None, 4) == []

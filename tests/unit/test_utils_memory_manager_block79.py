@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,

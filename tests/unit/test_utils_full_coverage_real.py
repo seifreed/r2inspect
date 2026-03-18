@@ -10,17 +10,23 @@ from pathlib import Path
 import pytest
 
 from r2inspect.error_handling import ErrorHandlingStrategy, ErrorPolicy
-from r2inspect.utils import command_helpers, error_handler, hashing, logger, r2_helpers, r2_suppress
-from r2inspect.utils.analyzer_factory import create_analyzer, run_analysis_method
-from r2inspect.utils.circuit_breaker import (
+from r2inspect.adapters.validation import _clean_list_items
+import r2inspect.infrastructure.command_helpers as command_helpers
+import r2inspect.error_handling.classifier as error_handler
+import r2inspect.infrastructure.hashing as hashing
+import r2inspect.infrastructure.logging as logger
+import r2inspect.infrastructure.r2_helpers as r2_helpers
+import r2inspect.infrastructure.r2_suppress as r2_suppress
+from r2inspect.core.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.infrastructure.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerError,
     CircuitState,
     R2CommandCircuitBreaker,
 )
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter, TokenBucket
-from r2inspect.utils.retry_manager import (
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter, TokenBucket
+from r2inspect.infrastructure.retry_manager import (
     NonRetryableError,
     RetryableError,
     RetryConfig,
@@ -32,7 +38,7 @@ from r2inspect.utils.retry_manager import (
     retry_on_failure,
     retry_r2_operation,
 )
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 
 class _AnalyzerKwargs:
@@ -390,7 +396,7 @@ def test_r2_helpers_and_suppress(tmp_path: Path) -> None:
     assert r2_helpers.validate_r2_data([], "list") == []
     assert r2_helpers.validate_r2_data("x", "other") == "x"
 
-    bad_list = r2_helpers._clean_list_items([{"name": "a&nbsp;"}, "bad"])
+    bad_list = _clean_list_items([{"name": "a&nbsp;"}, "bad"])
     assert bad_list[0]["name"] == "a "
 
     r2 = _R2Simple(json.dumps({"a": 1}))

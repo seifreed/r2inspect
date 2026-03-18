@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -138,7 +138,7 @@ def test_security_schema_helpers() -> None:
 
 
 def test_results_from_dict_and_helpers() -> None:
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     payload = {
         "file_info": {"name": "a.bin", "size": 123, "md5": "md5", "file_type": "PE"},
         "hashing": {"ssdeep": "3:abc:def", "simhash": "0x1"},

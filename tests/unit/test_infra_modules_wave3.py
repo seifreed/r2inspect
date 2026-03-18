@@ -61,7 +61,7 @@ def test_setup_logger_reinit_on_closed_file_handler(tmp_path: Path) -> None:
     """
     import io
 
-    from r2inspect.utils.logger import _loggers_initialized, setup_logger
+    from r2inspect.infrastructure.logging import _loggers_initialized, setup_logger
 
     name = "r2inspect.test.wave3.closed_handler"
     _cleanup_logger(name)
@@ -95,7 +95,7 @@ def test_setup_logger_reinit_on_closed_file_handler(tmp_path: Path) -> None:
 
 def test_setup_logger_fallback_console_when_log_dir_unwritable(tmp_path: Path) -> None:
     """Lines 87/89/94/95: fallback formatter used when RotatingFileHandler fails."""
-    from r2inspect.utils.logger import _loggers_initialized, setup_logger
+    from r2inspect.infrastructure.logging import _loggers_initialized, setup_logger
 
     name = "r2inspect.test.wave3.fallback_console"
     _cleanup_logger(name)
@@ -131,7 +131,7 @@ def test_setup_logger_fallback_console_when_log_dir_unwritable(tmp_path: Path) -
 def test_file_validator_fails_memory_limit(tmp_path: Path) -> None:
     """Lines 77-79 / 158-159: validate() returns False when memory limit exceeded."""
     from r2inspect.core.file_validator import FileValidator
-    from r2inspect.utils.memory_manager import global_memory_monitor
+    from r2inspect.infrastructure.memory import global_memory_monitor
 
     target = tmp_path / "big.bin"
     target.write_bytes(b"A" * 256)
@@ -177,10 +177,10 @@ def test_file_validator_unreadable_file(tmp_path: Path) -> None:
 def _write_fat_macho_arm64(path: Path) -> None:
     """Minimal fat Mach-O with a single arm64 slice."""
     data = bytearray()
-    data += (0xCAFEBABE).to_bytes(4, "big")   # big-endian magic
-    data += (1).to_bytes(4, "big")             # nfat_arch = 1
+    data += (0xCAFEBABE).to_bytes(4, "big")  # big-endian magic
+    data += (1).to_bytes(4, "big")  # nfat_arch = 1
     # 20-byte arch entry: cputype(4) + 16 padding bytes
-    data += (0x0100000C).to_bytes(4, "big")    # arm64 cputype
+    data += (0x0100000C).to_bytes(4, "big")  # arm64 cputype
     data += b"\x00" * 16
     path.write_bytes(bytes(data))
 
@@ -285,7 +285,7 @@ class _BadHexAdapter:
         def __bool__(self) -> bool:
             return True
 
-    def read_bytes(self, vaddr: int, size: int) -> "_BadHexAdapter._FakeBytes":
+    def read_bytes(self, vaddr: int, size: int) -> _BadHexAdapter._FakeBytes:
         return _BadHexAdapter._FakeBytes()
 
     def get_sections(self) -> list[dict[str, Any]]:
@@ -318,9 +318,9 @@ def test_crypto_analyzer_none_adapter_fallbacks() -> None:
     from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 
     analyzer = CryptoAnalyzer(adapter=None)
-    assert analyzer._get_imports() == []    # line 329
-    assert analyzer._get_sections() == []   # line 334
-    assert analyzer._get_strings() == []    # line 339
+    assert analyzer._get_imports() == []  # line 329
+    assert analyzer._get_sections() == []  # line 334
+    assert analyzer._get_strings() == []  # line 339
     assert analyzer._read_bytes(0, 64) == b""  # line 350
 
 
@@ -381,7 +381,7 @@ def test_overlay_analyzer_pe_end_not_castable_to_int() -> None:
 def test_overlay_analyzer_hash_calculation_error() -> None:
     """Lines 186-188: exception in bytes() for hash sets overlay_hashes={}."""
     from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
-    from r2inspect.utils.hashing import calculate_hashes_for_bytes
+    from r2inspect.infrastructure.hashing import calculate_hashes_for_bytes
 
     class _BadHashOverlay(OverlayAnalyzer):
         def _get_file_size(self) -> int:
@@ -402,19 +402,13 @@ def test_overlay_analyzer_hash_calculation_error() -> None:
         def _check_patterns(self, data: list[int]) -> list[dict[str, Any]]:
             return []
 
-        def _determine_overlay_type(
-            self, patterns: list[dict[str, Any]], data: list[int]
-        ) -> str:
+        def _determine_overlay_type(self, patterns: list[dict[str, Any]], data: list[int]) -> str:
             return "data"
 
-        def _extract_strings(
-            self, data: list[int], min_length: int = 4
-        ) -> list[str]:
+        def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
             return []
 
-        def _check_file_signatures(
-            self, data: list[int]
-        ) -> list[dict[str, Any]]:
+        def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
             return []
 
     result = _BadHashOverlay(adapter=None).analyze()

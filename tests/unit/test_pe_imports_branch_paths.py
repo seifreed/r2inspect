@@ -68,15 +68,14 @@ def test_group_imports_skips_empty_name() -> None:
     assert len(result["kernel32.dll"]) == 1
 
 
-def test_group_imports_uses_unknown_for_missing_libname() -> None:
+def test_group_imports_skips_missing_or_blank_libname() -> None:
     imports = [
         {"name": "SomeFunc"},
         {"name": "OtherFunc", "libname": ""},
         {"name": "ThirdFunc", "libname": "   "},
     ]
     result = group_imports_by_library(imports)
-    assert "unknown" in result
-    assert len(result["unknown"]) == 3
+    assert result == {}
 
 
 def test_group_imports_non_dict_entries_skipped() -> None:
@@ -176,3 +175,17 @@ def test_calculate_imphash_skips_empty_funcname() -> None:
     result = calculate_imphash(_SomeEmptyAdapter(), logger)
     assert isinstance(result, str)
     assert len(result) == 32
+
+
+def test_calculate_imphash_returns_empty_when_no_valid_import_strings() -> None:
+    class _InvalidEntriesAdapter:
+        def get_imports(self) -> list:
+            return [
+                {"libname": "kernel32.dll"},  # missing name
+                {"name": "   ", "libname": "kernel32.dll"},  # blank name
+                "not-a-dict",
+            ]
+
+    logger = _FakeLogger()
+    result = calculate_imphash(_InvalidEntriesAdapter(), logger)
+    assert result == ""

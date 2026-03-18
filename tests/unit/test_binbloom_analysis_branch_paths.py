@@ -177,3 +177,20 @@ def test_bloom_debug_messages_called() -> None:
     assert len(messages) >= 2
     assert any("Starting" in m for m in messages)
     assert any("completed" in m for m in messages)
+
+
+def test_bloom_top_level_exception_sets_error() -> None:
+    class _ExplodingAnalyzer(_FakeAnalyzer):
+        def _extract_functions(self) -> list[dict[str, Any]]:
+            raise RuntimeError("forced binbloom failure")
+
+    analyzer = _ExplodingAnalyzer()
+    result = run_binbloom_analysis(
+        analyzer=analyzer,
+        capacity=1000,
+        error_rate=0.001,
+        bloom_available=True,
+        log_debug=lambda _: None,
+        log_error=lambda _: None,
+    )
+    assert "forced binbloom failure" in str(result.get("error"))

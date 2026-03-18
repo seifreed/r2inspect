@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 
 
 def test_r2_session_open_and_close():

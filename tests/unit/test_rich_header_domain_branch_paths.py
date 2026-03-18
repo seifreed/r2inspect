@@ -11,7 +11,7 @@ import struct
 
 import pytest
 
-from r2inspect.modules.rich_header_domain import (
+from r2inspect.domain.services.rich_header import (
     build_rich_header_result,
     calculate_richpe_hash,
     decode_rich_header,
@@ -210,22 +210,27 @@ def test_validate_decoded_entries_count_too_high_returns_false():
     assert validate_decoded_entries(entries) is False
 
 
-def test_validate_decoded_entries_prodid_too_high_returns_false():
-    entries = [{"prodid": 0x20000, "count": 1}]
+def test_validate_decoded_entries_composite_prodid_returns_true():
+    entries = [{"prodid": 0x00020000, "count": 1}]
+    assert validate_decoded_entries(entries) is True
+
+
+def test_validate_decoded_entries_prodid_outside_u32_returns_false():
+    entries = [{"prodid": 0x1_0000_0000, "count": 1}]
     assert validate_decoded_entries(entries) is False
 
 
 def test_validate_decoded_entries_mixed_valid_invalid():
     entries = [
         {"prodid": 0x0001, "count": 1},
-        {"prodid": 0x20000, "count": 1},
+        {"prodid": 0x1_0000_0000, "count": 1},
     ]
     assert validate_decoded_entries(entries) is True
 
 
 def test_validate_decoded_entries_boundary_values():
     entries = [
-        {"prodid": 0xFFFF, "count": 9999},
+        {"prodid": 0xFFFF0001, "count": 9999},
     ]
     assert validate_decoded_entries(entries) is True
 

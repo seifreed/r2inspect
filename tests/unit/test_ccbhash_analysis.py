@@ -67,7 +67,7 @@ def test_ccbhash_no_functions():
     adapter = MockAdapter(has_functions=False)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     result = analyzer.analyze_functions()
-    
+
     assert result["available"] is False
     assert result["total_functions"] == 0
     assert result["error"] is not None
@@ -77,7 +77,7 @@ def test_ccbhash_basic_analysis():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     result = analyzer.analyze_functions()
-    
+
     assert result["available"] is True
     assert result["total_functions"] == 3
     assert result["analyzed_functions"] >= 0
@@ -98,7 +98,7 @@ def test_ccbhash_extract_functions():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     functions = analyzer._extract_functions()
-    
+
     assert len(functions) == 3
     assert all("addr" in f for f in functions)
     assert all("size" in f for f in functions)
@@ -108,7 +108,7 @@ def test_ccbhash_calculate_function_hash():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     ccbhash = analyzer._calculate_function_ccbhash(0x1000, "test_func")
-    
+
     assert ccbhash is not None
     assert isinstance(ccbhash, str)
     assert len(ccbhash) == 64
@@ -117,7 +117,7 @@ def test_ccbhash_calculate_function_hash():
 def test_ccbhash_hash_deterministic():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     hash1 = analyzer._calculate_function_ccbhash(0x1000, "test_func")
     hash2 = analyzer._calculate_function_ccbhash(0x1000, "test_func")
     assert hash1 == hash2
@@ -156,13 +156,13 @@ def test_ccbhash_canonical_empty():
 def test_ccbhash_find_similar_functions():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     function_hashes = {
         "func1": {"ccbhash": "abc123", "addr": 0x1000, "size": 100},
         "func2": {"ccbhash": "abc123", "addr": 0x2000, "size": 100},
         "func3": {"ccbhash": "def456", "addr": 0x3000, "size": 50},
     }
-    
+
     similar = analyzer._find_similar_functions(function_hashes)
     assert len(similar) >= 1
     assert similar[0]["count"] == 2
@@ -171,13 +171,13 @@ def test_ccbhash_find_similar_functions():
 def test_ccbhash_calculate_binary_hash():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     function_hashes = {
         "func1": {"ccbhash": "abc123"},
         "func2": {"ccbhash": "def456"},
         "func3": {"ccbhash": "ghi789"},
     }
-    
+
     binary_hash = analyzer._calculate_binary_ccbhash(function_hashes)
     assert binary_hash is not None
     assert isinstance(binary_hash, str)
@@ -187,12 +187,12 @@ def test_ccbhash_calculate_binary_hash():
 def test_ccbhash_binary_hash_deterministic():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     function_hashes = {
         "func1": {"ccbhash": "abc123"},
         "func2": {"ccbhash": "def456"},
     }
-    
+
     hash1 = analyzer._calculate_binary_ccbhash(function_hashes)
     hash2 = analyzer._calculate_binary_ccbhash(function_hashes)
     assert hash1 == hash2
@@ -201,7 +201,7 @@ def test_ccbhash_binary_hash_deterministic():
 def test_ccbhash_binary_hash_order_independent():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     hashes1 = {
         "func1": {"ccbhash": "abc"},
         "func2": {"ccbhash": "def"},
@@ -210,7 +210,7 @@ def test_ccbhash_binary_hash_order_independent():
         "func2": {"ccbhash": "def"},
         "func1": {"ccbhash": "abc"},
     }
-    
+
     hash1 = analyzer._calculate_binary_ccbhash(hashes1)
     hash2 = analyzer._calculate_binary_ccbhash(hashes2)
     assert hash1 == hash2
@@ -219,13 +219,13 @@ def test_ccbhash_binary_hash_order_independent():
 def test_ccbhash_compare_hashes():
     result = CCBHashAnalyzer.compare_hashes("abc123", "abc123")
     assert result is True
-    
+
     result = CCBHashAnalyzer.compare_hashes("abc123", "def456")
     assert result is False
-    
+
     result = CCBHashAnalyzer.compare_hashes("abc123", None)
     assert result is None
-    
+
     result = CCBHashAnalyzer.compare_hashes(None, "abc123")
     assert result is None
 
@@ -233,7 +233,7 @@ def test_ccbhash_compare_hashes():
 def test_ccbhash_compare_ccbhashes():
     result = CCBHashAnalyzer.compare_ccbhashes("abc123", "abc123")
     assert result is True
-    
+
     result = CCBHashAnalyzer.compare_ccbhashes("abc123", "def456")
     assert result is False
 
@@ -241,7 +241,7 @@ def test_ccbhash_compare_ccbhashes():
 def test_ccbhash_get_function_hash():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     ccbhash = analyzer.get_function_ccbhash("main")
     assert ccbhash is None or isinstance(ccbhash, str)
 
@@ -249,22 +249,22 @@ def test_ccbhash_get_function_hash():
 def test_ccbhash_get_function_hash_not_found():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     ccbhash = analyzer.get_function_ccbhash("nonexistent_function")
     assert ccbhash is None
 
 
 def test_ccbhash_unique_hashes_count():
     adapter = MockAdapter()
-    analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+    CCBHashAnalyzer(adapter, "/path/to/binary")
+
     function_hashes = {
         "func1": {"ccbhash": "abc123"},
         "func2": {"ccbhash": "abc123"},
         "func3": {"ccbhash": "def456"},
         "func4": {"ccbhash": "ghi789"},
     }
-    
+
     unique_hashes = {f["ccbhash"] for f in function_hashes.values()}
     assert len(unique_hashes) == 3
 
@@ -272,7 +272,7 @@ def test_ccbhash_unique_hashes_count():
 def test_ccbhash_similar_functions_sorting():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     function_hashes = {
         "func1": {"ccbhash": "abc"},
         "func2": {"ccbhash": "abc"},
@@ -280,7 +280,7 @@ def test_ccbhash_similar_functions_sorting():
         "func4": {"ccbhash": "def"},
         "func5": {"ccbhash": "def"},
     }
-    
+
     similar = analyzer._find_similar_functions(function_hashes)
     assert len(similar) == 2
     assert similar[0]["count"] >= similar[1]["count"]
@@ -289,12 +289,12 @@ def test_ccbhash_similar_functions_sorting():
 def test_ccbhash_html_entity_cleanup():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     function_hashes = {
         "func&nbsp;1": {"ccbhash": "abc"},
         "func&amp;2": {"ccbhash": "abc"},
     }
-    
+
     similar = analyzer._find_similar_functions(function_hashes)
     for group in similar:
         for func_name in group["functions"]:
@@ -319,7 +319,7 @@ def test_ccbhash_calculate_hash():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     hash_value, method, error = analyzer._calculate_hash()
-    
+
     if hash_value:
         assert isinstance(hash_value, str)
         assert method == "cfg_analysis"
@@ -330,20 +330,20 @@ def test_ccbhash_with_real_binary():
     sample = Path("samples/fixtures/hello_pe.exe")
     if not sample.exists():
         pytest.skip("Sample binary not available")
-    
+
     try:
         import r2pipe
         from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
     except ImportError:
         pytest.skip("r2pipe not available")
-    
+
     r2 = None
     try:
         r2 = r2pipe.open(str(sample), flags=["-2"])
         adapter = R2PipeAdapter(r2)
         analyzer = CCBHashAnalyzer(adapter, str(sample))
         result = analyzer.analyze_functions()
-        
+
         assert result["available"] is True
         assert result["total_functions"] >= 0
         assert "function_hashes" in result
@@ -362,21 +362,21 @@ def test_ccbhash_error_handling():
     class FailingAdapter:
         def cmdj(self, command: str, default=None):
             raise RuntimeError("Simulated error")
-        
+
         def get_cfg(self, func_offset: int):
             raise RuntimeError("Simulated error")
-    
+
     adapter = FailingAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     result = analyzer.analyze_functions()
-    
+
     assert "error" in result or result["total_functions"] == 0
 
 
 def test_ccbhash_empty_binary_hash():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    
+
     binary_hash = analyzer._calculate_binary_ccbhash({})
     assert binary_hash is None
 
@@ -387,10 +387,10 @@ def test_ccbhash_function_without_cfg():
             if command == "aflj":
                 return [{"name": "test", "addr": 0x1000, "size": 10}]
             return default if default is not None else {}
-        
+
         def get_cfg(self, func_offset: int):
             return []
-    
+
     adapter = NoCFGAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     ccbhash = analyzer._calculate_function_ccbhash(0x1000, "test")

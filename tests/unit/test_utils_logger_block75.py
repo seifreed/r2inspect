@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 
-from r2inspect.utils import logger as logger_mod
+import r2inspect.infrastructure.logging as logger_mod
 
 
 def test_setup_logger_handlers_and_levels(tmp_path):

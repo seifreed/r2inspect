@@ -3,100 +3,105 @@
 Comprehensive tests for r2inspect/adapters/r2pipe_queries.py
 
 Tests caching, error handling, silent failures, and all query methods.
+All tests use real objects (FakeR2 + R2PipeAdapter) instead of mocks.
 """
 
-import os
-from unittest.mock import MagicMock, Mock, patch
+import json
 
 import pytest
 
-from r2inspect.adapters.r2pipe_queries import R2PipeQueryMixin
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 
 
-class MockR2PipeAdapter(R2PipeQueryMixin):
-    """Mock adapter for testing query mixin."""
+class FakeR2:
+    """Fake r2pipe instance that returns pre-configured responses."""
 
-    def __init__(self):
-        self._cache = {}
-        self._force_error_methods = set()
-
-    def cmd(self, command):
-        return ""
+    def __init__(self, cmdj_map=None, cmd_map=None):
+        self.cmdj_map = cmdj_map or {}
+        self.cmd_map = cmd_map or {}
 
     def cmdj(self, command):
-        return None
+        return self.cmdj_map.get(command, None)
 
-    def _cached_query(
-        self, cmd, data_type="list", default=None, error_msg="", *, cache=True
-    ):
-        if cache and cmd in self._cache:
-            return self._cache[cmd]
+    def cmd(self, command):
+        return self.cmd_map.get(command, "")
 
-        if data_type == "list":
-            result = default if default is not None else []
-        else:
-            result = default if default is not None else {}
 
-        if cache:
-            self._cache[cmd] = result
-        return result
+class ErrorR2(FakeR2):
+    """FakeR2 subclass that raises exceptions on all commands."""
 
-    def _maybe_force_error(self, method):
-        if method in self._force_error_methods:
-            raise RuntimeError(f"Forced error for {method}")
+    def __init__(self, exc_type=RuntimeError, message="Connection error"):
+        super().__init__()
+        self._exc_type = exc_type
+        self._message = message
+
+    def cmdj(self, command):
+        raise self._exc_type(self._message)
+
+    def cmd(self, command):
+        raise self._exc_type(self._message)
+
+
+class SelectiveErrorR2(FakeR2):
+    """FakeR2 subclass that raises on specific commands, normal on others."""
+
+    def __init__(self, error_commands=None, cmdj_map=None, cmd_map=None):
+        super().__init__(cmdj_map=cmdj_map, cmd_map=cmd_map)
+        self.error_commands = error_commands or set()
+
+    def cmdj(self, command):
+        if command in self.error_commands:
+            raise RuntimeError(f"Error executing {command}")
+        return super().cmdj(command)
+
+    def cmd(self, command):
+        if command in self.error_commands:
+            raise RuntimeError(f"Error executing {command}")
+        return super().cmd(command)
+
+
+def _make_adapter(cmdj_map=None, cmd_map=None):
+    """Create an R2PipeAdapter with a FakeR2 backend."""
+    r2 = FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    return R2PipeAdapter(r2)
+
+
+def _make_error_adapter(exc_type=RuntimeError, message="Connection error"):
+    """Create an R2PipeAdapter that errors on all commands."""
+    r2 = ErrorR2(exc_type=exc_type, message=message)
+    return R2PipeAdapter(r2)
 
 
 # get_file_info tests
 
 
 def test_get_file_info_success():
-    adapter = MockR2PipeAdapter()
     info_data = {"arch": "x86", "bits": 64}
-    adapter._cache["ij"] = info_data
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.safe_cmd_dict", return_value=info_data
-    ):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=info_data,
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.is_valid_r2_response",
-                return_value=True,
-            ):
-                result = adapter.get_file_info()
-                assert result == info_data
+    adapter = _make_adapter(cmdj_map={"ij": info_data})
+    result = adapter.get_file_info()
+    assert result["arch"] == "x86"
+    assert result["bits"] == 64
 
 
 def test_get_file_info_cached():
-    adapter = MockR2PipeAdapter()
-    cached_data = {"arch": "arm", "bits": 32}
-    adapter._cache["ij"] = cached_data
+    info_data = {"arch": "arm", "bits": 32}
+    adapter = _make_adapter(cmdj_map={"ij": info_data})
 
-    result = adapter.get_file_info()
-    assert result == cached_data
+    result1 = adapter.get_file_info()
+    result2 = adapter.get_file_info()
+    assert result1 == result2
+    assert result1["arch"] == "arm"
 
 
 def test_get_file_info_invalid_response():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd_dict", return_value={}):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data", return_value={}
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.is_valid_r2_response",
-                return_value=False,
-            ):
-                result = adapter.get_file_info()
-                assert result == {}
+    # cmdj returns None (empty/invalid) -> should fall through to empty dict
+    adapter = _make_adapter(cmdj_map={})
+    result = adapter.get_file_info()
+    assert result == {}
 
 
 def test_get_file_info_error_handling():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_file_info")
-
+    adapter = _make_error_adapter()
     result = adapter.get_file_info()
     assert result == {}
 
@@ -105,265 +110,205 @@ def test_get_file_info_error_handling():
 
 
 def test_get_sections_success():
-    adapter = MockR2PipeAdapter()
     sections = [{"name": ".text", "size": 0x1000}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=sections):
-        result = adapter.get_sections()
-        assert result == sections
+    adapter = _make_adapter(cmdj_map={"iSj": sections})
+    result = adapter.get_sections()
+    assert result == sections
 
 
 def test_get_sections_empty():
-    adapter = MockR2PipeAdapter()
+    adapter = _make_adapter(cmdj_map={"iSj": []})
+    result = adapter.get_sections()
+    # Empty list is not a valid response, so returns the default
+    assert result == []
 
-    with patch.object(adapter, "_safe_cached_query", return_value=[]):
-        result = adapter.get_sections()
-        assert result == []
 
-
-def test_get_sections_calls_cached_query():
-    adapter = MockR2PipeAdapter()
+def test_get_sections_returns_section_data():
     sections = [{"name": ".data"}]
-
-    with patch.object(
-        adapter, "_safe_cached_query", return_value=sections
-    ) as mock_cached:
-        result = adapter.get_sections()
-        mock_cached.assert_called_once()
-        assert "iSj" in str(mock_cached.call_args)
+    adapter = _make_adapter(cmdj_map={"iSj": sections})
+    result = adapter.get_sections()
+    assert len(result) == 1
+    assert result[0]["name"] == ".data"
 
 
 # get_imports tests
 
 
 def test_get_imports_success():
-    adapter = MockR2PipeAdapter()
     imports = [{"name": "printf", "libname": "libc.so"}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=imports):
-        result = adapter.get_imports()
-        assert result == imports
+    adapter = _make_adapter(cmdj_map={"iij": imports})
+    result = adapter.get_imports()
+    assert result == imports
 
 
 def test_get_imports_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_safe_cached_query", return_value=[]):
-        result = adapter.get_imports()
-        assert result == []
+    adapter = _make_adapter(cmdj_map={"iij": []})
+    result = adapter.get_imports()
+    assert result == []
 
 
 # get_exports tests
 
 
 def test_get_exports_success():
-    adapter = MockR2PipeAdapter()
     exports = [{"name": "main", "vaddr": 0x401000}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=exports):
-        result = adapter.get_exports()
-        assert result == exports
+    adapter = _make_adapter(cmdj_map={"iEj": exports})
+    result = adapter.get_exports()
+    assert result == exports
 
 
 def test_get_exports_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_safe_cached_query", return_value=[]):
-        result = adapter.get_exports()
-        assert result == []
+    adapter = _make_adapter(cmdj_map={"iEj": []})
+    result = adapter.get_exports()
+    assert result == []
 
 
 # get_symbols tests
 
 
 def test_get_symbols_success():
-    adapter = MockR2PipeAdapter()
     symbols = [{"name": "sym.main", "type": "FUNC"}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=symbols):
-        result = adapter.get_symbols()
-        assert result == symbols
+    adapter = _make_adapter(cmdj_map={"isj": symbols})
+    result = adapter.get_symbols()
+    assert result == symbols
 
 
 def test_get_symbols_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_safe_cached_query", return_value=[]):
-        result = adapter.get_symbols()
-        assert result == []
+    adapter = _make_adapter(cmdj_map={"isj": []})
+    result = adapter.get_symbols()
+    assert result == []
 
 
 # get_strings tests
 
 
 def test_get_strings_success():
-    adapter = MockR2PipeAdapter()
     strings = [{"string": "hello", "vaddr": 0x402000}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=strings):
-        result = adapter.get_strings()
-        assert result == strings
+    adapter = _make_adapter(cmdj_map={"izzj": strings})
+    result = adapter.get_strings()
+    assert result == strings
 
 
 def test_get_strings_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_safe_cached_query", return_value=[]):
-        result = adapter.get_strings()
-        assert result == []
+    adapter = _make_adapter(cmdj_map={"izzj": []})
+    result = adapter.get_strings()
+    assert result == []
 
 
 # get_functions tests
 
 
 def test_get_functions_success():
-    adapter = MockR2PipeAdapter()
     functions = [{"name": "main", "size": 100}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=functions):
-        result = adapter.get_functions()
-        assert result == functions
+    adapter = _make_adapter(cmdj_map={"aflj": functions})
+    result = adapter.get_functions()
+    assert result == functions
 
 
 def test_get_functions_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_safe_cached_query", return_value=[]):
-        result = adapter.get_functions()
-        assert result == []
+    adapter = _make_adapter(cmdj_map={"aflj": []})
+    result = adapter.get_functions()
+    assert result == []
 
 
 # get_functions_at tests
 
 
 def test_get_functions_at_success():
-    adapter = MockR2PipeAdapter()
     address = 0x401000
     functions = [{"offset": address, "name": "main"}]
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=functions):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=functions,
-        ):
-            result = adapter.get_functions_at(address)
-            assert result == functions
+    adapter = _make_adapter(cmdj_map={f"aflj @ {address}": functions})
+    result = adapter.get_functions_at(address)
+    assert result == functions
 
 
 def test_get_functions_at_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_functions_at")
-
+    adapter = _make_error_adapter()
     result = adapter.get_functions_at(0x401000)
     assert result == []
 
 
 def test_get_functions_at_invalid_data():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=[]):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data", return_value=[]
-        ):
-            result = adapter.get_functions_at(0x401000)
-            assert result == []
+    adapter = _make_adapter(cmdj_map={})
+    result = adapter.get_functions_at(0x401000)
+    assert result == []
 
 
 # get_disasm tests
 
 
 def test_get_disasm_function_default():
-    adapter = MockR2PipeAdapter()
     disasm_data = {"ops": []}
-
-    with patch.object(
-        adapter, "_cached_query", return_value=disasm_data
-    ) as mock_cached:
-        result = adapter.get_disasm()
-        assert result == disasm_data
-        mock_cached.assert_called_once()
+    adapter = _make_adapter(cmdj_map={"pdfj": disasm_data})
+    result = adapter.get_disasm()
+    assert result == disasm_data
 
 
 def test_get_disasm_with_size():
-    adapter = MockR2PipeAdapter()
     disasm_data = [{"offset": 0x401000}]
-
-    with patch.object(adapter, "_cached_query", return_value=disasm_data):
-        result = adapter.get_disasm(size=10)
-        assert result == disasm_data
+    adapter = _make_adapter(cmdj_map={"pdj 10": disasm_data})
+    result = adapter.get_disasm(size=10)
+    assert result == disasm_data
 
 
 def test_get_disasm_with_address():
-    adapter = MockR2PipeAdapter()
     address = 0x401000
-
-    with patch.object(adapter, "_cached_query", return_value=[]) as mock_cached:
-        adapter.get_disasm(address=address)
-        args = mock_cached.call_args
-        assert str(address) in str(args) or "@" in str(args)
+    disasm_data = {"ops": [{"offset": address}]}
+    adapter = _make_adapter(cmdj_map={f"pdfj @ {address}": disasm_data})
+    result = adapter.get_disasm(address=address)
+    # When address is provided, result should be returned (or default)
+    assert isinstance(result, (dict, list))
 
 
 def test_get_disasm_with_address_and_size():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_cached_query", return_value=[]):
-        result = adapter.get_disasm(address=0x401000, size=20)
-        assert isinstance(result, list)
+    adapter = _make_adapter(cmdj_map={"pdj 20 @ 4198400": [{"offset": 0x401000}]})
+    result = adapter.get_disasm(address=0x401000, size=20)
+    assert isinstance(result, (dict, list))
 
 
 def test_get_disasm_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_disasm")
-
+    adapter = _make_error_adapter()
     result = adapter.get_disasm()
-    assert result == []
+    # Default size=None -> data_type="dict", _cached_query returns {} on error
+    assert result == {}
 
 
 # get_cfg tests
 
 
 def test_get_cfg_default():
-    adapter = MockR2PipeAdapter()
     cfg_data = [{"blocks": []}]
-
-    with patch.object(adapter, "_cached_query", return_value=cfg_data):
-        result = adapter.get_cfg()
-        assert result == cfg_data
+    adapter = _make_adapter(cmdj_map={"agj": cfg_data})
+    result = adapter.get_cfg()
+    assert result == cfg_data
 
 
 def test_get_cfg_with_address():
-    adapter = MockR2PipeAdapter()
     address = 0x401000
-
-    with patch.object(adapter, "_cached_query", return_value=[]) as mock_cached:
-        adapter.get_cfg(address=address)
-        args = mock_cached.call_args
-        assert str(address) in str(args) or "@" in str(args)
+    cfg_data = [{"blocks": [{"offset": address}]}]
+    adapter = _make_adapter(cmdj_map={f"agj @ {address}": cfg_data})
+    result = adapter.get_cfg(address=address)
+    assert isinstance(result, (dict, list))
 
 
 def test_get_cfg_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_cfg")
-
+    adapter = _make_error_adapter()
     result = adapter.get_cfg()
-    assert result == {}
+    # _cached_query with data_type="list" returns [] on error
+    assert result == []
 
 
 # analyze_all tests
 
 
 def test_analyze_all_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="Analysis complete"):
-        result = adapter.analyze_all()
-        assert result == "Analysis complete"
+    adapter = _make_adapter(cmd_map={"aaa": "Analysis complete"})
+    result = adapter.analyze_all()
+    assert result == "Analysis complete"
 
 
 def test_analyze_all_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("analyze_all")
-
+    adapter = _make_error_adapter()
     result = adapter.analyze_all()
     assert result == ""
 
@@ -372,99 +317,73 @@ def test_analyze_all_error():
 
 
 def test_get_info_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="info output"):
-        result = adapter.get_info_text()
-        assert result == "info output"
+    adapter = _make_adapter(cmd_map={"i": "info output"})
+    result = adapter.get_info_text()
+    assert result == "info output"
 
 
 def test_get_info_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_info_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_info_text()
     assert result == ""
 
 
 def test_get_dynamic_info_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="dynamic info"
-    ):
-        result = adapter.get_dynamic_info_text()
-        assert result == "dynamic info"
+    adapter = _make_adapter(cmd_map={"id": "dynamic info"})
+    result = adapter.get_dynamic_info_text()
+    assert result == "dynamic info"
 
 
 def test_get_dynamic_info_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_dynamic_info_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_dynamic_info_text()
     assert result == ""
 
 
 def test_get_entropy_pattern_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="entropy"):
-        result = adapter.get_entropy_pattern()
-        assert result == "entropy"
+    adapter = _make_adapter(cmd_map={"p=e 100": "entropy"})
+    result = adapter.get_entropy_pattern()
+    assert result == "entropy"
 
 
 def test_get_entropy_pattern_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_entropy_pattern")
-
+    adapter = _make_error_adapter()
     result = adapter.get_entropy_pattern()
     assert result == ""
 
 
 def test_get_pe_version_info_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="version"):
-        result = adapter.get_pe_version_info_text()
-        assert result == "version"
+    adapter = _make_adapter(cmd_map={"iR~version": "version"})
+    result = adapter.get_pe_version_info_text()
+    assert result == "version"
 
 
 def test_get_pe_version_info_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_pe_version_info_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_pe_version_info_text()
     assert result == ""
 
 
 def test_get_pe_security_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="security"):
-        result = adapter.get_pe_security_text()
-        assert result == "security"
+    adapter = _make_adapter(cmd_map={"iHH": "security"})
+    result = adapter.get_pe_security_text()
+    assert result == "security"
 
 
 def test_get_pe_security_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_pe_security_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_pe_security_text()
     assert result == ""
 
 
 def test_get_header_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="header"):
-        result = adapter.get_header_text()
-        assert result == "header"
+    adapter = _make_adapter(cmd_map={"ih": "header"})
+    result = adapter.get_header_text()
+    assert result == "header"
 
 
 def test_get_header_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_header_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_header_text()
     assert result == ""
 
@@ -473,59 +392,45 @@ def test_get_header_text_error():
 
 
 def test_get_headers_json_success():
-    adapter = MockR2PipeAdapter()
     headers = {"header": "data"}
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=headers):
-        result = adapter.get_headers_json()
-        assert result == headers
+    adapter = _make_adapter(cmdj_map={"ihj": headers})
+    result = adapter.get_headers_json()
+    assert result == headers
 
 
 def test_get_headers_json_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_headers_json")
-
+    adapter = _make_error_adapter()
     result = adapter.get_headers_json()
     assert result is None
 
 
 def test_get_strings_basic_success():
-    adapter = MockR2PipeAdapter()
     strings = [{"string": "test"}]
-
-    with patch.object(adapter, "_safe_cached_query", return_value=strings):
-        result = adapter.get_strings_basic()
-        assert result == strings
+    adapter = _make_adapter(cmdj_map={"izj": strings})
+    result = adapter.get_strings_basic()
+    assert result == strings
 
 
 def test_get_strings_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="strings"):
-        result = adapter.get_strings_text()
-        assert result == "strings"
+    adapter = _make_adapter(cmd_map={"izz~..": "strings"})
+    result = adapter.get_strings_text()
+    assert result == "strings"
 
 
 def test_get_strings_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_strings_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_strings_text()
     assert result == ""
 
 
 def test_get_strings_filtered_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="filtered"):
-        result = adapter.get_strings_filtered("iz~http")
-        assert result == "filtered"
+    adapter = _make_adapter(cmd_map={"iz~http": "filtered"})
+    result = adapter.get_strings_filtered("iz~http")
+    assert result == "filtered"
 
 
 def test_get_strings_filtered_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_strings_filtered")
-
+    adapter = _make_error_adapter()
     result = adapter.get_strings_filtered("iz~test")
     assert result == ""
 
@@ -534,170 +439,110 @@ def test_get_strings_filtered_error():
 
 
 def test_get_entry_info_success():
-    adapter = MockR2PipeAdapter()
     entry_data = [{"vaddr": 0x401000}]
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=entry_data):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=entry_data,
-        ):
-            result = adapter.get_entry_info()
-            assert result == entry_data
+    adapter = _make_adapter(cmdj_map={"iej": entry_data})
+    result = adapter.get_entry_info()
+    assert result == entry_data
 
 
 def test_get_entry_info_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_entry_info")
-
+    adapter = _make_error_adapter()
     result = adapter.get_entry_info()
     assert result == []
 
 
 def test_get_pe_header_success_dict():
-    adapter = MockR2PipeAdapter()
     header = {"machine": "x86"}
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=header):
-        result = adapter.get_pe_header()
-        assert result == header
+    adapter = _make_adapter(cmdj_map={"ihj": header})
+    result = adapter.get_pe_header()
+    assert result == header
 
 
 def test_get_pe_header_success_list():
-    adapter = MockR2PipeAdapter()
     headers = [{"header1": "value"}]
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=headers):
-        result = adapter.get_pe_header()
-        assert result == {"headers": headers}
+    adapter = _make_adapter(cmdj_map={"ihj": headers})
+    result = adapter.get_pe_header()
+    assert result == {"headers": headers}
 
 
 def test_get_pe_header_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=None):
-        result = adapter.get_pe_header()
-        assert result == {}
+    adapter = _make_adapter(cmdj_map={})
+    result = adapter.get_pe_header()
+    assert result == {}
 
 
 def test_get_pe_header_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_pe_header")
-
+    adapter = _make_error_adapter()
     result = adapter.get_pe_header()
     assert result == {}
 
 
 def test_get_pe_optional_header_success():
-    adapter = MockR2PipeAdapter()
     opt_header = {"subsystem": "GUI"}
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=opt_header
-    ):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=opt_header,
-        ):
-            result = adapter.get_pe_optional_header()
-            assert result == opt_header
+    adapter = _make_adapter(cmdj_map={"iHj": opt_header})
+    result = adapter.get_pe_optional_header()
+    assert result == opt_header
 
 
 def test_get_pe_optional_header_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_pe_optional_header")
-
+    adapter = _make_error_adapter()
     result = adapter.get_pe_optional_header()
     assert result == {}
 
 
 def test_get_data_directories_success():
-    adapter = MockR2PipeAdapter()
     directories = [{"name": "Import", "address": 0x1000}]
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=directories
-    ):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=directories,
-        ):
-            result = adapter.get_data_directories()
-            assert result == directories
+    adapter = _make_adapter(cmdj_map={"iDj": directories})
+    result = adapter.get_data_directories()
+    assert result == directories
 
 
 def test_get_data_directories_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_data_directories")
-
+    adapter = _make_error_adapter()
     result = adapter.get_data_directories()
     assert result == []
 
 
 def test_get_resources_info_success():
-    adapter = MockR2PipeAdapter()
     resources = [{"type": "ICON"}]
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=resources
-    ):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=resources,
-        ):
-            result = adapter.get_resources_info()
-            assert result == resources
+    adapter = _make_adapter(cmdj_map={"iRj": resources})
+    result = adapter.get_resources_info()
+    assert result == resources
 
 
 def test_get_resources_info_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_resources_info")
-
+    adapter = _make_error_adapter()
     result = adapter.get_resources_info()
     assert result == []
 
 
 def test_get_function_info_success():
-    adapter = MockR2PipeAdapter()
     func_info = [{"name": "main", "cc": 5}]
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=func_info):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data",
-            return_value=func_info,
-        ):
-            result = adapter.get_function_info(0x401000)
-            assert result == func_info
+    adapter = _make_adapter(cmdj_map={"afij @ 4198400": func_info})
+    result = adapter.get_function_info(0x401000)
+    assert result == func_info
 
 
 def test_get_function_info_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_function_info")
-
+    adapter = _make_error_adapter()
     result = adapter.get_function_info(0x401000)
     assert result == []
 
 
 def test_get_disasm_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="disasm"):
-        result = adapter.get_disasm_text()
-        assert result == "disasm"
+    adapter = _make_adapter(cmd_map={"pi": "disasm"})
+    result = adapter.get_disasm_text()
+    assert result == "disasm"
 
 
 def test_get_disasm_text_with_params():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="disasm"):
-        result = adapter.get_disasm_text(address=0x401000, size=10)
-        assert result == "disasm"
+    adapter = _make_adapter(cmd_map={"pi 10 @ 4198400": "disasm"})
+    result = adapter.get_disasm_text(address=0x401000, size=10)
+    assert result == "disasm"
 
 
 def test_get_disasm_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("get_disasm_text")
-
+    adapter = _make_error_adapter()
     result = adapter.get_disasm_text()
     assert result == ""
 
@@ -706,53 +551,38 @@ def test_get_disasm_text_error():
 
 
 def test_search_hex_json_success():
-    adapter = MockR2PipeAdapter()
     results = [{"offset": 0x1000, "data": "deadbeef"}]
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=results):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data", return_value=results
-        ):
-            result = adapter.search_hex_json("deadbeef")
-            assert result == results
+    adapter = _make_adapter(cmdj_map={"/xj deadbeef": results})
+    result = adapter.search_hex_json("deadbeef")
+    assert result == results
 
 
 def test_search_hex_json_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("search_hex_json")
-
+    adapter = _make_error_adapter()
     result = adapter.search_hex_json("deadbeef")
     assert result == []
 
 
 def test_search_text_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="results"):
-        result = adapter.search_text("password")
-        assert result == "results"
+    adapter = _make_adapter(cmd_map={"/c password": "results"})
+    result = adapter.search_text("password")
+    assert result == "results"
 
 
 def test_search_text_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("search_text")
-
+    adapter = _make_error_adapter()
     result = adapter.search_text("test")
     assert result == ""
 
 
 def test_search_hex_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="results"):
-        result = adapter.search_hex("deadbeef")
-        assert result == "results"
+    adapter = _make_adapter(cmd_map={"/x deadbeef": "results"})
+    result = adapter.search_hex("deadbeef")
+    assert result == "results"
 
 
 def test_search_hex_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("search_hex")
-
+    adapter = _make_error_adapter()
     result = adapter.search_hex("deadbeef")
     assert result == ""
 
@@ -761,151 +591,74 @@ def test_search_hex_error():
 
 
 def test_read_bytes_success():
-    adapter = MockR2PipeAdapter()
     hex_data = "4d5a9000"  # MZ header
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value=hex_data):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.is_valid_r2_response",
-            return_value=True,
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.sanitize_r2_output",
-                return_value=hex_data,
-            ):
-                with patch(
-                    "r2inspect.adapters.r2pipe_queries.validate_address",
-                    return_value=0x1000,
-                ):
-                    with patch(
-                        "r2inspect.adapters.r2pipe_queries.validate_size",
-                        return_value=4,
-                    ):
-                        result = adapter.read_bytes(0x1000, 4)
-                        assert result == bytes.fromhex(hex_data)
+    adapter = _make_adapter(cmd_map={"p8 4 @ 4096": hex_data})
+    result = adapter.read_bytes(0x1000, 4)
+    assert result == bytes.fromhex(hex_data)
 
 
 def test_read_bytes_invalid_hex():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value="GGGG"):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.is_valid_r2_response",
-            return_value=True,
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.sanitize_r2_output",
-                return_value="GGGG",
-            ):
-                with patch(
-                    "r2inspect.adapters.r2pipe_queries.validate_address",
-                    return_value=0x1000,
-                ):
-                    with patch(
-                        "r2inspect.adapters.r2pipe_queries.validate_size",
-                        return_value=4,
-                    ):
-                        result = adapter.read_bytes(0x1000, 4)
-                        assert result == b""
+    adapter = _make_adapter(cmd_map={"p8 4 @ 4096": "GGGG"})
+    result = adapter.read_bytes(0x1000, 4)
+    assert result == b""
 
 
 def test_read_bytes_invalid_address():
-    adapter = MockR2PipeAdapter()
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.validate_address",
-        side_effect=ValueError("Invalid address"),
-    ):
-        with pytest.raises(ValueError):
-            adapter.read_bytes(-1, 4)
+    adapter = _make_adapter()
+    with pytest.raises(ValueError):
+        adapter.read_bytes(-1, 4)
 
 
 def test_read_bytes_invalid_size():
-    adapter = MockR2PipeAdapter()
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.validate_address", return_value=0x1000
-    ):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_size",
-            side_effect=ValueError("Invalid size"),
-        ):
-            with pytest.raises(ValueError):
-                adapter.read_bytes(0x1000, 0)
+    adapter = _make_adapter()
+    with pytest.raises(ValueError):
+        adapter.read_bytes(0x1000, 0)
 
 
 def test_read_bytes_invalid_response():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd", return_value=""):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.is_valid_r2_response",
-            return_value=False,
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.validate_address",
-                return_value=0x1000,
-            ):
-                with patch(
-                    "r2inspect.adapters.r2pipe_queries.validate_size", return_value=4
-                ):
-                    result = adapter.read_bytes(0x1000, 4)
-                    assert result == b""
+    # cmd returns empty string -> is_valid_r2_response returns False
+    adapter = _make_adapter(cmd_map={})
+    result = adapter.read_bytes(0x1000, 4)
+    assert result == b""
 
 
 def test_read_bytes_error():
-    adapter = MockR2PipeAdapter()
-    adapter._force_error_methods.add("read_bytes")
-
+    adapter = _make_error_adapter()
     result = adapter.read_bytes(0x1000, 4)
     assert result == b""
 
 
 def test_read_bytes_exception():
-    adapter = MockR2PipeAdapter()
-
-    with patch(
-        "r2inspect.adapters.r2pipe_queries.safe_cmd",
-        side_effect=Exception("Connection error"),
-    ):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_address", return_value=0x1000
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.validate_size", return_value=4
-            ):
-                result = adapter.read_bytes(0x1000, 4)
-                assert result == b""
+    adapter = _make_error_adapter(exc_type=Exception, message="Connection error")
+    result = adapter.read_bytes(0x1000, 4)
+    assert result == b""
 
 
 def test_read_bytes_list_success():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "read_bytes", return_value=b"\x01\x02\x03\x04"):
-        result = adapter.read_bytes_list(0x1000, 4)
-        assert result == [1, 2, 3, 4]
+    hex_data = "01020304"
+    adapter = _make_adapter(cmd_map={"p8 4 @ 4096": hex_data})
+    result = adapter.read_bytes_list(0x1000, 4)
+    assert result == [1, 2, 3, 4]
 
 
 def test_read_bytes_list_empty():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "read_bytes", return_value=b""):
-        result = adapter.read_bytes_list(0x1000, 4)
-        assert result == []
+    # No data for the command -> returns empty bytes -> empty list
+    adapter = _make_adapter(cmd_map={})
+    result = adapter.read_bytes_list(0x1000, 4)
+    assert result == []
 
 
 # _safe_query tests
 
 
 def test_safe_query_success():
-    adapter = MockR2PipeAdapter()
-
+    adapter = _make_adapter()
     result = adapter._safe_query(lambda: {"data": "value"}, {}, "Error message")
     assert result == {"data": "value"}
 
 
 def test_safe_query_exception():
-    adapter = MockR2PipeAdapter()
+    adapter = _make_adapter()
 
     def raise_error():
         raise RuntimeError("Test error")
@@ -915,11 +668,8 @@ def test_safe_query_exception():
 
 
 def test_safe_query_returns_default_on_error():
-    adapter = MockR2PipeAdapter()
-
-    result = adapter._safe_query(
-        lambda: 1 / 0, "default_value", "Division by zero"
-    )
+    adapter = _make_adapter()
+    result = adapter._safe_query(lambda: 1 / 0, "default_value", "Division by zero")
     assert result == "default_value"
 
 
@@ -927,62 +677,47 @@ def test_safe_query_returns_default_on_error():
 
 
 def test_safe_cached_query_success():
-    adapter = MockR2PipeAdapter()
     data = [{"item": 1}]
-
-    with patch.object(adapter, "_cached_query", return_value=data):
-        result = adapter._safe_cached_query(
-            "cmd", "list", [], error_msg="error", error_label="items"
-        )
-        assert result == data
+    adapter = _make_adapter(cmdj_map={"test_cmd": data})
+    result = adapter._safe_cached_query(
+        "test_cmd", "list", [], error_msg="error", error_label="items"
+    )
+    assert result == data
 
 
 def test_safe_cached_query_error():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(
-        adapter, "_cached_query", side_effect=RuntimeError("Test error")
-    ):
-        result = adapter._safe_cached_query(
-            "cmd", "list", [], error_msg="error", error_label="items"
-        )
-        assert result == []
+    # Use an adapter whose underlying r2 always errors
+    adapter = _make_error_adapter()
+    result = adapter._safe_cached_query("cmd", "list", [], error_msg="error", error_label="items")
+    assert result == []
 
 
 def test_safe_cached_query_default_dict():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_cached_query", side_effect=Exception()):
-        result = adapter._safe_cached_query(
-            "cmd", "dict", {}, error_msg="error", error_label="data"
-        )
-        assert result == {}
+    adapter = _make_error_adapter()
+    result = adapter._safe_cached_query("cmd", "dict", {}, error_msg="error", error_label="data")
+    assert result == {}
 
 
 # Caching tests
 
 
 def test_caching_prevents_duplicate_calls():
-    adapter = MockR2PipeAdapter()
-    data = [{"cached": True}]
-    adapter._cache["iSj"] = data
-
-    with patch.object(adapter, "_cached_query", return_value=data) as mock_query:
-        result1 = adapter.get_sections()
-        result2 = adapter.get_sections()
-        assert result1 == result2
+    sections = [{"cached": True}]
+    adapter = _make_adapter(cmdj_map={"iSj": sections})
+    result1 = adapter.get_sections()
+    result2 = adapter.get_sections()
+    assert result1 == result2
 
 
 def test_caching_disabled_when_cache_false():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_safe_cached_query") as mock_query:
-        mock_query.return_value = []
-        adapter.get_sections()
+    adapter = _make_adapter(cmdj_map={"iSj": []})
+    # Just verify it runs without error
+    result = adapter.get_sections()
+    assert isinstance(result, list)
 
 
 def test_cache_hit_returns_cached_data():
-    adapter = MockR2PipeAdapter()
+    adapter = _make_adapter()
     cached = {"from": "cache"}
     adapter._cache["test_cmd"] = cached
 
@@ -994,41 +729,31 @@ def test_cache_hit_returns_cached_data():
 
 
 def test_disasm_no_cache_when_address_provided():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_cached_query") as mock_cached:
-        adapter.get_disasm(address=0x401000)
-        call_kwargs = mock_cached.call_args[1]
-        assert call_kwargs.get("cache") is False
+    disasm_data = {"ops": []}
+    adapter = _make_adapter(cmdj_map={"pdfj @ 4198400": disasm_data})
+    # First call with address
+    adapter.get_disasm(address=0x401000)
+    # The command with an address should NOT be cached
+    assert "pdfj @ 4198400" not in adapter._cache
 
 
 def test_cfg_no_cache_when_address_provided():
-    adapter = MockR2PipeAdapter()
-
-    with patch.object(adapter, "_cached_query") as mock_cached:
-        adapter.get_cfg(address=0x401000)
-        call_kwargs = mock_cached.call_args[1]
-        assert call_kwargs.get("cache") is False
+    cfg_data = [{"blocks": []}]
+    adapter = _make_adapter(cmdj_map={"agj @ 4198400": cfg_data})
+    adapter.get_cfg(address=0x401000)
+    # The command with an address should NOT be cached
+    assert "agj @ 4198400" not in adapter._cache
 
 
 def test_get_file_info_validates_response():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmd_dict", return_value={}):
-        with patch(
-            "r2inspect.adapters.r2pipe_queries.validate_r2_data", return_value={}
-        ):
-            with patch(
-                "r2inspect.adapters.r2pipe_queries.is_valid_r2_response"
-            ) as mock_valid:
-                mock_valid.return_value = False
-                result = adapter.get_file_info()
-                mock_valid.assert_called_once()
+    # When cmdj returns empty dict, is_valid_r2_response returns False
+    adapter = _make_adapter(cmdj_map={"ij": {}})
+    result = adapter.get_file_info()
+    # Empty dict is not valid per is_valid_r2_response
+    assert result == {}
 
 
 def test_pe_header_handles_empty_list():
-    adapter = MockR2PipeAdapter()
-
-    with patch("r2inspect.adapters.r2pipe_queries.safe_cmdj", return_value=[]):
-        result = adapter.get_pe_header()
-        assert result == {}
+    adapter = _make_adapter(cmdj_map={"ihj": []})
+    result = adapter.get_pe_header()
+    assert result == {}

@@ -32,6 +32,7 @@ from r2inspect.cli.batch_processing import (
 # Simple PE-style file used across several tests
 # ---------------------------------------------------------------------------
 
+
 def _write_pe_file(path: Path) -> Path:
     """Write a minimal MZ+PE header file to *path* and return it."""
     data = bytearray(128)
@@ -45,6 +46,7 @@ def _write_pe_file(path: Path) -> Path:
 # ---------------------------------------------------------------------------
 # Executable signature wrapper tests (lines 96, 101, 105, 109, 113, 117)
 # ---------------------------------------------------------------------------
+
 
 def test_check_executable_signature_pe_file(tmp_path: Path) -> None:
     """check_executable_signature wrapper returns True for a PE file."""
@@ -84,6 +86,7 @@ def test_is_script_executable_with_shebang() -> None:
 # find_executable_files_by_magic – init_errors branches (131-136)
 # ---------------------------------------------------------------------------
 
+
 def test_find_executable_files_by_magic_no_magic_returns_empty_and_logs(
     tmp_path: Path, capsys
 ) -> None:
@@ -100,9 +103,7 @@ def test_find_executable_files_by_magic_no_magic_returns_empty_and_logs(
     assert "python-magic" in out or "not available" in out
 
 
-def test_find_executable_files_by_magic_broken_magic_logs_fallback(
-    tmp_path: Path, capsys
-) -> None:
+def test_find_executable_files_by_magic_broken_magic_logs_fallback(tmp_path: Path, capsys) -> None:
     """find_executable_files_by_magic logs fallback message when magic init raises."""
 
     class _BrokenMagic:
@@ -127,9 +128,8 @@ def test_find_executable_files_by_magic_broken_magic_logs_fallback(
 # find_executable_files_by_magic – verbose output (139, 142-143, 146-147)
 # ---------------------------------------------------------------------------
 
-def test_find_executable_files_by_magic_verbose_prints_scan_count(
-    tmp_path: Path, capsys
-) -> None:
+
+def test_find_executable_files_by_magic_verbose_prints_scan_count(tmp_path: Path, capsys) -> None:
     """find_executable_files_by_magic prints scan count when verbose=True."""
 
     class _NoOpMagicObj:
@@ -152,9 +152,7 @@ def test_find_executable_files_by_magic_verbose_prints_scan_count(
     assert "Scanning" in out
 
 
-def test_find_executable_files_by_magic_verbose_prints_file_error(
-    tmp_path: Path, capsys
-) -> None:
+def test_find_executable_files_by_magic_verbose_prints_file_error(tmp_path: Path, capsys) -> None:
     """find_executable_files_by_magic prints file errors in verbose mode."""
 
     class _ErrorMagicObj:
@@ -213,9 +211,8 @@ def test_find_executable_files_by_magic_verbose_prints_found_executable(
 # find_files_to_process – verbose/not-quiet paths (394, 398)
 # ---------------------------------------------------------------------------
 
-def test_find_files_to_process_auto_detect_not_quiet_prints_message(
-    tmp_path: Path, capsys
-) -> None:
+
+def test_find_files_to_process_auto_detect_not_quiet_prints_message(tmp_path: Path, capsys) -> None:
     """find_files_to_process with auto_detect=True and quiet=False prints detection message."""
     find_files_to_process(
         tmp_path,
@@ -229,9 +226,7 @@ def test_find_files_to_process_auto_detect_not_quiet_prints_message(
     assert "Auto-detecting" in out
 
 
-def test_find_files_to_process_extensions_not_quiet_prints_message(
-    tmp_path: Path, capsys
-) -> None:
+def test_find_files_to_process_extensions_not_quiet_prints_message(tmp_path: Path, capsys) -> None:
     """find_files_to_process with extensions and quiet=False prints searching message."""
     (tmp_path / "file.exe").touch()
     find_files_to_process(
@@ -250,6 +245,7 @@ def test_find_files_to_process_extensions_not_quiet_prints_message(
 # setup_batch_output_directory – parent mkdir branch (433)
 # ---------------------------------------------------------------------------
 
+
 def test_setup_batch_output_directory_creates_nonexistent_parent_for_csv(
     tmp_path: Path,
 ) -> None:
@@ -264,6 +260,7 @@ def test_setup_batch_output_directory_creates_nonexistent_parent_for_csv(
 # _flush_coverage_data – current error branch (245, 258-259)
 # ---------------------------------------------------------------------------
 
+
 def test_flush_coverage_data_coverage_current_raises(tmp_path: Path) -> None:
     """_flush_coverage_data silently handles Coverage.current() raising an exception."""
     os.environ["R2INSPECT_TEST_COVERAGE_CURRENT_ERROR"] = "1"
@@ -276,6 +273,7 @@ def test_flush_coverage_data_coverage_current_raises(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # ensure_batch_shutdown – break branch and force-exit branch (207, 212-215)
 # ---------------------------------------------------------------------------
+
 
 def test_ensure_batch_shutdown_zero_timeout_raises_system_exit() -> None:
     """ensure_batch_shutdown raises SystemExit when timeout expires with lingering threads."""
@@ -298,6 +296,7 @@ def test_ensure_batch_shutdown_zero_timeout_raises_system_exit() -> None:
 # schedule_forced_exit – inner _exit function (224-227)
 # ---------------------------------------------------------------------------
 
+
 def test_schedule_forced_exit_inner_exit_function_executes() -> None:
     """schedule_forced_exit schedules a timer whose inner _exit function runs."""
     saved = os.environ.pop("R2INSPECT_DISABLE_FORCED_EXIT", None)
@@ -316,6 +315,7 @@ def test_schedule_forced_exit_inner_exit_function_executes() -> None:
 # ---------------------------------------------------------------------------
 # run_batch_analysis – inner function definitions (466-499)
 # ---------------------------------------------------------------------------
+
 
 def test_run_batch_analysis_inner_functions_defined_on_call(tmp_path: Path) -> None:
     """run_batch_analysis defines its inner functions and builds deps on every call."""

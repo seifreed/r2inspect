@@ -448,7 +448,7 @@ def test_export_analyzer_skips_non_dict_exports():
 # resource_analysis.run_resource_analysis
 # ---------------------------------------------------------------------------
 
-from r2inspect.modules.resource_analysis import run_resource_analysis
+from r2inspect.modules.resource_analyzer import run_resource_analysis
 
 
 class MinimalResourceAnalyzer:
@@ -755,6 +755,7 @@ def test_rich_header_debug_has_mz_header():
 def test_rich_header_debug_get_pe_offset():
     data = bytearray(0x40)
     import struct
+
     struct.pack_into("<I", data, 0x3C, 0x40)
     result = RichHeaderDebugMixin._debug_get_pe_offset(bytes(data))
     assert result == 0x40
@@ -800,7 +801,7 @@ class ConcreteCommand(Command):
 def test_command_base_cannot_instantiate_abstract():
     try:
         Command()
-        assert False, "Should not be able to instantiate abstract Command"
+        pytest.fail("Should not be able to instantiate abstract Command")
     except TypeError:
         pass
 
@@ -950,7 +951,7 @@ def test_config_command_list_yara_empty_dir(tmp_path):
 
 def test_config_command_list_yara_with_rules(tmp_path):
     rule_file = tmp_path / "test_rule.yar"
-    rule_file.write_text('rule Test { condition: true }')
+    rule_file.write_text("rule Test { condition: true }")
     ctx = CommandContext.create()
     cmd = ConfigCommand(ctx)
     result = cmd.execute({"list_yara": True, "yara": str(tmp_path)})

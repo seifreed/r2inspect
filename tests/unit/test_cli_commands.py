@@ -15,7 +15,7 @@ from r2inspect.cli.commands.config_command import ConfigCommand
 from r2inspect.cli.commands.interactive_command import InteractiveCommand
 from r2inspect.cli.commands.version_command import VersionCommand
 from r2inspect.config import Config
-from r2inspect.utils.logger import get_logger
+from r2inspect.infrastructure.logging import get_logger
 
 
 class _DummyCommand(Command):

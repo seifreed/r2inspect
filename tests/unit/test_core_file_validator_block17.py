@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.utils import memory_manager
+import r2inspect.infrastructure.memory as memory_manager
 
 
 def test_file_validator_missing_and_empty(tmp_path: Path):

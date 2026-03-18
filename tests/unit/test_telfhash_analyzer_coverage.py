@@ -47,7 +47,7 @@ def test_telfhash_is_available_returns_bool():
 
 
 def test_telfhash_available_constant_matches():
-    assert TELFHASH_AVAILABLE == TelfhashAnalyzer.is_available()
+    assert TelfhashAnalyzer.is_available() == TELFHASH_AVAILABLE
 
 
 # --- _check_library_availability ---
@@ -360,7 +360,7 @@ def test_analyze_symbols_not_available():
 def test_analyze_symbols_not_elf():
     if not TELFHASH_AVAILABLE:
         pytest.skip("telfhash not available")
-    adapter = make_adapter()
+    make_adapter()
     # r2 is None means _is_elf_file returns False
     analyzer = TelfhashAnalyzer(None, filepath="/tmp/test.bin")
     result = analyzer.analyze_symbols()
@@ -480,9 +480,8 @@ def test_calculate_hash_telfhash_returns_dict():
             return True
 
     # Patch telfhash at module level to return dict
-    original_telfhash = None
     try:
-        original_telfhash = ta_module_ref.telfhash
+        pass
     except AttributeError:
         pytest.skip("cannot access telfhash function")
 
@@ -497,7 +496,8 @@ def test_compare_hashes_with_ssdeep():
     """Test compare_hashes when both telfhash and ssdeep are available."""
     if not TELFHASH_AVAILABLE:
         pytest.skip("telfhash not available")
-    from r2inspect.utils.ssdeep_loader import get_ssdeep
+    from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
+
     ssdeep_module = get_ssdeep()
     if ssdeep_module is None:
         pytest.skip("ssdeep not available")
@@ -570,10 +570,7 @@ def test_is_elf_file_fallback_to_has_elf_symbols(tmp_path):
     # Then it falls back to _cmdj("ij") and _has_elf_symbols
     symbols = [{"name": "printf", "type": "FUNC"}]
     info = {"bin": {"os": "linux"}}
-    adapter = DirectFakeAdapter(
-        cmd_map={"i": "format: raw"},
-        cmdj_map={"ij": info, "isj": symbols}
-    )
+    adapter = DirectFakeAdapter(cmd_map={"i": "format: raw"}, cmdj_map={"ij": info, "isj": symbols})
     analyzer = TelfhashAnalyzer(adapter, filepath=str(f))
     # r2 is set to adapter (not None), is_elf_file returns False (no ELF magic),
     # so it falls to _has_elf_symbols

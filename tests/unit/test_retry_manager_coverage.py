@@ -12,7 +12,7 @@ Targets previously uncovered lines:
 
 import pytest
 
-from r2inspect.utils.retry_manager import (
+from r2inspect.infrastructure.retry_manager import (
     RetryConfig,
     RetryManager,
     RetryStrategy,
@@ -60,9 +60,9 @@ def test_configure_retry_for_command_updates_config():
     configure_retry_for_command("custom_test_type", custom)
 
     manager = RetryManager()
-    retrieved = manager._get_retry_config("custom_test_type", None)
+    manager._get_retry_config("custom_test_type", None)
 
-    from r2inspect.utils import retry_manager as rm_module
+    import r2inspect.infrastructure.retry_manager as rm_module
 
     assert rm_module.global_retry_manager.DEFAULT_CONFIGS["custom_test_type"].max_attempts == 7
 

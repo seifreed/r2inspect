@@ -12,9 +12,9 @@ from r2inspect.core import file_validator as file_validator_module
 from r2inspect.core import r2_session as r2_session_module
 from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.core.pipeline_builder import PipelineBuilder
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.core.result_aggregator import (
     ResultAggregator,
     _build_file_overview,
@@ -24,7 +24,7 @@ from r2inspect.core.result_aggregator import (
     _generate_recommendations,
     _normalize_results,
 )
-from r2inspect.utils import memory_manager as memory_manager_module
+import r2inspect.infrastructure.memory as memory_manager_module
 
 
 class _DummyPipeline:

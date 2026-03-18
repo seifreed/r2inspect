@@ -29,6 +29,7 @@ from r2inspect.config_schemas.schemas import (
 # ConfigBuilder initialisation
 # ---------------------------------------------------------------------------
 
+
 def test_config_builder_init_creates_empty_kwargs() -> None:
     builder = ConfigBuilder()
     assert builder._general_kwargs == {}
@@ -45,6 +46,7 @@ def test_config_builder_init_creates_empty_kwargs() -> None:
 # ---------------------------------------------------------------------------
 # General configuration methods
 # ---------------------------------------------------------------------------
+
 
 def test_with_verbose_stores_true() -> None:
     builder = ConfigBuilder().with_verbose(True)
@@ -71,6 +73,7 @@ def test_with_string_length_range_stores_both_bounds() -> None:
 # YARA configuration methods
 # ---------------------------------------------------------------------------
 
+
 def test_with_yara_rules_stores_path() -> None:
     builder = ConfigBuilder().with_yara_rules("/rules/malware")
     assert builder._yara_kwargs["rules_path"] == "/rules/malware"
@@ -89,6 +92,7 @@ def test_with_yara_timeout_stores_value() -> None:
 # ---------------------------------------------------------------------------
 # Packer configuration methods
 # ---------------------------------------------------------------------------
+
 
 def test_with_packer_detection_stores_flag() -> None:
     builder = ConfigBuilder().with_packer_detection(False)
@@ -109,6 +113,7 @@ def test_with_section_analysis_stores_flag() -> None:
 # Crypto configuration methods
 # ---------------------------------------------------------------------------
 
+
 def test_with_crypto_detection_stores_flag() -> None:
     builder = ConfigBuilder().with_crypto_detection(False)
     assert builder._crypto_kwargs["enabled"] is False
@@ -127,6 +132,7 @@ def test_with_base64_detection_stores_flag() -> None:
 # ---------------------------------------------------------------------------
 # Strings configuration methods
 # ---------------------------------------------------------------------------
+
 
 def test_with_string_min_length_stores_value() -> None:
     builder = ConfigBuilder().with_string_min_length(6)
@@ -152,6 +158,7 @@ def test_with_ascii_extraction_stores_flag() -> None:
 # Output configuration methods
 # ---------------------------------------------------------------------------
 
+
 def test_with_json_indent_stores_value() -> None:
     builder = ConfigBuilder().with_json_indent(4)
     assert builder._output_kwargs["json_indent"] == 4
@@ -171,6 +178,7 @@ def test_with_progress_display_stores_flag() -> None:
 # VirusTotal configuration methods
 # ---------------------------------------------------------------------------
 
+
 def test_with_virustotal_stores_api_key_and_enabled_flag() -> None:
     builder = ConfigBuilder().with_virustotal("my_api_key", enabled=True)
     assert builder._virustotal_kwargs["api_key"] == "my_api_key"
@@ -185,6 +193,7 @@ def test_with_virustotal_timeout_stores_value() -> None:
 # ---------------------------------------------------------------------------
 # Analysis configuration methods
 # ---------------------------------------------------------------------------
+
 
 def test_with_deep_analysis_stores_flag() -> None:
     builder = ConfigBuilder().with_deep_analysis(True)
@@ -204,6 +213,7 @@ def test_with_graph_analysis_stores_flag() -> None:
 # ---------------------------------------------------------------------------
 # PE analysis configuration methods
 # ---------------------------------------------------------------------------
+
 
 def test_with_authenticode_analysis_stores_flag() -> None:
     builder = ConfigBuilder().with_authenticode_analysis(True)
@@ -228,6 +238,7 @@ def test_with_mitigation_analysis_stores_flag() -> None:
 # ---------------------------------------------------------------------------
 # build() - empty kwargs branches (else-branches for each sub-config)
 # ---------------------------------------------------------------------------
+
 
 def test_build_empty_builder_uses_all_defaults() -> None:
     cfg = ConfigBuilder().build()
@@ -270,6 +281,7 @@ def test_build_with_pe_analysis_kwargs_creates_populated_config() -> None:
 # Fluent chaining returns self
 # ---------------------------------------------------------------------------
 
+
 def test_all_builder_methods_return_builder_instance() -> None:
     builder = ConfigBuilder()
     assert builder.with_verbose() is builder
@@ -305,6 +317,7 @@ def test_all_builder_methods_return_builder_instance() -> None:
 # ---------------------------------------------------------------------------
 # Factory convenience functions
 # ---------------------------------------------------------------------------
+
 
 def test_create_default_config_returns_r2inspect_config() -> None:
     cfg = create_default_config()

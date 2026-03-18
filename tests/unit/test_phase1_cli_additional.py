@@ -4,7 +4,7 @@ import pytest
 
 from r2inspect.cli import batch_output, batch_processing, display, interactive
 from r2inspect.cli.analysis_runner import output_csv_results, output_json_results
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 class _SimpleInspector:

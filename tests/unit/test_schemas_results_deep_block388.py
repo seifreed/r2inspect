@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas.results import (
     AnalysisResult,
@@ -132,7 +132,7 @@ def _full_payload() -> dict:
             {"type": "Packer", "description": "packed", "severity": "Low"},
         ],
         "error": None,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.5,
     }
 
@@ -201,7 +201,7 @@ def test_from_dict_partial_and_invalid_timestamp() -> None:
     assert isinstance(partial, AnalysisResult)
     assert partial.execution_time == 0.2
 
-    dt = datetime.utcnow()
+    dt = datetime.now(UTC)
     partial2 = from_dict({"timestamp": dt, "error": "boom"})
     assert partial2.timestamp == dt
     assert partial2.has_error() is True

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
 from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage

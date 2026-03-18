@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.utils.file_type import (
+from r2inspect.infrastructure.file_type import (
     _bin_info_has_elf,
     _bin_info_has_pe,
     is_elf_file,

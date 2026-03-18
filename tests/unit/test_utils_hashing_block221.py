@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from r2inspect.utils.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
+from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
 
 
 def test_calculate_hashes(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas import results as results_module
 from r2inspect.schemas.results import (
@@ -112,7 +112,7 @@ def test_results_dataclasses_methods_and_summary() -> None:
 
 
 def test_results_from_dict_and_loaders() -> None:
-    ts = datetime.utcnow()
+    ts = datetime.now(UTC)
     payload = {
         "file_info": {
             "name": "f.bin",

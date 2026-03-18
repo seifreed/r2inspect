@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.modules.function_domain import (
+from r2inspect.domain.services.function_analysis import (
     extract_mnemonics_from_ops,
     extract_mnemonics_from_text,
     machoc_hash_from_mnemonics,
@@ -29,6 +29,12 @@ def test_extract_mnemonics_from_text_single_word_per_line() -> None:
     text = "ret\nnop\nhlt"
     result = extract_mnemonics_from_text(text)
     assert result == ["ret", "nop", "hlt"]
+
+
+def test_extract_mnemonics_from_text_skips_address_prefixes() -> None:
+    text = "0x401000 mov eax, ebx\n0x401005 ret"
+    result = extract_mnemonics_from_text(text)
+    assert result == ["mov", "ret"]
 
 
 def test_extract_mnemonics_from_ops_basic() -> None:

@@ -26,7 +26,7 @@ from r2inspect.cli.batch_workers import (
     process_single_file,
 )
 from r2inspect.config import Config
-from r2inspect.utils.rate_limiter import BatchRateLimiter
+from r2inspect.infrastructure.rate_limiter import BatchRateLimiter
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +237,7 @@ def test_process_files_parallel_success(tmp_path: Path):
         rate_limiter,
     )
 
-    assert local.name in all_results
+    assert str(local) in all_results
     assert failed_files == []
 
 
@@ -310,7 +310,9 @@ def test_process_files_parallel_thread_cap_applied(tmp_path: Path):
 
     os.environ["R2INSPECT_MAX_THREADS"] = "1"
     try:
-        rate_limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=100.0, enable_adaptive=False)
+        rate_limiter = BatchRateLimiter(
+            max_concurrent=1, rate_per_second=100.0, enable_adaptive=False
+        )
         process_files_parallel(
             [local],
             all_results,
@@ -323,6 +325,6 @@ def test_process_files_parallel_thread_cap_applied(tmp_path: Path):
             10,
             rate_limiter,
         )
-        assert local.name in all_results
+        assert str(local) in all_results
     finally:
         del os.environ["R2INSPECT_MAX_THREADS"]

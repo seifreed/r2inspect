@@ -1,4 +1,5 @@
 """Tests for authenticode_analyzer.py - wave 3, real code, no mocks."""
+
 from __future__ import annotations
 
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
@@ -8,6 +9,7 @@ from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 # Stub adapters – lightweight objects that return configurable data so that
 # the real analyzer code runs end-to-end without unittest.mock.
 # ---------------------------------------------------------------------------
+
 
 class _BaseAdapter:
     """Returns sensible defaults for every adapter method used by the analyzer."""
@@ -120,6 +122,7 @@ class _RaisingFileInfoAdapter(_BaseAdapter):
 # analyze() paths
 # ---------------------------------------------------------------------------
 
+
 def test_analyze_no_security_directory_returns_no_signature():
     analyzer = AuthenticodeAnalyzer(adapter=_NoSecurityDirAdapter())
     result = analyzer.analyze()
@@ -178,6 +181,7 @@ def test_analyze_exception_path_sets_error_fields():
 # _get_security_directory()
 # ---------------------------------------------------------------------------
 
+
 def test_get_security_directory_not_a_list_returns_none():
     analyzer = AuthenticodeAnalyzer(adapter=_NonListDirAdapter())
     assert analyzer._get_security_directory() is None
@@ -204,6 +208,7 @@ def test_get_security_directory_empty_list_returns_none():
 # ---------------------------------------------------------------------------
 # _read_win_certificate()
 # ---------------------------------------------------------------------------
+
 
 def test_read_win_certificate_zero_offset_returns_none_and_appends_error():
     analyzer = AuthenticodeAnalyzer(adapter=_BaseAdapter())
@@ -268,6 +273,7 @@ def test_read_win_certificate_pkcs7_with_no_payload_returns_cert_without_pkcs7_i
 # _parse_win_cert_header()
 # ---------------------------------------------------------------------------
 
+
 def test_parse_win_cert_header_pkcs7_values():
     analyzer = AuthenticodeAnalyzer(adapter=None)
     data = [0x90, 0x01, 0x00, 0x00, 0x00, 0x02, 0x02, 0x00]
@@ -295,6 +301,7 @@ def test_parse_win_cert_header_little_endian_length():
 # ---------------------------------------------------------------------------
 # _get_cert_type_name()
 # ---------------------------------------------------------------------------
+
 
 def test_get_cert_type_name_x509():
     analyzer = AuthenticodeAnalyzer(adapter=None)
@@ -327,6 +334,7 @@ def test_get_cert_type_name_unknown_includes_hex():
 # _parse_pkcs7()
 # ---------------------------------------------------------------------------
 
+
 class _Pkcs7Sha1Adapter(_BaseAdapter):
     def read_bytes_list(self, address, size):
         sha1_oid = [0x2B, 0x0E, 0x03, 0x02, 0x1A]
@@ -348,6 +356,7 @@ def test_parse_pkcs7_empty_data_returns_none():
     class EmptyAdapter(_BaseAdapter):
         def read_bytes_list(self, address, size):
             return []
+
     analyzer = AuthenticodeAnalyzer(adapter=EmptyAdapter())
     assert analyzer._parse_pkcs7(0x1000, 100) is None
 
@@ -393,6 +402,7 @@ def test_parse_pkcs7_exception_returns_none():
 # _detect_digest_algorithm()
 # ---------------------------------------------------------------------------
 
+
 def test_detect_digest_algorithm_sha256():
     analyzer = AuthenticodeAnalyzer(adapter=None)
     data = [0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01] + [0x00] * 10
@@ -414,6 +424,7 @@ def test_detect_digest_algorithm_returns_none_for_unknown():
 # _detect_encryption_algorithm()
 # ---------------------------------------------------------------------------
 
+
 def test_detect_encryption_algorithm_rsa():
     analyzer = AuthenticodeAnalyzer(adapter=None)
     data = [0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01] + [0x00] * 5
@@ -428,6 +439,7 @@ def test_detect_encryption_algorithm_returns_none_for_unknown():
 # ---------------------------------------------------------------------------
 # _extract_common_names()
 # ---------------------------------------------------------------------------
+
 
 def test_extract_common_names_returns_empty_list_for_no_oid():
     analyzer = AuthenticodeAnalyzer(adapter=None)
@@ -458,6 +470,7 @@ def test_extract_common_names_limits_to_three_entries():
 # ---------------------------------------------------------------------------
 # _extract_cn_entry()
 # ---------------------------------------------------------------------------
+
 
 def test_extract_cn_entry_position_too_close_to_end_returns_none():
     analyzer = AuthenticodeAnalyzer(adapter=None)
@@ -512,6 +525,7 @@ def test_extract_cn_entry_non_printable_cn_returns_none():
 # _has_timestamp()
 # ---------------------------------------------------------------------------
 
+
 def test_has_timestamp_returns_true_when_oid_present():
     analyzer = AuthenticodeAnalyzer(adapter=None)
     ts_oid = [0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x10, 0x02, 0x0E]
@@ -527,6 +541,7 @@ def test_has_timestamp_returns_false_when_oid_absent():
 # ---------------------------------------------------------------------------
 # _find_pattern()
 # ---------------------------------------------------------------------------
+
 
 def test_find_pattern_found_at_start():
     analyzer = AuthenticodeAnalyzer(adapter=None)
@@ -558,6 +573,7 @@ def test_find_pattern_empty_data_returns_false():
 # _find_all_patterns()
 # ---------------------------------------------------------------------------
 
+
 def test_find_all_patterns_multiple_occurrences():
     analyzer = AuthenticodeAnalyzer(adapter=None)
     data = [0x01, 0x02, 0x03, 0x01, 0x02, 0x00, 0x01, 0x02]
@@ -585,6 +601,7 @@ def test_find_all_patterns_entire_data_is_pattern():
 # ---------------------------------------------------------------------------
 # _compute_authenticode_hash()
 # ---------------------------------------------------------------------------
+
 
 def test_compute_authenticode_hash_success():
     analyzer = AuthenticodeAnalyzer(adapter=_BaseAdapter())
@@ -640,6 +657,7 @@ def test_compute_authenticode_hash_exception_returns_none():
 # _verify_signature_integrity()
 # ---------------------------------------------------------------------------
 
+
 def test_verify_signature_integrity_no_signature_returns_false():
     analyzer = AuthenticodeAnalyzer(adapter=None)
     assert analyzer._verify_signature_integrity({"has_signature": False}) is False
@@ -647,46 +665,71 @@ def test_verify_signature_integrity_no_signature_returns_false():
 
 def test_verify_signature_integrity_empty_certificates_returns_false():
     analyzer = AuthenticodeAnalyzer(adapter=None)
-    assert analyzer._verify_signature_integrity({
-        "has_signature": True,
-        "certificates": [],
-    }) is False
+    assert (
+        analyzer._verify_signature_integrity(
+            {
+                "has_signature": True,
+                "certificates": [],
+            }
+        )
+        is False
+    )
 
 
 def test_verify_signature_integrity_errors_present_returns_false():
     analyzer = AuthenticodeAnalyzer(adapter=None)
-    assert analyzer._verify_signature_integrity({
-        "has_signature": True,
-        "certificates": ["cert"],
-        "errors": ["parse error"],
-    }) is False
+    assert (
+        analyzer._verify_signature_integrity(
+            {
+                "has_signature": True,
+                "certificates": ["cert"],
+                "errors": ["parse error"],
+            }
+        )
+        is False
+    )
 
 
 def test_verify_signature_integrity_no_security_directory_returns_false():
     analyzer = AuthenticodeAnalyzer(adapter=None)
-    assert analyzer._verify_signature_integrity({
-        "has_signature": True,
-        "certificates": ["cert"],
-        "errors": [],
-        "security_directory": None,
-    }) is False
+    assert (
+        analyzer._verify_signature_integrity(
+            {
+                "has_signature": True,
+                "certificates": ["cert"],
+                "errors": [],
+                "security_directory": None,
+            }
+        )
+        is False
+    )
 
 
 def test_verify_signature_integrity_security_dir_size_zero_returns_false():
     analyzer = AuthenticodeAnalyzer(adapter=None)
-    assert analyzer._verify_signature_integrity({
-        "has_signature": True,
-        "certificates": ["cert"],
-        "errors": [],
-        "security_directory": {"size": 0},
-    }) is False
+    assert (
+        analyzer._verify_signature_integrity(
+            {
+                "has_signature": True,
+                "certificates": ["cert"],
+                "errors": [],
+                "security_directory": {"size": 0},
+            }
+        )
+        is False
+    )
 
 
 def test_verify_signature_integrity_all_valid_returns_true():
     analyzer = AuthenticodeAnalyzer(adapter=None)
-    assert analyzer._verify_signature_integrity({
-        "has_signature": True,
-        "certificates": ["cert"],
-        "errors": [],
-        "security_directory": {"size": 400},
-    }) is True
+    assert (
+        analyzer._verify_signature_integrity(
+            {
+                "has_signature": True,
+                "certificates": ["cert"],
+                "errors": [],
+                "security_directory": {"size": 400},
+            }
+        )
+        is True
+    )

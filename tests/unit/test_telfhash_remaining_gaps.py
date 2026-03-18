@@ -81,6 +81,22 @@ def test_calculate_hash_list_falsy_hash_lines_72_73():
         _tel_mod.telfhash = orig_fn
 
 
+def test_calculate_hash_no_hash_lines_86():
+    """Cover line 86: calculation returns no hash fallback."""
+    if not TELFHASH_AVAILABLE:
+        pytest.skip("telfhash not available")
+    orig_fn = _tel_mod.telfhash
+    try:
+        _tel_mod.telfhash = lambda fp: None
+        analyzer = AlwaysElfTelfhashAnalyzer(SimpleAdapter(), filepath=ELF_FIXTURE)
+        h, method, error = analyzer._calculate_hash()
+        assert h is None
+        assert method is None
+        assert error == "Telfhash calculation returned no hash"
+    finally:
+        _tel_mod.telfhash = orig_fn
+
+
 # ---------------------------------------------------------------------------
 # Lines 75-77: _calculate_hash dict result with falsy hash and truthy msg
 # ---------------------------------------------------------------------------
@@ -200,6 +216,96 @@ def test_analyze_symbols_inner_exception_lines_178_180():
         assert "inner telfhash error" in result["error"]
     finally:
         _tel_mod.telfhash = orig_fn
+
+
+def test_analyze_symbols_outer_exception_lines_188_190():
+    """Cover lines 188-190: outer exception path in analyze_symbols."""
+    if not TELFHASH_AVAILABLE:
+        pytest.skip("telfhash not available")
+
+    def _raising_symbols() -> list[dict[str, Any]]:
+        raise RuntimeError("outer symbols failure")
+
+    analyzer = AlwaysElfTelfhashAnalyzer(SimpleAdapter(), filepath=ELF_FIXTURE)
+    analyzer._is_elf_file = lambda: True
+    analyzer._get_elf_symbols = _raising_symbols  # type: ignore[method-assign]
+    result = analyzer.analyze_symbols()
+
+    assert result["error"] == "outer symbols failure"
+
+
+def test_is_elf_file_handles_is_elf_exception():
+    """Cover line 211: exception path in _is_elf_file."""
+
+    def _raise_is_elf(*_args: object, **_kwargs: object) -> bool:
+        raise RuntimeError("is_elf failed")
+
+    adapter = SimpleAdapter()
+    analyzer = TelfhashAnalyzer(adapter, filepath="/tmp/test")
+    orig = _tel_mod.is_elf_file
+    try:
+        _tel_mod.is_elf_file = _raise_is_elf
+        assert analyzer._is_elf_file() is False
+    finally:
+        _tel_mod.is_elf_file = orig
+
+
+def test_is_elf_file_returns_true_when_is_elf_utility_matches():
+    """Cover line 205 in _is_elf_file."""
+    analyzer = TelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
+    orig = _tel_mod.is_elf_file
+    try:
+        _tel_mod.is_elf_file = lambda *_args, **_kwargs: True
+        assert analyzer._is_elf_file() is True
+    finally:
+        _tel_mod.is_elf_file = orig
+
+
+def test_has_elf_symbols_without_bin_metadata_lines_219():
+    """Cover line 218: branch when bin metadata is missing."""
+    adapter = SimpleAdapter()
+    analyzer = TelfhashAnalyzer(adapter, filepath="/tmp/test")
+    analyzer._cmd_list = lambda _cmd: [{"name": "main"}]  # type: ignore[method-assign]
+    assert analyzer._has_elf_symbols({"other": {}}) is False
+
+
+def test_has_elf_symbols_exception_line_222_224():
+    """Cover lines 222-224: return False when symbol enumeration fails."""
+    analyzer = AlwaysElfTelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
+    analyzer._cmd_list = lambda _cmd: (_ for _ in ()).throw(RuntimeError("cmdlist failed"))  # type: ignore[method-assign]
+    assert analyzer._has_elf_symbols({"bin": {"os": "linux"}}) is False
+
+
+def test_get_elf_symbols_exception_line_243_245():
+    """Cover lines 243-245: _get_elf_symbols returns empty list on exception."""
+    analyzer = AlwaysElfTelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
+    analyzer._cmd_list = lambda _cmd: (_ for _ in ()).throw(RuntimeError("symbols failed"))  # type: ignore[method-assign]
+    assert analyzer._get_elf_symbols() == []
+
+
+def test_filter_skips_short_symbol_name():
+    """Cover line 302: _should_skip_symbol short name."""
+    analyzer = TelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
+    assert analyzer._should_skip_symbol("x") is True
+
+
+def test_filter_skips_empty_symbol_name_line_279():
+    """Cover line 279: skip symbols with empty/blank names."""
+    analyzer = TelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
+    filtered = analyzer._filter_symbols_for_telfhash(
+        [{"type": "FUNC", "bind": "GLOBAL", "name": "   "}]
+    )
+    assert filtered == []
+
+
+def test_normalize_telfhash_value_non_str():
+    """Cover line 347: normalize returns None for non-string input."""
+    assert TelfhashAnalyzer._normalize_telfhash_value(123) is None
+
+
+def test_compare_hashes_empty_input_line_378_379():
+    """Cover line 378: comparison returns None for missing hash input."""
+    assert TelfhashAnalyzer.compare_hashes("", "") is None
 
 
 # ---------------------------------------------------------------------------

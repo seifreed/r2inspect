@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from r2inspect.utils.logger import (
+from r2inspect.infrastructure.logging import (
     configure_batch_logging,
     get_logger,
     reset_logging_levels,

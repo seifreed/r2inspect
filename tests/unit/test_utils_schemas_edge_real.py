@@ -23,7 +23,7 @@ from r2inspect.schemas.results import (
     SecurityFeatures,
     YaraMatch,
 )
-from r2inspect.utils.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
+from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
 
 
 def test_hashing_utils_edge_cases(tmp_path: Path) -> None:

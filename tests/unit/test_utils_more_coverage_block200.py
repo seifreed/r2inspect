@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.core.r2_session import R2Session
-from r2inspect.utils import command_helpers as ch
-from r2inspect.utils import hashing
-from r2inspect.utils import logger as logger_utils
-from r2inspect.utils.r2_suppress import _parse_raw_result, silent_cmdj
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.infrastructure.r2_session import R2Session
+import r2inspect.infrastructure.command_helpers as ch
+import r2inspect.infrastructure.hashing as hashing
+import r2inspect.infrastructure.logging as logger_utils
+from r2inspect.infrastructure.r2_suppress import _parse_raw_result, silent_cmdj
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def _install_fake_module(tmp_path: Path, contents: str) -> None:
 
 
 def _reset_ssdeep_loader() -> None:
-    import r2inspect.utils.ssdeep_loader as loader
+    import r2inspect.infrastructure.ssdeep_loader as loader
 
     loader._ssdeep_module = None
     if "ssdeep" in sys.modules:

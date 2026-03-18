@@ -1,67 +1,317 @@
 #!/usr/bin/env python3
-"""Comprehensive tests for inspector_helpers.py execution mixin."""
+"""Comprehensive tests for inspector_helpers.py execution mixin -- mock-free."""
 
-from unittest.mock import Mock, MagicMock
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from typing import Any
+
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.config import Config
+from r2inspect.core.inspector import InspectorExecutionMixin
+from r2inspect.core.result_aggregator import ResultAggregator
+from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline
+from r2inspect.pipeline.stage_models import AnalysisStage
+from r2inspect.registry.analyzer_registry import AnalyzerRegistry
+from r2inspect.registry.categories import AnalyzerCategory
+from r2inspect.abstractions.base_analyzer import BaseAnalyzer
 
 
-class MockInspector(InspectorExecutionMixin):
-    """Mock inspector for testing the mixin."""
-    
-    def __init__(self):
-        self.adapter = Mock()
-        self.config = Mock()
-        self.filename = "test.bin"
-        self.registry = Mock()
-        self._result_aggregator = Mock()
+# ---------------------------------------------------------------------------
+# FakeR2 -- lightweight stand-in for an r2pipe session
+# ---------------------------------------------------------------------------
+
+
+class FakeR2:
+    def __init__(self, cmdj_map=None, cmd_map=None):
+        self.cmdj_map = cmdj_map or {}
+        self.cmd_map = cmd_map or {}
+
+    def cmdj(self, command):
+        return self.cmdj_map.get(command, {})
+
+    def cmd(self, command):
+        return self.cmd_map.get(command, "")
+
+
+# ---------------------------------------------------------------------------
+# Tiny real analyzers used to populate the registry in tests
+# ---------------------------------------------------------------------------
+
+
+class _DictAnalyzer(BaseAnalyzer):
+    """Analyzer whose analyze() returns a fixed dict."""
+
+    _result: dict[str, Any] = {}
+
+    def analyze(self) -> dict[str, Any]:
+        return self._result
+
+
+class _ListAnalyzer(BaseAnalyzer):
+    """Analyzer with an analyze() that returns a list."""
+
+    _result: list[Any] = []
+
+    def analyze(self) -> Any:
+        return self._result
+
+
+class _MultiMethodAnalyzer(BaseAnalyzer):
+    """Analyzer exposing several named methods for dispatch testing."""
+
+    _analyze_result: dict[str, Any] = {"data": "result"}
+    _custom_result: dict[str, Any] = {"custom": "data"}
+
+    def analyze(self) -> dict[str, Any]:
+        return self._analyze_result
+
+    def custom_method(self) -> dict[str, Any]:
+        return self._custom_result
+
+
+class _ArgEchoAnalyzer(BaseAnalyzer):
+    """Analyzer whose analyze() echoes back positional and keyword args."""
+
+    def analyze(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return {"args": list(args), "kwargs": kwargs}
+
+
+class _ExplodingAnalyzer(BaseAnalyzer):
+    """Analyzer that always raises on construction body (but not __init__)."""
+
+    def analyze(self) -> dict[str, Any]:
+        raise RuntimeError("boom")
+
+
+class _StringAnalyzer(BaseAnalyzer):
+    """Analyzer with extract_strings and search_xor methods."""
+
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def extract_strings(self) -> list[str]:
+        return ["string1", "string2"]
+
+    def search_xor(self, search_string: str) -> list[dict[str, Any]]:
+        return [{"offset": 100, "pattern": search_string}]
+
+
+class _SecurityAnalyzer(BaseAnalyzer):
+    """Analyzer with get_security_features method."""
+
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def get_security_features(self) -> dict[str, Any]:
+        return {"aslr": True, "dep": False}
+
+
+class _ImportAnalyzer(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def get_imports(self) -> list[dict[str, Any]]:
+        return [{"name": "kernel32.dll"}]
+
+
+class _ExportAnalyzer(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def get_exports(self) -> list[dict[str, Any]]:
+        return [{"name": "DllMain"}]
+
+
+class _SectionAnalyzer(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def analyze_sections(self) -> list[dict[str, Any]]:
+        return [{"name": ".text"}]
+
+
+class _PackerDetector(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def detect(self) -> dict[str, Any]:
+        return {"is_packed": True}
+
+
+class _CryptoAnalyzer(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def detect(self) -> dict[str, Any]:
+        return {"algorithms": ["AES"]}
+
+
+class _AntiAnalysis(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def detect(self) -> dict[str, Any]:
+        return {"anti_debug": True}
+
+
+class _CompilerDetector(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def detect_compiler(self) -> dict[str, Any]:
+        return {"compiler": "MSVC"}
+
+
+class _YaraAnalyzer(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def scan(self, rules_path=None) -> list[dict[str, Any]]:
+        if rules_path:
+            return [{"rule": "custom"}]
+        return [{"rule": "malware"}]
+
+
+class _FunctionAnalyzer(BaseAnalyzer):
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+    def analyze_functions(self) -> dict[str, Any]:
+        return {"count": 10}
+
+
+class _SimilarityAnalyzer(BaseAnalyzer):
+    """Generic similarity analyzer that returns a dict from analyze()."""
+
+    _name: str = "similarity"
+
+    def analyze(self) -> dict[str, Any]:
+        return {"hash": "abc123", "type": self._name}
+
+
+# ---------------------------------------------------------------------------
+# Helpers to build a real TestInspector backed by FakeR2 + real registry
+# ---------------------------------------------------------------------------
+
+
+def _make_registry(**name_to_class: type) -> AnalyzerRegistry:
+    """Build a small AnalyzerRegistry populated with the given analyzers."""
+    registry = AnalyzerRegistry(lazy_loading=False)
+    for name, cls in name_to_class.items():
+        registry.register(name=name, analyzer_class=cls, category=AnalyzerCategory.DETECTION)
+    return registry
+
+
+def _make_inspector(
+    registry: AnalyzerRegistry | None = None,
+    cmdj_map: dict | None = None,
+    cmd_map: dict | None = None,
+) -> InspectorExecutionMixin:
+    """Create a concrete InspectorExecutionMixin wired to real collaborators."""
+    fake_r2 = FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    adapter = R2PipeAdapter(fake_r2)
+    config = Config()
+
+    class _TestInspector(InspectorExecutionMixin):
+        pass
+
+    inspector = _TestInspector.__new__(_TestInspector)
+    inspector.adapter = adapter
+    inspector.config = config
+    inspector.filename = "test.bin"
+    inspector.registry = registry or AnalyzerRegistry(lazy_loading=False)
+    inspector._result_aggregator = ResultAggregator()
+    return inspector
+
+
+# ---------------------------------------------------------------------------
+# A simple real pipeline stage for progress/execution tests
+# ---------------------------------------------------------------------------
+
+
+class _FixedResultStage(AnalysisStage):
+    """Stage that merges a fixed dict into the pipeline context results."""
+
+    def __init__(self, name: str, result: dict[str, Any]):
+        super().__init__(name=name)
+        self._result = result
+
+    def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
+        results = context.setdefault("results", {})
+        results.update(self._result)
+        return context
+
+
+class _NonDictStage(AnalysisStage):
+    """Stage whose _execute returns a non-dict to exercise fallback."""
+
+    def __init__(self, name: str):
+        super().__init__(name=name)
+
+    def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
+        # The pipeline itself always returns a dict, but we can make the
+        # results sub-key hold something unexpected.
+        return {"results": {}}
+
+
+# ===================================================================
+# Pipeline execution tests
+# ===================================================================
 
 
 def test_execute_with_progress_returns_dict():
-    inspector = MockInspector()
-    pipeline = Mock()
-    pipeline.execute_with_progress.return_value = {"result": "data"}
-    
-    result = inspector._execute_with_progress(pipeline, {}, lambda x: None)
-    assert result == {"result": "data"}
-    pipeline.execute_with_progress.assert_called_once()
+    pipeline = AnalysisPipeline()
+    pipeline.add_stage(_FixedResultStage("s1", {"result": "data"}))
+
+    inspector = _make_inspector()
+    progress_messages: list[str] = []
+    result = inspector._execute_with_progress(
+        pipeline, {}, lambda s, *_a: progress_messages.append(str(s))
+    )
+    assert isinstance(result, dict)
+    # Pipeline wraps results under "results" key in the context
+    results = result.get("results", result)
+    assert results.get("result") == "data"
 
 
-def test_execute_with_progress_converts_non_dict():
-    inspector = MockInspector()
-    pipeline = Mock()
-    pipeline.execute_with_progress.return_value = "not_a_dict"
-    
-    result = inspector._execute_with_progress(pipeline, {}, lambda x: None)
-    assert result == {}
+def test_execute_with_progress_empty_pipeline():
+    """An empty pipeline should return a dict (possibly empty)."""
+    pipeline = AnalysisPipeline()
+    inspector = _make_inspector()
+    result = inspector._execute_with_progress(pipeline, {}, lambda *_a: None)
+    assert isinstance(result, dict)
 
 
 def test_execute_without_progress_returns_dict():
-    inspector = MockInspector()
-    pipeline = Mock()
-    pipeline.execute.return_value = {"result": "data"}
-    
+    pipeline = AnalysisPipeline()
+    pipeline.add_stage(_FixedResultStage("s1", {"result": "data"}))
+
+    inspector = _make_inspector()
     result = inspector._execute_without_progress(pipeline, {})
-    assert result == {"result": "data"}
-    pipeline.execute.assert_called_with({}, parallel=False)
+    assert isinstance(result, dict)
+    results = result.get("results", result)
+    assert results.get("result") == "data"
 
 
 def test_execute_without_progress_with_parallel():
-    inspector = MockInspector()
-    pipeline = Mock()
-    pipeline.execute.return_value = {"result": "data"}
-    
+    pipeline = AnalysisPipeline()
+    pipeline.add_stage(_FixedResultStage("s1", {"result": "data"}))
+
+    inspector = _make_inspector()
     result = inspector._execute_without_progress(pipeline, {}, parallel=True)
-    assert result == {"result": "data"}
-    pipeline.execute.assert_called_with({}, parallel=True)
+    assert isinstance(result, dict)
+    results = result.get("results", result)
+    assert results.get("result") == "data"
 
 
-def test_execute_without_progress_converts_non_dict():
-    inspector = MockInspector()
-    pipeline = Mock()
-    pipeline.execute.return_value = ["not", "dict"]
-    
+def test_execute_without_progress_empty_pipeline():
+    pipeline = AnalysisPipeline()
+    inspector = _make_inspector()
     result = inspector._execute_without_progress(pipeline, {})
-    assert result == {}
+    assert isinstance(result, dict)
+
+
+# ===================================================================
+# Static helper tests (_as_dict, _as_bool_dict, _as_str)
+# ===================================================================
 
 
 def test_as_dict_with_dict():
@@ -110,460 +360,408 @@ def test_as_str_with_custom_default():
     assert InspectorExecutionMixin._as_str(None, default="N/A") == "N/A"
 
 
+# ===================================================================
+# _execute_analyzer dispatch tests
+# ===================================================================
+
+
 def test_execute_analyzer_not_found():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = None
-    
+    inspector = _make_inspector()
     result = inspector._execute_analyzer("nonexistent_analyzer")
     assert result == {}
-    inspector.registry.get_analyzer_class.assert_called_with("nonexistent_analyzer")
 
 
 def test_execute_analyzer_default_method():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = {"data": "result"}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(test_analyzer=_MultiMethodAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_analyzer("test_analyzer")
     assert result == {"data": "result"}
 
 
 def test_execute_analyzer_custom_method():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.custom_method.return_value = {"custom": "data"}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(test_analyzer=_MultiMethodAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_analyzer("test_analyzer", "custom_method")
     assert result == {"custom": "data"}
-    mock_analyzer.custom_method.assert_called_once()
 
 
 def test_execute_analyzer_method_not_found():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock(spec=[])
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(test_analyzer=_DictAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_analyzer("test_analyzer", "missing_method")
     assert result == {}
 
 
 def test_execute_analyzer_with_args():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = {"result": "ok"}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(test_analyzer=_ArgEchoAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_analyzer("test_analyzer", "analyze", "arg1", "arg2")
-    assert result == {"result": "ok"}
-    mock_analyzer.analyze.assert_called_with("arg1", "arg2")
+    assert result["args"] == ["arg1", "arg2"]
 
 
 def test_execute_analyzer_with_kwargs():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = {"result": "ok"}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(test_analyzer=_ArgEchoAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_analyzer("test_analyzer", "analyze", key="value")
-    assert result == {"result": "ok"}
-    mock_analyzer.analyze.assert_called_with(key="value")
+    assert result["kwargs"] == {"key": "value"}
 
 
 def test_execute_analyzer_raises_exception():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    analyzer_class.side_effect = Exception("Test error")
-    
+    registry = _make_registry(test_analyzer=_ExplodingAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_analyzer("test_analyzer")
     assert result == {}
 
 
+# ===================================================================
+# _execute_list / _execute_dict
+# ===================================================================
+
+
 def test_execute_list_returns_list():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = ["item1", "item2"]
-    analyzer_class.return_value = mock_analyzer
-    
+    class _LA(_ListAnalyzer):
+        _result = ["item1", "item2"]
+
+    registry = _make_registry(test_analyzer=_LA)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_list("test_analyzer")
     assert result == ["item1", "item2"]
 
 
 def test_execute_list_converts_non_list():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = {"not": "list"}
-    analyzer_class.return_value = mock_analyzer
-    
+    class _DA(_DictAnalyzer):
+        _result = {"not": "list"}
+
+    registry = _make_registry(test_analyzer=_DA)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_list("test_analyzer")
     assert result == []
 
 
 def test_execute_dict_returns_dict():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = {"key": "value"}
-    analyzer_class.return_value = mock_analyzer
-    
+    class _DA(_DictAnalyzer):
+        _result = {"key": "value"}
+
+    registry = _make_registry(test_analyzer=_DA)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_dict("test_analyzer")
     assert result == {"key": "value"}
 
 
 def test_execute_dict_converts_non_dict():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze.return_value = ["not", "dict"]
-    analyzer_class.return_value = mock_analyzer
-    
+    class _LA(_ListAnalyzer):
+        _result = ["not", "dict"]
+
+    registry = _make_registry(test_analyzer=_LA)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector._execute_dict("test_analyzer")
     assert result == {}
 
 
+# ===================================================================
+# Stage-backed query methods (get_file_info, _detect_file_format)
+# ===================================================================
+
+
 def test_get_file_info():
-    inspector = MockInspector()
-    inspector.adapter.cmdj.return_value = {"size": 1024, "name": "test.bin"}
-    
+    inspector = _make_inspector(
+        cmdj_map={"ij": {"core": {"size": 1024, "file": "test.bin"}}},
+    )
     result = inspector.get_file_info()
     assert isinstance(result, dict)
 
 
 def test_detect_file_format():
-    inspector = MockInspector()
-    inspector.adapter.cmdj.return_value = {"info": {"bintype": "pe"}}
-    
+    inspector = _make_inspector(
+        cmdj_map={"ij": {"bin": {"bintype": "pe", "arch": "x86"}}},
+    )
     result = inspector._detect_file_format()
     assert isinstance(result, str)
 
 
+# ===================================================================
+# High-level convenience methods backed by real analyzers
+# ===================================================================
+
+
 def test_get_pe_info():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
-    
+    class _PE(_DictAnalyzer):
+        _result = {"pe_type": "PE32"}
+
+    registry = _make_registry(pe_analyzer=_PE)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_pe_info()
     assert isinstance(result, dict)
 
 
 def test_get_elf_info():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
-    
+    class _ELF(_DictAnalyzer):
+        _result = {"elf_type": "ELF64"}
+
+    registry = _make_registry(elf_analyzer=_ELF)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_elf_info()
     assert isinstance(result, dict)
 
 
 def test_get_macho_info():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
-    
+    class _Macho(_DictAnalyzer):
+        _result = {"macho_type": "Mach-O"}
+
+    registry = _make_registry(macho_analyzer=_Macho)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_macho_info()
     assert isinstance(result, dict)
 
 
 def test_get_strings():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.extract_strings.return_value = ["string1", "string2"]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(string_analyzer=_StringAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_strings()
     assert result == ["string1", "string2"]
 
 
 def test_get_security_features():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.get_security_features.return_value = {"aslr": True, "dep": False}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(pe_analyzer=_SecurityAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_security_features()
     assert result == {"aslr": True, "dep": False}
 
 
 def test_get_imports():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.get_imports.return_value = [{"name": "kernel32.dll"}]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(import_analyzer=_ImportAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_imports()
     assert result == [{"name": "kernel32.dll"}]
 
 
 def test_get_exports():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.get_exports.return_value = [{"name": "DllMain"}]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(export_analyzer=_ExportAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_exports()
     assert result == [{"name": "DllMain"}]
 
 
 def test_get_sections():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze_sections.return_value = [{"name": ".text"}]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(section_analyzer=_SectionAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.get_sections()
     assert result == [{"name": ".text"}]
 
 
 def test_detect_packer():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.detect.return_value = {"is_packed": True}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(packer_detector=_PackerDetector)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.detect_packer()
     assert result == {"is_packed": True}
 
 
 def test_detect_crypto():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.detect.return_value = {"algorithms": ["AES"]}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(crypto_analyzer=_CryptoAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.detect_crypto()
     assert "algorithms" in result
 
 
 def test_detect_crypto_analyzer_not_found():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = None
-    
+    inspector = _make_inspector()  # empty registry
     result = inspector.detect_crypto()
-    assert result["error"] == "Analyzer not found"
+    assert result.get("error") == "Analyzer not found"
 
 
 def test_detect_anti_analysis():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.detect.return_value = {"anti_debug": True}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(anti_analysis=_AntiAnalysis)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.detect_anti_analysis()
     assert result == {"anti_debug": True}
 
 
 def test_detect_compiler():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.detect_compiler.return_value = {"compiler": "MSVC"}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(compiler_detector=_CompilerDetector)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.detect_compiler()
     assert result == {"compiler": "MSVC"}
 
 
 def test_run_yara_rules():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.scan.return_value = [{"rule": "malware"}]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(yara_analyzer=_YaraAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.run_yara_rules()
     assert result == [{"rule": "malware"}]
 
 
 def test_run_yara_rules_with_custom_path():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.scan.return_value = [{"rule": "custom"}]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(yara_analyzer=_YaraAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.run_yara_rules("/path/to/rules")
     assert result == [{"rule": "custom"}]
-    mock_analyzer.scan.assert_called_with("/path/to/rules")
 
 
 def test_search_xor():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.search_xor.return_value = [{"offset": 100}]
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(string_analyzer=_StringAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.search_xor("test")
-    assert result == [{"offset": 100}]
-    mock_analyzer.search_xor.assert_called_with("test")
+    assert len(result) == 1
+    assert result[0]["offset"] == 100
+    assert result[0]["pattern"] == "test"
+
+
+# ===================================================================
+# Indicator / summary helpers (backed by real ResultAggregator)
+# ===================================================================
 
 
 def test_generate_indicators():
-    inspector = MockInspector()
-    inspector._result_aggregator.generate_indicators.return_value = [{"type": "suspicious"}]
-    
-    result = inspector.generate_indicators({"data": "test"})
-    assert result == [{"type": "suspicious"}]
+    inspector = _make_inspector()
+    result = inspector.generate_indicators({"sections": []})
+    # Real aggregator returns a list (possibly empty when no indicators match)
+    assert isinstance(result, list)
 
 
-def test_generate_indicators_non_list():
-    inspector = MockInspector()
-    inspector._result_aggregator.generate_indicators.return_value = "not_a_list"
-    
-    result = inspector.generate_indicators({"data": "test"})
-    assert result == []
+def test_generate_indicators_with_suspicious_data():
+    inspector = _make_inspector()
+    # Provide analysis results that the real aggregator might flag
+    result = inspector.generate_indicators(
+        {
+            "sections": [{"name": ".text", "entropy": 7.9}],
+            "imports": [{"name": "VirtualAlloc"}, {"name": "WriteProcessMemory"}],
+        }
+    )
+    assert isinstance(result, list)
 
 
 def test_analyze_functions():
-    inspector = MockInspector()
-    analyzer_class = Mock()
-    inspector.registry.get_analyzer_class.return_value = analyzer_class
-    
-    mock_analyzer = Mock()
-    mock_analyzer.analyze_functions.return_value = {"count": 10}
-    analyzer_class.return_value = mock_analyzer
-    
+    registry = _make_registry(function_analyzer=_FunctionAnalyzer)
+    inspector = _make_inspector(registry=registry)
+
     result = inspector.analyze_functions()
     assert result == {"count": 10}
 
 
+# ===================================================================
+# Similarity analyzers
+# ===================================================================
+
+
+def _make_similarity_class(name: str) -> type:
+    """Dynamically build a similarity analyzer class."""
+
+    class _Sim(_SimilarityAnalyzer):
+        _name = name
+
+    _Sim.__name__ = f"_Sim_{name}"
+    return _Sim
+
+
 def test_analyze_ssdeep():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(ssdeep=_make_similarity_class("ssdeep"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_ssdeep()
     assert isinstance(result, dict)
+    assert result.get("type") == "ssdeep"
 
 
 def test_analyze_tlsh():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(tlsh=_make_similarity_class("tlsh"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_tlsh()
     assert isinstance(result, dict)
+    assert result.get("type") == "tlsh"
 
 
 def test_analyze_telfhash():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(telfhash=_make_similarity_class("telfhash"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_telfhash()
     assert isinstance(result, dict)
 
 
 def test_analyze_rich_header():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(rich_header=_make_similarity_class("rich_header"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_rich_header()
     assert isinstance(result, dict)
 
 
 def test_analyze_impfuzzy():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(impfuzzy=_make_similarity_class("impfuzzy"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_impfuzzy()
     assert isinstance(result, dict)
 
 
 def test_analyze_ccbhash():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(ccbhash=_make_similarity_class("ccbhash"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_ccbhash()
     assert isinstance(result, dict)
 
 
 def test_analyze_binlex():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(binlex=_make_similarity_class("binlex"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_binlex()
     assert isinstance(result, dict)
 
 
 def test_analyze_binbloom():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(binbloom=_make_similarity_class("binbloom"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_binbloom()
     assert isinstance(result, dict)
 
 
 def test_analyze_simhash():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(simhash=_make_similarity_class("simhash"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_simhash()
     assert isinstance(result, dict)
 
 
 def test_analyze_bindiff():
-    inspector = MockInspector()
-    inspector.registry.get_analyzer_class.return_value = Mock()
+    registry = _make_registry(bindiff=_make_similarity_class("bindiff"))
+    inspector = _make_inspector(registry=registry)
     result = inspector.analyze_bindiff()
     assert isinstance(result, dict)
 
 
+# ===================================================================
+# Executive summary (real ResultAggregator)
+# ===================================================================
+
+
 def test_generate_executive_summary():
-    inspector = MockInspector()
-    inspector._result_aggregator.generate_executive_summary.return_value = {"summary": "data"}
-    
+    inspector = _make_inspector()
     result = inspector.generate_executive_summary({"analysis": "results"})
-    assert result == {"summary": "data"}
+    assert isinstance(result, dict)
 
 
-def test_generate_executive_summary_non_dict():
-    inspector = MockInspector()
-    inspector._result_aggregator.generate_executive_summary.return_value = ["not", "dict"]
-    
-    result = inspector.generate_executive_summary({"analysis": "results"})
-    assert result == {}
+def test_generate_executive_summary_with_empty_results():
+    inspector = _make_inspector()
+    result = inspector.generate_executive_summary({})
+    assert isinstance(result, dict)

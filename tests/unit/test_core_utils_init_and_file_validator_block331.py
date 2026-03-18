@@ -7,7 +7,7 @@ import pytest
 
 from r2inspect import core, pipeline, registry, utils
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.utils import memory_manager
+import r2inspect.infrastructure.memory as memory_manager
 
 
 @pytest.mark.unit

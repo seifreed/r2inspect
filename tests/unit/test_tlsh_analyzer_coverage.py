@@ -54,7 +54,7 @@ def test_tlsh_is_available_returns_bool():
 
 
 def test_tlsh_available_constant_matches_is_available():
-    assert TLSH_AVAILABLE == TLSHAnalyzer.is_available()
+    assert TLSHAnalyzer.is_available() == TLSH_AVAILABLE
 
 
 # --- get_similarity_level ---
@@ -799,6 +799,7 @@ def test_find_similar_sections_with_precomputed_hashes(tmp_path):
 
     # Pre-calculate real TLSH hashes from actual data
     import tlsh as tlsh_lib
+
     data1 = bytes(range(256)) * 4
     data2 = bytes(range(256)) * 4  # Same data = same hash
     h1 = tlsh_lib.hash(data1)
@@ -837,6 +838,7 @@ def test_find_similar_sections_with_none_section_hash(tmp_path):
     f.write_bytes(bytes(range(256)) * 20)
 
     import tlsh as tlsh_lib
+
     data = bytes(range(256)) * 4
     h = tlsh_lib.hash(data)
 
@@ -845,9 +847,9 @@ def test_find_similar_sections_with_none_section_hash(tmp_path):
 
     # Mix of None and valid hashes to exercise both continue branches
     section_hashes = {
-        ".text": h,      # Valid hash
-        ".data": None,   # None hash -> line 302 continue
-        ".bss": None,    # Also None
+        ".text": h,  # Valid hash
+        ".data": None,  # None hash -> line 302 continue
+        ".bss": None,  # Also None
     }
     adapter = FakeAdapter()
     analyzer = SectionHashTLSHAnalyzer(
@@ -865,6 +867,7 @@ def test_find_similar_sections_first_hash_none(tmp_path):
     f.write_bytes(bytes(range(256)) * 20)
 
     import tlsh as tlsh_lib
+
     data = bytes(range(256)) * 4
     h = tlsh_lib.hash(data)
 
@@ -872,8 +875,8 @@ def test_find_similar_sections_first_hash_none(tmp_path):
         pytest.skip("Could not compute TLSH hash")
 
     section_hashes = {
-        ".null": None,   # First section has None -> line 297 continue
-        ".text": h,      # Second section valid
+        ".null": None,  # First section has None -> line 297 continue
+        ".text": h,  # Second section valid
     }
     adapter = FakeAdapter()
     analyzer = SectionHashTLSHAnalyzer(

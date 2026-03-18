@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 
 
 # ---------------------------------------------------------------------------
@@ -46,9 +46,7 @@ class SimplePipeline:
     def __init__(self) -> None:
         self.progress_calls: list[str] = []
 
-    def execute_with_progress(
-        self, callback: Any, options: dict[str, Any]
-    ) -> dict[str, Any]:
+    def execute_with_progress(self, callback: Any, options: dict[str, Any]) -> dict[str, Any]:
         callback("step1")
         return {"pipeline_result": True}
 

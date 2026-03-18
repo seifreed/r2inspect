@@ -6,7 +6,9 @@ from typing import Any
 
 import pytest
 
-from r2inspect.utils import circuit_breaker, rate_limiter, retry_manager
+import r2inspect.infrastructure.circuit_breaker as circuit_breaker
+import r2inspect.infrastructure.rate_limiter as rate_limiter
+import r2inspect.infrastructure.retry_manager as retry_manager
 
 
 class _R2Stub:

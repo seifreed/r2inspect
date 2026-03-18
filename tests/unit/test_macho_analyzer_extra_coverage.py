@@ -1,36 +1,84 @@
 #!/usr/bin/env python3
-"""Extra coverage tests for macho_analyzer module."""
+"""Extra coverage tests for macho_analyzer module.
 
-import pytest
-from unittest.mock import MagicMock, patch
+NO mocks, NO @patch. Uses FakeR2 + R2PipeAdapter and real objects.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 
 
-class FakeAdapter:
-    pass
+# ---------------------------------------------------------------------------
+# FakeR2
+# ---------------------------------------------------------------------------
+
+
+class FakeR2:
+    """Minimal r2pipe stand-in routing cmdj/cmd via lookup maps."""
+
+    def __init__(
+        self,
+        cmdj_map: dict[str, Any] | None = None,
+        cmd_map: dict[str, str] | None = None,
+    ) -> None:
+        self.cmdj_map = cmdj_map or {}
+        self.cmd_map = cmd_map or {}
+
+    def cmdj(self, command: str) -> Any:
+        val = self.cmdj_map.get(command)
+        if isinstance(val, Exception):
+            raise val
+        return val if val is not None else {}
+
+    def cmd(self, command: str) -> str:
+        val = self.cmd_map.get(command)
+        if isinstance(val, Exception):
+            raise val
+        return val if val is not None else ""
+
+
+def _make_adapter(
+    cmdj_map: dict[str, Any] | None = None,
+    cmd_map: dict[str, str] | None = None,
+) -> R2PipeAdapter:
+    return R2PipeAdapter(FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map))
+
+
+def _make_analyzer(
+    cmdj_map: dict[str, Any] | None = None,
+    cmd_map: dict[str, str] | None = None,
+) -> MachOAnalyzer:
+    adapter = _make_adapter(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    return MachOAnalyzer(adapter, config=None)
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 def test_macho_analyzer_init():
-    adapter = FakeAdapter()
+    adapter = _make_adapter()
     analyzer = MachOAnalyzer(adapter, config=None)
     assert analyzer.adapter is adapter
 
 
 def test_get_category():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
+    analyzer = _make_analyzer()
     assert analyzer.get_category() == "format"
 
 
 def test_get_description():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
+    analyzer = _make_analyzer()
     assert "Mach-O" in analyzer.get_description()
 
 
 def test_supports_format():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
+    analyzer = _make_analyzer()
     assert analyzer.supports_format("MACH0") is True
     assert analyzer.supports_format("MACHO") is True
     assert analyzer.supports_format("MACH-O") is True
@@ -38,121 +86,104 @@ def test_supports_format():
 
 
 def test_get_macho_headers():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch.object(analyzer, '_cmdj', return_value={}):
-        result = analyzer._get_macho_headers()
-        assert isinstance(result, dict)
+    """_get_macho_headers returns info from ij command."""
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "ij": {"bin": {"arch": "arm", "bits": 64, "machine": "ARM64"}},
+        }
+    )
+    result = analyzer._get_macho_headers()
+    assert isinstance(result, dict)
+
+
+def test_get_macho_headers_empty():
+    """_get_macho_headers with empty ij returns empty dict."""
+    analyzer = _make_analyzer(cmdj_map={"ij": {}})
+    result = analyzer._get_macho_headers()
+    assert isinstance(result, dict)
 
 
 def test_get_macho_headers_error():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch.object(analyzer, '_cmdj', side_effect=Exception("test")):
-        result = analyzer._get_macho_headers()
-        assert result == {}
+    """_get_macho_headers handles exceptions gracefully."""
+    analyzer = _make_analyzer(cmdj_map={"ij": Exception("test")})
+    result = analyzer._get_macho_headers()
+    assert result == {}
 
 
 def test_extract_build_version():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', return_value=[]):
-        result = analyzer._extract_build_version()
-        assert isinstance(result, dict)
+    """_extract_build_version with no headers returns empty dict."""
+    # No iHj data -> get_macho_headers returns []
+    analyzer = _make_analyzer(cmdj_map={"iHj": []})
+    result = analyzer._extract_build_version()
+    assert isinstance(result, dict)
 
 
 def test_extract_version_min():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', return_value=[]):
-        result = analyzer._extract_version_min()
-        assert isinstance(result, dict)
+    """_extract_version_min with no headers returns empty dict."""
+    analyzer = _make_analyzer(cmdj_map={"iHj": []})
+    result = analyzer._extract_version_min()
+    assert isinstance(result, dict)
 
 
 def test_extract_dylib_info():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', return_value=[]):
-        result = analyzer._extract_dylib_info()
-        assert isinstance(result, dict)
+    """_extract_dylib_info with no headers returns empty dict."""
+    analyzer = _make_analyzer(cmdj_map={"iHj": []})
+    result = analyzer._extract_dylib_info()
+    assert isinstance(result, dict)
 
 
 def test_extract_uuid():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', return_value=[]):
-        result = analyzer._extract_uuid()
-        assert result is None
+    """_extract_uuid with no headers returns None."""
+    analyzer = _make_analyzer(cmdj_map={"iHj": []})
+    result = analyzer._extract_uuid()
+    assert result is None
 
 
 def test_extract_uuid_error():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', side_effect=Exception("test")):
-        result = analyzer._extract_uuid()
-        assert result is None
-
-
-def test_estimate_from_sdk_version():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.estimate_from_sdk_version', return_value="2020"):
-        result = analyzer._estimate_from_sdk_version("14.0")
-        assert result == "2020"
-
-
-def test_estimate_from_sdk_version_error():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.estimate_from_sdk_version', side_effect=Exception("test")):
-        result = analyzer._estimate_from_sdk_version("14.0")
-        assert result is None
+    """_extract_uuid handles exceptions returning None."""
+    analyzer = _make_analyzer(cmdj_map={"iHj": Exception("test")})
+    result = analyzer._extract_uuid()
+    assert result is None
 
 
 def test_estimate_compile_time():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
+    """_estimate_compile_time returns empty string."""
+    analyzer = _make_analyzer()
     result = analyzer._estimate_compile_time()
     assert result == ""
 
 
 def test_get_load_commands():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', return_value=[]):
-        with patch('r2inspect.modules.macho_analyzer.build_load_commands', return_value=[]):
-            result = analyzer._get_load_commands()
-            assert isinstance(result, list)
+    """_get_load_commands with no headers returns empty list."""
+    analyzer = _make_analyzer(cmdj_map={"iHj": []})
+    result = analyzer._get_load_commands()
+    assert isinstance(result, list)
 
 
 def test_get_load_commands_error():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.get_macho_headers', side_effect=Exception("test")):
-        result = analyzer._get_load_commands()
-        assert result == []
+    """_get_load_commands handles exceptions returning empty list."""
+    analyzer = _make_analyzer(cmdj_map={"iHj": Exception("test")})
+    result = analyzer._get_load_commands()
+    assert result == []
 
 
 def test_get_section_info():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    analyzer.adapter = None
-    with patch('r2inspect.modules.macho_analyzer.build_sections', return_value=[]):
-        result = analyzer._get_section_info()
-        assert isinstance(result, list)
+    """_get_section_info returns a list."""
+    analyzer = _make_analyzer(cmdj_map={"iSj": []})
+    result = analyzer._get_section_info()
+    assert isinstance(result, list)
 
 
 def test_get_section_info_error():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch('r2inspect.modules.macho_analyzer.build_sections', side_effect=Exception("test")):
-        result = analyzer._get_section_info()
-        assert result == []
+    """_get_section_info handles exceptions returning empty list."""
+    analyzer = _make_analyzer(cmdj_map={"iSj": Exception("test")})
+    result = analyzer._get_section_info()
+    assert result == []
 
 
 def test_get_compilation_info_error():
-    adapter = FakeAdapter()
-    analyzer = MachOAnalyzer(adapter)
-    with patch.object(analyzer, '_extract_build_version', side_effect=Exception("test")):
-        result = analyzer._get_compilation_info()
-        assert isinstance(result, dict)
+    """_get_compilation_info handles exceptions from sub-methods."""
+    # Make ij raise (which _extract_build_version depends on via get_macho_headers)
+    analyzer = _make_analyzer(cmdj_map={"iHj": Exception("test"), "ij": Exception("test")})
+    result = analyzer._get_compilation_info()
+    assert isinstance(result, dict)

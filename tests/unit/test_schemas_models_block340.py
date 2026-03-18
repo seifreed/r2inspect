@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -279,7 +279,7 @@ def test_results_dataclasses_from_dict_and_summary() -> None:
         "crypto": {"algorithms": [{"name": "aes"}]},
         "indicators": [{"type": "Packer", "severity": "High"}],
         "error": "",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.0,
     }
 
@@ -311,7 +311,7 @@ def test_results_dataclasses_from_dict_and_summary() -> None:
     empty_result = results_schema.from_dict({})
     assert empty_result.file_info.name == ""
 
-    dt = datetime.utcnow()
+    dt = datetime.now(UTC)
     result_dt = results_schema.from_dict({"timestamp": dt})
     assert result_dt.timestamp == dt
 

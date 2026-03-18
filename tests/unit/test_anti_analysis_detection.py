@@ -1,21 +1,42 @@
 from __future__ import annotations
 
-from unittest.mock import Mock
-
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 
 
-def test_anti_debug_with_is_debugger_present_api():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "IsDebuggerPresent", "plt": 0x1000, "libname": "kernel32.dll"}]
-    )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
+class FakeR2:
+    def __init__(self, cmdj_map=None, cmd_map=None):
+        self.cmdj_map = cmdj_map or {}
+        self.cmd_map = cmd_map or {}
 
-    detector = AntiAnalysisDetector(adapter, None)
+    def cmdj(self, command):
+        return self.cmdj_map.get(command, {})
+
+    def cmd(self, command):
+        return self.cmd_map.get(command, "")
+
+
+def _make_detector(imports=None, strings=None, cmd_map=None):
+    """Create an AntiAnalysisDetector with a real R2PipeAdapter backed by FakeR2."""
+    cmdj_map = {}
+    if imports is not None:
+        cmdj_map["iij"] = imports
+    else:
+        cmdj_map["iij"] = []
+    if strings is not None:
+        cmdj_map["izzj"] = strings
+    else:
+        cmdj_map["izzj"] = []
+
+    fake = FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map or {})
+    adapter = R2PipeAdapter(fake)
+    return AntiAnalysisDetector(adapter, None)
+
+
+def test_anti_debug_with_is_debugger_present_api():
+    detector = _make_detector(
+        imports=[{"name": "IsDebuggerPresent", "plt": 0x1000, "libname": "kernel32.dll"}],
+    )
     result = detector.detect()
 
     assert result["anti_debug"] is True
@@ -25,53 +46,44 @@ def test_anti_debug_with_is_debugger_present_api():
 
 
 def test_anti_debug_with_check_remote_debugger_api():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[
-            {"name": "CheckRemoteDebuggerPresent", "plt": 0x2000, "libname": "kernel32.dll"}
-        ]
+    detector = _make_detector(
+        imports=[{"name": "CheckRemoteDebuggerPresent", "plt": 0x2000, "libname": "kernel32.dll"}],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_debug"] is True
 
 
 def test_anti_debug_with_nt_query_information():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "NtQueryInformationProcess", "plt": 0x3000, "libname": "ntdll.dll"}]
+    detector = _make_detector(
+        imports=[{"name": "NtQueryInformationProcess", "plt": 0x3000, "libname": "ntdll.dll"}],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_debug"] is True
 
 
 def test_anti_vm_with_vmware_strings():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(
-        return_value=[
-            {"string": "VMware", "vaddr": 0x1000},
-            {"string": "vmtoolsd.exe", "vaddr": 0x2000},
-        ]
+    detector = _make_detector(
+        strings=[
+            {
+                "string": "VMware",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 6,
+                "section": ".data",
+                "paddr": 0x1000,
+            },
+            {
+                "string": "vmtoolsd.exe",
+                "vaddr": 0x2000,
+                "type": "ascii",
+                "length": 12,
+                "section": ".data",
+                "paddr": 0x2000,
+            },
+        ],
     )
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_vm"] is True
@@ -81,52 +93,70 @@ def test_anti_vm_with_vmware_strings():
 
 
 def test_anti_vm_with_virtualbox_strings():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(
-        return_value=[
-            {"string": "VirtualBox", "vaddr": 0x1000},
-            {"string": "VBoxService", "vaddr": 0x2000},
-        ]
+    detector = _make_detector(
+        strings=[
+            {
+                "string": "VirtualBox",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 10,
+                "section": ".data",
+                "paddr": 0x1000,
+            },
+            {
+                "string": "VBoxService",
+                "vaddr": 0x2000,
+                "type": "ascii",
+                "length": 11,
+                "section": ".data",
+                "paddr": 0x2000,
+            },
+        ],
     )
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_vm"] is True
 
 
 def test_anti_sandbox_with_cuckoo_string():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(return_value=[{"string": "cuckoo", "vaddr": 0x1000}])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
+    detector = _make_detector(
+        strings=[
+            {
+                "string": "cuckoo",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 6,
+                "section": ".data",
+                "paddr": 0x1000,
+            }
+        ],
+    )
     result = detector.detect()
 
     assert result["anti_sandbox"] is True
 
 
 def test_anti_sandbox_with_sandbox_indicator():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(
-        return_value=[
-            {"string": "sandbox", "vaddr": 0x1000},
-            {"string": "virus.exe", "vaddr": 0x2000},
-        ]
+    detector = _make_detector(
+        strings=[
+            {
+                "string": "sandbox",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 7,
+                "section": ".data",
+                "paddr": 0x1000,
+            },
+            {
+                "string": "virus.exe",
+                "vaddr": 0x2000,
+                "type": "ascii",
+                "length": 9,
+                "section": ".data",
+                "paddr": 0x2000,
+            },
+        ],
     )
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_sandbox"] is True
@@ -137,139 +167,109 @@ def test_anti_sandbox_with_sandbox_indicator():
 
 
 def test_timing_checks_with_get_tick_count():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "GetTickCount", "plt": 0x1000, "libname": "kernel32.dll"}]
+    detector = _make_detector(
+        imports=[{"name": "GetTickCount", "plt": 0x1000, "libname": "kernel32.dll"}],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["timing_checks"] is True
     assert any("Timing API Calls" in str(e) for e in result["detection_details"]["timing_evidence"])
 
 
-def test_timing_checks_with_query_performance_counter():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "QueryPerformanceCounter", "plt": 0x2000, "libname": "kernel32.dll"}]
+def test_anti_analysis_evidence_accepts_library_key() -> None:
+    detector = _make_detector(
+        imports=[
+            {"name": "IsDebuggerPresent", "plt": 0x1000, "library": "kernel32.dll"},
+            {"name": "GetTickCount", "plt": 0x2000, "library": "kernel32.dll"},
+        ],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
+    result = detector.detect()
 
-    detector = AntiAnalysisDetector(adapter, None)
+    anti_debug_evidence = result["detection_details"]["anti_debug_evidence"]
+    timing_evidence = result["detection_details"]["timing_evidence"][0]["apis"]
+
+    assert anti_debug_evidence[0]["library"] == "kernel32.dll"
+    assert timing_evidence[0]["library"] == "kernel32.dll"
+
+
+def test_timing_checks_with_query_performance_counter():
+    detector = _make_detector(
+        imports=[{"name": "QueryPerformanceCounter", "plt": 0x2000, "libname": "kernel32.dll"}],
+    )
     result = detector.detect()
 
     assert result["timing_checks"] is True
 
 
 def test_suspicious_api_virtual_alloc():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "VirtualAlloc", "plt": 0x1000, "libname": "kernel32.dll"}]
+    detector = _make_detector(
+        imports=[{"name": "VirtualAlloc", "plt": 0x1000, "libname": "kernel32.dll"}],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert len(result["suspicious_apis"]) > 0
 
 
 def test_suspicious_api_create_process():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "CreateProcess", "plt": 0x2000, "libname": "kernel32.dll"}]
+    detector = _make_detector(
+        imports=[{"name": "CreateProcess", "plt": 0x2000, "libname": "kernel32.dll"}],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert len(result["suspicious_apis"]) > 0
 
 
 def test_suspicious_api_registry_operations():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[
+    detector = _make_detector(
+        imports=[
             {"name": "RegSetValue", "plt": 0x3000, "libname": "advapi32.dll"},
             {"name": "RegOpenKey", "plt": 0x3100, "libname": "advapi32.dll"},
-        ]
+        ],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert len(result["suspicious_apis"]) >= 2
 
 
 def test_suspicious_api_network_operations():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[
+    detector = _make_detector(
+        imports=[
             {"name": "socket", "plt": 0x4000, "libname": "ws2_32.dll"},
             {"name": "connect", "plt": 0x4100, "libname": "ws2_32.dll"},
-        ]
+        ],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert len(result["suspicious_apis"]) >= 2
 
 
 def test_injection_apis_detection():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[
+    detector = _make_detector(
+        imports=[
             {"name": "VirtualAllocEx", "plt": 0x1000, "libname": "kernel32.dll"},
             {"name": "WriteProcessMemory", "plt": 0x2000, "libname": "kernel32.dll"},
             {"name": "CreateRemoteThread", "plt": 0x3000, "libname": "kernel32.dll"},
-        ]
+        ],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert len(result["evasion_techniques"]) > 0 or len(result["suspicious_apis"]) > 0
 
 
 def test_no_anti_analysis_detected():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[{"name": "printf", "plt": 0x1000, "libname": "msvcrt.dll"}]
+    detector = _make_detector(
+        imports=[{"name": "printf", "plt": 0x1000, "libname": "msvcrt.dll"}],
+        strings=[
+            {
+                "string": "Hello World",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 11,
+                "section": ".data",
+                "paddr": 0x1000,
+            }
+        ],
     )
-    adapter.get_strings = Mock(return_value=[{"string": "Hello World", "vaddr": 0x1000}])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_debug"] is False
@@ -279,21 +279,14 @@ def test_no_anti_analysis_detected():
 
 
 def test_multiple_anti_debug_apis():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[
+    detector = _make_detector(
+        imports=[
             {"name": "IsDebuggerPresent", "plt": 0x1000, "libname": "kernel32.dll"},
             {"name": "CheckRemoteDebuggerPresent", "plt": 0x2000, "libname": "kernel32.dll"},
             {"name": "NtQueryInformationProcess", "plt": 0x3000, "libname": "ntdll.dll"},
             {"name": "OutputDebugStringA", "plt": 0x4000, "libname": "kernel32.dll"},
-        ]
+        ],
     )
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_debug"] is True
@@ -301,21 +294,42 @@ def test_multiple_anti_debug_apis():
 
 
 def test_combined_anti_vm_indicators():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(
-        return_value=[
-            {"string": "VMware", "vaddr": 0x1000},
-            {"string": "VirtualBox", "vaddr": 0x2000},
-            {"string": "qemu", "vaddr": 0x3000},
-            {"string": "bochs", "vaddr": 0x4000},
-        ]
+    detector = _make_detector(
+        strings=[
+            {
+                "string": "VMware",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 6,
+                "section": ".data",
+                "paddr": 0x1000,
+            },
+            {
+                "string": "VirtualBox",
+                "vaddr": 0x2000,
+                "type": "ascii",
+                "length": 10,
+                "section": ".data",
+                "paddr": 0x2000,
+            },
+            {
+                "string": "qemu",
+                "vaddr": 0x3000,
+                "type": "ascii",
+                "length": 4,
+                "section": ".data",
+                "paddr": 0x3000,
+            },
+            {
+                "string": "bochs",
+                "vaddr": 0x4000,
+                "type": "ascii",
+                "length": 5,
+                "section": ".data",
+                "paddr": 0x4000,
+            },
+        ],
     )
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_vm"] is True
@@ -325,22 +339,31 @@ def test_combined_anti_vm_indicators():
 
 
 def test_combined_evasion_techniques():
-    adapter = Mock()
-    adapter.get_imports = Mock(
-        return_value=[
+    detector = _make_detector(
+        imports=[
             {"name": "IsDebuggerPresent", "plt": 0x1000, "libname": "kernel32.dll"},
             {"name": "GetTickCount", "plt": 0x2000, "libname": "kernel32.dll"},
             {"name": "VirtualAllocEx", "plt": 0x3000, "libname": "kernel32.dll"},
-        ]
+        ],
+        strings=[
+            {
+                "string": "VMware",
+                "vaddr": 0x1000,
+                "type": "ascii",
+                "length": 6,
+                "section": ".data",
+                "paddr": 0x1000,
+            },
+            {
+                "string": "sandbox",
+                "vaddr": 0x2000,
+                "type": "ascii",
+                "length": 7,
+                "section": ".data",
+                "paddr": 0x2000,
+            },
+        ],
     )
-    adapter.get_strings = Mock(
-        return_value=[{"string": "VMware", "vaddr": 0x1000}, {"string": "sandbox", "vaddr": 0x2000}]
-    )
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
     result = detector.detect()
 
     assert result["anti_debug"] is True
@@ -351,14 +374,7 @@ def test_combined_evasion_techniques():
 
 
 def test_empty_imports():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
+    detector = _make_detector()
     result = detector.detect()
 
     assert result["anti_debug"] is False
@@ -367,14 +383,7 @@ def test_empty_imports():
 
 
 def test_detection_details_structure():
-    adapter = Mock()
-    adapter.get_imports = Mock(return_value=[])
-    adapter.get_strings = Mock(return_value=[])
-    adapter.cmdj = Mock(return_value=[])
-    adapter.cmd = Mock(return_value="")
-    adapter.search_text = Mock(return_value="")
-
-    detector = AntiAnalysisDetector(adapter, None)
+    detector = _make_detector()
     result = detector.detect()
 
     assert "detection_details" in result

@@ -8,7 +8,7 @@ import struct
 # ---------------------------------------------------------------------------
 # rich_header_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.rich_header_domain import (
+from r2inspect.domain.services.rich_header import (
     build_rich_header_result,
     calculate_richpe_hash,
     decode_rich_header,
@@ -92,6 +92,7 @@ from r2inspect.modules.import_domain import (
 # ===========================================================================
 # rich_header_domain tests
 # ===========================================================================
+
 
 def test_parse_clear_data_entries_normal() -> None:
     prodid = (5 << 16) | 0x0082  # build 5, product 0x82
@@ -184,9 +185,13 @@ def test_validate_decoded_entries_empty() -> None:
 
 
 def test_validate_decoded_entries_all_invalid() -> None:
-    entries = [{"prodid": 0xFFFF0001, "count": 99999}]
-    # prodid >= 0x10000 is invalid
+    entries = [{"prodid": 0x1_0000_0000, "count": 99999}]
     assert validate_decoded_entries(entries) is False
+
+
+def test_validate_decoded_entries_composite_prodid_valid() -> None:
+    entries = [{"prodid": 0xFFFF0001, "count": 5}]
+    assert validate_decoded_entries(entries) is True
 
 
 def test_build_rich_header_result_basic() -> None:
@@ -215,6 +220,11 @@ def test_calculate_richpe_hash_from_richpe_hash_field() -> None:
     assert result == "precomputed_hash"
 
 
+def test_find_suspicious_registry_accepts_short_roots() -> None:
+    result = find_suspicious(["HKLM\\Software", "HKCU\\Software\\App", "SYSTEM\\CurrentControlSet"])
+    assert [item["type"] for item in result].count("registry") == 3
+
+
 def test_calculate_richpe_hash_from_entries() -> None:
     entries = [{"prodid": 0x82, "count": 2}]
     result = calculate_richpe_hash({"entries": entries})
@@ -233,6 +243,7 @@ def test_calculate_richpe_hash_empty_dict() -> None:
 # ===========================================================================
 # compiler_domain tests
 # ===========================================================================
+
 
 def test_calculate_compiler_score_no_matches() -> None:
     sigs = {"strings": ["__gcc_personality"], "imports": ["libgcc"], "sections": [".bss"]}
@@ -282,8 +293,20 @@ def test_detection_method_low_confidence_dotnet() -> None:
 
 
 def test_detection_method_various_compilers() -> None:
-    for compiler in ["AutoIt", "NSIS", "InnoSetup", "PyInstaller", "cx_Freeze",
-                     "Nim", "Zig", "Swift", "TinyCC", "NodeJS", "FASM", "Unknown"]:
+    for compiler in [
+        "AutoIt",
+        "NSIS",
+        "InnoSetup",
+        "PyInstaller",
+        "cx_Freeze",
+        "Nim",
+        "Zig",
+        "Swift",
+        "TinyCC",
+        "NodeJS",
+        "FASM",
+        "Unknown",
+    ]:
         result = detection_method(compiler, 0.5)
         assert isinstance(result, str) and len(result) > 0
 
@@ -353,6 +376,7 @@ def test_detect_clang_version_unknown() -> None:
 # ===========================================================================
 # elf_domain tests
 # ===========================================================================
+
 
 def test_parse_comment_compiler_info_gcc() -> None:
     comment = "GCC: (Ubuntu 9.4.0-1ubuntu1~20.04) 9.4.0"
@@ -482,6 +506,7 @@ def test_find_section_by_name_none_list() -> None:
 # macho_domain tests
 # ===========================================================================
 
+
 def test_estimate_from_sdk_version_known() -> None:
     result = estimate_from_sdk_version("10.15.0")
     assert result is not None
@@ -566,8 +591,15 @@ def test_build_load_commands_missing_keys() -> None:
 
 def test_build_sections_normal() -> None:
     sections_info = [
-        {"name": "__text", "segment": "__TEXT", "type": "S_REGULAR",
-         "flags": "", "size": 4096, "vaddr": 0x1000, "paddr": 0},
+        {
+            "name": "__text",
+            "segment": "__TEXT",
+            "type": "S_REGULAR",
+            "flags": "",
+            "size": 4096,
+            "vaddr": 0x1000,
+            "paddr": 0,
+        },
     ]
     result = build_sections(sections_info)
     assert len(result) == 1
@@ -588,6 +620,7 @@ def test_build_sections_missing_keys() -> None:
 # ===========================================================================
 # pe_info_domain tests
 # ===========================================================================
+
 
 def test_determine_pe_file_type_dll_from_desc() -> None:
     bin_info = {"class": "PE32"}
@@ -719,6 +752,7 @@ def test_characteristics_from_bin_empty() -> None:
 # string_domain tests
 # ===========================================================================
 
+
 def test_filter_strings_normal() -> None:
     strings = ["hello", "hi", "a" * 200, "valid_string"]
     result = filter_strings(strings, 4, 100)
@@ -772,7 +806,7 @@ def test_xor_string_roundtrip() -> None:
 def test_build_xor_matches_with_hit() -> None:
     search_string = "A"  # 0x41
     # key=1 XOR 0x41 = 0x40 = '@'
-    expected_hex = "@".encode().hex()
+    expected_hex = b"@".hex()
 
     def fake_search(pattern: str) -> str:
         if pattern == expected_hex:
@@ -790,6 +824,7 @@ def test_build_xor_matches_no_hits() -> None:
 
 def test_decode_base64_valid() -> None:
     import base64 as b64
+
     encoded = b64.b64encode(b"Hello World!").decode()
     result = decode_base64(encoded)
     assert result is not None
@@ -861,6 +896,7 @@ def test_find_suspicious_no_match() -> None:
 # import_domain tests
 # ===========================================================================
 
+
 def test_assess_api_risk_empty_categories() -> None:
     suspicious, score = assess_api_risk({})
     assert suspicious == []
@@ -897,6 +933,7 @@ def test_assess_api_risk_registry_trigger() -> None:
 
 def test_assess_api_risk_network_trigger() -> None:
     from r2inspect.modules.import_domain import NETWORK_CATEGORY
+
     categories = {NETWORK_CATEGORY: {"count": 3, "apis": ["InternetOpen"] * 3}}
     suspicious, score = assess_api_risk(categories)
     assert score >= 10

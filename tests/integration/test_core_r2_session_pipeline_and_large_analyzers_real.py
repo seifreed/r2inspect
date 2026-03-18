@@ -7,7 +7,7 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.core.pipeline_builder import PipelineBuilder
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnalyzer
 from r2inspect.modules.function_analyzer import FunctionAnalyzer

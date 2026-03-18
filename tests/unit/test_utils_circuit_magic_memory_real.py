@@ -7,14 +7,14 @@ import pytest
 
 from r2inspect.config import Config
 from r2inspect.factory import create_inspector
-from r2inspect.utils import magic_detector
-from r2inspect.utils.circuit_breaker import (
+import r2inspect.infrastructure.magic_detector as magic_detector
+from r2inspect.infrastructure.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerError,
     CircuitState,
     R2CommandCircuitBreaker,
 )
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,

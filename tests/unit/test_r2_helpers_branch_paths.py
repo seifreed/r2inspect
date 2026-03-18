@@ -96,6 +96,7 @@ class ErrorR2:
 
 class NoCmdR2:
     """r2-like object that has no cmd method."""
+
     pass
 
 
@@ -124,16 +125,39 @@ def test_safe_cmdj_non_json_returns_default():
 
 def test_safe_cmdj_valid_json_returns_parsed():
     import json
+
     data = {"format": "ELF", "arch": "x86_64"}
     r2 = FakeR2(cmd_result=json.dumps(data))
     result = safe_cmdj(r2, "ij", {})
     assert result == data
 
 
+def test_safe_cmdj_prefers_native_cmdj_result_when_available():
+    class NativeR2:
+        def cmdj(self, command: str) -> Any:
+            return {"native": True, "command": command}
+
+        def cmd(self, command: str) -> str:
+            return '{"fallback": false}'
+
+    r2 = NativeR2()
+    result = safe_cmdj(r2, "ij", {})
+    assert result["native"] is True
+    assert result["command"] == "ij"
+
+
 def test_safe_cmdj_exception_returns_default():
     r2 = ErrorR2()
     result = safe_cmdj(r2, "aflj", [])
     assert result == []
+
+
+def test_safe_cmdj_exception_emits_debug_log(caplog: pytest.LogCaptureFixture):
+    r2 = ErrorR2()
+    with caplog.at_level("DEBUG"):
+        result = safe_cmdj(r2, "aflj", [])
+    assert result == []
+    assert "Native cmdj failed for aflj" in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -524,6 +548,12 @@ def test_maybe_use_adapter_none_returns_none():
     assert _maybe_use_adapter(None, "aflj") is None
 
 
+def test_maybe_use_adapter_ignores_mock_like_module_adapters():
+    FakeMockAdapter = type("FakeMockAdapter", (), {"__module__": "unittest.mock"})
+    adapter = FakeMockAdapter()
+    assert _maybe_use_adapter(adapter, "ij") is None
+
+
 def test_maybe_use_adapter_search_path():
     result = _maybe_use_adapter(SearchAdapter(), "/xj DEAD")
     assert result is not None
@@ -582,6 +612,7 @@ def test_cmdj_fallback_no_cmd_attr_returns_default():
 
 def test_cmdj_fallback_with_valid_r2():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps({"key": "val"}))
     result = _cmdj_fallback(r2, "ij", {})
     assert result == {"key": "val"}
@@ -642,16 +673,19 @@ def test_cmd_list_returns_empty_when_result_is_dict():
 
 def test_select_json_policy_aaa_is_analysis():
     from r2inspect.error_handling.presets import R2_ANALYSIS_POLICY
+
     assert _select_json_policy("aaa", None) is R2_ANALYSIS_POLICY
 
 
 def test_select_json_policy_list_default():
     from r2inspect.error_handling.presets import R2_JSON_LIST_POLICY
+
     assert _select_json_policy("iij", []) is R2_JSON_LIST_POLICY
 
 
 def test_select_json_policy_dict_default():
     from r2inspect.error_handling.presets import R2_JSON_DICT_POLICY
+
     assert _select_json_policy("ij", None) is R2_JSON_DICT_POLICY
 
 
@@ -688,7 +722,7 @@ def test_parse_section_header_unknown_with_no_current():
 def test_parse_key_value_pair_hex_value():
     result: dict = {"nt_headers": {}, "file_header": {}, "optional_header": {}}
     _parse_key_value_pair("Magic: 0x20b", result, "optional_header")
-    assert result["optional_header"]["Magic"] == 0x20b
+    assert result["optional_header"]["Magic"] == 0x20B
 
 
 def test_parse_key_value_pair_string_value():
@@ -779,7 +813,7 @@ def test_parse_pe_header_text_parses_all_sections():
     assert result is not None
     assert result["nt_headers"]["Signature"] == 0x4550
     assert result["file_header"]["Machine"] == 0x8664
-    assert result["optional_header"]["Magic"] == 0x20b
+    assert result["optional_header"]["Magic"] == 0x20B
 
 
 def test_parse_pe_header_text_skips_blank_lines():
@@ -791,7 +825,7 @@ def test_parse_pe_header_text_skips_blank_lines():
 
     result = parse_pe_header_text(R2())
     assert result is not None
-    assert result["file_header"]["Machine"] == 0x14c
+    assert result["file_header"]["Machine"] == 0x14C
 
 
 def test_parse_pe_header_text_no_section_header_skips_kv():
@@ -823,7 +857,7 @@ def test_get_headers_json_with_list_result():
 def test_get_headers_json_with_dict_result_wraps_in_list():
     class R2WithDictHeaders:
         def get_headers_json(self):
-            return {"name": "Magic", "value": 0x10b}
+            return {"name": "Magic", "value": 0x10B}
 
     result = _get_headers_json(R2WithDictHeaders())
     assert isinstance(result, list)
@@ -849,6 +883,7 @@ def test_get_headers_json_truthy_non_list_non_dict_returns_none():
 
 def test_get_headers_json_via_cmdj_fallback():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps([{"name": "Signature", "value": 0x4550}]))
     result = _get_headers_json(r2)
     assert result == [{"name": "Signature", "value": 0x4550}]
@@ -1052,6 +1087,7 @@ def test_safe_cmd_returns_default_on_exception():
 
 def test_safe_cmd_list_valid_json():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps([{"n": "f"}]))
     result = safe_cmd_list(r2, "aflj")
     assert result == [{"n": "f"}]
@@ -1063,6 +1099,7 @@ def test_safe_cmd_list_empty_on_error():
 
 def test_safe_cmd_dict_valid_json():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps({"format": "ELF"}))
     result = safe_cmd_dict(r2, "ij")
     assert result == {"format": "ELF"}
@@ -1085,9 +1122,20 @@ def test_safe_cmdj_any_uses_cmdj():
 
 def test_safe_cmdj_any_falls_back_when_cmdj_raises():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps({"fallback": True}), json_result=None)
     result = safe_cmdj_any(r2, "ij", {})
     assert result == {"fallback": True}
+
+
+def test_safe_cmdj_any_logs_cmdj_failure(caplog: pytest.LogCaptureFixture):
+    import json
+
+    r2 = FakeR2(cmd_result=json.dumps({"fallback": True}), json_result=None)
+    with caplog.at_level("DEBUG"):
+        result = safe_cmdj_any(r2, "ij", {})
+    assert result == {"fallback": True}
+    assert "safe_cmdj_any cmdj failed for ij" in caplog.text
 
 
 def test_safe_cmdj_any_no_cmdj_method():

@@ -4,7 +4,11 @@ import os
 import struct
 from pathlib import Path
 
-from r2inspect.utils.magic_detector import MagicByteDetector, get_file_threat_level
+from r2inspect.infrastructure.magic_detector import (
+    MagicByteDetector,
+    _read_at_offset,
+    get_file_threat_level,
+)
 
 
 def _write_bytes(path: Path, data: bytes) -> None:
@@ -118,6 +122,13 @@ def test_magic_detector_fallback_and_threat_levels(tmp_path: Path) -> None:
     text_threat = tmp_path / "text.bin"
     _write_bytes(text_threat, b"MZ" + b"\x00" * 10)
     assert get_file_threat_level(str(text_threat)) == "Low"
+
+
+def test_magic_detector_read_at_offset_wrapper(tmp_path: Path) -> None:
+    sample = tmp_path / "offset.bin"
+    _write_bytes(sample, b"0123456789abcdef")
+    with sample.open("rb") as handle:
+        assert _read_at_offset(handle, 4, 5) == b"45678"
 
     benign = tmp_path / "benign.bin"
     _write_bytes(benign, b"\x00" * 10)

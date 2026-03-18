@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.utils.analyzer_factory import (
+from r2inspect.core.analyzer_factory import (
     _build_kwargs,
     create_analyzer,
     run_analysis_method,
@@ -154,7 +154,9 @@ def test_create_analyzer_introspection_all_params():
     """create_analyzer uses introspection to pass adapter, config, filename (lines 37-44)."""
     backend = object()
     config = object()
-    inst = create_analyzer(_AdapterConfigFilenameAnalyzer, adapter=backend, config=config, filename="a.bin")
+    inst = create_analyzer(
+        _AdapterConfigFilenameAnalyzer, adapter=backend, config=config, filename="a.bin"
+    )
     assert inst.adapter is backend
     assert inst.config is config
     assert inst.filename == "a.bin"
@@ -192,7 +194,9 @@ def test_create_analyzer_positional_fallback_three_args():
     """create_analyzer uses positional fallback when kwargs raise TypeError (lines 48-62)."""
     backend = object()
     config = object()
-    inst = create_analyzer(_PositionalOnlyAnalyzer, adapter=backend, config=config, filename="c.bin")
+    inst = create_analyzer(
+        _PositionalOnlyAnalyzer, adapter=backend, config=config, filename="c.bin"
+    )
     assert inst.args == (backend, config, "c.bin")
 
 

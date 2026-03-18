@@ -1,0 +1,317 @@
+........................................................................ [ 60%]
+...............................................
+ERROR: Coverage failure: total of 63 is less than fail-under=70
+                                                                         [100%]
+=============================== warnings summary ===============================
+r2inspect/schemas/base.py:10
+  /Users/seifreed/tools/malware/r2inspect/r2inspect/schemas/base.py:10: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AnalysisResultBase(BaseModel):
+
+venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:319: 12 warnings
+  /Users/seifreed/tools/malware/r2inspect/venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:319: PydanticDeprecatedSince20: `json_encoders` is deprecated. See https://docs.pydantic.dev/2.12/concepts/serialization/#custom-serializers for alternatives. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    warnings.warn(
+
+tests/integration/test_cli_analysis_runner_real.py:16
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_cli_analysis_runner_real.py:16: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_cli_batch_output_real_flows.py:12
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_cli_batch_output_real_flows.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = [pytest.mark.requires_r2, pytest.mark.integration]
+
+tests/integration/test_cli_batch_output_real_flows.py:12
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_cli_batch_output_real_flows.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = [pytest.mark.requires_r2, pytest.mark.integration]
+
+tests/integration/test_cli_interactive_flow_real.py:12
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_cli_interactive_flow_real.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_cli_workflows.py:10
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_cli_workflows.py:10: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_core_r2_session_real_branches.py:9
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_core_r2_session_real_branches.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_hashing_and_function_analyzers_exhaustive_real.py:15
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_hashing_and_function_analyzers_exhaustive_real.py:15: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_integration_edge_cases.py:10
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_integration_edge_cases.py:10: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_integration_inspector.py:9
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_integration_inspector.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_large_modules_additional_real_inputs.py:16
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_large_modules_additional_real_inputs.py:16: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_large_modules_real_error_paths.py:16
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_large_modules_real_error_paths.py:16: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_modules_additional_real_fixtures.py:14
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_modules_additional_real_fixtures.py:14: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_modules_more_error_paths_real.py:12
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_modules_more_error_paths_real.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_modules_real_branches_exhaustive.py:9
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_modules_real_branches_exhaustive.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase1_display_batch_processing.py:13
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase1_display_batch_processing.py:13: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase2_pipeline.py:13
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase2_pipeline.py:13: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase2_real_no_mocks_hashing_deep_paths.py:14
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase2_real_no_mocks_hashing_deep_paths.py:14: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase3_real_no_mocks_hashing_similarity_paths.py:15
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase3_real_no_mocks_hashing_similarity_paths.py:15: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase4_format_analyzers.py:17
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase4_format_analyzers.py:17: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase4_real_no_mocks_error_recovery_paths.py:14
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase4_real_no_mocks_error_recovery_paths.py:14: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase5_detection_security.py:17
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase5_detection_security.py:17: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase6_hashing_similarity.py:21
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase6_hashing_similarity.py:21: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase7_metadata_analyzers.py:18
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase7_metadata_analyzers.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_phase9_integration_fixtures.py:15
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_phase9_integration_fixtures.py:15: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+tests/integration/test_pipeline_stages_real.py:25
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_pipeline_stages_real.py:25: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.requires_r2
+
+tests/integration/test_pipeline_stages_real.py:43
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_pipeline_stages_real.py:43: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.requires_r2
+
+tests/integration/test_resource_rich_header_exhaustive_real.py:12
+  /Users/seifreed/tools/malware/r2inspect/tests/integration/test_resource_rich_header_exhaustive_real.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.requires_r2 - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.requires_r2
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /Users/seifreed/tools/malware/r2inspect/.coverage-gate/integration_20260302_000204_1.junit.xml -
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.13.12-final-0 _______________
+
+Name                                                Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------------
+r2inspect/__main__.py                                   7      7     0%   7-16
+r2inspect/__version__.py                                5      0   100%
+r2inspect/abstractions/base_analyzer.py               100     42    58%   131, 197-201, 220, 249, 269, 301, 313-316, 342-344, 356-358, 380-390, 410-412, 426-432, 446-449, 462-465, 478-479
+r2inspect/abstractions/command_helper_mixin.py         14      0   100%
+r2inspect/abstractions/hashing_strategy.py             74     18    76%   36, 39, 42, 92-94, 106-107, 145-151, 155, 289-292, 301, 310
+r2inspect/abstractions/result_builder.py               17      5    71%   36-40
+r2inspect/adapters/file_system.py                      17      3    82%   17, 36-37
+r2inspect/adapters/magic_adapter.py                    24      8    67%   16-17, 22-23, 27, 31, 34-35
+r2inspect/adapters/r2_commands.py                      17     17     0%   4-24
+r2inspect/adapters/r2pipe_adapter.py                   74     21    72%   41, 57, 61-74, 112, 143, 149-154
+r2inspect/adapters/r2pipe_context.py                   14      5    64%   16-19, 25-26
+r2inspect/adapters/r2pipe_queries.py                  223     38    83%   47-49, 343-350, 439-443, 457-461, 517-526, 644-647, 656-665
+r2inspect/adapters/validation.py                      122     59    52%   76-84, 141-152, 167-178, 200, 248, 290, 298, 308-312, 338, 340-355, 380, 382-394
+r2inspect/application/analysis_service.py              47      9    81%   44-48, 53, 57, 63-64
+r2inspect/application/analyzer_runner.py                3      3     0%   4-8
+r2inspect/application/batch_discovery.py               78     57    27%   31-33, 37, 43-45, 55-87, 92-106, 111-123, 128, 133-140, 145
+r2inspect/application/batch_service.py                 42      2    95%   53-54
+r2inspect/application/batch_stats.py                   33      3    91%   11, 22-23
+r2inspect/application/options.py                        4      0   100%
+r2inspect/application/use_cases/analyze_binary.py      15      0   100%
+r2inspect/cli/analysis_runner.py                       48      0   100%
+r2inspect/cli/batch_output.py                         202     85    58%   154-169, 174, 179-184, 191-213, 217-226, 241-255, 259, 317, 337-342, 356, 360, 378, 386, 390-395, 401-409, 421-422, 426-437
+r2inspect/cli/batch_processing.py                     270    171    37%   72-86, 91-98, 115, 124, 129, 133, 137, 141, 145, 152-178, 204-205, 211, 215-216, 222-244, 249-260, 265-301, 306-315, 327-334, 341-355, 365-368, 373-382, 387-397, 402-407, 422-424, 427, 429, 442-447, 462, 467-474, 498-499
+r2inspect/cli/batch_workers.py                         68     11    84%   28, 31-32, 34, 49, 72-75, 133, 136
+r2inspect/cli/commands/analysis_output.py              50      2    96%   31, 50
+r2inspect/cli/commands/analyze_command.py              54     35    35%   69-109, 132-138, 153, 169, 184, 192, 200, 204, 208, 212, 222-231
+r2inspect/cli/commands/base.py                         73     47    36%   35-49, 54-62, 67-75, 120-125, 155, 184-186, 196, 208-212, 232-240
+r2inspect/cli/commands/batch_command.py                58     49    16%   68-117, 140-147, 188-211, 224-234, 254-267, 277-286
+r2inspect/cli/commands/config_command.py               50     40    20%   62-70, 90-108, 122-127, 141-163, 175-180
+r2inspect/cli/commands/interactive_command.py          93     74    20%   72-102, 119-140, 144-154, 166, 186-205, 221-229, 238-242, 251-253, 262-264, 273-275, 284-286, 295-297, 307-316
+r2inspect/cli/commands/version_command.py              12      6    50%   54-55, 59-64
+r2inspect/cli/display.py                                3      0   100%
+r2inspect/cli/display_base.py                         127     35    72%   42, 70, 87-94, 104-105, 110-127, 134-149, 192, 196
+r2inspect/cli/display_sections.py                      10      0   100%
+r2inspect/cli/display_sections_common.py                7      0   100%
+r2inspect/cli/display_sections_file.py                 62      1    98%   85
+r2inspect/cli/display_sections_hashing.py             143     43    70%   39-41, 59-61, 83-99, 103-113, 128-132, 141, 151-154, 169-171, 198
+r2inspect/cli/display_sections_helpers.py             118     15    87%   28, 53, 62-63, 89, 106, 112, 129, 136, 151-154, 159, 168
+r2inspect/cli/display_sections_indicators.py           16      0   100%
+r2inspect/cli/display_sections_metadata.py             45     34    24%   19-35, 39-65
+r2inspect/cli/display_sections_similarity.py          224    110    51%   44-46, 85-89, 126-146, 150-182, 186-196, 203-222, 226-228, 235-243, 247-281, 300-305, 323-325
+r2inspect/cli/display_statistics.py                    41     10    76%   16, 34, 55, 60, 65-72
+r2inspect/cli/interactive.py                           64      0   100%
+r2inspect/cli/presenter.py                             14      2    86%   22-23
+r2inspect/cli/validators.py                           138    138     0%   24-354
+r2inspect/cli_main.py                                  87     87     0%   25-243
+r2inspect/compat/command_helpers.py                     3      3     0%   4-18
+r2inspect/compat/error_handler.py                       3      3     0%   4-20
+r2inspect/compat/r2_helpers.py                         17     17     0%   4-23
+r2inspect/compat/r2_session.py                         15     15     0%   4-22
+r2inspect/config.py                                    92     10    89%   124-126, 145-148, 166, 181, 221, 225
+r2inspect/config_schemas/builder.py                   109     72    34%   24-32, 36-37, 40-41, 44-46, 50-51, 54-55, 58-59, 63-64, 67-68, 71-72, 76-77, 80-81, 84-85, 89-90, 93-94, 97-98, 101-102, 106-107, 110-111, 114-115, 119-121, 124-125, 129-130, 133-134, 137-138, 142-143, 146-147, 150-151, 154-155, 160, 190, 194, 198, 209
+r2inspect/config_schemas/schemas.py                   129     17    87%   20, 22, 24, 38, 52, 76, 78, 92, 94, 108, 113, 161-164, 170, 216
+r2inspect/config_store.py                              24      5    79%   27-29, 39-40
+r2inspect/core/constants.py                            25      0   100%
+r2inspect/core/file_validator.py                       68     25    63%   66-68, 72-74, 77-79, 101-105, 123, 136-137, 140-141, 158-159, 172-176
+r2inspect/core/inspector.py                           102     22    78%   52, 57-59, 64, 76, 85-86, 92, 109, 120-121, 204, 215, 232-242, 249
+r2inspect/core/inspector_helpers.py                   124     21    83%   30, 48, 52, 63-64, 76-79, 82, 85-87, 121-125, 167, 183-184, 220-221
+r2inspect/core/pipeline_builder.py                     25      0   100%
+r2inspect/core/r2_session.py                           15      0   100%
+r2inspect/core/result_aggregator.py                    60     29    52%   30-53, 57-60, 75, 85, 94-100, 104, 108-109, 117, 121-124, 222-227
+r2inspect/domain/results.py                            16      0   100%
+r2inspect/error_handling/classifier.py                190     56    71%   120, 143-152, 170-171, 175, 179, 183, 195, 199, 206, 219-222, 227-239, 283-288, 295, 298-301, 370-374, 401-417, 425-431, 436-440
+r2inspect/error_handling/policies.py                   47     15    68%   66, 69, 72, 75, 78, 92-93, 100, 112-121
+r2inspect/error_handling/presets.py                    31      6    81%   40, 45, 224-242
+r2inspect/error_handling/stats.py                       8      1    88%   22
+r2inspect/error_handling/unified_handler.py           140     42    70%   55-62, 68, 87-89, 107-120, 147, 155-156, 167-172, 207-210, 240-242, 278, 280, 285-286, 307-313
+r2inspect/factory.py                                   32      8    75%   27-30, 44, 64-66
+r2inspect/infrastructure/r2_helpers.py                289     91    69%   67-68, 72-75, 92-94, 105-106, 115-116, 123-124, 136, 139-140, 146, 149-150, 159, 192, 205, 207, 209, 211, 219-220, 222-226, 230, 239, 249, 258, 372-389, 396-402, 409-421, 458, 535-543, 555, 557, 560, 564-575, 600, 605-616
+r2inspect/infrastructure/r2_session.py                216     55    75%   130-131, 135-139, 168-169, 183, 188, 196, 203-204, 212-215, 219-232, 245, 258-259, 266-267, 269-270, 281, 287-290, 310, 322-326, 337, 346, 350-352, 361-362, 373, 382-383
+r2inspect/interfaces/binary_analyzer.py                 1      0   100%
+r2inspect/interfaces/core.py                            3      0   100%
+r2inspect/lazy_loader.py                              130     57    56%   105, 108, 112-114, 159-160, 199-210, 232, 263-268, 285-299, 320-330, 346-348, 391-396, 409-421, 429, 453-456
+r2inspect/lazy_loader_stats.py                         26     16    38%   34-51
+r2inspect/modules/anti_analysis.py                    163     35    79%   92-94, 109-110, 160-162, 173-174, 207-209, 220-221, 246-248, 262-263, 280-281, 297-305, 308, 329-331, 341-342, 353-355, 360, 365
+r2inspect/modules/anti_analysis_domain.py               7      0   100%
+r2inspect/modules/anti_analysis_helpers.py             64      8    88%   20, 53, 62, 75, 88, 104, 106, 138
+r2inspect/modules/authenticode_analyzer.py            182    142    22%   55-87, 97-103, 108-134, 137-140, 144-150, 154-177, 180-185, 188-191, 194-201, 206-219, 222-235, 239-245, 249-256, 260-298, 302-321
+r2inspect/modules/binbloom_analysis.py                 43     10    77%   42, 64-66, 76-78, 110-112
+r2inspect/modules/binbloom_analyzer.py                340    113    67%   24-27, 90, 121, 124, 145-146, 157-159, 180-181, 231, 235, 241-244, 253, 256, 266, 269, 279, 284, 298-300, 305, 334-336, 385-387, 410-411, 442-444, 464-466, 507, 522-524, 532-534, 548-569, 579, 607-674, 693-696
+r2inspect/modules/bindiff_analyzer.py                 208     67    68%   68-70, 79-115, 165-166, 179, 193-201, 211-212, 243, 247, 249, 257-258, 271, 280-284, 317-318, 355-356, 362-369, 373-380, 384-391, 395-400, 404-411
+r2inspect/modules/bindiff_domain.py                   149     99    34%   68-73, 85-91, 95-103, 168-191, 195-211, 215-239, 243-253, 257-277, 287-304
+r2inspect/modules/binlex_analyzer.py                  281     51    82%   72-74, 84-86, 110-112, 128, 151, 228-229, 240-242, 262-263, 277, 292-294, 313, 317-320, 344, 362, 375, 385, 400, 414, 475-476, 482, 488-502, 513, 529-532
+r2inspect/modules/ccbhash_analyzer.py                 195     60    69%   42, 64, 75, 81-85, 139, 151-153, 179-181, 213-215, 244, 252-254, 260-267, 274, 316-318, 332, 346-348, 360-379, 403-405, 431-432, 445-448
+r2inspect/modules/compiler_detector.py                177     55    69%   88, 102-104, 114-126, 156, 187-189, 197-201, 208-210, 217-219, 226-228, 239, 243, 250-252, 279, 283, 287, 291, 295, 303, 307, 311, 316, 322-324, 329, 334, 339, 342-343
+r2inspect/modules/compiler_domain.py                  156     68    56%   26, 32, 34, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 63-71, 77-84, 88-95, 99-106, 110-114, 118-122, 126-132, 165, 183, 190, 199, 222
+r2inspect/modules/compiler_signatures.py                7      0   100%
+r2inspect/modules/crypto_analyzer.py                  177     47    73%   48-50, 75-76, 129-139, 147-150, 210-212, 235-236, 247, 252, 257-258, 264-266, 301-310, 322-324, 329, 334, 339, 350, 354-401
+r2inspect/modules/crypto_constants.py                   1      0   100%
+r2inspect/modules/crypto_domain.py                     41      8    80%   64-65, 73, 80-82, 92, 108
+r2inspect/modules/domain_helpers.py                    36      7    81%   10, 25, 31, 33, 38, 42, 64
+r2inspect/modules/elf_analyzer.py                     148     39    74%   31, 34, 37, 92-93, 105, 115, 121-122, 140-146, 159-160, 173-179, 207-210, 237-240, 250, 252, 257-262, 265, 271, 274, 277
+r2inspect/modules/elf_domain.py                        74     30    59%   11-21, 32, 50-53, 70-78, 91-95
+r2inspect/modules/elf_security.py                      23      4    83%   29-30, 40-42
+r2inspect/modules/elf_security_domain.py               26      5    81%   11, 14-15, 23, 33
+r2inspect/modules/exploit_mitigation_analyzer.py      278    137    51%   77-82, 92-142, 148-149, 156-164, 177-191, 206, 216-219, 222-226, 229-230, 233-235, 245-253, 256, 266-270, 280-297, 302-309, 320-324, 328-332, 337-341, 348-349, 359, 371, 383, 399-420, 435-439, 447, 452, 463-465, 474-482, 491-497, 511-513, 517, 519, 525, 530, 533-535
+r2inspect/modules/exploit_mitigation_rules.py          25      2    92%   42, 93
+r2inspect/modules/export_analyzer.py                   97     21    78%   20, 23, 26, 56-57, 61-62, 83-85, 99, 133-134, 138-139, 163-164, 170-171, 176, 179
+r2inspect/modules/function_analyzer.py                265    132    50%   66-68, 85, 91-93, 100-101, 107-109, 139-146, 164-165, 175-176, 181, 199-210, 225-227, 231-243, 247-260, 264-272, 282, 326-328, 358-360, 394-396, 400-437, 441-459, 463-472, 476-512
+r2inspect/modules/function_domain.py                   29     11    62%   23-32, 37
+r2inspect/modules/impfuzzy_analyzer.py                149     39    74%   54, 69, 78, 120-122, 127-129, 141-143, 148-150, 172-174, 204-205, 214, 223-225, 265, 282-284, 309, 312, 318-319, 346-353
+r2inspect/modules/import_analyzer.py                  217     72    67%   35, 38, 41, 106, 108, 134-135, 168-170, 206, 212-242, 245-266, 269, 277-280, 296-298, 307, 318, 341, 355-357, 404, 421-423, 445, 472, 475, 486, 496-498, 514, 527-529
+r2inspect/modules/import_categories.py                  5      0   100%
+r2inspect/modules/import_domain.py                    104     46    56%   120-121, 123-124, 128-129, 131-132, 134-135, 140-222, 226-231, 245-246, 252, 256, 258
+r2inspect/modules/macho_analyzer.py                   162     60    63%   30, 33, 36, 95-96, 108, 113, 118, 123, 129-130, 145-160, 175-187, 202-216, 228-234, 240-246, 261-262, 274, 277-278
+r2inspect/modules/macho_domain.py                      34     22    35%   21-26, 30-38, 42-48
+r2inspect/modules/macho_security.py                    32      6    81%   30-31, 38, 42, 45, 50
+r2inspect/modules/macho_security_domain.py             30      5    83%   11, 21, 29, 36, 43
+r2inspect/modules/overlay_analyzer.py                 242     64    74%   48, 56, 63-69, 97, 100, 103-104, 112-113, 115, 137-139, 144, 159, 161-166, 177, 186-188, 204-207, 252, 256, 266, 271, 277, 293, 300-313, 349, 363, 370, 387, 398, 415, 425, 437-438, 448-449, 476-477, 480
+r2inspect/modules/packer_detector.py                  133     51    62%   28, 90-91, 112, 120-122, 136-139, 148-151, 157-159, 166-169, 178-206, 210-217, 222, 227, 232, 235, 241-243, 248-249
+r2inspect/modules/packer_helpers.py                    89     23    74%   35, 62, 84, 87-88, 114-117, 122, 131, 148-161
+r2inspect/modules/pe_analyzer.py                       45      6    87%   32, 35, 38, 86, 90, 106
+r2inspect/modules/pe_imports.py                        60     12    80%   14, 25, 29, 33, 42, 55, 82, 88-89, 95-97
+r2inspect/modules/pe_info.py                          108     27    75%   46-47, 54-56, 65-67, 72, 79-81, 98-103, 118-120, 126, 130-132, 144-145
+r2inspect/modules/pe_info_domain.py                    92     32    65%   21, 25, 33, 37, 41-48, 54, 58, 64, 76, 94, 98, 106, 118-123, 127-142, 149
+r2inspect/modules/pe_resource_defaults.py               1      0   100%
+r2inspect/modules/pe_resources.py                      24     18    25%   12-22, 26-36
+r2inspect/modules/pe_security.py                       53     14    74%   30-31, 44, 64-71, 79-81, 92
+r2inspect/modules/resource_analysis.py                 30     20    33%   50-81
+r2inspect/modules/resource_analyzer.py                304    158    48%   41-54, 64-94, 103-116, 122, 125, 142-150, 201, 210-215, 248-256, 264-290, 294-297, 301-302, 306-320, 327-332, 336, 353-365, 371-385, 389-406, 410-423, 432-469, 476, 525, 551, 554, 556
+r2inspect/modules/rich_header_analyzer.py             333    166    50%   83-84, 93-94, 101-126, 131, 140-151, 160-161, 169, 173-180, 200-202, 212, 242-246, 264, 269-271, 296-297, 305-314, 331-335, 342-356, 362-366, 370, 386, 396-426, 434-436, 446, 462-463, 467-473, 477-482, 486-494, 500-505, 518-519, 543-566, 577, 582-586
+r2inspect/modules/rich_header_debug.py                 99     30    70%   40-41, 62, 70-88, 93, 96, 111, 113, 122-128, 131-133
+r2inspect/modules/rich_header_defaults.py               2      0   100%
+r2inspect/modules/rich_header_domain.py                82     70    15%   222-238, 242-257, 261-278, 282-304, 308-316, 320-324, 332-347
+r2inspect/modules/rich_header_search.py               130     74    43%   44-49, 53-55, 73, 83-84, 95-105, 109, 124-134, 137-139, 146, 151-154, 158-161, 176-199, 203, 207-216, 220-227
+r2inspect/modules/search_helpers.py                    18      4    78%   16, 19, 25, 28
+r2inspect/modules/section_analyzer.py                 270     63    77%   26, 29, 32, 64-67, 99-101, 121-127, 149, 152-154, 173-174, 207, 216, 219, 228, 230, 244, 248, 256, 262-290, 325-326, 340-341, 352, 371-378, 384, 392, 402-409, 413, 418-419, 449-450, 469
+r2inspect/modules/security_scoring.py                  33     10    70%   32, 35-38, 53, 55, 57, 59, 61
+r2inspect/modules/simhash_analyzer.py                 348     67    81%   42, 64-66, 106-108, 113, 151, 163-164, 171-173, 188, 193, 200, 215-217, 222-224, 232, 238-248, 254, 256, 274, 282, 295-296, 306, 308, 311, 326, 335, 340, 345, 350-352, 362, 365, 377, 429, 477-479, 486, 493, 498, 503-504, 506, 508, 547, 550, 576-579
+r2inspect/modules/simhash_detailed.py                  50      5    90%   27-31, 135-137
+r2inspect/modules/similarity_scoring.py                12      9    25%   8-15, 19-21
+r2inspect/modules/ssdeep_analyzer.py                  149    102    32%   47, 67-89, 108-151, 160, 165-166, 195-202, 206-213, 217-253, 257-265, 269-275, 289-304
+r2inspect/modules/string_analyzer.py                  103     39    62%   34, 37, 81-84, 93-95, 102-104, 118-121, 125-126, 130-142, 154-164, 168-182
+r2inspect/modules/string_classification.py             24      2    92%   41, 45
+r2inspect/modules/string_domain.py                     70     23    67%   70-76, 82-89, 95-102, 108, 113
+r2inspect/modules/string_extraction.py                 32      7    78%   29-30, 40, 46-49
+r2inspect/modules/telfhash_analyzer.py                202     67    67%   10-11, 44, 73-78, 83-90, 131-133, 172-190, 209-211, 243-245, 274-285, 305-319, 334-336, 351, 376, 381-390, 414, 421, 423-425
+r2inspect/modules/tlsh_analyzer.py                    200     57    72%   10-11, 42, 58-65, 94, 132-134, 153, 160-161, 172-174, 200-205, 226-227, 242-247, 254, 259, 266-268, 274, 287, 318-320, 345, 348, 353-355, 378-391
+r2inspect/modules/yara_analyzer.py                    250    109    56%   42, 60, 71-72, 75, 79, 83, 88-89, 96-98, 100-101, 108-110, 140-141, 145, 149, 153-155, 160-162, 168, 171-172, 175-177, 203, 212-214, 218-222, 231-232, 241-243, 246-253, 267-274, 311-312, 318-328, 332-358, 362-411
+r2inspect/modules/yara_defaults.py                      1      0   100%
+r2inspect/pipeline/analysis_pipeline.py               212     49    77%   55-64, 76-79, 92, 149-150, 175, 178-179, 181, 229-238, 257, 303-310, 335-336, 340-342, 349-351, 413-416, 435, 494-495
+r2inspect/pipeline/stage_models.py                     54     10    81%   43-45, 58-63, 121-122
+r2inspect/pipeline/stages.py                            7      0   100%
+r2inspect/pipeline/stages_common.py                    32     14    56%   30-39, 42-55
+r2inspect/pipeline/stages_detection.py                 82     15    82%   81-85, 109-113, 129-133
+r2inspect/pipeline/stages_format.py                   186     26    86%   39-40, 69-70, 96, 153, 165-183, 187, 192, 194, 196, 241, 258, 267, 278, 290, 293
+r2inspect/pipeline/stages_hashing.py                   47      3    94%   51-53
+r2inspect/pipeline/stages_metadata.py                  61      5    92%   79, 92-95
+r2inspect/pipeline/stages_security.py                  53      9    83%   66-70, 84-86, 88
+r2inspect/registry/analyzer_registry.py               142     71    50%   92-100, 117-125, 161, 181, 205-223, 268-295, 397-421, 426, 440, 460, 464, 483, 485, 525, 531-536, 540-542, 554, 568-576, 592-595, 607, 627, 631, 635, 639
+r2inspect/registry/categories.py                        9      0   100%
+r2inspect/registry/default_registry.py                 32     12    62%   271-272, 278-294, 299, 304, 309
+r2inspect/registry/entry_points.py                     53     33    38%   23-25, 30-32, 35-49, 52-57, 60-74, 77-80
+r2inspect/registry/metadata.py                         29      3    90%   24, 26, 28
+r2inspect/registry/metadata_extraction.py              41     33    20%   19-32, 47-64, 80-98
+r2inspect/registry/registry_queries.py                103     63    39%   47, 55, 67-74, 87, 100-107, 111-118, 126-127, 139-144, 150-157, 166-171, 180-190, 194, 202, 206
+r2inspect/schemas/base.py                              41     12    71%   65, 71-73, 85, 97, 120-126
+r2inspect/schemas/converters.py                        74     44    41%   42-52, 81, 155-156, 186-193, 218-228, 243, 269-285, 307-314
+r2inspect/schemas/format.py                           124     51    59%   40-42, 50, 54, 58-63, 67, 93-103, 107-130, 134, 176-191, 197-199, 205-210, 214, 218, 222, 226, 230, 234, 238
+r2inspect/schemas/hashing.py                           34     17    50%   52-56, 62-72, 78-83, 92
+r2inspect/schemas/metadata.py                          80      0   100%
+r2inspect/schemas/results.py                            3      0   100%
+r2inspect/schemas/results_loader.py                   100     80    20%   36-53, 57-60, 76-79, 93-96, 115-118, 134-137, 149-152, 171-172, 176-179, 192-195, 210-213, 223-226, 235-238, 246-249, 260, 264-273, 277
+r2inspect/schemas/results_models.py                   166     38    77%   11, 62, 96, 100-101, 131, 153, 177, 201, 229, 253, 257, 279, 299, 303, 323, 376-426, 430, 434, 438, 447
+r2inspect/schemas/security.py                          90     19    79%   51-53, 98-100, 137, 141, 145, 149, 153-154, 158-161, 165-167
+r2inspect/security/validators.py                       87     37    57%   89-92, 129, 131, 135, 138, 145-147, 152-155, 164, 166, 209-220, 243, 247, 258, 271, 297-312
+r2inspect/utils/analyzer_factory.py                    44     14    68%   43-63, 72
+r2inspect/utils/analyzer_runner.py                     15      9    40%   25-33
+r2inspect/utils/circuit_breaker.py                    149    149     0%   6-319
+r2inspect/utils/command_helpers.py                      3      0   100%
+r2inspect/utils/error_handler.py                        3      0   100%
+r2inspect/utils/file_type.py                           81     23    72%   33-34, 41-42, 52-57, 76-77, 84-86, 93-97, 104-105, 108-109, 116
+r2inspect/utils/hashing.py                             65     31    52%   19, 41-44, 53, 60-63, 70-92, 97-103
+r2inspect/utils/logger.py                              63     44    30%   18-19, 27-100, 121-126
+r2inspect/utils/magic_detector.py                     215     72    67%   59-60, 90-92, 119, 130, 134, 150-151, 157-192, 220, 229, 236-239, 269, 310-312, 321, 333-334, 338-342, 408-410, 412-413, 415-416, 424, 429-430, 438-445, 487-488, 518-519, 532-542
+r2inspect/utils/magic_patterns.py                       2      0   100%
+r2inspect/utils/memory_manager.py                     164     87    47%   72, 110-111, 113-114, 116, 120-122, 126-140, 144-157, 161-169, 173-185, 189, 206-215, 230-233, 247-256, 272-276, 284-285, 307-314, 333-363, 372, 387, 399-404, 409-410
+r2inspect/utils/output.py                             151     95    37%   35-40, 55, 59, 63, 67, 71, 75, 79-91, 132-178, 182-194, 197-204, 207-217, 220-225, 228-234
+r2inspect/utils/output_csv.py                         170     24    86%   74-78, 93, 101-102, 127-128, 150-151, 153-154, 195-200, 261-262, 276-277
+r2inspect/utils/output_json.py                         11      2    82%   20-21
+r2inspect/utils/r2_helpers.py                          24      0   100%
+r2inspect/utils/r2_suppress.py                         71     12    83%   70, 76, 83-85, 93-96, 119, 125-126
+r2inspect/utils/rate_limiter.py                       166     50    70%   55-61, 124, 136-138, 147-167, 183-191, 234, 261, 273, 285-291, 305-311, 328-329, 336-347
+r2inspect/utils/retry_manager.py                      156     56    64%   148-149, 161, 165-185, 219-220, 225-228, 233, 239, 243-246, 253-254, 264-265, 284-288, 326-357, 377-378, 399-402
+r2inspect/utils/ssdeep_loader.py                       23      5    78%   31, 37-40
+---------------------------------------------------------------------------------
+TOTAL                                               15979   5925    63%
+FAIL Required test coverage of 70% not reached. Total coverage: 62.92%
+119 passed, 40 warnings in 78.00s (0:01:17)

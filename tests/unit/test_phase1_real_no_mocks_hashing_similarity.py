@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.modules.binbloom_analyzer import BLOOM_AVAILABLE, BinbloomAnalyzer
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
@@ -149,7 +149,9 @@ def test_phase1_simhash_helpers_real_no_mocks(tmp_path: Path) -> None:
 
     assert analyzer._get_prev_mnemonic([{"mnemonic": "mov"}, {"mnemonic": "jmp"}], 1) == "mov"
     assert analyzer._get_prev_mnemonic([], 0) is None
-    assert analyzer._extract_ops_from_disasm({"ops": [{"mnemonic": "ret"}]}) == [{"mnemonic": "ret"}]
+    assert analyzer._extract_ops_from_disasm({"ops": [{"mnemonic": "ret"}]}) == [
+        {"mnemonic": "ret"}
+    ]
     assert analyzer._extract_ops_from_disasm([{"mnemonic": "ret"}]) == [{"mnemonic": "ret"}]
     assert analyzer._extract_ops_from_disasm(None) == []
 
@@ -226,7 +228,9 @@ def test_phase1_binlex_grouping_and_top_ngrams_real_no_mocks(tmp_path: Path) -> 
         "fb": {2: {"signature": "a" * 64, "ngrams": ["mov jmp", "jmp ret"]}},
         "fc": {2: {"signature": "b" * 64, "ngrams": ["push pop"]}},
     }
-    unique_signatures, similar_functions = analyzer._build_signature_groups(function_signatures, [2])
+    unique_signatures, similar_functions = analyzer._build_signature_groups(
+        function_signatures, [2]
+    )
     assert unique_signatures[2] == 2
     assert similar_functions[2]
 

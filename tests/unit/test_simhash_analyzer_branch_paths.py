@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 import r2inspect.modules.simhash_analyzer as _mod
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +73,17 @@ class _ControlledSimHashAnalyzer(SimHashAnalyzer):
 
     def analyze(self) -> dict[str, Any]:
         return self._fixed_result
+
+
+@pytest.fixture
+def samples_dir(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 # ---------------------------------------------------------------------------
@@ -301,10 +314,7 @@ def test_extract_opcodes_features_uses_addr_field_when_no_offset() -> None:
 
 
 def test_extract_opcodes_features_truncates_at_10000_limit() -> None:
-    many_funcs = [
-        {"offset": i * 0x100, "name": f"func_{i}"}
-        for i in range(200)
-    ]
+    many_funcs = [{"offset": i * 0x100, "name": f"func_{i}"} for i in range(200)]
     ops_per_func = [{"mnemonic": "nop"}] * 100
     disasm_map = {i * 0x100: {"ops": ops_per_func} for i in range(200)}
     adapter = StubAdapter(functions=many_funcs, disasm_map=disasm_map)
@@ -356,7 +366,9 @@ def test_extract_function_features_skips_function_with_no_opcodes() -> None:
 def test_extract_function_features_records_simhash_for_valid_function() -> None:
     adapter = StubAdapter(
         functions=[{"offset": 0x1000, "name": "real_func", "size": 50}],
-        disasm_map={0x1000: {"ops": [{"mnemonic": "mov"}, {"mnemonic": "add"}, {"mnemonic": "ret"}]}},
+        disasm_map={
+            0x1000: {"ops": [{"mnemonic": "mov"}, {"mnemonic": "add"}, {"mnemonic": "ret"}]}
+        },
     )
     analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
     result = analyzer._extract_function_features()
@@ -414,7 +426,7 @@ def test_extract_function_features_handles_simhash_inner_exception() -> None:
 
 
 def test_extract_function_opcodes_uses_fallback_when_first_disasm_returns_none() -> None:
-    adapter = StubAdapter(
+    StubAdapter(
         disasm_map={},  # first call returns None
     )
     # Patch the adapter so first call (without size) returns None,
@@ -532,7 +544,7 @@ def test_extract_data_section_strings_skips_when_no_read_bytes_method() -> None:
         def read_bytes(self, address: int, size: int) -> bytes:
             raise AttributeError("no read_bytes")
 
-    adapter = NoReadBytesAdapter(
+    NoReadBytesAdapter(
         sections=[{"name": ".data", "vaddr": 0x4000, "size": 100}],
     )
     # Remove the read_bytes attribute entirely

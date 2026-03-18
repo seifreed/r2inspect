@@ -6,12 +6,24 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.lazy_loader import LazyAnalyzerLoader
 from r2inspect.lazy_loader_stats import build_stats, print_stats
 from r2inspect.modules.pe_analyzer import PEAnalyzer
 from r2inspect.pipeline.stages_common import AnalyzerStage, IndicatorStage
-from r2inspect.utils.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.core.analyzer_factory import create_analyzer, run_analysis_method
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
+
+
+@pytest.fixture
+def samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path_factory.mktemp("samples") / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 @pytest.fixture

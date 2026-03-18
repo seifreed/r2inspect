@@ -24,6 +24,7 @@ from r2inspect.modules.yara_analyzer import (
 
 try:
     import yara as _yara_lib
+
     YARA_AVAILABLE = True
 except Exception:
     YARA_AVAILABLE = False
@@ -96,6 +97,7 @@ def _clear_yara_cache():
 # import_analyzer.py - Lines 35, 38: get_category / get_description
 # ---------------------------------------------------------------------------
 
+
 def test_get_category_returns_metadata():
     """Line 35: get_category() returns 'metadata'."""
     analyzer = ImportAnalyzer(MinimalAdapter())
@@ -114,6 +116,7 @@ def test_get_description_is_meaningful_string():
 # import_analyzer.py - Lines 49-102: analyze() full execution path
 # ---------------------------------------------------------------------------
 
+
 def test_analyze_full_path_all_keys_present():
     """Lines 49-102: analyze() completes successfully with all expected keys."""
     adapter = MinimalAdapter()
@@ -127,9 +130,18 @@ def test_analyze_full_path_all_keys_present():
     result = analyzer.analyze()
 
     assert result.get("available") is True
-    for key in ("total_imports", "total_dlls", "imports", "dlls",
-                "api_analysis", "obfuscation", "dll_analysis", "anomalies",
-                "forwarding", "statistics"):
+    for key in (
+        "total_imports",
+        "total_dlls",
+        "imports",
+        "dlls",
+        "api_analysis",
+        "obfuscation",
+        "dll_analysis",
+        "anomalies",
+        "forwarding",
+        "statistics",
+    ):
         assert key in result, f"Missing key: {key}"
     assert result["total_imports"] == 3
 
@@ -156,6 +168,7 @@ def test_analyze_statistics_block():
 # import_analyzer.py - Lines 112-115: _count_suspicious_indicators
 # ---------------------------------------------------------------------------
 
+
 def test_count_suspicious_indicators_sum_all_sources():
     """Lines 112-115: all three sources contribute to the total count."""
     analyzer = ImportAnalyzer(MinimalAdapter())
@@ -177,6 +190,7 @@ def test_count_suspicious_indicators_missing_keys():
 # ---------------------------------------------------------------------------
 # import_analyzer.py - Lines 224-237: get_import_statistics body (non-empty)
 # ---------------------------------------------------------------------------
+
 
 def test_import_statistics_populates_distributions():
     """Lines 224-237: non-empty imports trigger distribution computation."""
@@ -217,6 +231,7 @@ def test_import_statistics_library_distribution_counts():
 # import_analyzer.py - Line 259: missing.append in get_missing_imports
 # ---------------------------------------------------------------------------
 
+
 def test_missing_imports_detects_unimported_known_api():
     """Line 259: a string matching a known API that is not in imported_apis is appended."""
     adapter = MinimalAdapter()
@@ -239,6 +254,7 @@ def test_missing_imports_detects_unimported_known_api():
 # ---------------------------------------------------------------------------
 # import_analyzer.py - Lines 288-290: analyze_api_usage return with imports
 # ---------------------------------------------------------------------------
+
 
 def test_analyze_api_usage_return_structure_non_empty():
     """Lines 288-290: return dict contains categories, suspicious_apis, risk_score."""
@@ -273,6 +289,7 @@ def test_analyze_api_usage_clamps_score_to_100():
 # import_analyzer.py - Lines 421-423: analyze_dll_dependencies exception path
 # ---------------------------------------------------------------------------
 
+
 def test_analyze_dll_dependencies_exception_returns_safe_defaults():
     """Lines 421-423: AttributeError on dll.lower() is caught; returns safe defaults."""
     analyzer = ImportAnalyzer(MinimalAdapter())
@@ -285,15 +302,12 @@ def test_analyze_dll_dependencies_exception_returns_safe_defaults():
 # import_analyzer.py - Line 514: check_import_forwarding forwards.append
 # ---------------------------------------------------------------------------
 
-def test_check_import_forwarding_matches_backslash_pattern():
-    """Line 514: a string matching r'^\\\\w+\\\\.\\\\w+$' causes forwards.append to run."""
+
+def test_check_import_forwarding_matches_real_forward_pattern():
+    """A real import forward like DLL.Function should be detected."""
     adapter = MinimalAdapter()
-    # The regex r"^\\w+\\.\\w+$" matches a string that starts with backslash + w chars,
-    # then backslash + any char, then backslash + w chars.
-    # Python string "\\w\\.\\w" equals the 6-char sequence: \w\.\w
-    matching_string = "\\w\\.\\w"
-    assert re.match(r"^\\w+\\.\\w+$", matching_string), \
-        "Precondition: regex must match the constructed string"
+    matching_string = "KERNEL32.CreateFileA"
+    assert re.match(r"^\w+\.\w+$", matching_string)
 
     adapter._json["izj"] = [
         {"string": matching_string, "vaddr": 0xDEAD},
@@ -307,9 +321,24 @@ def test_check_import_forwarding_matches_backslash_pattern():
     assert result["forwards"][0]["address"] == 0xDEAD
 
 
+def test_check_import_forwarding_matches_ordinal_forward():
+    adapter = MinimalAdapter()
+    matching_string = "KERNEL32.#123"
+    adapter._json["izj"] = [
+        {"string": matching_string, "vaddr": 0xBEEF},
+    ]
+    analyzer = ImportAnalyzer(adapter)
+    result = analyzer.check_import_forwarding()
+
+    assert result["detected"] is True
+    assert result["forwards"][0]["forward"] == matching_string
+    assert result["forwards"][0]["address"] == 0xBEEF
+
+
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Line 42: timeout_handler raises TimeoutException
 # ---------------------------------------------------------------------------
+
 
 def test_timeout_handler_raises_timeout_exception():
     """Line 42: calling timeout_handler always raises TimeoutException."""
@@ -321,6 +350,7 @@ def test_timeout_handler_raises_timeout_exception():
 # yara_analyzer.py - Line 60: __init__ raises ValueError when config is None
 # ---------------------------------------------------------------------------
 
+
 def test_init_raises_value_error_without_config():
     """Line 60: YaraAnalyzer.__init__ raises ValueError when config is None."""
     with pytest.raises(ValueError, match="config must be provided"):
@@ -330,6 +360,7 @@ def test_init_raises_value_error_without_config():
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Lines 71-72: scan returns [] when yara module is None
 # ---------------------------------------------------------------------------
+
 
 def test_scan_returns_empty_when_yara_module_unavailable(tmp_path):
     """Lines 71-72: scan() short-circuits with [] when yara is None."""
@@ -353,6 +384,7 @@ def test_scan_returns_empty_when_yara_module_unavailable(tmp_path):
 # yara_analyzer.py - Line 79: scan returns [] when rules_path resolves to None
 # ---------------------------------------------------------------------------
 
+
 def test_scan_returns_empty_when_rules_path_unresolvable(tmp_path):
     """Line 79: _resolve_rules_path returns None for an uncreatable path."""
     sample = tmp_path / "sample.bin"
@@ -367,6 +399,7 @@ def test_scan_returns_empty_when_rules_path_unresolvable(tmp_path):
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Line 83: scan returns [] when rules compile to None
 # ---------------------------------------------------------------------------
+
 
 @YARA_MARK
 def test_scan_returns_empty_when_rules_compile_fails(tmp_path):
@@ -390,6 +423,7 @@ def test_scan_returns_empty_when_rules_compile_fails(tmp_path):
 # yara_analyzer.py - Lines 88-89: scan exception path
 # ---------------------------------------------------------------------------
 
+
 @YARA_MARK
 def test_scan_exception_when_filepath_is_directory(tmp_path):
     """Lines 88-89: yara.match on a directory path raises; scan catches and returns []."""
@@ -410,6 +444,7 @@ def test_scan_exception_when_filepath_is_directory(tmp_path):
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Line 98: _resolve_file_path reads file path from adapter
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_file_path_uses_adapter_get_file_info(tmp_path):
     """Line 98: when filepath is None, falls back to adapter's ij command."""
@@ -435,6 +470,7 @@ def test_resolve_file_path_returns_none_for_nonexistent_file_from_adapter(tmp_pa
 # yara_analyzer.py - Lines 140-141: _compile_rules returns None when yara=None
 # ---------------------------------------------------------------------------
 
+
 def test_compile_rules_returns_none_when_yara_is_none(tmp_path):
     """Lines 140-141: _compile_rules returns None when the yara module is unavailable."""
     rules_dir = tmp_path / "rules"
@@ -454,6 +490,7 @@ def test_compile_rules_returns_none_when_yara_is_none(tmp_path):
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Line 203: subdirectory rule files appended in _discover_rule_files
 # ---------------------------------------------------------------------------
+
 
 @YARA_MARK
 def test_discover_rule_files_includes_nested_subdirectory(tmp_path):
@@ -480,6 +517,7 @@ def test_discover_rule_files_includes_nested_subdirectory(tmp_path):
 # yara_analyzer.py - Lines 241-253: _compile_default_rules
 # ---------------------------------------------------------------------------
 
+
 @YARA_MARK
 def test_compile_default_rules_returns_none_when_self_rules_path_is_file(tmp_path):
     """Lines 241-252: when self.rules_path is a file, mkdir fails and read_text fails -> None."""
@@ -499,6 +537,7 @@ def test_compile_default_rules_returns_none_when_self_rules_path_is_file(tmp_pat
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Lines 270-271: _compile_sources_with_timeout in non-main thread
 # ---------------------------------------------------------------------------
+
 
 @YARA_MARK
 def test_compile_sources_with_timeout_in_non_main_thread(tmp_path):
@@ -525,6 +564,7 @@ def test_compile_sources_with_timeout_in_non_main_thread(tmp_path):
 # yara_analyzer.py - Lines 272-274: SyntaxError in _compile_sources_with_timeout
 # ---------------------------------------------------------------------------
 
+
 @YARA_MARK
 def test_compile_sources_syntax_error_returns_none(tmp_path):
     """Lines 272-274: yara.SyntaxError during compilation is caught; returns None."""
@@ -537,6 +577,7 @@ def test_compile_sources_syntax_error_returns_none(tmp_path):
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Lines 275-277: generic exception in _compile_sources_with_timeout
 # ---------------------------------------------------------------------------
+
 
 @YARA_MARK
 def test_compile_sources_generic_exception_returns_none(tmp_path):
@@ -551,6 +592,7 @@ def test_compile_sources_generic_exception_returns_none(tmp_path):
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Line 308: instance.length attribute used in _process_matches
 # ---------------------------------------------------------------------------
+
 
 @YARA_MARK
 def test_process_matches_uses_instance_length_attribute(tmp_path):
@@ -580,6 +622,7 @@ def test_process_matches_uses_instance_length_attribute(tmp_path):
 # yara_analyzer.py - Lines 318-319: _process_matches exception
 # ---------------------------------------------------------------------------
 
+
 def test_process_matches_handles_exception_from_bad_match_object(tmp_path):
     """Lines 318-319: exception from a bad match object is caught; partial list returned."""
     _clear_yara_cache()
@@ -598,6 +641,7 @@ def test_process_matches_handles_exception_from_bad_match_object(tmp_path):
 # yara_analyzer.py - Lines 334-335: create_default_rules exception path
 # ---------------------------------------------------------------------------
 
+
 def test_create_default_rules_does_not_raise_when_path_is_existing_file(tmp_path):
     """Lines 334-335: mkdir fails on an existing file path; exception is silently caught."""
     existing_file = tmp_path / "not_a_dir.txt"
@@ -613,6 +657,7 @@ def test_create_default_rules_does_not_raise_when_path_is_existing_file(tmp_path
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Lines 361-363: validate_rules counts .yar/.yara in a directory
 # ---------------------------------------------------------------------------
+
 
 @YARA_MARK
 def test_validate_rules_counts_yar_and_yara_files_in_directory(tmp_path):
@@ -633,6 +678,7 @@ def test_validate_rules_counts_yar_and_yara_files_in_directory(tmp_path):
 # ---------------------------------------------------------------------------
 # yara_analyzer.py - Lines 409-411: list_available_rules skips broken symlinks
 # ---------------------------------------------------------------------------
+
 
 def test_list_available_rules_skips_broken_symlink(tmp_path):
     """Lines 409-411: broken symlink found by rglob causes stat() to fail; entry is skipped."""

@@ -39,7 +39,7 @@ def test_interactive_mode_exit_command() -> None:
     """Test interactive mode with 'exit' command"""
     inspector = MockInspector()
     options = {}
-    
+
     stdin = io.StringIO("exit\n")
     original_stdin = sys.stdin
     try:
@@ -53,24 +53,24 @@ def test_interactive_mode_keyboard_interrupt() -> None:
     """Test interactive mode with KeyboardInterrupt"""
     inspector = MockInspector()
     options = {}
-    
+
     # Create a mock stdin that raises KeyboardInterrupt
     class InterruptingInput:
         def readline(self) -> str:
             raise KeyboardInterrupt()
-    
+
     original_stdin = sys.stdin
     original_input = __builtins__.get("input")  # type: ignore
-    
+
     try:
         call_count = [0]
-        
+
         def mock_input(_prompt: str) -> str:
             call_count[0] += 1
             if call_count[0] == 1:
                 raise KeyboardInterrupt()
             return "quit"
-        
+
         sys.stdin = InterruptingInput()  # type: ignore
         __builtins__["input"] = mock_input  # type: ignore
         interactive.run_interactive_mode(inspector, options)
@@ -84,15 +84,15 @@ def test_interactive_mode_eof_error() -> None:
     """Test interactive mode with EOFError"""
     inspector = MockInspector()
     options = {}
-    
+
     call_count = [0]
-    
+
     def mock_input(_prompt: str) -> str:
         call_count[0] += 1
         if call_count[0] == 1:
             raise EOFError()
         return "quit"
-    
+
     original_input = __builtins__.get("input")  # type: ignore
     try:
         __builtins__["input"] = mock_input  # type: ignore
@@ -106,7 +106,7 @@ def test_interactive_mode_empty_input() -> None:
     """Test interactive mode with empty input"""
     inspector = MockInspector()
     options = {}
-    
+
     commands = "\n\nquit\n"
     stdin = io.StringIO(commands)
     original_stdin = sys.stdin
@@ -121,7 +121,7 @@ def test_interactive_mode_unknown_command() -> None:
     """Test interactive mode with unknown command"""
     inspector = MockInspector()
     options = {}
-    
+
     commands = "invalid_command\nquit\n"
     stdin = io.StringIO(commands)
     original_stdin = sys.stdin

@@ -1,6 +1,6 @@
 import pytest
 
-from r2inspect.utils.error_handler import (
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorClassifier,
     ErrorSeverity,
@@ -48,3 +48,11 @@ def test_safe_execute_returns_fallback():
         raise FileNotFoundError("missing")
 
     assert safe_execute(boom, fallback_result=None) is None
+
+
+def test_safe_execute_re_raises_on_non_recoverable_error():
+    def boom():
+        raise MemoryError("oom")
+
+    with pytest.raises(MemoryError):
+        safe_execute(boom, fallback_result=None)

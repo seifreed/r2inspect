@@ -691,7 +691,7 @@ def test_overlay_no_data_read():
         }
     )
     analyzer = OverlayAnalyzer(adapter)
-    result = analyzer.analyze()
+    analyzer.analyze()
 
     # Should handle gracefully when no data
 
@@ -743,7 +743,7 @@ def test_overlay_pe_end_invalid_type():
         }
     )
     analyzer = OverlayAnalyzer(adapter)
-    result = analyzer.analyze()
+    analyzer.analyze()
 
     # Should handle invalid paddr gracefully
 
@@ -802,7 +802,5 @@ def test_overlay_suspicious_strings_multiple():
     result = analyzer.analyze()
 
     # Should detect suspicious strings
-    suspicious = any(
-        ind["indicator"] == "Suspicious strings" for ind in result["suspicious_indicators"]
-    )
+    any(ind["indicator"] == "Suspicious strings" for ind in result["suspicious_indicators"])
     # May or may not be detected depending on string extraction

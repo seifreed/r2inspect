@@ -769,9 +769,7 @@ def test_calculate_statistics_handles_all_zero_sizes_and_entropies():
 def test_check_suspicious_resources_empty_for_normal_small_icon():
     analyzer = make_analyzer(bytes_data=[])
     result: dict[str, Any] = {}
-    resources = [
-        {"name": "RES1", "type_name": "RT_ICON", "size": 100, "entropy": 3.0, "offset": 0}
-    ]
+    resources = [{"name": "RES1", "type_name": "RT_ICON", "size": 100, "entropy": 3.0, "offset": 0}]
     analyzer._check_suspicious_resources(result, resources)
     assert result["suspicious_resources"] == []
 

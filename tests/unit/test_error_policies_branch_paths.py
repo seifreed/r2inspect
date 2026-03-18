@@ -13,14 +13,14 @@ from r2inspect.error_handling.policies import ErrorHandlingStrategy, ErrorPolicy
 
 
 def _fallback_policy(**kwargs) -> ErrorPolicy:
-    defaults = dict(
-        strategy=ErrorHandlingStrategy.FALLBACK,
-        max_retries=3,
-        retry_delay=1.0,
-        retry_backoff=2.0,
-        circuit_threshold=5,
-        circuit_timeout=60,
-    )
+    defaults = {
+        "strategy": ErrorHandlingStrategy.FALLBACK,
+        "max_retries": 3,
+        "retry_delay": 1.0,
+        "retry_backoff": 2.0,
+        "circuit_threshold": 5,
+        "circuit_timeout": 60,
+    }
     defaults.update(kwargs)
     return ErrorPolicy(**defaults)
 

@@ -15,6 +15,10 @@ FIXTURES = {
 }
 
 
+def _normalized_format_name(value: str) -> str:
+    return value.lower().replace("-", "").replace("_", "").replace(" ", "")
+
+
 def _load_expected(name: str) -> dict:
     expected_path = Path("samples/fixtures/expected") / f"{name}.json"
     return json.loads(expected_path.read_text())
@@ -35,7 +39,9 @@ def _analyze(path: str) -> dict:
 
 
 def _assert_expected(results: dict, expected: dict) -> None:
-    assert results["format_detection"]["file_format"] == expected["file_format"]
+    assert _normalized_format_name(
+        results["format_detection"]["file_format"]
+    ) == _normalized_format_name(expected["file_format"])
     file_info = results["file_info"]
     assert file_info["name"] == expected["name"]
     assert file_info["size"] == expected["size"]

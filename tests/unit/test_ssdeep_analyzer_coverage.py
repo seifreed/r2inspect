@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 
 # --- availability ---
@@ -302,7 +302,7 @@ def test_calculate_with_binary_no_binary(tmp_path):
     if not ssdeep_path:
         try:
             analyzer._calculate_with_binary()
-            assert False, "Should have raised RuntimeError"
+            pytest.fail("Should have raised RuntimeError")
         except RuntimeError as e:
             assert "ssdeep binary not found" in str(e)
     else:

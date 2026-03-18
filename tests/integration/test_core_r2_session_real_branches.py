@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 
 pytestmark = pytest.mark.requires_r2
 

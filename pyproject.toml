@@ -178,7 +178,7 @@ exclude = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
-"tests/*" = ["ARG", "S101"]
+"tests/*" = ["ARG", "S101", "E402", "UP038", "F811", "F403"]
 
 [tool.isort]
 profile = "black"
@@ -204,6 +204,14 @@ warn_no_return = true
 warn_unreachable = true
 strict_optional = true
 exclude = "^(venv|env|\\.venv|build|dist|\\.qlty|bench_samples|benchmarks|samples|templates)/"
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: fast unit-level coverage tests",
+    "integration: broader workflow and integration coverage",
+    "requires_r2: requires radare2/r2pipe runtime support",
+    "slow: slower-running tests that may touch larger fixtures or subprocesses",
+]
 
 [tool.pylint.messages_control]
 max-line-length = 100

@@ -26,9 +26,7 @@ def test_analysis_result_base_with_error():
 
 
 def test_analysis_result_base_execution_time():
-    result = AnalysisResultBase(
-        available=True, execution_time=1.5, analyzer_name="test"
-    )
+    result = AnalysisResultBase(available=True, execution_time=1.5, analyzer_name="test")
     assert result.execution_time == 1.5
 
 
@@ -102,9 +100,7 @@ def test_analysis_result_base_to_json_timestamp():
 
 
 def test_analysis_result_base_extra_fields_ignored():
-    result = AnalysisResultBase(
-        available=True, analyzer_name="test", unknown_field="value"
-    )
+    result = AnalysisResultBase(available=True, analyzer_name="test", unknown_field="value")
     assert not hasattr(result, "unknown_field")
 
 
@@ -121,9 +117,7 @@ def test_analysis_result_base_validate_assignment_invalid():
 
 
 def test_file_info_base_creation():
-    file_info = FileInfoBase(
-        file_size=1024, file_path="/tmp/test.exe", file_extension="exe"
-    )
+    file_info = FileInfoBase(file_size=1024, file_path="/tmp/test.exe", file_extension="exe")
     assert file_info.file_size == 1024
     assert file_info.file_path == "/tmp/test.exe"
     assert file_info.file_extension == "exe"
@@ -200,9 +194,7 @@ def test_analysis_result_base_all_fields():
 
 
 def test_file_info_base_all_fields():
-    file_info = FileInfoBase(
-        file_size=2048, file_path="/usr/bin/test", file_extension="bin"
-    )
+    file_info = FileInfoBase(file_size=2048, file_path="/usr/bin/test", file_extension="bin")
     assert file_info.file_size == 2048
     assert file_info.file_path == "/usr/bin/test"
     assert file_info.file_extension == "bin"

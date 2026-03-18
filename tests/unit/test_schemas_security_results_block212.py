@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -106,7 +106,7 @@ def test_from_dict_and_load_helpers() -> None:
         "crypto": {"algorithms": [{"name": "aes"}]},
         "indicators": [{"type": "Packer", "severity": "High"}],
         "error": "boom",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.25,
     }
     result = from_dict(data)
@@ -130,6 +130,6 @@ def test_from_dict_and_load_helpers() -> None:
     result = from_dict(data)
     assert isinstance(result.timestamp, datetime)
 
-    data["timestamp"] = datetime.utcnow()
+    data["timestamp"] = datetime.now(UTC)
     result = from_dict(data)
     assert isinstance(result.timestamp, datetime)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils.error_handler import (
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorClassifier,
     ErrorRecoveryManager,
@@ -56,7 +56,7 @@ def test_error_handler_and_safe_execute_recovery() -> None:
     def _recovery(_info):
         return "ok"
 
-    from r2inspect.utils import error_handler as handler_mod
+    import r2inspect.error_handling.classifier as handler_mod
 
     old = handler_mod.global_error_manager.recovery_strategies.get(ErrorCategory.UNKNOWN)
     handler_mod.global_error_manager.register_recovery_strategy(ErrorCategory.UNKNOWN, _recovery)

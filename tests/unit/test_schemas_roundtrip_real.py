@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 from r2inspect.schemas import results as results_schema
 from r2inspect.schemas.base import AnalysisResultBase, FileInfoBase
 from r2inspect.schemas.converters import ResultConverter, dict_to_model, model_to_dict
@@ -16,6 +17,17 @@ from r2inspect.schemas.hashing import HashAnalysisResult
 def _load_expected(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+@pytest.fixture
+def samples_dir(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 def test_results_roundtrip_from_expected(samples_dir: Path) -> None:
@@ -87,7 +99,7 @@ def test_results_roundtrip_full_payload() -> None:
         "crypto": {"has_crypto": True, "algorithms": ["AES"]},
         "indicators": [{"type": "evasion", "description": "suspicious", "severity": "High"}],
         "error": None,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.23,
     }
 

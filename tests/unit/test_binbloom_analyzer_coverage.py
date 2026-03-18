@@ -90,7 +90,7 @@ def test_bloom_is_available_returns_bool():
 
 
 def test_bloom_available_constant_matches():
-    assert BLOOM_AVAILABLE == BinbloomAnalyzer.is_available()
+    assert BinbloomAnalyzer.is_available() == BLOOM_AVAILABLE
 
 
 # --- _normalize_mnemonic ---
@@ -291,6 +291,7 @@ def test_group_functions_html_entities():
 def test_build_similar_groups_with_duplicates():
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     from collections import defaultdict
+
     signature_groups = defaultdict(list)
     signature_groups["aaa"] = ["func1", "func2", "func3"]
     signature_groups["bbb"] = ["func4"]  # Single - should not appear
@@ -303,6 +304,7 @@ def test_build_similar_groups_with_duplicates():
 def test_build_similar_groups_long_signature():
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     from collections import defaultdict
+
     long_sig = "a" * 32
     signature_groups = defaultdict(list)
     signature_groups[long_sig] = ["f1", "f2"]
@@ -314,6 +316,7 @@ def test_build_similar_groups_long_signature():
 def test_build_similar_groups_short_signature():
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     from collections import defaultdict
+
     short_sig = "abc"
     signature_groups = defaultdict(list)
     signature_groups[short_sig] = ["f1", "f2"]
@@ -366,6 +369,7 @@ def test_bloom_filter_create_and_check():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     bf = BloomFilter(capacity=100, error_rate=0.01)
     bf.add("mov")
     bf.add("push")
@@ -387,6 +391,7 @@ def test_add_instruction_patterns():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf = BloomFilter(capacity=1000, error_rate=0.001)
     instructions = ["mov", "push", "push", "pop"]
@@ -404,6 +409,7 @@ def test_serialize_bloom_roundtrip():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     bf = BloomFilter(capacity=100, error_rate=0.01)
     bf.add("mov")
     bf.add("push")
@@ -417,6 +423,7 @@ def test_deserialize_bloom_valid():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     bf = BloomFilter(capacity=100, error_rate=0.01)
     bf.add("mov")
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
@@ -471,10 +478,7 @@ def test_deserialize_bloom_invalid_count():
 
 
 def test_deserialize_bloom_bitarray_not_list():
-    data = {
-        "version": 1, "error_rate": 0.01, "capacity": 100,
-        "count": 0, "bitarray": "not_a_list"
-    }
+    data = {"version": 1, "error_rate": 0.01, "capacity": 100, "count": 0, "bitarray": "not_a_list"}
     encoded = base64.b64encode(json.dumps(data).encode()).decode()
     result = BinbloomAnalyzer.deserialize_bloom(encoded)
     assert result is None
@@ -494,6 +498,7 @@ def test_serialize_blooms_dict():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf1 = BloomFilter(capacity=100, error_rate=0.01)
     bf1.add("mov")
@@ -518,27 +523,25 @@ def test_compare_bloom_filters_both_empty():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf1 = BloomFilter(capacity=100, error_rate=0.01)
     bf2 = BloomFilter(capacity=100, error_rate=0.01)
     result = analyzer.compare_bloom_filters(bf1, bf2)
-    # pybloom_live uses 'bitarray' attribute not 'bit_array', so method returns 0.0
-    assert isinstance(result, float)
-    assert 0.0 <= result <= 1.0
+    assert result == 1.0
 
 
 def test_compare_bloom_filters_identical():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf1 = BloomFilter(capacity=100, error_rate=0.01)
     bf1.add("mov")
     bf1.add("push")
     result = analyzer.compare_bloom_filters(bf1, bf1)
-    # pybloom_live uses 'bitarray' not 'bit_array', so comparison returns 0.0
-    assert isinstance(result, float)
-    assert 0.0 <= result <= 1.0
+    assert result == 1.0
 
 
 def test_compare_bloom_filters_no_bit_array_attr():
@@ -555,6 +558,7 @@ def test_compare_bloom_filters_one_empty():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf1 = BloomFilter(capacity=100, error_rate=0.01)
     bf1.add("mov")
@@ -577,6 +581,7 @@ def test_calculate_bloom_stats_with_blooms():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf1 = BloomFilter(capacity=100, error_rate=0.01)
     bf1.add("mov")
@@ -591,6 +596,7 @@ def test_calculate_bloom_stats_fill_rate():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf = BloomFilter(capacity=256, error_rate=0.001)
     for i in range(20):
@@ -602,16 +608,16 @@ def test_calculate_bloom_stats_fill_rate():
 # --- _accumulate_bloom_bits ---
 
 
-def test_accumulate_bloom_bits_no_bit_array():
+def test_accumulate_bloom_bits_with_real_bloom_filter():
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
     from pybloom_live import BloomFilter
+
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf = BloomFilter(capacity=100, error_rate=0.01)
-    # BloomFilter uses 'bitarray' not 'bit_array', so _accumulate returns 0
     total_bits, total_cap = analyzer._accumulate_bloom_bits({"func": bf})
     assert total_bits == 0
-    assert total_cap == 0
+    assert total_cap > 0
 
 
 # --- _extract_instruction_mnemonics ---
@@ -771,9 +777,7 @@ def test_collect_function_blooms_no_addr():
     functions = [{"name": "func1", "size": 100}]  # No addr
     adapter = FakeDisasmAdapter()
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
-    blooms, sigs, instructions, count = analyzer._collect_function_blooms(
-        functions, 256, 0.001
-    )
+    blooms, sigs, instructions, count = analyzer._collect_function_blooms(functions, 256, 0.001)
     assert count == 0
 
 
@@ -784,9 +788,7 @@ def test_collect_function_blooms_with_html_entities():
     adapter = FakeDisasmAdapter(disasm_data=disasm_data)
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
     functions = [{"name": "func&amp;1", "addr": 0x1000, "size": 50}]
-    blooms, sigs, instructions, count = analyzer._collect_function_blooms(
-        functions, 256, 0.001
-    )
+    blooms, sigs, instructions, count = analyzer._collect_function_blooms(functions, 256, 0.001)
     assert "func&1" in blooms
 
 
@@ -938,9 +940,7 @@ def test_collect_function_blooms_bloom_result_none():
     adapter = FakeDisasmAdapter(disasm_data=None, disasm_list=None, disasm_text=None)
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
     functions = [{"name": "empty_func", "addr": 0x1000, "size": 50}]
-    blooms, sigs, instructions, count = analyzer._collect_function_blooms(
-        functions, 256, 0.001
-    )
+    blooms, sigs, instructions, count = analyzer._collect_function_blooms(functions, 256, 0.001)
     assert count == 0
     assert len(blooms) == 0
 
@@ -1049,9 +1049,7 @@ def test_calculate_binbloom_from_file_with_real_file():
     """Test lines 693-696: calculate_binbloom_from_file."""
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
-    result = BinbloomAnalyzer.calculate_binbloom_from_file(
-        "samples/fixtures/hello_elf"
-    )
+    result = BinbloomAnalyzer.calculate_binbloom_from_file("samples/fixtures/hello_elf")
     # Should return a dict or None (not raise)
     assert result is None or isinstance(result, dict)
 
@@ -1062,7 +1060,7 @@ def test_serialize_blooms_exception():
     class BrokenBloom:
         pass
 
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
+    _analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
 
     class BrokenAnalyzer(BinbloomAnalyzer):
         def _serialize_bloom(self, bloom_filter):
@@ -1118,7 +1116,7 @@ def test_add_binary_bloom_none_result():
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     results = {"binary_bloom": None, "binary_signature": None}
     # _create_binary_bloom with invalid capacity returns None
-    original_create = analyzer._create_binary_bloom
+    _original_create = analyzer._create_binary_bloom
 
     class NoneReturnAnalyzer(BinbloomAnalyzer):
         def _create_binary_bloom(self, instructions, capacity, error_rate):

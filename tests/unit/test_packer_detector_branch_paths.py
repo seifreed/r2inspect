@@ -47,6 +47,7 @@ class AdapterWithAllMethods:
 
 class AdapterWithoutOptionalMethods:
     """Adapter with no optional methods - tests the 'else' fallback branches (lines 222,227,232,235)."""
+
     pass
 
 
@@ -262,6 +263,44 @@ def test_detect_sets_unknown_heuristic_packer_type_when_packed_no_signature():
         assert isinstance(result["packer_type"], str)
 
 
+def test_detect_sets_unknown_heuristic_packer_type_when_no_signature_found():
+    detector = PackerDetector(AdapterWithRaisingMethods(), StubConfig())
+    detector._check_packer_signatures = lambda: None
+    detector._analyze_entropy = lambda: {"summary": {"high_entropy_sections": 4}}
+    detector._analyze_sections = lambda: {
+        "suspicious_sections": ["a", "b", "c"],
+        "section_count": 1,
+        "writable_executable": 0,
+    }
+    detector._count_imports = lambda: 0
+
+    result = detector.detect()
+
+    assert result["is_packed"] is True
+    assert result["packer_type"] == "Unknown (heuristic)"
+    assert result["confidence"] == 0.6
+
+
+def test_detect_captures_exceptions_in_main_loop():
+    # In the new design each sub-method catches its own error via _safe_call.
+    # If a sub-method is monkey-patched to raise, the exception propagates
+    # from detect() — the dispatch layer (InspectorDispatchMixin._execute_analyzer)
+    # catches it above.  This test verifies that contract.
+    detector = PackerDetector(AdapterWithoutOptionalMethods(), StubConfig())
+
+    detector._check_packer_signatures = lambda: {}
+    detector._analyze_entropy = lambda: {}
+    detector._analyze_sections = lambda: {}
+
+    def _raise() -> int:
+        raise RuntimeError("boom")
+
+    detector._count_imports = _raise
+
+    with pytest.raises(RuntimeError, match="boom"):
+        detector.detect()
+
+
 def test_detect_returns_not_packed_when_evidence_low():
     detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
     result = detector.detect()
@@ -294,9 +333,7 @@ def test_get_overlay_info_returns_empty_dict_on_exception():
 
 def test_calculate_heuristic_score_with_valid_data():
     detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
-    entropy_results = {
-        "summary": {"high_entropy_ratio": 0.5}
-    }
+    entropy_results = {"summary": {"high_entropy_ratio": 0.5}}
     section_results = {
         "suspicious_sections": [{"name": "packed"}],
         "section_count": 2,
@@ -324,3 +361,65 @@ def test_detect_with_empty_bytes_adapter():
     assert "is_packed" in result
     assert "entropy_analysis" in result
     assert "section_analysis" in result
+
+
+def test_check_packer_signatures_catches_exceptions():
+    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
+
+    # Monkeypatch helper to force exception from find_packer_signature and validate
+    # _check_packer_signatures exception handling path.
+    import r2inspect.modules.packer_detector as packer_mod
+
+    original = packer_mod.find_packer_signature
+    packer_mod.find_packer_signature = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        RuntimeError("signature scan failed")
+    )
+    try:
+        assert detector._check_packer_signatures() is None
+    finally:
+        packer_mod.find_packer_signature = original
+
+
+def test_check_packer_signatures_prefers_direct_signature():
+    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
+    sentinel = {"name": "sentinel-packer", "score": 0.99}
+    import r2inspect.modules.packer_detector as packer_mod
+
+    original_signature = packer_mod.find_packer_signature
+    original_string = packer_mod.find_packer_string
+    packer_mod.find_packer_signature = lambda *_args, **_kwargs: sentinel
+    packer_mod.find_packer_string = lambda *_args, **_kwargs: "should-not-be-called"
+
+    try:
+        assert detector._check_packer_signatures() == sentinel
+    finally:
+        packer_mod.find_packer_signature = original_signature
+        packer_mod.find_packer_string = original_string
+
+
+def test_calculate_heuristic_score_handles_non_mapping_summary():
+    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
+    score = detector._calculate_heuristic_score(
+        {"summary": object()}, {"section_count": 0, "suspicious_sections": []}
+    )
+    assert score == 0.0
+
+
+def test_search_hex_routes_through_search_helper(monkeypatch):
+    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
+    sentinel = "0xdeadbeef"
+
+    monkeypatch.setattr(
+        "r2inspect.modules.packer_detector.search_hex", lambda *_args, **_kwargs: sentinel
+    )
+    assert detector._search_hex("aa") == sentinel
+
+
+def test_search_text_routes_through_search_helper(monkeypatch):
+    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
+    sentinel = "match"
+
+    monkeypatch.setattr(
+        "r2inspect.modules.packer_detector.search_text", lambda *_args, **_kwargs: sentinel
+    )
+    assert detector._search_text("hello") == sentinel

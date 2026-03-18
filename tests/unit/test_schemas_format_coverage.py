@@ -8,6 +8,7 @@ from r2inspect.schemas.format import FormatAnalysisResult, SectionInfo, Security
 
 # SectionInfo tests
 
+
 def test_section_info_valid_name():
     section = SectionInfo(name=".text")
     assert section.name == ".text"
@@ -111,6 +112,7 @@ def test_section_info_to_dict():
 
 # SecurityFeatures tests
 
+
 def test_security_features_defaults():
     features = SecurityFeatures()
     assert features.aslr is False
@@ -189,9 +191,16 @@ def test_security_features_security_score_relro_true():
 
 def test_security_features_security_score_capped_at_100():
     features = SecurityFeatures(
-        nx=True, pie=True, canary=True, aslr=True,
-        guard_cf=True, seh=True, authenticode=True,
-        fortify=True, high_entropy_va=True, relro="full"
+        nx=True,
+        pie=True,
+        canary=True,
+        aslr=True,
+        guard_cf=True,
+        seh=True,
+        authenticode=True,
+        fortify=True,
+        high_entropy_va=True,
+        relro="full",
     )
     score = features.security_score()
     assert score <= 100
@@ -206,6 +215,7 @@ def test_security_features_to_dict():
 
 
 # FormatAnalysisResult tests
+
 
 def test_format_analysis_result_valid_pe():
     result = FormatAnalysisResult(available=True, format="PE32")
@@ -339,9 +349,11 @@ def test_format_analysis_result_elf_variants():
 
 # Test for validate_entropy validator directly (line 49)
 
+
 def test_validate_entropy_validator_raises_for_negative():
     """Direct call to validate_entropy raises ValueError for out-of-range values."""
     import pytest
+
     with pytest.raises(ValueError, match="Entropy must be between"):
         SectionInfo.validate_entropy(-1.0)
 
@@ -349,5 +361,6 @@ def test_validate_entropy_validator_raises_for_negative():
 def test_validate_entropy_validator_raises_for_above_max():
     """Direct call to validate_entropy raises ValueError for values above 8.0."""
     import pytest
+
     with pytest.raises(ValueError, match="Entropy must be between"):
         SectionInfo.validate_entropy(9.0)

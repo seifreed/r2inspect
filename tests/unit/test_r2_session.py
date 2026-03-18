@@ -2,8 +2,8 @@ import types
 
 import pytest
 
-import r2inspect.core.r2_session as r2_session
-from r2inspect.core.r2_session import R2Session
+import r2inspect.infrastructure.r2_session as r2_session
+from r2inspect.infrastructure.r2_session import R2Session
 
 
 class FakeR2:

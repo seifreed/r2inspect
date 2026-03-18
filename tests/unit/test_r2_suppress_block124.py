@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import sys
 
-from r2inspect.utils.r2_suppress import R2PipeErrorSuppressor, silent_cmdj, suppress_r2pipe_errors
+from r2inspect.infrastructure.r2_suppress import (
+    R2PipeErrorSuppressor,
+    silent_cmdj,
+    suppress_r2pipe_errors,
+)
 
 
 def test_r2pipe_error_suppressor_restores_stderr():

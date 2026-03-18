@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from r2inspect.utils.logger import (
+from r2inspect.infrastructure.logging import (
     configure_batch_logging,
     get_logger,
     reset_logging_levels,
@@ -114,4 +117,44 @@ def test_setup_logger_error_level() -> None:
         logger = setup_logger(name, level=logging.ERROR, thread_safe=False)
         assert logger.level == logging.ERROR
     finally:
+        _cleanup_logger(name)
+
+
+def test_setup_logger_fallback_console_only_thread_safe_true() -> None:
+    name = "r2inspect.test.bp.fallback_true"
+    old_home = os.environ.get("HOME")
+    try:
+        with TemporaryDirectory() as tmp:
+            os.environ["HOME"] = tmp
+            bad_logs_path = Path(tmp) / ".r2inspect" / "logs"
+            bad_logs_path.parent.mkdir(parents=True, exist_ok=True)
+            bad_logs_path.write_text("not-a-directory", encoding="utf-8")
+
+            logger = setup_logger(name, level=logging.INFO, thread_safe=True)
+            assert len(logger.handlers) == 1
+    finally:
+        if old_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = old_home
+        _cleanup_logger(name)
+
+
+def test_setup_logger_fallback_console_only_thread_safe_false() -> None:
+    name = "r2inspect.test.bp.fallback_false"
+    old_home = os.environ.get("HOME")
+    try:
+        with TemporaryDirectory() as tmp:
+            os.environ["HOME"] = tmp
+            bad_logs_path = Path(tmp) / ".r2inspect" / "logs"
+            bad_logs_path.parent.mkdir(parents=True, exist_ok=True)
+            bad_logs_path.write_text("not-a-directory", encoding="utf-8")
+
+            logger = setup_logger(name, level=logging.INFO, thread_safe=False)
+            assert len(logger.handlers) == 1
+    finally:
+        if old_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = old_home
         _cleanup_logger(name)

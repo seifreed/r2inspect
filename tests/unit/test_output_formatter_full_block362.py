@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 def test_output_formatter_json_and_csv_paths() -> None:

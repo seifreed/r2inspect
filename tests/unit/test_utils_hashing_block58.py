@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.utils.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
+from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
 
 
 def test_calculate_hashes_success(tmp_path: Path):

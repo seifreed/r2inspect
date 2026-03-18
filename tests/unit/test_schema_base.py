@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -18,7 +18,7 @@ def test_analysis_result_base_rejects_negative_execution_time():
 
 
 def test_analysis_result_timestamp_default():
-    before = datetime.utcnow() - timedelta(seconds=5)
+    before = datetime.now(UTC) - timedelta(seconds=5)
     result = AnalysisResultBase(available=True)
     assert result.timestamp is not None
     assert result.timestamp >= before

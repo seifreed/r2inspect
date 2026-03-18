@@ -1,0 +1,10 @@
+"""Bridge integration tests for similarity scoring coverage."""
+
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tests.unit.test_simhash_detailed_branch_paths import *

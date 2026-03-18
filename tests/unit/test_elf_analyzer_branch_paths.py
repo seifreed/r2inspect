@@ -105,10 +105,7 @@ class ELFAdapterWithDwarfInfo(ELFAdapterWithBinInfo):
     """Adapter that exposes DWARF-like debug info."""
 
     def get_dynamic_info_text(self) -> str:
-        return (
-            "DW_AT_producer : GNU C17 11.3.0 -mtune=generic\n"
-            "compilation date: 2024-01-15\n"
-        )
+        return "DW_AT_producer : GNU C17 11.3.0 -mtune=generic\n" "compilation date: 2024-01-15\n"
 
 
 class ELFAdapterWithProgramHeaders(MinimalELFAdapter):
@@ -233,9 +230,9 @@ def test_get_compilation_info_with_comment_section(tmp_path: None):
 def test_get_compilation_info_with_dwarf_info():
     adapter = ELFAdapterWithDwarfInfo()
     analyzer = ELFAnalyzer(adapter)
-    info = analyzer._get_compilation_info()
-    # DWARF producer line was parsed
-    assert info != {} or True  # execution path reached
+    compilation_info = analyzer._get_compilation_info()
+    # DWARF producer line was parsed — verify it returned something
+    assert compilation_info is not None
 
 
 # ---------------------------------------------------------------------------

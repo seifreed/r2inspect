@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock
 
 from r2inspect.cli import batch_processing
+from r2inspect.infrastructure.rate_limiter import BatchRateLimiter
 
 
 def test_flush_coverage_data_import_error() -> None:
@@ -171,7 +171,7 @@ def test_setup_batch_mode_with_extensions() -> None:
         output_csv=False,
         output=None,
     )
-    
+
     assert recursive is True
     assert use_auto_detect is False  # Extensions specified
     assert output is None
@@ -186,7 +186,7 @@ def test_setup_batch_mode_no_extensions_with_output() -> None:
         output_csv=False,
         output=None,
     )
-    
+
     assert recursive is True
     assert use_auto_detect is True  # No extensions
     assert output == "output"  # Default output dir
@@ -201,7 +201,7 @@ def test_setup_batch_mode_with_output_specified() -> None:
         output_csv=False,
         output="/custom/path",
     )
-    
+
     assert output == "/custom/path"
 
 
@@ -213,7 +213,7 @@ def test_setup_single_file_output_json() -> None:
         output=None,
         filename="/tmp/test.exe",
     )
-    
+
     assert output is not None
     assert str(output).endswith("_analysis.json")
 
@@ -226,7 +226,7 @@ def test_setup_single_file_output_csv() -> None:
         output=None,
         filename="/tmp/test.exe",
     )
-    
+
     assert output is not None
     assert str(output).endswith("_analysis.csv")
 
@@ -239,7 +239,7 @@ def test_setup_single_file_output_no_formats() -> None:
         output=None,
         filename="/tmp/test.exe",
     )
-    
+
     assert output is None
 
 
@@ -251,7 +251,7 @@ def test_setup_single_file_output_specified() -> None:
         output="/custom/output.json",
         filename="/tmp/test.exe",
     )
-    
+
     assert output == "/custom/output.json"
 
 
@@ -262,7 +262,7 @@ def test_display_rate_limiter_stats() -> None:
         "avg_wait_time": 0.05,
         "current_rate": 10.5,
     }
-    
+
     batch_processing.display_rate_limiter_stats(rate_stats)
     # Should not raise
 
@@ -279,7 +279,7 @@ def test_display_failed_files_verbose() -> None:
         ("/tmp/file1.exe", "Error: File not found"),
         ("/tmp/file2.exe", "Error: Permission denied"),
     ]
-    
+
     batch_processing.display_failed_files(failed_files, verbose=True)
     # Should not raise
 
@@ -289,7 +289,7 @@ def test_display_failed_files_not_verbose() -> None:
     failed_files = [
         ("/tmp/file1.exe", "Error: File not found"),
     ]
-    
+
     batch_processing.display_failed_files(failed_files, verbose=False)
     # Should not raise
 
@@ -297,7 +297,7 @@ def test_display_failed_files_not_verbose() -> None:
 def test_display_failed_files_many_errors() -> None:
     """Test display_failed_files with many errors (>10)"""
     failed_files = [(f"/tmp/file{i}.exe", f"Error {i}") for i in range(15)]
-    
+
     batch_processing.display_failed_files(failed_files, verbose=True)
     # Should show first 10 and summary
 
@@ -333,15 +333,15 @@ def test_display_no_files_message_extensions() -> None:
 def test_setup_batch_output_directory_with_filename() -> None:
     """Test setup_batch_output_directory when output is a filename"""
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = Path(tmpdir) / "subdir" / "results.json"
-        result = batch_processing.setup_batch_output_directory(
+        batch_processing.setup_batch_output_directory(
             output_dir=str(output_file),
             output_json=True,
             output_csv=False,
         )
-        
+
         # Parent directory should be created
         assert output_file.parent.exists()
 
@@ -349,7 +349,7 @@ def test_setup_batch_output_directory_with_filename() -> None:
 def test_setup_batch_output_directory_with_dir() -> None:
     """Test setup_batch_output_directory when output is a directory"""
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_dir = Path(tmpdir) / "results"
         result = batch_processing.setup_batch_output_directory(
@@ -357,7 +357,7 @@ def test_setup_batch_output_directory_with_dir() -> None:
             output_json=True,
             output_csv=False,
         )
-        
+
         assert result.exists()
         assert result.is_dir()
 
@@ -369,7 +369,7 @@ def test_setup_batch_output_directory_none_with_formats() -> None:
         output_json=True,
         output_csv=False,
     )
-    
+
     assert result.name == "output"
 
 
@@ -380,19 +380,14 @@ def test_setup_batch_output_directory_none_no_formats() -> None:
         output_json=False,
         output_csv=False,
     )
-    
+
     assert result.name == "r2inspect_batch_results"
 
 
 def test_display_batch_results_with_rate_stats() -> None:
     """Test display_batch_results with rate stats"""
-    rate_limiter = Mock()
-    rate_limiter.get_stats.return_value = {
-        "success_rate": 0.95,
-        "avg_wait_time": 0.05,
-        "current_rate": 10.0,
-    }
-    
+    rate_limiter = BatchRateLimiter(max_concurrent=2)
+
     batch_processing.display_batch_results(
         all_results={"file1.exe": {}, "file2.exe": {}},
         failed_files=[],
@@ -407,9 +402,8 @@ def test_display_batch_results_with_rate_stats() -> None:
 
 def test_display_batch_results_with_failures() -> None:
     """Test display_batch_results with failed files"""
-    rate_limiter = Mock()
-    rate_limiter.get_stats.return_value = {}
-    
+    rate_limiter = BatchRateLimiter(max_concurrent=2)
+
     batch_processing.display_batch_results(
         all_results={"file1.exe": {}},
         failed_files=[("/tmp/file2.exe", "Error")],
@@ -425,7 +419,7 @@ def test_display_batch_results_with_failures() -> None:
 def test_find_files_to_process_auto_detect() -> None:
     """Test find_files_to_process with auto_detect"""
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         result = batch_processing.find_files_to_process(
             batch_path=Path(tmpdir),
@@ -435,19 +429,19 @@ def test_find_files_to_process_auto_detect() -> None:
             verbose=False,
             quiet=True,
         )
-        
+
         assert isinstance(result, list)
 
 
 def test_find_files_to_process_extensions() -> None:
     """Test find_files_to_process with extensions"""
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create a test file
         test_file = Path(tmpdir) / "test.exe"
         test_file.write_bytes(b"\x00" * 100)
-        
+
         result = batch_processing.find_files_to_process(
             batch_path=Path(tmpdir),
             auto_detect=False,
@@ -456,14 +450,14 @@ def test_find_files_to_process_extensions() -> None:
             verbose=False,
             quiet=True,
         )
-        
+
         assert isinstance(result, list)
 
 
 def test_find_files_to_process_no_extensions() -> None:
     """Test find_files_to_process with auto_detect=False and no extensions"""
     import tempfile
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         result = batch_processing.find_files_to_process(
             batch_path=Path(tmpdir),
@@ -473,5 +467,5 @@ def test_find_files_to_process_no_extensions() -> None:
             verbose=False,
             quiet=True,
         )
-        
+
         assert result == []

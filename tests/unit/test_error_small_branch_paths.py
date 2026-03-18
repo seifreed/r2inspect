@@ -16,6 +16,7 @@ from r2inspect.error_handling.stats import get_error_stats_snapshot
 # presets.py
 # ---------------------------------------------------------------------------
 
+
 def test_empty_list_returns_new_list() -> None:
     """_empty_list returns an empty list."""
     result = _empty_list()
@@ -67,6 +68,7 @@ def test_create_custom_policy_with_kwargs_override() -> None:
 # ---------------------------------------------------------------------------
 # stats.py
 # ---------------------------------------------------------------------------
+
 
 def test_get_error_stats_snapshot_returns_dict_with_keys() -> None:
     """get_error_stats_snapshot returns a dict with the three expected keys."""

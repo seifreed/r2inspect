@@ -1,0 +1,112 @@
+[
+  {
+    "path": "r2inspect/modules/packer_helpers.py",
+    "miss": 27,
+    "pct": 69.66292134831461
+  },
+  {
+    "path": "r2inspect/modules/authenticode_analyzer.py",
+    "miss": 27,
+    "pct": 85.16483516483517
+  },
+  {
+    "path": "r2inspect/pipeline/stages_format.py",
+    "miss": 21,
+    "pct": 88.70967741935483
+  },
+  {
+    "path": "r2inspect/modules/ccbhash_analyzer.py",
+    "miss": 15,
+    "pct": 92.3076923076923
+  },
+  {
+    "path": "r2inspect/cli/batch_processing.py",
+    "miss": 12,
+    "pct": 95.55555555555556
+  },
+  {
+    "path": "r2inspect/modules/anti_analysis_helpers.py",
+    "miss": 9,
+    "pct": 85.9375
+  },
+  {
+    "path": "r2inspect/modules/crypto_analyzer.py",
+    "miss": 7,
+    "pct": 96.045197740113
+  },
+  {
+    "path": "r2inspect/modules/overlay_analyzer.py",
+    "miss": 7,
+    "pct": 97.10743801652893
+  },
+  {
+    "path": "r2inspect/utils/file_type.py",
+    "miss": 6,
+    "pct": 92.5925925925926
+  },
+  {
+    "path": "r2inspect/utils/hashing.py",
+    "miss": 5,
+    "pct": 92.3076923076923
+  },
+  {
+    "path": "r2inspect/modules/bindiff_analyzer.py",
+    "miss": 5,
+    "pct": 97.59615384615384
+  },
+  {
+    "path": "r2inspect/modules/search_helpers.py",
+    "miss": 4,
+    "pct": 77.77777777777777
+  },
+  {
+    "path": "r2inspect/modules/binbloom_analyzer.py",
+    "miss": 4,
+    "pct": 98.82352941176471
+  },
+  {
+    "path": "r2inspect/modules/binbloom_analysis.py",
+    "miss": 3,
+    "pct": 93.02325581395348
+  },
+  {
+    "path": "r2inspect/modules/pe_analyzer.py",
+    "miss": 3,
+    "pct": 93.33333333333333
+  },
+  {
+    "path": "r2inspect/modules/pe_resources.py",
+    "miss": 2,
+    "pct": 91.66666666666667
+  },
+  {
+    "path": "r2inspect/modules/exploit_mitigation_rules.py",
+    "miss": 2,
+    "pct": 92.0
+  },
+  {
+    "path": "r2inspect/modules/pe_imports.py",
+    "miss": 2,
+    "pct": 96.66666666666667
+  },
+  {
+    "path": "r2inspect/registry/analyzer_registry.py",
+    "miss": 2,
+    "pct": 98.59154929577464
+  },
+  {
+    "path": "r2inspect/modules/simhash_analyzer.py",
+    "miss": 2,
+    "pct": 99.42528735632185
+  },
+  {
+    "path": "r2inspect/cli/commands/base.py",
+    "miss": 1,
+    "pct": 98.63013698630137
+  },
+  {
+    "path": "r2inspect/utils/magic_detector.py",
+    "miss": 1,
+    "pct": 99.53488372093024
+  }
+]

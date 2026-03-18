@@ -1,0 +1,21 @@
+{
+  "file_format": "PE",
+  "name": "hello_pe.exe",
+  "size": 140217,
+  "hashes": {
+    "md5": "d8f29b674709c49dfdf3c7ecc16ad4c9",
+    "sha1": "fddfbceafe1602bec3a8a6036eb5d6265eec0975",
+    "sha256": "b4b674b6ede0cd5d4dcff2cff31a5957ac022ab995da977c667ddc7626205aea"
+  },
+  "file_info": {
+    "name": "hello_pe.exe",
+    "path": "/Users/seifreed/tools/malware/r2inspect/samples/fixtures/hello_pe.exe",
+    "size": 140217,
+    "md5": "d8f29b674709c49dfdf3c7ecc16ad4c9",
+    "sha1": "fddfbceafe1602bec3a8a6036eb5d6265eec0975",
+    "sha256": "b4b674b6ede0cd5d4dcff2cff31a5957ac022ab995da977c667ddc7626205aea",
+    "file_type": "PE"
+  },
+  "hashing": {},
+  "security": {}
+}

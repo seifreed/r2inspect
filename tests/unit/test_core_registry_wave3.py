@@ -22,50 +22,6 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
-# r2inspect/core/r2_session.py  -- lines 4,6,8-22
-# Importing the shim module exercises all re-export lines.
-# ---------------------------------------------------------------------------
-
-
-def test_r2_session_shim_exports_all_symbols():
-    import r2inspect.core.r2_session as shim
-
-    assert shim.R2Session is not None
-    assert shim.r2pipe is not None
-    assert shim.psutil is not None
-    assert shim.platform is not None
-    assert isinstance(shim.HUGE_FILE_THRESHOLD_MB, (int, float))
-    assert isinstance(shim.LARGE_FILE_THRESHOLD_MB, (int, float))
-    assert isinstance(shim.MIN_INFO_RESPONSE_LENGTH, int)
-    assert isinstance(shim.TEST_HUGE_FILE_THRESHOLD_MB, (int, float))
-    assert isinstance(shim.TEST_LARGE_FILE_THRESHOLD_MB, (int, float))
-    assert isinstance(shim.TEST_R2_ANALYSIS_TIMEOUT, (int, float))
-    assert isinstance(shim.TEST_R2_CMD_TIMEOUT, (int, float))
-    assert isinstance(shim.TEST_R2_OPEN_TIMEOUT, (int, float))
-
-
-def test_r2_session_shim_all_in_all():
-    import r2inspect.core.r2_session as shim
-
-    expected = [
-        "R2Session",
-        "r2pipe",
-        "psutil",
-        "platform",
-        "HUGE_FILE_THRESHOLD_MB",
-        "LARGE_FILE_THRESHOLD_MB",
-        "MIN_INFO_RESPONSE_LENGTH",
-        "TEST_HUGE_FILE_THRESHOLD_MB",
-        "TEST_LARGE_FILE_THRESHOLD_MB",
-        "TEST_R2_ANALYSIS_TIMEOUT",
-        "TEST_R2_CMD_TIMEOUT",
-        "TEST_R2_OPEN_TIMEOUT",
-    ]
-    for name in expected:
-        assert name in shim.__all__, f"{name} missing from __all__"
-
-
-# ---------------------------------------------------------------------------
 # r2inspect/cli/batch_processing.py
 # ---------------------------------------------------------------------------
 
@@ -476,7 +432,7 @@ def test_get_dependencies_returns_empty_set_for_unknown():
 # r2inspect/utils/memory_manager.py
 # ---------------------------------------------------------------------------
 
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,

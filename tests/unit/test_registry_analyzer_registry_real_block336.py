@@ -10,6 +10,7 @@ from r2inspect.registry.analyzer_registry import (
     AnalyzerMetadata,
     AnalyzerRegistry,
 )
+from r2inspect.registry.entry_points import EntryPointLoader
 from r2inspect.registry.default_registry import (
     create_default_registry,
     get_category_registry,
@@ -428,7 +429,7 @@ def test_registry_entry_point_non_callable(tmp_path):
             value="tmp_entrypoint_value:VALUE",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_value) == 0
+        assert EntryPointLoader(registry)._handle_entry_point(ep_value) == 0
     finally:
         sys.path.remove(str(tmp_path))
 
@@ -459,14 +460,14 @@ def test_registry_entry_point_class_failure(tmp_path):
             value="tmp_entrypoint_bad_class:BadAnalyzer",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_class) == 0
+        assert EntryPointLoader(registry)._handle_entry_point(ep_class) == 0
 
         ep_plain = EntryPoint(
             name="plain",
             value="tmp_entrypoint_bad_class:Plain",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_plain) == 1
+        assert EntryPointLoader(registry)._handle_entry_point(ep_plain) == 1
     finally:
         sys.path.remove(str(tmp_path))
 
@@ -505,7 +506,7 @@ def test_default_registry_entry_point_failure():
 
     original = registry_module.AnalyzerRegistry.load_entry_points
 
-    def _boom(self, group: str = "r2inspect.analyzers") -> int:  # noqa: D401
+    def _boom(self, group: str = "r2inspect.analyzers") -> int:
         raise RuntimeError("boom")
 
     try:
@@ -544,7 +545,7 @@ def test_registry_entry_point_handling(tmp_path):
             value="tmp_entrypoint_module_ep:register",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_callable) == 1
+        assert EntryPointLoader(registry)._handle_entry_point(ep_callable) == 1
         assert registry.is_registered("ep") is True
 
         ep_callable_fail = EntryPoint(
@@ -552,21 +553,21 @@ def test_registry_entry_point_handling(tmp_path):
             value="tmp_entrypoint_module_ep:register_fail",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_callable_fail) == 0
+        assert EntryPointLoader(registry)._handle_entry_point(ep_callable_fail) == 0
 
         ep_class = EntryPoint(
             name="class",
             value="tmp_entrypoint_module_ep:TempAnalyzer",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_class) == 1
+        assert EntryPointLoader(registry)._handle_entry_point(ep_class) == 1
 
         ep_missing = EntryPoint(
             name="missing",
             value="tmp_entrypoint_module_ep:Missing",
             group="r2inspect.analyzers",
         )
-        assert registry._handle_entry_point(ep_missing) == 0
+        assert EntryPointLoader(registry)._handle_entry_point(ep_missing) == 0
     finally:
         sys.path.remove(str(tmp_path))
 

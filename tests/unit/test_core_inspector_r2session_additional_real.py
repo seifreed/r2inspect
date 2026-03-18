@@ -11,10 +11,10 @@ from r2inspect.config import Config
 from r2inspect.core import r2_session as r2_session_module
 from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
-from r2inspect.core.r2_session import R2Session
+from r2inspect.core.inspector import InspectorExecutionMixin
+from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.core.result_aggregator import ResultAggregator
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryMonitor,
     configure_memory_limits,
     global_memory_monitor,

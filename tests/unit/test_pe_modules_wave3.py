@@ -500,6 +500,7 @@ def test_section_analyze_sections_exception() -> None:
 
 def test_section_analyze_single_section_exception() -> None:
     """_apply_permissions raising causes exception in the try block (lines 99-101)."""
+
     class _RaisingPermAdapter(SimpleSectionAdapter):
         pass
 

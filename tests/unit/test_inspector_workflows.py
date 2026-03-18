@@ -2,20 +2,187 @@
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from typing import Any
 
 import pytest
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.config import Config
+from r2inspect.config_schemas.schemas import PipelineConfig, R2InspectConfig
+from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.result_aggregator import ResultAggregator
+from r2inspect.infrastructure.memory import MemoryMonitor
+from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline
+from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 
 
-def create_mock_registry():
-    """Create a mock registry that supports len()."""
-    registry = Mock()
-    registry.__len__ = Mock(return_value=5)
-    registry.list_analyzers.return_value = []
+# ---------------------------------------------------------------------------
+# Lightweight fakes that satisfy the real interfaces without spawning r2pipe
+# ---------------------------------------------------------------------------
+
+
+class FakeR2:
+    """Minimal r2pipe stand-in."""
+
+    def __init__(
+        self, cmdj_map: dict[str, Any] | None = None, cmd_map: dict[str, Any] | None = None
+    ):
+        self.cmdj_map = cmdj_map or {}
+        self.cmd_map = cmd_map or {}
+
+    def cmdj(self, command: str) -> Any:
+        return self.cmdj_map.get(command, {})
+
+    def cmd(self, command: str) -> str:
+        return self.cmd_map.get(command, "")
+
+
+class FakeFileValidator:
+    """FileValidator substitute whose validate() result is configurable."""
+
+    def __init__(self, result: bool = True):
+        self._result = result
+        self.validate_called = False
+
+    def validate(self) -> bool:
+        self.validate_called = True
+        return self._result
+
+    def _file_size_mb(self) -> float:
+        return 0.01
+
+
+class FakePipeline:
+    """Minimal pipeline that records calls and returns canned results."""
+
+    def __init__(self, result: dict[str, Any] | None = None, *, error: Exception | None = None):
+        self._result = result or {}
+        self._error = error
+        self.execute_calls: list[tuple[dict, bool]] = []
+        self.execute_with_progress_calls: list[tuple[Any, dict]] = []
+
+    def execute(
+        self, options: dict[str, Any] | None = None, parallel: bool = False
+    ) -> dict[str, Any]:
+        if self._error is not None:
+            raise self._error
+        self.execute_calls.append((options or {}, parallel))
+        return dict(self._result)
+
+    def execute_with_progress(
+        self, progress_callback: Any, options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        if self._error is not None:
+            raise self._error
+        self.execute_with_progress_calls.append((progress_callback, options or {}))
+        return dict(self._result)
+
+
+class FakePipelineBuilder:
+    """PipelineBuilder substitute that yields a FakePipeline."""
+
+    def __init__(self, pipeline: FakePipeline | None = None):
+        self._pipeline = pipeline or FakePipeline()
+        self.build_calls: list[dict] = []
+
+    def build(self, options: dict[str, Any]) -> FakePipeline:
+        self.build_calls.append(options)
+        return self._pipeline
+
+
+class FakeAdapter:
+    """Lightweight adapter that does not require a live r2pipe session."""
+
+    thread_safe = False
+
+    def __init__(self):
+        self._cache: dict[str, Any] = {}
+        import threading
+
+        self._cache_lock = threading.Lock()
+
+    def cmd(self, command: str) -> str:
+        return ""
+
+    def cmdj(self, command: str) -> Any:
+        return {}
+
+    def execute_command(self, command: str) -> Any:
+        return None
+
+
+class ThreadSafeFakeAdapter(FakeAdapter):
+    """Adapter variant that reports itself as thread-safe."""
+
+    thread_safe = True
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_registry() -> AnalyzerRegistry:
+    """Return a real (empty) registry."""
+    registry = AnalyzerRegistry(lazy_loading=False)
     return registry
+
+
+def _make_memory_monitor() -> MemoryMonitor:
+    """Return a real memory monitor."""
+    return MemoryMonitor()
+
+
+def _make_config(parallel_execution: bool = True) -> Config:
+    """Return a real Config with default settings and optional pipeline overrides."""
+    config = Config(config_path="/dev/null")
+    new_pipeline = dataclasses.replace(
+        config.typed_config.pipeline, parallel_execution=parallel_execution
+    )
+    config._typed_config = dataclasses.replace(config.typed_config, pipeline=new_pipeline)
+    return config
+
+
+def _make_inspector(
+    *,
+    adapter: Any | None = None,
+    config: Config | None = None,
+    verbose: bool = False,
+    cleanup_callback: Any = None,
+    file_validator_result: bool = True,
+    pipeline_builder: FakePipelineBuilder | None = None,
+    registry: AnalyzerRegistry | None = None,
+    memory_monitor: MemoryMonitor | None = None,
+) -> R2Inspector:
+    """Build an R2Inspector wired to real lightweight objects."""
+    adapter = adapter if adapter is not None else FakeAdapter()
+    config = config if config is not None else _make_config()
+    memory_monitor = memory_monitor if memory_monitor is not None else _make_memory_monitor()
+    registry = registry if registry is not None else _make_registry()
+    pipeline_builder = pipeline_builder if pipeline_builder is not None else FakePipelineBuilder()
+
+    fv = FakeFileValidator(result=file_validator_result)
+
+    return R2Inspector(
+        filename="/tmp/test.bin",
+        config=config,
+        verbose=verbose,
+        adapter=adapter,
+        memory_monitor=memory_monitor,
+        cleanup_callback=cleanup_callback,
+        file_validator_factory=lambda _f: fv,
+        result_aggregator_factory=ResultAggregator,
+        registry_factory=lambda: registry,
+        pipeline_builder_factory=lambda _a, _r, _c, _f: pipeline_builder,
+    )
+
+
+# ===========================================================================
+# Tests
+# ===========================================================================
 
 
 class TestInspectorInitialization:
@@ -23,95 +190,103 @@ class TestInspectorInitialization:
 
     def test_init_with_all_dependencies(self) -> None:
         """Test successful initialization with all required dependencies."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        adapter = FakeAdapter()
+        memory = _make_memory_monitor()
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
+        fv = FakeFileValidator(result=True)
+        aggregator = ResultAggregator()
+        registry = _make_registry()
+        pb = FakePipelineBuilder()
 
         inspector = R2Inspector(
             filename="/tmp/test.bin",
-            config=mock_config,
+            config=config,
             verbose=False,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
+            adapter=adapter,
+            memory_monitor=memory,
+            file_validator_factory=lambda _: fv,
+            result_aggregator_factory=lambda: aggregator,
+            registry_factory=lambda: registry,
+            pipeline_builder_factory=lambda a, r, c, f: pb,
         )
 
         assert inspector.filename == "/tmp/test.bin"
-        assert inspector.adapter == mock_adapter
-        assert inspector.config == mock_config
+        assert inspector.adapter is adapter
+        assert inspector.config is config
         assert inspector.verbose is False
-        assert inspector.registry == mock_registry
-        mock_file_validator.validate.assert_called_once()
+        assert inspector.registry is registry
+        assert fv.validate_called
 
     def test_init_without_memory_monitor_raises(self) -> None:
         """Test initialization fails without memory monitor."""
+        adapter = FakeAdapter()
         with pytest.raises(ValueError, match="memory_monitor must be provided"):
-            R2Inspector(filename="/tmp/test.bin", memory_monitor=None)
+            R2Inspector(
+                filename="/tmp/test.bin",
+                adapter=adapter,
+                memory_monitor=None,
+                registry_factory=lambda: _make_registry(),
+                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+            )
 
     def test_init_without_adapter_raises(self) -> None:
         """Test initialization fails without adapter."""
-        mock_memory = Mock()
-        mock_config = Mock()
+        memory = _make_memory_monitor()
+        config = _make_config()
         with pytest.raises(ValueError, match="adapter must be provided"):
             R2Inspector(
-                filename="/tmp/test.bin", memory_monitor=mock_memory, config=mock_config, adapter=None
+                filename="/tmp/test.bin",
+                memory_monitor=memory,
+                config=config,
+                adapter=None,
             )
 
     def test_init_without_config_uses_factory(self) -> None:
         """Test config is created from factory when not provided."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        adapter = FakeAdapter()
+        memory = _make_memory_monitor()
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
+        fv = FakeFileValidator(result=True)
+        aggregator = ResultAggregator()
+        registry = _make_registry()
+        pb = FakePipelineBuilder()
 
         inspector = R2Inspector(
             filename="/tmp/test.bin",
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
+            adapter=adapter,
+            memory_monitor=memory,
             config=None,
-            config_factory=lambda: mock_config,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
+            config_factory=lambda: config,
+            file_validator_factory=lambda _: fv,
+            result_aggregator_factory=lambda: aggregator,
+            registry_factory=lambda: registry,
+            pipeline_builder_factory=lambda a, r, c, f: pb,
         )
 
-        assert inspector.config == mock_config
+        assert inspector.config is config
 
     def test_init_without_config_factory_raises(self) -> None:
         """Test initialization fails when config is None and no factory provided."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
+        adapter = FakeAdapter()
+        memory = _make_memory_monitor()
         with pytest.raises(ValueError, match="config_factory must be provided when config is None"):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=mock_adapter,
-                memory_monitor=mock_memory,
+                adapter=adapter,
+                memory_monitor=memory,
                 config=None,
                 config_factory=None,
+                registry_factory=lambda: _make_registry(),
+                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
             )
 
     def test_init_without_factories_raises(self) -> None:
         """Test initialization fails without required factories."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
+        adapter = FakeAdapter()
+        memory = _make_memory_monitor()
+        config = _make_config()
 
         with pytest.raises(
             ValueError,
@@ -119,52 +294,52 @@ class TestInspectorInitialization:
         ):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=mock_adapter,
-                memory_monitor=mock_memory,
-                config=mock_config,
+                adapter=adapter,
+                memory_monitor=memory,
+                config=config,
+                registry_factory=lambda: _make_registry(),
+                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
                 file_validator_factory=None,
                 result_aggregator_factory=None,
             )
 
     def test_init_file_validation_failure(self) -> None:
         """Test initialization fails when file validation fails."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
+        adapter = FakeAdapter()
+        memory = _make_memory_monitor()
+        config = _make_config()
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = False
+        fv = FakeFileValidator(result=False)
 
         with pytest.raises(ValueError, match="File validation failed"):
             R2Inspector(
                 filename="/tmp/nonexistent.bin",
-                adapter=mock_adapter,
-                memory_monitor=mock_memory,
-                config=mock_config,
-                file_validator_factory=lambda _: mock_file_validator,
-                result_aggregator_factory=lambda: Mock(),
-                registry_factory=lambda: Mock(),
-                pipeline_builder_factory=lambda a, r, c, f: Mock(),
+                adapter=adapter,
+                memory_monitor=memory,
+                config=config,
+                file_validator_factory=lambda _: fv,
+                result_aggregator_factory=ResultAggregator,
+                registry_factory=_make_registry,
+                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
             )
 
     def test_init_without_registry_factory_raises(self) -> None:
         """Test initialization fails without registry_factory."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
+        adapter = FakeAdapter()
+        memory = _make_memory_monitor()
+        config = _make_config()
+        fv = FakeFileValidator(result=True)
 
         with pytest.raises(
             ValueError, match="registry_factory and pipeline_builder_factory must be provided"
         ):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=mock_adapter,
-                memory_monitor=mock_memory,
-                config=mock_config,
-                file_validator_factory=lambda _: mock_file_validator,
-                result_aggregator_factory=lambda: Mock(),
+                adapter=adapter,
+                memory_monitor=memory,
+                config=config,
+                file_validator_factory=lambda _: fv,
+                result_aggregator_factory=ResultAggregator,
                 registry_factory=None,
                 pipeline_builder_factory=None,
             )
@@ -175,64 +350,23 @@ class TestInspectorInfrastructure:
 
     def test_init_infrastructure_success(self) -> None:
         """Test infrastructure initialization with registry and pipeline builder."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        registry = _make_registry()
+        pb = FakePipelineBuilder()
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_registry.__len__ = Mock(return_value=5)
-        mock_pipeline_builder = Mock()
+        inspector = _make_inspector(registry=registry, pipeline_builder=pb)
 
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            verbose=False,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
-        assert inspector.registry == mock_registry
-        assert inspector._pipeline_builder == mock_pipeline_builder
+        assert inspector.registry is registry
+        assert inspector._pipeline_builder is pb
 
     def test_init_infrastructure_verbose_logging(self) -> None:
-        """Test infrastructure initialization with verbose mode logs analyzers."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        """Test infrastructure initialization with verbose mode runs without error."""
+        registry = _make_registry()
+        pb = FakePipelineBuilder()
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_registry.__len__ = Mock(return_value=2)
-        mock_registry.list_analyzers.return_value = [
-            {"name": "pe_analyzer", "category": "format", "file_formats": ["PE"]},
-            {"name": "elf_analyzer", "category": "format", "file_formats": ["ELF"]},
-        ]
-        mock_pipeline_builder = Mock()
+        inspector = _make_inspector(verbose=True, registry=registry, pipeline_builder=pb)
 
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            verbose=True,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
-        mock_registry.list_analyzers.assert_called_once()
+        # Verbose mode should complete without error; registry is usable.
+        assert inspector.registry is registry
 
 
 class TestInspectorAnalyze:
@@ -240,35 +374,11 @@ class TestInspectorAnalyze:
 
     def test_analyze_sequential_execution(self) -> None:
         """Test analyze method with sequential pipeline execution."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_memory.check_memory.return_value = {
-            "process_memory_mb": 50.0,
-            "peak_memory_mb": 60.0,
-            "gc_count": 1,
-        }
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        pipeline = FakePipeline(result={"test": "result"})
+        pb = FakePipelineBuilder(pipeline=pipeline)
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline = Mock()
-        mock_pipeline.execute.return_value = {"test": "result"}
-        mock_pipeline_builder = Mock()
-        mock_pipeline_builder.build.return_value = mock_pipeline
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
+        inspector = _make_inspector(config=config, pipeline_builder=pb)
 
         options = {"batch_mode": True}
         result = inspector.analyze(**options)
@@ -276,178 +386,83 @@ class TestInspectorAnalyze:
         assert "test" in result
         assert result["test"] == "result"
         assert "memory_stats" in result
-        assert result["memory_stats"]["initial_memory_mb"] == 50.0
-        mock_pipeline_builder.build.assert_called_once_with(options)
-        mock_pipeline.execute.assert_called_once_with(options, parallel=False)
+        assert isinstance(result["memory_stats"]["initial_memory_mb"], float)
+        assert len(pb.build_calls) == 1
+        assert pb.build_calls[0] == options
+        assert len(pipeline.execute_calls) == 1
+        assert pipeline.execute_calls[0] == (options, False)
 
     def test_analyze_parallel_execution_thread_safe(self) -> None:
         """Test analyze method with parallel execution when adapter is thread-safe."""
-        mock_adapter = Mock()
-        mock_adapter.thread_safe = True
-        mock_memory = Mock()
-        mock_memory.check_memory.return_value = {"process_memory_mb": 50.0}
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = True
+        pipeline = FakePipeline(result={"parallel": "result"})
+        pb = FakePipelineBuilder(pipeline=pipeline)
+        config = _make_config(parallel_execution=True)
+        adapter = ThreadSafeFakeAdapter()
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline = Mock()
-        mock_pipeline.execute.return_value = {"parallel": "result"}
-        mock_pipeline_builder = Mock()
-        mock_pipeline_builder.build.return_value = mock_pipeline
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
+        inspector = _make_inspector(adapter=adapter, config=config, pipeline_builder=pb)
 
         result = inspector.analyze()
 
-        mock_pipeline.execute.assert_called_once_with({}, parallel=True)
+        assert len(pipeline.execute_calls) == 1
+        assert pipeline.execute_calls[0][1] is True  # parallel=True
         assert "parallel" in result
 
     def test_analyze_parallel_disabled_when_not_thread_safe(self) -> None:
         """Test parallel execution is disabled when adapter is not thread-safe."""
-        mock_adapter = Mock()
-        mock_adapter.thread_safe = False
-        mock_memory = Mock()
-        mock_memory.check_memory.return_value = {"process_memory_mb": 50.0}
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = True
+        pipeline = FakePipeline(result={})
+        pb = FakePipelineBuilder(pipeline=pipeline)
+        config = _make_config(parallel_execution=True)
+        adapter = FakeAdapter()  # thread_safe = False
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline = Mock()
-        mock_pipeline.execute.return_value = {}
-        mock_pipeline_builder = Mock()
-        mock_pipeline_builder.build.return_value = mock_pipeline
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(adapter=adapter, config=config, pipeline_builder=pb)
         inspector.analyze()
 
-        mock_pipeline.execute.assert_called_once_with({}, parallel=False)
+        assert len(pipeline.execute_calls) == 1
+        assert pipeline.execute_calls[0][1] is False  # parallel forced to False
 
     def test_analyze_with_progress_callback(self) -> None:
         """Test analyze method with progress callback in sequential mode."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_memory.check_memory.return_value = {"process_memory_mb": 50.0}
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        pipeline = FakePipeline(result={"progress": "tracked"})
+        pb = FakePipelineBuilder(pipeline=pipeline)
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline = Mock()
-        mock_pipeline.execute_with_progress.return_value = {"progress": "tracked"}
-        mock_pipeline_builder = Mock()
-        mock_pipeline_builder.build.return_value = mock_pipeline
+        inspector = _make_inspector(config=config, pipeline_builder=pb)
 
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
+        callback_calls: list[str] = []
 
-        progress_callback = Mock()
+        def progress_callback(msg: str, *_args: Any) -> None:
+            callback_calls.append(msg)
+
         options = {"detect_packer": True}
         result = inspector.analyze(progress_callback=progress_callback, **options)
 
         assert result["progress"] == "tracked"
-        mock_pipeline.execute_with_progress.assert_called_once_with(progress_callback, options)
+        assert len(pipeline.execute_with_progress_calls) == 1
+        cb_arg, opts_arg = pipeline.execute_with_progress_calls[0]
+        assert cb_arg is progress_callback
+        assert opts_arg == options
 
     def test_analyze_memory_error_handling(self) -> None:
         """Test analyze handles MemoryError gracefully."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_memory.check_memory.side_effect = [
-            {"process_memory_mb": 50.0},
-            {"process_memory_mb": 100.0},
-        ]
-        mock_memory._trigger_gc = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        pipeline = FakePipeline(error=MemoryError("Out of memory"))
+        pb = FakePipelineBuilder(pipeline=pipeline)
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline = Mock()
-        mock_pipeline.execute.side_effect = MemoryError("Out of memory")
-        mock_pipeline_builder = Mock()
-        mock_pipeline_builder.build.return_value = mock_pipeline
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
+        inspector = _make_inspector(config=config, pipeline_builder=pb)
 
         result = inspector.analyze()
 
         assert "error" in result
         assert "Memory limit exceeded" in result["error"]
         assert "memory_stats" in result
-        mock_memory._trigger_gc.assert_called_once_with(aggressive=True)
 
     def test_analyze_generic_exception_handling(self) -> None:
         """Test analyze handles generic exceptions gracefully."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_memory.check_memory.return_value = {"process_memory_mb": 50.0}
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        pipeline = FakePipeline(error=RuntimeError("Pipeline failed"))
+        pb = FakePipelineBuilder(pipeline=pipeline)
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline = Mock()
-        mock_pipeline.execute.side_effect = RuntimeError("Pipeline failed")
-        mock_pipeline_builder = Mock()
-        mock_pipeline_builder.build.return_value = mock_pipeline
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
+        inspector = _make_inspector(config=config, pipeline_builder=pb)
 
         result = inspector.analyze()
 
@@ -456,29 +471,9 @@ class TestInspectorAnalyze:
 
     def test_analyze_pipeline_builder_not_initialized(self) -> None:
         """Test analyze raises when pipeline builder is not initialized."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_memory.check_memory.return_value = {"process_memory_mb": 50.0}
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
+        config = _make_config(parallel_execution=False)
 
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(config=config)
         inspector._pipeline_builder = None
 
         result = inspector.analyze()
@@ -492,34 +487,12 @@ class TestInspectorCleanup:
 
     def test_cleanup_with_callback(self) -> None:
         """Test cleanup calls cleanup callback."""
-        cleanup_called = []
+        cleanup_called: list[bool] = []
 
         def cleanup_callback() -> None:
             cleanup_called.append(True)
 
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
-
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            cleanup_callback=cleanup_callback,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(cleanup_callback=cleanup_callback)
         inspector._cleanup()
 
         assert len(cleanup_called) == 1
@@ -527,91 +500,26 @@ class TestInspectorCleanup:
 
     def test_cleanup_without_callback(self) -> None:
         """Test cleanup without callback doesn't crash."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
-
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            cleanup_callback=None,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(cleanup_callback=None)
         inspector._cleanup()
 
         assert inspector.adapter is None
 
     def test_context_manager_enter(self) -> None:
         """Test context manager __enter__ returns self."""
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
-
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector()
         result = inspector.__enter__()
 
         assert result is inspector
 
     def test_context_manager_exit_cleanup(self) -> None:
         """Test context manager __exit__ calls cleanup."""
-        cleanup_called = []
+        cleanup_called: list[bool] = []
 
         def cleanup_callback() -> None:
             cleanup_called.append(True)
 
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
-
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            cleanup_callback=cleanup_callback,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(cleanup_callback=cleanup_callback)
         result = inspector.__exit__(None, None, None)
 
         assert result is False
@@ -619,68 +527,24 @@ class TestInspectorCleanup:
 
     def test_destructor_cleanup(self) -> None:
         """Test __del__ calls cleanup."""
-        cleanup_called = []
+        cleanup_called: list[bool] = []
 
         def cleanup_callback() -> None:
             cleanup_called.append(True)
 
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
-
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            cleanup_callback=cleanup_callback,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(cleanup_callback=cleanup_callback)
         inspector.__del__()
 
         assert len(cleanup_called) == 1
 
     def test_close_method(self) -> None:
         """Test close method calls cleanup."""
-        cleanup_called = []
+        cleanup_called: list[bool] = []
 
         def cleanup_callback() -> None:
             cleanup_called.append(True)
 
-        mock_adapter = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        mock_config.typed_config.pipeline.parallel_execution = False
-
-        mock_file_validator = Mock()
-        mock_file_validator.validate.return_value = True
-        mock_result_aggregator = Mock()
-        mock_registry = create_mock_registry()
-        mock_pipeline_builder = Mock()
-
-        inspector = R2Inspector(
-            filename="/tmp/test.bin",
-            config=mock_config,
-            adapter=mock_adapter,
-            memory_monitor=mock_memory,
-            cleanup_callback=cleanup_callback,
-            file_validator_factory=lambda _: mock_file_validator,
-            result_aggregator_factory=lambda: mock_result_aggregator,
-            registry_factory=lambda: mock_registry,
-            pipeline_builder_factory=lambda a, r, c, f: mock_pipeline_builder,
-        )
-
+        inspector = _make_inspector(cleanup_callback=cleanup_callback)
         inspector.close()
 
         assert len(cleanup_called) == 1

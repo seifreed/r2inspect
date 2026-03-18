@@ -373,9 +373,7 @@ def test_base_analyzer_analysis_context_no_set_available() -> None:
     analyzer = ConcreteAnalyzer()
     result = {"available": False, "error": None}
 
-    with analyzer._analysis_context(
-        result, error_message="Test error", set_available=False
-    ):
+    with analyzer._analysis_context(result, error_message="Test error", set_available=False):
         pass
 
     assert result["available"] is False

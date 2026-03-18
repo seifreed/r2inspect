@@ -12,6 +12,7 @@ from r2inspect.config_schemas.schemas import R2InspectConfig
 
 # Basic builder tests
 
+
 def test_config_builder_default_build():
     config = ConfigBuilder().build()
     assert isinstance(config, R2InspectConfig)
@@ -292,6 +293,7 @@ def test_config_builder_all_options_chain():
 
 
 # Factory function tests
+
 
 def test_create_default_config():
     config = create_default_config()

@@ -186,11 +186,7 @@ def test_get_pe_security_text_falls_back_to_cmd_when_no_method():
 
 def test_apply_authenticode_feature_sets_true_when_security_dir_has_size():
     features = {"authenticode": False}
-    pe_header = {
-        "data_directories": {
-            "security": {"size": 1024, "offset": 0x100}
-        }
-    }
+    pe_header = {"data_directories": {"security": {"size": 1024, "offset": 0x100}}}
     _apply_authenticode_feature(features, pe_header)
     assert features["authenticode"] is True
 
@@ -257,3 +253,34 @@ def test_get_security_features_returns_all_false_on_error():
     # Should return default dict without raising
     assert isinstance(features, dict)
     assert set(features.keys()) == {"aslr", "dep", "seh", "guard_cf", "authenticode"}
+
+
+def test_get_security_features_logs_error_when_text_fallback_raises():
+    """Trigger the outer except in get_security_features without monkeypatch.
+
+    Use an adapter whose get_headers_json returns [] (so pe_header is None,
+    no flags set) and whose get_pe_security_text raises, hitting the
+    except block on line 30.
+    """
+
+    class CollectingLogger:
+        def __init__(self) -> None:
+            self.errors: list[str] = []
+
+        def error(self, msg: str) -> None:
+            self.errors.append(msg)
+
+        def debug(self, *_args, **_kwargs) -> None:
+            return None
+
+    class _RaisingTextAdapter:
+        def get_headers_json(self) -> list:
+            return []
+
+        def get_pe_security_text(self) -> str:
+            raise RuntimeError("security text crash")
+
+    logger = CollectingLogger()
+    features = get_security_features(_RaisingTextAdapter(), logger)
+    assert features["aslr"] is False
+    assert any("Error checking security features" in msg for msg in logger.errors)

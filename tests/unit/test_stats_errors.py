@@ -43,7 +43,7 @@ def test_individual_stats_functions():
     error_stats = get_error_stats()
     retry_stats = get_retry_stats()
     cb_stats = get_circuit_breaker_stats()
-    
+
     assert isinstance(error_stats, dict)
     assert isinstance(retry_stats, dict)
     assert isinstance(cb_stats, dict)

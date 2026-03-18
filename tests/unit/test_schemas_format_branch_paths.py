@@ -191,8 +191,15 @@ def test_security_score_zero_when_all_false():
 
 def test_security_score_full_suite():
     sf = SecurityFeatures(
-        nx=True, pie=True, canary=True, aslr=True,
-        guard_cf=True, seh=True, authenticode=True, fortify=True, high_entropy_va=True,
+        nx=True,
+        pie=True,
+        canary=True,
+        aslr=True,
+        guard_cf=True,
+        seh=True,
+        authenticode=True,
+        fortify=True,
+        high_entropy_va=True,
     )
     score = sf.security_score()
     assert score > 0
@@ -214,9 +221,19 @@ def test_security_score_relro_true_same_as_partial():
 
 def test_security_score_capped_at_100():
     sf = SecurityFeatures(
-        nx=True, pie=True, canary=True, aslr=True, stack_canary=True,
-        guard_cf=True, seh=True, authenticode=True, fortify=True, high_entropy_va=True,
-        relro="full", dep=True, rpath=False,
+        nx=True,
+        pie=True,
+        canary=True,
+        aslr=True,
+        stack_canary=True,
+        guard_cf=True,
+        seh=True,
+        authenticode=True,
+        fortify=True,
+        high_entropy_va=True,
+        relro="full",
+        dep=True,
+        rpath=False,
     )
     assert sf.security_score() <= 100
 

@@ -1,0 +1,21 @@
+{
+  "file_format": "ELF",
+  "name": "hello_elf",
+  "size": 1872,
+  "hashes": {
+    "md5": "fbf668f8f360fee2da0c244369b94eb4",
+    "sha1": "e11ab6f8b7fe3ba0b037b6fc84d5d33748a5942a",
+    "sha256": "39688c91f985915d521bd21983f600817507de4a70cde683ea372eb8472a3a09"
+  },
+  "file_info": {
+    "name": "hello_elf",
+    "path": "/Users/seifreed/tools/malware/r2inspect/samples/fixtures/hello_elf",
+    "size": 1872,
+    "md5": "fbf668f8f360fee2da0c244369b94eb4",
+    "sha1": "e11ab6f8b7fe3ba0b037b6fc84d5d33748a5942a",
+    "sha256": "39688c91f985915d521bd21983f600817507de4a70cde683ea372eb8472a3a09",
+    "file_type": "ELF"
+  },
+  "hashing": {},
+  "security": {}
+}

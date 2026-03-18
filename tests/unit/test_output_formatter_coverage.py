@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from rich.table import Table
 
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 # ---------------------------------------------------------------------------
 # format_table
 # ---------------------------------------------------------------------------
+
 
 def test_format_table_returns_rich_table() -> None:
     fmt = OutputFormatter({"file_info": {"name": "test.exe"}})
@@ -39,10 +40,23 @@ def test_format_table_empty_data() -> None:
 # format_sections
 # ---------------------------------------------------------------------------
 
+
 def test_format_sections_normal() -> None:
     sections = [
-        {"name": ".text", "raw_size": 4096, "flags": "r-x", "entropy": 6.5, "suspicious_indicators": []},
-        {"name": ".data", "raw_size": 512, "flags": "rw-", "entropy": 2.1, "suspicious_indicators": ["high_entropy"]},
+        {
+            "name": ".text",
+            "raw_size": 4096,
+            "flags": "r-x",
+            "entropy": 6.5,
+            "suspicious_indicators": [],
+        },
+        {
+            "name": ".data",
+            "raw_size": 512,
+            "flags": "rw-",
+            "entropy": 2.1,
+            "suspicious_indicators": ["high_entropy"],
+        },
     ]
     result = OutputFormatter({}).format_sections(sections)
     assert isinstance(result, Table)
@@ -68,12 +82,25 @@ def test_format_sections_suspicious_yes() -> None:
 # format_imports
 # ---------------------------------------------------------------------------
 
+
 def test_format_imports_normal() -> None:
     imports = [
-        {"name": "CreateRemoteThread", "library": "kernel32.dll", "category": "Injection",
-         "risk_score": 95, "risk_level": "Critical", "risk_tags": ["Remote Thread Injection"]},
-        {"name": "VirtualAlloc", "library": "kernel32.dll", "category": "Memory",
-         "risk_score": 50, "risk_level": "Medium", "risk_tags": ["Memory Allocation"]},
+        {
+            "name": "CreateRemoteThread",
+            "library": "kernel32.dll",
+            "category": "Injection",
+            "risk_score": 95,
+            "risk_level": "Critical",
+            "risk_tags": ["Remote Thread Injection"],
+        },
+        {
+            "name": "VirtualAlloc",
+            "library": "kernel32.dll",
+            "category": "Memory",
+            "risk_score": 50,
+            "risk_level": "Medium",
+            "risk_tags": ["Memory Allocation"],
+        },
     ]
     result = OutputFormatter({}).format_imports(imports)
     assert isinstance(result, Table)
@@ -81,15 +108,31 @@ def test_format_imports_normal() -> None:
 
 def test_format_imports_all_risk_levels() -> None:
     for level in ["Critical", "High", "Medium", "Low", "Minimal"]:
-        imports = [{"name": "SomeFunc", "library": "lib.dll", "category": "X",
-                    "risk_score": 10, "risk_level": level, "risk_tags": ["tag1", "tag2", "tag3"]}]
+        imports = [
+            {
+                "name": "SomeFunc",
+                "library": "lib.dll",
+                "category": "X",
+                "risk_score": 10,
+                "risk_level": level,
+                "risk_tags": ["tag1", "tag2", "tag3"],
+            }
+        ]
         result = OutputFormatter({}).format_imports(imports)
         assert isinstance(result, Table)
 
 
 def test_format_imports_empty_tags() -> None:
-    imports = [{"name": "Func", "library": "lib.dll", "category": "X",
-                "risk_score": 0, "risk_level": "Minimal", "risk_tags": []}]
+    imports = [
+        {
+            "name": "Func",
+            "library": "lib.dll",
+            "category": "X",
+            "risk_score": 0,
+            "risk_level": "Minimal",
+            "risk_tags": [],
+        }
+    ]
     result = OutputFormatter({}).format_imports(imports)
     assert isinstance(result, Table)
 
@@ -100,9 +143,16 @@ def test_format_imports_empty_list() -> None:
 
 
 def test_format_imports_more_than_two_tags() -> None:
-    imports = [{"name": "F", "library": "L", "category": "C",
-                "risk_score": 50, "risk_level": "Medium",
-                "risk_tags": ["tag1", "tag2", "tag3", "tag4"]}]
+    imports = [
+        {
+            "name": "F",
+            "library": "L",
+            "category": "C",
+            "risk_score": 50,
+            "risk_level": "Medium",
+            "risk_tags": ["tag1", "tag2", "tag3", "tag4"],
+        }
+    ]
     result = OutputFormatter({}).format_imports(imports)
     assert isinstance(result, Table)
 
@@ -111,15 +161,14 @@ def test_format_imports_more_than_two_tags() -> None:
 # format_summary
 # ---------------------------------------------------------------------------
 
+
 def test_format_summary_empty_results() -> None:
     result = OutputFormatter({}).format_summary()
     assert "R2INSPECT" in result
 
 
 def test_format_summary_with_file_info() -> None:
-    results = {
-        "file_info": {"name": "test.exe", "size": 1024, "file_type": "PE", "md5": "abc123"}
-    }
+    results = {"file_info": {"name": "test.exe", "size": 1024, "file_type": "PE", "md5": "abc123"}}
     result = OutputFormatter(results).format_summary()
     assert "test.exe" in result
     assert "1024" in result
@@ -133,9 +182,7 @@ def test_format_summary_with_indicators() -> None:
 
 
 def test_format_summary_with_few_indicators() -> None:
-    results = {
-        "indicators": [{"type": "X", "description": "Y"}]
-    }
+    results = {"indicators": [{"type": "X", "description": "Y"}]}
     result = OutputFormatter(results).format_summary()
     assert "X" in result
 
@@ -173,6 +220,7 @@ def test_format_summary_no_file_info() -> None:
 # ---------------------------------------------------------------------------
 # to_json / to_csv
 # ---------------------------------------------------------------------------
+
 
 def test_to_json_basic() -> None:
     result = OutputFormatter({"key": "value"}).to_json()
