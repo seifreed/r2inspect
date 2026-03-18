@@ -6,7 +6,7 @@ from __future__ import annotations
 import struct
 from typing import Any, cast
 
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -24,7 +24,7 @@ class RichHeaderDebugMixin:
             logger.debug("=== DEBUGGING FILE STRUCTURE ===")
 
             file_size = self._debug_get_file_size()
-            logger.debug(f"File size: {file_size} bytes")
+            logger.debug("File size: %s bytes", file_size)
 
             data = self._debug_read_bytes(512)
             if not data:
@@ -38,7 +38,7 @@ class RichHeaderDebugMixin:
             self._debug_log_extended_patterns()
 
         except Exception as e:
-            logger.debug(f"Debug analysis failed: {e}")
+            logger.debug("Debug analysis failed: %s", e)
 
     def _debug_get_file_size(self) -> int:
         return int(self._get_file_info().get("core", {}).get("size", 0))
@@ -61,22 +61,22 @@ class RichHeaderDebugMixin:
         if len(data) < 0x3C + 4:
             return None
         pe_offset = int(struct.unpack("<I", data[0x3C : 0x3C + 4])[0])
-        logger.debug(f"PE header offset: 0x{pe_offset:x}")
+        logger.debug("PE header offset: 0x%x", pe_offset)
         return pe_offset
 
     def _debug_log_stub_analysis(self, data: bytes, pe_offset: int) -> None:
         if pe_offset <= 64:
             return
         stub_data = data[64 : min(pe_offset, len(data))]
-        logger.debug(f"DOS stub size: {len(stub_data)} bytes")
+        logger.debug("DOS stub size: %s bytes", len(stub_data))
 
         rich_pos = stub_data.find(b"Rich")
         dans_pos = stub_data.find(b"DanS")
 
         if rich_pos != -1:
-            logger.debug(f"Found 'Rich' at DOS stub offset: {rich_pos + 64}")
+            logger.debug("Found 'Rich' at DOS stub offset: %s", rich_pos + 64)
         if dans_pos != -1:
-            logger.debug(f"Found 'DanS' at DOS stub offset: {dans_pos + 64}")
+            logger.debug("Found 'DanS' at DOS stub offset: %s", dans_pos + 64)
 
         if rich_pos == -1 and dans_pos == -1:
             return
@@ -85,7 +85,7 @@ class RichHeaderDebugMixin:
         end_candidates = [pos for pos in [rich_pos, dans_pos] if pos != -1]
         end = min(len(stub_data), max(end_candidates) + 32)
         hex_dump = stub_data[start:end].hex()
-        logger.debug(f"Hex dump around signatures: {hex_dump}")
+        logger.debug("Hex dump around signatures: %s", hex_dump)
 
     def _debug_log_extended_patterns(self) -> None:
         logger.debug("Searching first 2KB for Rich Header patterns...")
@@ -96,8 +96,8 @@ class RichHeaderDebugMixin:
             return
         rich_positions, dans_positions = self._find_rich_dans_positions(extended_bytes)
 
-        logger.debug(f"Found 'Rich' at positions: {rich_positions}")
-        logger.debug(f"Found 'DanS' at positions: {dans_positions}")
+        logger.debug("Found 'Rich' at positions: %s", rich_positions)
+        logger.debug("Found 'DanS' at positions: %s", dans_positions)
 
         self._debug_log_candidates(extended_bytes, rich_positions, dans_positions)
 
@@ -125,7 +125,9 @@ class RichHeaderDebugMixin:
                         f"Attempting manual extraction at DanS:{dans_pos}, Rich:{rich_pos}"
                     )
                     segment = data[dans_pos : rich_pos + 8]
-                    logger.debug(f"Rich Header candidate ({len(segment)} bytes): {segment.hex()}")
+                    logger.debug(
+                        "Rich Header candidate (%s bytes): %s", len(segment), segment.hex()
+                    )
 
     def _read_bytes(self, address: int, size: int) -> bytes:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):

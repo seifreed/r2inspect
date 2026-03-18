@@ -1,6 +1,5 @@
-"""Helper loaders for AnalysisResult deserialization."""
+"""AnalysisResult loader facade."""
 
-from datetime import datetime
 from typing import Any
 
 from .results_models import (
@@ -18,259 +17,138 @@ from .results_models import (
     SecurityFeatures,
     YaraMatch,
 )
+from .results_loader_support import (
+    EXPORT_FIELDS,
+    FUNCTION_FIELDS,
+    IMPORT_FIELDS,
+    INDICATOR_FIELDS,
+    SECTION_FIELDS,
+    YARA_FIELDS,
+    load_collection as _load_collection_impl,
+    load_file_info as _load_file_info_impl,
+    load_hashing as _load_hashing_impl,
+    load_security as _load_security_impl,
+    load_simple as _load_simple_impl,
+    set_if_present as _set_if_present_impl,
+    load_timestamp as _load_timestamp_impl,
+)
 
 
-# Convenience function for creating AnalysisResult from raw dict
 def from_dict(data: dict[str, Any]) -> AnalysisResult:
-    """
-    Create an AnalysisResult from a dictionary.
-
-    This is useful for deserializing analysis results from JSON.
-
-    Args:
-        data: Dictionary containing analysis data
-
-    Returns:
-        AnalysisResult instance
-    """
     result = AnalysisResult()
-    _load_file_info(result, data)
-    _load_hashing(result, data)
-    _load_security(result, data)
-    _load_imports(result, data)
-    _load_exports(result, data)
-    _load_sections(result, data)
-    _load_strings(result, data)
-    _load_yara_matches(result, data)
-    _load_functions(result, data)
-    _load_anti_analysis(result, data)
-    _load_packer(result, data)
-    _load_crypto(result, data)
-    _load_indicators(result, data)
-    _load_error(result, data)
-    _load_timestamp(result, data)
-    _load_execution_time(result, data)
+    for loader in (
+        _load_file_info,
+        _load_hashing,
+        _load_security,
+        _load_imports,
+        _load_exports,
+        _load_sections,
+        _load_strings,
+        _load_yara_matches,
+        _load_functions,
+        _load_anti_analysis,
+        _load_packer,
+        _load_crypto,
+        _load_indicators,
+        _load_error,
+        _load_timestamp,
+        _load_execution_time,
+    ):
+        loader(result, data)
     return result
 
 
 def _load_file_info(result: AnalysisResult, data: dict[str, Any]) -> None:
-    fi = data.get("file_info")
-    if not fi:
-        return
-    result.file_info = FileInfo(
-        name=fi.get("name", ""),
-        path=fi.get("path", ""),
-        size=fi.get("size", 0),
-        md5=fi.get("md5", ""),
-        sha1=fi.get("sha1", ""),
-        sha256=fi.get("sha256", ""),
-        file_type=fi.get("file_type", ""),
-        architecture=fi.get("architecture", ""),
-        bits=fi.get("bits", 0),
-        endian=fi.get("endian", ""),
-        mime_type=fi.get("mime_type", ""),
-    )
+    _load_file_info_impl(result, data, FileInfo)
 
 
 def _load_hashing(result: AnalysisResult, data: dict[str, Any]) -> None:
-    h = data.get("hashing")
-    if not h:
-        return
-    result.hashing = HashingResult(
-        ssdeep=h.get("ssdeep", ""),
-        tlsh=h.get("tlsh", ""),
-        imphash=h.get("imphash", ""),
-        impfuzzy=h.get("impfuzzy", ""),
-        ccbhash=h.get("ccbhash", ""),
-        simhash=h.get("simhash", ""),
-        telfhash=h.get("telfhash", ""),
-        rich_hash=h.get("rich_hash", ""),
-        machoc_hash=h.get("machoc_hash", ""),
-    )
+    _load_hashing_impl(result, data, HashingResult)
 
 
 def _load_security(result: AnalysisResult, data: dict[str, Any]) -> None:
-    s = data.get("security")
-    if not s:
-        return
-    result.security = SecurityFeatures(
-        nx=s.get("nx", False),
-        pie=s.get("pie", False),
-        canary=s.get("canary", False),
-        dep=s.get("dep", False),
-        stack_canary=s.get("stack_canary", False),
-        relro=s.get("relro", ""),
-        aslr=s.get("aslr", False),
-        seh=s.get("seh", False),
-        guard_cf=s.get("guard_cf", False),
-        authenticode=s.get("authenticode", False),
-        fortify=s.get("fortify", False),
-        rpath=s.get("rpath", False),
-        runpath=s.get("runpath", False),
-        high_entropy_va=s.get("high_entropy_va", False),
-    )
+    _load_security_impl(result, data, SecurityFeatures)
 
 
 def _load_imports(result: AnalysisResult, data: dict[str, Any]) -> None:
-    imports = data.get("imports")
-    if not imports:
-        return
-    result.imports = [
-        ImportInfo(
-            name=imp.get("name", ""),
-            library=imp.get("library", ""),
-            address=imp.get("address", ""),
-            ordinal=imp.get("ordinal", 0),
-            category=imp.get("category", ""),
-            risk_score=imp.get("risk_score", 0),
-            risk_level=imp.get("risk_level", "Low"),
-            risk_tags=imp.get("risk_tags", []),
-        )
-        for imp in imports
-    ]
+    _load_collection_impl(result, data, "imports", ImportInfo, IMPORT_FIELDS)
 
 
 def _load_exports(result: AnalysisResult, data: dict[str, Any]) -> None:
-    exports = data.get("exports")
-    if not exports:
-        return
-    result.exports = [
-        ExportInfo(
-            name=exp.get("name", ""),
-            address=exp.get("address", ""),
-            ordinal=exp.get("ordinal", 0),
-            size=exp.get("size", 0),
-        )
-        for exp in exports
-    ]
+    _load_collection_impl(result, data, "exports", ExportInfo, EXPORT_FIELDS)
 
 
 def _load_sections(result: AnalysisResult, data: dict[str, Any]) -> None:
-    sections = data.get("sections")
-    if not sections:
-        return
-    result.sections = [
-        SectionInfo(
-            name=sec.get("name", ""),
-            virtual_address=sec.get("virtual_address", 0),
-            virtual_size=sec.get("virtual_size", 0),
-            raw_size=sec.get("raw_size", 0),
-            entropy=sec.get("entropy", 0.0),
-            permissions=sec.get("permissions", ""),
-            is_executable=sec.get("is_executable", False),
-            is_writable=sec.get("is_writable", False),
-            is_readable=sec.get("is_readable", False),
-            flags=sec.get("flags"),
-            suspicious_indicators=sec.get("suspicious_indicators", []),
-        )
-        for sec in sections
-    ]
+    _load_collection_impl(result, data, "sections", SectionInfo, SECTION_FIELDS)
 
 
 def _load_strings(result: AnalysisResult, data: dict[str, Any]) -> None:
-    if "strings" in data:
-        result.strings = data["strings"]
+    _set_if_present_impl(result, data, "strings")
 
 
 def _load_yara_matches(result: AnalysisResult, data: dict[str, Any]) -> None:
-    matches = data.get("yara_matches")
-    if not matches:
-        return
-    result.yara_matches = [
-        YaraMatch(
-            rule=match.get("rule", ""),
-            namespace=match.get("namespace", ""),
-            tags=match.get("tags", []),
-            meta=match.get("meta", {}),
-            strings=match.get("strings", []),
-        )
-        for match in matches
-    ]
+    _load_collection_impl(result, data, "yara_matches", YaraMatch, YARA_FIELDS)
 
 
 def _load_functions(result: AnalysisResult, data: dict[str, Any]) -> None:
-    functions = data.get("functions")
-    if not functions:
-        return
-    result.functions = [
-        FunctionInfo(
-            name=func.get("name", ""),
-            address=func.get("address", 0),
-            size=func.get("size", 0),
-            complexity=func.get("complexity", 0),
-            basic_blocks=func.get("basic_blocks", 0),
-            call_refs=func.get("call_refs", 0),
-            data_refs=func.get("data_refs", 0),
-        )
-        for func in functions
-    ]
+    _load_collection_impl(result, data, "functions", FunctionInfo, FUNCTION_FIELDS)
 
 
 def _load_anti_analysis(result: AnalysisResult, data: dict[str, Any]) -> None:
-    aa = data.get("anti_analysis")
-    if not aa:
-        return
-    result.anti_analysis = AntiAnalysisResult(
-        anti_debug=aa.get("anti_debug", False),
-        anti_vm=aa.get("anti_vm", False),
-        anti_sandbox=aa.get("anti_sandbox", False),
-        timing_checks=aa.get("timing_checks", False),
-        techniques=aa.get("techniques", []),
+    _load_simple_impl(
+        result,
+        data,
+        "anti_analysis",
+        AntiAnalysisResult,
+        {
+            "anti_debug": ("anti_debug", False),
+            "anti_vm": ("anti_vm", False),
+            "anti_sandbox": ("anti_sandbox", False),
+            "timing_checks": ("timing_checks", False),
+            "techniques": ("techniques", []),
+        },
     )
 
 
 def _load_packer(result: AnalysisResult, data: dict[str, Any]) -> None:
-    p = data.get("packer")
-    if not p:
-        return
-    result.packer = PackerResult(
-        is_packed=p.get("is_packed", False),
-        packer_type=p.get("packer_type", ""),
-        confidence=p.get("confidence", 0),
-        indicators=p.get("indicators", []),
+    _load_simple_impl(
+        result,
+        data,
+        "packer",
+        PackerResult,
+        {
+            "is_packed": ("is_packed", False),
+            "packer_type": ("packer_type", ""),
+            "confidence": ("confidence", 0),
+            "indicators": ("indicators", []),
+        },
     )
 
 
 def _load_crypto(result: AnalysisResult, data: dict[str, Any]) -> None:
-    c = data.get("crypto")
-    if not c:
-        return
-    result.crypto = CryptoResult(
-        algorithms=c.get("algorithms", []),
-        constants=c.get("constants", []),
-        functions=c.get("functions", []),
+    _load_simple_impl(
+        result,
+        data,
+        "crypto",
+        CryptoResult,
+        {
+            "algorithms": ("algorithms", []),
+            "constants": ("constants", []),
+            "functions": ("functions", []),
+        },
     )
 
 
 def _load_indicators(result: AnalysisResult, data: dict[str, Any]) -> None:
-    indicators = data.get("indicators")
-    if not indicators:
-        return
-    result.indicators = [
-        Indicator(
-            type=ind.get("type", ""),
-            description=ind.get("description", ""),
-            severity=ind.get("severity", "Low"),
-        )
-        for ind in indicators
-    ]
+    _load_collection_impl(result, data, "indicators", Indicator, INDICATOR_FIELDS)
 
 
 def _load_error(result: AnalysisResult, data: dict[str, Any]) -> None:
-    result.error = data.get("error")
+    _set_if_present_impl(result, data, "error")
 
 
 def _load_timestamp(result: AnalysisResult, data: dict[str, Any]) -> None:
-    ts = data.get("timestamp")
-    if ts is None:
-        return
-    if isinstance(ts, str):
-        try:
-            result.timestamp = datetime.fromisoformat(ts)
-        except ValueError:
-            return
-    elif isinstance(ts, datetime):
-        result.timestamp = ts
+    _load_timestamp_impl(result, data)
 
 
 def _load_execution_time(result: AnalysisResult, data: dict[str, Any]) -> None:

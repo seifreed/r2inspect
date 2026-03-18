@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import os
-import signal
-import threading
 from pathlib import Path
 from typing import Any
 
@@ -17,16 +15,19 @@ except Exception:  # pragma: no cover - optional dependency
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..adapters.file_system import default_file_system
 from ..security.validators import FileValidator
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
+from .yara_rules_support import (
+    compile_sources_with_timeout,
+    discover_rule_files,
+    list_available_rules as collect_available_rules,
+    process_matches,
+)
 from .yara_defaults import DEFAULT_YARA_RULES
 
 logger = get_logger(__name__)
 
-# Constants
 YARA_EXT = "*.yar"
 YARA_YARA_EXT = "*.yara"
-
-# Security limits for YARA compilation
 YARA_COMPILE_TIMEOUT = 30  # seconds
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
 
@@ -55,7 +56,7 @@ class YaraAnalyzer(CommandHelperMixin):
         filepath: str | None = None,
     ) -> None:
         self.adapter = adapter
-        self.r2 = adapter
+        self.r2 = adapter  # required by CommandHelperMixin
         if config is None:
             raise ValueError("config must be provided")
         self.config = config
@@ -86,7 +87,7 @@ class YaraAnalyzer(CommandHelperMixin):
             matches = self._process_matches(yara_matches)
 
         except Exception as e:
-            logger.error(f"Error in YARA scan: {e}")
+            logger.error("Error in YARA scan: %s", e)
 
         return matches
 
@@ -97,7 +98,7 @@ class YaraAnalyzer(CommandHelperMixin):
             if file_info and "core" in file_info:
                 file_path = str(file_info["core"].get("file", ""))
         if not file_path or not os.path.exists(file_path):
-            logger.debug(f"File not accessible for YARA scan: {file_path}")
+            logger.debug("File not accessible for YARA scan: %s", file_path)
             return None
         return file_path
 
@@ -105,7 +106,7 @@ class YaraAnalyzer(CommandHelperMixin):
         rules_path = custom_rules_path or self.rules_path or ""
         if os.path.exists(rules_path):
             return rules_path
-        logger.info(f"YARA rules path not found: {rules_path}. Creating defaults.")
+        logger.info("YARA rules path not found: %s. Creating defaults.", rules_path)
         self.create_default_rules()
         return rules_path if os.path.exists(rules_path) else None
 
@@ -119,22 +120,7 @@ class YaraAnalyzer(CommandHelperMixin):
         return rules
 
     def _compile_rules(self, rules_path: str) -> Any | None:
-        """
-        Compile YARA rules from directory or file with security validation.
-
-        Security: Prevents YARA rule injection and DoS attacks (CWE-400, CWE-94) by:
-        1. Validating file paths to prevent directory traversal
-        2. Enforcing size limits on rule files
-        3. Validating rule content for dangerous patterns
-        4. Implementing compilation timeout to prevent DoS
-        5. Using signal-based timeout (Unix/Linux) or basic timeout (Windows)
-
-        Args:
-            rules_path: Path to YARA rules file or directory
-
-        Returns:
-            Compiled YARA rules or None if compilation fails
-        """
+        """Compile YARA rules from a validated file or directory."""
         try:
             if yara is None:
                 logger.warning("python-yara not available; skipping rules compilation")
@@ -143,22 +129,20 @@ class YaraAnalyzer(CommandHelperMixin):
             validated_path = self._validate_rules_path(validator, rules_path)
             if not validated_path:
                 return None
-
             rules_dict = self._collect_rules_sources(validator, validated_path)
             if not rules_dict:
                 return self._compile_default_rules(rules_path)
-
-            logger.debug(f"Successfully loaded {len(rules_dict)} YARA rule source(s)")
+            logger.debug("Successfully loaded %s YARA rule source(s)", len(rules_dict))
             return self._compile_sources_with_timeout(rules_dict)
         except Exception as e:
-            logger.error(f"Error compiling YARA rules: {e}")
+            logger.error("Error compiling YARA rules: %s", e)
             return None
 
     def _validate_rules_path(self, validator: FileValidator, rules_path: str) -> Path | None:
         try:
             return validator.validate_path(rules_path, check_exists=True)
         except ValueError as e:
-            logger.error(f"YARA rules path validation failed: {e}")
+            logger.error("YARA rules path validation failed: %s", e)
             return None
 
     def _collect_rules_sources(
@@ -168,18 +152,18 @@ class YaraAnalyzer(CommandHelperMixin):
             return self._load_single_rule(validator, validated_path)
         if validated_path.is_dir():
             return self._load_rules_dir(validator, validated_path)
-        logger.error(f"YARA rules path is neither file nor directory: {validated_path}")
+        logger.error("YARA rules path is neither file nor directory: %s", validated_path)
         return {}
 
     def _load_single_rule(self, validator: FileValidator, rule_path: Path) -> dict[str, str]:
-        logger.debug(f"Loading single YARA file: {rule_path}")
+        logger.debug("Loading single YARA file: %s", rule_path)
         content = self._read_rule_content(validator, rule_path)
         return {"single_rule": content} if content else {}
 
     def _load_rules_dir(self, validator: FileValidator, rules_dir: Path) -> dict[str, str]:
         rules_dict: dict[str, str] = {}
         rules_found = self._discover_rule_files(rules_dir)
-        logger.debug(f"Found {len(rules_found)} YARA rule files in {rules_dir}")
+        logger.debug("Found %s YARA rule files in %s", len(rules_found), rules_dir)
 
         for rule_file in rules_found:
             content = self._read_rule_content(validator, rule_file)
@@ -191,28 +175,16 @@ class YaraAnalyzer(CommandHelperMixin):
         return rules_dict
 
     def _discover_rule_files(self, rules_dir: Path) -> list[Path]:
-        yara_extensions = [YARA_EXT, YARA_YARA_EXT, "*.rule", "*.rules"]
-        rules_found: list[Path] = []
-
-        for extension in yara_extensions:
-            rules_found.extend(rules_dir.glob(extension))
-
-        for extension in yara_extensions:
-            for rule_file in rules_dir.rglob(extension):
-                if rule_file not in rules_found:
-                    rules_found.append(rule_file)
-
-        return rules_found
+        return discover_rule_files(rules_dir, [YARA_EXT, YARA_YARA_EXT, "*.rule", "*.rules"])
 
     def _read_rule_content(self, validator: FileValidator, rule_file: Path) -> str | None:
         try:
-            logger.debug(f"Loading YARA file: {rule_file.name}")
+            logger.debug("Loading YARA file: %s", rule_file.name)
             try:
                 validated_rule = validator.validate_path(str(rule_file), check_exists=True)
             except ValueError as e:
-                logger.info(f"Skipping YARA rule (path invalid) {rule_file}: {e}")
+                logger.info("Skipping YARA rule (path invalid) %s: %s", rule_file, e)
                 return None
-
             file_size = validated_rule.stat().st_size
             if file_size > YARA_MAX_RULE_SIZE:
                 logger.info(
@@ -220,112 +192,60 @@ class YaraAnalyzer(CommandHelperMixin):
                     f"({file_size} > {YARA_MAX_RULE_SIZE})"
                 )
                 return None
-
             content = default_file_system.read_text(
                 validated_rule,
                 encoding="utf-8",
                 errors="ignore",
             ).strip()
-
             if not content:
-                logger.info(f"Skipping empty YARA file: {rule_file}")
+                logger.info("Skipping empty YARA file: %s", rule_file)
                 return None
-
             try:
                 validator.validate_yara_rule_content(content, YARA_MAX_RULE_SIZE)
             except ValueError as e:
-                logger.debug(f"Skipping YARA rule due to validation {rule_file}: {e}")
+                logger.debug("Skipping YARA rule due to validation %s: %s", rule_file, e)
                 return None
 
             return content
         except Exception as e:
-            logger.warning(f"Failed to read YARA file {rule_file}: {e}")
+            logger.warning("Failed to read YARA file %s: %s", rule_file, e)
             return None
 
     def _compile_default_rules(self, rules_path: str) -> yara.Rules | None:
-        logger.info(f"No valid YARA rules found in: {rules_path}. Using defaults.")
+        logger.info("No valid YARA rules found in: %s. Using defaults.", rules_path)
         self.create_default_rules()
         try:
             return yara.compile(
                 sources={"default": (Path(self.rules_path) / "packer_detection.yar").read_text()}
             )
-        except Exception:
+        except Exception as exc:
+            logger.error("Failed to compile default YARA rules: %s", exc)
             return None
 
     def _compile_sources_with_timeout(self, rules_dict: dict[str, str]) -> yara.Rules | None:
-        try:
-            if hasattr(signal, "SIGALRM") and threading.current_thread() is threading.main_thread():
-                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(YARA_COMPILE_TIMEOUT)
-                try:
-                    compiled_rules = yara.compile(sources=rules_dict)
-                    signal.alarm(0)
-                    return compiled_rules
-                finally:
-                    signal.signal(signal.SIGALRM, old_handler)
-            else:
-                logger.debug("YARA compilation timeout not available on this platform")
-                return yara.compile(sources=rules_dict)
-        except yara.SyntaxError as e:
-            logger.error(f"YARA syntax error: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"YARA compilation error: {e}")
-            return None
+        return compile_sources_with_timeout(
+            yara,
+            rules_dict,
+            YARA_COMPILE_TIMEOUT,
+            timeout_handler,
+            logger,
+        )
 
     def _process_matches(self, yara_matches: list[Any]) -> list[dict[str, Any]]:
         """Process YARA matches into structured format"""
-        matches: list[dict[str, Any]] = []
-
-        try:
-            for match in yara_matches:
-                match_info = {
-                    "rule": match.rule,
-                    "namespace": match.namespace,
-                    "tags": list(match.tags),
-                    "meta": dict(match.meta),
-                    "strings": [],
-                }
-
-                # Process string matches
-                for string_match in match.strings:
-                    string_info = {
-                        "identifier": string_match.identifier,
-                        "instances": [],
-                    }
-
-                    for instance in string_match.instances:
-                        instance_info = {
-                            "offset": instance.offset,
-                            "matched_data": instance.matched_data.decode("utf-8", errors="ignore"),
-                        }
-
-                        instance_info["length"] = len(instance.matched_data)
-
-                        string_info["instances"].append(instance_info)
-
-                    match_info["strings"].append(string_info)
-
-                matches.append(match_info)
-
-        except Exception as e:
-            logger.error(f"Error processing YARA matches: {e}")
-
-        return matches
+        return process_matches(yara_matches, logger)
 
     def create_default_rules(self) -> None:
         """Create default YARA rules if none exist"""
         try:
             rules_dir = Path(self.rules_path)
             rules_dir.mkdir(parents=True, exist_ok=True)
-
             for filename, content in DEFAULT_YARA_RULES.items():
                 rule_file = rules_dir / filename
                 if not rule_file.exists():
                     default_file_system.write_text(rule_file, content)
-
         except Exception as e:
-            logger.error(f"Error creating default rules: {e}")
+            logger.error("Error creating default rules: %s", e)
 
     def validate_rules(self, rules_path: str) -> dict[str, Any]:
         """Validate YARA rules syntax"""
@@ -339,18 +259,15 @@ class YaraAnalyzer(CommandHelperMixin):
         try:
             rules = self._compile_rules(rules_path)
             if rules:
-                validation_result["valid"] = True
-                # Count rules (this is a simplified count)
                 if os.path.isdir(rules_path):
                     yar_files = list(Path(rules_path).glob(YARA_EXT))
-                    yara_files = list(Path(rules_path).glob(YARA_YARA_EXT))
-                    validation_result["rules_count"] = len(yar_files) + len(yara_files)
+                    yara_ext_files = list(Path(rules_path).glob(YARA_YARA_EXT))
+                    validation_result["rules_count"] = len(yar_files) + len(yara_ext_files)
                 else:
                     validation_result["rules_count"] = 1
             else:
                 validation_result["valid"] = False
                 validation_result["errors"].append("Failed to compile rules")
-
         except Exception as e:
             validation_result["valid"] = False
             validation_result["errors"].append(str(e))
@@ -360,52 +277,8 @@ class YaraAnalyzer(CommandHelperMixin):
     def list_available_rules(self, rules_path: str | None = None) -> list[dict[str, Any]]:
         """List all available YARA rules in the rules directory"""
         rules_path = rules_path or self.rules_path
-        available_rules: list[dict[str, Any]] = []
-
-        try:
-            if not os.path.exists(rules_path):
-                logger.warning(f"YARA rules path not found: {rules_path}")
-                return available_rules
-
-            if os.path.isfile(rules_path):
-                # Single file
-                stat = os.stat(rules_path)
-                available_rules.append(
-                    {
-                        "name": Path(rules_path).name,
-                        "path": rules_path,
-                        "size": stat.st_size,
-                        "modified": stat.st_mtime,
-                        "type": "single_file",
-                    }
-                )
-            elif os.path.isdir(rules_path):
-                # Directory
-                yara_extensions = [YARA_EXT, YARA_YARA_EXT, "*.rule", "*.rules"]
-
-                for extension in yara_extensions:
-                    for rule_file in Path(rules_path).rglob(extension):
-                        try:
-                            stat = rule_file.stat()
-                            relative_path = rule_file.relative_to(Path(rules_path))
-
-                            available_rules.append(
-                                {
-                                    "name": rule_file.name,
-                                    "path": str(rule_file),
-                                    "relative_path": str(relative_path),
-                                    "size": stat.st_size,
-                                    "modified": stat.st_mtime,
-                                    "type": "directory_file",
-                                }
-                            )
-                        except Exception as e:
-                            logger.warning(f"Error reading file info for {rule_file}: {e}")
-                            continue
-
-            logger.info(f"Found {len(available_rules)} YARA rule files total")
-
-        except Exception as e:
-            logger.error(f"Error listing YARA rules: {e}")
-
-        return available_rules
+        return collect_available_rules(
+            rules_path,
+            [YARA_EXT, YARA_YARA_EXT, "*.rule", "*.rules"],
+            logger,
+        )

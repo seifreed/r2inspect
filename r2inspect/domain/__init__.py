@@ -1,5 +1,113 @@
-"""Domain models for analyzer results."""
+"""Domain models exposed at package level."""
 
+from .analysis_runtime import AnalysisRuntimeStats, BatchRunResult
+from .result_builder import build_analysis_result
+from .constants import (
+    CONFIDENCE_API,
+    CONFIDENCE_CONSTANT,
+    CONFIDENCE_STRING,
+    EXCESSIVE_IMPORTS_THRESHOLD,
+    FEW_IMPORTS_THRESHOLD,
+    HIGH_ENTROPY_THRESHOLD,
+    HUGE_FILE_THRESHOLD_MB,
+    LARGE_FILE_THRESHOLD_MB,
+    MAX_ENTROPY,
+    MIN_EXECUTABLE_SIZE_BYTES,
+    MIN_HEADER_SIZE_BYTES,
+    MIN_INFO_RESPONSE_LENGTH,
+    PACKING_EVIDENCE_THRESHOLD,
+    RISK_CRITICAL,
+    RISK_HIGH,
+    RISK_LOW,
+    RISK_MEDIUM,
+    SUBPROCESS_TIMEOUT_SECONDS,
+    TEST_HUGE_FILE_THRESHOLD_MB,
+    TEST_LARGE_FILE_THRESHOLD_MB,
+    TEST_R2_ANALYSIS_TIMEOUT,
+    TEST_R2_CMD_TIMEOUT,
+    TEST_R2_OPEN_TIMEOUT,
+    VERY_LARGE_FILE_THRESHOLD_MB,
+)
 from .results import AnalyzerResult, HashResult
+from .entities import (
+    AntiAnalysisResult,
+    CryptoResult,
+    ExportInfo,
+    FileInfo,
+    FunctionInfo,
+    HashingResult,
+    ImportInfo,
+    Indicator,
+    PackerResult,
+    StringInfo,
+    YaraMatch,
+)
+from .format_types import SectionInfo, SecurityFeatures
+from .hashing import compare_hashes
+from .analysis import (
+    count_suspicious_indicators,
+    get_function_description,
+    get_risk_level,
+    is_candidate_api_string,
+    matches_known_api,
+    normalize_import_entries,
+    safe_len,
+)
 
-__all__ = ["AnalyzerResult", "HashResult"]
+__all__ = [
+    "AnalysisRuntimeStats",
+    "BatchRunResult",
+    "build_analysis_result",
+    "AnalyzerResult",
+    "HashResult",
+    # Domain entities
+    "FileInfo",
+    "HashingResult",
+    "ImportInfo",
+    "ExportInfo",
+    "YaraMatch",
+    "StringInfo",
+    "FunctionInfo",
+    "AntiAnalysisResult",
+    "PackerResult",
+    "CryptoResult",
+    "Indicator",
+    # Domain format types
+    "SectionInfo",
+    "SecurityFeatures",
+    # Domain analysis
+    "count_suspicious_indicators",
+    "get_function_description",
+    "get_risk_level",
+    "is_candidate_api_string",
+    "matches_known_api",
+    "normalize_import_entries",
+    "safe_len",
+    # Constants
+    "MIN_EXECUTABLE_SIZE_BYTES",
+    "MIN_HEADER_SIZE_BYTES",
+    "MIN_INFO_RESPONSE_LENGTH",
+    "LARGE_FILE_THRESHOLD_MB",
+    "VERY_LARGE_FILE_THRESHOLD_MB",
+    "HUGE_FILE_THRESHOLD_MB",
+    "HIGH_ENTROPY_THRESHOLD",
+    "MAX_ENTROPY",
+    "RISK_CRITICAL",
+    "RISK_HIGH",
+    "RISK_MEDIUM",
+    "RISK_LOW",
+    "PACKING_EVIDENCE_THRESHOLD",
+    "FEW_IMPORTS_THRESHOLD",
+    "EXCESSIVE_IMPORTS_THRESHOLD",
+    "SUBPROCESS_TIMEOUT_SECONDS",
+    "CONFIDENCE_API",
+    "CONFIDENCE_CONSTANT",
+    "CONFIDENCE_STRING",
+    "TEST_LARGE_FILE_THRESHOLD_MB",
+    "TEST_HUGE_FILE_THRESHOLD_MB",
+    "TEST_R2_OPEN_TIMEOUT",
+    "TEST_R2_CMD_TIMEOUT",
+    "TEST_R2_ANALYSIS_TIMEOUT",
+    # Domain hashing
+    "compare_hashes",
+]

@@ -3,15 +3,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from ..interfaces import AnalyzerBackend
-from ..registry.analyzer_registry import AnalyzerRegistry
-from ..utils.analyzer_factory import create_analyzer
-from ..utils.logger import get_logger
+from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, AnalyzerRegistryLike
 from .analysis_pipeline import AnalysisStage
+from .stages_common import default_analyzer_factory
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class MetadataStage(AnalysisStage):
@@ -19,11 +18,12 @@ class MetadataStage(AnalysisStage):
 
     def __init__(
         self,
-        registry: AnalyzerRegistry,
+        registry: AnalyzerRegistryLike,
         adapter: AnalyzerBackend,
         config: Any,
         filename: str,
         options: dict[str, Any],
+        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
     ) -> None:
         super().__init__(
             name="metadata",
@@ -36,6 +36,7 @@ class MetadataStage(AnalysisStage):
         self.config = config
         self.filename = filename
         self.options = options
+        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         results: dict[str, Any] = {}
@@ -79,7 +80,7 @@ class MetadataStage(AnalysisStage):
             return None
 
         try:
-            analyzer = create_analyzer(
+            analyzer = self.analyzer_factory(
                 analyzer_class,
                 adapter=self.adapter,
                 config=self.config,
@@ -90,7 +91,7 @@ class MetadataStage(AnalysisStage):
             context["results"][result_key] = data
             return {result_key: data}
         except Exception as e:
-            logger.warning(f"{result_key.replace('_', ' ').title()} analysis failed: {e}")
+            logger.warning("%s analysis failed: %s", result_key.replace("_", " ").title(), e)
             context["results"][result_key] = default_value
             return {result_key: default_value}
 

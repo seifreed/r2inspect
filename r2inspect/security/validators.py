@@ -24,8 +24,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import re
 from pathlib import Path
+
+from .validator_support import (
+    resolve_path as _resolve_path_impl,
+    sanitize_for_subprocess as _sanitize_for_subprocess_impl,
+    validate_allowed_directory as _validate_allowed_directory_impl,
+    validate_basic_path as _validate_basic_path_impl,
+    validate_existing_path as _validate_existing_path_impl,
+    validate_yara_rule_content as _validate_yara_rule_content_impl,
+)
 
 
 class FileValidator:
@@ -125,47 +133,23 @@ class FileValidator:
         return resolved_path
 
     def _validate_basic_path(self, filepath: str) -> None:
-        if not filepath:
-            raise ValueError("File path cannot be empty")
-        if len(filepath) > self.MAX_PATH_LENGTH:
-            raise ValueError(
-                f"Path length exceeds maximum allowed ({self.MAX_PATH_LENGTH}): {len(filepath)}"
-            )
-        if "\x00" in filepath:
-            raise ValueError("Path contains null byte")
-        dangerous_found = self._check_dangerous_chars(filepath)
-        if dangerous_found:
-            raise ValueError(f"Path contains dangerous characters: {dangerous_found}")
+        _validate_basic_path_impl(
+            filepath,
+            self.MAX_PATH_LENGTH,
+            self.DANGEROUS_CHARS,
+            self._check_dangerous_chars,
+        )
 
     def _resolve_path(self, filepath: str, check_exists: bool) -> Path:
-        try:
-            path = Path(filepath)
-            if check_exists:
-                return path.resolve(strict=True)
-            return path.resolve(strict=False)
-        except (OSError, RuntimeError) as e:
-            raise ValueError(f"Path resolution failed: {e}")
+        return _resolve_path_impl(filepath, check_exists)
 
     def _validate_allowed_directory(self, resolved_path: Path) -> None:
-        if not self.allowed_directory:
-            return
-        try:
-            resolved_path.relative_to(self.allowed_directory)
-        except ValueError:
-            raise ValueError(
-                f"Path is outside allowed directory: {resolved_path} "
-                f"not in {self.allowed_directory}"
-            )
+        _validate_allowed_directory_impl(resolved_path, self.allowed_directory)
 
     def _validate_existing_path(
         self, original_path: str, resolved_path: Path, check_exists: bool
     ) -> None:
-        if not (check_exists and resolved_path.exists()):
-            return
-        if not resolved_path.is_file() and not resolved_path.is_dir():
-            raise ValueError(f"Path is not a regular file or directory: {resolved_path}")
-        # Path changed during resolution (symlinks/..). Keep as informational no-op.
-        _ = original_path
+        _validate_existing_path_impl(original_path, resolved_path, check_exists)
 
     def _check_dangerous_chars(self, filepath: str) -> set[str]:
         """
@@ -206,18 +190,7 @@ class FileValidator:
             safe_str = validator.sanitize_for_subprocess(safe_path)
             subprocess.run(["ssdeep", "-s", safe_str], shell=False)
         """
-        if not isinstance(filepath, Path):
-            raise TypeError("filepath must be a Path object from validate_path()")
-
-        # Convert to absolute string
-        abs_path = str(filepath.absolute())
-
-        # Double-check for dangerous characters (defense-in-depth)
-        dangerous = self._check_dangerous_chars(abs_path)
-        if dangerous:
-            raise ValueError(f"Path contains dangerous characters after validation: {dangerous}")
-
-        return abs_path
+        return _sanitize_for_subprocess_impl(filepath, self._check_dangerous_chars)
 
     def validate_yara_rule_content(self, content: str, max_size: int = 10 * 1024 * 1024) -> None:
         """
@@ -239,38 +212,7 @@ class FileValidator:
         - YARA best practices: https://yara.readthedocs.io/
         - CWE-400: Uncontrolled Resource Consumption
         """
-        if not content:
-            raise ValueError("YARA rule content cannot be empty")
-
-        # Size limit (CWE-400: Resource Consumption)
-        if len(content) > max_size:
-            raise ValueError(f"YARA rule content exceeds maximum size: {len(content)} > {max_size}")
-
-        # Check for dangerous patterns
-        # YARA external modules could potentially be abused
-        dangerous_patterns = [
-            r'include\s+"',  # Include directives could load malicious rules
-            r'import\s+"(?!pe|elf|cuckoo|magic|hash|math|dotnet)[^"]*"',  # Non-standard imports
-        ]
-
-        for pattern in dangerous_patterns:
-            if re.search(pattern, content, re.IGNORECASE):
-                raise ValueError(f"YARA rule contains potentially dangerous pattern: {pattern}")
-
-        # Basic complexity check (prevent excessive regex complexity)
-        # Count regex special characters as proxy for complexity
-        regex_chars = content.count("*") + content.count("+") + content.count("?")
-        if regex_chars > 10000:
-            raise ValueError(f"YARA rule appears too complex (regex chars: {regex_chars})")
-
-        # Check for excessively long lines (could indicate obfuscation)
-        lines = content.split("\n")
-        max_line_length = 10000
-        for i, line in enumerate(lines, 1):
-            if len(line) > max_line_length:
-                raise ValueError(
-                    f"YARA rule line {i} exceeds maximum length: {len(line)} > {max_line_length}"
-                )
+        _validate_yara_rule_content_impl(content, max_size=max_size)
 
 
 def validate_file_for_analysis(

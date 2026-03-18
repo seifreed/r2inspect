@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..utils.error_handler import get_error_stats, reset_error_stats
-from ..utils.retry_manager import get_retry_stats
+from .classifier import get_error_stats, reset_error_stats
+from ..infrastructure.retry_manager import get_retry_stats
 from .unified_handler import get_circuit_breaker_stats
 
 __all__ = [

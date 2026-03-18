@@ -28,17 +28,11 @@ from typing import Any
 
 import click
 
-# Import utility functions from modular CLI submodules
 from .cli.analysis_runner import handle_main_error
-
-# Import command implementations
+from .cli.cli_entry import build_context as _build_context_impl, build_dispatch
 from .cli.commands import (
-    AnalyzeCommand,
-    BatchCommand,
-    Command,
     CommandContext,
     ConfigCommand,
-    InteractiveCommand,
     VersionCommand,
 )
 from .cli.display import console, print_banner
@@ -162,14 +156,15 @@ def run_cli(args: CLIArgs) -> None:
 def _execute_list_yara(config: str | None, yara: str | None) -> None:
     """Run the ConfigCommand to list YARA rules and exit."""
     config_cmd = ConfigCommand()
-    exit_code = config_cmd.execute(
-        {
-            "list_yara": True,
-            "config": config,
-            "yara": yara,
-        }
+    sys.exit(
+        config_cmd.execute(
+            {
+                "list_yara": True,
+                "config": config,
+                "yara": yara,
+            }
+        )
     )
-    sys.exit(exit_code)
 
 
 def _execute_version() -> None:
@@ -180,12 +175,7 @@ def _execute_version() -> None:
 
 def _build_context(verbose: bool, quiet: bool, batch: str | None) -> CommandContext:
     """Construct a CommandContext with proper thread safety and logging."""
-    return CommandContext.create(
-        config=None,
-        verbose=verbose,
-        quiet=quiet,
-        thread_safe=batch is not None,
-    )
+    return _build_context_impl(verbose, quiet, batch)
 
 
 def _dispatch_command(
@@ -193,54 +183,8 @@ def _dispatch_command(
     args: CLIArgs,
 ) -> None:
     """Dispatch to the appropriate command based on CLI arguments."""
-    command: Command
-    if args.batch:
-        command = BatchCommand(context)
-        exit_code = command.execute(
-            {
-                "batch": args.batch,
-                "config": args.config,
-                "yara": args.yara,
-                "xor": args.xor,
-                "output_json": args.output_json,
-                "output_csv": args.output_csv,
-                "output": args.output,
-                "extensions": args.extensions,
-                "threads": args.threads,
-                "verbose": args.verbose,
-                "quiet": args.quiet,
-            }
-        )
-        sys.exit(exit_code)
-
-    if args.interactive:
-        command = InteractiveCommand(context)
-        exit_code = command.execute(
-            {
-                "filename": args.filename,
-                "config": args.config,
-                "yara": args.yara,
-                "xor": args.xor,
-                "verbose": args.verbose,
-            }
-        )
-        sys.exit(exit_code)
-
-    command = AnalyzeCommand(context)
-    exit_code = command.execute(
-        {
-            "filename": args.filename,
-            "config": args.config,
-            "yara": args.yara,
-            "xor": args.xor,
-            "output_json": args.output_json,
-            "output_csv": args.output_csv,
-            "output": args.output,
-            "verbose": args.verbose,
-            "threads": args.threads,
-        }
-    )
-    sys.exit(exit_code)
+    dispatch = build_dispatch(context, args)
+    sys.exit(dispatch.command.execute(dispatch.payload))
 
 
 if __name__ == "__main__":

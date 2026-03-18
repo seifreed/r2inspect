@@ -6,8 +6,16 @@ from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy
-from ..utils.analyzer_runner import run_analyzer_on_file
-from ..utils.logger import get_logger
+from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..infrastructure.logging import get_logger
+from .ccbhash_support import (
+    analyze_functions as build_function_analysis,
+    build_canonical_representation as build_cfg_canonical_representation,
+    calculate_binary_ccbhash as build_binary_ccbhash,
+    calculate_function_ccbhash as build_function_ccbhash,
+    extract_functions as collect_functions,
+    find_similar_functions as build_similar_function_groups,
+)
 
 logger = get_logger(__name__)
 
@@ -81,7 +89,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             return None, None, "Failed to calculate binary CCBHash"
 
         except Exception as e:
-            logger.error(f"Error calculating CCBHash: {e}")
+            logger.error("Error calculating CCBHash: %s", e)
             return None, None, f"CCBHash calculation failed: {str(e)}"
 
     def _get_hash_type(self) -> str:
@@ -103,84 +111,8 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             Dictionary containing detailed CCBHash analysis results
         """
-        logger.debug(f"Starting detailed CCBHash analysis for {self.filepath}")
-
-        results = {
-            "available": False,
-            "function_hashes": {},
-            "total_functions": 0,
-            "analyzed_functions": 0,
-            "unique_hashes": 0,
-            "similar_functions": [],
-            "binary_ccbhash": None,
-            "error": None,
-        }
-
-        try:
-            # Extract all functions
-            functions = self._extract_functions()
-            if not functions:
-                results["error"] = NO_FUNCTIONS_FOUND
-                logger.debug(NO_FUNCTIONS_FOUND)
-                return results
-
-            results["total_functions"] = len(functions)
-            logger.debug(f"Found {len(functions)} functions to analyze")
-
-            # Calculate CCBHash for each function
-            function_hashes = {}
-            analyzed_count = 0
-
-            for func in functions:
-                func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-                func_offset = func.get("addr")
-
-                if func_offset is None:
-                    continue
-
-                ccbhash = self._calculate_function_ccbhash(func_offset, func_name)
-                if ccbhash:
-                    function_hashes[func_name] = {
-                        "ccbhash": ccbhash,
-                        "addr": func_offset,
-                        "size": func.get("size", 0),
-                    }
-                    analyzed_count += 1
-
-            if not function_hashes:
-                results["error"] = NO_FUNCTIONS_ANALYZED
-                logger.debug(NO_FUNCTIONS_ANALYZED)
-                return results
-
-            # Analyze results
-            results["available"] = True
-            results["function_hashes"] = function_hashes
-            results["analyzed_functions"] = analyzed_count
-
-            # Calculate unique hashes
-            unique_hashes = {f["ccbhash"] for f in function_hashes.values()}
-            results["unique_hashes"] = len(unique_hashes)
-
-            # Find similar functions (same CCBHash)
-            similar_functions = self._find_similar_functions(function_hashes)
-            results["similar_functions"] = similar_functions
-
-            # Calculate binary-wide CCBHash
-            binary_ccbhash = self._calculate_binary_ccbhash(function_hashes)
-            results["binary_ccbhash"] = binary_ccbhash
-
-            logger.debug(
-                f"CCBHash analysis completed: {analyzed_count}/{len(functions)} functions analyzed"
-            )
-            logger.debug(
-                f"Found {len(unique_hashes)} unique hashes, {len(similar_functions)} similar function groups"
-            )
-
-        except Exception as e:
-            logger.error(f"CCBHash analysis failed: {e}")
-            results["error"] = str(e)
-
-        return results
+        logger.debug("Starting detailed CCBHash analysis for %s", self.filepath)
+        return build_function_analysis(self, logger, NO_FUNCTIONS_FOUND, NO_FUNCTIONS_ANALYZED)
 
     def _extract_functions(self) -> list[dict[str, Any]]:
         """
@@ -189,30 +121,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             List of function dictionaries
         """
-        try:
-            # Analysis is performed at core initialization
-
-            functions = self._cmd_list("aflj")
-
-            if not functions:
-                logger.debug("No functions found with 'aflj' command")
-                return []
-
-            # Filter out invalid functions - use 'addr' field like function_analyzer
-            valid_functions = []
-            for func in functions:
-                if func.get("addr") is not None and func.get("size", 0) > 0:
-                    # Clean HTML entities from function names
-                    if "name" in func and func["name"]:
-                        func["name"] = func["name"].replace("&nbsp;", " ").replace("&amp;", "&")
-                    valid_functions.append(func)
-
-            logger.debug(f"Extracted {len(valid_functions)} valid functions")
-            return valid_functions
-
-        except Exception as e:
-            logger.error(f"Error extracting functions: {e}")
-            return []
+        return collect_functions(self, logger)
 
     def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str | None:
         """
@@ -225,53 +134,11 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             CCBHash string or None if calculation fails
         """
-        try:
-            # Get Control Flow Graph in JSON format
-            cfg_data = (
-                self.adapter.get_cfg(func_offset)
-                if self.adapter is not None and hasattr(self.adapter, "get_cfg")
-                else self._cmd_list("agj")
-            )
-
-            if not cfg_data or len(cfg_data) == 0:
-                logger.debug(f"No CFG data found for function {func_name}")
-                return None
-
-            # Take the first CFG (should be the current function)
-            cfg = cfg_data[0]
-            canonical = self._build_canonical_representation(cfg, func_offset)
-            if not canonical:
-                return None
-
-            # Calculate SHA256 hash of canonical representation
-            ccbhash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-            logger.debug(f"CCBHash calculated for {func_name}: {ccbhash[:16]}...")
-            return ccbhash
-
-        except Exception as e:
-            logger.debug(f"Error calculating CCBHash for function {func_name}: {e}")
-            return None
+        return build_function_ccbhash(self, func_offset, func_name, logger)
 
     @staticmethod
     def _build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str | None:
-        edges = cfg.get("edges", [])
-        if edges:
-            edge_strs = []
-            for edge in edges:
-                src = edge.get("src")
-                dst = edge.get("dst")
-                if src is not None and dst is not None:
-                    edge_strs.append(f"{src}->{dst}")
-            edge_strs.sort()
-            return "|".join(edge_strs)
-
-        blocks = cfg.get("blocks", [])
-        if blocks:
-            block_addrs = sorted(block.get("offset", 0) for block in blocks)
-            return "|".join(str(addr) for addr in block_addrs)
-
-        return str(func_offset)
+        return build_cfg_canonical_representation(cfg, func_offset)
 
     def _find_similar_functions(
         self, function_hashes: dict[str, dict[str, Any]]
@@ -285,37 +152,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             List of similar function groups
         """
-        try:
-            # Group functions by hash
-            hash_groups: dict[str, list[str]] = {}
-            for func_name, func_data in function_hashes.items():
-                ccbhash = func_data["ccbhash"]
-                if ccbhash not in hash_groups:
-                    hash_groups[ccbhash] = []
-                # Clean HTML entities from function names
-                clean_func_name = func_name.replace("&nbsp;", " ").replace("&amp;", "&")
-                hash_groups[ccbhash].append(clean_func_name)
-
-            # Find groups with more than one function (similar functions)
-            similar_groups: list[dict[str, Any]] = []
-            for ccbhash, func_names in hash_groups.items():
-                if len(func_names) > 1:
-                    similar_groups.append(
-                        {
-                            "ccbhash": ccbhash,
-                            "functions": func_names,
-                            "count": len(func_names),
-                        }
-                    )
-
-            # Sort by group size (largest first)
-            similar_groups.sort(key=lambda x: int(x["count"]), reverse=True)
-
-            return similar_groups
-
-        except Exception as e:
-            logger.error(f"Error finding similar functions: {e}")
-            return []
+        return build_similar_function_groups(function_hashes, logger)
 
     def _calculate_binary_ccbhash(self, function_hashes: dict[str, dict[str, Any]]) -> str | None:
         """
@@ -327,25 +164,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             Binary CCBHash string or None if calculation fails
         """
-        try:
-            if not function_hashes:
-                return None
-
-            # Extract all function hashes and sort them for canonical representation
-            all_hashes = sorted([func_data["ccbhash"] for func_data in function_hashes.values()])
-
-            # Combine all hashes
-            combined = "|".join(all_hashes)
-
-            # Calculate SHA256 hash of combined representation
-            binary_ccbhash = hashlib.sha256(combined.encode("utf-8")).hexdigest()
-
-            logger.debug(f"Binary CCBHash calculated: {binary_ccbhash[:16]}...")
-            return binary_ccbhash
-
-        except Exception as e:
-            logger.error(f"Error calculating binary CCBHash: {e}")
-            return None
+        return build_binary_ccbhash(function_hashes, logger)
 
     def get_function_ccbhash(self, func_name: str) -> str | None:
         """
@@ -367,7 +186,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                     break
 
             if not target_func:
-                logger.debug(f"Function {func_name} not found")
+                logger.debug("Function %s not found", func_name)
                 return None
 
             return self._calculate_function_ccbhash(
@@ -375,7 +194,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             )  # Use 'addr' field
 
         except Exception as e:
-            logger.error(f"Error getting CCBHash for function {func_name}: {e}")
+            logger.error("Error getting CCBHash for function %s: %s", func_name, e)
             return None
 
     @staticmethod

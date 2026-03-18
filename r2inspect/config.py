@@ -18,12 +18,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import json
+import logging
 import os
+import threading
 from pathlib import Path
 from typing import Any, cast
 
 from .config_schemas.schemas import R2InspectConfig
 from .config_store import ConfigStore
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -31,7 +35,7 @@ class Config:
     Configuration manager for r2inspect.
 
     This class maintains a typed configuration for type safety and validation,
-    while storing a full dictionary for persistence.
+    while storing a full dictionary for persistence.  Thread-safe for concurrent reads/writes.
     """
 
     DEFAULT_CONFIG = {
@@ -78,6 +82,7 @@ class Config:
             config_path: Path to configuration file. If None, uses default location.
         """
         self.config_path = config_path or self._get_default_config_path()
+        self._lock = threading.Lock()
 
         # Initialize with default typed config and also keep a full dict copy
         self._typed_config = R2InspectConfig.from_dict(self.DEFAULT_CONFIG)
@@ -110,7 +115,11 @@ class Config:
         """Load configuration from file."""
         loaded = ConfigStore.load(self.config_path)
         if isinstance(loaded, dict):
-            self._load_from_dict(loaded)
+            try:
+                self._load_from_dict(loaded)
+            except ValueError as e:
+                logger.warning("Invalid configuration values: %s", e)
+                logger.warning("Using default configuration")
 
     @staticmethod
     def _merge_config(defaults: dict[str, Any], user_config: dict[str, Any]) -> dict[str, Any]:
@@ -132,20 +141,22 @@ class Config:
 
         Args:
             user_config: User configuration dictionary
+
+        Raises:
+            ValueError: If configuration values are invalid
         """
         # Merge user config with defaults (preserve unknown sections)
         merged_config = self._merge_config(self.DEFAULT_CONFIG, user_config)
 
-        # Store full merged configuration
-        self._full_config_dict = merged_config
-
-        # Create typed config from merged dictionary (unknown sections ignored by schema)
+        # Try to create typed config first — if it fails, keep current state intact
         try:
-            self._typed_config = R2InspectConfig.from_dict(merged_config)
+            new_typed = R2InspectConfig.from_dict(merged_config)
         except (ValueError, TypeError) as e:
-            print(f"Warning: Invalid configuration values: {e}")
-            print("Using default configuration")
-            self._typed_config = R2InspectConfig.from_dict(self.DEFAULT_CONFIG)
+            raise ValueError(f"Invalid configuration values: {e}") from e
+
+        # Only update state if validation succeeded
+        self._full_config_dict = merged_config
+        self._typed_config = new_typed
 
     def save_config(self) -> None:
         """Save configuration to file."""
@@ -158,13 +169,14 @@ class Config:
         Args:
             overrides: Mapping of section -> settings to merge.
         """
-        config_dict = self.to_dict()
-        for section, settings in overrides.items():
-            if isinstance(settings, dict) and isinstance(config_dict.get(section), dict):
-                config_dict[section].update(settings)
-            else:
-                config_dict[section] = settings
-        self._load_from_dict(config_dict)
+        with self._lock:
+            config_dict = self.to_dict()
+            for section, settings in overrides.items():
+                if isinstance(settings, dict) and isinstance(config_dict.get(section), dict):
+                    config_dict[section].update(settings)
+                else:
+                    config_dict[section] = settings
+            self._load_from_dict(config_dict)
 
     def set(self, section: str, key: str, value: Any) -> None:
         """
@@ -174,14 +186,18 @@ class Config:
             section: Top-level config section name
             key: Config key within the section
             value: Value to set
+
+        Raises:
+            ValueError: If the value is invalid per schema validation
         """
-        config_dict = self.to_dict()
-        section_dict = config_dict.get(section)
-        if not isinstance(section_dict, dict):
-            section_dict = {}
-        section_dict[key] = value
-        config_dict[section] = section_dict
-        self._load_from_dict(config_dict)
+        with self._lock:
+            config_dict = self.to_dict()
+            section_dict = config_dict.get(section)
+            if not isinstance(section_dict, dict):
+                section_dict = {}
+            section_dict[key] = value
+            config_dict[section] = section_dict
+            self._load_from_dict(config_dict)
 
     def from_dict(self, config_dict: dict[str, Any]) -> "Config":
         """

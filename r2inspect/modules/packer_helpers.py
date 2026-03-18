@@ -76,7 +76,7 @@ def calculate_section_entropy(
         vaddr = section.get("vaddr", 0)
         size = section.get("size", 0)
 
-        if size == 0 or size > 10000000:
+        if size == 0 or size > 50000000:
             return 0.0
 
         data = read_bytes_fn(vaddr, size) if size else b""

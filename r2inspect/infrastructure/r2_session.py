@@ -3,18 +3,13 @@
 
 import os
 import platform
-import struct
-import threading
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FuturesTimeoutError
-from pathlib import Path
 from types import TracebackType
 from typing import Any, Literal
 
 import psutil
 import r2pipe
 
-from ..core.constants import (
+from ..domain.constants import (
     HUGE_FILE_THRESHOLD_MB,
     LARGE_FILE_THRESHOLD_MB,
     MIN_INFO_RESPONSE_LENGTH,
@@ -24,8 +19,21 @@ from ..core.constants import (
     TEST_R2_CMD_TIMEOUT,
     TEST_R2_OPEN_TIMEOUT,
 )
-from ..utils.error_handler import ErrorCategory, ErrorSeverity, error_handler
-from ..utils.logger import get_logger
+from ..error_handling.classifier import ErrorCategory, ErrorSeverity, error_handler
+from ..infrastructure.logging import get_logger
+from .r2_session_cleanup import (
+    detect_fat_macho_arches as _detect_fat_macho_arches_impl,
+    force_close_process as _force_close_process_impl,
+    reopen_safe_mode as _reopen_safe_mode_impl,
+    select_r2_flags as _select_r2_flags_impl,
+    terminate_radare2_processes as _terminate_radare2_processes_impl,
+)
+from .r2_session_timeouts import (
+    open_with_timeout as _open_with_timeout_impl,
+    perform_initial_analysis as _perform_initial_analysis_impl,
+    run_basic_info_check as _run_basic_info_check_impl,
+    run_cmd_with_timeout as _run_cmd_with_timeout_impl,
+)
 
 logger = get_logger(__name__)
 
@@ -65,6 +73,11 @@ class R2Session:
     @property
     def _is_test_mode(self) -> bool:
         """Check if running in test mode for resource-constrained execution."""
+        env_value = os.environ.get("R2INSPECT_TEST_MODE", "").lower()
+        if env_value in {"1", "true", "yes"}:
+            return True
+        if env_value in {"0", "false", "no"}:
+            return False
         return self._test_mode
 
     def _get_open_timeout(self) -> float:
@@ -113,7 +126,7 @@ class R2Session:
             RuntimeError: If r2pipe initialization or basic checks fail
         """
         try:
-            logger.debug(f"Opening file with radare2: {self.filename}")
+            logger.debug("Opening file with radare2: %s", self.filename)
             logger.debug("Calling r2pipe.open()...")
 
             flags = self._select_r2_flags()
@@ -133,235 +146,61 @@ class R2Session:
             return self.r2
 
         except Exception as e:
-            logger.error(f"Failed to initialize r2pipe: {e}")
+            logger.error("Failed to initialize r2pipe: %s", e)
             if self.r2:
                 self.close()
             raise
 
     def _select_r2_flags(self) -> list[str]:
-        """
-        Return r2 flags for opening files.
-
-        Returns:
-            List of flags to pass to r2pipe.open()
-
-        Flags used:
-            -2: Disable stderr output from radare2
-            -NN: Disable plugins (reduces memory overhead)
-            -M: Disable demangling (reduces CPU usage, test mode only)
-            -n: No analysis on load (used in safe mode fallback)
-        """
-        # -2 flag disables stderr output from radare2
-        flags = ["-2"]
-
-        # Test mode: add resource-saving flags
-        if self._is_test_mode:
-            # -M disables demangling to reduce CPU usage
-            flags.append("-M")
-            logger.debug("Test mode: enabled resource-saving r2 flags (-M)")
-
-        fat_arches = self._detect_fat_macho_arches()
-        if fat_arches:
-            host = platform.machine().lower()
-            if "arm" in host and "arm64" in fat_arches:
-                flags += ["-a", "arm", "-b", "64"]
-            elif "x86_64" in fat_arches:
-                flags += ["-a", "x86", "-b", "64"]
-            flags.append("-NN")
-        if os.environ.get("R2INSPECT_DISABLE_PLUGINS", "").lower() in {"1", "true", "yes"}:
-            # Only add -NN if not already present
-            if "-NN" not in flags:
-                flags.append("-NN")
-        return flags
+        return _select_r2_flags_impl(self, logger=logger)
 
     def _detect_fat_macho_arches(self) -> set[str]:
-        """Detect architectures for fat Mach-O binaries."""
-        try:
-            with open(self.filename, "rb") as f:
-                header = f.read(8)
-                if len(header) < 8:
-                    return set()
-                magic_be = struct.unpack(">I", header[:4])[0]
-                if magic_be == 0xCAFEBABE:
-                    endian = ">"
-                elif magic_be == 0xBEBAFECA:
-                    endian = "<"
-                else:
-                    return set()
-                nfat_arch = struct.unpack(f"{endian}I", header[4:8])[0]
-                arches: set[str] = set()
-                for _ in range(nfat_arch):
-                    entry = f.read(20)
-                    if len(entry) < 20:
-                        break
-                    cputype = struct.unpack(f"{endian}I", entry[:4])[0]
-                    if cputype == 0x01000007:
-                        arches.add("x86_64")
-                    elif cputype == 0x0100000C:
-                        arches.add("arm64")
-                return arches
-        except Exception:
-            return set()
+        return _detect_fat_macho_arches_impl(self.filename)
 
     def _open_with_timeout(self, flags: list[str], timeout: float) -> Any:
-        """Open r2pipe with a timeout and terminate hung radare2 processes."""
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(r2pipe.open, self.filename, flags=flags)
-            try:
-                return future.result(timeout=timeout)
-            except FuturesTimeoutError as exc:
-                logger.error(f"r2pipe.open() timed out after {timeout:.1f}s")
-                self._terminate_radare2_processes()
-                raise TimeoutError("r2pipe.open() timed out") from exc
+        return _open_with_timeout_impl(self, flags, timeout, logger=logger)
 
     def _terminate_radare2_processes(self) -> None:
-        """Terminate radare2 processes associated with the current filename."""
-        target = self.filename
-        target_name = Path(self.filename).name
-        for proc in psutil.process_iter(["name", "cmdline"]):
-            try:
-                name = proc.info.get("name") or ""
-                cmdline = proc.info.get("cmdline") or []
-                if "radare2" not in name:
-                    continue
-                if any(target in arg for arg in cmdline) or any(
-                    target_name in arg for arg in cmdline
-                ):
-                    proc.terminate()
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
+        _terminate_radare2_processes_impl(self.filename)
 
     def _reopen_safe_mode(self) -> Any:
-        """Reopen r2 in safe mode (no analysis) after a timeout."""
-        self.close()
-        self.r2 = r2pipe.open(self.filename, flags=["-2", "-n"])
-        self._cleanup_required = True
-        return self.r2
+        return _reopen_safe_mode_impl(self)
 
     def _run_cmd_with_timeout(self, command: str, timeout: float) -> bool:
-        """Run an r2 command with a timeout, returning True if completed."""
-        r2_instance = self.r2
-        if r2_instance is None:
-            return False
-        forced = os.environ.get("R2INSPECT_FORCE_CMD_TIMEOUT", "")
-        if forced:
-            commands = {item.strip() for item in forced.split(",") if item.strip()}
-            if not commands or command in commands:
-                logger.warning("Forcing r2 command timeout: %s", command)
-                return False
-        completed = threading.Event()
-        error: dict[str, Exception | None] = {"exc": None}
-
-        def _run() -> None:
-            try:
-                r2_instance.cmd(command)
-            except Exception as exc:
-                error["exc"] = exc
-            finally:
-                completed.set()
-
-        thread = threading.Thread(target=_run, daemon=True)
-        thread.start()
-        if not completed.wait(timeout=timeout):
-            logger.warning("r2 command timed out: %s", command)
-            return False
-        if error["exc"] is not None:
-            logger.warning("r2 command failed (%s): %s", command, error["exc"])
-            return False
-        return True
+        return _run_cmd_with_timeout_impl(self, command, timeout, logger=logger)
 
     def _run_basic_info_check(self) -> bool:
-        """
-        Run a basic info command to verify r2 responsiveness.
-
-        Raises:
-            RuntimeError: If r2 cannot properly analyze the file
-        """
-        if self.r2 is None:
-            raise RuntimeError("r2pipe is not initialized")
-        if not self._run_cmd_with_timeout("i", self._get_cmd_timeout()):
-            return False
-        try:
-            info_result = self.r2.cmd("i")
-            if not info_result or len(info_result.strip()) < MIN_INFO_RESPONSE_LENGTH:
-                logger.warning(f"r2 basic info command returned minimal data for {self.filename}")
-        except Exception as e:
-            logger.error(f"r2 basic info test failed: {e}")
-            raise RuntimeError(f"r2 cannot properly analyze this file: {e}")
-        return True
+        return _run_basic_info_check_impl(
+            self, logger=logger, min_info_response_length=MIN_INFO_RESPONSE_LENGTH
+        )
 
     def _perform_initial_analysis(self, file_size_mb: float) -> bool:
-        """
-        Perform size-aware initial analysis with r2.
-
-        Args:
-            file_size_mb: Size of the file in megabytes
-
-        In test mode (R2INSPECT_TEST_MODE=1):
-        - Uses more aggressive thresholds to skip analysis earlier
-        - Uses shorter timeouts to fail fast
-        - Respects R2INSPECT_ANALYSIS_DEPTH to control analysis depth:
-          - 0: Skip all analysis
-          - 1: Use 'aa' (standard analysis) only
-          - 2+: Use 'aaa' (full analysis)
-        """
-        try:
-            if self.r2 is None:
-                raise RuntimeError("r2pipe is not initialized")
-
-            # Check if analysis should be skipped entirely (test mode optimization)
-            analysis_depth = os.environ.get("R2INSPECT_ANALYSIS_DEPTH", "").strip()
-            if analysis_depth == "0":
-                logger.debug("Analysis depth set to 0, skipping automatic analysis...")
-                return True
-
-            huge_threshold = self._get_huge_file_threshold()
-            large_threshold = self._get_large_file_threshold()
-
-            if file_size_mb > huge_threshold:
-                logger.debug(
-                    f"{'Test mode: ' if self._is_test_mode else ''}Very large file "
-                    f"({file_size_mb:.1f}MB > {huge_threshold}MB), skipping automatic analysis..."
-                )
-                return True
-
-            # In test mode or for large files, use minimal analysis (aa)
-            if self._is_test_mode or file_size_mb > large_threshold:
-                logger.debug(
-                    f"{'Test mode: ' if self._is_test_mode else 'Large file: '}"
-                    "Using standard analysis (aa command)..."
-                )
-                if not self._run_cmd_with_timeout(
-                    "aa", self._get_analysis_timeout(full_analysis=False)
-                ):
-                    return False
-                logger.debug("Standard analysis (aa) completed")
-                return True
-
-            # Full analysis only for small files in production mode
-            logger.debug("Running full analysis (aaa command)...")
-            if not self._run_cmd_with_timeout(
-                "aaa", self._get_analysis_timeout(full_analysis=True)
-            ):
-                return False
-            logger.debug("Full analysis (aaa) completed")
-            return True
-
-        except Exception as e:
-            logger.warning(f"Analysis command failed, continuing with basic r2 setup: {e}")
-            return True
+        return _perform_initial_analysis_impl(self, file_size_mb, logger=logger)
 
     def close(self) -> None:
         """Clean up r2pipe instance."""
-        if self.r2 and self._cleanup_required:
+        r2_instance = self.r2
+        if r2_instance and self._cleanup_required:
             try:
                 logger.debug("Cleaning up r2pipe instance")
-                self.r2.quit()
-                self._cleanup_required = False
+                r2_instance.quit()
             except Exception as e:
-                logger.debug(f"Error during r2pipe cleanup: {e}")
+                logger.debug("Error during r2pipe cleanup: %s", e)
             finally:
+                self._force_close_process(r2_instance)
+                self._cleanup_required = False
                 self.r2 = None
+
+    @staticmethod
+    def _force_close_process(r2_instance: Any) -> None:
+        _force_close_process_impl(r2_instance)
+
+    def __del__(self) -> None:
+        """Destructor fallback for sessions that outlive their test scope."""
+        try:
+            self.close()
+        except Exception as e:
+            logger.debug("Error closing R2Session in __del__: %s", e)
 
     @property
     def is_open(self) -> bool:

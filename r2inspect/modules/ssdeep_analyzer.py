@@ -10,8 +10,16 @@ from typing import Any, cast
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..adapters.file_system import default_file_system
 from ..security.validators import FileValidator
-from ..utils.logger import get_logger
-from ..utils.ssdeep_loader import get_ssdeep
+from ..infrastructure.logging import get_logger
+from ..infrastructure.ssdeep_loader import get_ssdeep
+from .ssdeep_runtime_support import (
+    compare_with_binary as _compare_with_binary_impl,
+    compare_with_library as _compare_with_library_impl,
+    is_available as _is_available_impl,
+    parse_ssdeep_output as _parse_ssdeep_output_impl,
+    resolve_ssdeep_binary as _resolve_ssdeep_binary_impl,
+    write_temp_hash_file as _write_temp_hash_file_impl,
+)
 
 logger = get_logger(__name__)
 SSDEEP_LIBRARY_AVAILABLE = get_ssdeep() is not None
@@ -62,30 +70,30 @@ class SSDeepAnalyzer(HashingStrategy):
             try:
                 file_content = default_file_system.read_bytes(self.filepath)
                 ssdeep_hash = ssdeep_module.hash(file_content)
-                logger.debug(f"SSDeep hash calculated using Python library: {ssdeep_hash}")
+                logger.debug("SSDeep hash calculated using Python library: %s", ssdeep_hash)
                 return ssdeep_hash, "python_library", None
             except OSError:
                 # Fall back to hash_from_file if direct read fails
                 try:
                     ssdeep_hash = ssdeep_module.hash_from_file(str(self.filepath))
-                    logger.debug(f"SSDeep hash calculated using hash_from_file: {ssdeep_hash}")
+                    logger.debug("SSDeep hash calculated using hash_from_file: %s", ssdeep_hash)
                     return ssdeep_hash, "python_library", None
                 except Exception as lib_error:
-                    logger.warning(f"Python ssdeep library failed: {lib_error}")
+                    logger.warning("Python ssdeep library failed: %s", lib_error)
                     # Continue to try binary method
             except Exception as e:
-                logger.warning(f"Python ssdeep library failed: {e}")
+                logger.warning("Python ssdeep library failed: %s", e)
                 # Continue to try binary method
 
         # Fallback to system binary
         try:
             ssdeep_hash, method = self._calculate_with_binary()
             if ssdeep_hash:
-                logger.debug(f"SSDeep hash calculated using system binary: {ssdeep_hash}")
+                logger.debug("SSDeep hash calculated using system binary: %s", ssdeep_hash)
                 return ssdeep_hash, method, None
             return None, None, "SSDeep binary calculation returned no hash"
         except Exception as e:
-            logger.error(f"System ssdeep binary failed: {e}")
+            logger.error("System ssdeep binary failed: %s", e)
             return None, None, f"Binary error: {str(e)}"
 
     def _calculate_with_binary(self) -> tuple[str | None, str]:
@@ -162,8 +170,7 @@ class SSDeepAnalyzer(HashingStrategy):
     @staticmethod
     def _resolve_ssdeep_binary() -> str | None:
         """Resolve ssdeep binary to an absolute path to avoid partial-path execution."""
-        ssdeep_path = shutil.which("ssdeep")
-        return ssdeep_path
+        return _resolve_ssdeep_binary_impl()
 
     def _get_hash_type(self) -> str:
         """
@@ -203,76 +210,25 @@ class SSDeepAnalyzer(HashingStrategy):
 
     @staticmethod
     def _compare_with_library(hash1: str, hash2: str) -> int | None:
-        ssdeep_module = get_ssdeep()
-        if ssdeep_module is None:
-            return None
-        try:
-            return cast(int, ssdeep_module.compare(hash1, hash2))
-        except Exception as e:
-            logger.warning(f"SSDeep comparison failed with library: {e}")
-            return None
+        return _compare_with_library_impl(hash1, hash2, get_ssdeep, logger)
 
     @staticmethod
     def _compare_with_binary(hash1: str, hash2: str) -> int | None:
-        temp_dir = None
-        try:
-            temp_dir = tempfile.TemporaryDirectory(prefix="r2inspect_ssdeep_")
-            temp_dir_path = Path(temp_dir.name)
-
-            temp_file1 = temp_dir_path / "hash1.txt"
-            temp_file2 = temp_dir_path / "hash2.txt"
-
-            SSDeepAnalyzer._write_temp_hash_file(temp_file1, f"{hash1},file1\n")
-            SSDeepAnalyzer._write_temp_hash_file(temp_file2, f"{hash2},file2\n")
-
-            ssdeep_path = SSDeepAnalyzer._resolve_ssdeep_binary()
-            if not ssdeep_path:
-                return None
-            result = subprocess.run(
-                [ssdeep_path, "-k", str(temp_file1), str(temp_file2)],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                shell=False,
-                check=False,
-                # nosec B603 - arguments are fixed and inputs are controlled
-            )
-
-            if result.returncode == 0:
-                return SSDeepAnalyzer._parse_ssdeep_output(result.stdout)
-
-        except Exception as e:
-            logger.warning(f"SSDeep comparison failed with binary: {e}")
-        finally:
-            if temp_dir is not None:
-                try:
-                    temp_dir.cleanup()
-                except Exception as e:
-                    logger.warning(f"Failed to cleanup temporary directory: {e}")
-
-        return None
+        return _compare_with_binary_impl(
+            hash1,
+            hash2,
+            SSDeepAnalyzer._resolve_ssdeep_binary,
+            SSDeepAnalyzer._write_temp_hash_file,
+            logger,
+        )
 
     @staticmethod
     def _write_temp_hash_file(path: Path, content: str) -> None:
-        fd = os.open(
-            path,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-            mode=0o600,
-        )
-        try:
-            os.write(fd, content.encode())
-        finally:
-            os.close(fd)
+        _write_temp_hash_file_impl(path, content)
 
     @staticmethod
     def _parse_ssdeep_output(output: str) -> int | None:
-        for line in output.split("\n"):
-            if "matches" in line and "(" in line and ")" in line:
-                start = line.rfind("(")
-                end = line.rfind(")")
-                if start != -1 and end != -1:
-                    return int(line[start + 1 : end])
-        return None
+        return _parse_ssdeep_output_impl(output)
 
     @staticmethod
     def is_available() -> bool:
@@ -282,23 +238,4 @@ class SSDeepAnalyzer(HashingStrategy):
         Returns:
             True if SSDeep is available, False otherwise
         """
-        if get_ssdeep() is not None:
-            return True
-
-        # Check system binary
-        try:
-            ssdeep_path = SSDeepAnalyzer._resolve_ssdeep_binary()
-            if not ssdeep_path:
-                return False
-            result = subprocess.run(
-                [ssdeep_path, "-V"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                shell=False,
-                check=False,
-                # nosec B603 - arguments are fixed and path is validated
-            )
-            return result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
-            return False
+        return _is_available_impl(get_ssdeep, SSDeepAnalyzer._resolve_ssdeep_binary)

@@ -28,7 +28,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         features["signed"] = is_signed(headers)
         features["nx"] = True
     except Exception as exc:
-        logger.error(f"Error checking security features: {exc}")
+        logger.error("Error checking security features: %s", exc)
 
     return features
 

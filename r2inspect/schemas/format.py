@@ -1,34 +1,31 @@
 #!/usr/bin/env python3
-"""Binary format analyzer schemas."""
+"""Format types re-exports for backwards compatibility.
+
+DEPRECATED: Import from domain.format_types directly instead.
+This module provides Pydantic-validated versions for backward compatibility.
+"""
 
 from pydantic import BaseModel, Field, field_validator
 
 from .base import AnalysisResultBase
 
+from ..domain.format_types import SectionInfo as _SectionInfo
+from ..domain.format_types import SecurityFeatures as _SecurityFeatures
+
 
 class SectionInfo(BaseModel):
-    """Information about a binary section."""
+    """Pydantic-validated section information (wraps domain entity)."""
 
     name: str = Field(..., description="Section name")
-
     virtual_address: int = Field(0, ge=0, description="Virtual address in memory")
-
     virtual_size: int = Field(0, ge=0, description="Virtual size in memory")
-
     raw_size: int = Field(0, ge=0, description="Raw size on disk")
-
     entropy: float | None = Field(None, ge=0.0, le=8.0, description="Section entropy (0.0-8.0)")
-
     permissions: str | None = Field(None, description="Permission flags (e.g., 'r-x')")
-
     is_executable: bool = Field(False, description="Whether section is executable")
-
     is_writable: bool = Field(False, description="Whether section is writable")
-
     is_readable: bool = Field(False, description="Whether section is readable")
-
     flags: str | None = Field(None, description="Raw permission flags")
-
     suspicious_indicators: list[str] = Field(
         default_factory=list, description="List of suspicious characteristics"
     )
@@ -45,7 +42,7 @@ class SectionInfo(BaseModel):
     @classmethod
     def validate_entropy(cls, v: float | None) -> float | None:
         """Validate entropy is within valid range"""
-        if v is not None and (v < 0.0 or v > 8.0):  # pragma: no cover
+        if v is not None and (v < 0.0 or v > 8.0):
             raise ValueError("Entropy must be between 0.0 and 8.0")
         return v
 
@@ -66,18 +63,31 @@ class SectionInfo(BaseModel):
         """Convert to dictionary representation."""
         return self.model_dump()
 
+    def to_domain(self) -> _SectionInfo:
+        """Convert to domain entity."""
+        return _SectionInfo(
+            name=self.name,
+            virtual_address=self.virtual_address,
+            virtual_size=self.virtual_size,
+            raw_size=self.raw_size,
+            entropy=self.entropy,
+            permissions=self.permissions,
+            is_executable=self.is_executable,
+            is_writable=self.is_writable,
+            is_readable=self.is_readable,
+            flags=self.flags,
+            suspicious_indicators=self.suspicious_indicators,
+        )
+
 
 class SecurityFeatures(BaseModel):
-    """Security features detected in a binary."""
+    """Pydantic-validated security features (wraps domain entity)."""
 
-    # PE security features
     aslr: bool = Field(False, description="ASLR enabled")
     dep: bool = Field(False, description="DEP/NX enabled")
     seh: bool = Field(False, description="SEH enabled")
     guard_cf: bool = Field(False, description="Control Flow Guard enabled")
     authenticode: bool = Field(False, description="Authenticode signature present")
-
-    # ELF security features
     nx: bool = Field(False, description="NX bit set (ELF)")
     stack_canary: bool = Field(False, description="Stack canary enabled")
     canary: bool = Field(False, description="Stack canary protection (alias)")
@@ -121,7 +131,6 @@ class SecurityFeatures(BaseModel):
             if getattr(self, feature, False):
                 score += weight
 
-        # RELRO scoring
         if self.relro == "full":
             score += 5
         elif self.relro == "partial" or self.relro is True:
@@ -133,40 +142,45 @@ class SecurityFeatures(BaseModel):
         """Convert to dictionary representation."""
         return self.model_dump()
 
+    def to_domain(self) -> _SecurityFeatures:
+        """Convert to domain entity."""
+        return _SecurityFeatures(
+            aslr=self.aslr,
+            dep=self.dep,
+            seh=self.seh,
+            guard_cf=self.guard_cf,
+            authenticode=self.authenticode,
+            nx=self.nx,
+            stack_canary=self.stack_canary,
+            canary=self.canary,
+            pie=self.pie,
+            relro=self.relro,
+            rpath=self.rpath,
+            runpath=self.runpath,
+            fortify=self.fortify,
+            high_entropy_va=self.high_entropy_va,
+        )
+
 
 class FormatAnalysisResult(AnalysisResultBase):
     """Result from format analyzers (PE, ELF, Mach-O)."""
 
     format: str = Field(..., description="Binary format (PE, ELF, Mach-O)")
-
     architecture: str | None = Field(None, description="CPU architecture")
-
     bits: int | None = Field(None, description="32 or 64 bit")
-
     endian: str | None = Field(None, description="Endianness (little/big)")
-
     machine: str | None = Field(None, description="Machine type")
-
     type: str | None = Field(None, description="Binary type (exe, dll, shared object)")
-
     entry_point: int | None = Field(None, ge=0, description="Entry point address")
-
     image_base: int | None = Field(None, ge=0, description="Image base address")
-
     sections: list[SectionInfo] = Field(default_factory=list, description="List of sections")
-
     security_features: SecurityFeatures | None = Field(
         None, description="Security features detected"
     )
-
     compile_time: str | None = Field(None, description="Compilation timestamp")
-
     compiler: str | None = Field(None, description="Compiler information")
-
     subsystem: str | None = Field(None, description="Subsystem (Windows)")
-
     is_dll: bool | None = Field(None, description="Whether binary is a DLL")
-
     is_executable: bool | None = Field(None, description="Whether binary is executable")
 
     @field_validator("format")
@@ -236,3 +250,6 @@ class FormatAnalysisResult(AnalysisResultBase):
     def is_macho(self) -> bool:
         """Check if binary is Mach-O format"""
         return "MACH" in self.format.upper()
+
+
+__all__ = ["SectionInfo", "SecurityFeatures", "FormatAnalysisResult"]

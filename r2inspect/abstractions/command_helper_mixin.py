@@ -3,11 +3,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmd_list as cmd_list_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..infrastructure.command_helpers import cmd as cmd_helper
+from ..infrastructure.command_helpers import cmd_list as cmd_list_helper
+from ..infrastructure.command_helpers import cmdj as cmdj_helper
+
+_log = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class CommandHelperMixin:
@@ -17,10 +23,54 @@ class CommandHelperMixin:
     r2: Any
 
     def _cmd(self, command: str) -> str:
-        return cmd_helper(self.adapter, self.r2, command)
+        return str(cmd_helper(self.adapter, self.r2, command))
 
     def _cmdj(self, command: str, default: Any | None = None) -> Any:
         return cmdj_helper(self.adapter, self.r2, command, default)
 
     def _cmd_list(self, command: str) -> list[Any]:
-        return cmd_list_helper(self.adapter, self.r2, command)
+        return cast(list[Any], cmd_list_helper(self.adapter, self.r2, command))
+
+    def _get_via_adapter(
+        self,
+        method_name: str,
+        fallback_cmd: str | None = None,
+        *,
+        as_dict: bool = False,
+    ) -> Any:
+        """Return data from an adapter method when available, else via r2 command.
+
+        Eliminates the recurring ``if self.adapter and hasattr(self.adapter, X)``
+        boilerplate in every analyzer.
+
+        - Pass ``fallback_cmd=None`` (default) when there is no r2 command fallback;
+          an empty list (or dict if ``as_dict=True``) is returned instead.
+        - Pass ``as_dict=True`` to use ``_cmdj`` (returns a dict) instead of
+          ``_cmd_list`` (returns a list) as the command fallback.
+        """
+        if self.adapter is not None and hasattr(self.adapter, method_name):
+            return getattr(self.adapter, method_name)()
+        if fallback_cmd is None:
+            return {} if as_dict else []
+        return (
+            cast(dict[str, Any], self._cmdj(fallback_cmd, {}))
+            if as_dict
+            else self._cmd_list(fallback_cmd)
+        )
+
+    def _safe_call(
+        self,
+        fn: Callable[[], T],
+        default: T,
+        error_msg: str,
+    ) -> T:
+        """Call *fn* and return its result; log *error_msg* and return *default* on any exception.
+
+        Replaces the repetitive ``try: return X() except Exception as e: logger.error(...)``
+        pattern spread across analyzer private methods.
+        """
+        try:
+            return fn()
+        except Exception as exc:
+            _log.error("%s: %s", error_msg, exc)
+            return default

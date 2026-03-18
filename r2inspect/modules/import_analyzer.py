@@ -2,12 +2,35 @@
 """Import analysis module."""
 
 import re
-from collections import Counter
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..utils.logger import get_logger
+from ..domain.services.import_analysis import (
+    analyze_dll_dependencies as analyze_dll_dependencies_domain,
+    build_import_statistics,
+    detect_api_obfuscation as detect_api_obfuscation_domain,
+    detect_import_anomalies as detect_import_anomalies_domain,
+)
+from ..infrastructure.logging import get_logger
+from .import_analyzer_collection_support import (
+    collect_imports as _collect_imports_impl,
+    safe_len as _safe_len_impl,
+)
+from .import_analyzer_result_support import (
+    collect_import_dlls as _collect_import_dlls_impl,
+    init_import_result as _init_import_result_impl,
+    populate_import_statistics as _populate_import_statistics_impl,
+)
+from .import_analyzer_support import (
+    analyze_import as _analyze_import_impl,
+    check_import_forwarding as _check_import_forwarding_impl,
+    count_suspicious_indicators as _count_suspicious_indicators_impl,
+    get_function_description as _get_function_description_impl,
+    get_risk_level as _get_risk_level_impl,
+    is_candidate_api_string as _is_candidate_api_string_impl,
+    matches_known_api as _matches_known_api_impl,
+)
 from .domain_helpers import clamp_score
 from .import_categories import get_api_categories
 from .import_domain import (
@@ -16,7 +39,6 @@ from .import_domain import (
     build_api_categories,
     categorize_apis,
     find_max_risk_score,
-    find_suspicious_patterns,
     risk_level_from_score,
 )
 
@@ -46,130 +68,51 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def analyze(self) -> dict[str, Any]:
         """Run complete import analysis"""
-        result = self._init_result_structure(
-            {
-                "total_imports": 0,
-                "total_dlls": 0,
-                "imports": [],
-                "dlls": [],
-                "statistics": {},
-                "api_analysis": {},
-                "obfuscation": {},
-                "dll_analysis": {},
-                "anomalies": {},
-                "forwarding": {},
-            }
-        )
+        result = _init_import_result_impl(self._init_result_structure)
 
         with self._analysis_context(result, error_message="Import analysis failed"):
             self._log_info("Starting import analysis")
 
-            # Get basic import information
             imports = self.get_imports()
-            dlls = list({imp.get("library", "") for imp in imports if imp.get("library")})
+            dlls = _collect_import_dlls_impl(imports)
 
             result["imports"] = imports
             result["dlls"] = dlls
             result["total_imports"] = len(imports)
             result["total_dlls"] = len(dlls)
 
-            # Perform various analyses
             result["api_analysis"] = self.analyze_api_usage(imports)
             result["obfuscation"] = self.detect_api_obfuscation(imports)
             result["dll_analysis"] = self.analyze_dll_dependencies(dlls)
             result["anomalies"] = self.detect_import_anomalies(imports)
             result["forwarding"] = self.check_import_forwarding()
-
-            # Calculate overall risk score
-            total_risk = (
-                result["api_analysis"].get("risk_score", 0) * 0.4
-                + result["obfuscation"].get("score", 0) * 0.3
-                + (result["anomalies"].get("count", 0) * 10) * 0.2
-                + (len(result["dll_analysis"].get("suspicious_dlls", [])) * 5) * 0.1
+            _populate_import_statistics_impl(
+                result,
+                get_risk_level_fn=self._get_risk_level,
+                count_suspicious_indicators_fn=self._count_suspicious_indicators,
             )
-
-            risk_level = self._get_risk_level(total_risk)
-            suspicious_indicators = self._count_suspicious_indicators(result)
-
-            result["statistics"] = {
-                "total_risk_score": min(total_risk, 100),
-                "risk_level": risk_level,
-                "suspicious_indicators": suspicious_indicators,
-            }
 
             self._log_info(f"Analyzed {len(imports)} imports from {len(dlls)} DLLs")
 
         return result
 
     def _get_risk_level(self, total_risk: float) -> str:
-        if total_risk >= 70:
-            return "HIGH"
-        if total_risk >= 40:
-            return "MEDIUM"
-        return "LOW"
+        return _get_risk_level_impl(total_risk)
 
     def _count_suspicious_indicators(self, result: dict[str, Any]) -> int:
-        api_analysis = result.get("api_analysis", {})
-        obfuscation = result.get("obfuscation", {})
-        anomalies = result.get("anomalies", {})
-        return (
-            len(api_analysis.get("suspicious_apis", []))
-            + len(obfuscation.get("indicators", []))
-            + int(anomalies.get("count", 0))
-        )
+        return _count_suspicious_indicators_impl(result)
 
     def get_imports(self) -> list[dict[str, Any]]:
         """Get all imported functions with analysis"""
-        imports_info = []
-
-        try:
-            # Get imports from radare2
-            imports = self._cmdj("iij", [])
-
-            if imports:
-                for imp in imports:
-                    import_analysis = self._analyze_import(imp)
-                    imports_info.append(import_analysis)
-
-        except Exception as e:
-            logger.error(f"Error getting imports: {e}")
-
-        return imports_info
+        return _collect_imports_impl(
+            cmdj=self._cmdj,
+            analyze_import_fn=self._analyze_import,
+            logger=logger,
+        )
 
     def _analyze_import(self, imp: dict[str, Any]) -> dict[str, Any]:
         """Analyze a single import"""
-        analysis = {
-            "name": imp.get("name", "unknown"),
-            "address": hex(imp.get("plt", 0)),
-            "ordinal": imp.get("ordinal", 0),
-            "library": imp.get("libname", "unknown"),
-            "type": imp.get("type", "unknown"),
-            "category": "Unknown",
-            "risk_score": 0,
-            "risk_level": "Low",
-            "risk_tags": [],
-            "description": "",
-        }
-
-        try:
-            func_name = imp.get("name", "")
-
-            # Calculate detailed risk score
-            risk_analysis = self._calculate_risk_score(func_name)
-            analysis.update(risk_analysis)
-
-            # Categorize the function
-            for category, functions in self.api_categories.items():
-                if any(api in func_name for api in functions):
-                    analysis["category"] = category
-                    analysis["description"] = self._get_function_description(func_name)
-                    break
-
-        except Exception as e:
-            logger.error(f"Error analyzing import: {e}")
-            analysis["error"] = str(e)
-
-        return analysis
+        return _analyze_import_impl(imp, self, logger=logger)
 
     def _calculate_risk_score(self, func_name: str) -> dict[str, Any]:
         """Calculate detailed risk score (0-100) with specific tags"""
@@ -184,72 +127,24 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _get_function_description(self, func_name: str) -> str:
         """Get description for common functions"""
-        descriptions = {
-            "CreateProcess": "Creates a new process",
-            "CreateRemoteThread": "Creates thread in another process (DLL injection)",
-            "WriteProcessMemory": "Writes to another process memory",
-            "VirtualAlloc": "Allocates virtual memory",
-            "VirtualAllocEx": "Allocates memory in another process",
-            "LoadLibrary": "Loads a DLL dynamically",
-            "GetProcAddress": "Gets address of exported function",
-            "RegSetValue": "Sets registry value",
-            "CreateFile": "Creates or opens file",
-            "IsDebuggerPresent": "Checks if debugger is present",
-            "CreateService": "Creates a Windows service",
-            "CryptEncrypt": "Encrypts data",
-            "InternetOpen": "Initializes WinINet",
-            "URLDownloadToFile": "Downloads file from URL",
-        }
-
-        for api, desc in descriptions.items():
-            if api in func_name:
-                return desc
-
-        return ""
+        return _get_function_description_impl(func_name)
 
     def get_import_statistics(self) -> dict[str, Any]:
         """Get statistics about imports"""
-        stats = {
-            "total_imports": 0,
-            "unique_libraries": 0,
-            "category_distribution": {},
-            "risk_distribution": {},
-            "library_distribution": {},
-            "suspicious_patterns": [],
-        }
-
+        imports: list[dict[str, Any]] = []
         try:
             imports = self.get_imports()
-
-            if imports:
-                stats["total_imports"] = len(imports)
-
-                # Count categories and risks
-                categories = [imp["category"] for imp in imports]
-                risks = [imp["risk_level"] for imp in imports]
-                libraries = [imp["library"] for imp in imports]
-
-                stats["category_distribution"] = dict(Counter(categories))
-                stats["risk_distribution"] = dict(Counter(risks))
-                stats["library_distribution"] = dict(Counter(libraries))
-                stats["unique_libraries"] = len(set(libraries))
-
-                stats["suspicious_patterns"] = find_suspicious_patterns(imports)
-
-        except Exception as e:
-            logger.error(f"Error getting import statistics: {e}")
-
-        return stats
+            return build_import_statistics(imports)
+        except Exception as exc:
+            logger.error("Error getting import statistics for %s imports: %s", len(imports), exc)
+            return build_import_statistics([])
 
     def get_missing_imports(self) -> list[str]:
         missing = []
 
         try:
             # Get all string references that look like API calls
-            if self.adapter is not None and hasattr(self.adapter, "get_strings"):
-                strings = self.adapter.get_strings()
-            else:
-                strings = self._cmdj("izj", [])
+            strings = self._get_via_adapter("get_strings", "izj")
             imported_apis = [imp["name"] for imp in self.get_imports()]
 
             if strings:
@@ -260,24 +155,16 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                     if self._matches_known_api(string_val):
                         missing.append(string_val)
 
-        except Exception as e:
-            logger.error(f"Error detecting missing imports: {e}")
+        except Exception as exc:
+            logger.error("Error detecting missing imports: %s", exc)
 
         return list(set(missing))  # Remove duplicates
 
     def _is_candidate_api_string(self, string_val: str, imported_apis: list[str]) -> bool:
-        return (
-            len(string_val) > 3
-            and string_val[0].isupper()
-            and any(c.islower() for c in string_val)
-            and string_val not in imported_apis
-        )
+        return _is_candidate_api_string_impl(string_val, imported_apis)
 
     def _matches_known_api(self, string_val: str) -> bool:
-        for _, apis in self.api_categories.items():
-            if any(api in string_val for api in apis):
-                return True
-        return False
+        return _matches_known_api_impl(string_val, self.api_categories)
 
     def analyze_api_usage(self, imports: list[dict]) -> dict[str, Any]:
         try:
@@ -293,237 +180,43 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 "risk_score": clamp_score(risk_score),
             }
 
-        except Exception as e:
-            logger.error(f"Error analyzing API usage: {e}")
+        except Exception as exc:
+            logger.error("Error analyzing API usage for %s imports: %s", len(imports), exc)
             return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
 
     def detect_api_obfuscation(self, imports: list[dict]) -> dict[str, Any]:
         try:
-            obfuscation_indicators = []
-
-            # Check for GetProcAddress usage (dynamic API loading)
-            getproc_count = sum(1 for imp in imports if "GetProcAddress" in imp.get("name", ""))
-            if getproc_count > 0:
-                obfuscation_indicators.append(
-                    {
-                        "type": "dynamic_loading",
-                        "description": "GetProcAddress usage detected - possible dynamic API loading",
-                        "count": getproc_count,
-                    }
-                )
-
-            # Check for LoadLibrary usage
-            loadlib_count = sum(1 for imp in imports if "LoadLibrary" in imp.get("name", ""))
-            if loadlib_count > 0:
-                obfuscation_indicators.append(
-                    {
-                        "type": "dynamic_library_loading",
-                        "description": "LoadLibrary usage detected - possible dynamic library loading",
-                        "count": loadlib_count,
-                    }
-                )
-
-            # Check for very few imports (possible static linking or packing)
-            if len(imports) < 10:
-                obfuscation_indicators.append(
-                    {
-                        "type": "few_imports",
-                        "description": f"Very few imports ({len(imports)}) - possible static linking or packing",
-                        "count": len(imports),
-                    }
-                )
-
-            # Check for ordinal-only imports
-            ordinal_only = sum(
-                1 for imp in imports if not imp.get("name") and imp.get("ordinal", 0) > 0
+            return detect_api_obfuscation_domain(imports)
+        except Exception as exc:
+            logger.error(
+                "Error detecting API obfuscation for %s imports: %s", len(imports or []), exc
             )
-            if ordinal_only > 0:
-                obfuscation_indicators.append(
-                    {
-                        "type": "ordinal_imports",
-                        "description": "Ordinal-only imports detected - possible obfuscation",
-                        "count": ordinal_only,
-                    }
-                )
-
-            return {
-                "detected": len(obfuscation_indicators) > 0,
-                "indicators": obfuscation_indicators,
-                "score": min(len(obfuscation_indicators) * 20, 100),
-            }
-
-        except Exception as e:
-            logger.error(f"Error detecting API obfuscation: {e}")
             return {"detected": False, "indicators": [], "score": 0}
 
     def analyze_dll_dependencies(self, dlls: list[str]) -> dict[str, Any]:
         try:
-            if not dlls:
-                return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
-
-            # Common system DLLs
-            common_system_dlls = [
-                "kernel32.dll",
-                "user32.dll",
-                "advapi32.dll",
-                "ntdll.dll",
-                "msvcrt.dll",
-                "shell32.dll",
-                "ole32.dll",
-                "oleaut32.dll",
-                "ws2_32.dll",
-                "wininet.dll",
-                "urlmon.dll",
-                "shlwapi.dll",
-            ]
-
-            # Suspicious DLLs that might indicate malicious behavior
-            suspicious_dlls = [
-                "psapi.dll",  # Process enumeration
-                "imagehlp.dll",  # PE manipulation
-                "dbghelp.dll",  # Debugging
-                "winsock.dll",  # Older networking
-                "rasapi32.dll",  # Remote access
-                "netapi32.dll",  # Network management
-                "secur32.dll",  # Security
-                "crypt32.dll",  # Cryptography
-                "wintrust.dll",  # Trust verification
-                "version.dll",  # Version info
-                "setupapi.dll",  # Setup/installation
-                "cfgmgr32.dll",  # Configuration management
-            ]
-
-            common_found = []
-            suspicious_found = []
-
-            for dll in dlls:
-                dll_lower = dll.lower()
-                if dll_lower in [d.lower() for d in common_system_dlls]:
-                    common_found.append(dll)
-                if dll_lower in [d.lower() for d in suspicious_dlls]:
-                    suspicious_found.append(dll)
-
-            # Analysis
-            analysis = {
-                "total_dlls": len(dlls),
-                "common_ratio": len(common_found) / len(dlls) if dlls else 0,
-                "suspicious_ratio": len(suspicious_found) / len(dlls) if dlls else 0,
-                "unique_dlls": len({dll.lower() for dll in dlls}),
-            }
-
-            return {
-                "common_dlls": common_found,
-                "suspicious_dlls": suspicious_found,
-                "analysis": analysis,
-                "all_dlls": dlls,
-            }
-
-        except Exception as e:
-            logger.error(f"Error analyzing DLL dependencies: {e}")
+            return analyze_dll_dependencies_domain(dlls)
+        except Exception as exc:
+            logger.error(
+                "Error analyzing DLL dependencies for %s DLLs: %s", _safe_len_impl(dlls), exc
+            )
             return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
     def detect_import_anomalies(self, imports: list[dict[str, Any]]) -> dict[str, Any]:
         """Detect anomalies in import table"""
         try:
-            anomalies: list[dict[str, Any]] = []
-
-            if not imports:
-                anomalies.append(
-                    {
-                        "type": "no_imports",
-                        "description": "No imports found - possible packing or static linking",
-                        "severity": "HIGH",
-                    }
-                )
-                return {"anomalies": anomalies, "count": len(anomalies)}
-
-            # Check for duplicate imports
-            import_names = [imp.get("name", "") for imp in imports if imp.get("name")]
-            duplicates = [name for name, count in Counter(import_names).items() if count > 1]
-
-            if duplicates:
-                anomalies.append(
-                    {
-                        "type": "duplicate_imports",
-                        "description": f"Duplicate imports found: {', '.join(duplicates[:5])}",
-                        "severity": "MEDIUM",
-                        "count": len(duplicates),
-                    }
-                )
-
-            # Check for imports from unusual DLLs
-            unusual_dlls: list[str] = []
-            for imp in imports:
-                dll = imp.get("dll", "").lower()
-                if (
-                    dll
-                    and dll not in unusual_dlls
-                    and not any(
-                        common in dll
-                        for common in [
-                            "kernel32",
-                            "user32",
-                            "advapi32",
-                            "ntdll",
-                            "msvcrt",
-                        ]
-                    )
-                ):
-                    unusual_dlls.append(dll)
-
-            if len(unusual_dlls) > 5:
-                anomalies.append(
-                    {
-                        "type": "many_unusual_dlls",
-                        "description": f"Many unusual DLLs: {len(unusual_dlls)} found",
-                        "severity": "MEDIUM",
-                        "dlls": unusual_dlls[:10],  # Show first 10
-                    }
-                )
-
-            # Check for very high number of imports
-            if len(imports) > 500:
-                anomalies.append(
-                    {
-                        "type": "excessive_imports",
-                        "description": f"Excessive number of imports: {len(imports)}",
-                        "severity": "MEDIUM",
-                    }
-                )
-
-            return {"anomalies": anomalies, "count": len(anomalies)}
-
-        except Exception as e:
-            logger.error(f"Error detecting import anomalies: {e}")
+            return detect_import_anomalies_domain(imports)
+        except Exception as exc:
+            logger.error(
+                "Error detecting import anomalies for %s imports: %s", _safe_len_impl(imports), exc
+            )
             return {"anomalies": [], "count": 0}
 
     def check_import_forwarding(self) -> dict[str, Any]:
         """Check for import forwarding"""
         try:
-            # Look for forwarded imports in strings
             strings = self._cmdj("izj", [])
-            if not strings:
-                return {"detected": False, "forwards": []}
-
-            forwards = []
-            for string_entry in strings:
-                if isinstance(string_entry, dict) and "string" in string_entry:
-                    string_value = string_entry["string"]
-                    # Look for DLL.function pattern (typical forwarding)
-                    if re.match(r"^\\w+\\.\\w+$", string_value):
-                        forwards.append(
-                            {
-                                "forward": string_value,
-                                "address": string_entry.get("vaddr", 0),
-                            }
-                        )
-
-            return {
-                "detected": len(forwards) > 0,
-                "forwards": forwards,
-                "count": len(forwards),
-            }
-
-        except Exception as e:
-            logger.error(f"Error checking import forwarding: {e}")
+            return _check_import_forwarding_impl(strings, logger=logger)
+        except Exception as exc:
+            logger.error("Error checking import forwarding from strings: %s", exc)
             return {"detected": False, "forwards": []}

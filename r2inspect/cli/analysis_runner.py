@@ -1,35 +1,16 @@
 #!/usr/bin/env python3
-"""
-r2inspect CLI Analysis Runner Module
+"""Public facade for single-file CLI analysis execution and output."""
 
-Provides analysis orchestration and result output functions.
-Extracted from cli_utils.py for better modularity.
-
-Copyright (C) 2025 Marc Rivero López
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-"""
-
-import sys
 from pathlib import Path
 from typing import Any
 
 from rich.console import Console
 
+from ..application.options import build_analysis_options
 from ..application.analysis_service import default_analysis_service
 from ..application.use_cases import AnalyzeBinaryUseCase
-from ..utils.output import OutputFormatter
+from ..cli.output_formatters import OutputFormatter
+from . import analysis_runner_support as _runner_support
 from .commands import analysis_output
 
 console = Console()
@@ -43,31 +24,10 @@ def run_analysis(
     output_file: str | Path | None,
     verbose: bool = False,
 ) -> dict[str, Any]:
-    """
-    Run complete analysis and display results.
-
-    Args:
-        inspector: Inspector instance
-        options: Analysis options dictionary
-        output_json: Whether to output JSON
-        output_csv: Whether to output CSV
-        output_file: Output file path
-        verbose: Enable verbose output
-
-    Returns:
-        Analysis results dictionary
-    """
-    # Import here to avoid circular dependency
-    from .display import display_error_statistics, display_performance_statistics, display_results
-
     print_status_if_appropriate(output_json, output_csv, output_file)
-
-    # Perform analysis
-    results = AnalyzeBinaryUseCase().run(inspector, options)
-
-    # Output results in appropriate format
+    result = AnalyzeBinaryUseCase().run(inspector, options)
+    results = result.to_dict()
     output_results(results, output_json, output_csv, output_file, verbose)
-
     return results
 
 
@@ -79,25 +39,12 @@ def print_status_if_appropriate(
 
 
 def add_statistics_to_results(results: dict[str, Any]) -> None:
-    """
-    Add error, retry, and circuit breaker statistics to results.
-
-    Args:
-        results: Results dictionary to augment
-    """
+    """Augment results with service-level retry and circuit-breaker stats."""
     default_analysis_service.add_statistics(results)
 
 
 def has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
-    """
-    Check if circuit breaker statistics contain any meaningful data.
-
-    Args:
-        circuit_stats: Circuit breaker statistics dictionary
-
-    Returns:
-        True if there is meaningful data, False otherwise
-    """
+    """Return whether the circuit-breaker payload contains real signal."""
     return default_analysis_service.has_circuit_breaker_data(circuit_stats)
 
 
@@ -133,67 +80,32 @@ def setup_single_file_output(
     output: str | Path | None,
     filename: str,
 ) -> str | Path | None:
-    """
-    Setup output file for single file mode.
-
-    Args:
-        output_json: Whether JSON output is enabled
-        output_csv: Whether CSV output is enabled
-        output: User-provided output path
-        filename: Input filename
-
-    Returns:
-        Output file path or None
-    """
-    if (output_json or output_csv) and not output:
-        # Create output directory if it doesn't exist
-        output_dir = Path("output")
-        output_dir.mkdir(exist_ok=True)
-
-        # Generate filename based on input file
-        input_path = Path(filename)
-        base_name = input_path.stem
-
-        if output_json:
-            output = output_dir / f"{base_name}_analysis.json"
-        elif output_csv:
-            output = output_dir / f"{base_name}_analysis.csv"
-
-    return output
+    """Return the derived output path for single-file CLI execution."""
+    return _runner_support.setup_single_file_output(output_json, output_csv, output, filename)
 
 
 def setup_analysis_options(yara: str | None, sanitized_xor: str | None) -> dict[str, Any]:
-    """
-    Setup analysis options with all modules enabled by default.
-
-    Args:
-        yara: YARA rules directory path
-        sanitized_xor: Sanitized XOR search string
-
-    Returns:
-        Analysis options dictionary
-    """
-    return {
-        "detect_packer": True,
-        "detect_crypto": True,
-        "detect_av": True,
-        "full_analysis": True,
-        "custom_yara": yara,
-        "xor_search": sanitized_xor,
-    }
+    """Build the default analysis option set for CLI execution."""
+    return build_analysis_options(yara, sanitized_xor)
 
 
 def handle_main_error(e: Exception, verbose: bool) -> None:
-    """
-    Handle errors in main function.
+    """Report a top-level CLI error and terminate with exit code 1."""
+    _runner_support.handle_main_error(console, e, verbose)
 
-    Args:
-        e: Exception that occurred
-        verbose: Enable verbose error output
-    """
-    console.print(f"[red]Error: {str(e)}[/red]")
-    if verbose:
-        import traceback
 
-        traceback.print_exc()
-    sys.exit(1)
+__all__ = [
+    "OutputFormatter",
+    "add_statistics_to_results",
+    "console",
+    "handle_main_error",
+    "has_circuit_breaker_data",
+    "output_console_results",
+    "output_csv_results",
+    "output_json_results",
+    "output_results",
+    "print_status_if_appropriate",
+    "run_analysis",
+    "setup_analysis_options",
+    "setup_single_file_output",
+]

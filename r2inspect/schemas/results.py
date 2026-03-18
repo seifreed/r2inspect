@@ -20,8 +20,8 @@ from .results_loader import (
     _load_yara_matches,
     from_dict,
 )
-from .results_models import (
-    AnalysisResult,
+from .results_models import AnalysisResult, SectionInfo, SecurityFeatures
+from ..domain.entities import (
     AntiAnalysisResult,
     CryptoResult,
     ExportInfo,
@@ -31,8 +31,6 @@ from .results_models import (
     ImportInfo,
     Indicator,
     PackerResult,
-    SectionInfo,
-    SecurityFeatures,
     StringInfo,
     YaraMatch,
 )

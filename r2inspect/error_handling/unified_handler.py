@@ -15,166 +15,43 @@ Author: Marc Rivero Lopez
 """
 
 import functools
-import secrets
-import threading
-import time
 from collections.abc import Callable
-from enum import Enum
-from typing import Any, assert_never
+from typing import Any, assert_never, overload
 
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
 from .policies import ErrorHandlingStrategy, ErrorPolicy
+from .unified_handler_circuit_support import (
+    CircuitBreakerState,
+    CircuitState,
+    _circuit_breakers,
+    _circuit_lock,
+    get_circuit_breaker as _get_circuit_breaker_impl,
+    get_circuit_breaker_stats as _get_circuit_breaker_stats_impl,
+    reset_circuit_breakers as _reset_circuit_breakers_impl,
+)
+from .unified_handler_retry_support import (
+    calculate_retry_delay as _calculate_retry_delay_impl,
+    fallback_execution as _fallback_execution_impl,
+    retry_execution as _retry_execution_impl,
+)
 
 logger = get_logger(__name__)
 
 
-class CircuitState(Enum):
-    """Circuit breaker states"""
-
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Circuit tripped, failing fast
-    HALF_OPEN = "half_open"  # Testing recovery
-
-
-class CircuitBreakerState:
-    """Thread-safe circuit breaker state management"""
-
-    def __init__(self, policy: ErrorPolicy):
-        self.policy = policy
-        self.state = CircuitState.CLOSED
-        self.failure_count = 0
-        self.last_failure_time: float | None = None
-        self.lock = threading.Lock()
-
-    def should_allow_request(self) -> bool:
-        """Check if request should be allowed through circuit"""
-        with self.lock:
-            if self.state == CircuitState.CLOSED:
-                return True
-
-            if self.state == CircuitState.OPEN:
-                if self._should_attempt_reset():
-                    self.state = CircuitState.HALF_OPEN
-                    return True
-                return False
-
-            # HALF_OPEN state allows one request
-            return True
-
-    def record_success(self) -> None:
-        """Record successful execution"""
-        with self.lock:
-            if self.state == CircuitState.HALF_OPEN:
-                self.state = CircuitState.CLOSED
-            self.failure_count = 0
-            self.last_failure_time = None
-
-    def record_failure(self) -> None:
-        """Record failed execution"""
-        with self.lock:
-            self.failure_count += 1
-            self.last_failure_time = time.time()
-
-            if self.failure_count >= self.policy.circuit_threshold:
-                self.state = CircuitState.OPEN
-                logger.warning(
-                    f"Circuit breaker opened after {self.failure_count} failures, "
-                    f"will retry in {self.policy.circuit_timeout}s"
-                )
-
-    def _should_attempt_reset(self) -> bool:
-        """Check if enough time has passed to attempt reset"""
-        if self.last_failure_time is None:
-            return False
-        return (time.time() - self.last_failure_time) >= self.policy.circuit_timeout
-
-
-# Global circuit breaker registry by function
-_circuit_breakers: dict[str, CircuitBreakerState] = {}
-_circuit_lock = threading.Lock()
-
-
 def _get_circuit_breaker(func_id: str, policy: ErrorPolicy) -> CircuitBreakerState:
     """Get or create circuit breaker for function"""
-    with _circuit_lock:
-        if func_id not in _circuit_breakers:
-            _circuit_breakers[func_id] = CircuitBreakerState(policy)
-        return _circuit_breakers[func_id]
+    return _get_circuit_breaker_impl(func_id, policy, logger)
 
 
 def _calculate_retry_delay(attempt: int, policy: ErrorPolicy) -> float:
     """Calculate delay before retry using exponential backoff with optional jitter"""
-    if attempt <= 0:
-        return 0.0
-
-    # Exponential backoff
-    delay = policy.retry_delay * (policy.retry_backoff ** (attempt - 1))
-
-    # Add jitter to prevent thundering herd
-    if policy.retry_jitter:
-        # Add ±20% jitter
-        jitter_range = delay * 0.2
-        jitter = (secrets.randbelow(int(jitter_range * 2000)) / 1000.0) - jitter_range
-        delay = max(0.01, delay + jitter)
-
-    return delay
+    return _calculate_retry_delay_impl(attempt, policy)
 
 
 def _retry_execution(
     func: Callable, policy: ErrorPolicy, func_args: tuple, func_kwargs: dict
 ) -> Any:
-    """
-    Execute function with retry logic
-
-    Args:
-        func: Function to execute
-        policy: Error policy configuration
-        func_args: Positional arguments for function
-        func_kwargs: Keyword arguments for function
-
-    Returns:
-        Function result
-
-    Raises:
-        Exception: If all retries exhausted or non-retryable error
-    """
-    last_exception = None
-
-    for attempt in range(policy.max_retries + 1):
-        try:
-            result = func(*func_args, **func_kwargs)
-            if attempt > 0:
-                logger.debug(f"Operation succeeded on retry attempt {attempt + 1}")
-            return result
-
-        except Exception as e:
-            last_exception = e
-
-            # Check if error is retryable
-            if not policy.is_retryable(e):
-                logger.debug(f"Non-retryable error: {type(e).__name__}")
-                raise
-
-            # Check if we have retries left
-            if attempt >= policy.max_retries:
-                logger.warning(
-                    f"Operation failed after {policy.max_retries + 1} attempts: "
-                    f"{type(e).__name__}: {e}"
-                )
-                raise
-
-            # Calculate delay and wait
-            delay = _calculate_retry_delay(attempt + 1, policy)
-            logger.debug(
-                f"Retrying after error ({type(e).__name__}), "
-                f"attempt {attempt + 2}/{policy.max_retries + 1} in {delay:.2f}s"
-            )
-            time.sleep(delay)
-
-    # Should not reach here, but handle gracefully
-    if last_exception:  # pragma: no cover
-        raise last_exception  # pragma: no cover
-    raise RuntimeError("Retry execution completed without result")  # pragma: no cover
+    return _retry_execution_impl(func, policy, func_args, func_kwargs, logger)
 
 
 def _circuit_break_execution(
@@ -204,17 +81,18 @@ def _circuit_break_execution(
 
     # Check if circuit allows request
     if not circuit.should_allow_request():
-        logger.debug(f"Circuit breaker open for {func_id}, returning fallback")
+        logger.debug("Circuit breaker open for %s, returning fallback", func_id)
         if policy.fallback_value is not None:
             return policy.fallback_value
         raise RuntimeError(f"Circuit breaker open for {func_id}")
 
-    # Attempt execution with retry logic
+    # Use the standard retry logic, then record a single success/failure
+    # on the circuit breaker. This keeps threshold semantics simple:
+    # circuit_threshold counts function invocations, not individual attempts.
     try:
         result = _retry_execution(func, policy, func_args, func_kwargs)
         circuit.record_success()
         return result
-
     except Exception:
         circuit.record_failure()
         raise
@@ -223,26 +101,20 @@ def _circuit_break_execution(
 def _fallback_execution(
     func: Callable, policy: ErrorPolicy, func_args: tuple, func_kwargs: dict
 ) -> Any:
-    """
-    Execute function with fallback on error
-
-    Args:
-        func: Function to execute
-        policy: Error policy configuration
-        func_args: Positional arguments for function
-        func_kwargs: Keyword arguments for function
-
-    Returns:
-        Function result or fallback value on error
-    """
-    try:
-        return func(*func_args, **func_kwargs)
-    except Exception as e:
-        logger.debug(f"Operation failed, returning fallback value: {type(e).__name__}: {e}")
-        return policy.fallback_value
+    return _fallback_execution_impl(func, policy, func_args, func_kwargs, logger)
 
 
-def handle_errors(policy: ErrorPolicy) -> Callable:
+@overload
+def handle_errors(policy: ErrorPolicy) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
+
+
+@overload
+def handle_errors(policy: ErrorPolicy, func: Callable[..., Any]) -> Callable[..., Any]: ...
+
+
+def handle_errors(
+    policy: ErrorPolicy, func: Callable[..., Any] | None = None
+) -> Callable[..., Any] | Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Unified error handling decorator
 
@@ -251,9 +123,10 @@ def handle_errors(policy: ErrorPolicy) -> Callable:
 
     Args:
         policy: ErrorPolicy configuration defining handling strategy
+        func: Optional function to decorate (allows @handle_errors(policy) syntax)
 
     Returns:
-        Decorator function
+        Decorator function or decorated function
 
     Example:
         @handle_errors(ErrorPolicy(ErrorHandlingStrategy.RETRY, max_retries=3))
@@ -265,23 +138,23 @@ def handle_errors(policy: ErrorPolicy) -> Callable:
             return parse_metadata()
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         # Create unique identifier for this function
-        func_id = f"{func.__module__}.{func.__qualname__}"
+        func_id = f"{fn.__module__}.{fn.__qualname__}"
 
-        @functools.wraps(func)
+        @functools.wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 # Select execution strategy based on policy
                 match policy.strategy:
                     case ErrorHandlingStrategy.FAIL_FAST:
-                        return func(*args, **kwargs)
+                        return fn(*args, **kwargs)
                     case ErrorHandlingStrategy.RETRY:
-                        return _retry_execution(func, policy, args, kwargs)
+                        return _retry_execution(fn, policy, args, kwargs)
                     case ErrorHandlingStrategy.FALLBACK:
-                        return _fallback_execution(func, policy, args, kwargs)
+                        return _fallback_execution(fn, policy, args, kwargs)
                     case ErrorHandlingStrategy.CIRCUIT_BREAK:
-                        return _circuit_break_execution(func, policy, args, kwargs, func_id)
+                        return _circuit_break_execution(fn, policy, args, kwargs, func_id)
                     case _ as unreachable:
                         assert_never(unreachable)
 
@@ -290,8 +163,8 @@ def handle_errors(policy: ErrorPolicy) -> Callable:
                 logger.debug(
                     f"Error in {func_id}: {type(e).__name__}: {e}",
                     extra={
-                        "function": func.__name__,
-                        "module": func.__module__,
+                        "function": fn.__name__,
+                        "module": fn.__module__,
                         "strategy": policy.strategy.value,
                     },
                 )
@@ -299,18 +172,15 @@ def handle_errors(policy: ErrorPolicy) -> Callable:
 
         return wrapper
 
+    # Support both @handle_errors(policy) and @handle_errors(policy, func) syntax
+    if func is not None:
+        return decorator(func)
     return decorator
 
 
 def reset_circuit_breakers() -> None:
     """Reset all circuit breakers to closed state"""
-    with _circuit_lock:
-        for circuit in _circuit_breakers.values():
-            with circuit.lock:
-                circuit.state = CircuitState.CLOSED
-                circuit.failure_count = 0
-                circuit.last_failure_time = None
-    logger.info("All circuit breakers have been reset")
+    _reset_circuit_breakers_impl(logger)
 
 
 def get_circuit_breaker_stats() -> dict[str, Any]:
@@ -320,15 +190,4 @@ def get_circuit_breaker_stats() -> dict[str, Any]:
     Returns:
         Dictionary mapping function IDs to circuit state information
     """
-    stats = {}
-    with _circuit_lock:
-        for func_id, circuit in _circuit_breakers.items():
-            with circuit.lock:
-                stats[func_id] = {
-                    "state": circuit.state.value,
-                    "failure_count": circuit.failure_count,
-                    "last_failure_time": circuit.last_failure_time,
-                    "threshold": circuit.policy.circuit_threshold,
-                    "timeout": circuit.policy.circuit_timeout,
-                }
-    return stats
+    return _get_circuit_breaker_stats_impl()

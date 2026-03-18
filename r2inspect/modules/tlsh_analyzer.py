@@ -10,14 +10,22 @@ try:
 except ImportError:
     TLSH_AVAILABLE = False
 
+from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy
 from ..adapters.file_system import default_file_system
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
+from .tlsh_support import (
+    build_detailed_analysis,
+    calculate_function_tlsh,
+    calculate_section_tlsh,
+    find_similar_sections as build_similar_sections,
+    similarity_level,
+)
 
 logger = get_logger(__name__)
 
 
-class TLSHAnalyzer(R2HashingStrategy):
+class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
     """TLSH (Trend Micro Locality Sensitive Hash) analyzer for sections and functions"""
 
     def __init__(self, adapter: Any, filename: str) -> None:
@@ -61,7 +69,7 @@ class TLSHAnalyzer(R2HashingStrategy):
                 "TLSH calculation returned no hash (file may be too small)",
             )
         except Exception as e:
-            logger.error(f"Error calculating TLSH hash: {e}")
+            logger.error("Error calculating TLSH hash: %s", e)
             return None, None, f"TLSH calculation failed: {str(e)}"
 
     def _get_hash_type(self) -> str:
@@ -90,47 +98,10 @@ class TLSHAnalyzer(R2HashingStrategy):
         Returns:
             Dictionary containing detailed section and function analysis
         """
-        if not TLSH_AVAILABLE:
-            return {"available": False, "error": "TLSH library not installed"}
-
         try:
-            result: dict[str, Any] = {
-                "available": True,
-                "binary_tlsh": None,
-                "text_section_tlsh": None,
-                "section_tlsh": {},
-                "function_tlsh": {},
-                "stats": {
-                    "sections_analyzed": 0,
-                    "sections_with_tlsh": 0,
-                    "functions_analyzed": 0,
-                    "functions_with_tlsh": 0,
-                },
-            }
-
-            # Get binary-wide TLSH
-            result["binary_tlsh"] = self._calculate_binary_tlsh()
-
-            # Get section-wise TLSH
-            result["section_tlsh"] = self._calculate_section_tlsh()
-            stats = cast(dict[str, int], result["stats"])
-            section_hashes = cast(dict[str, str | None], result["section_tlsh"])
-            stats["sections_analyzed"] = len(section_hashes)
-            stats["sections_with_tlsh"] = sum(1 for v in section_hashes.values() if v)
-
-            # Get text section TLSH specifically
-            result["text_section_tlsh"] = section_hashes.get(".text")
-
-            # Get function-wise TLSH (limited to avoid performance issues)
-            result["function_tlsh"] = self._calculate_function_tlsh()
-            function_hashes = cast(dict[str, str | None], result["function_tlsh"])
-            stats["functions_analyzed"] = len(function_hashes)
-            stats["functions_with_tlsh"] = sum(1 for v in function_hashes.values() if v)
-
-            return result
-
+            return build_detailed_analysis(self, TLSH_AVAILABLE)
         except Exception as e:
-            logger.error(f"Error in TLSH analysis: {e}")
+            logger.error("Error in TLSH analysis: %s", e)
             return {"available": False, "error": str(e)}
 
     # Minimum data size required for TLSH calculation
@@ -170,93 +141,20 @@ class TLSHAnalyzer(R2HashingStrategy):
                 return None
             return cast(str | None, tlsh.hash(data))
         except Exception as e:
-            logger.error(f"Error calculating binary TLSH: {e}")
+            logger.error("Error calculating binary TLSH: %s", e)
             return None
 
     def _calculate_section_tlsh(self) -> dict[str, str | None]:
-        """Calculate TLSH for each section"""
-        section_hashes: dict[str, str | None] = {}
-
-        try:
-            sections = self._get_sections()
-            if not sections:
-                return section_hashes
-
-            for section in sections:
-                section_name = section.get("name", "unknown")
-                vaddr = section.get("vaddr", 0)
-                size = section.get("size", 0)
-
-                if size == 0 or size > 50 * 1024 * 1024:  # Skip empty or very large sections
-                    section_hashes[section_name] = None
-                    continue
-
-                try:
-                    # Read section data
-                    read_size = min(size, 1024 * 1024)  # 1MB limit per section
-                    hex_data = self._read_bytes_hex(vaddr, read_size)
-                    section_hashes[section_name] = self._calculate_tlsh_from_hex(hex_data)
-
-                except Exception as e:
-                    logger.debug(f"Error calculating TLSH for section {section_name}: {e}")
-                    section_hashes[section_name] = None
-
-        except Exception as e:
-            logger.error(f"Error in section TLSH calculation: {e}")
-
-        return section_hashes
+        return calculate_section_tlsh(self, logger)
 
     def _calculate_function_tlsh(self) -> dict[str, str | None]:
-        """Calculate TLSH for functions (limited sample)"""
-        function_hashes: dict[str, str | None] = {}
-
-        try:
-            # Get functions (core already performed analysis)
-            functions = self._get_functions()
-
-            if not functions:
-                return function_hashes
-
-            # Limit to first 50 functions to avoid performance issues
-            functions_to_analyze = functions[:50]
-
-            for func in functions_to_analyze:
-                # Skip if function is not a dictionary (malformed data)
-                if not isinstance(func, dict):
-                    logger.debug(f"Skipping malformed function data: {type(func)} - {func}")
-                    continue
-
-                func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-                func_addr = func.get("addr")
-                func_size = func.get("size", 0)
-
-                if not func_addr or func_size == 0 or func_size > 100000:  # Skip large functions
-                    function_hashes[func_name] = None
-                    continue
-
-                try:
-                    # Read function data
-                    hex_data = self._read_bytes_hex(func_addr, func_size)
-                    function_hashes[func_name] = self._calculate_tlsh_from_hex(hex_data)
-
-                except Exception as e:
-                    logger.debug(f"Error calculating TLSH for function {func_name}: {e}")
-                    function_hashes[func_name] = None
-
-        except Exception as e:
-            logger.error(f"Error in function TLSH calculation: {e}")
-
-        return function_hashes
+        return calculate_function_tlsh(self, logger)
 
     def _get_sections(self) -> list[Any]:
-        if self.adapter is not None and hasattr(self.adapter, "get_sections"):
-            return cast(list[Any], self.adapter.get_sections())
-        return []
+        return cast(list[Any], self._get_via_adapter("get_sections"))
 
     def _get_functions(self) -> list[Any]:
-        if self.adapter is not None and hasattr(self.adapter, "get_functions"):
-            return cast(list[Any], self.adapter.get_functions())
-        return []
+        return cast(list[Any], self._get_via_adapter("get_functions"))
 
     def _read_bytes_hex(self, vaddr: int, size: int) -> str | None:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
@@ -276,48 +174,12 @@ class TLSHAnalyzer(R2HashingStrategy):
             return cast(int, tlsh.diff(hash1, hash2))
 
         except Exception as e:
-            logger.error(f"Error comparing TLSH hashes: {e}")
+            logger.error("Error comparing TLSH hashes: %s", e)
             return None
 
     def find_similar_sections(self, threshold: int = 100) -> list[dict[str, Any]]:
         """Find sections with similar TLSH hashes"""
-        try:
-            analysis = self.analyze_sections()
-            if not analysis.get("available"):
-                return []
-
-            section_hashes = analysis.get("section_tlsh", {})
-            similar_pairs = []
-
-            # Compare all pairs
-            section_names = list(section_hashes.keys())
-            for i, name1 in enumerate(section_names):
-                hash1 = section_hashes[name1]
-                if not hash1:
-                    continue
-
-                for name2 in section_names[i + 1 :]:
-                    hash2 = section_hashes[name2]
-                    if not hash2:
-                        continue
-
-                    similarity = self.compare_tlsh(hash1, hash2)
-                    if similarity is not None and similarity <= threshold:
-                        similar_pairs.append(
-                            {
-                                "section1": name1,
-                                "section2": name2,
-                                "similarity_score": similarity,
-                                "hash1": hash1,
-                                "hash2": hash2,
-                            }
-                        )
-
-            return sorted(similar_pairs, key=lambda x: x["similarity_score"])
-
-        except Exception as e:
-            logger.error(f"Error finding similar sections: {e}")
-            return []
+        return build_similar_sections(self, threshold, logger)
 
     @staticmethod
     def compare_hashes(hash1: str, hash2: str) -> int | None:
@@ -351,7 +213,7 @@ class TLSHAnalyzer(R2HashingStrategy):
             score = cast(int, tlsh.diff(hash1, hash2))
             return score
         except Exception as e:
-            logger.warning(f"TLSH comparison failed: {e}")
+            logger.warning("TLSH comparison failed: %s", e)
             return None
 
     @staticmethod
@@ -375,17 +237,4 @@ class TLSHAnalyzer(R2HashingStrategy):
         Returns:
             Similarity level description
         """
-        if score is None:
-            return "Unknown"
-        elif score == 0:
-            return "Identical"
-        elif score <= 30:
-            return "Very Similar"
-        elif score <= 50:
-            return "Similar"
-        elif score <= 100:
-            return "Somewhat Similar"
-        elif score <= 200:
-            return "Different"
-        else:
-            return "Very Different"
+        return similarity_level(score)

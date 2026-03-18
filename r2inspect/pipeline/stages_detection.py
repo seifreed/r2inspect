@@ -3,15 +3,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from ..interfaces import AnalyzerBackend
-from ..registry.analyzer_registry import AnalyzerRegistry
-from ..utils.analyzer_factory import create_analyzer
-from ..utils.logger import get_logger
+from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, AnalyzerRegistryLike
 from .analysis_pipeline import AnalysisStage
+from .stages_common import default_analyzer_factory
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class DetectionStage(AnalysisStage):
@@ -19,11 +18,12 @@ class DetectionStage(AnalysisStage):
 
     def __init__(
         self,
-        registry: AnalyzerRegistry,
+        registry: AnalyzerRegistryLike,
         adapter: AnalyzerBackend,
         config: Any,
         filename: str,
         options: dict[str, Any],
+        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
     ) -> None:
         super().__init__(
             name="detection",
@@ -36,6 +36,7 @@ class DetectionStage(AnalysisStage):
         self.config = config
         self.filename = filename
         self.options = options
+        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         results: dict[str, Any] = {}
@@ -69,7 +70,7 @@ class DetectionStage(AnalysisStage):
         analyzer_class = self.registry.get_analyzer_class(analyzer_name)
         if analyzer_class:
             try:
-                analyzer = create_analyzer(
+                analyzer = self.analyzer_factory(
                     analyzer_class,
                     adapter=self.adapter,
                     config=self.config,
@@ -79,7 +80,7 @@ class DetectionStage(AnalysisStage):
                 context["results"][result_key] = data
                 return {result_key: data}
             except Exception as e:
-                logger.warning(f"Analyzer '{analyzer_name}' failed: {e}")
+                logger.warning("Analyzer '%s' failed: %s", analyzer_name, e)
                 context["results"][result_key] = {"error": str(e)}
                 return {result_key: {"error": str(e)}}
         return None
@@ -97,7 +98,7 @@ class DetectionStage(AnalysisStage):
         analyzer_class = self.registry.get_analyzer_class("compiler_detector")
         if analyzer_class:
             try:
-                analyzer = create_analyzer(
+                analyzer = self.analyzer_factory(
                     analyzer_class,
                     adapter=self.adapter,
                     config=self.config,
@@ -107,7 +108,7 @@ class DetectionStage(AnalysisStage):
                 context["results"]["compiler"] = data
                 return {"compiler": data}
             except Exception as e:
-                logger.warning(f"Compiler detection failed: {e}")
+                logger.warning("Compiler detection failed: %s", e)
                 context["results"]["compiler"] = {"error": str(e)}
                 return {"compiler": {"error": str(e)}}
         return None
@@ -116,7 +117,7 @@ class DetectionStage(AnalysisStage):
         analyzer_class = self.registry.get_analyzer_class("yara_analyzer")
         if analyzer_class:
             try:
-                analyzer = create_analyzer(
+                analyzer = self.analyzer_factory(
                     analyzer_class,
                     adapter=self.adapter,
                     config=self.config,
@@ -127,7 +128,7 @@ class DetectionStage(AnalysisStage):
                 context["results"]["yara_matches"] = data
                 return {"yara_matches": data}
             except Exception as e:
-                logger.warning(f"YARA analysis failed: {e}")
+                logger.warning("YARA analysis failed: %s", e)
                 context["results"]["yara_matches"] = []
                 return {"yara_matches": []}
         return None

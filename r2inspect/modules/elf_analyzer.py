@@ -6,8 +6,8 @@ from typing import Any, cast
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..utils.logger import get_logger
-from ..utils.r2_helpers import get_elf_headers
+from ..infrastructure.logging import get_logger
+from ..infrastructure.r2_helpers import get_elf_headers
 from .elf_domain import (
     find_section_by_name,
     parse_build_id_data,
@@ -90,7 +90,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 info["entry_point"] = bin_info.get("baddr", 0)
 
         except Exception as e:
-            logger.error(f"Error getting ELF headers: {e}")
+            logger.error("Error getting ELF headers: %s", e)
 
         return info
 
@@ -119,7 +119,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 info["compile_time"] = self._estimate_compile_time()
 
         except Exception as e:
-            logger.error(f"Error getting compilation info: {e}")
+            logger.error("Error getting compilation info: %s", e)
 
         return info
 
@@ -141,7 +141,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             info.update(self._parse_comment_compiler_info(comment_data))
 
         except Exception as e:
-            logger.error(f"Error extracting comment section: {e}")
+            logger.error("Error extracting comment section: %s", e)
 
         return info
 
@@ -157,7 +157,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 info.update(self._parse_dwarf_info(debug_info.split("\n")))
 
         except Exception as e:
-            logger.error(f"Error extracting DWARF info: {e}")
+            logger.error("Error extracting DWARF info: %s", e)
 
         return info
 
@@ -174,7 +174,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return self._parse_build_id_data(build_id_data)
 
         except Exception as e:
-            logger.error(f"Error extracting build ID: {e}")
+            logger.error("Error extracting build ID: %s", e)
 
         return None
 
@@ -207,7 +207,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 logger.debug("No sections found or invalid response from radare2")
 
         except Exception as e:
-            logger.debug(f"Error getting section info: {e}")
+            logger.debug("Error getting section info: %s", e)
 
         return sections
 
@@ -237,7 +237,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 logger.debug("No program headers found or invalid response from radare2")
 
         except Exception as e:
-            logger.debug(f"Error getting program headers: {e}")
+            logger.debug("Error getting program headers: %s", e)
 
         return headers
 

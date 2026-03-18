@@ -16,7 +16,7 @@ from .display_sections_hashing import (
     _display_telfhash,
     _display_tlsh,
 )
-from .display_sections_helpers import (  # noqa: F401
+from .display_sections_helpers import (
     _add_bindiff_entries,
     _add_bindiff_functions,
     _add_bindiff_signatures,

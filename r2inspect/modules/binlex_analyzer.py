@@ -1,21 +1,45 @@
 #!/usr/bin/env python3
 """Binlex lexical analysis for function similarity."""
 
-import hashlib
 from collections import Counter, defaultdict
 from typing import Any, TypedDict, cast
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..utils.analyzer_runner import run_analyzer_on_file
-from ..utils.logger import get_logger
-from .similarity_scoring import jaccard_similarity
+from ..domain.services.binlex import (
+    create_signature,
+    extract_mnemonic_from_op,
+    extract_tokens_from_ops,
+    generate_ngrams,
+    normalize_mnemonic,
+)
+from ..infrastructure.logging import get_logger
+from .binlex_support import (
+    accumulate_ngrams as _accumulate_ngrams_impl,
+    build_signature_groups as _build_signature_groups_impl,
+    build_similar_groups as _build_similar_groups_impl,
+    collect_function_signatures as _collect_function_signatures_impl,
+    collect_signatures_for_size as _collect_signatures_for_size_impl,
+    collect_top_ngrams as _collect_top_ngrams_impl,
+    get_function_similarity_score as _get_function_similarity_score_impl,
+)
+from .binlex_features import (
+    analyze_function as _analyze_function_impl,
+    extract_functions as _extract_functions_impl,
+    extract_instruction_tokens as _extract_instruction_tokens_impl,
+)
+from .binlex_runtime import (
+    calculate_binary_signature_safe as _calculate_binary_signature_safe,
+    calculate_binlex_from_file as _calculate_binlex_from_file,
+    extract_tokens_from_pdfj as _extract_tokens_from_pdfj_impl,
+    extract_tokens_from_pdj as _extract_tokens_from_pdj_impl,
+    extract_tokens_from_text_channel as _extract_tokens_from_text_impl,
+    get_function_similarity_score_safe as _get_function_similarity_score_safe,
+    run_binlex_analysis,
+)
+from ..domain.formats.similarity import jaccard_similarity
 
 logger = get_logger(__name__)
-
-# Constants
-HTML_NBSP = "&nbsp;"
-HTML_AMP = "&amp;"
 
 
 class BinlexResult(TypedDict):
@@ -43,99 +67,12 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def analyze(self, ngram_sizes: list[int] | None = None) -> BinlexResult:  # type: ignore[override]
         """Run Binlex analysis for all functions."""
-        if ngram_sizes is None:
-            ngram_sizes = [2, 3, 4]
-
-        logger.debug(f"Starting Binlex analysis for {self.filepath}")
-
-        results = cast(
-            BinlexResult,
-            self._init_result_structure(
-                {
-                    "function_signatures": {},
-                    "ngram_sizes": ngram_sizes,
-                    "total_functions": 0,
-                    "analyzed_functions": 0,
-                    "unique_signatures": {},
-                    "similar_functions": {},
-                    "binary_signature": None,
-                    "top_ngrams": {},
-                    "error": None,
-                }
-            ),
-        )
-
-        try:
-            # Extract all functions
-            functions = self._extract_functions()
-            if not functions:
-                results["error"] = "No functions found in binary"
-                logger.debug("No functions found in binary")
-                return results
-
-            results["total_functions"] = len(functions)
-            logger.debug(f"Found {len(functions)} functions to analyze")
-
-            function_signatures, all_ngrams, analyzed_count = self._collect_function_signatures(
-                functions, ngram_sizes
-            )
-
-            if not function_signatures:
-                results["error"] = "No functions could be analyzed for Binlex"
-                logger.debug("No functions could be analyzed for Binlex")
-                return results
-
-            # Analyze results
-            results["available"] = True
-            results["function_signatures"] = function_signatures
-            results["analyzed_functions"] = analyzed_count
-
-            unique_signatures, similar_functions = self._build_signature_groups(
-                function_signatures, ngram_sizes
-            )
-            results["unique_signatures"] = unique_signatures
-            results["similar_functions"] = similar_functions
-
-            # Calculate binary-wide signature
-            binary_signature = self._calculate_binary_signature(function_signatures, ngram_sizes)
-            results["binary_signature"] = binary_signature
-
-            # Get top n-grams for each size
-            results["top_ngrams"] = self._collect_top_ngrams(all_ngrams, ngram_sizes)
-
-            logger.debug(
-                f"Binlex analysis completed: {analyzed_count}/{len(functions)} functions analyzed"
-            )
-
-        except Exception as e:
-            logger.error(f"Binlex analysis failed: {e}")
-            results["error"] = str(e)
-
-        return results
+        return cast(BinlexResult, run_binlex_analysis(self, ngram_sizes=ngram_sizes, logger=logger))
 
     def _collect_function_signatures(
         self, functions: list[dict[str, Any]], ngram_sizes: list[int]
     ) -> tuple[dict[str, dict[int, dict[str, Any]]], defaultdict[int, Counter[str]], int]:
-        function_signatures: dict[str, dict[int, dict[str, Any]]] = {}
-        all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
-        analyzed_count = 0
-
-        for func in functions:
-            func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-            func_addr = func.get("addr")
-
-            if func_addr is None:
-                continue
-
-            func_sigs = self._analyze_function(func_addr, func_name, ngram_sizes)
-            if not func_sigs:
-                continue
-
-            function_signatures[func_name] = func_sigs
-            analyzed_count += 1
-            self._accumulate_ngrams(all_ngrams, func_sigs, ngram_sizes)
-
-        return function_signatures, all_ngrams, analyzed_count
+        return _collect_function_signatures_impl(self, functions, ngram_sizes)
 
     def _accumulate_ngrams(
         self,
@@ -143,71 +80,29 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         func_sigs: dict[int, dict[str, Any]],
         ngram_sizes: list[int],
     ) -> None:
-        for n in ngram_sizes:
-            if n not in func_sigs or "ngrams" not in func_sigs[n]:
-                continue
-            ngrams_value = func_sigs[n].get("ngrams")
-            if not isinstance(ngrams_value, list):
-                continue
-            for ngram in ngrams_value:
-                all_ngrams[n][ngram] += 1
+        _accumulate_ngrams_impl(all_ngrams, func_sigs, ngram_sizes)
 
     def _build_signature_groups(
         self,
         function_signatures: dict[str, dict[int, dict[str, Any]]],
         ngram_sizes: list[int],
     ) -> tuple[dict[int, int], dict[int, list[dict[str, Any]]]]:
-        unique_signatures: dict[int, int] = {}
-        similar_functions: dict[int, list[dict[str, Any]]] = {}
-
-        for n in ngram_sizes:
-            signatures, signature_groups = self._collect_signatures_for_size(function_signatures, n)
-            unique_signatures[n] = len(signatures)
-            similar_groups = self._build_similar_groups(signature_groups)
-            similar_groups.sort(key=lambda x: int(x["count"]), reverse=True)
-            similar_functions[n] = similar_groups
-
-        return unique_signatures, similar_functions
+        return _build_signature_groups_impl(self, function_signatures, ngram_sizes)
 
     def _collect_signatures_for_size(
         self, function_signatures: dict[str, dict[int, dict[str, Any]]], n: int
     ) -> tuple[set[str], defaultdict[str, list[str]]]:
-        signatures: set[str] = set()
-        signature_groups: defaultdict[str, list[str]] = defaultdict(list)
-
-        for func_name, func_sigs in function_signatures.items():
-            if n not in func_sigs or "signature" not in func_sigs[n]:
-                continue
-            sig_value = func_sigs[n].get("signature")
-            if isinstance(sig_value, str):
-                signatures.add(sig_value)
-                signature_groups[sig_value].append(func_name)
-
-        return signatures, signature_groups
+        return _collect_signatures_for_size_impl(function_signatures, n)
 
     def _build_similar_groups(
         self, signature_groups: defaultdict[str, list[str]]
     ) -> list[dict[str, Any]]:
-        similar_groups: list[dict[str, Any]] = []
-        for sig, funcs in signature_groups.items():
-            if len(funcs) > 1:
-                similar_groups.append(
-                    {
-                        "signature": sig[:16] + "..." if len(sig) > 16 else sig,
-                        "functions": funcs,
-                        "count": len(funcs),
-                    }
-                )
-        return similar_groups
+        return _build_similar_groups_impl(signature_groups)
 
     def _collect_top_ngrams(
         self, all_ngrams: defaultdict[int, Counter[str]], ngram_sizes: list[int]
     ) -> dict[int, list[tuple[str, int]]]:
-        top_ngrams: dict[int, list[tuple[str, int]]] = {}
-        for n in ngram_sizes:
-            if n in all_ngrams:
-                top_ngrams[n] = all_ngrams[n].most_common(10)
-        return top_ngrams
+        return _collect_top_ngrams_impl(all_ngrams, ngram_sizes)
 
     def _extract_functions(self) -> list[dict[str, Any]]:
         """
@@ -216,30 +111,7 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             List of function dictionaries
         """
-        try:
-            # Ensure analysis is complete
-            if self.adapter is not None and hasattr(self.adapter, "analyze_all"):
-                self.adapter.analyze_all()
-
-            # Get function list
-            functions = self._cmd_list("aflj")
-
-            if not functions:
-                logger.debug("No functions found with 'aflj' command")
-                return []
-
-            # Filter out invalid functions
-            valid_functions = []
-            for func in functions:
-                if func.get("addr") is not None and func.get("size", 0) > 0:
-                    valid_functions.append(func)
-
-            logger.debug(f"Extracted {len(valid_functions)} valid functions")
-            return valid_functions
-
-        except Exception as e:
-            logger.error(f"Error extracting functions: {e}")
-            return []
+        return _extract_functions_impl(self, logger=logger)
 
     def _analyze_function(
         self, func_addr: int, func_name: str, ngram_sizes: list[int]
@@ -255,43 +127,7 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             Dictionary with analysis results for each n-gram size
         """
-        try:
-            # Extract instruction tokens
-            tokens = self._extract_instruction_tokens(func_addr, func_name)
-            if not tokens:
-                logger.debug(f"No tokens found for function {func_name}")
-                return None
-
-            # Analyze for each n-gram size
-            results: dict[int, dict[str, Any | None]] = {}
-            for n in ngram_sizes:
-                if len(tokens) < n:
-                    logger.debug(
-                        f"Function {func_name} has too few tokens ({len(tokens)}) for {n}-gram analysis"
-                    )
-                    continue
-
-                # Generate n-grams
-                ngrams = self._generate_ngrams(tokens, n)
-                if not ngrams:
-                    continue
-
-                # Create signature
-                signature = self._create_signature(ngrams)
-
-                results[n] = {
-                    "signature": signature,
-                    "ngrams": ngrams,
-                    "token_count": len(tokens),
-                    "ngram_count": len(ngrams),
-                    "unique_ngrams": len(set(ngrams)),
-                }
-
-            return results if results else None
-
-        except Exception as e:
-            logger.debug(f"Error analyzing function {func_name}: {e}")
-            return None
+        return _analyze_function_impl(self, func_addr, func_name, ngram_sizes, logger=logger)
 
     def _extract_instruction_tokens(self, func_addr: int, func_name: str) -> list[str]:
         """
@@ -303,101 +139,25 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             List of instruction mnemonics
         """
-        try:
-            tokens = self._extract_tokens_from_pdfj(func_addr, func_name)
-            if tokens:
-                return tokens
-
-            tokens = self._extract_tokens_from_pdj(func_addr, func_name)
-            if tokens:
-                return tokens
-
-            tokens = self._extract_tokens_from_text(func_addr, func_name)
-            if tokens:
-                return tokens
-
-        except Exception as e:
-            logger.debug(f"Error extracting tokens from {func_name}: {e}")
-
-        return []
+        return _extract_instruction_tokens_impl(self, func_addr, func_name, logger=logger)
 
     def _extract_tokens_from_pdfj(self, func_addr: int, func_name: str) -> list[str]:
-        disasm = (
-            self.adapter.get_disasm(address=func_addr)
-            if self.adapter is not None and hasattr(self.adapter, "get_disasm")
-            else self._cmdj("pdfj", {})
-        )
-        if not disasm or "ops" not in disasm:
-            return []
-        tokens = self._extract_tokens_from_ops(disasm["ops"])
-        if tokens:
-            logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdfj")
-        return tokens
+        return _extract_tokens_from_pdfj_impl(self, func_addr, func_name, logger=logger)
 
     def _extract_tokens_from_pdj(self, func_addr: int, func_name: str) -> list[str]:
-        disasm_list = (
-            self.adapter.get_disasm(address=func_addr, size=200)
-            if self.adapter is not None and hasattr(self.adapter, "get_disasm")
-            else self._cmd_list("pdj 200")
-        )
-        if not isinstance(disasm_list, list):
-            return []
-        tokens = self._extract_tokens_from_ops(disasm_list)
-        if tokens:
-            logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pdj")
-        return tokens
+        return _extract_tokens_from_pdj_impl(self, func_addr, func_name, logger=logger)
 
     def _extract_tokens_from_text(self, func_addr: int, func_name: str) -> list[str]:
-        instructions_text = (
-            self.adapter.get_disasm_text(address=func_addr, size=100)
-            if self.adapter is not None and hasattr(self.adapter, "get_disasm_text")
-            else self._cmd("pi 100")
-        )
-        if not instructions_text or not instructions_text.strip():
-            return []
-        tokens: list[str] = []
-        for line in instructions_text.strip().split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-            mnemonic = line.split()[0]
-            clean_mnemonic = self._normalize_mnemonic(mnemonic)
-            if clean_mnemonic:
-                tokens.append(clean_mnemonic)
-        if tokens:
-            logger.debug(f"Extracted {len(tokens)} tokens from {func_name} using pi")
-        return tokens
+        return _extract_tokens_from_text_impl(self, func_addr, func_name, logger=logger)
 
     def _extract_tokens_from_ops(self, ops: list[Any]) -> list[str]:
-        tokens: list[str] = []
-        for op in ops:
-            if not isinstance(op, dict):
-                continue
-            mnemonic = self._extract_mnemonic_from_op(op)
-            clean_mnemonic = self._normalize_mnemonic(mnemonic)
-            if clean_mnemonic:
-                tokens.append(clean_mnemonic)
-        return tokens
+        return extract_tokens_from_ops(ops)
 
     def _extract_mnemonic_from_op(self, op: dict[str, Any]) -> str | None:
-        mnemonic = op.get("mnemonic")
-        if isinstance(mnemonic, str) and mnemonic:
-            return mnemonic
-        opcode = op.get("opcode")
-        if isinstance(opcode, str):
-            opcode = opcode.strip()
-            if opcode:
-                return opcode.split()[0]
-        return None
+        return extract_mnemonic_from_op(op)
 
     def _normalize_mnemonic(self, mnemonic: str | None) -> str | None:
-        if not mnemonic:
-            return None
-        clean_mnemonic = mnemonic.strip().lower()
-        clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(HTML_AMP, "&")
-        if clean_mnemonic and not clean_mnemonic.startswith("&"):
-            return clean_mnemonic
-        return None
+        return normalize_mnemonic(mnemonic)
 
     def _generate_ngrams(self, tokens: list[str], n: int) -> list[str]:
         """
@@ -410,15 +170,7 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             List of n-gram strings
         """
-        if len(tokens) < n:
-            return []
-
-        ngrams = []
-        for i in range(len(tokens) - n + 1):
-            ngram = " ".join(tokens[i : i + n])
-            ngrams.append(ngram)
-
-        return ngrams
+        return generate_ngrams(tokens, n)
 
     def _create_signature(self, ngrams: list[str]) -> str:
         """
@@ -430,52 +182,14 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             SHA256 signature hash
         """
-        # Sort n-grams for canonical representation
-        sorted_ngrams = sorted(ngrams)
-        combined = "|".join(sorted_ngrams)
-
-        # Create SHA256 hash
-        signature = hashlib.sha256(combined.encode("utf-8")).hexdigest()
-        return signature
+        return create_signature(ngrams)
 
     def _calculate_binary_signature(
         self,
         function_signatures: dict[str, dict[int, dict[str, Any]]],
         ngram_sizes: list[int],
     ) -> dict[int, str]:
-        """
-        Calculate binary-wide signatures by combining all function signatures.
-
-        Args:
-            function_signatures: Dictionary of function signatures
-            ngram_sizes: List of n-gram sizes
-
-        Returns:
-            Dictionary of binary signatures for each n-gram size
-        """
-        binary_signatures = {}
-
-        try:
-            for n in ngram_sizes:
-                # Collect all signatures for this n-gram size
-                signatures = []
-                for func_name, func_sigs in function_signatures.items():
-                    if n in func_sigs and "signature" in func_sigs[n]:
-                        signatures.append(func_sigs[n]["signature"])
-
-                if signatures:
-                    # Sort for canonical representation
-                    sorted_signatures = sorted(signatures)
-                    combined = "|".join(sorted_signatures)
-
-                    # Create binary signature
-                    binary_sig = hashlib.sha256(combined.encode("utf-8")).hexdigest()
-                    binary_signatures[n] = binary_sig
-
-        except Exception as e:
-            logger.error(f"Error calculating binary signature: {e}")
-
-        return binary_signatures
+        return _calculate_binary_signature_safe(function_signatures, ngram_sizes, logger=logger)
 
     def compare_functions(self, func1_sig: str, func2_sig: str) -> bool:
         """Compare two function signatures for exact match."""
@@ -485,21 +199,12 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         self, func1_ngrams: list[str], func2_ngrams: list[str]
     ) -> float:
         """Calculate similarity score between two functions based on n-gram overlap."""
-        try:
-            set1 = set(func1_ngrams)
-            set2 = set(func2_ngrams)
-
-            if not set1 and not set2:
-                return 1.0  # Both empty
-
-            if not set1 or not set2:
-                return 0.0  # One empty
-
-            return jaccard_similarity(set1, set2)
-
-        except Exception as e:
-            logger.error(f"Error calculating similarity score: {e}")
-            return 0.0
+        return _get_function_similarity_score_safe(
+            func1_ngrams,
+            func2_ngrams,
+            _get_function_similarity_score_impl,
+            logger=logger,
+        )
 
     @staticmethod
     def is_available() -> bool:
@@ -516,17 +221,7 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def calculate_binlex_from_file(
         filepath: str, ngram_sizes: list[int] | None = None
     ) -> BinlexResult | None:
-        """
-        Calculate Binlex signatures directly from a file path.
-
-        Args:
-            filepath: Path to the binary file
-            ngram_sizes: List of n-gram sizes to analyze
-
-        Returns:
-            Binlex analysis results or None if calculation fails
-        """
-        result = run_analyzer_on_file(BinlexAnalyzer, filepath, ngram_sizes)
-        if result is None:
-            logger.error("Error calculating Binlex from file")
-        return result
+        return cast(
+            BinlexResult | None,
+            _calculate_binlex_from_file(BinlexAnalyzer, filepath, ngram_sizes, logger=logger),
+        )

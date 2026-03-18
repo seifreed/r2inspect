@@ -4,7 +4,7 @@
 import hashlib
 from typing import Any
 
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..infrastructure.command_helpers import cmdj as cmdj_helper
 
 
 def fetch_imports(adapter: Any) -> list[dict[str, Any]]:
@@ -24,17 +24,27 @@ def group_imports_by_library(
         if not isinstance(imp, dict) or "name" not in imp:
             continue
 
-        libname = imp.get("libname", "unknown")
-        if not libname or libname.strip() == "":
-            libname = "unknown"
+        libname = imp.get("libname") or imp.get("library")
+        if not has_known_library_name(libname):
+            continue
 
         funcname = imp.get("name", "")
         if not funcname or funcname.strip() == "":
             continue
 
-        imports_by_lib.setdefault(libname, []).append(funcname)
+        imports_by_lib.setdefault(str(libname), []).append(funcname)
 
     return imports_by_lib
+
+
+def has_known_library_name(lib_name: str | bytes | None) -> bool:
+    if isinstance(lib_name, bytes):
+        lib_name = lib_name.decode(errors="ignore")
+    return (
+        isinstance(lib_name, str)
+        and bool(lib_name.strip())
+        and lib_name.strip().lower() != "unknown"
+    )
 
 
 def normalize_library_name(lib_name: str | bytes, extensions: list[str]) -> str:
@@ -72,7 +82,11 @@ def calculate_imphash(adapter: Any, logger: Any) -> str:
 
         impstrs: list[str] = []
         for libname, functions in imports_by_lib.items():
+            if not has_known_library_name(libname):
+                continue
             normalized_lib = normalize_library_name(libname, extensions)
+            if normalized_lib == "unknown":
+                continue
 
             for funcname in functions:
                 if not funcname:  # pragma: no cover
@@ -89,9 +103,9 @@ def calculate_imphash(adapter: Any, logger: Any) -> str:
             return ""
 
         imphash = compute_imphash(impstrs)
-        logger.debug(f"Imphash calculated: {imphash} (from {len(impstrs)} imports)")
+        logger.debug("Imphash calculated: %s (from %s imports)", imphash, len(impstrs))
         return imphash
 
     except Exception as exc:
-        logger.error(f"Error calculating imphash: {exc}")
+        logger.error("Error calculating imphash: %s", exc)
         return ""
