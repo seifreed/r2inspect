@@ -244,7 +244,7 @@ def test_validate_result_validation_error_branch():
 # utils/rate_limiter.py  -- lines 162,164,166,167,346,347
 # ---------------------------------------------------------------------------
 
-from r2inspect.utils.rate_limiter import AdaptiveRateLimiter, cleanup_memory
+from r2inspect.infrastructure.rate_limiter import AdaptiveRateLimiter, cleanup_memory
 
 
 def test_rate_limiter_increase_rate_low_system_load():

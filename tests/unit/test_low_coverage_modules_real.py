@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from r2inspect.adapters import r2_commands
 from r2inspect.cli import validators
-from r2inspect.compat import command_helpers, error_handler, r2_helpers, r2_session
+from r2inspect.domain.services import function_analysis as function_domain
+from r2inspect.error_handling import classifier as error_handler
+from r2inspect.infrastructure import command_helpers, r2_helpers, r2_session
 from r2inspect.modules import (
     crypto_domain,
     elf_domain,
-    function_domain,
     import_domain,
     macho_domain,
     pe_imports,
     pe_info_domain,
-    resource_analysis,
+    resource_analyzer as resource_analysis,
     security_scoring,
     similarity_scoring,
     simhash_detailed,
@@ -70,27 +70,27 @@ class _Adapter:
         return bytes([(address + i) % 256 for i in range(size)])
 
 
-def test_compat_modules_export_real_symbols() -> None:
+def test_canonical_modules_export_real_symbols() -> None:
     assert r2_session.R2Session is not None
     assert "R2Session" in r2_session.__all__
 
-    assert command_helpers.cmd is r2_commands.cmd
-    assert r2_helpers.cmdj is r2_commands.cmdj
+    assert callable(command_helpers.cmd)
+    assert callable(r2_helpers.cmdj)
 
     assert error_handler.ErrorClassifier is not None
-    assert "safe_execute" in error_handler.__all__
+    assert hasattr(error_handler, "safe_execute")
 
 
 def test_r2_commands_dispatch_without_mocks() -> None:
     adapter = _Adapter()
     fallback = _TinyR2(payload="fallback")
 
-    assert r2_commands.cmdj(adapter, None, "/xj 4142", []) == [{"query": "4142"}]
-    assert r2_commands.cmdj(adapter, None, "afij @ 0x401000", {})["address"] == 0x401000
-    assert r2_commands.cmdj(adapter, None, "aflj", [])[0]["name"] == "main"
-    assert isinstance(r2_commands.cmdj(adapter, None, "pdj 8 @ 0x1000", {}), dict)
-    assert r2_commands.cmd(adapter, None, "p8 4 @ 0x10")
-    assert r2_commands.cmd(None, fallback, "i") == "fallback"
+    assert command_helpers.cmdj(adapter, None, "/xj 4142", []) == [{"query": "4142"}]
+    assert command_helpers.cmdj(adapter, None, "afij @ 0x401000", {})["address"] == 0x401000
+    assert command_helpers.cmdj(adapter, None, "aflj", [])[0]["name"] == "main"
+    assert isinstance(command_helpers.cmdj(adapter, None, "pdj 8 @ 0x1000", {}), dict)
+    assert command_helpers.cmd(adapter, None, "p8 4 @ 0x10")
+    assert command_helpers.cmd(None, fallback, "i") == "fallback"
 
 
 def test_cli_validators_paths_and_sanitization(tmp_path: Path) -> None:
@@ -163,7 +163,7 @@ def test_results_loader_full_payload_and_branches() -> None:
         "crypto": {"algorithms": [{"name": "AES"}]},
         "indicators": [{"type": "x", "description": "y", "severity": "High"}],
         "error": None,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.2,
     }
 
@@ -197,7 +197,7 @@ def test_results_loader_full_payload_and_branches() -> None:
     assert empty_result.error == "boom"
 
     results_loader._load_timestamp(empty_result, {"timestamp": "invalid"})
-    results_loader._load_timestamp(empty_result, {"timestamp": datetime.utcnow()})
+    results_loader._load_timestamp(empty_result, {"timestamp": datetime.now(UTC)})
     results_loader._load_execution_time(empty_result, {"execution_time": 9.5})
     assert empty_result.execution_time == 9.5
 

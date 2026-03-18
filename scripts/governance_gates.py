@@ -53,7 +53,9 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
     return frontmatter
 
 
-def _add_failure(failure_groups: dict[str, list[dict[str, str]]], code: str, message: str, fix: str) -> None:
+def _add_failure(
+    failure_groups: dict[str, list[dict[str, str]]], code: str, message: str, fix: str
+) -> None:
     failure_groups.setdefault(code, []).append(
         {
             "code": code,
@@ -80,7 +82,7 @@ def _parse_iso_utc(value: str) -> datetime | None:
 
 
 def _ordered_failure_groups(
-    failure_groups: dict[str, list[dict[str, str]]]
+    failure_groups: dict[str, list[dict[str, str]]],
 ) -> dict[str, list[dict[str, str]]]:
     order = ("missing_file", "invalid_status", "malformed_sections", "stale_audit")
     ordered: dict[str, list[dict[str, str]]] = {}
@@ -94,7 +96,7 @@ def _ordered_failure_groups(
 
 
 def _ordered_requirements_failure_groups(
-    failure_groups: dict[str, list[dict[str, str]]]
+    failure_groups: dict[str, list[dict[str, str]]],
 ) -> dict[str, list[dict[str, str]]]:
     order = (
         "missing_file",
@@ -115,7 +117,7 @@ def _ordered_requirements_failure_groups(
 
 
 def _ordered_traceability_failure_groups(
-    failure_groups: dict[str, list[dict[str, str]]]
+    failure_groups: dict[str, list[dict[str, str]]],
 ) -> dict[str, list[dict[str, str]]]:
     order = (
         "missing_file",
@@ -266,7 +268,10 @@ def _parse_traceability_rows(requirements_content: str) -> tuple[list[dict[str, 
     for row_index, raw_row in enumerate(table_lines[2:], start=1):
         cells = [cell.strip() for cell in raw_row.strip("|").split("|")]
         if len(cells) != 3:
-            return [], f"Traceability row #{row_index} must contain Requirement, Phase, and Status cells."
+            return (
+                [],
+                f"Traceability row #{row_index} must contain Requirement, Phase, and Status cells.",
+            )
         requirement_id, phase_id, status = cells
         if not requirement_id:
             return [], f"Traceability row #{row_index} has blank Requirement value."
@@ -484,7 +489,9 @@ def build_requirement_coverage_matrix(
         "schema_version": COVERAGE_MATRIX_SCHEMA_VERSION,
         "coverage_matrix": {
             "scope": scope,
-            "scope_target": normalized_phase_id if normalized_phase_id is not None else "all-active",
+            "scope_target": (
+                normalized_phase_id if normalized_phase_id is not None else "all-active"
+            ),
             "rows": rows,
             "summary": summary,
         },
@@ -500,7 +507,9 @@ def format_coverage_matrix_summary(coverage_matrix: dict[str, Any]) -> str:
     for row in rows:
         requirement_id = str(row.get("requirement_id", "")).strip()
         state = str(row.get("coverage_state", "")).strip() or "unknown"
-        causes = ",".join(str(code).strip() for code in row.get("cause_codes", []) if str(code).strip())
+        causes = ",".join(
+            str(code).strip() for code in row.get("cause_codes", []) if str(code).strip()
+        )
         if causes:
             row_fragments.append(f"{requirement_id}:{state}[{causes}]")
         else:
@@ -537,7 +546,9 @@ def format_coverage_matrix_expanded(coverage_matrix: dict[str, Any]) -> str:
     for row in rows:
         requirement_id = str(row.get("requirement_id", "")).strip() or "UNKNOWN"
         state = str(row.get("coverage_state", "")).strip() or "unknown"
-        cause_codes = [str(code).strip() for code in row.get("cause_codes", []) if str(code).strip()]
+        cause_codes = [
+            str(code).strip() for code in row.get("cause_codes", []) if str(code).strip()
+        ]
         causes = ", ".join(cause_codes) if cause_codes else "-"
         remediation = str(row.get("remediation", "")).strip() or "-"
         retry_command = str(row.get("retry_command", "")).strip() or "-"
@@ -552,7 +563,9 @@ def evaluate_milestone_governance_gate(
     planning_root: Path, milestone_version: str
 ) -> dict[str, Any]:
     audit_path = planning_root / f"{milestone_version}-MILESTONE-AUDIT.md"
-    retry_command = f"node ~/.claude/get-shit-done/bin/gsd-tools.cjs milestone precheck {milestone_version}"
+    retry_command = (
+        f"node ~/.claude/get-shit-done/bin/gsd-tools.cjs milestone precheck {milestone_version}"
+    )
     failure_groups: dict[str, list[dict[str, str]]] = {}
 
     if not audit_path.exists():
@@ -667,7 +680,9 @@ def evaluate_requirements_contract_gate(
             seen_ids.add(requirement_id)
         validated_entries.append((index, entry))
 
-    touched_ids = {item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()}
+    touched_ids = {
+        item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()
+    }
     if scope == "touched":
         if not touched_ids:
             _add_failure(
@@ -777,7 +792,9 @@ def evaluate_traceability_drift_gate(
             "failure_groups": _ordered_traceability_failure_groups(failure_groups),
             "retry_command": retry_command,
             "scope": scope,
-            "touched_requirement_ids": sorted(item.strip() for item in (touched_requirement_ids or set()) if item),
+            "touched_requirement_ids": sorted(
+                item.strip() for item in (touched_requirement_ids or set()) if item
+            ),
         }
 
     requirements_content = requirements_path.read_text(encoding="utf-8")
@@ -795,7 +812,9 @@ def evaluate_traceability_drift_gate(
             "Define a valid Traceability table with Requirement, Phase, and Status columns.",
         )
 
-    touched_ids = {item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()}
+    touched_ids = {
+        item.strip() for item in (touched_requirement_ids or set()) if item and item.strip()
+    }
     scoped_ids = set(active_ids)
     if scope == "touched":
         if not touched_ids:
@@ -947,11 +966,16 @@ def build_impact_ranked_remediation_hints(
             if not isinstance(issue, dict):
                 continue
             severity = str(issue.get("severity", "error")).strip().lower() or "error"
-            severity_weight = IMPACT_SEVERITY_WEIGHTS.get(severity, IMPACT_SEVERITY_WEIGHTS["error"])
+            severity_weight = IMPACT_SEVERITY_WEIGHTS.get(
+                severity, IMPACT_SEVERITY_WEIGHTS["error"]
+            )
             check_key = _canonical_check_key(failure_type_key, issue, issue_index)
             blast_radius = max(cause_blast_radius.get(failure_type_key, 0), 1)
             message = str(issue.get("message", "")).strip() or "Traceability check failed."
-            fix = str(issue.get("fix", "")).strip() or "Apply the smallest corrective update and rerun."
+            fix = (
+                str(issue.get("fix", "")).strip()
+                or "Apply the smallest corrective update and rerun."
+            )
             normalized_message = " ".join(message.split())
             normalized_fix = " ".join(fix.split())
             rank_sort_key = (
@@ -998,9 +1022,16 @@ def format_impact_ranked_remediation_hints(ranked_hints: list[dict[str, Any]]) -
     for hint in ranked_hints:
         rank = int(hint.get("rank", 0))
         rationale = str(hint.get("rationale", "")).strip() or "deterministic impact order."
-        blocking_reason = str(hint.get("blocking_reason", "")).strip() or "Traceability check failed."
-        minimal_fix = str(hint.get("minimal_fix", "")).strip() or "Apply the smallest corrective change."
-        retry_command = str(hint.get("retry_command", "")).strip() or "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
+        blocking_reason = (
+            str(hint.get("blocking_reason", "")).strip() or "Traceability check failed."
+        )
+        minimal_fix = (
+            str(hint.get("minimal_fix", "")).strip() or "Apply the smallest corrective change."
+        )
+        retry_command = (
+            str(hint.get("retry_command", "")).strip()
+            or "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck"
+        )
         blocks.append(
             "\n".join(
                 [
@@ -1014,7 +1045,9 @@ def format_impact_ranked_remediation_hints(ranked_hints: list[dict[str, Any]]) -
     return "\n\n".join(blocks)
 
 
-def build_top_rank_change_note(previous_top_rank_key: str | None, current_top_rank_key: str | None) -> str:
+def build_top_rank_change_note(
+    previous_top_rank_key: str | None, current_top_rank_key: str | None
+) -> str:
     current_key = str(current_top_rank_key or "").strip()
     previous_key = str(previous_top_rank_key or "").strip()
     if not current_key:

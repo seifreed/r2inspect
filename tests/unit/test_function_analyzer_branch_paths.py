@@ -346,7 +346,9 @@ def test_process_single_function_hash_returns_none_when_mnemonics_empty():
             return []
 
     analyzer = _EmptyMnemonicsAnalyzer(_NoFunctionsAdapter())
-    result = analyzer._process_single_function_hash({"name": "fn", "addr": 0x1000, "size": 50}, 0, 1)
+    result = analyzer._process_single_function_hash(
+        {"name": "fn", "addr": 0x1000, "size": 50}, 0, 1
+    )
     assert result is None
 
 
@@ -362,7 +364,9 @@ def test_process_single_function_hash_returns_none_when_machoc_hash_empty():
         ops = [{"opcode": "mov eax, 1"}, {"opcode": "ret"}]
         adapter = _StaticFunctionsAdapter([], ops=ops)
         analyzer = FunctionAnalyzer(adapter)
-        result = analyzer._process_single_function_hash({"name": "fn", "addr": 0x1000, "size": 10}, 0, 1)
+        result = analyzer._process_single_function_hash(
+            {"name": "fn", "addr": 0x1000, "size": 10}, 0, 1
+        )
         assert result is None
     finally:
         fa_module.machoc_hash_from_mnemonics = original
@@ -859,12 +863,27 @@ def test_analyze_function_coverage_with_size_and_blocks():
     analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
     result = analyzer._analyze_function_coverage(funcs)
     assert result["total_functions"] == 3
-    assert result["functions_with_size"] == 2   # f1, f2
+    assert result["functions_with_size"] == 2  # f1, f2
     assert result["functions_with_blocks"] == 2  # f1, f3
     assert result["total_code_coverage"] == 280
     assert result["avg_function_size"] == pytest.approx(140.0)
     assert "size_coverage_percent" in result
     assert "block_coverage_percent" in result
+
+
+def test_analyze_function_coverage_accepts_string_sizes_and_blocks():
+    funcs = [
+        {"name": "f1", "size": "200", "nbbs": "4"},
+        {"name": "f2", "size": "bad", "nbbs": "0"},
+        {"name": "f3", "size": "80", "nbbs": "2"},
+    ]
+    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
+    result = analyzer._analyze_function_coverage(funcs)
+    assert result["total_functions"] == 3
+    assert result["functions_with_size"] == 2
+    assert result["functions_with_blocks"] == 2
+    assert result["total_code_coverage"] == 280
+    assert result["avg_function_size"] == pytest.approx(140.0)
 
 
 def test_analyze_function_coverage_percentages_are_calculated():
@@ -887,7 +906,12 @@ def test_analyze_function_coverage_returns_empty_on_exception():
 
 
 def test_analyze_functions_returns_full_results_with_real_ops():
-    ops = [{"opcode": "push ebp"}, {"opcode": "mov ebp, esp"}, {"opcode": "pop ebp"}, {"opcode": "ret"}]
+    ops = [
+        {"opcode": "push ebp"},
+        {"opcode": "mov ebp, esp"},
+        {"opcode": "pop ebp"},
+        {"opcode": "ret"},
+    ]
     funcs = [{"name": "real_func", "addr": 0x401000, "size": 16, "type": "user"}]
     adapter = _StaticFunctionsAdapter(funcs, ops=ops)
     # Let get_functions return funcs on aflj call

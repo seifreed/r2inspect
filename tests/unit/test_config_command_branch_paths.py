@@ -26,7 +26,7 @@ def make_command() -> ConfigCommand:
 
 
 # ---------------------------------------------------------------------------
-# execute – list_yara=True branch (lines 62-63)
+# execute - list_yara=True branch (lines 62-63)
 # ---------------------------------------------------------------------------
 
 
@@ -46,7 +46,7 @@ def test_execute_list_yara_false_prints_message(capsys):
 
 
 # ---------------------------------------------------------------------------
-# _list_yara_rules – directory does not exist (lines 95-97)
+# _list_yara_rules - directory does not exist (lines 95-97)
 # ---------------------------------------------------------------------------
 
 
@@ -58,7 +58,7 @@ def test_list_yara_rules_path_does_not_exist(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# _list_yara_rules – directory exists but contains no YARA files (lines 102-104)
+# _list_yara_rules - directory exists but contains no YARA files (lines 102-104)
 # ---------------------------------------------------------------------------
 
 
@@ -80,7 +80,7 @@ def test_list_yara_rules_directory_has_non_yara_files(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# _list_yara_rules – directory has YARA files → display table (lines 107-108)
+# _list_yara_rules - directory has YARA files -> display table (lines 107-108)
 # ---------------------------------------------------------------------------
 
 
@@ -88,7 +88,7 @@ def test_list_yara_rules_with_yar_files_returns_zero(tmp_path: Path):
     cmd = make_command()
     yara_dir = tmp_path / "rules"
     yara_dir.mkdir()
-    (yara_dir / "test_rule.yar").write_text('rule test { condition: true }')
+    (yara_dir / "test_rule.yar").write_text("rule test { condition: true }")
     exit_code = cmd._list_yara_rules(yara_path=str(yara_dir))
     assert exit_code == 0
 
@@ -97,7 +97,7 @@ def test_list_yara_rules_with_yara_extension_files(tmp_path: Path):
     cmd = make_command()
     yara_dir = tmp_path / "rules"
     yara_dir.mkdir()
-    (yara_dir / "detect.yara").write_text('rule detect { condition: true }')
+    (yara_dir / "detect.yara").write_text("rule detect { condition: true }")
     exit_code = cmd._list_yara_rules(yara_path=str(yara_dir))
     assert exit_code == 0
 
@@ -111,8 +111,8 @@ def test_find_yara_rules_finds_yar_files(tmp_path: Path):
     cmd = make_command()
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
-    (rules_dir / "rule_a.yar").write_text('rule a { condition: true }')
-    (rules_dir / "rule_b.yara").write_text('rule b { condition: true }')
+    (rules_dir / "rule_a.yar").write_text("rule a { condition: true }")
+    (rules_dir / "rule_b.yara").write_text("rule b { condition: true }")
     found = cmd._find_yara_rules(rules_dir)
     names = [f.name for f in found]
     assert "rule_a.yar" in names
@@ -124,7 +124,7 @@ def test_find_yara_rules_recursive_search(tmp_path: Path):
     rules_dir = tmp_path / "rules"
     subdir = rules_dir / "malware"
     subdir.mkdir(parents=True)
-    (subdir / "nested.yar").write_text('rule nested { condition: true }')
+    (subdir / "nested.yar").write_text("rule nested { condition: true }")
     found = cmd._find_yara_rules(rules_dir)
     assert any("nested.yar" in str(f) for f in found)
 
@@ -141,8 +141,8 @@ def test_find_yara_rules_returns_sorted_list(tmp_path: Path):
     cmd = make_command()
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
-    (rules_dir / "zzz.yar").write_text('rule z { condition: true }')
-    (rules_dir / "aaa.yar").write_text('rule a { condition: true }')
+    (rules_dir / "zzz.yar").write_text("rule z { condition: true }")
+    (rules_dir / "aaa.yar").write_text("rule a { condition: true }")
     found = cmd._find_yara_rules(rules_dir)
     names = [f.name for f in found]
     assert names == sorted(names)
@@ -158,20 +158,18 @@ def test_display_yara_rules_table_runs_without_error(tmp_path: Path, capsys):
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
     rule_file = rules_dir / "my_rule.yar"
-    rule_file.write_text('rule my_rule { condition: true }')
+    rule_file.write_text("rule my_rule { condition: true }")
     cmd._display_yara_rules_table([rule_file], rules_dir)
     out = capsys.readouterr().out
     assert "my_rule.yar" in out
 
 
-def test_display_yara_rules_table_category_root_when_file_at_top_level(
-    tmp_path: Path, capsys
-):
+def test_display_yara_rules_table_category_root_when_file_at_top_level(tmp_path: Path, capsys):
     cmd = make_command()
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
     rule_file = rules_dir / "top_level.yar"
-    rule_file.write_text('rule top { condition: true }')
+    rule_file.write_text("rule top { condition: true }")
     cmd._display_yara_rules_table([rule_file], rules_dir)
     out = capsys.readouterr().out
     assert "Root" in out
@@ -183,7 +181,7 @@ def test_display_yara_rules_table_category_from_subdirectory(tmp_path: Path, cap
     sub = rules_dir / "ransomware"
     sub.mkdir(parents=True)
     rule_file = sub / "detect.yar"
-    rule_file.write_text('rule r { condition: true }')
+    rule_file.write_text("rule r { condition: true }")
     cmd._display_yara_rules_table([rule_file], rules_dir)
     out = capsys.readouterr().out
     assert "ransomware" in out
@@ -194,10 +192,27 @@ def test_display_yara_rules_table_shows_rules_directory(tmp_path: Path, capsys):
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
     rule_file = rules_dir / "rule.yar"
-    rule_file.write_text('rule r { condition: true }')
+    rule_file.write_text("rule r { condition: true }")
     cmd._display_yara_rules_table([rule_file], rules_dir)
     out = capsys.readouterr().out
     assert "Rules directory" in out
+
+
+def test_display_yara_rules_table_relative_to_fallback_to_filename(tmp_path: Path):
+    """Test that a file outside the rules_dir triggers the ValueError fallback path."""
+    cmd = make_command()
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+
+    # Create a real file in a completely separate directory
+    other_dir = tmp_path / "outside_rules"
+    other_dir.mkdir()
+    orphan_rule = other_dir / "orphan.yar"
+    orphan_rule.write_text("rule orphan { condition: true }")
+
+    # The file is real but not relative to rules_dir, triggering the fallback
+    cmd._display_yara_rules_table([orphan_rule], rules_dir)
+    # Should not raise - the display falls back to the filename
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +246,7 @@ def test_format_file_size_gigabytes_range():
 
 
 # ---------------------------------------------------------------------------
-# execute – with list_yara=True using config_path (line 93 with config)
+# execute - with list_yara=True using config_path (line 93 with config)
 # ---------------------------------------------------------------------------
 
 
@@ -239,6 +254,6 @@ def test_execute_list_yara_with_explicit_yara_path_that_exists(tmp_path: Path):
     cmd = make_command()
     yara_dir = tmp_path / "custom_rules"
     yara_dir.mkdir()
-    (yara_dir / "custom.yar").write_text('rule c { condition: true }')
+    (yara_dir / "custom.yar").write_text("rule c { condition: true }")
     exit_code = cmd.execute({"list_yara": True, "yara": str(yara_dir)})
     assert exit_code == 0

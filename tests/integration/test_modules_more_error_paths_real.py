@@ -8,8 +8,20 @@ from r2inspect.factory import create_inspector
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 
 pytestmark = pytest.mark.requires_r2
+
+
+@pytest.fixture
+def samples_dir(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 def test_resource_analyzer_error_paths_real(samples_dir: Path) -> None:

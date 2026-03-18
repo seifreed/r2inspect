@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy, retry_on_failure
+from r2inspect.infrastructure.retry_manager import (
+    RetryConfig,
+    RetryManager,
+    RetryStrategy,
+    retry_on_failure,
+)
 
 
 def test_retry_manager_jitter_delay() -> None:

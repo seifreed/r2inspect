@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -35,4 +35,4 @@ def test_file_info_extension_normalization():
     # Ensure timestamp default is set
     result = AnalysisResultBase(available=True)
     assert isinstance(result.timestamp, datetime)
-    assert result.timestamp >= datetime.utcnow() - timedelta(seconds=5)
+    assert result.timestamp >= datetime.now(UTC) - timedelta(seconds=5)

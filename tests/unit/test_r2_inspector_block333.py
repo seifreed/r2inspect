@@ -12,7 +12,7 @@ from r2inspect.core.pipeline_builder import PipelineBuilder
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.factory import create_inspector
 from r2inspect.registry.default_registry import create_default_registry
-from r2inspect.utils.memory_manager import MemoryMonitor
+from r2inspect.infrastructure.memory import MemoryMonitor
 
 
 def _sample_path() -> Path:

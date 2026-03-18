@@ -70,7 +70,7 @@ class AdapterWithPdfjFallback:
 
     def cmd(self, command: str) -> str:
         if command.startswith("pdj "):
-            return "[{\"mnemonic\": \"push\"}, {\"mnemonic\": \"pop\"}]"
+            return '[{"mnemonic": "push"}, {"mnemonic": "pop"}]'
         if command.startswith("pi "):
             return "mov rax, rbx\nret\n"
         return ""
@@ -152,6 +152,7 @@ class AdapterWithOpcodeFallback:
 
 # Tests for code paths in analyze() when function_signatures is empty
 
+
 def test_analyze_no_extractable_tokens_returns_error():
     adapter = AdapterWithFunctionsNoDisasm()
     analyzer = BinlexAnalyzer(adapter=adapter, filepath="/tmp/test.bin")
@@ -170,6 +171,7 @@ def test_analyze_function_without_addr_skipped():
 
 
 # Tests for _extract_tokens_from_ops with non-dict entries
+
 
 def test_extract_tokens_from_ops_skips_non_dicts():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
@@ -199,6 +201,7 @@ def test_extract_tokens_from_ops_opcode_fallback():
 
 
 # Tests for _extract_mnemonic_from_op
+
 
 def test_extract_mnemonic_from_op_mnemonic_field():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
@@ -232,6 +235,7 @@ def test_extract_mnemonic_from_op_none_mnemonic():
 
 # Tests for _normalize_mnemonic with HTML entities
 
+
 def test_normalize_mnemonic_html_nbsp():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     result = analyzer._normalize_mnemonic("mov&nbsp;")
@@ -264,6 +268,7 @@ def test_normalize_mnemonic_empty_string():
 
 # Tests for _accumulate_ngrams
 
+
 def test_accumulate_ngrams_missing_n_in_func_sigs():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
@@ -291,6 +296,7 @@ def test_accumulate_ngrams_valid():
 
 # Tests for _extract_tokens_from_text paths
 
+
 def test_extract_tokens_from_text_with_text_adapter():
     adapter = AdapterWithTextFallback()
     analyzer = BinlexAnalyzer(adapter=adapter, filepath=None)
@@ -317,6 +323,7 @@ def test_extract_tokens_from_text_with_blank_lines():
 
 # Tests for _extract_tokens_from_pdfj fallback
 
+
 def test_extract_tokens_from_pdfj_no_ops_key():
     class AdapterNoOps:
         def get_disasm(self, address: int = 0, size: int = 0) -> dict[str, Any]:
@@ -342,6 +349,7 @@ def test_extract_tokens_from_pdfj_empty_disasm():
 
 # Tests for _extract_tokens_from_pdj
 
+
 def test_extract_tokens_from_pdj_non_list_result():
     class AdapterPdjNonList:
         def get_disasm(self, address: int = 0, size: int = 0) -> Any:
@@ -365,8 +373,10 @@ def test_extract_tokens_from_pdj_valid_list():
 
 # Test _analyze_function edge case: tokens present but all n too large
 
+
 def test_analyze_function_all_ngrams_skipped_due_to_token_count():
     """When tokens exist but all n sizes require more tokens than available."""
+
     class SmallFuncAdapter:
         def get_disasm(self, address: int = 0, size: int = 0) -> dict[str, Any]:
             # Only 1 token total
@@ -383,6 +393,7 @@ def test_analyze_function_all_ngrams_skipped_due_to_token_count():
 
 # Test _collect_signatures_for_size with missing signature key
 
+
 def test_collect_signatures_for_size_no_signature_key():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
@@ -393,6 +404,7 @@ def test_collect_signatures_for_size_no_signature_key():
 
 
 # Test _build_similar_groups with groups that have only 1 function (not similar)
+
 
 def test_build_similar_groups_single_function_per_sig():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
@@ -424,6 +436,7 @@ def test_build_similar_groups_long_signature_truncated():
 
 # Test compare_functions
 
+
 def test_compare_functions_identical():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     assert analyzer.compare_functions("abc123", "abc123") is True
@@ -435,6 +448,7 @@ def test_compare_functions_different():
 
 
 # Test get_function_similarity_score edge cases
+
 
 def test_similarity_score_both_empty():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
@@ -465,6 +479,7 @@ def test_similarity_score_partial_overlap():
 
 # Test _calculate_binary_signature
 
+
 def test_calculate_binary_signature_with_data():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
@@ -488,11 +503,13 @@ def test_calculate_binary_signature_no_signatures_for_n():
 
 # Test is_available
 
+
 def test_is_available_returns_true():
     assert BinlexAnalyzer.is_available() is True
 
 
 # Test analyze with adapter that raises exception during function extraction
+
 
 def test_analyze_handles_exception_gracefully():
     class ExplodingAdapter:
@@ -513,6 +530,7 @@ def test_analyze_handles_exception_gracefully():
 
 
 # Tests for NoneType adapter paths (no adapter)
+
 
 def test_extract_tokens_from_pdfj_no_adapter():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
@@ -535,6 +553,7 @@ def test_extract_tokens_from_text_no_adapter():
 
 # Test with ops that have None values to cover line 375
 
+
 def test_extract_tokens_from_ops_with_none_entry():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     ops = [None, {"mnemonic": "mov"}, 42, {"mnemonic": "ret"}]
@@ -545,6 +564,7 @@ def test_extract_tokens_from_ops_with_none_entry():
 
 
 # --- Additional tests for uncovered exception handling and edge case paths ---
+
 
 class AdapterPdfjEmptyPdjValid:
     """Adapter where pdfj returns no ops but pdj returns valid list."""
@@ -646,8 +666,19 @@ class BrokenBinarySignatureBinlexAnalyzer(BinlexAnalyzer):
         self, functions: list[dict[str, Any]], ngram_sizes: list[int]
     ) -> Any:
         # Return valid data
-        sigs = {"func_sig": {2: {"signature": "abc", "ngrams": ["a b"], "token_count": 3, "ngram_count": 2, "unique_ngrams": 2}}}
+        sigs = {
+            "func_sig": {
+                2: {
+                    "signature": "abc",
+                    "ngrams": ["a b"],
+                    "token_count": 3,
+                    "ngram_count": 2,
+                    "unique_ngrams": 2,
+                }
+            }
+        }
         from collections import defaultdict, Counter
+
         all_ngrams = defaultdict(Counter)
         all_ngrams[2]["a b"] += 1
         return sigs, all_ngrams, 1
@@ -658,6 +689,7 @@ class BrokenBinarySignatureBinlexAnalyzer(BinlexAnalyzer):
 
 # Tests for exception handling paths (lines 110-112)
 
+
 def test_analyze_outer_exception_caught():
     analyzer = BrokenCollectBinlexAnalyzer(adapter=None, filepath=None)
     result = analyzer.analyze(ngram_sizes=[2])
@@ -667,16 +699,21 @@ def test_analyze_outer_exception_caught():
 
 # Tests for _analyze_function exception path (lines 292-294)
 
+
 def test_analyze_function_exception_returns_none():
     class AdapterWithValidFunctions:
         def analyze_all(self) -> None:
             pass
+
         def get_disasm(self, address: int = 0, size: int = None) -> Any:
             return {"ops": [{"mnemonic": "mov"}, {"mnemonic": "push"}, {"mnemonic": "ret"}]}
+
         def get_disasm_text(self, **kwargs: Any) -> str:
             return ""
+
         def cmdj(self, command: str, default: Any = None) -> Any:
             return default if default is not None else {}
+
         def cmd(self, command: str) -> str:
             return ""
 
@@ -690,6 +727,7 @@ def test_analyze_function_exception_returns_none():
 
 # Test _extract_tokens_from_pdj when it returns valid tokens (line 313)
 
+
 def test_extract_instruction_tokens_pdj_fallback_returns_tokens():
     adapter = AdapterPdfjEmptyPdjValid()
     analyzer = BinlexAnalyzer(adapter=adapter, filepath=None)
@@ -699,6 +737,7 @@ def test_extract_instruction_tokens_pdj_fallback_returns_tokens():
 
 
 # Test _extract_tokens_from_text with blank lines (line 362)
+
 
 def test_extract_tokens_from_text_skips_blank_lines():
     adapter = AdapterTextWithBlankLines()
@@ -713,6 +752,7 @@ def test_extract_tokens_from_text_skips_blank_lines():
 
 # Test exception path in _extract_instruction_tokens (lines 319-320)
 
+
 def test_extract_instruction_tokens_exception_returns_empty():
     adapter = AdapterTextThrows()
     analyzer = BinlexAnalyzer(adapter=adapter, filepath=None)
@@ -722,12 +762,15 @@ def test_extract_instruction_tokens_exception_returns_empty():
 
 # Test _extract_tokens_from_text when text returns tokens (line 317)
 
+
 def test_extract_instruction_tokens_text_fallback():
     class PdfjAndPdjEmptyTextValidAdapter:
         def analyze_all(self) -> None:
             pass
+
         def get_disasm(self, address: int = 0, size: int = None) -> Any:
             return {}  # neither ops for pdfj nor list for pdj
+
         def get_disasm_text(self, address: int = 0, size: int = 100) -> str:
             return "push rbp\nmov rsp, rbp\nret\n"
 
@@ -738,6 +781,7 @@ def test_extract_instruction_tokens_text_fallback():
 
 # Tests for _calculate_binary_signature exception path (lines 475-476)
 
+
 def test_calculate_binary_signature_handles_exception():
     analyzer = BrokenBinarySignatureBinlexAnalyzer(adapter=None, filepath=None)
     # Call analyze to trigger the exception in _build_signature_groups
@@ -747,12 +791,14 @@ def test_calculate_binary_signature_handles_exception():
 
 # Test get_function_similarity_score exception path (lines 500-502)
 
+
 def test_similarity_score_exception_returns_zero():
     """Pass unhashable items to trigger exception in set()."""
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
 
     class Unhashable:
         __hash__ = None  # type: ignore[assignment]
+
         def __eq__(self, other: object) -> bool:
             return False
 
@@ -768,6 +814,7 @@ def test_similarity_score_exception_returns_zero():
 
 # Test _collect_function_signatures with func that has no addr (line 128)
 
+
 def test_collect_function_signatures_skips_no_addr():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     functions = [
@@ -780,6 +827,7 @@ def test_collect_function_signatures_skips_no_addr():
 
 
 # Test _calculate_binary_signature exception path (lines 475-476)
+
 
 def test_calculate_binary_signature_exception_with_non_sortable():
     """Exception in _calculate_binary_signature is caught."""
@@ -802,6 +850,7 @@ def test_calculate_binary_signature_exception_with_non_sortable():
 
 # Test analyze() with ngram_sizes=None (line 47)
 
+
 def test_analyze_default_ngram_sizes_used_when_none():
     """When ngram_sizes=None, defaults to [2, 3, 4]."""
     analyzer = BinlexAnalyzer(adapter=AdapterWithFunctionsNoDisasm(), filepath=None)
@@ -810,6 +859,7 @@ def test_analyze_default_ngram_sizes_used_when_none():
 
 
 # Test line 277: if not ngrams: continue (defensive code path)
+
 
 class EmptyNgramAnalyzer(BinlexAnalyzer):
     """Subclass that always returns empty ngrams."""
@@ -820,12 +870,18 @@ class EmptyNgramAnalyzer(BinlexAnalyzer):
 
 def test_analyze_function_empty_ngrams_skipped():
     """When _generate_ngrams returns empty, the n-gram size is skipped (line 277)."""
+
     class GoodTokenAdapter:
         def get_disasm(self, address: int = 0, size: int = None) -> Any:
-            return {"ops": [
-                {"mnemonic": "mov"}, {"mnemonic": "push"},
-                {"mnemonic": "call"}, {"mnemonic": "pop"}, {"mnemonic": "ret"},
-            ]}
+            return {
+                "ops": [
+                    {"mnemonic": "mov"},
+                    {"mnemonic": "push"},
+                    {"mnemonic": "call"},
+                    {"mnemonic": "pop"},
+                    {"mnemonic": "ret"},
+                ]
+            }
 
         def get_disasm_text(self, **kwargs: Any) -> str:
             return ""

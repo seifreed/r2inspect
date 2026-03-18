@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from r2inspect.utils.magic_detector import MagicByteDetector
+from r2inspect.infrastructure.magic_detector import MagicByteDetector
 
 PE_FIXTURE = Path("samples/fixtures/hello_pe.exe")
 ELF_FIXTURE = Path("samples/fixtures/hello_elf")

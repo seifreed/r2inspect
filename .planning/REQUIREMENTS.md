@@ -1,67 +1,50 @@
-# Requirements: r2inspect v1.2 Governance UX
+# Requirements: r2inspect v1.4 Governance Operations Hardening
 
 **Defined:** 2026-03-01
 **Core Value:** Mantener entregas pequenas, verificables y acumulables.
 
 ## v1 Requirements
 
-### Governance UX
+### Governance Operations
 
-#### Requirement
+- [ ] **GOV-01**: Operator can set and inspect governance exception retention policy by scope (global/project/requirement family) with transparent auditability.
+- [ ] **GOV-02**: Expired governance exceptions are clearly reported and cannot be silently ignored during reporting.
 
-- id: GUX-01
-- status: Complete
-- acceptance_criteria: Operators can generate a deterministic requirement coverage matrix for phase and milestone scope using current planning artifacts only.
+### Traceability Controls
 
-#### Requirement
-
-- id: GUX-02
-- status: Complete
-- acceptance_criteria: Operators receive deterministic remediation hints ranked by impact, with actionable next steps and retry commands.
+- [ ] **TRC-01**: Operator can run commands with a `--readonly` mode that suppresses traceability snapshot persistence.
+- [ ] **TRC-02**: In readonly mode, delta reports still compute and emit full added/removed/changed output while marking persistence as intentionally suppressed.
 
 ## v2 Requirements
 
-### Advanced Traceability
+### Future Enhancements
 
-#### Requirement
-
-- id: ATR-01
-- status: Pending
-- acceptance_criteria: Exception workflow supports temporary governance bypass with owner, expiry, and mandatory remediation task.
-
-#### Requirement
-
-- id: ATR-02
-- status: Pending
-- acceptance_criteria: Delta traceability reports highlight coverage changes between consecutive execution cycles.
+- **POL-01**: Add centralized exception policy templates per team/project.
+- **POL-02**: Add retention policy diff audit in milestone summaries.
 
 ## Out of Scope
 
-#### Requirement
-
-- id: OOS-01
-- status: Blocked
-- acceptance_criteria: Full ALM platform replication remains out of scope to avoid workflow scope explosion.
-
-#### Requirement
-
-- id: OOS-02
-- status: Blocked
-- acceptance_criteria: Automatic mutation of planning artifacts from remediation hints remains out of scope pending explicit approval workflow design.
+| Feature | Reason |
+|---------|--------|
+| Full ALM platform replication inside the quick workflow | Scope would exceed current governance operations milestone |
+| Automatic mutation of planning artifacts from remediation hints without explicit approval | Requires approval workflow and explicit user confirmation |
+| Historical forensic export format conversion | Nice-to-have, not required for v1.4 governance hardening |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GUX-01 | 5 | Complete |
-| GUX-02 | 6 | Complete |
+| GOV-01 | 9 | Pending |
+| GOV-02 | 9 | Pending |
+| TRC-01 | 10 | Pending |
+| TRC-02 | 10 | Pending |
 
 **Coverage:**
-- v1 requirements: 2 total
-- Mapped to phases: 2
+- v1 requirements: 4 total
+- Mapped to phases: 4
 - Unmapped: 0
 - Coverage: 100%
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after plan 06-03 completion*
+*Last updated: 2026-03-01 after opening v1.4*

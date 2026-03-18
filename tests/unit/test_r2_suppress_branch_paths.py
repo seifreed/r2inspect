@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 
-from r2inspect.utils.r2_suppress import (
+from r2inspect.infrastructure.r2_suppress import (
     R2PipeErrorSuppressor,
     _parse_raw_result,
     _try_cmd_parse,
@@ -102,6 +103,14 @@ def test_silent_cmdj_catches_non_oserror_from_cmdj():
     assert result == {"fallback": 1}
 
 
+def test_silent_cmdj_logs_cmdj_fallback(caplog):
+    r2 = FakeR2WithValueError()
+    with caplog.at_level(logging.DEBUG):
+        result = silent_cmdj(r2, "ij", default={"fallback": 1})
+    assert result == {"fallback": 1}
+    assert "cmdj failed for ij, falling back to text parsing" in caplog.text
+
+
 def test_silent_cmdj_catches_non_oserror_returns_none_default():
     r2 = FakeR2WithValueError()
     result = silent_cmdj(r2, "ij", default=None)
@@ -168,12 +177,12 @@ def test_try_cmd_parse_returns_default_when_parsed_result_is_none():
 
 
 def test_parse_raw_result_valid_json_list():
-    result = _parse_raw_result('[1, 2, 3]')
+    result = _parse_raw_result("[1, 2, 3]")
     assert result == [1, 2, 3]
 
 
 def test_parse_raw_result_valid_json_int():
-    result = _parse_raw_result('42')
+    result = _parse_raw_result("42")
     assert result == 42
 
 

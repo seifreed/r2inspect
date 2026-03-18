@@ -80,9 +80,7 @@ def test_section_info_entropy_none():
 
 
 def test_section_info_is_suspicious():
-    section = SectionInfo(
-        name=".text", suspicious_indicators=["high_entropy"]
-    )
+    section = SectionInfo(name=".text", suspicious_indicators=["high_entropy"])
     assert section.is_suspicious() is True
 
 
@@ -182,9 +180,7 @@ def test_security_features_get_enabled_features_relro_bool():
 
 
 def test_security_features_security_score():
-    features = SecurityFeatures(
-        nx=True, pie=True, canary=True, aslr=True
-    )
+    features = SecurityFeatures(nx=True, pie=True, canary=True, aslr=True)
     score = features.security_score()
     assert score == 60
 
@@ -232,9 +228,7 @@ def test_security_features_to_dict():
 
 
 def test_format_analysis_result_creation():
-    result = FormatAnalysisResult(
-        available=True, format="PE", architecture="x64", bits=64
-    )
+    result = FormatAnalysisResult(available=True, format="PE", architecture="x64", bits=64)
     assert result.format == "PE"
     assert result.bits == 64
 
@@ -290,9 +284,7 @@ def test_format_analysis_result_bits_invalid():
 
 
 def test_format_analysis_result_endian_little():
-    result = FormatAnalysisResult(
-        available=True, format="PE", endian="little"
-    )
+    result = FormatAnalysisResult(available=True, format="PE", endian="little")
     assert result.endian == "little"
 
 
@@ -319,26 +311,20 @@ def test_format_analysis_result_endian_invalid():
 def test_format_analysis_result_with_sections():
     section1 = SectionInfo(name=".text", is_executable=True)
     section2 = SectionInfo(name=".data", is_writable=True)
-    result = FormatAnalysisResult(
-        available=True, format="PE", sections=[section1, section2]
-    )
+    result = FormatAnalysisResult(available=True, format="PE", sections=[section1, section2])
     assert len(result.sections) == 2
 
 
 def test_format_analysis_result_with_security_features():
     security = SecurityFeatures(aslr=True, nx=True)
-    result = FormatAnalysisResult(
-        available=True, format="PE", security_features=security
-    )
+    result = FormatAnalysisResult(available=True, format="PE", security_features=security)
     assert result.security_features.aslr is True
 
 
 def test_format_analysis_result_get_executable_sections():
     section1 = SectionInfo(name=".text", is_executable=True)
     section2 = SectionInfo(name=".data", is_writable=True)
-    result = FormatAnalysisResult(
-        available=True, format="PE", sections=[section1, section2]
-    )
+    result = FormatAnalysisResult(available=True, format="PE", sections=[section1, section2])
     executable = result.get_executable_sections()
     assert len(executable) == 1
     assert executable[0].name == ".text"
@@ -347,9 +333,7 @@ def test_format_analysis_result_get_executable_sections():
 def test_format_analysis_result_get_writable_sections():
     section1 = SectionInfo(name=".text", is_executable=True)
     section2 = SectionInfo(name=".data", is_writable=True)
-    result = FormatAnalysisResult(
-        available=True, format="PE", sections=[section1, section2]
-    )
+    result = FormatAnalysisResult(available=True, format="PE", sections=[section1, section2])
     writable = result.get_writable_sections()
     assert len(writable) == 1
     assert writable[0].name == ".data"
@@ -357,12 +341,8 @@ def test_format_analysis_result_get_writable_sections():
 
 def test_format_analysis_result_get_suspicious_sections():
     section1 = SectionInfo(name=".text")
-    section2 = SectionInfo(
-        name=".packed", suspicious_indicators=["high_entropy"]
-    )
-    result = FormatAnalysisResult(
-        available=True, format="PE", sections=[section1, section2]
-    )
+    section2 = SectionInfo(name=".packed", suspicious_indicators=["high_entropy"])
+    result = FormatAnalysisResult(available=True, format="PE", sections=[section1, section2])
     suspicious = result.get_suspicious_sections()
     assert len(suspicious) == 1
     assert suspicious[0].name == ".packed"
@@ -462,9 +442,7 @@ def test_section_info_negative_sizes():
 
 
 def test_section_info_permissions_all():
-    section = SectionInfo(
-        name=".text", is_readable=True, is_writable=True, is_executable=True
-    )
+    section = SectionInfo(name=".text", is_readable=True, is_writable=True, is_executable=True)
     assert section.has_permission("r") is True
     assert section.has_permission("w") is True
     assert section.has_permission("x") is True

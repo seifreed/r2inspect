@@ -252,7 +252,7 @@ def test_get_missing_imports_uses_cmdj_when_no_get_strings_on_adapter():
 
 def test_get_missing_imports_adds_matching_api_string():
     adapter = _StringsAdapter(strings=[{"string": "CreateFileA"}])
-    analyzer = ImportAnalyzer(adapter=adapter)
+    ImportAnalyzer(adapter=adapter)
     # Override get_imports to return empty list (so CreateFileA is not in imported_apis)
 
     class _NoImportsAnalyzer(ImportAnalyzer):
@@ -262,6 +262,18 @@ def test_get_missing_imports_adds_matching_api_string():
     analyzer2 = _NoImportsAnalyzer(adapter=adapter)
     result = analyzer2.get_missing_imports()
     assert "CreateFileA" in result
+
+
+def test_get_missing_imports_skips_non_candidate_strings():
+    adapter = _StringsAdapter(strings=[{"string": "notAnApi"}])
+
+    class _NoImportsAnalyzer(ImportAnalyzer):
+        def get_imports(self) -> list:
+            return []
+
+    analyzer = _NoImportsAnalyzer(adapter=adapter)
+    result = analyzer.get_missing_imports()
+    assert result == []
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +326,8 @@ def test_analyze_api_usage_exception_returns_zero_risk():
             try:
                 raise RuntimeError("categorize error")
             except Exception as e:
-                from r2inspect.utils.logger import get_logger
+                from r2inspect.infrastructure.logging import get_logger
+
                 get_logger(__name__).error(f"Error analyzing API usage: {e}")
                 return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
 
@@ -325,6 +338,7 @@ def test_analyze_api_usage_exception_returns_zero_risk():
 
 def test_analyze_api_usage_calls_exception_handler_via_bad_data():
     """Pass imports list that causes an internal error by patching categorize_apis."""
+
     # Use a subclass that overrides to trigger the internal except block
     class _ExplodingCategorizeAnalyzer(ImportAnalyzer):
         @property
@@ -446,8 +460,8 @@ def test_analyze_dll_dependencies_imagehlp_is_suspicious():
 
 def test_analyze_dll_dependencies_exception_returns_safe_default():
     analyzer = ImportAnalyzer(adapter=None)
-    # Pass a non-list to trigger an exception inside the method
-    result = analyzer.analyze_dll_dependencies(None)  # type: ignore[arg-type]
+    # Truthy, non-iterable value triggers TypeError in loop and hits except block.
+    result = analyzer.analyze_dll_dependencies(1)  # type: ignore[arg-type]
     assert result["common_dlls"] == []
     assert result["suspicious_dlls"] == []
     assert result["analysis"] == {}
@@ -473,10 +487,24 @@ def test_detect_import_anomalies_empty_imports_returns_no_imports_anomaly():
 
 def test_detect_import_anomalies_duplicate_imports_detected():
     analyzer = ImportAnalyzer(adapter=None)
-    imports = [{"name": "CreateFileA"}, {"name": "CreateFileA"}]
+    imports = [
+        {"name": "CreateFileA", "library": "kernel32.dll"},
+        {"name": "CreateFileA", "library": "kernel32.dll"},
+    ]
     result = analyzer.detect_import_anomalies(imports)
     types = [a["type"] for a in result["anomalies"]]
     assert "duplicate_imports" in types
+
+
+def test_detect_import_anomalies_same_name_different_libraries_not_duplicate():
+    analyzer = ImportAnalyzer(adapter=None)
+    imports = [
+        {"name": "Initialize", "library": "foo.dll"},
+        {"name": "Initialize", "library": "bar.dll"},
+    ]
+    result = analyzer.detect_import_anomalies(imports)
+    types = [a["type"] for a in result["anomalies"]]
+    assert "duplicate_imports" not in types
 
 
 # ---------------------------------------------------------------------------
@@ -486,7 +514,7 @@ def test_detect_import_anomalies_duplicate_imports_detected():
 
 def test_detect_import_anomalies_unusual_dll_is_appended():
     analyzer = ImportAnalyzer(adapter=None)
-    imports = [{"name": "SomeFunc", "dll": "unusual_lib.dll"}]
+    imports = [{"name": "SomeFunc", "library": "unusual_lib.dll"}]
     result = analyzer.detect_import_anomalies(imports)
     # No anomaly for just 1 unusual DLL (needs > 5), but code path is exercised.
     assert isinstance(result["count"], int)
@@ -499,7 +527,7 @@ def test_detect_import_anomalies_unusual_dll_is_appended():
 
 def test_detect_import_anomalies_many_unusual_dlls_detected():
     analyzer = ImportAnalyzer(adapter=None)
-    imports = [{"name": f"Func{i}", "dll": f"unusual{i}.dll"} for i in range(6)]
+    imports = [{"name": f"Func{i}", "library": f"unusual{i}.dll"} for i in range(6)]
     result = analyzer.detect_import_anomalies(imports)
     types = [a["type"] for a in result["anomalies"]]
     assert "many_unusual_dlls" in types
@@ -550,19 +578,30 @@ def test_check_import_forwarding_no_strings_returns_not_detected():
 # ---------------------------------------------------------------------------
 
 
-def test_check_import_forwarding_string_entries_checked_against_pattern():
+def test_check_import_forwarding_string_entries_checked_against_pattern(monkeypatch):
     class _StringsReturnAnalyzer(ImportAnalyzer):
         def _cmdj(self, command: str, default: Any = None) -> Any:
             if command == "izj":
-                return [{"string": "SomeLib.SomeFunc", "vaddr": 0x1000}]
+                return [{"string": "KERNEL32.CreateFileA", "vaddr": 0x1000}]
             return default if default is not None else []
 
     analyzer = _StringsReturnAnalyzer(adapter=None)
     result = analyzer.check_import_forwarding()
-    # The regex in the source uses escaped backslashes: r"^\\w+\\.\\w+$"
-    # which matches literally, not as \w pattern - so forwards list stays empty.
-    assert "detected" in result
-    assert "forwards" in result
+    assert result["detected"] is True
+    assert result["forwards"][0]["forward"] == "KERNEL32.CreateFileA"
+
+
+def test_check_import_forwarding_accepts_ordinal_forwards():
+    class _OrdinalForwardAnalyzer(ImportAnalyzer):
+        def _cmdj(self, command: str, default: Any = None) -> Any:
+            if command == "izj":
+                return [{"string": "KERNEL32.#123", "vaddr": 0x2000}]
+            return default if default is not None else []
+
+    analyzer = _OrdinalForwardAnalyzer(adapter=None)
+    result = analyzer.check_import_forwarding()
+    assert result["detected"] is True
+    assert result["forwards"][0]["forward"] == "KERNEL32.#123"
 
 
 # ---------------------------------------------------------------------------

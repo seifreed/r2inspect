@@ -174,12 +174,21 @@ def test_is_registry_string_hkcu():
     assert is_registry_string("HKCU\\Software\\App") is True
 
 
+def test_is_registry_string_additional_registry_roots():
+    assert is_registry_string("HKCR\\CLSID") is True
+    assert is_registry_string("HKU\\S-1-5-18") is True
+    assert is_registry_string("HKCC\\Software") is True
+
+
 def test_is_registry_string_software_backslash():
     assert is_registry_string("SOFTWARE\\Microsoft") is True
 
 
 def test_is_registry_string_false():
     assert is_registry_string("hello world") is False
+    assert is_registry_string("XXHKLMYY") is False
+    assert is_registry_string("notsystem\\path") is False
+    assert is_registry_string("myHKEY_value") is False
 
 
 def test_classify_string_type_url():
@@ -196,6 +205,18 @@ def test_classify_string_type_path_unix():
 
 def test_classify_string_type_registry():
     assert classify_string_type("HKEY_LOCAL_MACHINE\\Software") == "registry"
+    assert classify_string_type("HKLM\\Software") == "registry"
+    assert classify_string_type("HKCU\\Software\\App") == "registry"
+    assert classify_string_type("HKCR\\CLSID") == "registry"
+    assert classify_string_type("HKU\\S-1-5-18") == "registry"
+    assert classify_string_type("HKCC\\Software") == "registry"
+    assert classify_string_type("SYSTEM\\CurrentControlSet") == "registry"
+
+
+def test_classify_string_type_rejects_registry_false_positives():
+    assert classify_string_type("XXHKLMYY") != "registry"
+    assert classify_string_type("notsystem\\path") != "registry"
+    assert classify_string_type("myHKEY_value") != "registry"
 
 
 def test_classify_string_type_error_string():
@@ -211,7 +232,7 @@ def test_classify_string_type_none():
 # ---------------------------------------------------------------------------
 import json
 
-from r2inspect.utils.output_json import JsonOutputFormatter
+from r2inspect.cli.output_json import JsonOutputFormatter
 
 
 def test_json_output_formatter_basic():
@@ -537,7 +558,12 @@ def test_authenticode_detect_encryption_none():
 
 def test_authenticode_verify_signature_no_sig():
     a = _make_analyzer()
-    sig_info = {"has_signature": False, "certificates": [], "errors": [], "security_directory": None}
+    sig_info = {
+        "has_signature": False,
+        "certificates": [],
+        "errors": [],
+        "security_directory": None,
+    }
     assert a._verify_signature_integrity(sig_info) is False
 
 

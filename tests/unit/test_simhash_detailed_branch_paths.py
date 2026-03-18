@@ -11,6 +11,7 @@ from r2inspect.modules.similarity_scoring import (
 
 # ----- similarity_scoring tests -----
 
+
 def test_jaccard_similarity_both_empty_returns_one() -> None:
     assert jaccard_similarity(set(), set()) == 1.0
 
@@ -65,18 +66,19 @@ def test_normalized_difference_similarity_negative_values_return_zero() -> None:
 
 # ----- simhash_detailed tests -----
 
+
 def _make_simhash_params(**overrides):
-    defaults = dict(
-        filepath="test.bin",
-        simhash_available=False,
-        no_features_error="No features",
-        extract_string_features=lambda: [],
-        extract_opcodes_features=lambda: [],
-        extract_function_features=lambda: {},
-        find_similar_functions=lambda _: [],
-        log_debug=lambda _: None,
-        log_error=lambda _: None,
-    )
+    defaults = {
+        "filepath": "test.bin",
+        "simhash_available": False,
+        "no_features_error": "No features",
+        "extract_string_features": lambda: [],
+        "extract_opcodes_features": lambda: [],
+        "extract_function_features": lambda: {},
+        "find_similar_functions": lambda _: [],
+        "log_debug": lambda _: None,
+        "log_error": lambda _: None,
+    }
     defaults.update(overrides)
     return defaults
 
@@ -84,12 +86,16 @@ def _make_simhash_params(**overrides):
 def test_simhash_unavailable_returns_unavailable_result() -> None:
     params = _make_simhash_params(simhash_available=False)
     result = run_detailed_simhash_analysis(**params)
-    assert result.get("available") is False or "error" in result or not result.get("library_available", True)
+    assert (
+        result.get("available") is False
+        or "error" in result
+        or not result.get("library_available", True)
+    )
 
 
 def test_simhash_no_features_returns_error() -> None:
     try:
-        from simhash import Simhash  # noqa: F401
+        from simhash import Simhash
     except ImportError:
         pytest.skip("simhash not installed")
 
@@ -105,7 +111,7 @@ def test_simhash_no_features_returns_error() -> None:
 
 def test_simhash_with_string_features_only() -> None:
     try:
-        from simhash import Simhash  # noqa: F401
+        from simhash import Simhash
     except ImportError:
         pytest.skip("simhash not installed")
 
@@ -121,7 +127,7 @@ def test_simhash_with_string_features_only() -> None:
 
 def test_simhash_with_opcodes_features_only() -> None:
     try:
-        from simhash import Simhash  # noqa: F401
+        from simhash import Simhash
     except ImportError:
         pytest.skip("simhash not installed")
 
@@ -137,7 +143,7 @@ def test_simhash_with_opcodes_features_only() -> None:
 
 def test_simhash_with_both_features() -> None:
     try:
-        from simhash import Simhash  # noqa: F401
+        from simhash import Simhash
     except ImportError:
         pytest.skip("simhash not installed")
 
@@ -156,7 +162,7 @@ def test_simhash_with_both_features() -> None:
 
 def test_simhash_with_function_features() -> None:
     try:
-        from simhash import Simhash  # noqa: F401
+        from simhash import Simhash
     except ImportError:
         pytest.skip("simhash not installed")
 
@@ -179,7 +185,7 @@ def test_simhash_with_function_features() -> None:
 
 def test_simhash_feature_stats_includes_most_common() -> None:
     try:
-        from simhash import Simhash  # noqa: F401
+        from simhash import Simhash
     except ImportError:
         pytest.skip("simhash not installed")
 

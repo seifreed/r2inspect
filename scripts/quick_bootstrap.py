@@ -16,6 +16,8 @@ DEFAULT_GSD_TOOLS_PATH = str(Path.home() / ".codex/get-shit-done/bin/gsd-tools.c
 DEFAULT_TEMPLATE_DIR = Path(__file__).resolve().parent / "quick_templates"
 DEFAULT_STATE_PATH = Path(".planning/STATE.md")
 TRACEABILITY_TOP_RANK_MARKER = "<!-- traceability_top_rank_key:"
+TRACEABILITY_DELTA_FILE_NAME = "traceability-delta.json"
+TRACEABILITY_DELTA_SCHEMA_VERSION = "traceability_delta.v1"
 MIN_CHECKS = 2
 MAX_CHECKS = 3
 
@@ -139,6 +141,269 @@ def _write_traceability_top_rank_key(state_path: Path, top_rank_key: str | None)
     state_path.write_text(updated if updated.endswith("\n") else f"{updated}\n", encoding="utf-8")
 
 
+def _parse_iso_utc(value: str) -> datetime | None:
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _format_iso_utc(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _parse_governance_exception_payload(args: argparse.Namespace) -> dict[str, str] | None:
+    owner = str(getattr(args, "governance_exception_owner", "")).strip()
+    task = str(getattr(args, "governance_exception_task", "")).strip()
+    rationale = str(getattr(args, "governance_exception_rationale", "")).strip()
+    until_raw = str(getattr(args, "governance_exception_until", "")).strip()
+
+    if not any((owner, task, rationale, until_raw)):
+        return None
+
+    if not (owner and task and rationale and until_raw):
+        return None
+
+    until = _parse_iso_utc(until_raw)
+    if until is None:
+        return None
+
+    now = datetime.now(timezone.utc)
+    if until <= now:
+        return None
+
+    return {
+        "owner": owner,
+        "task": task,
+        "rationale": rationale,
+        "until": _format_iso_utc(until),
+    }
+
+
+def _normalize_traceability_delta_key(scope: str, scope_target: str) -> str:
+    normalized_scope = str(scope or "milestone").strip().lower()
+    normalized_target = str(scope_target or "all-active").strip() or "all-active"
+    return f"{normalized_scope}:{normalized_target}"
+
+
+def _normalize_phase_snapshot_target(value: str | None) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.lower().startswith("phase "):
+        text = text[6:].strip()
+    if not text:
+        return ""
+    if "." in text:
+        integer_part, decimal_part = text.split(".", 1)
+        return f"{int(integer_part)}.{int(decimal_part)}"
+    return str(int(text))
+
+
+def _normalize_delta_row(row: dict[str, object]) -> dict[str, object]:
+    requirement_id = str(row.get("requirement_id", "")).strip()
+    requirement_status = str(row.get("requirement_status", "")).strip()
+    coverage_state = str(row.get("coverage_state", "")).strip()
+    mapped_phases = sorted(
+        item.strip() for item in (row.get("mapped_phases", []) or []) if str(item).strip()
+    )
+    primary_cause = str(row.get("primary_cause", "")).strip()
+    cause_codes = sorted(
+        item.strip() for item in (row.get("cause_codes", []) or []) if str(item).strip()
+    )
+    return {
+        "requirement_id": requirement_id,
+        "requirement_status": requirement_status,
+        "mapped_phases": mapped_phases,
+        "coverage_state": coverage_state,
+        "primary_cause": primary_cause,
+        "cause_codes": cause_codes,
+    }
+
+
+def _snapshot_rows_from_coverage_matrix(
+    matrix_payload: dict[str, object],
+) -> list[dict[str, object]]:
+    matrix_payload_root = matrix_payload.get("coverage_matrix", {})
+    if not isinstance(matrix_payload_root, dict):
+        return []
+    rows = matrix_payload_root.get("rows", [])
+    if not isinstance(rows, list):
+        return []
+    normalized: list[dict[str, object]] = []
+    for raw_row in rows:
+        if not isinstance(raw_row, dict):
+            continue
+        normalized_row = _normalize_delta_row(raw_row)
+        if not normalized_row.get("requirement_id"):
+            continue
+        normalized.append(normalized_row)
+    return sorted(normalized, key=lambda row: str(row.get("requirement_id", "")))
+
+
+def _compare_traceability_rows(
+    previous_rows: list[dict[str, object]],
+    current_rows: list[dict[str, object]],
+) -> tuple[list[str], list[str], list[str]]:
+    previous_by_id = {str(item.get("requirement_id", "")).strip(): item for item in previous_rows}
+    current_by_id = {str(item.get("requirement_id", "")).strip(): item for item in current_rows}
+    previous_ids = sorted(previous_by_id)
+    current_ids = sorted(current_by_id)
+
+    added = [rid for rid in current_ids if rid not in previous_by_id]
+    removed = [rid for rid in previous_ids if rid not in current_by_id]
+    changed: list[str] = []
+    for rid in sorted(set(previous_ids) & set(current_ids)):
+        if previous_by_id[rid] != current_by_id[rid]:
+            changed.append(rid)
+    return added, removed, changed
+
+
+def _summary_from_coverage_matrix(matrix_payload: dict[str, object]) -> dict[str, int]:
+    matrix_payload_root = matrix_payload.get("coverage_matrix", {})
+    if not isinstance(matrix_payload_root, dict):
+        return {}
+    summary = matrix_payload_root.get("summary", {})
+    if not isinstance(summary, dict) or not summary:
+        return {}
+    return {
+        "total": int(summary.get("total", 0) or 0),
+        "covered": int(summary.get("covered", 0) or 0),
+        "partial": int(summary.get("partial", 0) or 0),
+        "uncovered": int(summary.get("uncovered", 0) or 0),
+        "stale": int(summary.get("stale", 0) or 0),
+    }
+
+
+def _format_traceability_delta_report(
+    scope: str,
+    scope_target: str,
+    current_rows: list[dict[str, object]],
+    previous_rows: list[dict[str, object]],
+    current_summary: dict[str, int],
+    previous_summary: dict[str, int],
+) -> str:
+    added, removed, changed = _compare_traceability_rows(previous_rows, current_rows)
+    lines = [
+        "Traceability delta report:",
+        f"- scope: {scope} ({scope_target})",
+    ]
+
+    if not previous_rows and not previous_summary:
+        lines.append("- baseline: none (first successful traceability precheck).")
+        return "\n".join(lines + ["- added: 0", "- removed: 0", "- changed: 0"])
+
+    lines.append(f"- added: {len(added)}")
+    if added:
+        lines.append("  - added requirements:")
+        for requirement_id in added:
+            row = next(
+                (item for item in current_rows if item.get("requirement_id") == requirement_id),
+                None,
+            )
+            if row is None:
+                continue
+            state_value = str(row.get("coverage_state", "")).strip() or "unknown"
+            lines.append(f"    - {requirement_id}: {state_value}")
+
+    lines.append(f"- removed: {len(removed)}")
+    if removed:
+        lines.append("  - removed requirements:")
+        for requirement_id in removed:
+            row = next(
+                (item for item in previous_rows if item.get("requirement_id") == requirement_id),
+                None,
+            )
+            if row is None:
+                continue
+            state_value = str(row.get("coverage_state", "")).strip() or "unknown"
+            lines.append(f"    - {requirement_id}: {state_value}")
+
+    lines.append(f"- changed: {len(changed)}")
+    if changed:
+        lines.append("  - changed requirements:")
+        for requirement_id in changed:
+            current = next(
+                (item for item in current_rows if item.get("requirement_id") == requirement_id),
+                None,
+            )
+            previous = next(
+                (item for item in previous_rows if item.get("requirement_id") == requirement_id),
+                None,
+            )
+            if current is None or previous is None:
+                continue
+            current_state = str(current.get("coverage_state", "")).strip() or "unknown"
+            previous_state = str(previous.get("coverage_state", "")).strip() or "unknown"
+            if current_state == previous_state:
+                lines.append(f"    - {requirement_id}: metadata changed")
+            else:
+                lines.append(f"    - {requirement_id}: {previous_state} -> {current_state}")
+
+    stale_delta = int(current_summary.get("stale", 0)) - int(previous_summary.get("stale", 0))
+    uncovered_delta = int(current_summary.get("uncovered", 0)) - int(
+        previous_summary.get("uncovered", 0)
+    )
+    regressions: list[str] = []
+    if stale_delta > 0:
+        regressions.append(f"stale increased by {stale_delta}")
+    if uncovered_delta > 0:
+        regressions.append(f"uncovered increased by {uncovered_delta}")
+
+    if regressions:
+        lines.append("- regressions:")
+        for regression in regressions:
+            lines.append(f"  - {regression}")
+    else:
+        lines.append("- regressions: none")
+
+    return "\n".join(lines)
+
+
+def _read_traceability_delta_payload(planning_root: Path) -> dict[str, object]:
+    path = planning_root / TRACEABILITY_DELTA_FILE_NAME
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return payload
+
+
+def _write_traceability_delta_payload(planning_root: Path, payload: dict[str, object]) -> None:
+    path = planning_root / TRACEABILITY_DELTA_FILE_NAME
+    planning_root.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2), encoding="utf-8"
+    )
+
+
+def _build_traceability_delta_snapshot(
+    scope: str,
+    scope_target: str,
+    matrix_payload: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "scope": str(scope).strip() or "milestone",
+        "scope_target": str(scope_target).strip() or "all-active",
+        "schema_version": TRACEABILITY_DELTA_SCHEMA_VERSION,
+        "generated_at": _format_iso_utc(datetime.now(timezone.utc)),
+        "summary": _summary_from_coverage_matrix(matrix_payload),
+        "rows": _snapshot_rows_from_coverage_matrix(matrix_payload),
+    }
+
+
 def slugify(value: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "-", value.strip().lower())
     normalized = normalized.strip("-")
@@ -204,7 +469,11 @@ def normalize_task_identity(payload: dict[str, object], objective: str) -> tuple
 
     raw_slug = str(payload.get("slug", "")).strip()
     slug = slugify(raw_slug or objective)
-    parent = task_dir_from_init.parent if task_dir_from_init.parent != Path(".") else Path(".planning/quick")
+    parent = (
+        task_dir_from_init.parent
+        if task_dir_from_init.parent != Path(".")
+        else Path(".planning/quick")
+    )
     normalized_task_dir = parent / f"{number}-{slug}"
     return number, slug, normalized_task_dir
 
@@ -237,7 +506,7 @@ def create_quick_task(
         "status": "scaffolded",
         "blocker": "None",
         "attempted_commands": "- pending",
-        "continuation_command": f"python scripts/quick_bootstrap.py \"{objective.strip()}\"",
+        "continuation_command": f'python scripts/quick_bootstrap.py "{objective.strip()}"',
     }
 
     plan_path = task_dir / f"{number}-PLAN.md"
@@ -299,7 +568,7 @@ def close_quick_task(
     description: str,
     blocker: str = "None",
     attempted_commands: list[str] | None = None,
-    continuation_command: str = "python scripts/quick_bootstrap.py \"<objective>\"",
+    continuation_command: str = 'python scripts/quick_bootstrap.py "<objective>"',
     state_path: Path = DEFAULT_STATE_PATH,
 ) -> Path:
     number_prefix = task_dir.name.split("-", 1)[0]
@@ -309,7 +578,9 @@ def close_quick_task(
     summary_path = task_dir / f"{number}-SUMMARY.md"
     if not summary_path.exists():
         summary_path.parent.mkdir(parents=True, exist_ok=True)
-        summary_path.write_text(f"# Quick Task {number} Summary\n\n## Verification\n- pending\n", encoding="utf-8")
+        summary_path.write_text(
+            f"# Quick Task {number} Summary\n\n## Verification\n- pending\n", encoding="utf-8"
+        )
 
     attempts = attempted_commands or ["- pending"]
     block = [
@@ -489,6 +760,63 @@ def record_traceability_gate_activity(
         _write_traceability_top_rank_key(state_path, top_rank_key)
 
 
+def record_governance_exception_activity(
+    state_path: Path,
+    command: str,
+    *,
+    scope: str,
+    owner: str,
+    task: str,
+    rationale: str,
+    until: str,
+    result: str = "active",
+) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    line = f"Last activity: {_today_iso()} - governance exception {result}: {command}"
+    if state_path.exists():
+        text = state_path.read_text(encoding="utf-8")
+    else:
+        text = "# Project State\n"
+
+    if re.search(r"^Last activity:.*$", text, flags=re.MULTILINE):
+        text = re.sub(r"^Last activity:.*$", line, text, flags=re.MULTILINE)
+    else:
+        text = text.rstrip() + f"\n\n{line}\n"
+
+    row = f"| {_today_iso()} | {command} | {scope} | {owner} | {task} | {until} | {result} | {rationale} |"
+    if "## Governance Exception Activity" not in text:
+        text = text.rstrip() + (
+            "\n\n## Governance Exception Activity\n\n"
+            "| Date | Command | Scope | Owner | Task | Until | Result | Rationale |\n"
+            "|------|---------|-------|-------|------|-------|--------|-----------|\n"
+            f"{row}\n"
+        )
+    elif row not in text:
+        lines = text.splitlines()
+        inserted = False
+        for idx, current in enumerate(lines):
+            if (
+                current.strip()
+                == "|------|---------|-------|-------|------|-------|--------|-----------|"
+            ):
+                lines.insert(idx + 1, row)
+                inserted = True
+                break
+        if not inserted:
+            lines.extend(
+                [
+                    "",
+                    "## Governance Exception Activity",
+                    "",
+                    "| Date | Command | Scope | Owner | Task | Until | Result | Rationale |",
+                    "|------|---------|-------|-------|------|-------|--------|-----------|",
+                    row,
+                ]
+            )
+        text = "\n".join(lines)
+    state_path.write_text(text if text.endswith("\n") else f"{text}\n", encoding="utf-8")
+
+
 def run_transition_delegate(subcommand: str, delegate_args: list[str]):
     command_parts = subcommand.split()
     if len(command_parts) != 2:
@@ -520,7 +848,9 @@ def execute_bootstrap(
             checks = build_measurable_checks(clean_objective)
             if not (MIN_CHECKS <= len(checks) <= MAX_CHECKS):
                 raise BootstrapError("Quick intake must include 2-3 measurable checks.")
-            artifacts = create_quick_task(payload, clean_objective, checks, template_dir=template_dir)
+            artifacts = create_quick_task(
+                payload, clean_objective, checks, template_dir=template_dir
+            )
             return BootstrapResult(
                 number=number,
                 slug=slug,
@@ -545,7 +875,9 @@ def execute_bootstrap(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Bootstrap quick planning task with preflight and retry.")
+    parser = argparse.ArgumentParser(
+        description="Bootstrap quick planning task with preflight and retry."
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     bootstrap_parser = subparsers.add_parser("bootstrap")
@@ -559,13 +891,15 @@ def parse_args() -> argparse.Namespace:
 
     close_parser = subparsers.add_parser("close")
     close_parser.add_argument("--task-dir", required=True, help="Quick task directory path.")
-    close_parser.add_argument("--status", required=True, choices=["completed", "failed", "scaffolded"])
+    close_parser.add_argument(
+        "--status", required=True, choices=["completed", "failed", "scaffolded"]
+    )
     close_parser.add_argument("--description", required=True)
     close_parser.add_argument("--blocker", default="None")
     close_parser.add_argument("--attempted-command", action="append", default=[])
     close_parser.add_argument(
         "--continuation-command",
-        default="python scripts/quick_bootstrap.py bootstrap \"<objective>\"",
+        default='python scripts/quick_bootstrap.py bootstrap "<objective>"',
     )
     close_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
 
@@ -581,6 +915,14 @@ def parse_args() -> argparse.Namespace:
     complete_parser.add_argument("version", help="Milestone version, e.g., v1.1.")
     complete_parser.add_argument("--planning-root", default=".planning")
     complete_parser.add_argument("--state-path", default=str(DEFAULT_STATE_PATH))
+    complete_parser.add_argument(
+        "--governance-exception-owner", help="Exception owner (required with all exception fields)."
+    )
+    complete_parser.add_argument("--governance-exception-task", help="Exception task ID.")
+    complete_parser.add_argument("--governance-exception-rationale", help="Exception rationale.")
+    complete_parser.add_argument(
+        "--governance-exception-until", help="Exception expiry in ISO-8601 UTC."
+    )
 
     roadmap_parser = subparsers.add_parser("roadmap")
     roadmap_subparsers = roadmap_parser.add_subparsers(dest="roadmap_command")
@@ -603,6 +945,14 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="Touched requirement ID; repeat flag for multiple IDs.",
+    )
+    phase_complete.add_argument(
+        "--governance-exception-owner", help="Exception owner (required with all exception fields)."
+    )
+    phase_complete.add_argument("--governance-exception-task", help="Exception task ID.")
+    phase_complete.add_argument("--governance-exception-rationale", help="Exception rationale.")
+    phase_complete.add_argument(
+        "--governance-exception-until", help="Exception expiry in ISO-8601 UTC."
     )
     phase_complete.add_argument("delegate_args", nargs=argparse.REMAINDER)
 
@@ -653,7 +1003,11 @@ def main() -> int:
             continuation_command=args.continuation_command,
             state_path=Path(args.state_path),
         )
-        print(json.dumps({"summary_path": str(summary_path), "status": args.status}, ensure_ascii=True))
+        print(
+            json.dumps(
+                {"summary_path": str(summary_path), "status": args.status}, ensure_ascii=True
+            )
+        )
         return 0
     if command == "milestone":
         milestone_command = getattr(args, "milestone_command", None)
@@ -662,11 +1016,14 @@ def main() -> int:
         planning_root = Path(args.planning_root)
         state_path = Path(args.state_path)
         milestone_version = args.version
+        governance_exception = _parse_governance_exception_payload(args)
 
         if milestone_command == "precheck":
             result = evaluate_milestone_governance_gate(planning_root, milestone_version)
             passed = bool(result.get("passed", False))
-            precheck_retry = f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}"
+            precheck_retry = (
+                f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}"
+            )
             record_milestone_gate_activity(state_path, milestone_version, "precheck", passed)
             output = {
                 "command": "milestone precheck",
@@ -679,9 +1036,34 @@ def main() -> int:
             print(json.dumps(output, ensure_ascii=True))
             return 0
 
+        if governance_exception is not None:
+            record_governance_exception_activity(
+                state_path,
+                f"milestone complete {milestone_version}",
+                scope="milestone",
+                owner=governance_exception["owner"],
+                task=governance_exception["task"],
+                rationale=governance_exception["rationale"],
+                until=governance_exception["until"],
+            )
+            print(
+                json.dumps(
+                    {
+                        "command": "milestone complete",
+                        "version": milestone_version,
+                        "passed": True,
+                        "governance_exception": governance_exception,
+                    },
+                    ensure_ascii=True,
+                )
+            )
+            return 0
+
         requirements_result = evaluate_requirements_contract_gate(planning_root)
         if not bool(requirements_result.get("passed", False)):
-            retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            retry_command = (
+                f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            )
             record_requirements_gate_activity(
                 state_path,
                 "complete",
@@ -702,7 +1084,9 @@ def main() -> int:
             planning_root,
             scope="all",
         )
-        traceability_retry = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+        traceability_retry = (
+            f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+        )
         traceability_touched_ids = sorted(
             item.strip()
             for item in traceability_result.get("touched_requirement_ids", [])
@@ -729,7 +1113,9 @@ def main() -> int:
 
         result = evaluate_milestone_governance_gate(planning_root, milestone_version)
         if not bool(result.get("passed", False)):
-            retry_command = f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            retry_command = (
+                f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
+            )
             record_milestone_gate_activity(state_path, milestone_version, "complete", False)
             print(format_gate_failures(result, retry_command))
             return 1
@@ -775,7 +1161,11 @@ def main() -> int:
             list(getattr(args, "delegate_args", []) or []),
         )
         if delegate.returncode != 0:
-            detail = (delegate.stderr or "").strip() or (delegate.stdout or "").strip() or "roadmap transition failed"
+            detail = (
+                (delegate.stderr or "").strip()
+                or (delegate.stdout or "").strip()
+                or "roadmap transition failed"
+            )
             print(detail)
             return int(delegate.returncode) if int(delegate.returncode) > 0 else 1
         output = {
@@ -790,18 +1180,54 @@ def main() -> int:
             raise BootstrapError("Missing phase subcommand. Use `complete`.")
         planning_root = Path(args.planning_root)
         state_path = Path(args.state_path)
+        governance_exception = _parse_governance_exception_payload(args)
         touched_ids = {
             requirement_id.strip()
             for requirement_id in list(getattr(args, "requirement_id", []) or [])
             if str(requirement_id).strip()
         }
+
+        if governance_exception is not None:
+            record_governance_exception_activity(
+                state_path,
+                "phase complete",
+                scope="phase",
+                owner=governance_exception["owner"],
+                task=governance_exception["task"],
+                rationale=governance_exception["rationale"],
+                until=governance_exception["until"],
+            )
+            delegate = run_transition_delegate(
+                "phase complete",
+                list(getattr(args, "delegate_args", []) or []),
+            )
+            if delegate.returncode != 0:
+                detail = (
+                    (delegate.stderr or "").strip()
+                    or (delegate.stdout or "").strip()
+                    or "phase transition failed"
+                )
+                print(detail)
+                return int(delegate.returncode) if int(delegate.returncode) > 0 else 1
+
+            output = {
+                "command": "phase complete",
+                "passed": True,
+                "governance_exception": governance_exception,
+                "touched_requirement_ids": sorted(touched_ids),
+            }
+            print(json.dumps(output, ensure_ascii=True))
+            return 0
+
         requirements_result = evaluate_requirements_contract_gate(
             planning_root,
             scope="touched",
             touched_requirement_ids=touched_ids,
         )
         retry_command_parts = ["python scripts/quick_bootstrap.py phase complete"]
-        retry_command_parts.extend(f"--requirement-id {requirement_id}" for requirement_id in sorted(touched_ids))
+        retry_command_parts.extend(
+            f"--requirement-id {requirement_id}" for requirement_id in sorted(touched_ids)
+        )
         retry_command = " ".join(retry_command_parts)
 
         if not bool(requirements_result.get("passed", False)):
@@ -848,7 +1274,11 @@ def main() -> int:
             list(getattr(args, "delegate_args", []) or []),
         )
         if delegate.returncode != 0:
-            detail = (delegate.stderr or "").strip() or (delegate.stdout or "").strip() or "phase transition failed"
+            detail = (
+                (delegate.stderr or "").strip()
+                or (delegate.stdout or "").strip()
+                or "phase transition failed"
+            )
             print(detail)
             return int(delegate.returncode) if int(delegate.returncode) > 0 else 1
         output = {
@@ -902,7 +1332,11 @@ def main() -> int:
                 phase_id=traceability_phase_id,
             )
         except (FileNotFoundError, ValueError):
-            scope_target = str(traceability_phase_id).strip() if traceability_scope == "phase" else "all-active"
+            scope_target = (
+                str(traceability_phase_id).strip()
+                if traceability_scope == "phase"
+                else "all-active"
+            )
             matrix_payload = {
                 "schema_version": "coverage_matrix.v1",
                 "coverage_matrix": {
@@ -921,12 +1355,76 @@ def main() -> int:
         passed = bool(result.get("passed", False))
         retry_command = _build_traceability_retry_command(traceability_scope, traceability_phase_id)
         previous_top_rank_key = _read_traceability_top_rank_key(state_path)
+        matrix_payload_coverage = matrix_payload.get("coverage_matrix", {})
+        current_scope_target = str(matrix_payload_coverage.get("scope_target", "")).strip() or (
+            _normalize_phase_snapshot_target(traceability_phase_id)
+            if traceability_scope == "phase"
+            else "all-active"
+        )
+        scope_key = _normalize_traceability_delta_key(traceability_scope, current_scope_target)
+        current_rows = _snapshot_rows_from_coverage_matrix(matrix_payload)
+        try:
+            delta_baseline_payload = _read_traceability_delta_payload(planning_root)
+        except Exception:
+            delta_baseline_payload = {}
+        scope_payload = (
+            delta_baseline_payload.get("snapshots", {})
+            if isinstance(delta_baseline_payload.get("snapshots", {}), dict)
+            else {}
+        )
+        previous_scope_payload = (
+            scope_payload.get(scope_key, {}) if isinstance(scope_payload, dict) else {}
+        )
+        if not isinstance(previous_scope_payload, dict):
+            previous_scope_payload = {}
+        previous_rows = [
+            item
+            for item in list(previous_scope_payload.get("rows", []) or [])
+            if isinstance(item, dict) and str(item.get("requirement_id", "")).strip()
+        ]
+        previous_summary = _summary_from_coverage_matrix(
+            {
+                "coverage_matrix": {
+                    "summary": previous_scope_payload.get("summary", {}),
+                }
+            }
+        )
+        current_summary = _summary_from_coverage_matrix(matrix_payload)
+        delta_report = _format_traceability_delta_report(
+            traceability_scope,
+            current_scope_target,
+            current_rows,
+            previous_rows,
+            current_summary,
+            previous_summary,
+        )
+        try:
+            current_snapshots = dict(scope_payload or {})
+            current_snapshots[scope_key] = _build_traceability_delta_snapshot(
+                traceability_scope,
+                current_scope_target,
+                matrix_payload,
+            )
+            payload_to_store = {
+                "schema_version": TRACEABILITY_DELTA_SCHEMA_VERSION,
+                "generated_at": _format_iso_utc(datetime.now(timezone.utc)),
+                "snapshots": current_snapshots,
+            }
+            _write_traceability_delta_payload(planning_root, payload_to_store)
+        except Exception:
+            if delta_report:
+                delta_report = (
+                    delta_report
+                    + "\n- baseline persistence unavailable: not persisted for this run."
+                )
         ranked_hints = build_impact_ranked_remediation_hints(
             result,
             matrix_payload,
             retry_command=retry_command,
         )
-        current_top_rank_key = str(ranked_hints[0].get("check_key", "")).strip() if ranked_hints else None
+        current_top_rank_key = (
+            str(ranked_hints[0].get("check_key", "")).strip() if ranked_hints else None
+        )
         top_rank_note = build_top_rank_change_note(previous_top_rank_key, current_top_rank_key)
         ranked_hint_text = format_impact_ranked_remediation_hints(ranked_hints)
         grouped_checklist = format_traceability_drift_failures(result, retry_command)
@@ -937,13 +1435,19 @@ def main() -> int:
             else format_coverage_matrix_summary(coverage_matrix)
         )
         checklist_parts = [
-            part for part in (ranked_hint_text, top_rank_note, grouped_checklist, matrix_text) if part
+            part
+            for part in (
+                ranked_hint_text,
+                delta_report,
+                top_rank_note,
+                grouped_checklist,
+                matrix_text,
+            )
+            if part
         ]
         checklist = "\n\n".join(checklist_parts)
         touched_ids = sorted(
-            item.strip()
-            for item in result.get("touched_requirement_ids", [])
-            if str(item).strip()
+            item.strip() for item in result.get("touched_requirement_ids", []) if str(item).strip()
         )
         record_traceability_gate_activity(
             state_path,
@@ -981,7 +1485,7 @@ def main() -> int:
         status="scaffolded",
         description=objective,
         attempted_commands=["node ... init quick ... --raw"],
-        continuation_command=f"python scripts/quick_bootstrap.py bootstrap \"{objective}\"",
+        continuation_command=f'python scripts/quick_bootstrap.py bootstrap "{objective}"',
         state_path=Path(args.state_path),
     )
     print(

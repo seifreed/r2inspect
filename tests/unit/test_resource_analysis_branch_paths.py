@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from r2inspect.modules.resource_analysis import run_resource_analysis
+from r2inspect.modules.resource_analyzer import run_resource_analysis
 
 
 # ---------------------------------------------------------------------------

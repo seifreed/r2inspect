@@ -12,8 +12,8 @@ from r2inspect.config import Config
 from r2inspect.config_store import ConfigStore
 from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.result_aggregator import ResultAggregator
-from r2inspect.utils import hashing as hashing_utils
-from r2inspect.utils.error_handler import (
+import r2inspect.infrastructure.hashing as hashing_utils
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorClassifier,
     ErrorSeverity,

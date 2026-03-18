@@ -1,4 +1,4 @@
-from r2inspect.utils.r2_helpers import validate_r2_data
+from r2inspect.infrastructure.r2_helpers import validate_r2_data
 
 
 def test_validate_r2_data_cleans_html_entities():

@@ -13,6 +13,7 @@ from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
 from r2inspect.pipeline import stages_format
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
+from r2inspect.registry.entry_points import EntryPointLoader
 
 
 def test_magic_adapter_windows_branch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,12 +145,16 @@ def test_resource_analyzer_exception_branches() -> None:
     assert strings_result.get("strings") == []
 
 
-def test_registry_entry_point_shims() -> None:
+def test_registry_entry_point_loader_helpers() -> None:
     registry = AnalyzerRegistry()
     ep = SimpleNamespace(name="dummy_ep")
-    obj = lambda r: None
-    assert registry._register_entry_point_callable(ep, obj) in {0, 1}
-    assert isinstance(registry._derive_entry_point_name(ep, obj), str)
+
+    def obj(r):
+        return None
+
+    loader = EntryPointLoader(registry)
+    assert loader._register_entry_point_callable(ep, obj) in {0, 1}
+    assert isinstance(loader._derive_entry_point_name(ep, obj), str)
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not installed")

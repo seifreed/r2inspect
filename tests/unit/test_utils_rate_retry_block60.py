@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from r2inspect.utils.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter, TokenBucket
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.infrastructure.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter, TokenBucket
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
 
 
 def test_token_bucket_basic():

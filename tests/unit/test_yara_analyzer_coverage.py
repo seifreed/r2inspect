@@ -64,7 +64,6 @@ def test_timeout_exception_is_exception():
 
 
 def test_timeout_handler_raises():
-    import signal
 
     with pytest.raises(TimeoutException):
         timeout_handler(signal.SIGALRM, None)
@@ -323,9 +322,7 @@ def test_load_rules_dir_multiple_extensions(tmp_path):
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
     (rules_dir / "a.yar").write_text(SIMPLE_YARA_RULE)
-    (rules_dir / "b.yara").write_text(
-        'rule BRule { strings: $c = "cat" condition: $c }'
-    )
+    (rules_dir / "b.yara").write_text('rule BRule { strings: $c = "cat" condition: $c }')
     config = FakeConfig(str(rules_dir))
     analyzer = YaraAnalyzer(FakeAdapter(), config=config)
     validator = FileValidator()
@@ -578,9 +575,7 @@ def test_validate_rules_valid_directory(tmp_path):
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
     (rules_dir / "test1.yar").write_text(SIMPLE_YARA_RULE)
-    (rules_dir / "test2.yara").write_text(
-        'rule BRule { strings: $d = "data" condition: $d }'
-    )
+    (rules_dir / "test2.yara").write_text('rule BRule { strings: $d = "data" condition: $d }')
     config = FakeConfig(str(rules_dir))
     analyzer = YaraAnalyzer(FakeAdapter(), config=config)
     result = analyzer.validate_rules(str(rules_dir))
@@ -839,16 +834,16 @@ def test_compile_default_rules_exception(tmp_path):
     rules_dir = tmp_path / "empty_rules"
     rules_dir.mkdir()
     config = FakeConfig(str(rules_dir))
-    analyzer = YaraAnalyzer(FakeAdapter(), config=config)
+    YaraAnalyzer(FakeAdapter(), config=config)
     # _compile_default_rules creates defaults but if the rules_path dir doesn't
     # have packer_detection.yar after creation, compile fails
     # Actually it creates defaults in self.rules_path (same dir)
     # Let's try with a path where read_text fails - use nonexistent
     config2 = FakeConfig("/nonexistent/path/that/cannot/be/created")
     analyzer2 = YaraAnalyzer(FakeAdapter(), config=config2)
-    result = analyzer2._compile_default_rules(str(tmp_path))
-    # Should return None when exception occurs
-    assert result is None or result is not None  # may succeed or fail
+    compile_result = analyzer2._compile_default_rules(str(tmp_path))
+    # Should return None when exception occurs, or Rules if it succeeded
+    assert compile_result is None or compile_result is not None
 
 
 def test_compile_sources_timeout_exception():
@@ -856,9 +851,7 @@ def test_compile_sources_timeout_exception():
     import yara as real_yara
 
     original_compile = real_yara.compile
-    real_yara.compile = lambda **kwargs: (_ for _ in ()).throw(
-        TimeoutException("test timeout")
-    )
+    real_yara.compile = lambda **kwargs: (_ for _ in ()).throw(TimeoutException("test timeout"))
     try:
         config = FakeConfig("/tmp/rules")
         analyzer = YaraAnalyzer(FakeAdapter(), config=config)
@@ -889,9 +882,7 @@ def test_compile_sources_general_exception():
     import yara as real_yara
 
     original_compile = real_yara.compile
-    real_yara.compile = lambda **kwargs: (_ for _ in ()).throw(
-        ValueError("unexpected error")
-    )
+    real_yara.compile = lambda **kwargs: (_ for _ in ()).throw(ValueError("unexpected error"))
     try:
         config = FakeConfig("/tmp/rules")
         analyzer = YaraAnalyzer(FakeAdapter(), config=config)
@@ -943,7 +934,8 @@ def test_list_available_rules_outer_exception():
             try:
                 raise RuntimeError("listing exception")
             except Exception as e:
-                from r2inspect.utils.logger import get_logger
+                from r2inspect.infrastructure.logging import get_logger
+
                 get_logger(__name__).error(f"Error listing YARA rules: {e}")
             return available_rules
 
@@ -988,7 +980,7 @@ def test_read_rule_content_validate_path_raises_value_error(tmp_path):
     analyzer = YaraAnalyzer(FakeAdapter(), config=config)
     # This will find broken.yar via rglob, call validate_path which raises ValueError
     # for the nonexistent symlink target
-    rules = analyzer._compile_rules(str(rules_dir))
+    analyzer._compile_rules(str(rules_dir))
     # Should not crash; valid.yar should still be compiled
 
 
@@ -1004,6 +996,7 @@ def test_list_available_rules_exception_handler():
                 raise OSError("test listing error")
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).error(f"Error listing YARA rules: {e}")
             return available_rules
 

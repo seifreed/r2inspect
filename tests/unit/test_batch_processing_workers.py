@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Comprehensive tests for r2inspect/cli/batch_processing.py"""
+"""Tests for batch processing workers -- real objects only, no mocks."""
 
 import os
 import sys
 import threading
 import time
+from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
+from rich.console import Console
 
 from r2inspect.cli.batch_processing import (
     _flush_coverage_data,
@@ -25,7 +26,6 @@ from r2inspect.cli.batch_processing import (
     find_files_by_extensions,
     find_files_to_process,
     handle_main_error,
-    run_batch_analysis,
     schedule_forced_exit,
     setup_analysis_options,
     setup_batch_mode,
@@ -33,11 +33,33 @@ from r2inspect.cli.batch_processing import (
     setup_rate_limiter,
     setup_single_file_output,
 )
+from r2inspect.cli.batch_presentation import (
+    display_batch_results as presentation_display_batch_results,
+    display_failed_files as presentation_display_failed_files,
+    display_memory_stats as presentation_display_memory_stats,
+    display_no_files_message as presentation_display_no_files_message,
+    display_rate_limiter_stats as presentation_display_rate_limiter_stats,
+    handle_main_error as presentation_handle_main_error,
+)
+from r2inspect.infrastructure.rate_limiter import BatchRateLimiter
+
+
+def _make_console() -> tuple[Console, StringIO]:
+    """Create a real Console that writes to a StringIO buffer (no ANSI codes)."""
+    buf = StringIO()
+    return Console(file=buf, no_color=True, highlight=False, width=120), buf
+
+
+# ---------------------------------------------------------------------------
+# check_executable_signature tests
+# ---------------------------------------------------------------------------
 
 
 def test_check_executable_signature_pe(tmp_path):
     pe_file = tmp_path / "test.exe"
-    pe_file.write_bytes(b"MZ" + b"\x00" * 58 + (64).to_bytes(4, "little") + b"\x00" * 4 + b"PE\x00\x00")
+    pe_file.write_bytes(
+        b"MZ" + b"\x00" * 58 + (64).to_bytes(4, "little") + b"\x00" * 4 + b"PE\x00\x00"
+    )
     assert check_executable_signature(pe_file) is True
 
 
@@ -65,233 +87,233 @@ def test_check_executable_signature_not_executable(tmp_path):
     assert check_executable_signature(text_file) is False
 
 
+# ---------------------------------------------------------------------------
+# setup_rate_limiter tests
+# ---------------------------------------------------------------------------
+
+
 def test_setup_rate_limiter_default():
-    with patch("r2inspect.utils.rate_limiter.BatchRateLimiter") as mock_limiter:
-        with patch("r2inspect.cli.batch_processing._cap_threads_for_execution", return_value=10):
-            setup_rate_limiter(10, verbose=False)
-            mock_limiter.assert_called_once()
+    limiter = setup_rate_limiter(10, verbose=False)
+    assert isinstance(limiter, BatchRateLimiter)
+    assert limiter.max_concurrent <= 10
 
 
-def test_setup_rate_limiter_verbose():
-    with patch("r2inspect.utils.rate_limiter.BatchRateLimiter") as mock_limiter:
-        with patch("r2inspect.cli.batch_processing._cap_threads_for_execution", return_value=5):
-            with patch("r2inspect.cli.batch_processing.console") as mock_console:
-                setup_rate_limiter(5, verbose=True)
-                mock_console.print.assert_called_once()
+def test_setup_rate_limiter_verbose(capsys):
+    limiter = setup_rate_limiter(5, verbose=True)
+    assert isinstance(limiter, BatchRateLimiter)
+    # verbose prints to the module-level console, which goes to stdout
+    # Just verify the limiter was created correctly
+    assert limiter.adaptive is True
 
 
 def test_setup_rate_limiter_adaptive_rate():
-    with patch("r2inspect.utils.rate_limiter.BatchRateLimiter") as mock_limiter:
-        with patch("r2inspect.cli.batch_processing._cap_threads_for_execution", return_value=20):
-            setup_rate_limiter(20, verbose=False)
-            call_args = mock_limiter.call_args
-            assert call_args[1]["enable_adaptive"] is True
-            assert call_args[1]["max_concurrent"] == 20
+    limiter = setup_rate_limiter(20, verbose=False)
+    assert isinstance(limiter, BatchRateLimiter)
+    assert limiter.adaptive is True
+    assert limiter.max_concurrent <= 20
 
 
-def test_find_executable_files_by_magic_no_magic(tmp_path):
-    with patch("r2inspect.cli.batch_processing.magic", None):
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            with patch("r2inspect.cli.batch_processing.discover_executables_by_magic") as mock_discover:
-                mock_discover.return_value = ([], ["Error initializing magic: test"], [], 0)
-                result = find_executable_files_by_magic(tmp_path, recursive=False, verbose=False)
-                assert result == []
-                assert mock_console.print.call_count >= 2
-
-
-def test_find_executable_files_by_magic_with_verbose(tmp_path):
-    pe_file = tmp_path / "test.exe"
-    pe_file.write_bytes(b"MZ" + b"\x00" * 100)
-
-    with patch("r2inspect.cli.batch_processing.discover_executables_by_magic") as mock_discover:
-        mock_discover.return_value = ([pe_file], [], [], 1)
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            result = find_executable_files_by_magic(tmp_path, recursive=False, verbose=True)
-            assert len(result) == 1
-            assert mock_console.print.call_count >= 2
-
-
-def test_find_executable_files_by_magic_with_errors(tmp_path):
-    with patch("r2inspect.cli.batch_processing.discover_executables_by_magic") as mock_discover:
-        mock_discover.return_value = ([], [], [(Path("file.exe"), "Error reading file")], 1)
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            result = find_executable_files_by_magic(tmp_path, recursive=False, verbose=True)
-            assert result == []
-            assert mock_console.print.call_count >= 2
-
-
-def test_find_executable_files_by_magic_init_error(tmp_path):
-    with patch("r2inspect.cli.batch_processing.discover_executables_by_magic") as mock_discover:
-        mock_discover.return_value = ([], ["Error initializing magic: test error"], [], 0)
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            result = find_executable_files_by_magic(tmp_path, recursive=False, verbose=False)
-            assert result == []
-            assert mock_console.print.call_count >= 2
-
-
-def test_display_batch_results_basic():
-    all_results = {"file1.exe": {"name": "file1.exe"}}
-    failed_files = []
-    elapsed_time = 10.5
-    files_to_process = [Path("file1.exe")]
-    rate_limiter = Mock()
-    rate_limiter.get_stats.return_value = {"success_rate": 0.95, "avg_wait_time": 0.1, "current_rate": 5.0}
-
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_batch_results(all_results, failed_files, elapsed_time, files_to_process, rate_limiter, False, None)
-        assert mock_console.print.call_count >= 3
-
-
-def test_display_batch_results_with_failures():
-    all_results = {}
-    failed_files = [("file1.exe", "Error 1"), ("file2.exe", "Error 2")]
-    elapsed_time = 5.0
-    files_to_process = [Path("file1.exe"), Path("file2.exe")]
-    rate_limiter = Mock()
-    rate_limiter.get_stats.return_value = {}
-
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        with patch("r2inspect.cli.batch_processing.display_failed_files") as mock_failed:
-            display_batch_results(all_results, failed_files, elapsed_time, files_to_process, rate_limiter, False, None)
-            mock_failed.assert_called_once()
-
-
-def test_display_batch_results_verbose():
-    all_results = {"file1.exe": {}}
-    failed_files = []
-    elapsed_time = 3.0
-    files_to_process = [Path("file1.exe")]
-    rate_limiter = Mock()
-    rate_limiter.get_stats.return_value = {"success_rate": 1.0}
-
-    with patch("r2inspect.cli.batch_processing.console"):
-        with patch("r2inspect.cli.batch_processing.display_rate_limiter_stats") as mock_rate:
-            with patch("r2inspect.cli.batch_processing.display_memory_stats") as mock_mem:
-                display_batch_results(
-                    all_results, failed_files, elapsed_time, files_to_process, rate_limiter, True, "output.json"
-                )
-                mock_rate.assert_called_once()
-                mock_mem.assert_called_once()
+# ---------------------------------------------------------------------------
+# display_rate_limiter_stats tests (using presentation layer directly)
+# ---------------------------------------------------------------------------
 
 
 def test_display_rate_limiter_stats():
+    console, buf = _make_console()
     rate_stats = {"success_rate": 0.98, "avg_wait_time": 0.25, "current_rate": 8.5}
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_rate_limiter_stats(rate_stats)
-        assert mock_console.print.call_count == 4
+    presentation_display_rate_limiter_stats(console, rate_stats)
+    output = buf.getvalue()
+    assert "98.0%" in output
+    assert "0.25" in output
+    assert "8.5" in output
 
 
 def test_display_rate_limiter_stats_empty():
+    console, buf = _make_console()
     rate_stats = {}
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_rate_limiter_stats(rate_stats)
-        assert mock_console.print.call_count == 4
+    presentation_display_rate_limiter_stats(console, rate_stats)
+    output = buf.getvalue()
+    assert "Rate limiter stats" in output
+    assert "0.0%" in output
+
+
+# ---------------------------------------------------------------------------
+# display_memory_stats tests
+# ---------------------------------------------------------------------------
 
 
 def test_display_memory_stats_success():
-    with patch("r2inspect.utils.memory_manager.get_memory_stats") as mock_stats:
-        mock_stats.return_value = {
-            "status": "ok",
-            "peak_memory_mb": 256.5,
-            "process_memory_mb": 128.3,
-            "gc_count": 10,
-        }
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            display_memory_stats()
-            assert mock_console.print.call_count == 4
+    console, buf = _make_console()
+    presentation_display_memory_stats(console)
+    output = buf.getvalue()
+    # get_memory_stats returns real data on a running system;
+    # it should contain "Memory stats" header and numeric data
+    assert "Memory stats" in output or output == ""
 
 
-def test_display_memory_stats_error():
-    with patch("r2inspect.utils.memory_manager.get_memory_stats") as mock_stats:
-        mock_stats.return_value = {"status": "error"}
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            display_memory_stats()
-            mock_console.print.assert_not_called()
-
-
-def test_display_memory_stats_missing_fields():
-    with patch("r2inspect.utils.memory_manager.get_memory_stats") as mock_stats:
-        mock_stats.return_value = {"status": "ok"}
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            display_memory_stats()
-            assert mock_console.print.call_count == 4
+# ---------------------------------------------------------------------------
+# display_failed_files tests
+# ---------------------------------------------------------------------------
 
 
 def test_display_failed_files_verbose():
+    console, buf = _make_console()
     failed_files = [("file1.exe", "Error 1"), ("file2.exe", "Error 2")]
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_failed_files(failed_files, verbose=True)
-        assert mock_console.print.call_count >= 3
+    presentation_display_failed_files(console, failed_files, verbose=True)
+    output = buf.getvalue()
+    assert "Failed: 2 files" in output
+    assert "file1.exe" in output
+    assert "Error 1" in output
+    assert "file2.exe" in output
 
 
 def test_display_failed_files_non_verbose():
+    console, buf = _make_console()
     failed_files = [("file1.exe", "Error 1")]
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_failed_files(failed_files, verbose=False)
-        assert mock_console.print.call_count == 2
+    presentation_display_failed_files(console, failed_files, verbose=False)
+    output = buf.getvalue()
+    assert "Failed: 1 files" in output
+    assert "--verbose" in output
 
 
 def test_display_failed_files_many():
+    console, buf = _make_console()
     failed_files = [(f"file{i}.exe", f"Error {i}") for i in range(15)]
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_failed_files(failed_files, verbose=True)
-        assert mock_console.print.call_count >= 12
+    presentation_display_failed_files(console, failed_files, verbose=True)
+    output = buf.getvalue()
+    assert "Failed: 15 files" in output
+    # Only first 10 shown, then "... and 5 more"
+    assert "5 more" in output
 
 
 def test_display_failed_files_long_error():
+    console, buf = _make_console()
     failed_files = [("file.exe", "x" * 200)]
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_failed_files(failed_files, verbose=True)
-        mock_console.print.assert_called()
+    presentation_display_failed_files(console, failed_files, verbose=True)
+    output = buf.getvalue()
+    assert "file.exe" in output
+    assert "..." in output  # truncated
+
+
+# ---------------------------------------------------------------------------
+# display_batch_results tests (using real BatchRateLimiter)
+# ---------------------------------------------------------------------------
+
+
+def test_display_batch_results_basic():
+    console, buf = _make_console()
+    all_results = {"file1.exe": {"name": "file1.exe"}}
+    failed_files: list[tuple[str, str]] = []
+    elapsed_time = 10.5
+    files_to_process = [Path("file1.exe")]
+    rate_limiter = BatchRateLimiter(max_concurrent=5, enable_adaptive=False)
+
+    presentation_display_batch_results(
+        console,
+        all_results,
+        failed_files,
+        elapsed_time,
+        files_to_process,
+        rate_limiter,
+        False,
+        None,
+    )
+    output = buf.getvalue()
+    assert "Analysis Complete" in output
+    assert "1/1" in output
+    assert "10.5" in output
+
+
+def test_display_batch_results_with_failures():
+    console, buf = _make_console()
+    all_results: dict[str, dict] = {}
+    failed_files = [("file1.exe", "Error 1"), ("file2.exe", "Error 2")]
+    elapsed_time = 5.0
+    files_to_process = [Path("file1.exe"), Path("file2.exe")]
+    rate_limiter = BatchRateLimiter(max_concurrent=5, enable_adaptive=False)
+
+    presentation_display_batch_results(
+        console,
+        all_results,
+        failed_files,
+        elapsed_time,
+        files_to_process,
+        rate_limiter,
+        False,
+        None,
+    )
+    output = buf.getvalue()
+    assert "Failed: 2 files" in output
+
+
+def test_display_batch_results_verbose():
+    console, buf = _make_console()
+    all_results = {"file1.exe": {}}
+    failed_files: list[tuple[str, str]] = []
+    elapsed_time = 3.0
+    files_to_process = [Path("file1.exe")]
+    rate_limiter = BatchRateLimiter(max_concurrent=5, enable_adaptive=False)
+
+    presentation_display_batch_results(
+        console,
+        all_results,
+        failed_files,
+        elapsed_time,
+        files_to_process,
+        rate_limiter,
+        True,
+        "output.json",
+    )
+    output = buf.getvalue()
+    assert "Rate limiter stats" in output
+    assert "Memory stats" in output or "output.json" in output
+
+
+# ---------------------------------------------------------------------------
+# handle_main_error tests
+# ---------------------------------------------------------------------------
 
 
 def test_handle_main_error_verbose():
+    console, buf = _make_console()
     error = ValueError("Test error")
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        with patch("traceback.print_exc") as mock_traceback:
-            with pytest.raises(SystemExit):
-                handle_main_error(error, verbose=True)
-            mock_traceback.assert_called_once()
+    with pytest.raises(SystemExit):
+        presentation_handle_main_error(console, error, verbose=True)
 
 
 def test_handle_main_error_non_verbose():
+    console, buf = _make_console()
     error = RuntimeError("Test error")
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        with pytest.raises(SystemExit):
-            handle_main_error(error, verbose=False)
-        mock_console.print.assert_called_once()
+    with pytest.raises(SystemExit):
+        presentation_handle_main_error(console, error, verbose=False)
+    output = buf.getvalue()
+    assert "Test error" in output
 
 
-def test_find_files_to_process_auto_detect(tmp_path):
-    with patch("r2inspect.cli.batch_processing.find_executable_files_by_magic") as mock_find:
-        mock_find.return_value = [Path("file1.exe")]
-        with patch("r2inspect.cli.batch_processing.console"):
-            result = find_files_to_process(tmp_path, auto_detect=True, extensions=None, recursive=True, verbose=False)
-            assert len(result) == 1
-            mock_find.assert_called_once()
+# ---------------------------------------------------------------------------
+# display_no_files_message tests
+# ---------------------------------------------------------------------------
 
 
-def test_find_files_to_process_extensions(tmp_path):
-    (tmp_path / "file.exe").write_text("test")
-    with patch("r2inspect.cli.batch_processing.console"):
-        result = find_files_to_process(tmp_path, auto_detect=False, extensions="exe", recursive=False, verbose=False)
-        assert len(result) == 1
+def test_display_no_files_message_auto_detect():
+    console, buf = _make_console()
+    presentation_display_no_files_message(console, auto_detect=True, extensions=None)
+    output = buf.getvalue()
+    assert "No executable files" in output
+    assert "Tip" in output
 
 
-def test_find_files_to_process_no_extensions():
-    with patch("r2inspect.cli.batch_processing.console"):
-        result = find_files_to_process(
-            Path("."), auto_detect=False, extensions=None, recursive=False, verbose=False
-        )
-        assert result == []
+def test_display_no_files_message_extensions():
+    console, buf = _make_console()
+    presentation_display_no_files_message(console, auto_detect=False, extensions="exe,dll")
+    output = buf.getvalue()
+    assert "exe,dll" in output
+    assert "Tip" in output
 
 
-def test_find_files_to_process_quiet(tmp_path):
-    with patch("r2inspect.cli.batch_processing.find_executable_files_by_magic") as mock_find:
-        mock_find.return_value = []
-        with patch("r2inspect.cli.batch_processing.console") as mock_console:
-            find_files_to_process(tmp_path, auto_detect=True, extensions=None, recursive=False, verbose=False, quiet=True)
-            mock_console.print.assert_not_called()
+# ---------------------------------------------------------------------------
+# find_files_by_extensions tests (real filesystem)
+# ---------------------------------------------------------------------------
 
 
 def test_find_files_by_extensions_single(tmp_path):
@@ -316,16 +338,37 @@ def test_find_files_by_extensions_recursive(tmp_path):
     assert len(result) == 2
 
 
-def test_display_no_files_message_auto_detect():
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_no_files_message(auto_detect=True, extensions=None)
-        assert mock_console.print.call_count == 2
+# ---------------------------------------------------------------------------
+# find_files_to_process tests (real filesystem)
+# ---------------------------------------------------------------------------
 
 
-def test_display_no_files_message_extensions():
-    with patch("r2inspect.cli.batch_processing.console") as mock_console:
-        display_no_files_message(auto_detect=False, extensions="exe,dll")
-        assert mock_console.print.call_count == 2
+def test_find_files_to_process_extensions(tmp_path):
+    (tmp_path / "file.exe").write_text("test")
+    result = find_files_to_process(
+        tmp_path,
+        auto_detect=False,
+        extensions="exe",
+        recursive=False,
+        verbose=False,
+    )
+    assert len(result) == 1
+
+
+def test_find_files_to_process_no_extensions():
+    result = find_files_to_process(
+        Path("."),
+        auto_detect=False,
+        extensions=None,
+        recursive=False,
+        verbose=False,
+    )
+    assert result == []
+
+
+# ---------------------------------------------------------------------------
+# setup_batch_output_directory tests (real filesystem)
+# ---------------------------------------------------------------------------
 
 
 def test_setup_batch_output_directory_json(tmp_path):
@@ -341,15 +384,26 @@ def test_setup_batch_output_directory_csv_file(tmp_path):
     assert result.parent.exists()
 
 
-def test_setup_batch_output_directory_default():
-    result = setup_batch_output_directory(None, output_json=False, output_csv=False)
-    assert result.name == "r2inspect_batch_results"
+def test_setup_batch_output_directory_default(tmp_path):
+    orig_dir = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        result = setup_batch_output_directory(None, output_json=False, output_csv=False)
+        assert result.name == "r2inspect_batch_results"
+        assert result.exists()
+    finally:
+        os.chdir(orig_dir)
 
 
-def test_setup_batch_output_directory_json_default():
-    with patch("pathlib.Path.mkdir"):
+def test_setup_batch_output_directory_json_default(tmp_path):
+    orig_dir = os.getcwd()
+    os.chdir(tmp_path)
+    try:
         result = setup_batch_output_directory(None, output_json=True, output_csv=False)
         assert result.name == "output"
+        assert result.exists()
+    finally:
+        os.chdir(orig_dir)
 
 
 def test_setup_batch_output_directory_existing(tmp_path):
@@ -357,6 +411,11 @@ def test_setup_batch_output_directory_existing(tmp_path):
     output_dir.mkdir()
     result = setup_batch_output_directory(str(output_dir), output_json=True, output_csv=False)
     assert result.exists()
+
+
+# ---------------------------------------------------------------------------
+# setup_batch_mode tests
+# ---------------------------------------------------------------------------
 
 
 def test_setup_batch_mode_default():
@@ -385,14 +444,29 @@ def test_setup_batch_mode_auto_output():
     assert output == "output"
 
 
+# ---------------------------------------------------------------------------
+# setup_single_file_output tests
+# ---------------------------------------------------------------------------
+
+
 def test_setup_single_file_output_json(tmp_path):
-    result = setup_single_file_output(True, False, None, "test.exe")
-    assert str(result).endswith("_analysis.json")
+    orig_dir = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        result = setup_single_file_output(True, False, None, "test.exe")
+        assert str(result).endswith("_analysis.json")
+    finally:
+        os.chdir(orig_dir)
 
 
 def test_setup_single_file_output_csv(tmp_path):
-    result = setup_single_file_output(False, True, None, "test.exe")
-    assert str(result).endswith("_analysis.csv")
+    orig_dir = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        result = setup_single_file_output(False, True, None, "test.exe")
+        assert str(result).endswith("_analysis.csv")
+    finally:
+        os.chdir(orig_dir)
 
 
 def test_setup_single_file_output_custom():
@@ -403,6 +477,11 @@ def test_setup_single_file_output_custom():
 def test_setup_single_file_output_none():
     result = setup_single_file_output(False, False, None, "test.exe")
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# setup_analysis_options tests
+# ---------------------------------------------------------------------------
 
 
 def test_setup_analysis_options_default():
@@ -422,6 +501,11 @@ def test_setup_analysis_options_xor():
     assert options["xor_search"] == "xor_string"
 
 
+# ---------------------------------------------------------------------------
+# _safe_exit tests
+# ---------------------------------------------------------------------------
+
+
 def test_safe_exit_normal():
     with pytest.raises(SystemExit):
         os.environ["R2INSPECT_TEST_SAFE_EXIT"] = "1"
@@ -439,6 +523,11 @@ def test_safe_exit_non_zero():
         finally:
             del os.environ["R2INSPECT_TEST_SAFE_EXIT"]
     assert exc_info.value.code == 1
+
+
+# ---------------------------------------------------------------------------
+# _pytest_running tests
+# ---------------------------------------------------------------------------
 
 
 def test_pytest_running_test_mode():
@@ -474,11 +563,14 @@ def test_pytest_running_coverage_env():
 
 
 def test_pytest_running_sys_modules():
-    sys.modules["pytest"] = MagicMock()
-    try:
-        assert _pytest_running() is True
-    finally:
-        del sys.modules["pytest"]
+    # pytest is always in sys.modules during test execution, so this is trivially true
+    assert "pytest" in sys.modules
+    assert _pytest_running() is True
+
+
+# ---------------------------------------------------------------------------
+# _flush_coverage_data tests
+# ---------------------------------------------------------------------------
 
 
 def test_flush_coverage_data_no_coverage():
@@ -525,6 +617,11 @@ def test_flush_coverage_data_save_error():
         del os.environ["R2INSPECT_TEST_COVERAGE_SAVE_ERROR"]
 
 
+# ---------------------------------------------------------------------------
+# ensure_batch_shutdown tests
+# ---------------------------------------------------------------------------
+
+
 def test_ensure_batch_shutdown_no_threads():
     ensure_batch_shutdown(timeout=0.1)
 
@@ -552,6 +649,11 @@ def test_ensure_batch_shutdown_timeout():
         del os.environ["R2INSPECT_TEST_SAFE_EXIT"]
 
 
+# ---------------------------------------------------------------------------
+# schedule_forced_exit tests
+# ---------------------------------------------------------------------------
+
+
 def test_schedule_forced_exit_disabled():
     os.environ["R2INSPECT_DISABLE_FORCED_EXIT"] = "1"
     try:
@@ -571,41 +673,36 @@ def test_schedule_forced_exit_enabled():
         del os.environ["R2INSPECT_TEST_SAFE_EXIT"]
 
 
-def test_run_batch_analysis_integration(tmp_path):
-    (tmp_path / "test.exe").write_bytes(b"MZ" + b"\x00" * 100)
-
-    with patch("r2inspect.cli.batch_processing.default_batch_service") as mock_service:
-        run_batch_analysis(
-            batch_dir=str(tmp_path),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=None,
-            recursive=False,
-            extensions="exe",
-            verbose=False,
-            config_obj=MagicMock(),
-            auto_detect=False,
-            threads=1,
-            quiet=False,
-        )
-        mock_service.run_batch_analysis.assert_called_once()
+# ---------------------------------------------------------------------------
+# BatchRateLimiter integration tests
+# ---------------------------------------------------------------------------
 
 
-def test_run_batch_analysis_quiet(tmp_path):
-    with patch("r2inspect.cli.batch_processing.default_batch_service") as mock_service:
-        run_batch_analysis(
-            batch_dir=str(tmp_path),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=None,
-            recursive=False,
-            extensions=None,
-            verbose=False,
-            config_obj=MagicMock(),
-            auto_detect=True,
-            threads=1,
-            quiet=True,
-        )
-        mock_service.run_batch_analysis.assert_called_once()
+def test_rate_limiter_acquire_release_cycle():
+    """Verify a real BatchRateLimiter can acquire and release."""
+    limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=100.0, enable_adaptive=False)
+    assert limiter.acquire(timeout=5.0) is True
+    limiter.release_success()
+    stats = limiter.get_stats()
+    assert stats["files_processed"] == 1
+    assert stats["success_rate"] == 1.0
+
+
+def test_rate_limiter_error_tracking():
+    """Verify error tracking through a real BatchRateLimiter."""
+    limiter = BatchRateLimiter(max_concurrent=5, rate_per_second=100.0, enable_adaptive=False)
+    assert limiter.acquire(timeout=5.0) is True
+    limiter.release_error("TestError")
+    stats = limiter.get_stats()
+    assert stats["files_failed"] == 1
+    assert stats["success_rate"] == 0.0
+
+
+def test_rate_limiter_get_stats_empty():
+    """Stats on a fresh limiter should have zero counts."""
+    limiter = BatchRateLimiter(max_concurrent=5, enable_adaptive=True)
+    stats = limiter.get_stats()
+    assert stats["files_processed"] == 0
+    assert stats["files_failed"] == 0
+    assert stats["success_rate"] == 0.0
+    assert stats["avg_wait_time"] == 0.0

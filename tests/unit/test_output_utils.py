@@ -1,7 +1,7 @@
 import csv
 import json
 
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 def test_to_json_round_trip():

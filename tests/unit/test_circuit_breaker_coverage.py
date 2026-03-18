@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from r2inspect.utils.circuit_breaker import (
+from r2inspect.infrastructure.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerError,
     CircuitState,

@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from r2inspect.utils.rate_limiter import (
+from r2inspect.infrastructure.rate_limiter import (
     AdaptiveRateLimiter,
     BatchRateLimiter,
     TokenBucket,

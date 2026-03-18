@@ -261,7 +261,9 @@ def test_environment_check_commands_system_info():
 
 
 def test_environment_check_commands_process_enum():
-    commands = [cmd for cmd, name, desc in ENVIRONMENT_CHECK_COMMANDS if "Process Enumeration" in name]
+    commands = [
+        cmd for cmd, name, desc in ENVIRONMENT_CHECK_COMMANDS if "Process Enumeration" in name
+    ]
     assert len(commands) > 0
 
 

@@ -31,15 +31,15 @@ def test_add_simhash_feature_stats_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     feature_stats = {
         "total_features": 100,
         "total_strings": 50,
         "total_opcodes": 50,
-        "feature_diversity": 0.85
+        "feature_diversity": 0.85,
     }
     _add_simhash_feature_stats(table, feature_stats)
-    
+
     assert table.row_count == 4
 
 
@@ -48,13 +48,10 @@ def test_add_simhash_feature_stats_partial():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    feature_stats = {
-        "total_features": 100,
-        "feature_diversity": 0.75
-    }
+
+    feature_stats = {"total_features": 100, "feature_diversity": 0.75}
     _add_simhash_feature_stats(table, feature_stats)
-    
+
     assert table.row_count == 4
 
 
@@ -63,15 +60,15 @@ def test_add_simhash_feature_stats_zero_values():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     feature_stats = {
         "total_features": 0,
         "total_strings": 0,
         "total_opcodes": 0,
-        "feature_diversity": 0.0
+        "feature_diversity": 0.0,
     }
     _add_simhash_feature_stats(table, feature_stats)
-    
+
     assert table.row_count == 4
 
 
@@ -111,14 +108,14 @@ def test_add_simhash_hashes_all_types():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     simhash_info = {
         "combined_simhash": {"hex": "abc123def456", "feature_count": 100},
         "strings_simhash": {"hex": "ghi789jkl012"},
-        "opcodes_simhash": {"hex": "mno345pqr678"}
+        "opcodes_simhash": {"hex": "mno345pqr678"},
     }
     _add_simhash_hashes(table, simhash_info)
-    
+
     assert table.row_count == 4
 
 
@@ -127,12 +124,10 @@ def test_add_simhash_hashes_combined_only():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    simhash_info = {
-        "combined_simhash": {"hex": "abc123", "feature_count": 50}
-    }
+
+    simhash_info = {"combined_simhash": {"hex": "abc123", "feature_count": 50}}
     _add_simhash_hashes(table, simhash_info)
-    
+
     assert table.row_count == 2
 
 
@@ -141,12 +136,10 @@ def test_add_simhash_hashes_strings_only():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    simhash_info = {
-        "strings_simhash": {"hex": "def456"}
-    }
+
+    simhash_info = {"strings_simhash": {"hex": "def456"}}
     _add_simhash_hashes(table, simhash_info)
-    
+
     assert table.row_count == 1
 
 
@@ -155,12 +148,10 @@ def test_add_simhash_hashes_opcodes_only():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    simhash_info = {
-        "opcodes_simhash": {"hex": "ghi789"}
-    }
+
+    simhash_info = {"opcodes_simhash": {"hex": "ghi789"}}
     _add_simhash_hashes(table, simhash_info)
-    
+
     assert table.row_count == 1
 
 
@@ -169,9 +160,9 @@ def test_add_simhash_hashes_none():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     _add_simhash_hashes(table, {})
-    
+
     assert table.row_count == 0
 
 
@@ -180,12 +171,10 @@ def test_add_simhash_hashes_long():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    simhash_info = {
-        "combined_simhash": {"hex": "a" * 64, "feature_count": 100}
-    }
+
+    simhash_info = {"combined_simhash": {"hex": "a" * 64, "feature_count": 100}}
     _add_simhash_hashes(table, simhash_info)
-    
+
     assert table.row_count == 2
 
 
@@ -194,17 +183,17 @@ def test_add_simhash_function_analysis_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     simhash_info = {
         "function_simhashes": {"func1": "hash1", "func2": "hash2"},
         "total_functions": 100,
         "analyzed_functions": 95,
         "similarity_groups": [
             {"count": 3, "representative_hash": "hash1", "functions": ["f1", "f2"]}
-        ]
+        ],
     }
     _add_simhash_function_analysis(table, simhash_info)
-    
+
     assert table.row_count > 2
 
 
@@ -213,15 +202,15 @@ def test_add_simhash_function_analysis_no_groups():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     simhash_info = {
         "function_simhashes": {"func1": "hash1"},
         "total_functions": 10,
         "analyzed_functions": 10,
-        "similarity_groups": []
+        "similarity_groups": [],
     }
     _add_simhash_function_analysis(table, simhash_info)
-    
+
     assert table.row_count == 3
 
 
@@ -230,14 +219,10 @@ def test_add_simhash_function_analysis_no_functions():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    simhash_info = {
-        "function_simhashes": {},
-        "total_functions": 0,
-        "analyzed_functions": 0
-    }
+
+    simhash_info = {"function_simhashes": {}, "total_functions": 0, "analyzed_functions": 0}
     _add_simhash_function_analysis(table, simhash_info)
-    
+
     assert table.row_count == 0
 
 
@@ -246,12 +231,12 @@ def test_add_simhash_similarity_groups_single():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     similarity_groups = [
         {"count": 5, "representative_hash": "hash1", "functions": ["f1", "f2", "f3"]}
     ]
     _add_simhash_similarity_groups(table, similarity_groups)
-    
+
     assert table.row_count > 1
 
 
@@ -260,14 +245,14 @@ def test_add_simhash_similarity_groups_multiple():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     similarity_groups = [
         {"count": 5, "representative_hash": "hash1", "functions": ["f1", "f2"]},
         {"count": 3, "representative_hash": "hash2", "functions": ["f3", "f4"]},
-        {"count": 2, "representative_hash": "hash3", "functions": ["f5", "f6"]}
+        {"count": 2, "representative_hash": "hash3", "functions": ["f5", "f6"]},
     ]
     _add_simhash_similarity_groups(table, similarity_groups)
-    
+
     assert table.row_count > 3
 
 
@@ -276,13 +261,12 @@ def test_add_simhash_similarity_groups_many():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     similarity_groups = [
-        {"count": i, "representative_hash": f"hash{i}", "functions": [f"f{i}"]}
-        for i in range(5)
+        {"count": i, "representative_hash": f"hash{i}", "functions": [f"f{i}"]} for i in range(5)
     ]
     _add_simhash_similarity_groups(table, similarity_groups)
-    
+
     assert table.row_count > 0
 
 
@@ -291,14 +275,14 @@ def test_add_simhash_similarity_group_basic():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     group = {
         "count": 5,
         "representative_hash": "abc123def456",
-        "functions": ["func1", "func2", "func3"]
+        "functions": ["func1", "func2", "func3"],
     }
     _add_simhash_similarity_group(table, 1, group)
-    
+
     assert table.row_count == 3
 
 
@@ -307,14 +291,10 @@ def test_add_simhash_similarity_group_long_hash():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    group = {
-        "count": 5,
-        "representative_hash": "a" * 100,
-        "functions": ["func1"]
-    }
+
+    group = {"count": 5, "representative_hash": "a" * 100, "functions": ["func1"]}
     _add_simhash_similarity_group(table, 1, group)
-    
+
     assert table.row_count == 3
 
 
@@ -323,14 +303,10 @@ def test_add_simhash_similarity_group_short_hash():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    group = {
-        "count": 2,
-        "representative_hash": "abc",
-        "functions": ["func1", "func2"]
-    }
+
+    group = {"count": 2, "representative_hash": "abc", "functions": ["func1", "func2"]}
     _add_simhash_similarity_group(table, 2, group)
-    
+
     assert table.row_count == 3
 
 
@@ -339,15 +315,11 @@ def test_add_simhash_similarity_group_many_functions():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     functions = [f"function_{i}" for i in range(10)]
-    group = {
-        "count": 10,
-        "representative_hash": "hash123",
-        "functions": functions
-    }
+    group = {"count": 10, "representative_hash": "hash123", "functions": functions}
     _add_simhash_similarity_group(table, 1, group)
-    
+
     assert table.row_count == 3
 
 
@@ -356,14 +328,14 @@ def test_add_simhash_similarity_group_long_function_names():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     group = {
         "count": 2,
         "representative_hash": "hash",
-        "functions": ["very_long_function_name_" + "x" * 50]
+        "functions": ["very_long_function_name_" + "x" * 50],
     }
     _add_simhash_similarity_group(table, 1, group)
-    
+
     assert table.row_count == 3
 
 
@@ -372,14 +344,10 @@ def test_add_simhash_similarity_group_no_functions():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    group = {
-        "count": 0,
-        "representative_hash": "hash123",
-        "functions": []
-    }
+
+    group = {"count": 0, "representative_hash": "hash123", "functions": []}
     _add_simhash_similarity_group(table, 1, group)
-    
+
     assert table.row_count == 2
 
 
@@ -388,16 +356,12 @@ def test_add_simhash_top_features_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     feature_stats = {
-        "most_common_features": [
-            ("STR:string1", 10),
-            ("OP:mov", 8),
-            ("OPTYPE:arithmetic", 6)
-        ]
+        "most_common_features": [("STR:string1", 10), ("OP:mov", 8), ("OPTYPE:arithmetic", 6)]
     }
     _add_simhash_top_features(table, feature_stats)
-    
+
     assert table.row_count == 1
 
 
@@ -406,14 +370,10 @@ def test_add_simhash_top_features_many():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    feature_stats = {
-        "most_common_features": [
-            (f"STR:feature{i}", 10 - i) for i in range(10)
-        ]
-    }
+
+    feature_stats = {"most_common_features": [(f"STR:feature{i}", 10 - i) for i in range(10)]}
     _add_simhash_top_features(table, feature_stats)
-    
+
     assert table.row_count == 1
 
 
@@ -422,14 +382,10 @@ def test_add_simhash_top_features_long_names():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    feature_stats = {
-        "most_common_features": [
-            ("STR:" + "x" * 100, 10)
-        ]
-    }
+
+    feature_stats = {"most_common_features": [("STR:" + "x" * 100, 10)]}
     _add_simhash_top_features(table, feature_stats)
-    
+
     assert table.row_count == 1
 
 
@@ -438,9 +394,9 @@ def test_add_simhash_top_features_none():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     _add_simhash_top_features(table, {})
-    
+
     assert table.row_count == 0
 
 
@@ -449,10 +405,10 @@ def test_add_simhash_top_features_empty_list():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     feature_stats = {"most_common_features": []}
     _add_simhash_top_features(table, feature_stats)
-    
+
     assert table.row_count == 0
 
 
@@ -461,16 +417,16 @@ def test_add_bindiff_entries_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     bindiff_info = {
         "filename": "test.exe",
         "structural_features": {"file_type": "PE32"},
         "function_features": {"function_count": 100},
         "string_features": {"total_strings": 50},
-        "signatures": {"imphash": "abc123"}
+        "signatures": {"imphash": "abc123"},
     }
     _add_bindiff_entries(table, bindiff_info)
-    
+
     assert table.row_count > 0
 
 
@@ -479,16 +435,16 @@ def test_add_bindiff_entries_minimal():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     bindiff_info = {
         "filename": "test.exe",
         "structural_features": {},
         "function_features": {},
         "string_features": {},
-        "signatures": {}
+        "signatures": {},
     }
     _add_bindiff_entries(table, bindiff_info)
-    
+
     assert table.row_count == 1
 
 
@@ -497,17 +453,17 @@ def test_add_bindiff_structural_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     structural = {
         "file_type": "PE32",
         "file_size": 10240,
         "section_count": 5,
         "section_names": [".text", ".data", ".rdata", ".reloc", ".rsrc"],
         "import_count": 20,
-        "export_count": 10
+        "export_count": 10,
     }
     _add_bindiff_structural(table, structural)
-    
+
     assert table.row_count == 6
 
 
@@ -516,17 +472,17 @@ def test_add_bindiff_structural_few_sections():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     structural = {
         "file_type": "ELF",
         "file_size": 20480,
         "section_count": 3,
         "section_names": [".text", ".data", ".bss"],
         "import_count": 15,
-        "export_count": 5
+        "export_count": 5,
     }
     _add_bindiff_structural(table, structural)
-    
+
     assert table.row_count == 6
 
 
@@ -535,17 +491,17 @@ def test_add_bindiff_structural_many_sections():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     structural = {
         "file_type": "PE32+",
         "file_size": 102400,
         "section_count": 12,
         "section_names": [f".section{i}" for i in range(12)],
         "import_count": 50,
-        "export_count": 20
+        "export_count": 20,
     }
     _add_bindiff_structural(table, structural)
-    
+
     assert table.row_count > 5
 
 
@@ -554,16 +510,16 @@ def test_add_bindiff_structural_no_sections():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     structural = {
         "file_type": "PE32",
         "file_size": 10240,
         "section_count": 5,
         "import_count": 20,
-        "export_count": 10
+        "export_count": 10,
     }
     _add_bindiff_structural(table, structural)
-    
+
     assert table.row_count == 5
 
 
@@ -572,16 +528,13 @@ def test_add_bindiff_functions_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     function_features = {
         "function_count": 150,
-        "cfg_features": {
-            "func1": {"blocks": 10},
-            "func2": {"blocks": 15}
-        }
+        "cfg_features": {"func1": {"blocks": 10}, "func2": {"blocks": 15}},
     }
     _add_bindiff_functions(table, function_features)
-    
+
     assert table.row_count == 2
 
 
@@ -590,12 +543,10 @@ def test_add_bindiff_functions_no_cfg():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    function_features = {
-        "function_count": 100
-    }
+
+    function_features = {"function_count": 100}
     _add_bindiff_functions(table, function_features)
-    
+
     assert table.row_count == 1
 
 
@@ -604,17 +555,13 @@ def test_add_bindiff_strings_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
+
     string_features = {
         "total_strings": 100,
-        "categorized_strings": {
-            "urls": 10,
-            "paths": 20,
-            "registry": 5
-        }
+        "categorized_strings": {"urls": 10, "paths": 20, "registry": 5},
     }
     _add_bindiff_strings(table, string_features)
-    
+
     assert table.row_count == 2
 
 
@@ -623,12 +570,10 @@ def test_add_bindiff_strings_no_categories():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    string_features = {
-        "total_strings": 50
-    }
+
+    string_features = {"total_strings": 50}
     _add_bindiff_strings(table, string_features)
-    
+
     assert table.row_count == 1
 
 
@@ -637,14 +582,10 @@ def test_add_bindiff_signatures_complete():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    signatures = {
-        "imphash": "abc123def456",
-        "richpe": "ghi789jkl012",
-        "ssdeep": "mno345pqr678"
-    }
+
+    signatures = {"imphash": "abc123def456", "richpe": "ghi789jkl012", "ssdeep": "mno345pqr678"}
     _add_bindiff_signatures(table, signatures)
-    
+
     assert table.row_count == 3
 
 
@@ -653,13 +594,10 @@ def test_add_bindiff_signatures_partial():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    signatures = {
-        "imphash": "abc123",
-        "richpe": ""
-    }
+
+    signatures = {"imphash": "abc123", "richpe": ""}
     _add_bindiff_signatures(table, signatures)
-    
+
     assert table.row_count == 1
 
 
@@ -668,11 +606,8 @@ def test_add_bindiff_signatures_empty_values():
     table = Table()
     table.add_column("Property")
     table.add_column("Value")
-    
-    signatures = {
-        "imphash": "",
-        "richpe": None
-    }
+
+    signatures = {"imphash": "", "richpe": None}
     _add_bindiff_signatures(table, signatures)
-    
+
     assert table.row_count == 0

@@ -1,6 +1,6 @@
 import json
 
-from r2inspect.utils.r2_suppress import _parse_raw_result, silent_cmdj
+from r2inspect.infrastructure.r2_suppress import _parse_raw_result, silent_cmdj
 
 
 class FakeR2:

@@ -41,7 +41,7 @@ def test_shannon_entropy_all_same():
 
 def test_shannon_entropy_two_values():
     """Test Shannon entropy with two different values."""
-    data = b"\x00\xFF" * 50
+    data = b"\x00\xff" * 50
     result = shannon_entropy(data)
     assert result == 1.0
 
@@ -285,15 +285,26 @@ def test_standard_pe_sections_constant():
 
 def test_standard_pe_sections_completeness():
     """Test STANDARD_PE_SECTIONS has common sections."""
-    expected = [".text", ".data", ".rdata", ".bss", ".idata", 
-                ".edata", ".rsrc", ".reloc", ".debug", ".pdata", ".xdata"]
+    expected = [
+        ".text",
+        ".data",
+        ".rdata",
+        ".bss",
+        ".idata",
+        ".edata",
+        ".rsrc",
+        ".reloc",
+        ".debug",
+        ".pdata",
+        ".xdata",
+    ]
     for section in expected:
         assert section in STANDARD_PE_SECTIONS
 
 
 def test_shannon_entropy_calculation_correctness():
     """Test Shannon entropy calculation is mathematically correct."""
-    data = b"\x00\xFF"
+    data = b"\x00\xff"
     result = shannon_entropy(data)
     expected = -((0.5 * math.log2(0.5)) + (0.5 * math.log2(0.5)))
     assert abs(result - expected) < 0.0001
@@ -301,7 +312,7 @@ def test_shannon_entropy_calculation_correctness():
 
 def test_shannon_entropy_half_half():
     """Test Shannon entropy with half-half distribution."""
-    data = b"\x00" * 128 + b"\xFF" * 128
+    data = b"\x00" * 128 + b"\xff" * 128
     result = shannon_entropy(data)
     assert abs(result - 1.0) < 0.0001
 

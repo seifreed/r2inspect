@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 
 
 # ---------------------------------------------------------------------------
 # Minimal concrete subclass for testing
 # ---------------------------------------------------------------------------
+
 
 class FakeResultAggregator:
     def generate_indicators(self, results: dict) -> list:
@@ -38,6 +39,7 @@ def make_inspector() -> StubInspector:
 # ---------------------------------------------------------------------------
 # Static helper methods
 # ---------------------------------------------------------------------------
+
 
 def test_as_dict_with_dict_input():
     assert StubInspector._as_dict({"key": "val"}) == {"key": "val"}
@@ -87,6 +89,7 @@ def test_as_str_with_custom_default():
 # _execute_analyzer – analyzer not found
 # ---------------------------------------------------------------------------
 
+
 def test_execute_analyzer_returns_empty_dict_when_not_in_registry():
     inspector = make_inspector()
     result = inspector._execute_analyzer("nonexistent_analyzer_xyz")
@@ -108,6 +111,7 @@ def test_execute_dict_returns_empty_dict_when_analyzer_not_found():
 # ---------------------------------------------------------------------------
 # _execute_analyzer – via registered analyzer class
 # ---------------------------------------------------------------------------
+
 
 class FakeAnalyzer:
     def __init__(self, **kwargs):
@@ -202,6 +206,7 @@ def test_execute_analyzer_handles_exception_returns_empty():
 # _execute_list / _execute_dict
 # ---------------------------------------------------------------------------
 
+
 def test_execute_list_returns_list_from_analyzer():
     inspector = make_inspector()
     register_fake_analyzer(inspector.registry, name="list_analyzer")
@@ -226,6 +231,7 @@ def test_execute_dict_returns_dict_from_analyzer():
 # ---------------------------------------------------------------------------
 # Convenience wrapper methods (test they route correctly)
 # ---------------------------------------------------------------------------
+
 
 def test_get_pe_info_returns_empty_when_no_analyzer():
     inspector = make_inspector()
@@ -373,6 +379,7 @@ def test_analyze_bindiff_returns_empty():
 # generate_indicators / generate_executive_summary
 # ---------------------------------------------------------------------------
 
+
 def test_generate_indicators_returns_list():
     inspector = make_inspector()
     result = inspector.generate_indicators({"some": "data"})
@@ -388,6 +395,7 @@ def test_generate_executive_summary_returns_dict():
 # ---------------------------------------------------------------------------
 # _execute_with_progress / _execute_without_progress
 # ---------------------------------------------------------------------------
+
 
 class FakePipeline:
     def execute_with_progress(self, callback, options):
@@ -429,6 +437,7 @@ def test_execute_without_progress_with_parallel():
 # get_file_info / _detect_file_format (covers lines 115-125)
 # ---------------------------------------------------------------------------
 
+
 def test_get_file_info_returns_dict_with_file_not_found():
     inspector = make_inspector()
     # filename "stub_file.bin" doesn't exist, stage catches internally
@@ -452,6 +461,7 @@ def test_detect_file_format_returns_unknown_without_real_file():
 # ---------------------------------------------------------------------------
 # detect_crypto with registered analyzer (covers line 168)
 # ---------------------------------------------------------------------------
+
 
 class FakeCryptoAnalyzer:
     def __init__(self, **kwargs):

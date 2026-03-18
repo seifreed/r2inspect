@@ -25,6 +25,7 @@ from r2inspect.error_handling.classifier import (
 # ErrorSeverity / ErrorCategory enum coverage
 # ---------------------------------------------------------------------------
 
+
 def test_error_severity_values_are_distinct():
     values = {s.value for s in ErrorSeverity}
     assert len(values) == len(ErrorSeverity)
@@ -38,6 +39,7 @@ def test_error_category_values_are_distinct():
 # ---------------------------------------------------------------------------
 # ErrorInfo
 # ---------------------------------------------------------------------------
+
 
 def test_error_info_default_context():
     exc = ValueError("bad input")
@@ -74,6 +76,7 @@ def test_error_info_to_dict_contains_required_keys():
 # ---------------------------------------------------------------------------
 # ErrorClassifier.classify – direct mapping
 # ---------------------------------------------------------------------------
+
 
 def test_classify_memory_error():
     info = ErrorClassifier.classify(MemoryError("oom"))
@@ -139,6 +142,7 @@ def test_classify_module_not_found_error():
 # ErrorClassifier._classify_by_inheritance
 # ---------------------------------------------------------------------------
 
+
 def test_classify_by_inheritance_unknown_exception():
     class MyWeirdError(Exception):
         pass
@@ -169,6 +173,7 @@ def test_classify_by_inheritance_subclass_of_mapped_type():
 # ---------------------------------------------------------------------------
 # ErrorClassifier._adjust_classification
 # ---------------------------------------------------------------------------
+
 
 def test_adjust_classification_analysis_type_upgrades_medium_to_high():
     exc = ValueError("bad")
@@ -216,6 +221,7 @@ def test_adjust_classification_r2pipe_initialization_phase():
 # ErrorClassifier._is_recoverable
 # ---------------------------------------------------------------------------
 
+
 def test_is_recoverable_critical_is_false():
     exc = MemoryError("oom")
     # large file downgrades CRITICAL to HIGH, but direct: use context that keeps CRITICAL
@@ -226,14 +232,18 @@ def test_is_recoverable_critical_is_false():
 
 def test_is_recoverable_memory_with_cleanup_available():
     exc = MemoryError("oom")
-    info = ErrorClassifier.classify(exc, context={"file_size_mb": 200, "memory_cleanup_available": True})
+    info = ErrorClassifier.classify(
+        exc, context={"file_size_mb": 200, "memory_cleanup_available": True}
+    )
     # large file -> HIGH severity -> check memory recovery
     assert info.recoverable is True
 
 
 def test_is_recoverable_memory_cleanup_not_available():
     exc = MemoryError("oom")
-    info = ErrorClassifier.classify(exc, context={"file_size_mb": 200, "memory_cleanup_available": False})
+    info = ErrorClassifier.classify(
+        exc, context={"file_size_mb": 200, "memory_cleanup_available": False}
+    )
     assert info.recoverable is False
 
 
@@ -266,6 +276,7 @@ def test_is_recoverable_generic_error_is_true():
 # ErrorClassifier._suggest_action
 # ---------------------------------------------------------------------------
 
+
 def test_suggest_action_memory_critical():
     exc = MemoryError("oom")
     info = ErrorClassifier.classify(exc)
@@ -275,7 +286,9 @@ def test_suggest_action_memory_critical():
 def test_suggest_action_memory_non_critical():
     exc = MemoryError("oom")
     info = ErrorClassifier.classify(exc, context={"file_size_mb": 200})
-    assert "garbage" in info.suggested_action.lower() or "collection" in info.suggested_action.lower()
+    assert (
+        "garbage" in info.suggested_action.lower() or "collection" in info.suggested_action.lower()
+    )
 
 
 def test_suggest_action_file_not_found():
@@ -287,7 +300,10 @@ def test_suggest_action_file_not_found():
 def test_suggest_action_permission_error():
     exc = PermissionError("denied")
     info = ErrorClassifier.classify(exc)
-    assert "permission" in info.suggested_action.lower() or "privilege" in info.suggested_action.lower()
+    assert (
+        "permission" in info.suggested_action.lower()
+        or "privilege" in info.suggested_action.lower()
+    )
 
 
 def test_suggest_action_r2pipe():
@@ -323,6 +339,7 @@ def test_suggest_action_unknown_category():
 # ---------------------------------------------------------------------------
 # ErrorRecoveryManager
 # ---------------------------------------------------------------------------
+
 
 def test_error_recovery_manager_handle_error_no_strategy():
     manager = ErrorRecoveryManager()
@@ -407,6 +424,7 @@ def test_error_recovery_manager_thread_safety():
 # error_handler decorator
 # ---------------------------------------------------------------------------
 
+
 def test_error_handler_decorator_success_path():
     @error_handler(category=ErrorCategory.ANALYSIS, severity=ErrorSeverity.LOW)
     def my_func():
@@ -467,6 +485,7 @@ def test_error_handler_preserves_function_name():
 # safe_execute
 # ---------------------------------------------------------------------------
 
+
 def test_safe_execute_success():
     result = safe_execute(lambda: 99)
     assert result == 99
@@ -502,6 +521,7 @@ def test_safe_execute_with_kwargs():
 # Module-level helpers
 # ---------------------------------------------------------------------------
 
+
 def test_register_recovery_strategies_does_not_raise():
     register_recovery_strategies()
 
@@ -525,6 +545,7 @@ def test_reset_error_stats_clears_counts():
 # Recovery strategy inner functions (lines 425-445)
 # ---------------------------------------------------------------------------
 
+
 def test_memory_recovery_strategy_is_triggered():
     """Trigger memory_recovery (lines 425-431) via safe_execute with large file context."""
     register_recovery_strategies()
@@ -545,9 +566,7 @@ def test_r2pipe_recovery_strategy_json_command():
     def r2pipe_fail():
         raise RuntimeError("r2pipe connection timeout")
 
-    result = safe_execute(
-        r2pipe_fail, fallback_result="fallback", context={"command": "ij"}
-    )
+    result = safe_execute(r2pipe_fail, fallback_result="fallback", context={"command": "ij"})
     # r2pipe_recovery: command ends with 'j' -> returns None -> recovered=True
     assert result is None
 
@@ -559,9 +578,7 @@ def test_r2pipe_recovery_strategy_text_command():
     def r2pipe_fail():
         raise RuntimeError("r2pipe error occurred")
 
-    result = safe_execute(
-        r2pipe_fail, fallback_result="fallback", context={"command": "i"}
-    )
+    result = safe_execute(r2pipe_fail, fallback_result="fallback", context={"command": "i"})
     # r2pipe_recovery: command does not end with 'j' -> returns "" -> recovered=True
     assert result == ""
 

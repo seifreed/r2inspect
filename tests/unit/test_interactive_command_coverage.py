@@ -192,14 +192,7 @@ def test_run_interactive_mode_all_commands():
 
     old_stdin = sys.stdin
     sys.stdin = StringIO(
-        "info\n"
-        "pe\n"
-        "imports\n"
-        "exports\n"
-        "sections\n"
-        "strings\n"
-        "help\n"
-        "exit\n"
+        "info\n" "pe\n" "imports\n" "exports\n" "sections\n" "strings\n" "help\n" "exit\n"
     )
     try:
         with create_inspector(str(sample)) as inspector:

@@ -7,16 +7,28 @@ from pathlib import Path
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 pytestmark = [pytest.mark.unit, pytest.mark.requires_r2]
+
+
+@pytest.fixture
+def samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path_factory.mktemp("samples") / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 def _open_session(sample: Path) -> tuple[R2Session, R2PipeAdapter]:

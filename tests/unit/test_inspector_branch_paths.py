@@ -12,7 +12,7 @@ from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
-from r2inspect.utils.memory_manager import MemoryMonitor, global_memory_monitor
+from r2inspect.infrastructure.memory import MemoryMonitor, global_memory_monitor
 
 
 # ---------------------------------------------------------------------------
@@ -49,9 +49,7 @@ class OkPipeline:
     def execute(self, options: dict[str, Any], parallel: bool = False) -> dict[str, Any]:
         return {"analysis": {"ok": True}}
 
-    def execute_with_progress(
-        self, callback: Any, options: dict[str, Any]
-    ) -> dict[str, Any]:
+    def execute_with_progress(self, callback: Any, options: dict[str, Any]) -> dict[str, Any]:
         if callback is not None:
             callback("stage_done")
         return {"analysis": {"ok": True, "progress": True}}
@@ -87,11 +85,13 @@ class StubPipelineBuilder:
 
 class StubAdapter:
     """Minimal adapter stub."""
+
     thread_safe = True
 
 
 class NonThreadSafeAdapter:
     """Adapter that is not thread-safe."""
+
     thread_safe = False
 
 
@@ -121,7 +121,9 @@ def make_inspector(
     if memory_monitor is None:
         memory_monitor = MemoryMonitor()
     if file_validator_factory is None:
-        file_validator_factory = lambda path: FileValidator(sample)
+
+        def file_validator_factory(path):
+            return FileValidator(sample)
 
     return R2Inspector(
         filename=str(sample),
@@ -303,6 +305,15 @@ def test_init_infrastructure_with_verbose_registry(tmp_path: Path) -> None:
     assert len(inspector.registry.list_analyzers()) == 2
 
 
+def test_init_infrastructure_rejects_missing_factories(tmp_path: Path) -> None:
+    inspector = make_inspector(tmp_path)
+    inspector._registry_factory = None
+    inspector._pipeline_builder_factory = None
+
+    with pytest.raises(ValueError, match="registry_factory and pipeline_builder_factory"):
+        inspector._init_infrastructure()
+
+
 # ---------------------------------------------------------------------------
 # _cleanup (lines 127-129)
 # ---------------------------------------------------------------------------
@@ -407,6 +418,18 @@ def test_analyze_with_non_thread_safe_adapter_disables_parallel(tmp_path: Path) 
     inspector = make_inspector(tmp_path, adapter=NonThreadSafeAdapter())
     results = inspector.analyze()
     assert "memory_stats" in results
+
+
+def test_analyze_uses_progress_callback_when_not_parallel(tmp_path: Path) -> None:
+    cfg = Config()
+    cfg.set("pipeline", "parallel_execution", False)
+    stages: list[str] = []
+
+    inspector = make_inspector(tmp_path, config=cfg)
+    results = inspector.analyze(progress_callback=lambda stage: stages.append(stage))
+
+    assert stages == ["stage_done"]
+    assert results["analysis"]["progress"] is True
 
 
 def test_analyze_parallel_disabled_in_config(tmp_path: Path) -> None:

@@ -8,11 +8,13 @@ from r2inspect.registry.metadata import AnalyzerMetadata
 
 class TestAnalyzer:
     """Test analyzer class"""
+
     pass
 
 
 class AnotherAnalyzer:
     """Another test analyzer"""
+
     pass
 
 
@@ -88,7 +90,7 @@ def test_metadata_to_dict():
         description="Test description",
     )
     result = meta.to_dict()
-    
+
     assert result["name"] == "test_analyzer"
     assert result["class"] == "TestAnalyzer"
     assert "TestAnalyzer" in result["module"] or result["module"] == "test_metadata_registry"
@@ -107,7 +109,7 @@ def test_metadata_to_dict_with_defaults():
         category=AnalyzerCategory.METADATA,
     )
     result = meta.to_dict()
-    
+
     assert result["name"] == "simple"
     assert result["class"] == "TestAnalyzer"
     assert result["category"] == "metadata"
@@ -141,7 +143,7 @@ def test_metadata_all_categories():
         AnalyzerCategory.SIMILARITY,
         AnalyzerCategory.BEHAVIORAL,
     ]
-    
+
     for category in categories:
         meta = AnalyzerMetadata(
             name=f"test_{category.value}",
@@ -161,7 +163,7 @@ def test_metadata_required_flag():
         required=True,
     )
     assert meta_required.required is True
-    
+
     meta_optional = AnalyzerMetadata(
         name="optional_analyzer",
         analyzer_class=TestAnalyzer,

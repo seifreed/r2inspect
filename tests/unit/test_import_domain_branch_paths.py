@@ -25,29 +25,44 @@ def test_assess_api_risk_anti_analysis_below_threshold_no_flag():
 
 
 def test_assess_api_risk_anti_analysis_at_threshold_adds_flag():
-    categories = {"Anti-Analysis": {"count": 2, "apis": ["IsDebuggerPresent", "CheckRemoteDebuggerPresent"]}}
+    categories = {
+        "Anti-Analysis": {"count": 2, "apis": ["IsDebuggerPresent", "CheckRemoteDebuggerPresent"]}
+    }
     suspicious, risk = assess_api_risk(categories)
     assert any("anti-debug" in s.lower() for s in suspicious)
     assert risk >= 20
 
 
 def test_assess_api_risk_dll_injection_at_threshold_adds_flag():
-    categories = {"DLL Injection": {"count": 3, "apis": ["CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx"]}}
+    categories = {
+        "DLL Injection": {
+            "count": 3,
+            "apis": ["CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx"],
+        }
+    }
     suspicious, risk = assess_api_risk(categories)
     assert any("dll injection" in s.lower() for s in suspicious)
     assert risk >= 30
 
 
 def test_assess_api_risk_dll_injection_below_threshold_no_flag():
-    categories = {"DLL Injection": {"count": 2, "apis": ["CreateRemoteThread", "WriteProcessMemory"]}}
+    categories = {
+        "DLL Injection": {"count": 2, "apis": ["CreateRemoteThread", "WriteProcessMemory"]}
+    }
     suspicious, risk = assess_api_risk(categories)
     assert not any("dll injection" in s.lower() for s in suspicious)
 
 
 def test_assess_api_risk_process_manipulation_adds_flag():
     categories = {
-        "Process/Thread Management": {"count": 3, "apis": ["CreateProcess", "OpenProcess", "TerminateProcess"]},
-        "Memory Management": {"count": 3, "apis": ["VirtualAlloc", "VirtualProtect", "WriteProcessMemory"]},
+        "Process/Thread Management": {
+            "count": 3,
+            "apis": ["CreateProcess", "OpenProcess", "TerminateProcess"],
+        },
+        "Memory Management": {
+            "count": 3,
+            "apis": ["VirtualAlloc", "VirtualProtect", "WriteProcessMemory"],
+        },
     }
     suspicious, risk = assess_api_risk(categories)
     assert any("process" in s.lower() for s in suspicious)
@@ -64,7 +79,12 @@ def test_assess_api_risk_process_manipulation_below_threshold_no_flag():
 
 
 def test_assess_api_risk_registry_adds_flag():
-    categories = {"Registry": {"count": 4, "apis": ["RegSetValue", "RegCreateKey", "RegDeleteKey", "RegOpenKey"]}}
+    categories = {
+        "Registry": {
+            "count": 4,
+            "apis": ["RegSetValue", "RegCreateKey", "RegDeleteKey", "RegOpenKey"],
+        }
+    }
     suspicious, risk = assess_api_risk(categories)
     assert any("registry" in s.lower() for s in suspicious)
     assert risk >= 15

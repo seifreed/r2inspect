@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.factory import create_inspector
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry

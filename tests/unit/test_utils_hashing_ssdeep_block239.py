@@ -3,7 +3,8 @@ import importlib
 import sys
 from pathlib import Path
 
-from r2inspect.utils import hashing, ssdeep_loader
+import r2inspect.infrastructure.hashing as hashing
+import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
 
 
 class BlockSSDeepFinder:

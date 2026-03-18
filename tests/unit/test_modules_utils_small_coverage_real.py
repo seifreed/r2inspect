@@ -16,7 +16,8 @@ from r2inspect.modules import (
     string_classification,
     string_extraction,
 )
-from r2inspect.utils import command_helpers, hashing
+import r2inspect.infrastructure.command_helpers as command_helpers
+import r2inspect.infrastructure.hashing as hashing
 
 
 class DummyLogger:
@@ -77,6 +78,14 @@ def test_string_classification_and_extraction() -> None:
     assert string_classification.classify_string_type("https://example.com") == "url"
     assert string_classification.classify_string_type("C:\\Windows\\System32") == "path"
     assert string_classification.classify_string_type("HKEY_LOCAL_MACHINE\\SOFTWARE") == "registry"
+    assert string_classification.classify_string_type("SOFTWARE\\Microsoft") == "registry"
+    assert string_classification.classify_string_type("SYSTEM\\CurrentControlSet") == "registry"
+    assert string_classification.classify_string_type("HKLM\\Software") == "registry"
+    assert string_classification.classify_string_type("HKCU\\Software\\App") == "registry"
+    assert string_classification.classify_string_type("HKCR\\CLSID") == "registry"
+    assert string_classification.classify_string_type("HKU\\S-1-5-18") == "registry"
+    assert string_classification.classify_string_type("HKCC\\Software") == "registry"
+    assert string_classification.classify_string_type("XXHKLMYY") != "registry"
     assert string_classification.classify_string_type("CreateFileW") == "api"
     assert string_classification.classify_string_type("invalid operation failed") == "error"
     assert string_classification.classify_string_type("plain") is None

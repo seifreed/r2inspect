@@ -30,7 +30,7 @@ def test_normalize_results_with_full_data():
         "crypto": {"matches": []},
         "rich_header": {},
     }
-    
+
     normalized = _normalize_results(results)
     assert normalized["file_info"] == {"name": "test"}
     assert normalized["pe_info"] == {"timestamp": 123}
@@ -39,7 +39,7 @@ def test_normalize_results_with_full_data():
 def test_normalize_results_with_missing_keys():
     results = {"file_info": {"name": "test"}}
     normalized = _normalize_results(results)
-    
+
     assert normalized["file_info"] == {"name": "test"}
     assert normalized["pe_info"] == {}
     assert normalized["security"] == {}
@@ -51,7 +51,7 @@ def test_normalize_results_with_missing_keys():
 def test_normalize_results_empty_input():
     results = {}
     normalized = _normalize_results(results)
-    
+
     assert normalized["file_info"] == {}
     assert normalized["pe_info"] == {}
     assert normalized["security"] == {}
@@ -78,7 +78,7 @@ def test_build_file_overview_minimal():
         "pe_info": {},
         "rich_header": {},
     }
-    
+
     overview = _build_file_overview(results)
     assert overview["filename"] == "sample.exe"
     assert overview["file_type"] == "PE32"
@@ -101,7 +101,7 @@ def test_build_file_overview_with_timestamp():
         "pe_info": {"compilation_timestamp": "2024-01-01 12:00:00"},
         "rich_header": {},
     }
-    
+
     overview = _build_file_overview(results)
     assert overview["compiled"] == "2024-01-01 12:00:00"
 
@@ -127,7 +127,7 @@ def test_build_file_overview_with_rich_header():
             ],
         },
     }
-    
+
     overview = _build_file_overview(results)
     assert "toolset" in overview
     assert len(overview["toolset"]) == 3
@@ -149,7 +149,7 @@ def test_build_file_overview_rich_header_not_available():
         "pe_info": {},
         "rich_header": {"available": False},
     }
-    
+
     overview = _build_file_overview(results)
     assert "toolset" not in overview
 
@@ -160,7 +160,7 @@ def test_build_file_overview_missing_fields():
         "pe_info": {},
         "rich_header": {},
     }
-    
+
     overview = _build_file_overview(results)
     assert overview["filename"] == "Unknown"
     assert overview["file_type"] == "Unknown"
@@ -182,7 +182,7 @@ def test_build_security_assessment_all_features():
         },
         "packer": {"is_packed": False},
     }
-    
+
     assessment = _build_security_assessment(results)
     assert assessment["is_signed"] is True
     assert assessment["is_packed"] is False
@@ -199,7 +199,7 @@ def test_build_security_assessment_packed():
         "security": {"authenticode": False},
         "packer": {"is_packed": True, "packer_type": "UPX"},
     }
-    
+
     assessment = _build_security_assessment(results)
     assert assessment["is_signed"] is False
     assert assessment["is_packed"] is True
@@ -211,7 +211,7 @@ def test_build_security_assessment_no_security():
         "security": {},
         "packer": {},
     }
-    
+
     assessment = _build_security_assessment(results)
     assert assessment["is_signed"] is False
     assert assessment["is_packed"] is False
@@ -226,7 +226,7 @@ def test_build_threat_indicators_clean():
         "sections": [],
         "crypto": {},
     }
-    
+
     indicators = _build_threat_indicators(results)
     assert indicators["suspicious_imports"] == 0
     assert indicators["yara_matches"] == 0
@@ -248,7 +248,7 @@ def test_build_threat_indicators_suspicious():
         ],
         "crypto": {"matches": ["AES", "RC4"]},
     }
-    
+
     indicators = _build_threat_indicators(results)
     assert indicators["suspicious_imports"] == 2
     assert indicators["yara_matches"] == 2
@@ -263,7 +263,7 @@ def test_build_technical_details():
         "functions": {"count": 42},
         "crypto": {"matches": ["AES"]},
     }
-    
+
     details = _build_technical_details(results)
     assert details["imports"] == 2
     assert details["sections"] == 2
@@ -278,7 +278,7 @@ def test_build_technical_details_empty():
         "functions": {},
         "crypto": {},
     }
-    
+
     details = _build_technical_details(results)
     assert details["imports"] == 0
     assert details["sections"] == 0
@@ -294,7 +294,7 @@ def test_count_suspicious_imports():
         {"name": "CreateRemoteThread"},
         {"name": "SetThreadContext"},
     ]
-    
+
     count = _count_suspicious_imports(imports)
     assert count == 4
 
@@ -316,7 +316,7 @@ def test_count_high_entropy_sections():
         {"entropy": 6.5},
         {"entropy": 7.2},
     ]
-    
+
     count = _count_high_entropy_sections(sections)
     assert count == 3
 
@@ -339,7 +339,7 @@ def test_count_suspicious_sections_by_name():
         {"name": "UPX0"},
         {"name": ".text"},
     ]
-    
+
     count = _count_suspicious_sections(sections)
     assert count == 2
 
@@ -349,7 +349,7 @@ def test_count_suspicious_sections_by_indicator():
         {"name": ".text", "suspicious_indicators": ["unusual_size"]},
         {"name": ".data"},
     ]
-    
+
     count = _count_suspicious_sections(sections)
     assert count == 1
 
@@ -360,7 +360,7 @@ def test_count_suspicious_sections_both():
         {"name": ".rsrc", "suspicious_indicators": []},
         {"name": ".text"},
     ]
-    
+
     count = _count_suspicious_sections(sections)
     assert count == 2
 
@@ -390,7 +390,7 @@ def test_generate_recommendations_packed():
         "crypto": {},
         "anti_analysis": {},
     }
-    
+
     recommendations = _generate_recommendations(results)
     assert any("packed" in r.lower() for r in recommendations)
 
@@ -402,7 +402,7 @@ def test_generate_recommendations_unsigned():
         "crypto": {},
         "anti_analysis": {},
     }
-    
+
     recommendations = _generate_recommendations(results)
     assert any("unsigned" in r.lower() for r in recommendations)
 
@@ -414,7 +414,7 @@ def test_generate_recommendations_crypto():
         "crypto": {"matches": ["AES"]},
         "anti_analysis": {},
     }
-    
+
     recommendations = _generate_recommendations(results)
     assert any("crypto" in r.lower() for r in recommendations)
 
@@ -426,7 +426,7 @@ def test_generate_recommendations_anti_debug():
         "crypto": {},
         "anti_analysis": {"anti_debug": True},
     }
-    
+
     recommendations = _generate_recommendations(results)
     assert any("anti-debug" in r.lower() for r in recommendations)
 
@@ -438,7 +438,7 @@ def test_generate_recommendations_clean():
         "crypto": {},
         "anti_analysis": {},
     }
-    
+
     recommendations = _generate_recommendations(results)
     assert len(recommendations) == 1
     assert "no immediate concerns" in recommendations[0].lower()
@@ -451,7 +451,7 @@ def test_generate_recommendations_multiple():
         "crypto": {"matches": ["AES"]},
         "anti_analysis": {"anti_debug": True},
     }
-    
+
     recommendations = _generate_recommendations(results)
     assert len(recommendations) == 4
 
@@ -461,7 +461,7 @@ def test_result_aggregator_generate_indicators_packer():
     results = {
         "packer": {"is_packed": True, "packer_type": "UPX"},
     }
-    
+
     indicators = agg.generate_indicators(results)
     assert len(indicators) >= 1
     assert any(i["type"] == "Packer" for i in indicators)
@@ -472,7 +472,7 @@ def test_result_aggregator_generate_indicators_anti_debug():
     results = {
         "anti_analysis": {"anti_debug": True},
     }
-    
+
     indicators = agg.generate_indicators(results)
     assert any(i["type"] == "Anti-Debug" for i in indicators)
 
@@ -482,7 +482,7 @@ def test_result_aggregator_generate_indicators_anti_vm():
     results = {
         "anti_analysis": {"anti_vm": True},
     }
-    
+
     indicators = agg.generate_indicators(results)
     assert any(i["type"] == "Anti-VM" for i in indicators)
 
@@ -495,7 +495,7 @@ def test_result_aggregator_generate_indicators_suspicious_api():
             {"name": "CreateRemoteThread"},
         ],
     }
-    
+
     indicators = agg.generate_indicators(results)
     suspicious_apis = [i for i in indicators if i["type"] == "Suspicious API"]
     assert len(suspicious_apis) == 2
@@ -509,7 +509,7 @@ def test_result_aggregator_generate_indicators_yara():
             {"rule": "trojan_rule"},
         ],
     }
-    
+
     indicators = agg.generate_indicators(results)
     yara_indicators = [i for i in indicators if i["type"] == "YARA Match"]
     assert len(yara_indicators) == 2
@@ -523,7 +523,7 @@ def test_result_aggregator_generate_indicators_combined():
         "imports": [{"name": "VirtualAlloc"}],
         "yara_matches": [{"rule": "malware"}],
     }
-    
+
     indicators = agg.generate_indicators(results)
     assert len(indicators) >= 5
 
@@ -531,7 +531,7 @@ def test_result_aggregator_generate_indicators_combined():
 def test_result_aggregator_generate_indicators_empty():
     agg = ResultAggregator()
     results = {}
-    
+
     indicators = agg.generate_indicators(results)
     assert indicators == []
 
@@ -554,7 +554,7 @@ def test_result_aggregator_generate_executive_summary():
         "functions": {"count": 10},
         "crypto": {},
     }
-    
+
     summary = agg.generate_executive_summary(results)
     assert "file_overview" in summary
     assert "security_assessment" in summary
@@ -592,9 +592,9 @@ def test_result_aggregator_generate_executive_summary_complete():
         "crypto": {"matches": ["AES"]},
         "rich_header": {"available": False},
     }
-    
+
     summary = agg.generate_executive_summary(results)
-    
+
     assert summary["file_overview"]["filename"] == "test.exe"
     assert summary["security_assessment"]["is_signed"] is True
     assert summary["security_assessment"]["is_packed"] is True
@@ -604,7 +604,7 @@ def test_result_aggregator_generate_executive_summary_complete():
 
 def test_result_aggregator_generate_executive_summary_error_handling():
     agg = ResultAggregator()
-    
+
     summary = agg.generate_executive_summary(None)
     assert "error" in summary
 
@@ -617,15 +617,15 @@ def test_result_aggregator_indicator_severity():
         "imports": [{"name": "VirtualAlloc"}],
         "yara_matches": [{"rule": "malware"}],
     }
-    
+
     indicators = agg.generate_indicators(results)
-    
+
     packer_ind = next(i for i in indicators if i["type"] == "Packer")
     assert packer_ind["severity"] == "Medium"
-    
+
     anti_debug_ind = next(i for i in indicators if i["type"] == "Anti-Debug")
     assert anti_debug_ind["severity"] == "High"
-    
+
     yara_ind = next(i for i in indicators if i["type"] == "YARA Match")
     assert yara_ind["severity"] == "High"
 
@@ -636,12 +636,12 @@ def test_result_aggregator_indicator_descriptions():
         "packer": {"is_packed": True, "packer_type": "Themida"},
         "anti_analysis": {"anti_debug": True, "anti_vm": True},
     }
-    
+
     indicators = agg.generate_indicators(results)
-    
+
     packer_ind = next(i for i in indicators if i["type"] == "Packer")
     assert "Themida" in packer_ind["description"]
-    
+
     anti_debug_ind = next(i for i in indicators if i["type"] == "Anti-Debug")
     assert "debug" in anti_debug_ind["description"].lower()
 
@@ -649,7 +649,7 @@ def test_result_aggregator_indicator_descriptions():
 def test_normalize_results_preserves_original():
     original = {"file_info": {"name": "test"}}
     normalized = _normalize_results(original)
-    
+
     assert normalized["file_info"]["name"] == "test"
     assert "pe_info" in normalized
     assert "security" in normalized

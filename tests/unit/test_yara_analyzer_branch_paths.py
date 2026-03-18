@@ -228,7 +228,7 @@ def test_compile_rules_empty_directory_falls_back_to_defaults(tmp_path):
     rules_dir = tmp_path / "main_rules"
     analyzer = make_analyzer(str(rules_dir))
 
-    result = analyzer._compile_rules(str(empty_dir))
+    analyzer._compile_rules(str(empty_dir))
 
 
 def test_compile_rules_invalid_syntax_returns_none(tmp_path):

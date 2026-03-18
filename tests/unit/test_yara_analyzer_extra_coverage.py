@@ -1,443 +1,736 @@
 #!/usr/bin/env python3
-"""Extra coverage tests for yara_analyzer module."""
+"""Extra coverage tests for yara_analyzer module.
 
+All tests use real objects — NO mocks, NO monkeypatch, NO @patch.
+YaraAnalyzer is exercised through FakeR2 + R2PipeAdapter.
+Real YARA rule files are created via tmp_path.
+"""
+
+import json
 import os
 import signal
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
+from typing import Any
 
 import pytest
 
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.yara_analyzer import (
-    YaraAnalyzer,
-    TimeoutException,
-    timeout_handler,
     YARA_COMPILE_TIMEOUT,
     YARA_MAX_RULE_SIZE,
+    TimeoutException,
+    YaraAnalyzer,
+    timeout_handler,
 )
+
+try:
+    import yara as _yara_mod
+except Exception:
+    _yara_mod = None
+
+
+# ---------------------------------------------------------------------------
+# Helpers — real lightweight objects, no mocks
+# ---------------------------------------------------------------------------
+
+
+class FakeR2:
+    """Minimal r2pipe-like object backed by static command maps."""
+
+    def __init__(
+        self,
+        cmd_map: dict[str, str] | None = None,
+        cmdj_map: dict[str, Any] | None = None,
+    ):
+        self._cmd_map = cmd_map or {}
+        self._cmdj_map = cmdj_map or {}
+
+    def cmd(self, command: str) -> str:
+        return self._cmd_map.get(command, "")
+
+    def cmdj(self, command: str) -> Any:
+        return self._cmdj_map.get(command)
 
 
 class FakeConfig:
-    def __init__(self, yara_path=None):
-        self._yara_path = yara_path or "/tmp/yara_rules"
-    
-    def get_yara_rules_path(self):
+    """Minimal config object providing a YARA rules path."""
+
+    def __init__(self, yara_path: str = "/tmp/yara_rules"):
+        self._yara_path = yara_path
+
+    def get_yara_rules_path(self) -> str:
         return self._yara_path
 
 
-class FakeAdapter:
-    def __init__(self, file_info=None):
-        self._file_info = file_info or {}
-    
-    def cmdj(self, cmd, default):
-        if cmd == "ij":
-            return self._file_info
-        return default
+def _make_adapter(
+    cmd_map: dict[str, str] | None = None,
+    cmdj_map: dict[str, Any] | None = None,
+) -> R2PipeAdapter:
+    return R2PipeAdapter(FakeR2(cmd_map=cmd_map, cmdj_map=cmdj_map))
+
+
+def _make_analyzer(
+    tmp_path: Path,
+    filepath: str | None = None,
+    rules_path: str | None = None,
+    cmdj_map: dict[str, Any] | None = None,
+) -> YaraAnalyzer:
+    adapter = _make_adapter(cmdj_map=cmdj_map)
+    rp = rules_path or str(tmp_path / "yara_rules")
+    config = FakeConfig(rp)
+    return YaraAnalyzer(adapter, config=config, filepath=filepath)
+
+
+def _write_rule(path: Path, name: str = "test_rule") -> Path:
+    """Write a valid YARA rule file and return its path."""
+    content = f'rule {name} {{ strings: $a = "test" condition: $a }}'
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Basic construction tests
+# ---------------------------------------------------------------------------
 
 
 def test_timeout_exception():
-    """Test TimeoutException creation"""
+    """TimeoutException stores message correctly."""
     exc = TimeoutException("test timeout")
     assert str(exc) == "test timeout"
 
 
 def test_timeout_handler():
-    """Test timeout signal handler raises TimeoutException"""
+    """timeout_handler raises TimeoutException."""
     with pytest.raises(TimeoutException, match="YARA compilation timed out"):
         timeout_handler(signal.SIGALRM, None)
 
 
 def test_yara_analyzer_init_without_config():
-    """Test that YaraAnalyzer raises ValueError without config"""
-    adapter = FakeAdapter()
+    """YaraAnalyzer raises ValueError when config is None."""
+    adapter = _make_adapter()
     with pytest.raises(ValueError, match="config must be provided"):
         YaraAnalyzer(adapter, config=None)
 
 
-def test_yara_analyzer_init_with_config():
-    """Test YaraAnalyzer initialization with config"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
+def test_yara_analyzer_init_with_config(tmp_path):
+    """YaraAnalyzer stores adapter, config, rules_path, filepath."""
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    adapter = _make_adapter()
+    config = FakeConfig(str(rules_dir))
     analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
+
     assert analyzer.adapter is adapter
     assert analyzer.config is config
-    assert analyzer.rules_path == "/tmp/yara_rules"
+    assert analyzer.rules_path == str(rules_dir)
     assert analyzer.filepath == "/tmp/test.bin"
 
 
-@patch('r2inspect.modules.yara_analyzer.yara', None)
-def test_scan_no_yara_available():
-    """Test scan returns empty when yara module not available"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    matches = analyzer.scan()
-    assert matches == []
+# ---------------------------------------------------------------------------
+# _resolve_file_path
+# ---------------------------------------------------------------------------
 
 
-def test_resolve_file_path_no_filepath():
-    """Test _resolve_file_path when filepath is None"""
-    file_info = {"core": {"file": "/test/sample.bin"}}
-    adapter = FakeAdapter(file_info)
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath=None)
-    
-    with patch.object(analyzer, '_cmdj', return_value=file_info):
-        with patch('os.path.exists', return_value=True):
-            path = analyzer._resolve_file_path()
-            assert path == "/test/sample.bin"
+def test_resolve_file_path_with_existing_filepath(tmp_path):
+    """_resolve_file_path returns filepath when it exists on disk."""
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"\x00" * 16)
+    analyzer = _make_analyzer(tmp_path, filepath=str(sample))
+
+    path = analyzer._resolve_file_path()
+    assert path == str(sample)
 
 
-def test_resolve_file_path_file_not_exists():
-    """Test _resolve_file_path returns None when file doesn't exist"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/nonexistent.bin")
-    
-    with patch('os.path.exists', return_value=False):
-        path = analyzer._resolve_file_path()
-        assert path is None
+def test_resolve_file_path_no_filepath_falls_back_to_r2(tmp_path):
+    """_resolve_file_path queries r2 'ij' when filepath is None."""
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"\x00" * 16)
+    cmdj_map = {"ij": {"core": {"file": str(sample)}}}
+    analyzer = _make_analyzer(tmp_path, filepath=None, cmdj_map=cmdj_map)
+
+    path = analyzer._resolve_file_path()
+    assert path == str(sample)
 
 
-def test_resolve_rules_path_not_exists(tmp_path):
-    """Test _resolve_rules_path creates defaults when path doesn't exist"""
-    adapter = FakeAdapter()
-    rules_path = str(tmp_path / "nonexistent_rules")
-    config = FakeConfig(rules_path)
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(analyzer, 'create_default_rules'):
-        result = analyzer._resolve_rules_path(None)
-        analyzer.create_default_rules.assert_called_once()
+def test_resolve_file_path_nonexistent():
+    """_resolve_file_path returns None when file does not exist."""
+    adapter = _make_adapter()
+    config = FakeConfig("/tmp/yara_rules")
+    analyzer = YaraAnalyzer(adapter, config=config, filepath="/nonexistent_path_xyz.bin")
+
+    path = analyzer._resolve_file_path()
+    assert path is None
 
 
-def test_validate_rules_path_error():
-    """Test _validate_rules_path with validation error"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    mock_validator.validate_path.side_effect = ValueError("Invalid path")
-    
-    result = analyzer._validate_rules_path(mock_validator, "/bad/path")
+def test_resolve_file_path_none_filepath_no_r2_info(tmp_path):
+    """_resolve_file_path returns None when filepath is None and r2 gives nothing."""
+    analyzer = _make_analyzer(tmp_path, filepath=None)
+    path = analyzer._resolve_file_path()
+    assert path is None
+
+
+# ---------------------------------------------------------------------------
+# _resolve_rules_path
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_rules_path_existing_dir(tmp_path):
+    """_resolve_rules_path returns path when the dir already exists."""
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    analyzer = _make_analyzer(tmp_path, rules_path=str(rules_dir))
+
+    result = analyzer._resolve_rules_path(None)
+    assert result == str(rules_dir)
+
+
+def test_resolve_rules_path_custom(tmp_path):
+    """_resolve_rules_path honours a custom rules path."""
+    custom = tmp_path / "custom_rules"
+    custom.mkdir()
+    analyzer = _make_analyzer(tmp_path)
+
+    result = analyzer._resolve_rules_path(str(custom))
+    assert result == str(custom)
+
+
+def test_resolve_rules_path_creates_defaults(tmp_path):
+    """_resolve_rules_path creates default rules when path missing."""
+    rules_dir = tmp_path / "yara_rules"
+    analyzer = _make_analyzer(tmp_path, rules_path=str(rules_dir))
+
+    # Rules path does not exist yet; _resolve_rules_path should call
+    # create_default_rules which creates the directory.
+    result = analyzer._resolve_rules_path(None)
+    # After creating defaults the directory should exist.
+    assert rules_dir.exists()
+    assert result == str(rules_dir)
+
+
+# ---------------------------------------------------------------------------
+# _validate_rules_path
+# ---------------------------------------------------------------------------
+
+
+def test_validate_rules_path_success(tmp_path):
+    """_validate_rules_path returns Path for a valid existing path."""
+    from r2inspect.security.validators import FileValidator
+
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._validate_rules_path(validator, str(rules_dir))
+    assert result is not None
+    assert result == rules_dir.resolve()
+
+
+def test_validate_rules_path_nonexistent(tmp_path):
+    """_validate_rules_path returns None for non-existent path."""
+    from r2inspect.security.validators import FileValidator
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._validate_rules_path(validator, str(tmp_path / "does_not_exist"))
     assert result is None
 
 
-def test_load_single_rule(tmp_path):
-    """Test _load_single_rule"""
+# ---------------------------------------------------------------------------
+# _discover_rule_files
+# ---------------------------------------------------------------------------
+
+
+def test_discover_rule_files_multiple_extensions(tmp_path):
+    """_discover_rule_files finds .yar, .yara, .rule, .rules files."""
+    (tmp_path / "a.yar").touch()
+    (tmp_path / "b.yara").touch()
+    (tmp_path / "c.rule").touch()
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "d.rules").touch()
+
+    analyzer = _make_analyzer(tmp_path)
+    found = analyzer._discover_rule_files(tmp_path)
+    names = {f.name for f in found}
+    assert {"a.yar", "b.yara", "c.rule", "d.rules"}.issubset(names)
+
+
+def test_discover_rule_files_empty_dir(tmp_path):
+    """_discover_rule_files returns empty list for empty directory."""
+    analyzer = _make_analyzer(tmp_path)
+    found = analyzer._discover_rule_files(tmp_path)
+    assert found == []
+
+
+# ---------------------------------------------------------------------------
+# _read_rule_content
+# ---------------------------------------------------------------------------
+
+
+def test_read_rule_content_valid(tmp_path):
+    """_read_rule_content reads a valid YARA rule file."""
+    from r2inspect.security.validators import FileValidator
+
     rule_file = tmp_path / "test.yar"
-    rule_file.write_text("rule test { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    mock_validator.validate_path.return_value = rule_file
-    
-    with patch.object(analyzer, '_read_rule_content', return_value="rule test { condition: true }"):
-        result = analyzer._load_single_rule(mock_validator, rule_file)
-        assert result == {"single_rule": "rule test { condition: true }"}
+    _write_rule(rule_file)
 
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
 
-def test_load_single_rule_empty():
-    """Test _load_single_rule with empty content"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    
-    with patch.object(analyzer, '_read_rule_content', return_value=None):
-        result = analyzer._load_single_rule(mock_validator, Path("/tmp/test.yar"))
-        assert result == {}
-
-
-def test_discover_rule_files(tmp_path):
-    """Test _discover_rule_files finds various extensions"""
-    (tmp_path / "test1.yar").touch()
-    (tmp_path / "test2.yara").touch()
-    (tmp_path / "test3.rule").touch()
-    (tmp_path / "subdir").mkdir()
-    (tmp_path / "subdir" / "test4.rules").touch()
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    rules = analyzer._discover_rule_files(tmp_path)
-    assert len(rules) >= 4
-
-
-def test_read_rule_content_file_too_large(tmp_path):
-    """Test _read_rule_content skips files that are too large"""
-    large_file = tmp_path / "large.yar"
-    large_file.touch()
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    mock_validator.validate_path.return_value = large_file
-    
-    with patch.object(Path, 'stat') as mock_stat:
-        mock_stat.return_value.st_size = YARA_MAX_RULE_SIZE + 1
-        result = analyzer._read_rule_content(mock_validator, large_file)
-        assert result is None
-
-
-def test_read_rule_content_validation_error(tmp_path):
-    """Test _read_rule_content with validation error"""
-    rule_file = tmp_path / "test.yar"
-    rule_file.write_text("rule test { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    mock_validator.validate_path.return_value = rule_file
-    mock_validator.validate_yara_rule_content.side_effect = ValueError("Bad content")
-    
-    with patch('r2inspect.modules.yara_analyzer.default_file_system.read_text', return_value="content"):
-        result = analyzer._read_rule_content(mock_validator, rule_file)
-        assert result is None
+    content = analyzer._read_rule_content(validator, rule_file)
+    assert content is not None
+    assert "rule test_rule" in content
 
 
 def test_read_rule_content_empty_file(tmp_path):
-    """Test _read_rule_content with empty file"""
+    """_read_rule_content returns None for empty file."""
+    from r2inspect.security.validators import FileValidator
+
     rule_file = tmp_path / "empty.yar"
-    rule_file.write_text("")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    mock_validator.validate_path.return_value = rule_file
-    
-    with patch('r2inspect.modules.yara_analyzer.default_file_system.read_text', return_value=""):
-        result = analyzer._read_rule_content(mock_validator, rule_file)
-        assert result is None
+    rule_file.write_text("", encoding="utf-8")
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    content = analyzer._read_rule_content(validator, rule_file)
+    assert content is None
+
+
+def test_read_rule_content_file_too_large(tmp_path):
+    """_read_rule_content returns None when file exceeds YARA_MAX_RULE_SIZE."""
+    from r2inspect.security.validators import FileValidator
+
+    rule_file = tmp_path / "huge.yar"
+    # Create a file larger than max size by writing sparse content
+    # We can't actually write 10MB+, but we can make the stat report it.
+    # Instead, just write YARA_MAX_RULE_SIZE + 1 bytes.
+    rule_file.write_bytes(b"x" * (YARA_MAX_RULE_SIZE + 1))
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    content = analyzer._read_rule_content(validator, rule_file)
+    assert content is None
+
+
+# ---------------------------------------------------------------------------
+# _load_single_rule / _load_rules_dir
+# ---------------------------------------------------------------------------
+
+
+def test_load_single_rule_valid(tmp_path):
+    """_load_single_rule returns dict with content for valid rule."""
+    from r2inspect.security.validators import FileValidator
+
+    rule_file = tmp_path / "single.yar"
+    _write_rule(rule_file, "single_test")
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._load_single_rule(validator, rule_file)
+    assert "single_rule" in result
+    assert "rule single_test" in result["single_rule"]
+
+
+def test_load_single_rule_empty(tmp_path):
+    """_load_single_rule returns {} when file is empty."""
+    from r2inspect.security.validators import FileValidator
+
+    rule_file = tmp_path / "empty.yar"
+    rule_file.write_text("", encoding="utf-8")
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._load_single_rule(validator, rule_file)
+    assert result == {}
+
+
+def test_load_rules_dir_with_rules(tmp_path):
+    """_load_rules_dir loads all valid rules from directory."""
+    from r2inspect.security.validators import FileValidator
+
+    _write_rule(tmp_path / "a.yar", "rule_a")
+    _write_rule(tmp_path / "b.yar", "rule_b")
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._load_rules_dir(validator, tmp_path)
+    assert len(result) == 2
+    assert any("rule_a" in v for v in result.values())
+    assert any("rule_b" in v for v in result.values())
+
+
+def test_load_rules_dir_no_matches(tmp_path):
+    """_load_rules_dir returns {} when directory has no rule files."""
+    from r2inspect.security.validators import FileValidator
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._load_rules_dir(validator, tmp_path)
+    assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# _collect_rules_sources
+# ---------------------------------------------------------------------------
+
+
+def test_collect_rules_sources_file(tmp_path):
+    """_collect_rules_sources handles a single file path."""
+    from r2inspect.security.validators import FileValidator
+
+    rule_file = tmp_path / "single.yar"
+    _write_rule(rule_file, "single_src")
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._collect_rules_sources(validator, rule_file)
+    assert "single_rule" in result
+
+
+def test_collect_rules_sources_dir(tmp_path):
+    """_collect_rules_sources handles a directory."""
+    from r2inspect.security.validators import FileValidator
+
+    _write_rule(tmp_path / "r.yar", "dir_rule")
+
+    analyzer = _make_analyzer(tmp_path)
+    validator = FileValidator()
+
+    result = analyzer._collect_rules_sources(validator, tmp_path)
+    assert len(result) >= 1
+
+
+# ---------------------------------------------------------------------------
+# create_default_rules
+# ---------------------------------------------------------------------------
 
 
 def test_create_default_rules(tmp_path):
-    """Test create_default_rules creates directory and files"""
-    rules_path = tmp_path / "yara_rules"
-    adapter = FakeAdapter()
-    config = FakeConfig(str(rules_path))
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch('r2inspect.modules.yara_analyzer.default_file_system.write_text') as mock_write:
-        analyzer.create_default_rules()
-        assert rules_path.exists()
+    """create_default_rules creates directory and writes default rule files."""
+    rules_dir = tmp_path / "yara_defaults"
+    analyzer = _make_analyzer(tmp_path, rules_path=str(rules_dir))
+
+    analyzer.create_default_rules()
+
+    assert rules_dir.exists()
+    yar_files = list(rules_dir.glob("*.yar"))
+    assert len(yar_files) > 0
+    # Check content was actually written
+    for f in yar_files:
+        assert f.stat().st_size > 0
 
 
-def test_create_default_rules_error():
-    """Test create_default_rules handles errors"""
-    adapter = FakeAdapter()
-    config = FakeConfig("/invalid/path")
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch('pathlib.Path.mkdir', side_effect=PermissionError("No permission")):
-        analyzer.create_default_rules()  # Should not raise
+def test_create_default_rules_already_exists(tmp_path):
+    """create_default_rules does not overwrite existing files."""
+    rules_dir = tmp_path / "yara_defaults"
+    rules_dir.mkdir()
+    sentinel = rules_dir / "packer_detection.yar"
+    sentinel.write_text("sentinel content", encoding="utf-8")
+
+    analyzer = _make_analyzer(tmp_path, rules_path=str(rules_dir))
+    analyzer.create_default_rules()
+
+    # The sentinel content should remain intact because the file already existed.
+    assert sentinel.read_text() == "sentinel content"
 
 
+def test_create_default_rules_readonly_parent(tmp_path):
+    """create_default_rules does not raise on permission errors."""
+    # Use a path inside /nonexistent so mkdir will fail without raising
+    analyzer = _make_analyzer(tmp_path, rules_path="/nonexistent/readonly/yara")
+    # Should not raise
+    analyzer.create_default_rules()
+
+
+# ---------------------------------------------------------------------------
+# validate_rules
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
 def test_validate_rules_directory(tmp_path):
-    """Test validate_rules with directory"""
-    (tmp_path / "test1.yar").write_text("rule test1 { condition: true }")
-    (tmp_path / "test2.yara").write_text("rule test2 { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(analyzer, '_compile_rules', return_value=MagicMock()):
-        result = analyzer.validate_rules(str(tmp_path))
-        assert result["valid"] is True
-        assert result["rules_count"] >= 2
+    """validate_rules returns valid=True for a directory with valid rules."""
+    _write_rule(tmp_path / "a.yar", "val_rule_a")
+    _write_rule(tmp_path / "b.yara", "val_rule_b")
+
+    analyzer = _make_analyzer(tmp_path)
+    result = analyzer.validate_rules(str(tmp_path))
+
+    assert result["valid"] is True
+    assert result["rules_count"] >= 2
 
 
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
 def test_validate_rules_single_file(tmp_path):
-    """Test validate_rules with single file"""
-    rule_file = tmp_path / "test.yar"
-    rule_file.write_text("rule test { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(analyzer, '_compile_rules', return_value=MagicMock()):
-        result = analyzer.validate_rules(str(rule_file))
-        assert result["valid"] is True
-        assert result["rules_count"] == 1
+    """validate_rules returns valid=True for a single valid rule file."""
+    rule_file = tmp_path / "single.yar"
+    _write_rule(rule_file, "val_single")
+
+    analyzer = _make_analyzer(tmp_path)
+    result = analyzer.validate_rules(str(rule_file))
+
+    assert result["valid"] is True
+    assert result["rules_count"] == 1
 
 
-def test_validate_rules_failure():
-    """Test validate_rules with compilation failure"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(analyzer, '_compile_rules', return_value=None):
-        result = analyzer.validate_rules("/tmp/rules")
-        assert result["valid"] is False
-        assert "Failed to compile rules" in result["errors"]
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_validate_rules_compile_failure(tmp_path):
+    """validate_rules returns valid=False when rules have syntax errors."""
+    bad_rule = tmp_path / "bad.yar"
+    bad_rule.write_text("this is not valid yara syntax at all", encoding="utf-8")
+
+    analyzer = _make_analyzer(tmp_path)
+    result = analyzer.validate_rules(str(bad_rule))
+
+    # With invalid syntax the compile will fail; valid should be False.
+    assert result["valid"] is False
 
 
-def test_validate_rules_exception():
-    """Test validate_rules handles exceptions"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(analyzer, '_compile_rules', side_effect=Exception("test error")):
-        result = analyzer.validate_rules("/tmp/rules")
-        assert result["valid"] is False
-        assert "test error" in result["errors"]
+def test_validate_rules_nonexistent_path(tmp_path):
+    """validate_rules returns valid=False for non-existent path."""
+    analyzer = _make_analyzer(tmp_path)
+    result = analyzer.validate_rules(str(tmp_path / "does_not_exist"))
+
+    assert result["valid"] is False
+
+
+# ---------------------------------------------------------------------------
+# list_available_rules
+# ---------------------------------------------------------------------------
 
 
 def test_list_available_rules_single_file(tmp_path):
-    """Test list_available_rules with single file"""
+    """list_available_rules returns info for a single file."""
     rule_file = tmp_path / "test.yar"
-    rule_file.write_text("rule test { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
+    _write_rule(rule_file)
+
+    analyzer = _make_analyzer(tmp_path)
     rules = analyzer.list_available_rules(str(rule_file))
+
     assert len(rules) == 1
     assert rules[0]["name"] == "test.yar"
     assert rules[0]["type"] == "single_file"
 
 
 def test_list_available_rules_directory(tmp_path):
-    """Test list_available_rules with directory"""
-    (tmp_path / "test1.yar").write_text("rule test1 { condition: true }")
-    (tmp_path / "test2.yara").write_text("rule test2 { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
+    """list_available_rules finds rules in a directory."""
+    _write_rule(tmp_path / "r1.yar", "dir1")
+    _write_rule(tmp_path / "r2.yara", "dir2")
+
+    analyzer = _make_analyzer(tmp_path)
     rules = analyzer.list_available_rules(str(tmp_path))
-    assert len(rules) >= 2
+
+    names = {r["name"] for r in rules}
+    assert "r1.yar" in names
+    assert "r2.yara" in names
 
 
-def test_list_available_rules_not_exists():
-    """Test list_available_rules with non-existent path"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    rules = analyzer.list_available_rules("/nonexistent/path")
+def test_list_available_rules_not_exists(tmp_path):
+    """list_available_rules returns [] for non-existent path."""
+    analyzer = _make_analyzer(tmp_path)
+    rules = analyzer.list_available_rules("/nonexistent/path/xyz")
     assert rules == []
 
 
-def test_list_available_rules_error_handling(tmp_path):
-    """Test list_available_rules handles file stat errors"""
-    (tmp_path / "test.yar").write_text("rule test { condition: true }")
-    
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(Path, 'stat', side_effect=OSError("Permission denied")):
-        rules = analyzer.list_available_rules(str(tmp_path))
-        # Should continue despite errors
+# ---------------------------------------------------------------------------
+# scan — end-to-end
+# ---------------------------------------------------------------------------
 
 
-def test_scan_error_handling():
-    """Test scan handles errors gracefully"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    with patch.object(analyzer, '_resolve_file_path', side_effect=Exception("test error")):
-        matches = analyzer.scan()
-        assert matches == []
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_scan_with_matching_rule(tmp_path):
+    """scan returns matches when a rule matches the target file."""
+    # Create a sample binary containing the string "TESTMARKER"
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"\x00" * 16 + b"TESTMARKER" + b"\x00" * 16)
+
+    # Create a YARA rule that matches "TESTMARKER"
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    (rules_dir / "marker.yar").write_text(
+        'rule MarkerRule { strings: $m = "TESTMARKER" condition: $m }',
+        encoding="utf-8",
+    )
+
+    # Clear the compiled cache to avoid cross-test contamination
+    from r2inspect.modules.yara_analyzer import _COMPILED_CACHE
+
+    _COMPILED_CACHE.pop(str(rules_dir), None)
+
+    analyzer = _make_analyzer(tmp_path, filepath=str(sample), rules_path=str(rules_dir))
+    matches = analyzer.scan()
+
+    assert len(matches) >= 1
+    assert matches[0]["rule"] == "MarkerRule"
 
 
-@patch('r2inspect.modules.yara_analyzer.yara')
-def test_compile_sources_timeout_platform(mock_yara):
-    """Test _compile_sources_with_timeout on platform without SIGALRM"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_yara.compile.return_value = MagicMock()
-    
-    with patch('signal.SIGALRM', create=True) as mock_sig:
-        # Remove SIGALRM to simulate Windows
-        delattr(signal, 'SIGALRM')
-        
-        result = analyzer._compile_sources_with_timeout({"test": "rule test {}"})
-        mock_yara.compile.assert_called_once()
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_scan_no_match(tmp_path):
+    """scan returns empty list when no rules match."""
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"\x00" * 64)
+
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    (rules_dir / "nomatch.yar").write_text(
+        'rule NoMatch { strings: $x = "UNIQUE_STRING_XYZ_999" condition: $x }',
+        encoding="utf-8",
+    )
+
+    from r2inspect.modules.yara_analyzer import _COMPILED_CACHE
+
+    _COMPILED_CACHE.pop(str(rules_dir), None)
+
+    analyzer = _make_analyzer(tmp_path, filepath=str(sample), rules_path=str(rules_dir))
+    matches = analyzer.scan()
+    assert matches == []
 
 
-@patch('r2inspect.modules.yara_analyzer.yara')
-def test_compile_sources_syntax_error(mock_yara):
-    """Test _compile_sources_with_timeout handles syntax errors"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    # Create a proper exception class
-    class YaraSyntaxError(Exception):
-        pass
-    
-    mock_yara.SyntaxError = YaraSyntaxError
-    mock_yara.compile.side_effect = YaraSyntaxError("Bad syntax")
-    
-    result = analyzer._compile_sources_with_timeout({"test": "bad rule"})
+def test_scan_file_not_found(tmp_path):
+    """scan returns [] when target file does not exist."""
+    analyzer = _make_analyzer(tmp_path, filepath="/nonexistent_file_xyz.bin")
+    matches = analyzer.scan()
+    assert matches == []
+
+
+def test_scan_no_rules_path(tmp_path):
+    """scan returns [] when rules path does not exist and defaults fail."""
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"\x00" * 16)
+
+    # Use a rules path that does not exist and cannot be created
+    analyzer = _make_analyzer(
+        tmp_path,
+        filepath=str(sample),
+        rules_path="/nonexistent/rules/xyz",
+    )
+    matches = analyzer.scan()
+    assert matches == []
+
+
+# ---------------------------------------------------------------------------
+# _compile_rules
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_compile_rules_valid(tmp_path):
+    """_compile_rules returns compiled rules for valid YARA files."""
+    rules_dir = tmp_path / "compile_test"
+    rules_dir.mkdir()
+    _write_rule(rules_dir / "good.yar", "compile_good")
+
+    analyzer = _make_analyzer(tmp_path)
+    compiled = analyzer._compile_rules(str(rules_dir))
+    assert compiled is not None
+
+
+def test_compile_rules_nonexistent(tmp_path):
+    """_compile_rules returns None for non-existent path."""
+    analyzer = _make_analyzer(tmp_path)
+    compiled = analyzer._compile_rules("/nonexistent/rules/xyz")
+    assert compiled is None
+
+
+# ---------------------------------------------------------------------------
+# _compile_sources_with_timeout
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_compile_sources_with_timeout_valid(tmp_path):
+    """_compile_sources_with_timeout compiles valid rule sources."""
+    analyzer = _make_analyzer(tmp_path)
+    sources = {"test": 'rule TimeoutTest { strings: $a = "abc" condition: $a }'}
+
+    compiled = analyzer._compile_sources_with_timeout(sources)
+    assert compiled is not None
+
+
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_compile_sources_with_timeout_syntax_error(tmp_path):
+    """_compile_sources_with_timeout returns None on syntax errors."""
+    analyzer = _make_analyzer(tmp_path)
+    sources = {"bad": "this is not valid yara syntax at all"}
+
+    compiled = analyzer._compile_sources_with_timeout(sources)
+    assert compiled is None
+
+
+# ---------------------------------------------------------------------------
+# _compile_default_rules
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_compile_default_rules(tmp_path):
+    """_compile_default_rules creates and compiles built-in defaults."""
+    rules_dir = tmp_path / "yara_defaults"
+    analyzer = _make_analyzer(tmp_path, rules_path=str(rules_dir))
+
+    # First create the defaults so the file exists
+    analyzer.create_default_rules()
+    compiled = analyzer._compile_default_rules(str(rules_dir))
+    assert compiled is not None
+
+
+def test_compile_default_rules_unwritable(tmp_path):
+    """_compile_default_rules returns None when defaults cannot be created."""
+    # Point rules_path at a location that cannot be created (nested under a file)
+    blocker = tmp_path / "blocker"
+    blocker.write_text("not a dir")
+    impossible_path = str(blocker / "rules")
+    analyzer = _make_analyzer(tmp_path, rules_path=impossible_path)
+
+    result = analyzer._compile_default_rules(impossible_path)
     assert result is None
 
 
-def test_load_rules_dir_no_matches(tmp_path):
-    """Test _load_rules_dir with no matching files"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    
-    with patch.object(analyzer, '_discover_rule_files', return_value=[]):
-        result = analyzer._load_rules_dir(mock_validator, tmp_path)
-        assert result == {}
+# ---------------------------------------------------------------------------
+# _get_cached_rules
+# ---------------------------------------------------------------------------
 
 
-def test_collect_rules_sources_invalid_path():
-    """Test _collect_rules_sources with invalid path type"""
-    adapter = FakeAdapter()
-    config = FakeConfig()
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_validator = MagicMock()
-    mock_path = MagicMock()
-    mock_path.is_file.return_value = False
-    mock_path.is_dir.return_value = False
-    
-    result = analyzer._collect_rules_sources(mock_validator, mock_path)
-    assert result == {}
+@pytest.mark.skipif(_yara_mod is None, reason="python-yara not installed")
+def test_get_cached_rules_caches(tmp_path):
+    """_get_cached_rules caches compiled rules on second call."""
+    from r2inspect.modules.yara_analyzer import _COMPILED_CACHE
+
+    rules_dir = tmp_path / "cache_test"
+    rules_dir.mkdir()
+    _write_rule(rules_dir / "cache.yar", "cache_rule")
+
+    cache_key = str(rules_dir)
+    _COMPILED_CACHE.pop(cache_key, None)
+
+    analyzer = _make_analyzer(tmp_path)
+
+    first = analyzer._get_cached_rules(cache_key)
+    assert first is not None
+    assert cache_key in _COMPILED_CACHE
+
+    # Second call should return cached version
+    second = analyzer._get_cached_rules(cache_key)
+    assert second is first
+
+    # Cleanup
+    _COMPILED_CACHE.pop(cache_key, None)
 
 
-@patch('r2inspect.modules.yara_analyzer.yara')
-def test_compile_default_rules_error(mock_yara, tmp_path):
-    """Test _compile_default_rules handles errors"""
-    rules_path = tmp_path / "rules"
-    rules_path.mkdir()
-    
-    adapter = FakeAdapter()
-    config = FakeConfig(str(rules_path))
-    analyzer = YaraAnalyzer(adapter, config=config, filepath="/tmp/test.bin")
-    
-    mock_yara.compile.side_effect = Exception("Compile error")
-    
-    result = analyzer._compile_default_rules(str(rules_path))
-    assert result is None
+# ---------------------------------------------------------------------------
+# Constants sanity
+# ---------------------------------------------------------------------------
+
+
+def test_constants():
+    """YARA constants have expected values."""
+    assert YARA_COMPILE_TIMEOUT == 30
+    assert YARA_MAX_RULE_SIZE == 10 * 1024 * 1024

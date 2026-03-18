@@ -32,9 +32,13 @@ from r2inspect.error_handling.unified_handler import (
     handle_errors,
     reset_circuit_breakers,
 )
-from r2inspect.utils.error_handler import error_handler, reset_error_stats
-from r2inspect.utils.rate_limiter import BatchRateLimiter
-from r2inspect.utils.retry_manager import RetryConfig, global_retry_manager, reset_retry_stats
+from r2inspect.error_handling.classifier import error_handler, reset_error_stats
+from r2inspect.infrastructure.rate_limiter import BatchRateLimiter
+from r2inspect.infrastructure.retry_manager import (
+    RetryConfig,
+    global_retry_manager,
+    reset_retry_stats,
+)
 
 SAMPLES_ROOT = Path(__file__).resolve().parents[2] / "samples" / "fixtures"
 SAMPLE_ELF = SAMPLES_ROOT / "hello_elf"

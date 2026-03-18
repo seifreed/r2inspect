@@ -3,10 +3,10 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from r2inspect.core.constants import MIN_EXECUTABLE_SIZE_BYTES
+from r2inspect.domain.constants import MIN_EXECUTABLE_SIZE_BYTES
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.utils import hashing
-from r2inspect.utils.memory_manager import configure_memory_limits, global_memory_monitor
+import r2inspect.infrastructure.hashing as hashing
+from r2inspect.infrastructure.memory import configure_memory_limits, global_memory_monitor
 
 
 def test_calculate_hashes_success_and_missing(tmp_path: Path) -> None:

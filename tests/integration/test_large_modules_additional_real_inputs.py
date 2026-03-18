@@ -11,9 +11,21 @@ from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TELFHASH_AVAILABLE, TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
+from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 
 pytestmark = pytest.mark.requires_r2
+
+
+@pytest.fixture
+def samples_dir(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    source_root = resolve_fixture_source_root(repo_root)
+    if source_root is None:
+        pytest.skip("sample fixtures are not available")
+    fixtures_dir = tmp_path / "fixtures"
+    sync_sample_fixtures(fixtures_dir, source_root, copy_files=True)
+    return fixtures_dir
 
 
 def test_resource_and_rich_header_real_edge_inputs(samples_dir: Path) -> None:

@@ -5,16 +5,16 @@ import hashlib
 import pytest
 
 from r2inspect.core.result_aggregator import ResultAggregator
-from r2inspect.utils.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash, calculate_ssdeep
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,
     cleanup_memory,
     configure_memory_limits,
 )
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 pytestmark = pytest.mark.unit
 

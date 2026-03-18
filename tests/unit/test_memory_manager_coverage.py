@@ -5,7 +5,7 @@ Coverage tests for r2inspect/utils/memory_manager.py
 
 import pytest
 
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,
@@ -193,14 +193,16 @@ def test_check_memory_limits_file_too_large():
 
 
 def test_check_memory_limits_within_bounds():
-    from r2inspect.utils import memory_manager as mm
+    import r2inspect.infrastructure.memory as mm
+
     mm.global_memory_monitor.last_check = 0  # Force full check with system stats
     result = check_memory_limits(file_size_bytes=1024, estimated_analysis_mb=1.0)
     assert result is True
 
 
 def test_check_memory_limits_zero_file_size():
-    from r2inspect.utils import memory_manager as mm
+    import r2inspect.infrastructure.memory as mm
+
     mm.global_memory_monitor.last_check = 0
     result = check_memory_limits(file_size_bytes=0, estimated_analysis_mb=1.0)
     assert result is True

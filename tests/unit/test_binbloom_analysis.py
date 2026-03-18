@@ -84,11 +84,11 @@ def test_binbloom_basic_analysis():
         from pybloom_live import BloomFilter
     except ImportError:
         pytest.skip("pybloom-live not available")
-    
+
     adapter = MockAdapter(has_functions=True)
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
     result = analyzer.analyze(capacity=128, error_rate=0.01)
-    
+
     assert result["analyzer"] == "binbloom"
     assert result["available"] is True
     assert result["total_functions"] == 3
@@ -112,7 +112,7 @@ def test_binbloom_extract_mnemonics():
         from pybloom_live import BloomFilter
     except ImportError:
         pytest.skip("pybloom-live not available")
-    
+
     adapter = MockAdapter(has_functions=True)
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
     mnemonics = analyzer._extract_instruction_mnemonics(0x1000, "test_func")
@@ -124,7 +124,7 @@ def test_binbloom_extract_mnemonics():
 def test_binbloom_normalize_mnemonic():
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
-    
+
     assert analyzer._normalize_mnemonic("MOV") == "mov"
     assert analyzer._normalize_mnemonic("  PUSH  ") == "push"
     assert analyzer._normalize_mnemonic("") is None
@@ -156,17 +156,17 @@ def test_binbloom_compare_bloom_filters():
         from pybloom_live import BloomFilter
     except ImportError:
         pytest.skip("pybloom-live not available")
-    
+
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
-    
+
     bloom1 = BloomFilter(capacity=100, error_rate=0.01)
     bloom2 = BloomFilter(capacity=100, error_rate=0.01)
-    
+
     for item in ["mov", "push", "call"]:
         bloom1.add(item)
         bloom2.add(item)
-    
+
     similarity = analyzer.compare_bloom_filters(bloom1, bloom2)
     assert 0.0 <= similarity <= 1.0
 
@@ -176,12 +176,12 @@ def test_binbloom_serialize_deserialize():
         from pybloom_live import BloomFilter
     except ImportError:
         pytest.skip("pybloom-live not available")
-    
+
     bloom = BloomFilter(capacity=100, error_rate=0.01)
     bloom.add("test1")
     bloom.add("test2")
     bloom.add("test3")
-    
+
     serialized = BinbloomAnalyzer.deserialize_bloom(BinbloomAnalyzer._serialize_bloom(None, bloom))
     assert serialized is not None
     assert serialized.capacity == bloom.capacity
@@ -190,7 +190,7 @@ def test_binbloom_serialize_deserialize():
 def test_binbloom_deserialize_invalid():
     result = BinbloomAnalyzer.deserialize_bloom("invalid_base64")
     assert result is None
-    
+
     result = BinbloomAnalyzer.deserialize_bloom("")
     assert result is None
 
@@ -205,13 +205,13 @@ def test_binbloom_calculate_from_file_no_pybloom():
 def test_binbloom_find_similar_functions():
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
-    
+
     function_signatures = {
         "func1": {"signature": "abc123", "instruction_count": 10},
         "func2": {"signature": "abc123", "instruction_count": 10},
         "func3": {"signature": "def456", "instruction_count": 5},
     }
-    
+
     similar = analyzer._find_similar_functions(function_signatures)
     assert isinstance(similar, list)
     assert len(similar) >= 1
@@ -220,12 +220,12 @@ def test_binbloom_find_similar_functions():
 def test_binbloom_html_entity_cleanup():
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
-    
+
     function_signatures = {
         "func&nbsp;1": {"signature": "abc", "instruction_count": 5},
         "func&amp;2": {"signature": "def", "instruction_count": 5},
     }
-    
+
     similar = analyzer._find_similar_functions(function_signatures)
     for group in similar:
         for func_name in group["functions"]:
@@ -236,14 +236,14 @@ def test_binbloom_html_entity_cleanup():
 def test_binbloom_unique_signatures():
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
-    
+
     function_signatures = {
         "func1": {"signature": "abc123"},
         "func2": {"signature": "abc123"},
         "func3": {"signature": "def456"},
         "func4": {"signature": "ghi789"},
     }
-    
+
     unique = analyzer._collect_unique_signatures(function_signatures)
     assert len(unique) == 3
 
@@ -278,21 +278,21 @@ def test_binbloom_with_real_binary():
     sample = Path("samples/fixtures/hello_pe.exe")
     if not sample.exists():
         pytest.skip("Sample binary not available")
-    
+
     try:
         from pybloom_live import BloomFilter
         import r2pipe
         from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
     except ImportError:
         pytest.skip("Required libraries not available")
-    
+
     r2 = None
     try:
         r2 = r2pipe.open(str(sample), flags=["-2"])
         adapter = R2PipeAdapter(r2)
         analyzer = BinbloomAnalyzer(adapter, str(sample))
         result = analyzer.analyze(capacity=128, error_rate=0.01)
-        
+
         assert result["analyzer"] == "binbloom"
         assert result["total_functions"] >= 0
     except Exception:

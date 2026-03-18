@@ -18,9 +18,7 @@ from r2inspect.cli.batch_output import (
 )
 
 
-def test_find_files_to_process_auto_detect_not_quiet_prints_message(
-    tmp_path: Path, capsys
-) -> None:
+def test_find_files_to_process_auto_detect_not_quiet_prints_message(tmp_path: Path, capsys) -> None:
     """find_files_to_process with auto_detect=True and quiet=False prints auto-detect message."""
     find_files_to_process(
         tmp_path,
@@ -34,9 +32,7 @@ def test_find_files_to_process_auto_detect_not_quiet_prints_message(
     assert "Auto-detecting" in out
 
 
-def test_find_files_to_process_extensions_not_quiet_prints_message(
-    tmp_path: Path, capsys
-) -> None:
+def test_find_files_to_process_extensions_not_quiet_prints_message(tmp_path: Path, capsys) -> None:
     """find_files_to_process with extensions and quiet=False prints searching message."""
     (tmp_path / "file.exe").touch()
     find_files_to_process(
@@ -64,9 +60,7 @@ def test_find_files_to_process_none_extensions_returns_empty(tmp_path: Path) -> 
     assert result == []
 
 
-def test_prepare_batch_run_not_quiet_prints_file_and_thread_count(
-    tmp_path: Path, capsys
-) -> None:
+def test_prepare_batch_run_not_quiet_prints_file_and_thread_count(tmp_path: Path, capsys) -> None:
     """_prepare_batch_run with quiet=False prints found file count and thread count."""
     (tmp_path / "test.exe").touch()
     result = _prepare_batch_run(
@@ -117,9 +111,7 @@ def test_collect_yara_matches_plain_value_uses_str_fallback() -> None:
 
 def test_build_small_row_none_file_info_returns_error_tuple() -> None:
     """_build_small_row returns error tuple when file_info is None (triggers except branch)."""
-    filename, file_type, compiler, compile_time = _build_small_row(
-        "key.exe", {"file_info": None}
-    )
+    filename, file_type, compiler, compile_time = _build_small_row("key.exe", {"file_info": None})
     assert filename == "key.exe"
     assert file_type == "Error"
     assert compiler == "Error"
@@ -128,9 +120,7 @@ def test_build_small_row_none_file_info_returns_error_tuple() -> None:
 
 def test_build_large_row_none_file_info_returns_error_tuple() -> None:
     """_build_large_row returns error tuple when file_info is None (triggers except branch)."""
-    md5, file_type, compiler, compile_time, yara = _build_large_row(
-        "key.exe", {"file_info": None}
-    )
+    md5, file_type, compiler, compile_time, yara = _build_large_row("key.exe", {"file_info": None})
     assert md5 == "key.exe"
     assert file_type == "Error"
     assert compiler == "Error"

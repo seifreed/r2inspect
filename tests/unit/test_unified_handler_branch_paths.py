@@ -81,10 +81,11 @@ def test_should_allow_request_open_after_timeout_transitions_to_half_open():
     assert cb.state == CircuitState.HALF_OPEN
 
 
-def test_should_allow_request_half_open_returns_true():
+def test_should_allow_request_half_open_allows_single_probe():
     cb = CircuitBreakerState(_make_policy())
     cb.state = CircuitState.HALF_OPEN
     assert cb.should_allow_request() is True
+    assert cb.should_allow_request() is False
 
 
 # ---------------------------------------------------------------------------
@@ -95,12 +96,14 @@ def test_should_allow_request_half_open_returns_true():
 def test_record_success_from_half_open_closes_circuit():
     cb = CircuitBreakerState(_make_policy())
     cb.state = CircuitState.HALF_OPEN
+    cb.half_open_probe_in_flight = True
     cb.failure_count = 3
     cb.last_failure_time = time.time()
     cb.record_success()
     assert cb.state == CircuitState.CLOSED
     assert cb.failure_count == 0
     assert cb.last_failure_time is None
+    assert cb.half_open_probe_in_flight is False
 
 
 def test_record_success_from_closed_resets_counters():
@@ -131,6 +134,15 @@ def test_record_failure_opens_circuit_at_threshold():
     assert cb.state == CircuitState.CLOSED
     cb.record_failure()
     assert cb.state == CircuitState.OPEN
+
+
+def test_record_failure_from_half_open_reopens_and_clears_probe():
+    cb = CircuitBreakerState(_make_policy(circuit_threshold=1))
+    cb.state = CircuitState.HALF_OPEN
+    cb.half_open_probe_in_flight = True
+    cb.record_failure()
+    assert cb.state == CircuitState.OPEN
+    assert cb.half_open_probe_in_flight is False
 
 
 def test_record_failure_above_threshold_stays_open():
@@ -164,6 +176,17 @@ def test_should_attempt_reset_after_timeout_returns_true():
     assert cb._should_attempt_reset() is True
 
 
+def test_get_circuit_breaker_updates_policy_for_same_func_id():
+    func_id = "test.module.shared_policy"
+    first_policy = _make_policy(circuit_threshold=1, circuit_timeout=1)
+    second_policy = _make_policy(circuit_threshold=99, circuit_timeout=42)
+    cb1 = _get_circuit_breaker(func_id, first_policy)
+    cb2 = _get_circuit_breaker(func_id, second_policy)
+    assert cb1 is cb2
+    assert cb2.policy.circuit_threshold == 99
+    assert cb2.policy.circuit_timeout == 42
+
+
 # ---------------------------------------------------------------------------
 # _calculate_retry_delay
 # ---------------------------------------------------------------------------
@@ -192,6 +215,12 @@ def test_calculate_retry_delay_with_jitter_is_positive():
     for _ in range(10):
         delay = _calculate_retry_delay(1, policy)
         assert delay > 0
+
+
+def test_calculate_retry_delay_with_tiny_jitter_delay_does_not_raise():
+    policy = _make_retry_policy(retry_delay=0.0001, retry_backoff=1.0, retry_jitter=True)
+    delay = _calculate_retry_delay(1, policy)
+    assert delay > 0
 
 
 # ---------------------------------------------------------------------------

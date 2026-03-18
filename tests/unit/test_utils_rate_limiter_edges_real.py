@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-import r2inspect.utils.rate_limiter as rate_limiter
-from r2inspect.utils.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter
+import r2inspect.infrastructure.rate_limiter as rate_limiter
+from r2inspect.infrastructure.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter
 
 
 class _BadPsutil:

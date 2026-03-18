@@ -1,0 +1,372 @@
+{
+  "modules": [
+    {
+      "coverage": 86.20689655172414,
+      "path": "r2inspect/cli_main.py",
+      "phase": "A",
+      "priority": 0
+    },
+    {
+      "coverage": 93.47826086956522,
+      "path": "r2inspect/cli/validators.py",
+      "phase": "A",
+      "priority": 0
+    },
+    {
+      "coverage": 87.12871287128714,
+      "path": "r2inspect/cli/batch_output.py",
+      "phase": "B",
+      "priority": 1
+    },
+    {
+      "coverage": 91.37931034482759,
+      "path": "r2inspect/cli/commands/batch_command.py",
+      "phase": "B",
+      "priority": 1
+    },
+    {
+      "coverage": 92.5925925925926,
+      "path": "r2inspect/cli/commands/analyze_command.py",
+      "phase": "B",
+      "priority": 1
+    },
+    {
+      "coverage": 94.23076923076923,
+      "path": "r2inspect/utils/retry_manager.py",
+      "phase": "D",
+      "priority": 3
+    },
+    {
+      "coverage": 75.67567567567568,
+      "path": "r2inspect/abstractions/hashing_strategy.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 78.26086956521739,
+      "path": "r2inspect/utils/ssdeep_loader.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 80.48780487804878,
+      "path": "r2inspect/cli/display_statistics.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 80.64516129032258,
+      "path": "r2inspect/error_handling/presets.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 80.85106382978724,
+      "path": "r2inspect/application/analysis_service.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 81.18811881188118,
+      "path": "r2inspect/modules/telfhash_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 81.25,
+      "path": "r2inspect/modules/macho_security.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 81.37254901960785,
+      "path": "r2inspect/core/inspector.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 81.70731707317073,
+      "path": "r2inspect/pipeline/stages_detection.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 83.01886792452831,
+      "path": "r2inspect/pipeline/stages_security.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 83.78378378378379,
+      "path": "r2inspect/adapters/r2pipe_adapter.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 84.375,
+      "path": "r2inspect/factory.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 84.50704225352112,
+      "path": "r2inspect/utils/r2_suppress.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 84.84848484848484,
+      "path": "r2inspect/modules/security_scoring.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 85.48387096774194,
+      "path": "r2inspect/core/inspector_helpers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 85.71428571428571,
+      "path": "r2inspect/utils/logger.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 85.88957055214723,
+      "path": "r2inspect/modules/anti_analysis.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 86.11111111111111,
+      "path": "r2inspect/modules/domain_helpers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 86.57718120805369,
+      "path": "r2inspect/modules/ssdeep_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 86.82170542635659,
+      "path": "r2inspect/config_schemas/schemas.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 87.5,
+      "path": "r2inspect/config_store.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 87.5,
+      "path": "r2inspect/error_handling/stats.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 87.5,
+      "path": "r2inspect/modules/string_extraction.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 87.65432098765432,
+      "path": "r2inspect/modules/macho_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 87.65432098765432,
+      "path": "r2inspect/utils/file_type.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 87.8048780487805,
+      "path": "r2inspect/modules/crypto_domain.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 88.46153846153847,
+      "path": "r2inspect/modules/elf_security_domain.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 88.88888888888889,
+      "path": "r2inspect/modules/search_helpers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 89.1304347826087,
+      "path": "r2inspect/config.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 89.93288590604027,
+      "path": "r2inspect/modules/impfuzzy_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 90.0,
+      "path": "r2inspect/modules/macho_security_domain.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 90.2439024390244,
+      "path": "r2inspect/schemas/base.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 90.69767441860465,
+      "path": "r2inspect/modules/binbloom_analysis.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 90.9090909090909,
+      "path": "r2inspect/application/batch_stats.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.17647058823529,
+      "path": "r2inspect/cli/batch_workers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.36690647482014,
+      "path": "r2inspect/modules/exploit_mitigation_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.5,
+      "path": "r2inspect/modules/tlsh_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.52542372881356,
+      "path": "r2inspect/cli/display_sections_helpers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.66666666666667,
+      "path": "r2inspect/modules/pe_resources.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.80327868852459,
+      "path": "r2inspect/pipeline/stages_metadata.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 91.89189189189189,
+      "path": "r2inspect/modules/elf_domain.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 92.13483146067416,
+      "path": "r2inspect/modules/packer_helpers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 92.16589861751152,
+      "path": "r2inspect/modules/import_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 92.3076923076923,
+      "path": "r2inspect/application/batch_discovery.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 92.5925925925926,
+      "path": "r2inspect/modules/section_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 93.10344827586206,
+      "path": "r2inspect/modules/function_domain.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 93.33333333333333,
+      "path": "r2inspect/modules/ccbhash_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 93.33333333333333,
+      "path": "r2inspect/modules/pe_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 93.61702127659575,
+      "path": "r2inspect/pipeline/stages_hashing.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 93.75,
+      "path": "r2inspect/modules/anti_analysis_helpers.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 94.33962264150944,
+      "path": "r2inspect/registry/entry_points.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 94.36619718309859,
+      "path": "r2inspect/registry/analyzer_registry.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 94.5945945945946,
+      "path": "r2inspect/modules/rich_header_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 94.61538461538461,
+      "path": "r2inspect/modules/rich_header_search.py",
+      "phase": "Z",
+      "priority": 4
+    },
+    {
+      "coverage": 94.84536082474227,
+      "path": "r2inspect/modules/export_analyzer.py",
+      "phase": "Z",
+      "priority": 4
+    }
+  ],
+  "threshold": 95.0,
+  "total_coverage": 95.49560853199498
+}

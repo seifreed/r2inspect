@@ -12,6 +12,7 @@ import r2inspect.modules.elf_security_domain as esd
 # crypto_domain.py
 # ---------------------------------------------------------------------------
 
+
 def test_is_candidate_string_re_error_returns_false() -> None:
     """_is_candidate_string returns False when NOISE_PATTERNS contains invalid regex."""
     original = cd.NOISE_PATTERNS
@@ -61,8 +62,18 @@ def test_consolidate_detections_multiple_evidence_types_boosts_confidence() -> N
     """consolidate_detections boosts confidence when multiple evidence types exist."""
     detected = {
         "AES": [
-            {"evidence_type": "String Reference", "evidence": "aes", "confidence": 0.4, "address": "0x0"},
-            {"evidence_type": "Import Reference", "evidence": "AES_init", "confidence": 0.6, "address": "0x10"},
+            {
+                "evidence_type": "String Reference",
+                "evidence": "aes",
+                "confidence": 0.4,
+                "address": "0x0",
+            },
+            {
+                "evidence_type": "Import Reference",
+                "evidence": "AES_init",
+                "confidence": 0.6,
+                "address": "0x10",
+            },
         ]
     }
     result = cd.consolidate_detections(detected)
@@ -76,7 +87,12 @@ def test_consolidate_detections_single_evidence_type_no_boost() -> None:
     """consolidate_detections does not boost confidence for a single evidence type."""
     detected = {
         "MD5": [
-            {"evidence_type": "String Reference", "evidence": "md5", "confidence": 0.4, "address": "0x0"},
+            {
+                "evidence_type": "String Reference",
+                "evidence": "md5",
+                "confidence": 0.4,
+                "address": "0x0",
+            },
         ]
     }
     result = cd.consolidate_detections(detected)
@@ -86,6 +102,7 @@ def test_consolidate_detections_single_evidence_type_no_boost() -> None:
 # ---------------------------------------------------------------------------
 # macho_security_domain.py
 # ---------------------------------------------------------------------------
+
 
 def test_is_pie_returns_false_for_none() -> None:
     """is_pie returns False when macho_info is None."""
@@ -145,6 +162,7 @@ def test_is_signed_returns_false_for_empty() -> None:
 # ---------------------------------------------------------------------------
 # elf_security_domain.py
 # ---------------------------------------------------------------------------
+
 
 def test_has_nx_returns_false_for_empty_ph_info() -> None:
     """has_nx returns False when ph_info is empty."""

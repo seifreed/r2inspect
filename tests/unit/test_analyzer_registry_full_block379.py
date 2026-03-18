@@ -11,6 +11,7 @@ from r2inspect.registry.analyzer_registry import (
     AnalyzerMetadata,
     AnalyzerRegistry,
 )
+from r2inspect.registry.entry_points import EntryPointLoader
 
 
 class DummyAnalyzer(BaseAnalyzer):
@@ -187,7 +188,9 @@ def test_registry_lazy_loading_and_entry_points(tmp_path: Path) -> None:
                 raise RuntimeError("load error")
             return self._obj  # type: ignore[return-value]
 
-    loaded = registry._handle_entry_point(_EntryPoint("fail", raise_load=True))
+    loader = EntryPointLoader(registry)
+
+    loaded = loader._handle_entry_point(_EntryPoint("fail", raise_load=True))
     assert loaded == 0
 
     def _callable(reg: AnalyzerRegistry) -> None:
@@ -197,18 +200,18 @@ def test_registry_lazy_loading_and_entry_points(tmp_path: Path) -> None:
             category=AnalyzerCategory.METADATA,
         )
 
-    loaded = registry._handle_entry_point(_EntryPoint("callable", _callable))
+    loaded = loader._handle_entry_point(_EntryPoint("callable", _callable))
     assert loaded == 1
 
-    loaded = registry._handle_entry_point(_EntryPoint("class", DummyAnalyzer))
+    loaded = loader._handle_entry_point(_EntryPoint("class", DummyAnalyzer))
     assert loaded == 1
 
-    assert registry._handle_entry_point(_EntryPoint("unknown", object())) == 0
+    assert loader._handle_entry_point(_EntryPoint("unknown", object())) == 0
 
     class _BadEP:
         name = "bad"
 
-    assert registry._register_entry_point_class(_BadEP(), BadAnalyzer) == 0
+    assert loader._register_entry_point_class(_BadEP(), BadAnalyzer) == 0
 
 
 def test_registry_dependencies_and_order() -> None:

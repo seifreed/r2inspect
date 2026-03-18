@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.core.constants import HUGE_FILE_THRESHOLD_MB, LARGE_FILE_THRESHOLD_MB
-from r2inspect.core.r2_session import R2Session
+from r2inspect.domain.constants import HUGE_FILE_THRESHOLD_MB, LARGE_FILE_THRESHOLD_MB
+from r2inspect.infrastructure.r2_session import R2Session
 
 
 class DummyR2:
@@ -79,7 +79,7 @@ def test_open_with_timeout_and_terminate(tmp_path):
     target = tmp_path / "file.bin"
     target.write_bytes(b"abcd")
 
-    def slow_open(_filename, flags=None):  # noqa: ANN001
+    def slow_open(_filename, flags=None):
         time.sleep(0.05)
         return DummyR2()
 
@@ -102,7 +102,7 @@ def test_open_with_timeout_and_terminate(tmp_path):
 
     dummy_proc = DummyProc()
 
-    from r2inspect.core import r2_session as session_module
+    import r2inspect.infrastructure.r2_session as session_module
 
     original_open = session_module.r2pipe.open
     original_iter = session_module.psutil.process_iter
@@ -215,7 +215,7 @@ def test_close_and_reopen_safe_mode(tmp_path):
     target = tmp_path / "file.bin"
     target.write_bytes(b"abcd")
 
-    from r2inspect.core import r2_session as session_module
+    import r2inspect.infrastructure.r2_session as session_module
 
     original_open = session_module.r2pipe.open
     session_module.r2pipe.open = lambda *_args, **_kw: DummyR2()
@@ -237,7 +237,7 @@ def test_open_reopen_paths(tmp_path):
     target = tmp_path / "file.bin"
     target.write_bytes(b"abcd")
 
-    from r2inspect.core import r2_session as session_module
+    import r2inspect.infrastructure.r2_session as session_module
 
     original_open = session_module.r2pipe.open
     session_module.r2pipe.open = lambda *_args, **_kw: DummyR2()

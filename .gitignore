@@ -3,6 +3,7 @@
 
 # Coverage / test artifacts
 .coverage
+.coverage-gate/
 coverage.json
 coverage-unit.json
 htmlcov/

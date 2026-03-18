@@ -37,3 +37,12 @@ def test_apply_thread_settings_updates_config(tmp_path: Path):
     # Invalid threads should not crash or change config
     apply_thread_settings(config, "bad")
     assert config.typed_config.pipeline.max_workers == 8
+
+
+def test_get_config_uses_explicit_config_path(tmp_path: Path):
+    cmd = _DummyCommand()
+    custom = tmp_path / "custom-config.json"
+
+    cfg = cmd._get_config(str(custom))
+
+    assert isinstance(cfg, Config)

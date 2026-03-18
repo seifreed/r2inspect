@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 
-from r2inspect.utils.magic_detector import MagicByteDetector
+from r2inspect.infrastructure.magic_detector import MagicByteDetector
 
 
 def test_magic_detector_validate_pe_format(tmp_path):

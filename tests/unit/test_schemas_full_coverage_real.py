@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -211,7 +211,7 @@ def test_security_schema_helpers() -> None:
 def test_results_dataclasses_and_loaders() -> None:
     analysis = results_module.AnalysisResult()
     analysis.error = "boom"
-    analysis.timestamp = datetime.utcnow()
+    analysis.timestamp = datetime.now(UTC)
     analysis.execution_time = 0.1
     analysis.file_info = results_module.FileInfo(name="sample", size=1)
     analysis.security = results_module.SecurityFeatures(aslr=True, relro="partial")
@@ -251,7 +251,7 @@ def test_results_dataclasses_and_loaders() -> None:
         "crypto": {"algorithms": [{"name": "AES"}]},
         "indicators": [{"severity": "critical"}],
         "error": "boom",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 0.2,
     }
     parsed = results_module.from_dict(input_data)
@@ -290,4 +290,4 @@ def test_results_dataclasses_and_loaders() -> None:
 
     invalid_ts = results_module.AnalysisResult()
     results_module._load_timestamp(invalid_ts, {"timestamp": "bad"})
-    results_module._load_timestamp(invalid_ts, {"timestamp": datetime.utcnow()})
+    results_module._load_timestamp(invalid_ts, {"timestamp": datetime.now(UTC)})

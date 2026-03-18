@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
-from r2inspect.modules.rich_header_domain import (
+from r2inspect.domain.services.rich_header import (
     build_rich_header_result,
     decode_rich_header,
     validate_decoded_entries,

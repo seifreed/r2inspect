@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -193,6 +193,6 @@ def test_results_schema_helpers_and_from_dict() -> None:
     assert parsed.security.nx is True
     assert parsed.execution_time == 1.25
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     parsed = from_dict({"timestamp": now})
     assert parsed.timestamp == now

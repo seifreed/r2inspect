@@ -114,8 +114,9 @@ def test_analyzer_registry_is_base_analyzer_not_a_class() -> None:
 
 def test_analyzer_registry_extract_metadata_from_class_raises_for_non_base() -> None:
     import pytest
+
     registry = AnalyzerRegistry()
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, TypeError, RuntimeError)):
         registry.extract_metadata_from_class(_DummyAnalyzer)
 
 
@@ -135,6 +136,7 @@ def test_analyzer_registry_validate_analyzer_not_a_class() -> None:
 
 def test_analyzer_registry_register_from_instance_non_base_raises() -> None:
     import pytest
+
     registry = AnalyzerRegistry()
     instance = _DummyAnalyzer()
     with pytest.raises(ValueError, match="not a BaseAnalyzer subclass"):

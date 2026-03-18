@@ -7,12 +7,17 @@ import pytest
 
 from r2inspect.registry.analyzer_registry import AnalyzerCategory, AnalyzerRegistry
 from r2inspect.registry.metadata import AnalyzerMetadata
-from r2inspect.registry.metadata_extraction import auto_extract_metadata, extract_metadata_from_class, parse_category
+from r2inspect.registry.metadata_extraction import (
+    auto_extract_metadata,
+    extract_metadata_from_class,
+    parse_category,
+)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 class DummyAnalyzer:
     def __init__(self, adapter=None, **_kw):
@@ -25,6 +30,7 @@ class DummyAnalyzer:
 # ---------------------------------------------------------------------------
 # registry_queries.py
 # ---------------------------------------------------------------------------
+
 
 def test_get_analyzer_class_returns_none_for_unknown() -> None:
     """get_analyzer_class returns None when name is not registered."""
@@ -45,6 +51,19 @@ def test_get_analyzers_for_format_skips_unsupported_format() -> None:
     )
     result = registry.get_analyzers_for_format("PE")
     assert "dummy" not in result
+
+
+def test_get_analyzers_for_format_returns_supported_analyzer() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "dummy_pe",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        file_formats={"PE"},
+        auto_extract=False,
+    )
+    result = registry.get_analyzers_for_format("PE")
+    assert result["dummy_pe"] is DummyAnalyzer
 
 
 def test_get_by_category_skips_wrong_category() -> None:
@@ -113,6 +132,7 @@ def test_resolve_execution_order_with_dependency_appends_to_queue() -> None:
 # metadata_extraction.py
 # ---------------------------------------------------------------------------
 
+
 def test_extract_metadata_from_class_raises_for_non_base_analyzer() -> None:
     """extract_metadata_from_class raises ValueError for non-BaseAnalyzer class."""
     registry = AnalyzerRegistry(lazy_loading=False)
@@ -146,6 +166,7 @@ def test_auto_extract_metadata_fills_category_when_none() -> None:
 # metadata.py
 # ---------------------------------------------------------------------------
 
+
 def test_supports_format_returns_true_for_matching_format() -> None:
     """AnalyzerMetadata.supports_format returns True when format matches."""
     meta = AnalyzerMetadata(
@@ -177,3 +198,94 @@ def test_supports_format_returns_true_for_empty_file_formats() -> None:
         file_formats=set(),
     )
     assert meta.supports_format("ANYTHING") is True
+
+
+def test_get_analyzer_class_uses_lazy_loader_when_registered() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "lazy_dummy",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        auto_extract=False,
+    )
+
+    class FakeLazyLoader:
+        def is_registered(self, name: str) -> bool:
+            return name == "lazy_dummy"
+
+        def get_analyzer_class(self, _name: str):
+            class LazyResolved:
+                pass
+
+            return LazyResolved
+
+    registry._lazy_loading = True
+    registry._lazy_loader = FakeLazyLoader()  # type: ignore[assignment]
+    resolved = registry.get_analyzer_class("lazy_dummy")
+    assert resolved is not None
+    assert resolved.__name__ == "LazyResolved"
+
+
+def test_get_by_category_raises_type_error_for_invalid_category() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    with pytest.raises(TypeError):
+        registry.get_by_category("format")  # type: ignore[arg-type]
+
+
+def test_list_analyzers_contains_registered_entry() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "listed",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        auto_extract=False,
+    )
+    items = registry.list_analyzers()
+    assert any(item["name"] == "listed" for item in items)
+
+
+def test_resolve_execution_order_raises_for_circular_dependencies() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "a",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        dependencies={"b"},
+        auto_extract=False,
+    )
+    registry.register(
+        "b",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        dependencies={"a"},
+        auto_extract=False,
+    )
+    with pytest.raises(ValueError, match="Circular dependency"):
+        registry.resolve_execution_order(["a", "b"])
+
+
+def test_resolve_execution_order_ignores_external_dependency() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "core",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        dependencies={"external_dep"},
+        auto_extract=False,
+    )
+    order = registry.resolve_execution_order(["core"])
+    assert order == ["core"]
+
+
+def test_clear_contains_and_iter_methods() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "iterable",
+        analyzer_class=DummyAnalyzer,
+        category=AnalyzerCategory.FORMAT,
+        auto_extract=False,
+    )
+    assert "iterable" in registry
+    assert list(iter(registry)) == ["iterable"]
+    registry.clear()
+    assert len(registry) == 0

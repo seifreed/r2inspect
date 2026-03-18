@@ -14,7 +14,7 @@ import pytest
 
 import r2inspect.factory as _factory_mod
 import r2inspect.modules.string_domain as _sd_mod
-import r2inspect.utils.analyzer_factory as _af_mod
+import r2inspect.core.analyzer_factory as _af_mod
 from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
 from r2inspect.core.pipeline_builder import PipelineBuilder
@@ -26,9 +26,9 @@ from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.schemas.base import AnalysisResultBase
 from r2inspect.schemas.format import SectionInfo
 from r2inspect.schemas.hashing import HashAnalysisResult
-from r2inspect.utils.analyzer_factory import create_analyzer
-from r2inspect.utils.memory_manager import global_memory_monitor
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.core.analyzer_factory import create_analyzer
+from r2inspect.infrastructure.memory import global_memory_monitor
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
 
 FIXTURE = Path("samples/fixtures/hello_pe.exe")
 

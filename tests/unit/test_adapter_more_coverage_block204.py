@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.core.r2_session import R2Session
+from r2inspect.infrastructure.r2_session import R2Session
 
 
 class FallbackR2:
@@ -157,40 +156,49 @@ def test_adapter_repr_str(adapter: R2PipeAdapter) -> None:
     assert "R2PipeAdapter" in str(adapter)
 
 
-@pytest.mark.requires_r2
-def test_adapter_forced_errors(adapter: R2PipeAdapter) -> None:
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "all"
-    try:
-        assert adapter.get_sections() == []
-        assert adapter.get_imports() == []
-        assert adapter.get_exports() == []
-        assert adapter.get_symbols() == []
-        assert adapter.get_strings() == []
-        assert adapter.get_functions() == []
-        assert adapter.get_disasm() == []
-        assert adapter.get_cfg() == {}
-        assert adapter.analyze_all() == ""
-        assert adapter.get_info_text() == ""
-        assert adapter.get_dynamic_info_text() == ""
-        assert adapter.get_entropy_pattern() == ""
-        assert adapter.get_pe_version_info_text() == ""
-        assert adapter.get_pe_security_text() == ""
-        assert adapter.get_header_text() == ""
-        assert adapter.get_headers_json() is None
-        assert adapter.get_strings_text() == ""
-        assert adapter.get_strings_filtered("iz~test") == ""
-        assert adapter.get_entry_info() == []
-        assert adapter.get_pe_header() == {}
-        assert adapter.get_pe_optional_header() == {}
-        assert adapter.get_data_directories() == []
-        assert adapter.get_resources_info() == []
-        assert adapter.get_function_info(0) == []
-        assert adapter.get_disasm_text() == ""
-        assert adapter.search_hex_json("90") == []
-        assert adapter.search_text("test") == ""
-        assert adapter.search_hex("90") == ""
-    finally:
-        os.environ.pop("R2INSPECT_FORCE_ADAPTER_ERROR", None)
+def _always_raise(method: str) -> None:
+    raise RuntimeError("Forced adapter error")
+
+
+def _selective_raise(*methods: str):
+    def _injector(method: str) -> None:
+        if method in methods:
+            raise RuntimeError("Forced adapter error")
+
+    return _injector
+
+
+def test_adapter_forced_errors_with_fallback() -> None:
+    """Verify all query methods return safe defaults when fault_injector raises."""
+    adapter = R2PipeAdapter(FallbackR2(), fault_injector=_always_raise)
+    assert adapter.get_sections() == []
+    assert adapter.get_imports() == []
+    assert adapter.get_exports() == []
+    assert adapter.get_symbols() == []
+    assert adapter.get_strings() == []
+    assert adapter.get_functions() == []
+    assert adapter.get_disasm() == []
+    assert adapter.get_cfg() == {}
+    assert adapter.analyze_all() == ""
+    assert adapter.get_info_text() == ""
+    assert adapter.get_dynamic_info_text() == ""
+    assert adapter.get_entropy_pattern() == ""
+    assert adapter.get_pe_version_info_text() == ""
+    assert adapter.get_pe_security_text() == ""
+    assert adapter.get_header_text() == ""
+    assert adapter.get_headers_json() is None
+    assert adapter.get_strings_text() == ""
+    assert adapter.get_strings_filtered("iz~test") == ""
+    assert adapter.get_entry_info() == []
+    assert adapter.get_pe_header() == {}
+    assert adapter.get_pe_optional_header() == {}
+    assert adapter.get_data_directories() == []
+    assert adapter.get_resources_info() == []
+    assert adapter.get_function_info(0) == []
+    assert adapter.get_disasm_text() == ""
+    assert adapter.search_hex_json("90") == []
+    assert adapter.search_text("test") == ""
+    assert adapter.search_hex("90") == ""
 
 
 def test_adapter_with_fake_r2_invalid_responses() -> None:
@@ -269,11 +277,9 @@ def test_adapter_get_file_info_cache_and_error() -> None:
     second = adapter.get_file_info()
     assert second == first
 
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "get_file_info"
-    try:
-        assert adapter.get_file_info() == {}
-    finally:
-        os.environ.pop("R2INSPECT_FORCE_ADAPTER_ERROR", None)
+    # Verify that fault_injector causes error recovery to safe defaults
+    adapter_err = R2PipeAdapter(FakeR2(), fault_injector=_selective_raise("get_file_info"))
+    assert adapter_err.get_file_info() == {}
 
 
 def test_adapter_error_branches() -> None:
@@ -284,21 +290,14 @@ def test_adapter_error_branches() -> None:
         def cmdj(self, command: str):
             return None
 
-    adapter = R2PipeAdapter(FakeR2())
+    adapter_fn = R2PipeAdapter(FakeR2(), fault_injector=_selective_raise("get_functions_at"))
+    assert adapter_fn.get_functions_at(0) == []
 
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "get_functions_at"
-    try:
-        assert adapter.get_functions_at(0) == []
-    finally:
-        os.environ.pop("R2INSPECT_FORCE_ADAPTER_ERROR", None)
+    adapter_ok = R2PipeAdapter(FakeR2())
+    assert adapter_ok.analyze_all() == "ok"
 
-    assert adapter.analyze_all() == "ok"
-
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "_cached_query"
-    try:
-        assert adapter.get_strings_basic() == []
-    finally:
-        os.environ.pop("R2INSPECT_FORCE_ADAPTER_ERROR", None)
+    adapter_cq = R2PipeAdapter(FakeR2(), fault_injector=_selective_raise("_cached_query"))
+    assert adapter_cq.get_strings_basic() == []
 
 
 def test_adapter_pe_header_dict_and_read_bytes_errors() -> None:
@@ -337,11 +336,8 @@ def test_adapter_pe_header_dict_and_read_bytes_errors() -> None:
     adapter_obj = R2PipeAdapter(FakeR2Obj())
     assert adapter_obj.read_bytes(0, 2) == b""
 
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "read_bytes"
-    try:
-        assert adapter.read_bytes(0, 2) == b""
-    finally:
-        os.environ.pop("R2INSPECT_FORCE_ADAPTER_ERROR", None)
+    adapter_rb = R2PipeAdapter(FakeR2(), fault_injector=_selective_raise("read_bytes"))
+    assert adapter_rb.read_bytes(0, 2) == b""
 
     class FakeR2Text:
         def cmd(self, command: str):
@@ -364,9 +360,5 @@ def test_adapter_force_error_specific_method() -> None:
         def cmdj(self, command: str):
             return None
 
-    adapter = R2PipeAdapter(FakeR2())
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "get_info_text"
-    try:
-        assert adapter.get_info_text() == ""
-    finally:
-        os.environ.pop("R2INSPECT_FORCE_ADAPTER_ERROR", None)
+    adapter = R2PipeAdapter(FakeR2(), fault_injector=_selective_raise("get_info_text"))
+    assert adapter.get_info_text() == ""

@@ -67,6 +67,7 @@ def _write_tmp(data: bytes) -> str:
 
 class _MinimalAdapter:
     """Non-None adapter so _is_pe_file can proceed to file magic check."""
+
     pass
 
 
@@ -157,6 +158,7 @@ def test_analyze_method_r2pipe_forced_by_disabling_pefile() -> None:
 
 def test_analyze_captures_exception_in_error_field() -> None:
     """Lines 122-124: exception raised inside analyze() is captured in result['error']."""
+
     class _BrokenAnalyzer(RichHeaderAnalyzer):
         def _is_pe_file(self) -> bool:
             raise RuntimeError("forced analyzer failure")
@@ -213,7 +215,7 @@ class _FakeEntry:
 class _FakeRichHeader:
     checksum = 0xDEADBEEF
     values = [_FakeEntry()]
-    clear_data = b"\xAB\xCD" * 16
+    clear_data = b"\xab\xcd" * 16
 
 
 class _FakePE:
@@ -222,6 +224,7 @@ class _FakePE:
 
 class _FakePENoRH:
     """PE without RICH_HEADER attribute."""
+
     pass
 
 
@@ -268,6 +271,7 @@ def test_pefile_parse_entry_returns_dict() -> None:
 
 def test_pefile_parse_entry_returns_none_for_incomplete_entry() -> None:
     """Lines 190-191: returns None when required attributes are missing."""
+
     class _NoCount:
         product_id = 1
         build_version = 2
@@ -356,6 +360,7 @@ def test_extract_rich_header_r2pipe_returns_none_for_pe_without_rich() -> None:
 
 def test_extract_rich_header_r2pipe_exception_returns_none() -> None:
     """Lines 244-246: exception is caught and None is returned."""
+
     class _BrokenR2Analyzer(RichHeaderAnalyzer):
         def _extract_rich_header(self):
             raise RuntimeError("r2 extraction failed")
@@ -480,6 +485,7 @@ def test_extract_rich_header_returns_none_for_pe_without_rich() -> None:
 
 def test_extract_rich_header_exception_returns_none() -> None:
     """Lines 312-314: exception is caught and None is returned."""
+
     class _BrokenDirectAnalyzer(RichHeaderAnalyzer):
         def _direct_file_rich_search(self):
             raise RuntimeError("direct search exploded")
@@ -701,6 +707,7 @@ def test_direct_file_rich_search_returns_none_for_non_mz_file() -> None:
 
 def test_direct_file_rich_search_exception_returns_none() -> None:
     """Lines 424-426: exception is caught and None returned."""
+
     class _BrokenFileAnalyzer(RichHeaderAnalyzer):
         def _read_file_bytes(self):
             raise RuntimeError("file read failed")
@@ -898,15 +905,15 @@ def test_estimate_dans_start_returns_none_when_no_alignment() -> None:
 def test_extract_encoded_from_stub_valid_8byte_multiple() -> None:
     """Lines 500-505: extracts encoded bytes when length is multiple of 8."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    stub = b"DanS" + b"\xBB" * 8 + b"Rich" + b"\x00" * 4
+    stub = b"DanS" + b"\xbb" * 8 + b"Rich" + b"\x00" * 4
     result = analyzer._extract_encoded_from_stub(stub, dans_pos=0, rich_pos=12)
-    assert result == b"\xBB" * 8
+    assert result == b"\xbb" * 8
 
 
 def test_extract_encoded_from_stub_returns_none_for_wrong_length() -> None:
     """Lines 501-503: returns None when encoded length is not divisible by 8."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    stub = b"DanS" + b"\xBB" * 5 + b"Rich"
+    stub = b"DanS" + b"\xbb" * 5 + b"Rich"
     result = analyzer._extract_encoded_from_stub(stub, dans_pos=0, rich_pos=9)
     assert result is None
 

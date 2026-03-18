@@ -185,7 +185,7 @@ def test_detect_compiler_exception_stored_in_result():
 
 def test_apply_rich_header_detection_msvc_compiler_sets_results():
     detector = _MinimalAdapter()
-    cd = CompilerDetector(detector)
+    _cd = CompilerDetector(detector)
     results: dict[str, Any] = {
         "detected": False,
         "compiler": "Unknown",
@@ -199,6 +199,7 @@ def test_apply_rich_header_detection_msvc_compiler_sets_results():
         "available": True,
         "compilers": [{"compiler_name": "Utc1900_C"}],
     }
+
     # Replace _analyze_rich_header via subclass technique on a fresh instance
     class _SubDetector(CompilerDetector):
         def _analyze_rich_header(self) -> dict[str, Any]:
@@ -221,8 +222,13 @@ def test_apply_rich_header_detection_utc_name_variant_triggers_msvc():
 
     cd = _UtcVariant(_MinimalAdapter())
     results: dict[str, Any] = {
-        "detected": False, "compiler": "", "confidence": 0.0,
-        "version": "", "details": {}, "signatures_found": [], "rich_header_info": {},
+        "detected": False,
+        "compiler": "",
+        "confidence": 0.0,
+        "version": "",
+        "details": {},
+        "signatures_found": [],
+        "rich_header_info": {},
     }
     assert cd._apply_rich_header_detection(results) is True
 
@@ -347,6 +353,17 @@ def test_analyze_rich_header_returns_empty_when_filepath_is_empty():
     cd = CompilerDetector(adapter)
     result = cd._analyze_rich_header()
     assert result == {}
+
+
+def test_analyze_rich_header_executes_rich_analyzer_path(tmp_path):
+    sample = tmp_path / "minimal_mz.bin"
+    sample.write_bytes(b"MZ" + b"\x00" * 256)
+
+    adapter = _MinimalAdapter(file_info={"core": {"file": str(sample)}})
+    cd = CompilerDetector(adapter)
+    result = cd._analyze_rich_header()
+
+    assert isinstance(result, dict)
 
 
 # ---------------------------------------------------------------------------

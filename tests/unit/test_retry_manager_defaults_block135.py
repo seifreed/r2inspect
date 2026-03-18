@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils.retry_manager import RetryManager, RetryStrategy
+from r2inspect.infrastructure.retry_manager import RetryManager, RetryStrategy
 
 
 def test_retry_manager_is_retryable_command():

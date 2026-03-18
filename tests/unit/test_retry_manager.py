@@ -1,6 +1,6 @@
 import pytest
 
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
 
 
 def test_retry_operation_succeeds_after_retry():

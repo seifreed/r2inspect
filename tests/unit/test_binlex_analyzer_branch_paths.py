@@ -214,10 +214,7 @@ class AdapterMultipleFunctions:
 
     def cmdj(self, command: str, default: Any = None) -> Any:
         if command == "aflj":
-            return [
-                {"name": f"func_{i}", "addr": 0x1000 + i * 0x100, "size": 50}
-                for i in range(3)
-            ]
+            return [{"name": f"func_{i}", "addr": 0x1000 + i * 0x100, "size": 50} for i in range(3)]
         return default if default is not None else {}
 
     def cmd(self, command: str) -> str:
@@ -345,10 +342,12 @@ def test_calculate_binary_signature_no_n_match() -> None:
 
 def test_calculate_binary_signature_exception_returns_empty() -> None:
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
+
     # Non-sortable signatures trigger exception
     class NonSortable:
         def __gt__(self, other: object) -> bool:
             raise TypeError("not comparable")
+
         def __lt__(self, other: object) -> bool:
             raise TypeError("not comparable")
 
@@ -408,13 +407,16 @@ class EmptyNgramsBinlexAnalyzer(BinlexAnalyzer):
 def test_analyze_function_empty_ngrams_returns_none() -> None:
     class GoodTokenAdapter:
         def get_disasm(self, address: int = 0, size: int = 0) -> dict[str, Any]:
-            return {"ops": [
-                {"mnemonic": "push"},
-                {"mnemonic": "mov"},
-                {"mnemonic": "call"},
-                {"mnemonic": "pop"},
-                {"mnemonic": "ret"},
-            ]}
+            return {
+                "ops": [
+                    {"mnemonic": "push"},
+                    {"mnemonic": "mov"},
+                    {"mnemonic": "call"},
+                    {"mnemonic": "pop"},
+                    {"mnemonic": "ret"},
+                ]
+            }
+
         def get_disasm_text(self, **kwargs: Any) -> str:
             return ""
 
@@ -437,6 +439,7 @@ def test_analyze_function_exception_returns_none() -> None:
     class GoodTokenAdapter:
         def get_disasm(self, address: int = 0, size: int = 0) -> dict[str, Any]:
             return {"ops": [{"mnemonic": "push"}, {"mnemonic": "ret"}]}
+
         def get_disasm_text(self, **kwargs: Any) -> str:
             return ""
 
@@ -511,11 +514,13 @@ def test_extract_instruction_tokens_exception_returns_empty() -> None:
 def test_extract_tokens_from_pdfj_logs_when_tokens_found() -> None:
     class PdfjWithOpsAdapter:
         def get_disasm(self, address: int = 0, size: int = 0) -> dict[str, Any]:
-            return {"ops": [
-                {"mnemonic": "push"},
-                {"mnemonic": "mov"},
-                {"mnemonic": "pop"},
-            ]}
+            return {
+                "ops": [
+                    {"mnemonic": "push"},
+                    {"mnemonic": "mov"},
+                    {"mnemonic": "pop"},
+                ]
+            }
 
         def get_disasm_text(self, **kwargs: Any) -> str:
             return ""
@@ -565,8 +570,14 @@ def test_extract_tokens_from_pdj_with_non_list_returns_empty() -> None:
 def test_extract_tokens_from_pdj_logs_when_tokens_found() -> None:
     class PdjWithTokensAdapter:
         def get_disasm(self, address: int = 0, size: int = 200) -> Any:
-            return [{"mnemonic": "push"}, {"mnemonic": "mov"}, {"mnemonic": "sub"},
-                    {"mnemonic": "call"}, {"mnemonic": "pop"}, {"mnemonic": "ret"}]
+            return [
+                {"mnemonic": "push"},
+                {"mnemonic": "mov"},
+                {"mnemonic": "sub"},
+                {"mnemonic": "call"},
+                {"mnemonic": "pop"},
+                {"mnemonic": "ret"},
+            ]
 
     analyzer = BinlexAnalyzer(adapter=PdjWithTokensAdapter(), filepath=None)
     tokens = analyzer._extract_tokens_from_pdj(0x1000, "func_with_tokens")
@@ -748,6 +759,7 @@ def test_similarity_score_exception_returns_zero() -> None:
 
     class Unhashable:
         __hash__ = None  # type: ignore[assignment]
+
         def __eq__(self, other: object) -> bool:
             return False
 

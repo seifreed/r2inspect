@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils.memory_manager import MemoryAwareAnalyzer, MemoryMonitor
+from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryMonitor
 
 
 class _BadProcess:

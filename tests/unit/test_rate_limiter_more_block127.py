@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from r2inspect.utils.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter, TokenBucket
+from r2inspect.infrastructure.rate_limiter import AdaptiveRateLimiter, BatchRateLimiter, TokenBucket
 
 
 def test_token_bucket_timeout_and_acquire():

@@ -234,8 +234,8 @@ def test_process_imports_skips_ordinal_entries():
 def test_process_imports_exception_returns_empty():
     """Passing non-dict items triggers the exception handler (lines 280-282)."""
     analyzer = _make_analyzer(EmptyAdapter())
-    # None item will cause AttributeError on .get() call
-    result = analyzer._process_imports([None])  # type: ignore[list-item]
+    # libname as int triggers AttributeError on .lower(), hitting exception branch
+    result = analyzer._process_imports([{"libname": 123, "name": "CreateFileA"}])  # type: ignore[list-item]
     assert result == []
 
 
@@ -316,3 +316,134 @@ def test_calculate_impfuzzy_from_file_with_real_pe():
         return
     result = ImpfuzzyAnalyzer.calculate_impfuzzy_from_file(str(sample))
     assert result is None or isinstance(result, str)
+
+
+def test_check_library_availability_true_when_available(monkeypatch):
+    monkeypatch.setattr(impfuzzy_module, "IMPFUZZY_AVAILABLE", True)
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    available, error = analyzer._check_library_availability()
+    assert available is True
+    assert error is None
+
+
+def test_get_hash_type_returns_impfuzzy():
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    assert analyzer._get_hash_type() == "impfuzzy"
+
+
+def test_calculate_hash_success_and_empty_hash_and_exception(monkeypatch):
+    class FakeImpfuzzy:
+        def __init__(self):
+            self.mode = "ok"
+
+        def get_impfuzzy(self, _path: str):
+            if self.mode == "ok":
+                return "3:abc:def"
+            if self.mode == "empty":
+                return ""
+            raise RuntimeError("boom")
+
+    fake = FakeImpfuzzy()
+    monkeypatch.setattr(impfuzzy_module, "pyimpfuzzy", fake, raising=False)
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    analyzer._is_pe_file = lambda: True  # type: ignore[method-assign]
+
+    h, method, err = analyzer._calculate_hash()
+    assert h == "3:abc:def"
+    assert method == "python_library"
+    assert err is None
+
+    fake.mode = "empty"
+    h, method, err = analyzer._calculate_hash()
+    assert h is None
+    assert method is None
+    assert err is not None
+
+    fake.mode = "raise"
+    h, method, err = analyzer._calculate_hash()
+    assert h is None
+    assert method is None
+    assert "Impfuzzy calculation failed" in (err or "")
+
+
+def test_analyze_imports_processed_empty_failed_hash_and_success(monkeypatch):
+    class FakeImpfuzzy:
+        def __init__(self):
+            self.value = "3:hash:value"
+
+        def get_impfuzzy(self, _path: str):
+            return self.value
+
+    fake = FakeImpfuzzy()
+    monkeypatch.setattr(impfuzzy_module, "IMPFUZZY_AVAILABLE", True)
+    monkeypatch.setattr(impfuzzy_module, "pyimpfuzzy", fake, raising=False)
+
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    analyzer._is_pe_file = lambda: True  # type: ignore[method-assign]
+    analyzer._extract_imports = lambda: [{"libname": "KERNEL32.dll", "name": "CreateFileA"}]  # type: ignore[method-assign]
+
+    analyzer._process_imports = lambda _imports: []  # type: ignore[method-assign]
+    result = analyzer.analyze_imports()
+    assert result["available"] is False
+    assert result["error"] == "No valid imports found after processing"
+
+    analyzer._process_imports = lambda _imports: ["kernel32.createfilea"]  # type: ignore[method-assign]
+    fake.value = ""
+    result = analyzer.analyze_imports()
+    assert result["available"] is False
+    assert result["error"] == "Failed to calculate impfuzzy hash"
+
+    fake.value = "3:hash:value"
+    result = analyzer.analyze_imports()
+    assert result["available"] is True
+    assert result["impfuzzy_hash"] == "3:hash:value"
+    assert result["import_count"] == 1
+    assert result["dll_count"] == 1
+
+
+def test_analyze_imports_exception_branch_sets_error(monkeypatch):
+    monkeypatch.setattr(impfuzzy_module, "IMPFUZZY_AVAILABLE", True)
+    monkeypatch.setattr(
+        impfuzzy_module,
+        "pyimpfuzzy",
+        type("FakeImpfuzzy", (), {"get_impfuzzy": staticmethod(lambda _p: "3:ok")})(),
+        raising=False,
+    )
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    analyzer._is_pe_file = lambda: True  # type: ignore[method-assign]
+
+    def _raise():
+        raise RuntimeError("extract failed")
+
+    analyzer._extract_imports = _raise  # type: ignore[method-assign]
+    result = analyzer.analyze_imports()
+    assert result["available"] is False
+    assert result["error"] == "extract failed"
+
+
+def test_process_imports_builds_flat_sorted_entries():
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    result = analyzer._process_imports(
+        [
+            {"libname": "KERNEL32.dll", "name": "CreateFileA"},
+            {"libname": "KERNEL32.dll", "function": "ReadFile"},
+        ]
+    )
+    assert result == ["kernel32.createfilea", "kernel32.readfile"]
+
+
+def test_process_imports_skips_non_dict_entries_without_crashing():
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    result = analyzer._process_imports(
+        [
+            "invalid-entry",
+            {"libname": "KERNEL32.dll", "name": "CloseHandle"},
+        ]  # type: ignore[list-item]
+    )
+    assert result == ["kernel32.closehandle"]
+
+
+def test_compare_hashes_returns_none_when_ssdeep_loader_missing(monkeypatch):
+    monkeypatch.setattr(impfuzzy_module, "IMPFUZZY_AVAILABLE", True)
+    monkeypatch.setattr(impfuzzy_module, "get_ssdeep", lambda: None)
+    assert ImpfuzzyAnalyzer.compare_hashes("3:a:b", "3:a:c") is None

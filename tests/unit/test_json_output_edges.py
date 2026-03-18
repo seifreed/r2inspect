@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from r2inspect.utils.output_json import JsonOutputFormatter
+from r2inspect.cli.output_json import JsonOutputFormatter
 
 
 def test_empty_dict():
@@ -19,13 +19,7 @@ def test_empty_dict():
 
 def test_nested_dict():
     """Test with nested dictionaries."""
-    data = {
-        "level1": {
-            "level2": {
-                "level3": "value"
-            }
-        }
-    }
+    data = {"level1": {"level2": {"level3": "value"}}}
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
     assert json.loads(result) == data
@@ -33,10 +27,7 @@ def test_nested_dict():
 
 def test_list_values():
     """Test with list values."""
-    data = {
-        "items": [1, 2, 3],
-        "names": ["a", "b", "c"]
-    }
+    data = {"items": [1, 2, 3], "names": ["a", "b", "c"]}
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
     assert json.loads(result) == data
@@ -44,13 +35,7 @@ def test_list_values():
 
 def test_mixed_types():
     """Test with mixed data types."""
-    data = {
-        "string": "text",
-        "integer": 42,
-        "float": 3.14,
-        "boolean": True,
-        "null": None
-    }
+    data = {"string": "text", "integer": 42, "float": 3.14, "boolean": True, "null": None}
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
     assert json.loads(result) == data
@@ -83,10 +68,11 @@ def test_indent_none():
 
 def test_non_serializable_object():
     """Test with non-serializable object triggers error handling."""
+
     class CustomClass:
         def __str__(self):
             return "custom_string"
-    
+
     obj = CustomClass()
     formatter = JsonOutputFormatter({"obj": obj})
     result = formatter.to_json()
@@ -97,14 +83,15 @@ def test_non_serializable_object():
 
 def test_serialization_error_handling():
     """Test exception handling when serialization fails."""
+
     class BadObject:
         def __str__(self):
             raise RuntimeError("Cannot convert to string")
-    
+
     formatter = JsonOutputFormatter({"bad": BadObject()})
     result = formatter.to_json()
     parsed = json.loads(result)
-    
+
     # Should have error key and partial_results
     assert "error" in parsed
     assert "JSON serialization failed" in parsed["error"]
@@ -141,12 +128,7 @@ def test_large_indent():
 
 def test_unicode_strings():
     """Test with unicode characters."""
-    data = {
-        "emoji": "🔍",
-        "chinese": "中文",
-        "arabic": "العربية",
-        "greek": "ελληνικά"
-    }
+    data = {"emoji": "🔍", "chinese": "中文", "arabic": "العربية", "greek": "ελληνικά"}
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
     parsed = json.loads(result)
@@ -159,7 +141,7 @@ def test_special_characters():
         "quote": 'He said "hello"',
         "backslash": "C:\\path\\to\\file",
         "newline": "line1\nline2",
-        "tab": "col1\tcol2"
+        "tab": "col1\tcol2",
     }
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
@@ -184,7 +166,7 @@ def test_deeply_nested_structure():
     for i in range(1, 50):
         current["nested"] = {"level": i}
         current = current["nested"]
-    
+
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
     parsed = json.loads(result)
@@ -194,14 +176,8 @@ def test_deeply_nested_structure():
 def test_mixed_list_and_dict():
     """Test with mixed list and dict structures."""
     data = {
-        "users": [
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"}
-        ],
-        "metadata": {
-            "count": 2,
-            "tags": ["active", "verified"]
-        }
+        "users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}],
+        "metadata": {"count": 2, "tags": ["active", "verified"]},
     }
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
@@ -211,11 +187,7 @@ def test_mixed_list_and_dict():
 
 def test_boolean_values():
     """Test with boolean values."""
-    data = {
-        "active": True,
-        "deleted": False,
-        "verified": True
-    }
+    data = {"active": True, "deleted": False, "verified": True}
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
     parsed = json.loads(result)
@@ -229,7 +201,7 @@ def test_numeric_edge_cases():
         "negative": -42,
         "large": 999999999999,
         "float_zero": 0.0,
-        "small_float": 0.00001
+        "small_float": 0.00001,
     }
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()
@@ -241,11 +213,8 @@ def test_null_values_in_dict():
     """Test with null values in nested structures."""
     data = {
         "field1": None,
-        "field2": {
-            "nested_null": None,
-            "nested_value": "value"
-        },
-        "list_with_nulls": [1, None, 3]
+        "field2": {"nested_null": None, "nested_value": "value"},
+        "list_with_nulls": [1, None, 3],
     }
     formatter = JsonOutputFormatter(data)
     result = formatter.to_json()

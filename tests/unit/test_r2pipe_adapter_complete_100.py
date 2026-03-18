@@ -1,234 +1,229 @@
-"""Comprehensive tests for r2pipe_adapter.py - 100% coverage target."""
+"""Comprehensive tests for r2pipe_adapter.py - 100% coverage target.
 
-from unittest.mock import Mock, patch
-import os
+All tests use FakeR2 + real R2PipeAdapter code paths. No mocks, no
+monkeypatch, no @patch.
+"""
+
+import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 
 
+class FakeR2:
+    """Minimal r2pipe stand-in that drives the real adapter code."""
+
+    def __init__(self, cmdj_map=None, cmd_map=None):
+        self.cmdj_map = cmdj_map or {}
+        self.cmd_map = cmd_map or {}
+
+    def cmdj(self, command):
+        return self.cmdj_map.get(command)
+
+    def cmd(self, command):
+        return self.cmd_map.get(command, "")
+
+
+class FakeR2NonString:
+    """FakeR2 whose cmd() returns a non-string value."""
+
+    def __init__(self, value):
+        self._value = value
+
+    def cmdj(self, command):
+        return None
+
+    def cmd(self, command):
+        return self._value
+
+
+# -------------------------------------------------------------------
+# Initialization
+# -------------------------------------------------------------------
+
+
 def test_init_success():
-    """Test R2PipeAdapter initialization."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    assert adapter._r2 == r2_instance
+    """R2PipeAdapter accepts a valid r2 instance."""
+    r2 = FakeR2()
+    adapter = R2PipeAdapter(r2)
+    assert adapter._r2 is r2
 
 
 def test_init_none_raises():
-    """Test R2PipeAdapter initialization with None raises ValueError."""
-    try:
+    """R2PipeAdapter rejects None with ValueError."""
+    with pytest.raises(ValueError, match="cannot be None"):
         R2PipeAdapter(None)
-        assert False, "Should have raised ValueError"
-    except ValueError as e:
-        assert "cannot be None" in str(e)
 
 
-def test_cmd():
-    """Test cmd method."""
-    r2_instance = Mock()
-    r2_instance.cmd.return_value = "test result"
-    adapter = R2PipeAdapter(r2_instance)
-    
-    result = adapter.cmd("iSj")
-    
-    assert result == "test result"
+# -------------------------------------------------------------------
+# cmd / cmdj
+# -------------------------------------------------------------------
 
 
-def test_cmd_non_string():
-    """Test cmd method with non-string return."""
-    r2_instance = Mock()
-    r2_instance.cmd.return_value = 12345
-    adapter = R2PipeAdapter(r2_instance)
-    
-    result = adapter.cmd("test")
-    
-    assert result == "12345"
+def test_cmd_returns_string():
+    """cmd() returns the string result from r2."""
+    r2 = FakeR2(cmd_map={"iSj": "test result"})
+    adapter = R2PipeAdapter(r2)
+    assert adapter.cmd("iSj") == "test result"
 
 
-def test_cmdj():
-    """Test cmdj method."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.silent_cmdj", return_value={"test": "data"}):
-        result = adapter.cmdj("iSj")
-        
-        assert result == {"test": "data"}
+def test_cmd_non_string_coerced():
+    """cmd() coerces non-string return values via str()."""
+    r2 = FakeR2NonString(12345)
+    adapter = R2PipeAdapter(r2)
+    assert adapter.cmd("anything") == "12345"
+
+
+def test_cmdj_returns_parsed_json():
+    """cmdj() delegates through silent_cmdj and returns parsed data."""
+    r2 = FakeR2(cmdj_map={"iij": {"info": "data"}})
+    adapter = R2PipeAdapter(r2)
+    result = adapter.cmdj("iij")
+    assert result == {"info": "data"}
+
+
+# -------------------------------------------------------------------
+# _cached_query — list paths
+# -------------------------------------------------------------------
 
 
 def test_cached_query_list_cached():
-    """Test _cached_query with cached list data."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
+    """_cached_query returns cached list without hitting r2 again."""
+    r2 = FakeR2()
+    adapter = R2PipeAdapter(r2)
     adapter._cache["iSj"] = [{"test": "data"}]
-    
     result = adapter._cached_query("iSj", "list")
-    
     assert result == [{"test": "data"}]
 
 
-def test_cached_query_dict_cached():
-    """Test _cached_query with cached dict data."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    adapter._cache["iij"] = {"test": "data"}
-    
-    result = adapter._cached_query("iij", "dict")
-    
-    assert result == {"test": "data"}
-
-
 def test_cached_query_list_not_cached():
-    """Test _cached_query with uncached list data."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.safe_cmd_list", return_value=[{"test": "data"}]), \
-         patch("r2inspect.adapters.r2pipe_adapter.validate_r2_data", return_value=[{"test": "data"}]), \
-         patch("r2inspect.adapters.r2pipe_adapter.is_valid_r2_response", return_value=True):
-        result = adapter._cached_query("iSj", "list")
-        
-        assert result == [{"test": "data"}]
-        assert "iSj" in adapter._cache
+    """_cached_query fetches, validates, caches, and returns a list."""
+    r2 = FakeR2(cmdj_map={"iSj": [{"name": ".text"}]})
+    adapter = R2PipeAdapter(r2)
 
-
-def test_cached_query_dict_not_cached():
-    """Test _cached_query with uncached dict data."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.safe_cmd_dict", return_value={"test": "data"}), \
-         patch("r2inspect.adapters.r2pipe_adapter.validate_r2_data", return_value={"test": "data"}), \
-         patch("r2inspect.adapters.r2pipe_adapter.is_valid_r2_response", return_value=True):
-        result = adapter._cached_query("iij", "dict")
-        
-        assert result == {"test": "data"}
+    result = adapter._cached_query("iSj", "list")
+    assert result == [{"name": ".text"}]
+    assert "iSj" in adapter._cache
 
 
 def test_cached_query_invalid_response_list():
-    """Test _cached_query with invalid response for list."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.safe_cmd_list", return_value=None), \
-         patch("r2inspect.adapters.r2pipe_adapter.validate_r2_data", return_value=None), \
-         patch("r2inspect.adapters.r2pipe_adapter.is_valid_r2_response", return_value=False):
-        result = adapter._cached_query("iSj", "list", error_msg="Test error")
-        
-        assert result == []
+    """_cached_query returns empty list when r2 gives None/invalid data."""
+    r2 = FakeR2(cmdj_map={"iSj": None})
+    adapter = R2PipeAdapter(r2)
 
-
-def test_cached_query_invalid_response_dict():
-    """Test _cached_query with invalid response for dict."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.safe_cmd_dict", return_value=None), \
-         patch("r2inspect.adapters.r2pipe_adapter.validate_r2_data", return_value=None), \
-         patch("r2inspect.adapters.r2pipe_adapter.is_valid_r2_response", return_value=False):
-        result = adapter._cached_query("iij", "dict")
-        
-        assert result == {}
+    result = adapter._cached_query("iSj", "list", error_msg="No sections")
+    assert result == []
 
 
 def test_cached_query_custom_default_list():
-    """Test _cached_query with custom default for list."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.safe_cmd_list", return_value=None), \
-         patch("r2inspect.adapters.r2pipe_adapter.validate_r2_data", return_value=None), \
-         patch("r2inspect.adapters.r2pipe_adapter.is_valid_r2_response", return_value=False):
-        result = adapter._cached_query("iSj", "list", default=[{"default": "value"}])
-        
-        assert result == [{"default": "value"}]
+    """_cached_query uses the caller-supplied default for invalid list data."""
+    r2 = FakeR2(cmdj_map={"iSj": None})
+    adapter = R2PipeAdapter(r2)
+
+    sentinel = [{"default": "value"}]
+    result = adapter._cached_query("iSj", "list", default=sentinel)
+    assert result == sentinel
 
 
-def test_cached_query_no_cache():
-    """Test _cached_query with caching disabled."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    with patch("r2inspect.adapters.r2pipe_adapter.safe_cmd_list", return_value=[{"test": "data"}]), \
-         patch("r2inspect.adapters.r2pipe_adapter.validate_r2_data", return_value=[{"test": "data"}]), \
-         patch("r2inspect.adapters.r2pipe_adapter.is_valid_r2_response", return_value=True):
-        result = adapter._cached_query("iSj", "list", cache=False)
-        
-        assert result == [{"test": "data"}]
-        assert "iSj" not in adapter._cache
+def test_cached_query_no_cache_list():
+    """_cached_query with cache=False skips caching."""
+    r2 = FakeR2(cmdj_map={"iSj": [{"name": ".data"}]})
+    adapter = R2PipeAdapter(r2)
+
+    result = adapter._cached_query("iSj", "list", cache=False)
+    assert result == [{"name": ".data"}]
+    assert "iSj" not in adapter._cache
+
+
+# -------------------------------------------------------------------
+# _cached_query — dict paths
+# -------------------------------------------------------------------
+
+
+def test_cached_query_dict_cached():
+    """_cached_query returns cached dict without hitting r2 again."""
+    r2 = FakeR2()
+    adapter = R2PipeAdapter(r2)
+    adapter._cache["iij"] = {"test": "data"}
+    result = adapter._cached_query("iij", "dict")
+    assert result == {"test": "data"}
+
+
+def test_cached_query_dict_not_cached():
+    """_cached_query fetches, validates, caches, and returns a dict."""
+    r2 = FakeR2(cmdj_map={"iij": {"arch": "x86"}})
+    adapter = R2PipeAdapter(r2)
+
+    result = adapter._cached_query("iij", "dict")
+    assert result == {"arch": "x86"}
+
+
+def test_cached_query_invalid_response_dict():
+    """_cached_query returns empty dict when r2 gives None/invalid data."""
+    r2 = FakeR2(cmdj_map={"iij": None})
+    adapter = R2PipeAdapter(r2)
+
+    result = adapter._cached_query("iij", "dict")
+    assert result == {}
+
+
+# -------------------------------------------------------------------
+# __repr__ / __str__
+# -------------------------------------------------------------------
 
 
 def test_repr():
-    """Test __repr__ method."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    result = repr(adapter)
-    
-    assert "R2PipeAdapter" in result
+    """__repr__ includes the class name."""
+    adapter = R2PipeAdapter(FakeR2())
+    assert "R2PipeAdapter" in repr(adapter)
 
 
 def test_str():
-    """Test __str__ method."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    result = str(adapter)
-    
-    assert "radare2" in result
+    """__str__ mentions radare2."""
+    adapter = R2PipeAdapter(FakeR2())
+    assert "radare2" in str(adapter)
 
 
-def test_maybe_force_error_not_set():
-    """Test _maybe_force_error when env var not set."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    # Should not raise
-    adapter._maybe_force_error("test_method")
+# -------------------------------------------------------------------
+# _maybe_force_error
+# -------------------------------------------------------------------
 
 
-def test_maybe_force_error_all():
-    """Test _maybe_force_error with 'all' value."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "true"
-    try:
+def test_maybe_force_error_no_injector():
+    """No error when fault_injector is None (default)."""
+    adapter = R2PipeAdapter(FakeR2())
+    adapter._maybe_force_error("test_method")  # should not raise
+
+
+def test_maybe_force_error_with_injector():
+    """fault_injector is called and may raise."""
+
+    def _injector(method: str) -> None:
+        raise RuntimeError("Forced adapter error")
+
+    adapter = R2PipeAdapter(FakeR2(), fault_injector=_injector)
+    with pytest.raises(RuntimeError, match="Forced adapter error"):
         adapter._maybe_force_error("test_method")
-        assert False, "Should have raised RuntimeError"
-    except RuntimeError as e:
-        assert "Forced adapter error" in str(e)
-    finally:
-        del os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"]
 
 
-def test_maybe_force_error_specific_method():
-    """Test _maybe_force_error with specific method."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "test_method,other_method"
-    try:
+def test_maybe_force_error_injector_selective():
+    """fault_injector can selectively raise based on method name."""
+
+    def _injector(method: str) -> None:
+        if method == "test_method":
+            raise RuntimeError("Forced adapter error")
+
+    adapter = R2PipeAdapter(FakeR2(), fault_injector=_injector)
+    with pytest.raises(RuntimeError, match="Forced adapter error"):
         adapter._maybe_force_error("test_method")
-        assert False, "Should have raised RuntimeError"
-    except RuntimeError as e:
-        assert "Forced adapter error" in str(e)
-    finally:
-        del os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"]
+    # Different method does not raise
+    adapter._maybe_force_error("other_method")
 
 
-def test_maybe_force_error_different_method():
-    """Test _maybe_force_error with different method."""
-    r2_instance = Mock()
-    adapter = R2PipeAdapter(r2_instance)
-    
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "other_method"
-    try:
-        # Should not raise
-        adapter._maybe_force_error("test_method")
-    finally:
-        del os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"]
+# -------------------------------------------------------------------
+# Class attributes
+# -------------------------------------------------------------------
 
 
 def test_thread_safe_attribute():
-    """Test thread_safe class attribute."""
+    """thread_safe class attribute is False."""
     assert R2PipeAdapter.thread_safe is False

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import os
 import sys
 from pathlib import Path
@@ -14,6 +12,12 @@ except ImportError:
     _resource = None  # type: ignore[assignment]
 
 import pytest
+
+from r2inspect.testing.fixtures import (
+    ensure_expected_snapshots,
+    resolve_fixture_source_root,
+    sync_sample_fixtures,
+)
 
 # =============================================================================
 # Test Resource Limits Configuration
@@ -27,81 +31,11 @@ DEFAULT_TEST_MEMORY_LIMIT_MB = 1024  # 1GB memory limit per test process
 DEFAULT_TEST_CPU_LIMIT_SECONDS = 300  # 5 minute CPU time limit per test session
 
 
-def _infer_file_format(path: Path) -> str:
-    data = path.read_bytes()[:4]
-    if data.startswith(b"MZ"):
-        return "PE"
-    if data.startswith(b"\x7fELF"):
-        return "ELF"
-    if data in {
-        b"\xfe\xed\xfa\xce",
-        b"\xce\xfa\xed\xfe",
-        b"\xfe\xed\xfa\xcf",
-        b"\xcf\xfa\xed\xfe",
-        b"\xca\xfe\xba\xbe",
-    }:
-        return "MACHO"
-    return "Unknown"
-
-
-def _build_expected_payload(path: Path) -> dict[str, object]:
-    data = path.read_bytes()
-    md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
-    sha1 = hashlib.sha1(data, usedforsecurity=False).hexdigest()
-    sha256 = hashlib.sha256(data).hexdigest()
-    file_format = _infer_file_format(path)
-    return {
-        "file_format": file_format,
-        "name": path.name,
-        "size": path.stat().st_size,
-        "hashes": {"md5": md5, "sha1": sha1, "sha256": sha256},
-        "file_info": {
-            "name": path.name,
-            "path": str(path),
-            "size": path.stat().st_size,
-            "md5": md5,
-            "sha1": sha1,
-            "sha256": sha256,
-            "file_type": file_format,
-        },
-        "hashing": {},
-        "security": {},
-    }
-
-
-def _ensure_expected_snapshots(fixtures_dir: Path) -> None:
-    expected_dir = fixtures_dir / "expected"
-    expected_dir.mkdir(parents=True, exist_ok=True)
-    snapshot_names = (
-        "hello_pe.exe",
-        "hello_elf",
-        "hello_macho",
-        "edge_packed.bin",
-        "edge_tiny.bin",
-        "edge_bad_pe.bin",
-        "edge_high_entropy.bin",
-    )
-    for file_name in snapshot_names:
-        fixture_path = fixtures_dir / file_name
-        if not fixture_path.exists():
-            continue
-        payload = _build_expected_payload(fixture_path)
-        out_name = file_name.replace(".exe", "").replace(".bin", "") + ".json"
-        (expected_dir / out_name).write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-
 @pytest.fixture(scope="session")
-def samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Return a legacy-compatible fixtures directory backed by test binaries repo."""
+def _session_samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Build the shared sample-fixture tree used by session-scoped test helpers."""
     repo_root = Path(__file__).resolve().parent.parent
-    configured = os.getenv("R2INSPECT_TEST_BINARIES_DIR", "").strip()
-    candidate_roots = []
-    if configured:
-        candidate_roots.append(Path(configured))
-    candidate_roots.append(repo_root.parent / "r2inspect-test-binaries")
-    candidate_roots.append(repo_root / "samples" / "fixtures")
-
-    source_root = next((path for path in candidate_roots if path.exists()), None)
+    source_root = resolve_fixture_source_root(repo_root)
     if source_root is None:
         pytest.skip(
             "No fixture binaries found. Set R2INSPECT_TEST_BINARIES_DIR or clone "
@@ -109,33 +43,18 @@ def samples_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
         )
 
     if (source_root / "hello_pe.exe").exists():
-        # Legacy in-repo layout already available.
+        ensure_expected_snapshots(source_root)
         return source_root
 
-    # Build a legacy fixtures layout expected by existing tests.
-    legacy_dir = tmp_path_factory.mktemp("legacy_fixtures")
-    mapping = {
-        "hello_pe.exe": source_root / "pe" / "hello_pe.exe",
-        "hello_elf": source_root / "elf" / "hello_elf",
-        "hello_macho": source_root / "mach0" / "hello_macho",
-        "hello_macho_stripped": source_root / "mach0" / "hello_macho_stripped",
-        "edge_tiny.bin": source_root / "edge" / "edge_tiny.bin",
-        "edge_packed.bin": source_root / "edge" / "edge_packed.bin",
-        "edge_bad_pe.bin": source_root / "edge" / "edge_bad_pe.bin",
-        "edge_high_entropy.bin": source_root / "edge" / "edge_high_entropy.bin",
-    }
+    fixture_dir = tmp_path_factory.mktemp("sample_fixtures")
+    sync_sample_fixtures(fixture_dir, source_root)
+    return fixture_dir
 
-    for target_name, source_path in mapping.items():
-        if not source_path.exists():
-            continue
-        target_path = legacy_dir / target_name
-        try:
-            target_path.symlink_to(source_path)
-        except OSError:
-            target_path.write_bytes(source_path.read_bytes())
 
-    _ensure_expected_snapshots(legacy_dir)
-    return legacy_dir
+@pytest.fixture(scope="session")
+def samples_dir(_session_samples_dir: Path) -> Path:
+    """Return the shared sample-fixture directory backed by the binaries repo."""
+    return _session_samples_dir
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -213,24 +132,24 @@ def cap_test_resources() -> None:
 
 
 @pytest.fixture(autouse=True, scope="session")
-def ensure_legacy_samples_tree(samples_dir: Path) -> None:
+def ensure_sample_fixture_tree(_session_samples_dir: Path) -> None:
     """
-    Ensure legacy samples/fixtures paths exist for tests with hardcoded paths.
+    Ensure samples/fixtures paths exist for tests with hardcoded repository paths.
 
-    The project migrated binaries out of this repo; this recreates the legacy
-    tree as symlinks (or copies) during test execution only.
+    The project keeps binaries in an external fixture repo; this recreates the
+    local samples tree as symlinks (or copies) during test execution only.
     """
     repo_root = Path(__file__).resolve().parent.parent
-    legacy_fixtures = repo_root / "samples" / "fixtures"
+    sample_fixtures = repo_root / "samples" / "fixtures"
     created = False
     created_files: list[Path] = []
 
-    if not legacy_fixtures.exists():
-        legacy_fixtures.mkdir(parents=True, exist_ok=True)
+    if not sample_fixtures.exists():
+        sample_fixtures.mkdir(parents=True, exist_ok=True)
         created = True
 
-    for source in samples_dir.iterdir():
-        target = legacy_fixtures / source.name
+    for source in _session_samples_dir.iterdir():
+        target = sample_fixtures / source.name
         if target.exists():
             continue
         try:
@@ -249,8 +168,8 @@ def ensure_legacy_samples_tree(samples_dir: Path) -> None:
 
     if created:
         try:
-            legacy_fixtures.rmdir()
-            (legacy_fixtures.parent).rmdir()
+            sample_fixtures.rmdir()
+            sample_fixtures.parent.rmdir()
         except OSError:
             pass
 

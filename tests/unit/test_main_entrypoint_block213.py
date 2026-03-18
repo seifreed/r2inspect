@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import runpy
+import subprocess
 import sys
 
-import pytest
 
-
-def test_main_entrypoint_invocation(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(sys, "argv", ["r2inspect", "--help"])
-    with pytest.raises(SystemExit) as excinfo:
-        runpy.run_module("r2inspect.__main__", run_name="__main__")
-    assert excinfo.value.code == 0
-    out = capsys.readouterr().out
-    assert "Usage" in out or "Options" in out
+def test_main_entrypoint_invocation() -> None:
+    """Invoke r2inspect --help via subprocess to avoid mutating sys.argv."""
+    result = subprocess.run(
+        [sys.executable, "-m", "r2inspect", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0
+    out = result.stdout
+    assert "Usage" in out or "Options" in out or "usage" in out or "options" in out

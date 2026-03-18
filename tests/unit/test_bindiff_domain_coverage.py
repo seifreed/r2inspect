@@ -481,10 +481,22 @@ def test_compare_behavioral_features_all_zero():
 
 
 def test_compare_behavioral_features_partial_match():
-    a = {"crypto_indicators": 3, "network_indicators": 0, "persistence_indicators": 0,
-         "suspicious_apis": 0, "crypto_apis": 0, "network_apis": 0}
-    b = {"crypto_indicators": 1, "network_indicators": 0, "persistence_indicators": 0,
-         "suspicious_apis": 0, "crypto_apis": 0, "network_apis": 0}
+    a = {
+        "crypto_indicators": 3,
+        "network_indicators": 0,
+        "persistence_indicators": 0,
+        "suspicious_apis": 0,
+        "crypto_apis": 0,
+        "network_apis": 0,
+    }
+    b = {
+        "crypto_indicators": 1,
+        "network_indicators": 0,
+        "persistence_indicators": 0,
+        "suspicious_apis": 0,
+        "crypto_apis": 0,
+        "network_apis": 0,
+    }
     score = compare_behavioral_features(a, b)
     assert 0.0 < score <= 1.0
 

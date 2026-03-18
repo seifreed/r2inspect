@@ -1,0 +1,36 @@
+........................................................................ [ 19%]
+........................................................................ [ 39%]
+........................................................................ [ 59%]
+........................................................................ [ 78%]
+........................................................................ [ 98%]
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+tests/unit/test_memory_manager_block278.py:11
+  /Users/seifreed/tools/malware/r2inspect/tests/unit/test_memory_manager_block278.py:11: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+
+tests/unit/test_memory_manager_block278.py:34
+  /Users/seifreed/tools/malware/r2inspect/tests/unit/test_memory_manager_block278.py:34: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+
+tests/unit/test_memory_manager_block278.py:55
+  /Users/seifreed/tools/malware/r2inspect/tests/unit/test_memory_manager_block278.py:55: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+
+tests/unit/test_memory_manager_block278.py:72
+  /Users/seifreed/tools/malware/r2inspect/tests/unit/test_memory_manager_block278.py:72: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.unit
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /Users/seifreed/tools/malware/r2inspect/.coverage-gate/phase_d_unit_20260302_001251_1.junit.xml -
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.13.12-final-0 _______________
+
+Name                                Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------
+r2inspect/utils/memory_manager.py     164      0   100%
+r2inspect/utils/rate_limiter.py       166      0   100%
+r2inspect/utils/retry_manager.py      156      0   100%
+-----------------------------------------------------------------
+TOTAL                                 486      0   100%
+365 passed, 4 warnings in 17.80s

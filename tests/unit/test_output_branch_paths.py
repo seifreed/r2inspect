@@ -7,12 +7,13 @@ import json
 import pytest
 from rich.table import Table
 
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_formatter(extra: dict | None = None) -> OutputFormatter:
     results: dict = {
@@ -32,6 +33,7 @@ def _make_formatter(extra: dict | None = None) -> OutputFormatter:
 # to_json
 # ---------------------------------------------------------------------------
 
+
 def test_to_json_returns_valid_json_string() -> None:
     formatter = _make_formatter()
     output = formatter.to_json(indent=2)
@@ -50,6 +52,7 @@ def test_to_json_respects_indent_parameter() -> None:
 # _extract_csv_data (backward-compat wrapper)
 # ---------------------------------------------------------------------------
 
+
 def test_extract_csv_data_delegates_to_csv_formatter() -> None:
     formatter = _make_formatter()
     data = {"file_info": {"name": "x.exe", "md5": "abc"}}
@@ -60,6 +63,7 @@ def test_extract_csv_data_delegates_to_csv_formatter() -> None:
 # ---------------------------------------------------------------------------
 # format_table
 # ---------------------------------------------------------------------------
+
 
 def test_format_table_returns_rich_table_instance() -> None:
     formatter = _make_formatter()
@@ -94,6 +98,7 @@ def test_format_table_uses_default_title() -> None:
 # ---------------------------------------------------------------------------
 # format_sections
 # ---------------------------------------------------------------------------
+
 
 def _make_sections(suspicious: bool = False) -> list[dict]:
     return [
@@ -143,6 +148,7 @@ def test_format_sections_handles_missing_fields() -> None:
 # ---------------------------------------------------------------------------
 # format_imports
 # ---------------------------------------------------------------------------
+
 
 def _make_import(risk_level: str, risk_score: int, tags: list[str]) -> dict:
     return {
@@ -225,6 +231,7 @@ def test_format_imports_handles_empty_list() -> None:
 # format_summary
 # ---------------------------------------------------------------------------
 
+
 def test_format_summary_returns_string() -> None:
     formatter = _make_formatter()
     summary = formatter.format_summary()
@@ -255,16 +262,16 @@ def test_format_summary_includes_indicators_section_when_present() -> None:
 
 
 def test_format_summary_truncates_more_than_five_indicators() -> None:
-    indicators = [
-        {"type": f"Type{i}", "description": f"desc{i}"} for i in range(8)
-    ]
+    indicators = [{"type": f"Type{i}", "description": f"desc{i}"} for i in range(8)]
     formatter = _make_formatter({"indicators": indicators})
     summary = formatter.format_summary()
     assert "and 3 more" in summary
 
 
 def test_format_summary_skips_indicators_when_absent() -> None:
-    formatter = OutputFormatter({"file_info": {"name": "x.exe", "size": 0, "file_type": "ELF", "md5": ""}})
+    formatter = OutputFormatter(
+        {"file_info": {"name": "x.exe", "size": 0, "file_type": "ELF", "md5": ""}}
+    )
     summary = formatter.format_summary()
     assert "Suspicious Indicators" not in summary
 
@@ -311,13 +318,7 @@ def test_format_summary_includes_yara_matches_section() -> None:
 
 
 def test_format_summary_truncates_more_than_three_yara_rules() -> None:
-    formatter = _make_formatter(
-        {
-            "yara_matches": [
-                {"rule": f"Rule{i}"} for i in range(6)
-            ]
-        }
-    )
+    formatter = _make_formatter({"yara_matches": [{"rule": f"Rule{i}"} for i in range(6)]})
     summary = formatter.format_summary()
     assert "YARA Matches: 6" in summary
 
@@ -333,3 +334,79 @@ def test_format_summary_handles_empty_results() -> None:
     summary = formatter.format_summary()
     assert isinstance(summary, str)
     assert "R2INSPECT ANALYSIS SUMMARY" in summary
+
+
+def test_extract_imphash_wrapper_delegates_to_csv_formatter() -> None:
+    formatter = _make_formatter()
+    assert formatter._extract_imphash({"pe_info": {"imphash": "abc123"}}) == "abc123"
+
+
+def test_extract_compile_time_wrapper_delegates_to_csv_formatter() -> None:
+    formatter = _make_formatter()
+    assert (
+        formatter._extract_compile_time({"pe_info": {"compile_time": "2024-01-01"}}) == "2024-01-01"
+    )
+
+
+def test_count_duplicate_machoc_wrapper_delegates_to_csv_formatter() -> None:
+    formatter = _make_formatter()
+    assert formatter._count_duplicate_machoc({"a": "h1", "b": "h1"}) == 1
+
+
+def test_to_csv_returns_error_row_when_csv_data_fails(monkeypatch) -> None:
+    formatter = _make_formatter()
+
+    def _raise(_data: dict) -> dict:
+        raise RuntimeError("forced csv failure")
+
+    monkeypatch.setattr(formatter, "_extract_csv_data", _raise)
+    result = formatter.to_csv()
+    assert "CSV Export Failed" in result
+
+
+def test_to_csv_executes_csv_formatter_path() -> None:
+    formatter = _make_formatter()
+    result = formatter.to_csv()
+    assert "sample.exe" in result
+    assert "name" in result.splitlines()[0]
+
+
+def test_format_summary_catches_exceptions(monkeypatch) -> None:
+    formatter = _make_formatter()
+
+    def _raise(_lines: list[str]) -> None:
+        raise RuntimeError("summary failure")
+
+    monkeypatch.setattr(formatter, "_append_file_info_summary", _raise)
+    summary = formatter.format_summary()
+    assert "Error generating summary: summary failure" in summary
+
+
+def test_extract_names_from_list_proxy_on_output_formatter() -> None:
+    formatter = _make_formatter()
+    data = {"items": ["kernel32.dll", "ntdll.dll"]}
+    assert formatter._extract_names_from_list(data, "items") == "kernel32.dll, ntdll.dll"
+
+
+def test_format_file_size_proxy_uses_csv_behavior() -> None:
+    formatter = _make_formatter()
+    assert formatter._format_file_size(2048) == "2.0 KB"
+
+
+def test_clean_file_type_proxy_uses_csv_behavior() -> None:
+    formatter = _make_formatter()
+    assert formatter._clean_file_type("PE32 executable, 5 sections") == "PE32 executable"
+
+
+def test_flatten_results_flattens_dict_and_list() -> None:
+    formatter = _make_formatter()
+    nested = {"outer": ["leaf", {"inner": 1}]}
+    rows = formatter._flatten_results(nested)
+    assert {"field": "outer[0]", "value": "leaf"} in rows
+    assert {"field": "outer[1].inner", "value": "1"} in rows
+
+
+def test_flatten_results_flattens_scalar_value() -> None:
+    formatter = _make_formatter()
+    rows = formatter._flatten_results(123, prefix="value")
+    assert rows == [{"field": "value", "value": "123"}]

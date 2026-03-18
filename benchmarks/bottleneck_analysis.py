@@ -80,7 +80,7 @@ def _report_loaded_modules() -> list[str]:
 
     import sys
 
-    from r2inspect import R2Inspector  # noqa: F401
+    from r2inspect import R2Inspector
 
     r2inspect_modules = [m for m in sys.modules if "r2inspect" in m]
     analyzer_modules = [

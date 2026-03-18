@@ -1,153 +1,206 @@
 #!/usr/bin/env python3
-"""Tests for modules/resource_analysis.py"""
+"""Tests for modules/resource_analyzer.py run_resource_analysis function.
+
+Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO @patch.
+"""
 
 from __future__ import annotations
 
-from unittest.mock import Mock
+from typing import Any
 
-from r2inspect.modules import resource_analysis
+from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.modules.resource_analyzer import ResourceAnalyzer, run_resource_analysis
+from r2inspect.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+class FakeR2:
+    """Fake r2pipe instance returning predetermined responses by command."""
+
+    def __init__(
+        self,
+        cmdj_map: dict[str, Any] | None = None,
+        cmd_map: dict[str, str] | None = None,
+    ):
+        self.cmdj_map: dict[str, Any] = cmdj_map or {}
+        self.cmd_map: dict[str, str] = cmd_map or {}
+
+    def cmdj(self, command: str) -> Any:
+        if command in self.cmdj_map:
+            value = self.cmdj_map[command]
+            if isinstance(value, Exception):
+                raise value
+            return value
+        return None
+
+    def cmd(self, command: str) -> str:
+        if command in self.cmd_map:
+            value = self.cmd_map[command]
+            if isinstance(value, Exception):
+                raise value
+            return value
+        for key, value in self.cmd_map.items():
+            if key in command:
+                if isinstance(value, Exception):
+                    raise value
+                return value
+        return ""
+
+
+def _make_analyzer(
+    cmdj_map: dict[str, Any] | None = None,
+    cmd_map: dict[str, str] | None = None,
+) -> ResourceAnalyzer:
+    """Create a ResourceAnalyzer backed by FakeR2 + R2PipeAdapter."""
+    fake_r2 = FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    adapter = R2PipeAdapter(fake_r2)
+    return ResourceAnalyzer(adapter=adapter)
+
+
+# ---------------------------------------------------------------------------
+# Basic: no resource directory at all
+# ---------------------------------------------------------------------------
 
 
 def test_run_resource_analysis_basic():
-    analyzer = Mock()
-    analyzer._init_result_structure.return_value = {
-        "has_resources": False,
-        "resource_directory": None,
-        "total_resources": 0,
-        "total_size": 0,
-        "resource_types": [],
-        "resources": [],
-        "version_info": None,
-        "manifest": None,
-        "icons": [],
-        "strings": [],
-        "suspicious_resources": [],
-        "statistics": {},
-    }
-    analyzer._get_resource_directory.return_value = None
-    logger = Mock()
-    
-    result = resource_analysis.run_resource_analysis(analyzer, logger)
-    
+    """No resource directory => available=True, has_resources=False."""
+    # iDj returns empty => _get_resource_directory returns None
+    analyzer = _make_analyzer(cmdj_map={"iDj": []})
+    result = run_resource_analysis(analyzer, logger)
+
     assert result["available"] is True
     assert result["has_resources"] is False
+
+
+# ---------------------------------------------------------------------------
+# With resources: directory present and parseable entries
+# ---------------------------------------------------------------------------
+
+
+def _bytes_to_hex(data: list[int]) -> str:
+    return "".join(f"{b:02x}" for b in data)
 
 
 def test_run_resource_analysis_with_resources():
-    analyzer = Mock()
-    analyzer._init_result_structure.return_value = {
-        "has_resources": False,
-        "resource_directory": None,
-        "total_resources": 0,
-        "total_size": 0,
-        "resource_types": [],
-        "resources": [],
-        "version_info": None,
-        "manifest": None,
-        "icons": [],
-        "strings": [],
-        "suspicious_resources": [],
-        "statistics": {},
+    """Resource directory present with two valid entries."""
+    resource_bytes_icon = [0x00] * 1024
+    resource_bytes_version = [0x00] * 512
+
+    cmdj_map: dict[str, Any] = {
+        "iDj": [
+            {"name": "RESOURCE", "vaddr": 0x4000, "paddr": 0x3000, "size": 0x1000},
+        ],
+        "iRj": [
+            {
+                "name": "icon.ico",
+                "type": "RT_ICON",
+                "type_id": 3,
+                "lang": "en-US",
+                "paddr": 0x5000,
+                "size": 1024,
+                "vaddr": 0x6000,
+            },
+            {
+                "name": "version.res",
+                "type": "RT_VERSION",
+                "type_id": 16,
+                "lang": "en-US",
+                "paddr": 0x7000,
+                "size": 512,
+                "vaddr": 0x8000,
+            },
+        ],
     }
-    analyzer._get_resource_directory.return_value = {"rva": 0x1000}
-    analyzer._parse_resources.return_value = [
-        {"type": "RT_ICON", "size": 1024},
-        {"type": "RT_VERSION", "size": 512},
-    ]
-    logger = Mock()
-    
-    result = resource_analysis.run_resource_analysis(analyzer, logger)
-    
+    cmd_map = {
+        f"p8 1024 @ {0x5000}": _bytes_to_hex(resource_bytes_icon),
+        f"p8 512 @ {0x7000}": _bytes_to_hex(resource_bytes_version),
+    }
+
+    analyzer = _make_analyzer(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    result = run_resource_analysis(analyzer, logger)
+
     assert result["available"] is True
     assert result["has_resources"] is True
-    assert result["resource_directory"] == {"rva": 0x1000}
+    assert result["resource_directory"] is not None
     assert result["total_resources"] == 2
-    analyzer._analyze_resource_types.assert_called_once()
-    analyzer._extract_version_info.assert_called_once()
-    analyzer._extract_manifest.assert_called_once()
-    analyzer._extract_icons.assert_called_once()
-    analyzer._extract_strings.assert_called_once()
-    analyzer._calculate_statistics.assert_called_once()
-    analyzer._check_suspicious_resources.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Directory present but no parseable resource entries
+# ---------------------------------------------------------------------------
 
 
 def test_run_resource_analysis_no_resources():
-    analyzer = Mock()
-    analyzer._init_result_structure.return_value = {
-        "has_resources": False,
-        "resource_directory": None,
-        "total_resources": 0,
-        "total_size": 0,
-        "resource_types": [],
-        "resources": [],
-        "version_info": None,
-        "manifest": None,
-        "icons": [],
-        "strings": [],
-        "suspicious_resources": [],
-        "statistics": {},
+    """Resource directory exists but iRj returns empty list."""
+    cmdj_map: dict[str, Any] = {
+        "iDj": [
+            {"name": "RESOURCE", "vaddr": 0x4000, "paddr": 0x3000, "size": 0x1000},
+        ],
+        "iRj": [],
+        # Also need iSj for manual fallback (empty so nothing found)
+        "iSj": [],
     }
-    analyzer._get_resource_directory.return_value = {"rva": 0x1000}
-    analyzer._parse_resources.return_value = []
-    logger = Mock()
-    
-    result = resource_analysis.run_resource_analysis(analyzer, logger)
-    
+
+    analyzer = _make_analyzer(cmdj_map=cmdj_map)
+    result = run_resource_analysis(analyzer, logger)
+
     assert result["available"] is True
     assert result["has_resources"] is True
+    # _parse_resources returns [] and _normalize_resources returns [],
+    # so total_resources stays at 0
     assert result["total_resources"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Directory present, _parse_resources returns None (iRj returns None)
+# ---------------------------------------------------------------------------
 
 
 def test_run_resource_analysis_none_resources():
-    analyzer = Mock()
-    analyzer._init_result_structure.return_value = {
-        "has_resources": False,
-        "resource_directory": None,
-        "total_resources": 0,
-        "total_size": 0,
-        "resource_types": [],
-        "resources": [],
-        "version_info": None,
-        "manifest": None,
-        "icons": [],
-        "strings": [],
-        "suspicious_resources": [],
-        "statistics": {},
+    """Resource directory exists but iRj returns None => empty resources."""
+    cmdj_map: dict[str, Any] = {
+        "iDj": [
+            {"name": "RESOURCE", "vaddr": 0x4000, "paddr": 0x3000, "size": 0x1000},
+        ],
+        "iRj": None,
+        "iSj": [],
     }
-    analyzer._get_resource_directory.return_value = {"rva": 0x1000}
-    analyzer._parse_resources.return_value = None
-    logger = Mock()
-    
-    result = resource_analysis.run_resource_analysis(analyzer, logger)
-    
+
+    analyzer = _make_analyzer(cmdj_map=cmdj_map)
+    result = run_resource_analysis(analyzer, logger)
+
     assert result["available"] is True
     assert result["has_resources"] is True
     assert result["total_resources"] == 0
 
 
+# ---------------------------------------------------------------------------
+# Exception during resource analysis
+# ---------------------------------------------------------------------------
+
+
+class _RaisingResourceAnalyzer(ResourceAnalyzer):
+    """ResourceAnalyzer subclass that raises in _get_resource_directory.
+
+    The real _get_resource_directory catches exceptions internally, so to
+    exercise run_resource_analysis's outer except branch we override the
+    method to let the error propagate.
+    """
+
+    def _get_resource_directory(self) -> dict[str, Any] | None:
+        raise RuntimeError("Test error")
+
+
 def test_run_resource_analysis_exception():
-    analyzer = Mock()
-    analyzer._init_result_structure.return_value = {
-        "has_resources": False,
-        "resource_directory": None,
-        "total_resources": 0,
-        "total_size": 0,
-        "resource_types": [],
-        "resources": [],
-        "version_info": None,
-        "manifest": None,
-        "icons": [],
-        "strings": [],
-        "suspicious_resources": [],
-        "statistics": {},
-    }
-    analyzer._get_resource_directory.side_effect = Exception("Test error")
-    logger = Mock()
-    
-    result = resource_analysis.run_resource_analysis(analyzer, logger)
-    
+    """Exception propagating from analyzer method => available=False, error set."""
+    fake_r2 = FakeR2()
+    adapter = R2PipeAdapter(fake_r2)
+    analyzer = _RaisingResourceAnalyzer(adapter=adapter)
+
+    result = run_resource_analysis(analyzer, logger)
+
     assert result["available"] is False
     assert result["has_resources"] is False
     assert "error" in result
-    assert result["error"] == "Test error"
-    logger.error.assert_called_once()
+    assert "Test error" in result["error"]

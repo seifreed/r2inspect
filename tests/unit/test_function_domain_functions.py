@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for function_domain.py module."""
 
-from r2inspect.modules.function_domain import (
+from r2inspect.domain.services.function_analysis import (
     extract_mnemonics_from_ops,
     extract_mnemonics_from_text,
     machoc_hash_from_mnemonics,
@@ -95,7 +95,7 @@ ret"""
 
 def test_extract_mnemonics_from_text_with_whitespace():
     """Test extracting mnemonics from text with extra whitespace."""
-    text = """  mov eax, ebx  
+    text = """  mov eax, ebx
     push ecx
   call 0x1000
     ret  """

@@ -48,6 +48,17 @@ def test_completion_aborts_without_state_mutation_on_gate_failure(monkeypatch, t
     monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_gate)
     monkeypatch.setattr(
         quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
         "parse_args",
         lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
@@ -97,6 +108,17 @@ def test_completion_records_evidence_when_gate_passes(monkeypatch, tmp_path, cap
     )
     monkeypatch.setattr(
         quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
         "parse_args",
         lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
@@ -141,6 +163,17 @@ def test_blocked_completion_keeps_completion_state_unadvanced(monkeypatch, tmp_p
                 "invalid_status": [{"message": "status must be passed", "fix": "set status passed"}]
             },
             "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
+        },
+    )
+    monkeypatch.setattr(
+        quick_bootstrap,
+        "evaluate_traceability_drift_gate",
+        lambda _planning_root, **_kwargs: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+            "scope": "all",
+            "touched_requirement_ids": [],
         },
     )
     monkeypatch.setattr(

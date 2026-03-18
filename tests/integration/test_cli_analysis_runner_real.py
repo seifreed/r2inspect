@@ -9,9 +9,10 @@ from r2inspect.config import Config
 from r2inspect.error_handling import ErrorHandlingStrategy, ErrorPolicy, handle_errors
 from r2inspect.error_handling.unified_handler import get_circuit_breaker_stats
 from r2inspect.factory import create_inspector
-from r2inspect.utils import error_handler, retry_manager
-from r2inspect.utils.error_handler import ErrorCategory, ErrorSeverity, reset_error_stats
-from r2inspect.utils.retry_manager import RetryConfig
+import r2inspect.error_handling.classifier as error_handler
+import r2inspect.infrastructure.retry_manager as retry_manager
+from r2inspect.error_handling.classifier import ErrorCategory, ErrorSeverity, reset_error_stats
+from r2inspect.infrastructure.retry_manager import RetryConfig
 
 pytestmark = pytest.mark.requires_r2
 

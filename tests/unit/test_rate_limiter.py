@@ -1,6 +1,6 @@
 import time
 
-from r2inspect.utils.rate_limiter import BatchRateLimiter, TokenBucket, cleanup_memory
+from r2inspect.infrastructure.rate_limiter import BatchRateLimiter, TokenBucket, cleanup_memory
 
 
 def test_token_bucket_acquire_and_refill():

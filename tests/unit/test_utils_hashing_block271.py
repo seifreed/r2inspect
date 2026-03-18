@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.utils import hashing
+import r2inspect.infrastructure.hashing as hashing
 
 
 @pytest.mark.unit

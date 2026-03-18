@@ -77,7 +77,7 @@ def test_file_info_base_extension_normalization():
 # ---------------------------------------------------------------------------
 # hashing.py  (lines 41, 43, 44, 61, 62, 63, 91, 92, 100)
 # ---------------------------------------------------------------------------
-from r2inspect.utils.hashing import (
+from r2inspect.infrastructure.hashing import (
     calculate_hashes,
     calculate_hashes_for_bytes,
     calculate_imphash,
@@ -134,7 +134,7 @@ def test_calculate_ssdeep_with_real_file(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # file_type.py  (lines 41, 42, 56, 57, 76, 77, 85, 86, 96, 97)
 # ---------------------------------------------------------------------------
-from r2inspect.utils.file_type import (
+from r2inspect.infrastructure.file_type import (
     _bin_info_has_elf,
     _bin_info_has_pe,
     is_elf_file,
@@ -258,7 +258,7 @@ def test_bin_info_has_elf_false():
 # ---------------------------------------------------------------------------
 # magic_detector.py  (lines 90, 91, 92, 134, 150, 151, 269, 310, 311, 312, 540)
 # ---------------------------------------------------------------------------
-from r2inspect.utils.magic_detector import (
+from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
     detect_file_type,
     get_file_threat_level,
@@ -293,7 +293,7 @@ def test_validate_pe_format_exception_path():
     # Force struct.unpack / seek error -> lines 150, 151
     class _BrokenSeek(io.BytesIO):
         def seek(self, pos: int, *args: Any) -> int:
-            raise IOError("broken seek")
+            raise OSError("broken seek")
 
     # Craft header: starts with MZ, pe_offset points beyond header length
     pe_offset = 0xFFFFFF00  # very large offset
@@ -319,7 +319,7 @@ def test_analyze_pe_details_exception_path():
     # Force an error via broken file handle -> lines 310-312
     class _BrokenSeek2(io.BytesIO):
         def seek(self, pos: int, *args: Any) -> int:
-            raise IOError("broken seek")
+            raise OSError("broken seek")
 
     pe_offset = 0xFFFFFF00
     header = b"MZ" + b"\x00" * 58 + struct.pack("<I", pe_offset)
@@ -431,36 +431,38 @@ def test_r2pipe_adapter_cached_query_dict_valid_no_cache():
     assert isinstance(result, dict)
 
 
-def test_r2pipe_adapter_force_error_via_env_true():
-    # lines 127-129: env set to "1" raises RuntimeError
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "1"
-    try:
-        adapter = R2PipeAdapter(_FakeR2Valid())
-        with pytest.raises(RuntimeError, match="Forced adapter error"):
-            adapter._maybe_force_error("anything")
-    finally:
-        del os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"]
+def _always_raise_adapter(method: str) -> None:
+    raise RuntimeError("Forced adapter error")
 
 
-def test_r2pipe_adapter_force_error_via_method_name():
-    # lines 130-132: env set to specific method name raises for that method
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "_cached_query"
-    try:
-        adapter = R2PipeAdapter(_FakeR2Valid())
-        with pytest.raises(RuntimeError, match="Forced adapter error"):
-            adapter._maybe_force_error("_cached_query")
-    finally:
-        del os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"]
+def _selective_raise_adapter(*methods: str):
+    def _injector(method: str) -> None:
+        if method in methods:
+            raise RuntimeError("Forced adapter error")
+
+    return _injector
+
+
+def test_r2pipe_adapter_force_error_via_injector():
+    # fault_injector raises RuntimeError for any method
+    adapter = R2PipeAdapter(_FakeR2Valid(), fault_injector=_always_raise_adapter)
+    with pytest.raises(RuntimeError, match="Forced adapter error"):
+        adapter._maybe_force_error("anything")
+
+
+def test_r2pipe_adapter_force_error_via_selective_injector():
+    # fault_injector raises only for specific method
+    adapter = R2PipeAdapter(
+        _FakeR2Valid(), fault_injector=_selective_raise_adapter("_cached_query")
+    )
+    with pytest.raises(RuntimeError, match="Forced adapter error"):
+        adapter._maybe_force_error("_cached_query")
 
 
 def test_r2pipe_adapter_force_error_method_not_in_list():
-    # lines 130-131: env set but method not in list -> no raise
-    os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"] = "other_method"
-    try:
-        adapter = R2PipeAdapter(_FakeR2Valid())
-        adapter._maybe_force_error("_cached_query")  # should not raise
-    finally:
-        del os.environ["R2INSPECT_FORCE_ADAPTER_ERROR"]
+    # selective injector does not raise for non-matching method
+    adapter = R2PipeAdapter(_FakeR2Valid(), fault_injector=_selective_raise_adapter("other_method"))
+    adapter._maybe_force_error("_cached_query")  # should not raise
 
 
 # ---------------------------------------------------------------------------
@@ -664,7 +666,9 @@ def test_exploit_parse_guard_flags_too_short():
     load_config: dict[str, Any] = {}
     result = {"mitigations": {}}
     config_data = list(range(140))  # len=140, <= 140+4 with is_64bit=False
-    analyzer._parse_guard_flags(load_config, config_data, config_size=200, is_64bit=False, result=result)
+    analyzer._parse_guard_flags(
+        load_config, config_data, config_size=200, is_64bit=False, result=result
+    )
     assert "guard_flags" not in load_config
 
 
@@ -869,7 +873,11 @@ def test_packer_detect_heuristic_packed(tmp_path: Path):
 
         def read_bytes(self, addr: int, size: int) -> bytes:
             # Return all unique bytes: maximum entropy
-            return bytes(range(256))[:size] + bytes(range(size - 256)) if size > 256 else bytes(range(size))
+            return (
+                bytes(range(256))[:size] + bytes(range(size - 256))
+                if size > 256
+                else bytes(range(size))
+            )
 
         def cmd(self, command: str) -> str:
             return ""
@@ -895,7 +903,7 @@ from r2inspect.modules.pe_info import (
     get_compilation_info,
     get_file_characteristics,
 )
-from r2inspect.utils.logger import get_logger as _get_logger
+from r2inspect.infrastructure.logging import get_logger as _get_logger
 
 _module_logger = _get_logger(__name__)
 

@@ -17,6 +17,7 @@ from r2inspect.infrastructure.r2_session import R2Session
 # Initialization
 # ---------------------------------------------------------------------------
 
+
 def test_r2session_init_stores_filename():
     session = R2Session("/path/to/binary")
     assert session.filename == "/path/to/binary"
@@ -35,6 +36,7 @@ def test_r2session_is_not_open_initially():
 # ---------------------------------------------------------------------------
 # Test mode detection
 # ---------------------------------------------------------------------------
+
 
 def test_is_test_mode_true_when_env_set():
     os.environ["R2INSPECT_TEST_MODE"] = "1"
@@ -73,6 +75,7 @@ def test_is_test_mode_false_when_env_is_zero():
 # ---------------------------------------------------------------------------
 # Timeout / threshold helpers
 # ---------------------------------------------------------------------------
+
 
 def test_get_open_timeout_test_mode():
     os.environ["R2INSPECT_TEST_MODE"] = "1"
@@ -128,7 +131,8 @@ def test_get_large_file_threshold_test_mode():
 
 
 def test_get_large_file_threshold_production_mode():
-    from r2inspect.core.constants import LARGE_FILE_THRESHOLD_MB
+    from r2inspect.domain.constants import LARGE_FILE_THRESHOLD_MB
+
     os.environ.pop("R2INSPECT_TEST_MODE", None)
     session = R2Session("/tmp/test")
     assert session._get_large_file_threshold() == float(LARGE_FILE_THRESHOLD_MB)
@@ -143,7 +147,8 @@ def test_get_huge_file_threshold_test_mode():
 
 
 def test_get_huge_file_threshold_production_mode():
-    from r2inspect.core.constants import HUGE_FILE_THRESHOLD_MB
+    from r2inspect.domain.constants import HUGE_FILE_THRESHOLD_MB
+
     os.environ.pop("R2INSPECT_TEST_MODE", None)
     session = R2Session("/tmp/test")
     assert session._get_huge_file_threshold() == float(HUGE_FILE_THRESHOLD_MB)
@@ -152,6 +157,7 @@ def test_get_huge_file_threshold_production_mode():
 # ---------------------------------------------------------------------------
 # _detect_fat_macho_arches
 # ---------------------------------------------------------------------------
+
 
 def test_detect_fat_macho_arches_nonexistent_file():
     session = R2Session("/nonexistent/path/binary.bin")
@@ -202,7 +208,7 @@ def test_detect_fat_macho_arches_little_endian_magic(tmp_path: Path):
 
 def test_detect_fat_macho_arches_too_short_file(tmp_path: Path):
     binary = tmp_path / "short.bin"
-    binary.write_bytes(b"\xCA\xFE")
+    binary.write_bytes(b"\xca\xfe")
     session = R2Session(str(binary))
     arches = session._detect_fat_macho_arches()
     assert arches == set()
@@ -211,6 +217,7 @@ def test_detect_fat_macho_arches_too_short_file(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # _select_r2_flags
 # ---------------------------------------------------------------------------
+
 
 def test_select_r2_flags_always_includes_minus2():
     session = R2Session("/tmp/test")
@@ -247,6 +254,7 @@ def test_select_r2_flags_disable_plugins_env(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # _run_cmd_with_timeout
 # ---------------------------------------------------------------------------
+
 
 def test_run_cmd_with_timeout_r2_is_none():
     session = R2Session("/tmp/test")
@@ -307,6 +315,7 @@ def test_run_cmd_with_timeout_command_raises():
 # _run_basic_info_check
 # ---------------------------------------------------------------------------
 
+
 def test_run_basic_info_check_raises_when_r2_is_none():
     session = R2Session("/tmp/test")
     session.r2 = None
@@ -349,6 +358,7 @@ def test_run_basic_info_check_logs_warning_on_minimal_output():
 # ---------------------------------------------------------------------------
 # _perform_initial_analysis
 # ---------------------------------------------------------------------------
+
 
 def test_perform_initial_analysis_depth_zero_skips():
     class FakeR2:
@@ -432,6 +442,7 @@ def test_perform_initial_analysis_r2_none_returns_true():
 # close
 # ---------------------------------------------------------------------------
 
+
 def test_close_when_r2_is_none_does_nothing():
     session = R2Session("/tmp/test")
     session.close()
@@ -484,6 +495,7 @@ def test_close_does_nothing_when_cleanup_not_required():
 # is_open property
 # ---------------------------------------------------------------------------
 
+
 def test_is_open_true_when_r2_and_cleanup_required():
     class FakeR2:
         pass
@@ -512,6 +524,7 @@ def test_is_open_false_when_cleanup_not_required():
 # ---------------------------------------------------------------------------
 # Context manager
 # ---------------------------------------------------------------------------
+
 
 def test_context_manager_enter_returns_session():
     session = R2Session("/tmp/test")
@@ -551,6 +564,7 @@ def test_context_manager_exit_with_exception_returns_false():
 # _run_cmd_with_timeout: actual thread timeout (lines 266-267)
 # ---------------------------------------------------------------------------
 
+
 def test_run_cmd_with_timeout_thread_times_out():
     """Cover lines 266-267: command doesn't complete within timeout."""
     import time
@@ -571,6 +585,7 @@ def test_run_cmd_with_timeout_thread_times_out():
 # _perform_initial_analysis: aa command times out (line 337)
 # ---------------------------------------------------------------------------
 
+
 def test_perform_initial_analysis_aa_command_times_out():
     """Cover line 337: aa command timeout in test mode -> return False."""
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
@@ -589,9 +604,10 @@ def test_perform_initial_analysis_aa_command_times_out():
 # _perform_initial_analysis: large file (non-test) uses aa
 # ---------------------------------------------------------------------------
 
+
 def test_perform_initial_analysis_large_file_uses_aa():
     """Cover lines ~328-339: large file in production mode uses aa."""
-    from r2inspect.core.constants import LARGE_FILE_THRESHOLD_MB
+    from r2inspect.domain.constants import LARGE_FILE_THRESHOLD_MB
 
     ran_commands = []
     os.environ.pop("R2INSPECT_TEST_MODE", None)
@@ -617,6 +633,7 @@ def test_perform_initial_analysis_large_file_uses_aa():
 # _detect_fat_macho_arches: entry too short -> break (line 196)
 # ---------------------------------------------------------------------------
 
+
 def test_detect_fat_macho_arches_entry_too_short_triggers_break(tmp_path: Path):
     """Cover line 196: entry < 20 bytes -> break out of arch loop."""
     binary = tmp_path / "fat_short_entry.macho"
@@ -632,6 +649,7 @@ def test_detect_fat_macho_arches_entry_too_short_triggers_break(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # _select_r2_flags: fat Mach-O with arch flags (lines 165-170)
 # ---------------------------------------------------------------------------
+
 
 def test_select_r2_flags_fat_macho_adds_arch_flags_x86_64(tmp_path: Path):
     """Cover lines 165-170: fat Mach-O x86_64 adds architecture flags."""
@@ -651,6 +669,7 @@ def test_select_r2_flags_fat_macho_adds_arch_flags_x86_64(tmp_path: Path):
 def test_select_r2_flags_fat_macho_adds_arch_flags_arm64(tmp_path: Path):
     """Cover lines 165-167: fat Mach-O arm64 on arm host adds arm flags."""
     import platform as _platform
+
     binary = tmp_path / "fat_arm64.macho"
     # CPU_TYPE_ARM64 = 0x0100000C
     data = struct.pack(">II", 0xCAFEBABE, 1)
@@ -673,6 +692,7 @@ def test_select_r2_flags_fat_macho_adds_arch_flags_arm64(tmp_path: Path):
 # _terminate_radare2_processes (lines 219-232)
 # ---------------------------------------------------------------------------
 
+
 def test_terminate_radare2_processes_with_no_radare2_running():
     """Cover lines 219-226: iterate processes, none match 'radare2'."""
     session = R2Session("/tmp/test_terminate.bin")
@@ -683,6 +703,7 @@ def test_terminate_radare2_processes_with_no_radare2_running():
 # ---------------------------------------------------------------------------
 # _reopen_safe_mode (lines 236-239) - must run BEFORE open_with_timeout tests
 # ---------------------------------------------------------------------------
+
 
 def test_reopen_safe_mode_opens_r2_in_safe_mode():
     """Cover lines 236-239: reopen r2 without analysis flags."""
@@ -716,6 +737,7 @@ def test_reopen_safe_mode_opens_r2_in_safe_mode():
 # ---------------------------------------------------------------------------
 # _open_with_timeout: timeout path (lines 208-215)
 # ---------------------------------------------------------------------------
+
 
 def test_open_with_timeout_raises_timeout_error_on_short_timeout(tmp_path: Path):
     """Cover lines 208-215: r2pipe.open() times out -> raise TimeoutError."""

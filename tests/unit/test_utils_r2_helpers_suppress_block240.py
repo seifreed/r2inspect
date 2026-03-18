@@ -2,8 +2,8 @@ import json
 import os
 import time
 
-from r2inspect.utils import r2_helpers
-from r2inspect.utils.r2_suppress import (
+import r2inspect.infrastructure.r2_helpers as r2_helpers
+from r2inspect.infrastructure.r2_suppress import (
     R2PipeErrorSuppressor,
     _parse_raw_result,
     silent_cmdj,

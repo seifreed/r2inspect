@@ -4,8 +4,8 @@ import math
 
 import pytest
 
-from r2inspect.utils import memory_manager
-from r2inspect.utils.memory_manager import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
+import r2inspect.infrastructure.memory as memory_manager
+from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
 
 
 @pytest.mark.unit

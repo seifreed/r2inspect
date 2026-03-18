@@ -13,6 +13,7 @@ from r2inspect.modules.rich_header_search import RichHeaderSearchMixin
 # Minimal real adapter and mixin subclass - no mocks
 # ---------------------------------------------------------------------------
 
+
 class FakeAdapter:
     """Minimal adapter backed by an in-memory byte buffer."""
 
@@ -42,6 +43,7 @@ class ConcreteSearcher(RichHeaderSearchMixin):
 # ---------------------------------------------------------------------------
 # Helper: build a valid Rich Header binary payload
 # ---------------------------------------------------------------------------
+
 
 def _build_rich_buffer(
     dans_offset: int = 100,
@@ -76,6 +78,7 @@ def _build_rich_buffer(
 # _read_manual_search_bytes
 # ---------------------------------------------------------------------------
 
+
 def test_read_manual_search_bytes_with_no_adapter_returns_none() -> None:
     searcher = ConcreteSearcher(adapter=None)
     assert searcher._read_manual_search_bytes() is None
@@ -98,6 +101,7 @@ def test_read_manual_search_bytes_returns_bytes_for_valid_adapter() -> None:
 # _find_all_occurrences
 # ---------------------------------------------------------------------------
 
+
 def test_find_all_occurrences_finds_multiple_matches() -> None:
     data = b"abcRichabcRichabc"
     searcher = ConcreteSearcher()
@@ -113,6 +117,7 @@ def test_find_all_occurrences_returns_empty_when_absent() -> None:
 # ---------------------------------------------------------------------------
 # _find_signature_offsets
 # ---------------------------------------------------------------------------
+
 
 def test_find_signature_offsets_returns_none_when_no_rich() -> None:
     data = b"DanS" + b"\x00" * 100
@@ -142,6 +147,7 @@ def test_find_signature_offsets_returns_offset_lists() -> None:
 # _offset_pair_valid
 # ---------------------------------------------------------------------------
 
+
 def test_offset_pair_valid_returns_true_for_valid_pair() -> None:
     searcher = ConcreteSearcher()
     assert searcher._offset_pair_valid(10, 22, 512) is True
@@ -160,6 +166,7 @@ def test_offset_pair_valid_returns_false_when_distance_exceeds_max() -> None:
 # ---------------------------------------------------------------------------
 # _try_signature_pairs
 # ---------------------------------------------------------------------------
+
 
 def test_try_signature_pairs_returns_none_when_no_valid_pair() -> None:
     buf = b"\x00" * 2048
@@ -180,6 +187,7 @@ def test_try_signature_pairs_succeeds_with_valid_data() -> None:
 # _validate_rich_size
 # ---------------------------------------------------------------------------
 
+
 def test_validate_rich_size_accepts_valid_size() -> None:
     searcher = ConcreteSearcher()
     assert searcher._validate_rich_size(12) is True
@@ -198,6 +206,7 @@ def test_validate_rich_size_rejects_too_large() -> None:
 # ---------------------------------------------------------------------------
 # _extract_xor_key
 # ---------------------------------------------------------------------------
+
 
 def test_extract_xor_key_returns_none_when_no_adapter() -> None:
     searcher = ConcreteSearcher(adapter=None)
@@ -218,6 +227,12 @@ def test_extract_xor_key_returns_valid_key() -> None:
     assert key == 0xABCD1234
 
 
+def test_find_rich_positions_accepts_signature_at_last_valid_offset() -> None:
+    searcher = ConcreteSearcher()
+    data = b"xxxxRich" + struct.pack("<I", 0x01020304)
+    assert searcher._find_rich_positions(data) == [4]
+
+
 def test_extract_xor_key_returns_none_for_short_buffer() -> None:
     buf = b"\x01\x02"
     searcher = ConcreteSearcher(adapter=FakeAdapter(buf))
@@ -227,6 +242,7 @@ def test_extract_xor_key_returns_none_for_short_buffer() -> None:
 # ---------------------------------------------------------------------------
 # _extract_encoded_data
 # ---------------------------------------------------------------------------
+
 
 def test_extract_encoded_data_returns_none_when_no_adapter() -> None:
     searcher = ConcreteSearcher(adapter=None)
@@ -240,7 +256,7 @@ def test_extract_encoded_data_returns_none_for_too_short_data() -> None:
 
 
 def test_extract_encoded_data_returns_bytes_for_valid_data() -> None:
-    buf = b"\xAA" * 32
+    buf = b"\xaa" * 32
     searcher = ConcreteSearcher(adapter=FakeAdapter(buf))
     result = searcher._extract_encoded_data(0, 16)
     assert result is not None
@@ -250,6 +266,7 @@ def test_extract_encoded_data_returns_bytes_for_valid_data() -> None:
 # ---------------------------------------------------------------------------
 # _try_extract_rich_at_offsets
 # ---------------------------------------------------------------------------
+
 
 def test_try_extract_rich_at_offsets_rejects_bad_size() -> None:
     buf = b"\x00" * 2048
@@ -276,6 +293,7 @@ def test_try_extract_rich_at_offsets_returns_result_for_valid_data() -> None:
 # _find_rich_positions
 # ---------------------------------------------------------------------------
 
+
 def test_find_rich_positions_finds_all_occurrences() -> None:
     data = b"\x00" * 10 + b"Rich" + b"\x00" * 10 + b"Rich" + b"\x00" * 10
     searcher = ConcreteSearcher()
@@ -292,6 +310,7 @@ def test_find_rich_positions_returns_empty_for_no_rich() -> None:
 # ---------------------------------------------------------------------------
 # _is_valid_rich_key
 # ---------------------------------------------------------------------------
+
 
 def test_is_valid_rich_key_returns_false_when_key_zero() -> None:
     data = b"\x00" * 50 + b"Rich" + b"\x00\x00\x00\x00"
@@ -323,6 +342,7 @@ def test_is_valid_rich_key_returns_false_when_too_short() -> None:
 # _find_dans_before_rich
 # ---------------------------------------------------------------------------
 
+
 def test_find_dans_before_rich_finds_dans_marker() -> None:
     buf = bytearray(200)
     buf[50:54] = b"DanS"
@@ -341,6 +361,7 @@ def test_find_dans_before_rich_returns_none_when_absent() -> None:
 # ---------------------------------------------------------------------------
 # _pattern_based_rich_search
 # ---------------------------------------------------------------------------
+
 
 def test_pattern_based_rich_search_finds_valid_header() -> None:
     buf = _build_rich_buffer(dans_offset=80, xor_key=0x00000001)
@@ -366,6 +387,7 @@ def test_pattern_based_rich_search_skips_invalid_key() -> None:
 # ---------------------------------------------------------------------------
 # _manual_rich_search (end-to-end)
 # ---------------------------------------------------------------------------
+
 
 def test_manual_rich_search_returns_none_for_no_adapter() -> None:
     searcher = ConcreteSearcher(adapter=None)
@@ -393,7 +415,7 @@ def test_manual_rich_search_falls_through_to_pattern_search() -> None:
     # Overwrite "DanS" so the exact-signature path finds nothing but the
     # Rich+key bytes remain for pattern search to find.
     mutable = bytearray(buf)
-    mutable[80:84] = b"\xCC\xCC\xCC\xCC"
+    mutable[80:84] = b"\xcc\xcc\xcc\xcc"
     # Place a real DanS 20 bytes before the Rich signature at offset 92
     mutable[72:76] = b"DanS"
     searcher = ConcreteSearcher(adapter=FakeAdapter(bytes(mutable)))

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas import results
 
@@ -35,7 +35,7 @@ def test_results_from_dict_and_summary() -> None:
             {"type": "info", "description": "note", "severity": "Low"},
         ],
         "error": "failed",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.2,
     }
 

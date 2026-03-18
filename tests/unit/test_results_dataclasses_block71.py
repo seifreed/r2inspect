@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas import results
 
@@ -54,7 +54,7 @@ def test_analysis_result_to_dict_and_summary():
 
 
 def test_from_dict_loads_fields():
-    ts = datetime.utcnow().isoformat()
+    ts = datetime.now(UTC).isoformat()
     payload = {
         "file_info": {"name": "a", "size": 1, "md5": "m"},
         "hashing": {"ssdeep": "h"},

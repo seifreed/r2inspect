@@ -1,10 +1,10 @@
+from r2inspect.domain.services.rich_header import COMPILER_PRODUCTS
 from r2inspect.modules import (
     anti_analysis_domain,
     compiler_signatures,
     crypto_constants,
     pe_resource_defaults,
     rich_header_defaults,
-    rich_header_domain,
     yara_defaults,
 )
 
@@ -24,6 +24,6 @@ def test_module_constant_imports():
     assert pe_resource_defaults.RESOURCE_TYPES
     assert rich_header_defaults.RICH_PATTERNS
     assert rich_header_defaults.DANS_PATTERNS
-    assert rich_header_domain.COMPILER_PRODUCTS
+    assert COMPILER_PRODUCTS
 
     assert yara_defaults.DEFAULT_YARA_RULES

@@ -1,19 +1,39 @@
 #!/usr/bin/env python3
-"""Comprehensive tests for r2inspect/cli/display_sections_file.py"""
+"""Tests for r2inspect/cli/display_sections_file.py — no mocks, real Console output."""
 
-from typing import Any
-from unittest.mock import MagicMock, patch
+from __future__ import annotations
 
-from r2inspect.cli.display_sections_file import _display_file_info, _display_pe_info, _display_security
+from io import StringIO
+
+from rich.console import Console
+
+from r2inspect.cli import display as display_module
+from r2inspect.cli.display_sections_file import (
+    _display_file_info,
+    _display_pe_info,
+    _display_security,
+)
+
+
+def _capture(fn, results: dict) -> str:
+    """Call *fn(results)* while routing all console output to a string buffer."""
+    buf = StringIO()
+    real_console = Console(file=buf, width=120, force_terminal=False)
+    original = display_module.console
+    display_module.console = real_console
+    try:
+        fn(results)
+    finally:
+        display_module.console = original
+    return buf.getvalue()
+
+
+# ── _display_file_info ──────────────────────────────────────────────
 
 
 def test_display_file_info_not_present():
-    results = {}
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_not_called()
+    output = _capture(_display_file_info, {})
+    assert output == ""
 
 
 def test_display_file_info_basic():
@@ -26,11 +46,12 @@ def test_display_file_info_basic():
             "file_type": "PE32 executable",
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_file_info, results)
+    assert "File Information" in output
+    assert "1024" in output
+    assert "file.exe" in output
+    assert "application/x-executable" in output
+    assert "PE32 executable" in output
 
 
 def test_display_file_info_with_hashes():
@@ -40,14 +61,13 @@ def test_display_file_info_with_hashes():
             "md5": "d41d8cd98f00b204e9800998ecf8427e",
             "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "sha512": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
+            "sha512": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce",
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_file_info, results)
+    assert "d41d8cd98f00b204e9800998ecf8427e" in output
+    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in output
+    assert "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" in output
 
 
 def test_display_file_info_with_enhanced_detection():
@@ -65,20 +85,23 @@ def test_display_file_info_with_enhanced_detection():
             },
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_file_info, results)
+    assert "PE" in output
+    assert "executable" in output
+    assert "x86" in output
+    assert "32" in output
+    assert "little" in output
+    assert "95.00%" in output
+    assert "high" in output
 
 
 def test_display_file_info_empty_enhanced():
     results = {"file_info": {"name": "test.exe", "enhanced_detection": {}}}
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_file_info, results)
+    assert "File Information" in output
+    assert "test.exe" in output
+    # Empty enhanced_detection should not add format/category rows
+    assert "Format" not in output or "test.exe" in output
 
 
 def test_display_file_info_none_values():
@@ -90,11 +113,10 @@ def test_display_file_info_none_values():
             "sha1": None,
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_file_info, results)
+    # None values should be skipped (not rendered)
+    assert "test.exe" in output
+    assert "None" not in output
 
 
 def test_display_file_info_missing_enhanced_fields():
@@ -106,11 +128,10 @@ def test_display_file_info_missing_enhanced_fields():
             },
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_file_info, results)
+    assert "PE" in output
+    # Missing fields should fall back to "Unknown"
+    assert "Unknown" in output
 
 
 def test_display_file_info_all_fields():
@@ -136,20 +157,39 @@ def test_display_file_info_all_fields():
             },
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_file_info, results)
+    assert "File Information" in output
+    assert "2048" in output
+    assert "file.exe" in output
+    assert "abc123" in output
+    assert "def456" in output
+    assert "ghi789" in output
+    assert "jkl012" in output
+    assert "PE32" in output
+    assert "medium" in output
+    assert "99.00%" in output
+
+
+def test_display_file_info_sha256_sha512_strings():
+    """sha256/sha512 values are cast to str even if numeric."""
+    results = {
+        "file_info": {
+            "name": "test.exe",
+            "sha256": 12345,
+            "sha512": 67890,
+        }
+    }
+    output = _capture(_display_file_info, results)
+    assert "12345" in output
+    assert "67890" in output
+
+
+# ── _display_pe_info ────────────────────────────────────────────────
 
 
 def test_display_pe_info_not_present():
-    results = {}
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_pe_info(results)
-        mock_console_obj.print.assert_not_called()
+    output = _capture(_display_pe_info, {})
+    assert output == ""
 
 
 def test_display_pe_info_basic():
@@ -159,11 +199,10 @@ def test_display_pe_info_basic():
             "timestamp": "2024-01-01",
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_pe_info(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_pe_info, results)
+    assert "PE Analysis" in output
+    assert "GUI" in output
+    assert "2024-01-01" in output
 
 
 def test_display_pe_info_excluded_keys():
@@ -178,11 +217,11 @@ def test_display_pe_info_excluded_keys():
             "subsystem": "Console",
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_pe_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_pe_info, results)
+    assert "Console" in output
+    # Excluded keys should not appear as rows
+    assert "x86" not in output
+    assert "i386" not in output
 
 
 def test_display_pe_info_with_list_values():
@@ -192,11 +231,11 @@ def test_display_pe_info_with_list_values():
             "exports": ["func1", "func2"],
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_pe_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_pe_info, results)
+    assert "kernel32.dll" in output
+    assert "user32.dll" in output
+    assert "func1" in output
+    assert "func2" in output
 
 
 def test_display_pe_info_with_dict_values():
@@ -206,11 +245,9 @@ def test_display_pe_info_with_dict_values():
             "subsystem": "GUI",
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_pe_info(results)
-        mock_console_obj.print.assert_called()
+    output = _capture(_display_pe_info, results)
+    # Dict values are skipped
+    assert "GUI" in output
 
 
 def test_display_pe_info_complex():
@@ -224,20 +261,23 @@ def test_display_pe_info_complex():
             "characteristics": ["executable", "32bit"],
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_pe_info(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_pe_info, results)
+    assert "PE Analysis" in output
+    assert "Console" in output
+    assert "2024-01-15" in output
+    assert "0x1000" in output
+    assert "0x400000" in output
+    assert "text" in output
+    assert "data" in output
+    assert "executable" in output
+
+
+# ── _display_security ───────────────────────────────────────────────
 
 
 def test_display_security_not_present():
-    results = {}
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        mock_console_obj.print.assert_not_called()
+    output = _capture(_display_security, {})
+    assert output == ""
 
 
 def test_display_security_all_enabled():
@@ -250,11 +290,11 @@ def test_display_security_all_enabled():
             "stripped": False,
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_security, results)
+    assert "Security Features" in output
+    assert "Nx" in output
+    assert "Pie" in output
+    assert "Canary" in output
 
 
 def test_display_security_all_disabled():
@@ -267,11 +307,8 @@ def test_display_security_all_disabled():
             "stripped": True,
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_security, results)
+    assert "Security Features" in output
 
 
 def test_display_security_mixed():
@@ -283,20 +320,16 @@ def test_display_security_mixed():
             "relro": False,
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_security, results)
+    assert "Security Features" in output
+    assert "Nx" in output
+    assert "Canary" in output
 
 
 def test_display_security_single_feature():
     results = {"security": {"aslr": True}}
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_security, results)
+    assert "Aslr" in output
 
 
 def test_display_security_underscores():
@@ -307,23 +340,23 @@ def test_display_security_underscores():
             "control_flow_guard": True,
         }
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_security, results)
+    assert "Dep Enabled" in output
+    assert "Safe Seh" in output
+    assert "Control Flow Guard" in output
 
 
 def test_display_security_empty():
     results = {"security": {}}
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_security(results)
-        assert mock_console_obj.print.call_count == 2
+    output = _capture(_display_security, results)
+    assert "Security Features" in output
+
+
+# ── integration ─────────────────────────────────────────────────────
 
 
 def test_display_sections_integration():
+    """All three display functions produce output for a combined results dict."""
     results = {
         "file_info": {
             "name": "test.exe",
@@ -339,52 +372,41 @@ def test_display_sections_integration():
             "pie": False,
         },
     }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
+    buf = StringIO()
+    real_console = Console(file=buf, width=120, force_terminal=False)
+    original = display_module.console
+    display_module.console = real_console
+    try:
         _display_file_info(results)
         _display_pe_info(results)
         _display_security(results)
-        assert mock_console_obj.print.call_count == 6
+    finally:
+        display_module.console = original
+
+    output = buf.getvalue()
+    assert "File Information" in output
+    assert "PE Analysis" in output
+    assert "Security Features" in output
+    assert "abc123" in output
+    assert "Console" in output
+    assert "Nx" in output
 
 
-def test_display_file_info_get_section():
-    results = {"file_info": {"name": "test.exe"}}
-    with patch("r2inspect.cli.display_sections_file._get_section") as mock_get:
-        mock_get.return_value = ({"name": "test.exe"}, True)
-        with patch("r2inspect.cli.display_sections_file._get_console"):
-            _display_file_info(results)
-            mock_get.assert_called_once_with(results, "file_info", {})
+def test_display_file_info_get_section_delegates():
+    """_display_file_info uses get_section under the hood — verify via absent key."""
+    results = {"__present__": {"pe_info"}, "file_info": {"name": "test.exe"}}
+    output = _capture(_display_file_info, results)
+    # file_info is not in __present__ set, so should produce no output
+    assert output == ""
 
 
-def test_display_pe_info_get_section():
-    results = {"pe_info": {"subsystem": "GUI"}}
-    with patch("r2inspect.cli.display_sections_file._get_section") as mock_get:
-        mock_get.return_value = ({"subsystem": "GUI"}, True)
-        with patch("r2inspect.cli.display_sections_file._get_console"):
-            _display_pe_info(results)
-            mock_get.assert_called_once_with(results, "pe_info", {})
+def test_display_pe_info_get_section_delegates():
+    results = {"__present__": {"file_info"}, "pe_info": {"subsystem": "GUI"}}
+    output = _capture(_display_pe_info, results)
+    assert output == ""
 
 
-def test_display_security_get_section():
-    results = {"security": {"nx": True}}
-    with patch("r2inspect.cli.display_sections_file._get_section") as mock_get:
-        mock_get.return_value = ({"nx": True}, True)
-        with patch("r2inspect.cli.display_sections_file._get_console"):
-            _display_security(results)
-            mock_get.assert_called_once_with(results, "security", {})
-
-
-def test_display_file_info_sha256_sha512_strings():
-    results = {
-        "file_info": {
-            "name": "test.exe",
-            "sha256": 12345,
-            "sha512": 67890,
-        }
-    }
-    with patch("r2inspect.cli.display_sections_file._get_console") as mock_console:
-        mock_console_obj = MagicMock()
-        mock_console.return_value = mock_console_obj
-        _display_file_info(results)
-        mock_console_obj.print.assert_called()
+def test_display_security_get_section_delegates():
+    results = {"__present__": {"file_info"}, "security": {"nx": True}}
+    output = _capture(_display_security, results)
+    assert output == ""

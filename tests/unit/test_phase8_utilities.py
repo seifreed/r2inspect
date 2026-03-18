@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 import r2pipe
 
-from r2inspect.utils.magic_detector import MagicByteDetector
-from r2inspect.utils.memory_manager import MemoryLimits, MemoryMonitor
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.r2_helpers import parse_pe_header_text, validate_r2_data
-from r2inspect.utils.rate_limiter import BatchRateLimiter, cleanup_memory
-from r2inspect.utils.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.infrastructure.magic_detector import MagicByteDetector
+from r2inspect.infrastructure.memory import MemoryLimits, MemoryMonitor
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.r2_helpers import parse_pe_header_text, validate_r2_data
+from r2inspect.infrastructure.rate_limiter import BatchRateLimiter, cleanup_memory
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
 
 PE_FIXTURE = "samples/fixtures/hello_pe.exe"
 

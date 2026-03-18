@@ -11,6 +11,7 @@ from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 # Stub adapter using correct method names from _SIMPLE_BASE_CALLS / _handle_bytes
 # ---------------------------------------------------------------------------
 
+
 class _ResponseRegistry:
     """Holds per-address responses for read_bytes_list calls."""
 
@@ -51,6 +52,7 @@ class _ResponseRegistry:
 # _get_resource_directory
 # ---------------------------------------------------------------------------
 
+
 def test_get_resource_directory_returns_none_when_resource_vaddr_is_zero() -> None:
     """Covers line 50: return None when RESOURCE entry has vaddr=0 (falls through loop)."""
     adapter = _ResponseRegistry(
@@ -88,14 +90,22 @@ def test_get_resource_directory_returns_dict_for_valid_resource_entry() -> None:
 # _parse_resources – non-dict items in the list (line 68)
 # ---------------------------------------------------------------------------
 
+
 def test_parse_resources_skips_non_dict_items() -> None:
     """Line 68: continue when list item is not a dict."""
     adapter = _ResponseRegistry(
         resources_info=[
             42,
             "not_a_dict",
-            {"name": "icon", "type": "RT_ICON", "type_id": 3, "lang": "en",
-             "paddr": 0, "size": 0, "vaddr": 0},
+            {
+                "name": "icon",
+                "type": "RT_ICON",
+                "type_id": 3,
+                "lang": "en",
+                "paddr": 0,
+                "size": 0,
+                "vaddr": 0,
+            },
         ]
     )
     result = ResourceAnalyzer(adapter=adapter)._parse_resources()
@@ -107,6 +117,7 @@ def test_parse_resources_skips_non_dict_items() -> None:
 # ---------------------------------------------------------------------------
 # _parse_resources_manual (lines 103-116) + _parse_dir_entries (lines 142-150)
 # ---------------------------------------------------------------------------
+
 
 def _build_valid_dir_header(named_entries: int = 0, id_entries: int = 1) -> list[int]:
     """Build a minimal IMAGE_RESOURCE_DIRECTORY header (16 bytes)."""
@@ -127,8 +138,16 @@ def test_parse_resources_manual_with_valid_rsrc_section() -> None:
     dir_header = _build_valid_dir_header(named_entries=1, id_entries=0)
 
     # Entry data (8 bytes): id=3 (RT_ICON), offset=0x100 (not a directory)
-    entry_data = [0x03, 0x00, 0x00, 0x00,  # name_or_id = 3
-                  0x00, 0x01, 0x00, 0x00]  # offset_to_data = 0x100
+    entry_data = [
+        0x03,
+        0x00,
+        0x00,
+        0x00,  # name_or_id = 3
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+    ]  # offset_to_data = 0x100
 
     adapter = _ResponseRegistry(
         raise_on_resources=True,
@@ -208,6 +227,7 @@ def test_parse_dir_entries_loops_over_multiple_entries() -> None:
 # _analyze_resource_data (lines 202-213)
 # ---------------------------------------------------------------------------
 
+
 def test_analyze_resource_data_calculates_entropy_and_hashes() -> None:
     """Lines 202, 205-207: valid data path – entropy and hashes populated."""
     offset = 0x9000
@@ -251,6 +271,7 @@ def test_analyze_resource_data_outer_exception() -> None:
 # _parse_version_info / _read_version_info_data (lines 266-295)
 # ---------------------------------------------------------------------------
 
+
 def _build_version_data_with_signature() -> list[int]:
     """Build a 128-byte fake version block with VS_FIXEDFILEINFO signature."""
     data = [0] * 128
@@ -259,9 +280,15 @@ def _build_version_data_with_signature() -> list[int]:
     for i, b in enumerate(sig):
         data[i] = b
     # file_version_ms at sig_pos+8: 2.1 -> 0x00020001
-    data[8] = 0x01; data[9] = 0x00; data[10] = 0x02; data[11] = 0x00
+    data[8] = 0x01
+    data[9] = 0x00
+    data[10] = 0x02
+    data[11] = 0x00
     # file_version_ls at sig_pos+12: 4.3 -> 0x00040003
-    data[12] = 0x03; data[13] = 0x00; data[14] = 0x04; data[15] = 0x00
+    data[12] = 0x03
+    data[13] = 0x00
+    data[14] = 0x04
+    data[15] = 0x00
 
     # Embed a UTF-16LE "ProductName\x00\x00" + value "TestApp\x00\x00"
     key = "ProductName"
@@ -296,6 +323,15 @@ def test_parse_version_info_returns_dict_with_strings() -> None:
     # (depends on exact byte layout, but we at least exercise the code path)
     # The method may return None if strings not found due to layout, that's OK
     assert result is None or isinstance(result, dict)
+
+
+def test_parse_version_info_exception_returns_none() -> None:
+    """Lines 288-290: _read_version_info_data exceptions return None."""
+
+    # Use an adapter that raises on read_bytes_list so _read_version_info_data fails
+    adapter = _ResponseRegistry(raise_on_addr=0x1000)
+    analyzer = ResourceAnalyzer(adapter=adapter)
+    assert analyzer._parse_version_info(offset=0x1000, size=128) is None
 
 
 def test_parse_version_info_returns_none_for_short_size() -> None:
@@ -334,6 +370,7 @@ def test_read_version_info_data_returns_none_for_short_data() -> None:
 # ---------------------------------------------------------------------------
 # _read_version_string_value (lines 345-365)
 # ---------------------------------------------------------------------------
+
 
 def test_read_version_string_value_empty_when_key_not_found() -> None:
     """Returns empty string when key pattern absent."""
@@ -388,6 +425,7 @@ def test_read_version_string_value_returns_empty_for_non_printable() -> None:
 # _extract_manifest (lines 367-383)
 # ---------------------------------------------------------------------------
 
+
 def test_extract_manifest_populates_result_on_valid_data() -> None:
     """Lines 374-381: manifest dict is set when data is available."""
     manifest_xml = '<assembly xmlns="urn:schemas-microsoft-com:asm.v1">'.encode("utf-16le")
@@ -419,6 +457,7 @@ def test_extract_manifest_logs_on_exception() -> None:
 # _extract_strings (lines 406-421)
 # ---------------------------------------------------------------------------
 
+
 def test_extract_strings_populates_result_on_valid_data() -> None:
     """Lines 416-417: strings list is extended when RT_STRING resource is found."""
     text = "Hello\x00World\x00TestString\x00More"
@@ -449,6 +488,7 @@ def test_extract_strings_handles_exception() -> None:
 # ---------------------------------------------------------------------------
 # _read_resource_as_string (lines 423-465)
 # ---------------------------------------------------------------------------
+
 
 def test_read_resource_as_string_utf16le_path() -> None:
     """Lines 438-441: UTF-16LE decode succeeds for Unicode text bytes."""
@@ -500,6 +540,27 @@ def test_read_resource_as_string_type_error_in_all_decoders() -> None:
     assert result is None
 
 
+class _BadDecodeBytes(bytes):
+    def decode(self, *args, **kwargs):  # type: ignore[override]
+        raise TypeError("forced decode failure")
+
+
+class _BadBytesProvider:
+    def __bytes__(self) -> bytes:
+        return _BadDecodeBytes(b"\x00\x00\x00\x00")
+
+
+def test_read_resource_as_string_utf16_decode_type_error_fallback() -> None:
+    """Lines 446-447: UTF-16 decode exception is handled and falls through."""
+
+    offset = 0x15000
+
+    class _BadDataAdapter(_ResponseRegistry):
+        def read_bytes_list(self, address: int, size: int) -> object:
+            return _BadBytesProvider()
+
+    result = ResourceAnalyzer(adapter=_BadDataAdapter())._read_resource_as_string(offset, size=4)
+    assert result is None
 
     """Line 461: returns None when all decoders produce only non-printable text."""
     # All control chars – none printable in any encoding
@@ -538,6 +599,7 @@ def test_read_resource_as_string_returns_none_when_data_empty() -> None:
 # ---------------------------------------------------------------------------
 # _check_resource_embedded_pe – non-MZ header (line 559)
 # ---------------------------------------------------------------------------
+
 
 def test_check_resource_embedded_pe_returns_empty_for_non_mz_header() -> None:
     """Line 559: return [] when header bytes are NOT 0x4D 0x5A (MZ)."""

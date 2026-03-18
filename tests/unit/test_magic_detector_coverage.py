@@ -10,10 +10,11 @@ Targets previously uncovered lines:
 import struct
 import tempfile
 import os
+import io
 
 import pytest
 
-from r2inspect.utils.magic_detector import (
+from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
     detect_file_type,
     get_file_threat_level,
@@ -206,6 +207,93 @@ def test_detect_pe32_short_pe_data_returns_unknown_arch():
         os.unlink(path)
 
 
+def test_validate_pe_format_exception_returns_medium_confidence() -> None:
+    """Lines 150-151: _validate_pe_format handles seek/read failures."""
+
+    header = bytearray(64)
+    header[0:2] = b"MZ"
+    header[60:64] = struct.pack("<I", 128)
+
+    class _BadSeekFile:
+        def seek(self, *_args, **_kwargs):
+            raise OSError("seek failed")
+
+        def read(self, *_args, **_kwargs) -> bytes:
+            return b""
+
+    detector = MagicByteDetector()
+    assert detector._validate_pe_format(bytes(header), _BadSeekFile()) == 0.3
+
+
+def test_validate_docx_format_returns_zero_for_non_zip_header() -> None:
+    detector = MagicByteDetector()
+
+    class _NonZipIO:
+        def seek(self, *_args, **_kwargs):
+            return None
+
+        def read(self, size: int = -1) -> bytes:
+            return b"NOTZIP"[:size]
+
+    assert detector._validate_docx_format(_NonZipIO()) == 0.0
+
+
+def test_analyze_pe_details_short_header_returns_unknown() -> None:
+    """Lines 269-273: _analyze_pe_details early return for short header."""
+
+    detector = MagicByteDetector()
+    result = detector._analyze_pe_details(b"MZ" + b"\x00" * 50, io.BytesIO())
+    assert result["architecture"] == "Unknown"
+    assert result["bits"] == "Unknown"
+
+
+def test_analyze_pe_details_corrupt_pe_offset_falls_back_to_unknown() -> None:
+    """Lines 310-312: _analyze_pe_details catches unexpected failures from corrupt data.
+
+    Craft a header where the PE offset points beyond the header length, so the
+    PE data slice is empty/too short, triggering the exception/fallback path.
+    """
+    detector = MagicByteDetector()
+    # MZ header (2 bytes) + 58 zero bytes = 60 bytes; pe_offset at byte 60
+    # points to offset 200, which is past the 64-byte header
+    header = b"MZ" + b"\x00" * 58 + struct.pack("<I", 200)
+    assert len(header) == 64
+    result = detector._analyze_pe_details(header, io.BytesIO())
+
+    assert result["architecture"] == "Unknown"
+    assert result["bits"] == "Unknown"
+
+
+def test_analyze_macho_details_unknown_magic_returns_unknown() -> None:
+    detector = MagicByteDetector()
+    result = detector._analyze_macho_details(b"\x00" * 8)
+    assert result["architecture"] == "Unknown"
+    assert result["endianness"] == "Unknown"
+
+
+def test_analyze_elf_details_unknown_header_returns_unknown() -> None:
+    detector = MagicByteDetector()
+    result = detector._analyze_elf_details(b"\x7fELF\x00")
+    assert result["architecture"] == "Unknown"
+    assert result["bits"] == "Unknown"
+
+
+def test_get_format_category_unknown_returns_other() -> None:
+    detector = MagicByteDetector()
+    details = detector._get_format_details("CUSTOM", b"data", io.BytesIO())
+    assert details["format_category"] == "Other"
+
+
+def test_get_file_threat_level_low_for_script_threat() -> None:
+    """Lines 540: potential threat path without exec/document/archive maps to Low."""
+
+    path = _write_tmp(b"#!/usr/bin/env python\nprint('hello')\n")
+    try:
+        assert get_file_threat_level(path) == "Low"
+    finally:
+        os.unlink(path)
+
+
 def test_validate_docx_format_exception_path():
     """
     Cover lines 189-192: exception inside _validate_docx_format.
@@ -283,7 +371,7 @@ def test_clear_cache():
     data = b"%PDF-1.4 " + b"\x00" * 50
     path = _write_tmp(data)
     try:
-        detect_result = detector.detect_file_type(path)
+        detector.detect_file_type(path)
         assert len(detector.cache) > 0
         detector.clear_cache()
         assert len(detector.cache) == 0

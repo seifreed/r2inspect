@@ -194,7 +194,7 @@ def test_bindiff_compare_binaries():
     adapter2 = MockAdapter()
 
     analyzer1 = BinDiffAnalyzer(adapter1, "/path/to/binary1.exe")
-    analyzer2 = BinDiffAnalyzer(adapter2, "/path/to/binary2.exe")
+    _analyzer2 = BinDiffAnalyzer(adapter2, "/path/to/binary2.exe")
 
     result1 = analyzer1.analyze()
     comparison = analyzer1.compare_with(result1)
@@ -240,7 +240,7 @@ def test_bindiff_similarity_scoring():
     analyzer1 = BinDiffAnalyzer(adapter, "/path/to/binary1.exe")
     analyzer2 = BinDiffAnalyzer(adapter, "/path/to/binary2.exe")
 
-    result1 = analyzer1.analyze()
+    _result1 = analyzer1.analyze()
     result2 = analyzer2.analyze()
 
     comparison = analyzer1.compare_with(result2)

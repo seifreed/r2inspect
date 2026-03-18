@@ -180,7 +180,7 @@ class TestSanitizeR2Output:
         text = "Test&nbsp;String&amp;&lt;&gt;&quot;&#39;"
         result = sanitize_r2_output(text)
 
-        assert result == 'Test String&<>"\''
+        assert result == "Test String&<>\"'"
 
     def test_sanitize_strips_whitespace(self) -> None:
         """Test sanitization strips leading/trailing whitespace."""

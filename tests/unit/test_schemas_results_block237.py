@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from r2inspect.schemas import results as results_mod
 from r2inspect.schemas.results import (
@@ -92,7 +92,7 @@ def test_from_dict_and_load_helpers():
         "crypto": {"algorithms": [{"name": "AES"}], "constants": [{"v": 1}]},
         "indicators": [{"type": "Anti-VM", "description": "vm", "severity": "High"}],
         "error": None,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "execution_time": 1.23,
     }
 

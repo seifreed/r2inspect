@@ -1,6 +1,6 @@
 import hashlib
 
-from r2inspect.utils.hashing import calculate_hashes, calculate_imphash
+from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash
 
 
 def test_calculate_hashes_matches_hashlib(tmp_path):

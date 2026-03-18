@@ -58,7 +58,7 @@ def test_get_analysis_timeout_production_full_returns_60():
 
 def test_get_large_file_threshold_production_returns_constant():
     """Line 88: non-test mode returns LARGE_FILE_THRESHOLD_MB."""
-    from r2inspect.core.constants import LARGE_FILE_THRESHOLD_MB
+    from r2inspect.domain.constants import LARGE_FILE_THRESHOLD_MB
 
     session = R2Session("/tmp/test")
     session._test_mode = False
@@ -67,7 +67,7 @@ def test_get_large_file_threshold_production_returns_constant():
 
 def test_get_huge_file_threshold_production_returns_constant():
     """Line 94: non-test mode returns HUGE_FILE_THRESHOLD_MB."""
-    from r2inspect.core.constants import HUGE_FILE_THRESHOLD_MB
+    from r2inspect.domain.constants import HUGE_FILE_THRESHOLD_MB
 
     session = R2Session("/tmp/test")
     session._test_mode = False
@@ -149,7 +149,7 @@ def test_open_exception_closes_r2_if_already_set():
 def test_detect_fat_macho_arches_header_too_short_returns_empty(tmp_path: Path):
     """Line 183: file with header < 8 bytes returns empty set."""
     binary = tmp_path / "short.bin"
-    binary.write_bytes(b"\xCA\xFE")
+    binary.write_bytes(b"\xca\xfe")
     session = R2Session(str(binary))
     assert session._detect_fat_macho_arches() == set()
 

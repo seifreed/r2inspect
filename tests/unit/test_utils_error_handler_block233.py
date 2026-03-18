@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.utils import error_handler as eh
+import r2inspect.error_handling.classifier as eh
 
 
 def test_error_classifier_basic() -> None:

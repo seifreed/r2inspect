@@ -1,0 +1,21 @@
+{
+  "file_format": "Unknown",
+  "name": "edge_high_entropy.bin",
+  "size": 65536,
+  "hashes": {
+    "md5": "699dca930cfec796bbc01842e16c0444",
+    "sha1": "08c0eadab3cfbb62881d7c8a04614d22fccc92b8",
+    "sha256": "9053b0f9ae54e451e48aae2a391f6ba9132475e4665faa39a84abcd4c3b13ee1"
+  },
+  "file_info": {
+    "name": "edge_high_entropy.bin",
+    "path": "/Users/seifreed/tools/malware/r2inspect/samples/fixtures/edge_high_entropy.bin",
+    "size": 65536,
+    "md5": "699dca930cfec796bbc01842e16c0444",
+    "sha1": "08c0eadab3cfbb62881d7c8a04614d22fccc92b8",
+    "sha256": "9053b0f9ae54e451e48aae2a391f6ba9132475e4665faa39a84abcd4c3b13ee1",
+    "file_type": "Unknown"
+  },
+  "hashing": {},
+  "security": {}
+}

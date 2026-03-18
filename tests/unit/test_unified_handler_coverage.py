@@ -26,6 +26,7 @@ from r2inspect.error_handling.unified_handler import (
 # CircuitState enum
 # ---------------------------------------------------------------------------
 
+
 def test_circuit_state_values():
     assert CircuitState.CLOSED.value == "closed"
     assert CircuitState.OPEN.value == "open"
@@ -35,6 +36,7 @@ def test_circuit_state_values():
 # ---------------------------------------------------------------------------
 # CircuitBreakerState
 # ---------------------------------------------------------------------------
+
 
 def _make_policy(**kwargs) -> ErrorPolicy:
     defaults = {
@@ -79,22 +81,25 @@ def test_circuit_breaker_transitions_to_half_open_after_timeout():
     assert cb.state == CircuitState.HALF_OPEN
 
 
-def test_circuit_breaker_half_open_allows_request():
+def test_circuit_breaker_half_open_allows_single_probe():
     policy = _make_policy()
     cb = CircuitBreakerState(policy)
     cb.state = CircuitState.HALF_OPEN
     assert cb.should_allow_request() is True
+    assert cb.should_allow_request() is False
 
 
 def test_circuit_breaker_record_success_from_half_open_closes_circuit():
     policy = _make_policy()
     cb = CircuitBreakerState(policy)
     cb.state = CircuitState.HALF_OPEN
+    cb.half_open_probe_in_flight = True
     cb.failure_count = 2
     cb.record_success()
     assert cb.state == CircuitState.CLOSED
     assert cb.failure_count == 0
     assert cb.last_failure_time is None
+    assert cb.half_open_probe_in_flight is False
 
 
 def test_circuit_breaker_record_success_from_closed_resets_count():
@@ -123,6 +128,7 @@ def test_circuit_breaker_should_not_attempt_reset_before_timeout():
 # _get_circuit_breaker
 # ---------------------------------------------------------------------------
 
+
 def test_get_circuit_breaker_creates_and_reuses():
     policy = _make_policy()
     cb1 = _get_circuit_breaker("test.module.func_unique_1", policy)
@@ -137,9 +143,17 @@ def test_get_circuit_breaker_different_keys_different_instances():
     assert cb1 is not cb2
 
 
+def test_get_circuit_breaker_reuses_instance_and_refreshes_policy():
+    cb1 = _get_circuit_breaker("test.module.refreshable", _make_policy(circuit_threshold=1))
+    cb2 = _get_circuit_breaker("test.module.refreshable", _make_policy(circuit_threshold=7))
+    assert cb1 is cb2
+    assert cb2.policy.circuit_threshold == 7
+
+
 # ---------------------------------------------------------------------------
 # _calculate_retry_delay
 # ---------------------------------------------------------------------------
+
 
 def test_calculate_retry_delay_attempt_zero_is_zero():
     policy = _make_policy(retry_delay=1.0, retry_backoff=2.0, retry_jitter=False)
@@ -183,9 +197,22 @@ def test_calculate_retry_delay_with_jitter_is_positive():
     assert delay > 0
 
 
+def test_calculate_retry_delay_with_tiny_base_delay_and_jitter():
+    policy = ErrorPolicy(
+        strategy=ErrorHandlingStrategy.RETRY,
+        retry_delay=0.0001,
+        retry_backoff=1.0,
+        retry_jitter=True,
+        max_retries=3,
+    )
+    delay = _calculate_retry_delay(1, policy)
+    assert delay > 0
+
+
 # ---------------------------------------------------------------------------
 # _retry_execution
 # ---------------------------------------------------------------------------
+
 
 def test_retry_execution_success_first_attempt():
     policy = ErrorPolicy(
@@ -262,6 +289,7 @@ def test_retry_execution_exhausts_all_retries():
 # _fallback_execution
 # ---------------------------------------------------------------------------
 
+
 def test_fallback_execution_success_returns_result():
     policy = ErrorPolicy(
         strategy=ErrorHandlingStrategy.FALLBACK,
@@ -296,6 +324,7 @@ def test_fallback_execution_with_args():
 # ---------------------------------------------------------------------------
 # _circuit_break_execution
 # ---------------------------------------------------------------------------
+
 
 def test_circuit_break_execution_success():
     policy = _make_policy(circuit_threshold=5)
@@ -350,6 +379,7 @@ def test_circuit_break_execution_failure_records_and_raises():
 # ---------------------------------------------------------------------------
 # handle_errors decorator
 # ---------------------------------------------------------------------------
+
 
 def test_handle_errors_fail_fast_success():
     policy = ErrorPolicy(strategy=ErrorHandlingStrategy.FAIL_FAST)
@@ -439,6 +469,7 @@ def test_handle_errors_preserves_function_name():
 # reset_circuit_breakers / get_circuit_breaker_stats
 # ---------------------------------------------------------------------------
 
+
 def test_reset_circuit_breakers_clears_open_circuits():
     policy = _make_policy(circuit_threshold=1)
     cb = _get_circuit_breaker("test.reset.func", policy)
@@ -470,6 +501,7 @@ def test_get_circuit_breaker_stats_returns_dict():
 # _retry_execution edge case: max_retries=-1 covers lines 175-177
 # ---------------------------------------------------------------------------
 
+
 def test_retry_execution_with_negative_max_retries_raises_runtime_error():
     """Cover lines 175-177: loop never runs when max_retries is forced to -1."""
     policy = ErrorPolicy(
@@ -490,6 +522,7 @@ def test_retry_execution_with_negative_max_retries_raises_runtime_error():
 # handle_errors assert_never branch (lines 285-286)
 # ---------------------------------------------------------------------------
 
+
 def test_handle_errors_assert_never_with_invalid_strategy():
     """Cover lines 285-286: assert_never branch for unknown strategy."""
     from r2inspect.error_handling.policies import ErrorPolicy, ErrorHandlingStrategy
@@ -504,5 +537,6 @@ def test_handle_errors_assert_never_with_invalid_strategy():
         return "ok"
 
     import pytest
+
     with pytest.raises((AssertionError, Exception)):
         my_func()

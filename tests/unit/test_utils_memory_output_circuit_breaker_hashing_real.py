@@ -5,14 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.utils import hashing, ssdeep_loader
-from r2inspect.utils.circuit_breaker import (
+import r2inspect.infrastructure.hashing as hashing
+import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
+from r2inspect.infrastructure.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerError,
     CircuitState,
     R2CommandCircuitBreaker,
 )
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryAwareAnalyzer,
     MemoryLimits,
     MemoryMonitor,
@@ -21,8 +22,8 @@ from r2inspect.utils.memory_manager import (
     configure_memory_limits,
     get_memory_stats,
 )
-from r2inspect.utils.output import OutputFormatter
-from r2inspect.utils.ssdeep_loader import get_ssdeep
+from r2inspect.cli.output_formatters import OutputFormatter
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 
 def test_hashing_utils_real(tmp_path: Path) -> None:
@@ -235,7 +236,7 @@ def test_circuit_breaker_decorator_and_half_open() -> None:
 
 
 def test_r2_command_circuit_breaker_real() -> None:
-    from r2inspect.core.r2_session import R2Session
+    from r2inspect.infrastructure.r2_session import R2Session
 
     fixture = Path("samples/fixtures/hello_pe.exe")
     session = R2Session(str(fixture))

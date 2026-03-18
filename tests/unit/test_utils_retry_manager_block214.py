@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from r2inspect.utils.retry_manager import (
+from r2inspect.infrastructure.retry_manager import (
     RetryableError,
     RetryConfig,
     RetryManager,

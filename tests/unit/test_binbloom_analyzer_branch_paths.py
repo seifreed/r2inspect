@@ -1,4 +1,5 @@
 """Branch-path tests for r2inspect/modules/binbloom_analyzer.py."""
+
 from __future__ import annotations
 
 import base64
@@ -255,11 +256,13 @@ def test_extract_functions_returns_empty_when_no_functions_found():
 
 def test_extract_functions_filters_invalid_functions():
     """Lines 149-154: only functions with addr and size > 0 are kept."""
-    adapter = DisasmAdapter(functions=[
-        {"name": "valid_func", "addr": 0x1000, "size": 64},
-        {"name": "no_size_func", "addr": 0x2000, "size": 0},
-        {"name": "no_addr_func", "size": 32},
-    ])
+    adapter = DisasmAdapter(
+        functions=[
+            {"name": "valid_func", "addr": 0x1000, "size": 64},
+            {"name": "no_size_func", "addr": 0x2000, "size": 0},
+            {"name": "no_addr_func", "size": 32},
+        ]
+    )
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
     result = analyzer._extract_functions()
     assert len(result) == 1
@@ -289,9 +292,7 @@ def test_create_function_bloom_returns_none_when_no_instructions():
 
 def test_create_function_bloom_returns_tuple_when_instructions_found():
     """Lines 183-191: returns (bloom, instructions, signature) on success."""
-    adapter = DisasmAdapter(
-        disasm_data={"ops": [{"mnemonic": "push"}, {"mnemonic": "ret"}]}
-    )
+    adapter = DisasmAdapter(disasm_data={"ops": [{"mnemonic": "push"}, {"mnemonic": "ret"}]})
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
     result = analyzer._create_function_bloom(0x1000, "simple_func", 256, 0.001)
     assert result is not None
@@ -302,6 +303,7 @@ def test_create_function_bloom_returns_tuple_when_instructions_found():
 
 def test_create_function_bloom_exception_returns_none():
     """Lines 193-195: exception during bloom creation returns None."""
+
     class BadDisasmAdapter(NoDisasmAdapter):
         def get_disasm(self, address=None, size=None):
             raise RuntimeError("Simulated disasm failure")
@@ -409,6 +411,7 @@ def test_extract_instruction_mnemonics_falls_back_to_text():
 
 def test_extract_instruction_mnemonics_logs_on_exception():
     """Lines 241-244: exception during extraction is logged and empty list returned."""
+
     class ExceptionDisasmAdapter(NoDisasmAdapter):
         def get_disasm(self, address=None, size=None):
             raise RuntimeError("disasm unavailable")
@@ -429,9 +432,7 @@ def test_extract_instruction_mnemonics_logs_on_exception():
 
 def test_extract_mnemonics_from_pdfj_uses_adapter_get_disasm():
     """Lines 247-256: adapter.get_disasm is used when available."""
-    adapter = DisasmAdapter(
-        disasm_data={"ops": [{"mnemonic": "xor"}, {"mnemonic": "jmp"}]}
-    )
+    adapter = DisasmAdapter(disasm_data={"ops": [{"mnemonic": "xor"}, {"mnemonic": "jmp"}]})
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
     result = analyzer._extract_mnemonics_from_pdfj(0x1000, "func_pdfj")
     assert "xor" in result
@@ -652,8 +653,20 @@ def test_find_similar_functions_groups_identical_signatures():
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     sig = "a" * 64
     sigs = {
-        "func_a": {"signature": sig, "instruction_count": 2, "unique_instructions": 2, "addr": 0x1000, "size": 10},
-        "func_b": {"signature": sig, "instruction_count": 2, "unique_instructions": 2, "addr": 0x2000, "size": 10},
+        "func_a": {
+            "signature": sig,
+            "instruction_count": 2,
+            "unique_instructions": 2,
+            "addr": 0x1000,
+            "size": 10,
+        },
+        "func_b": {
+            "signature": sig,
+            "instruction_count": 2,
+            "unique_instructions": 2,
+            "addr": 0x2000,
+            "size": 10,
+        },
     }
     result = analyzer._find_similar_functions(sigs)
     assert len(result) == 1
@@ -792,14 +805,14 @@ def test_compare_bloom_filters_partial_overlap_returns_jaccard():
     assert abs(result - 1 / 3) < 1e-9
 
 
-def test_compare_bloom_filters_no_bit_array_attribute_returns_zero():
-    """Lines 548-550: bloom without bit_array attribute returns 0.0."""
+def test_compare_bloom_filters_real_bloom_filter_uses_bitarray_contract():
+    """Real BloomFilter objects should be compared using their native bitarray."""
     from pybloom_live import BloomFilter
 
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     bf = BloomFilter(capacity=64, error_rate=0.01)
     result = analyzer.compare_bloom_filters(bf, bf)
-    assert result == 0.0
+    assert result == 1.0
 
 
 def test_compare_bloom_filters_identical_bit_arrays_returns_one():

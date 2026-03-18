@@ -43,7 +43,7 @@ def test_security_issue_valid():
         description="Buffer overflow detected",
         recommendation="Use safe functions",
         cwe_id=120,
-        cvss_score=7.5
+        cvss_score=7.5,
     )
     assert issue.severity == SeverityLevel.HIGH
     assert issue.description == "Buffer overflow detected"
@@ -57,15 +57,15 @@ def test_security_issue_description_validation():
     # Valid description
     issue = SecurityIssue(severity=SeverityLevel.LOW, description="Valid issue")
     assert issue.description == "Valid issue"
-    
+
     # Description with whitespace gets trimmed
     issue = SecurityIssue(severity=SeverityLevel.LOW, description="  Trimmed  ")
     assert issue.description == "Trimmed"
-    
+
     # Empty description should fail (Pydantic min_length validation)
     with pytest.raises(ValidationError):
         SecurityIssue(severity=SeverityLevel.LOW, description="")
-    
+
     # Whitespace-only description should fail (custom validator)
     with pytest.raises(ValueError, match="description cannot be empty"):
         SecurityIssue(severity=SeverityLevel.LOW, description="   ")
@@ -84,7 +84,7 @@ def test_security_issue_cwe_validation():
     # Valid CWE
     issue = SecurityIssue(severity=SeverityLevel.HIGH, description="Test", cwe_id=79)
     assert issue.cwe_id == 79
-    
+
     # CWE must be >= 1
     with pytest.raises(ValidationError):
         SecurityIssue(severity=SeverityLevel.HIGH, description="Test", cwe_id=0)
@@ -95,14 +95,14 @@ def test_security_issue_cvss_validation():
     # Valid CVSS scores
     issue1 = SecurityIssue(severity=SeverityLevel.LOW, description="Test", cvss_score=0.0)
     assert issue1.cvss_score == 0.0
-    
+
     issue2 = SecurityIssue(severity=SeverityLevel.CRITICAL, description="Test", cvss_score=10.0)
     assert issue2.cvss_score == 10.0
-    
+
     # CVSS out of range
     with pytest.raises(ValidationError):
         SecurityIssue(severity=SeverityLevel.HIGH, description="Test", cvss_score=10.1)
-    
+
     with pytest.raises(ValidationError):
         SecurityIssue(severity=SeverityLevel.HIGH, description="Test", cvss_score=-0.1)
 
@@ -113,7 +113,7 @@ def test_mitigation_info_basic():
         enabled=True,
         description="ASLR enabled",
         details="High entropy enabled",
-        note="Full protection"
+        note="Full protection",
     )
     assert mitigation.enabled is True
     assert mitigation.description == "ASLR enabled"
@@ -123,11 +123,7 @@ def test_mitigation_info_basic():
 
 def test_mitigation_info_aslr():
     """Test MitigationInfo with ASLR-specific field."""
-    mitigation = MitigationInfo(
-        enabled=True,
-        description="ASLR",
-        high_entropy=True
-    )
+    mitigation = MitigationInfo(enabled=True, description="ASLR", high_entropy=True)
     assert mitigation.high_entropy is True
 
 
@@ -145,7 +141,7 @@ def test_recommendation_complete():
         priority=SeverityLevel.HIGH,
         mitigation="ASLR",
         recommendation="Enable ASLR by setting /DYNAMICBASE",
-        impact="Prevents reliable exploitation"
+        impact="Prevents reliable exploitation",
     )
     assert rec.priority == SeverityLevel.HIGH
     assert rec.mitigation == "ASLR"
@@ -155,12 +151,7 @@ def test_recommendation_complete():
 
 def test_security_score_valid():
     """Test SecurityScore with valid data."""
-    score = SecurityScore(
-        score=75,
-        max_score=100,
-        percentage=75.0,
-        grade=SecurityGrade.B
-    )
+    score = SecurityScore(score=75, max_score=100, percentage=75.0, grade=SecurityGrade.B)
     assert score.score == 75
     assert score.max_score == 100
     assert score.percentage == 75.0
@@ -172,10 +163,10 @@ def test_security_score_max_score_validation():
     # Valid: max_score >= score
     score = SecurityScore(score=50, max_score=100, percentage=50.0, grade=SecurityGrade.C)
     assert score.max_score == 100
-    
+
     score = SecurityScore(score=50, max_score=50, percentage=100.0, grade=SecurityGrade.A)
     assert score.max_score == 50
-    
+
     # Invalid: max_score < score
     with pytest.raises(ValidationError, match="max_score cannot be less than score"):
         SecurityScore(score=100, max_score=50, percentage=100.0, grade=SecurityGrade.A)
@@ -186,10 +177,10 @@ def test_security_score_percentage_bounds():
     # Valid percentages
     score1 = SecurityScore(score=0, max_score=100, percentage=0.0, grade=SecurityGrade.F)
     assert score1.percentage == 0.0
-    
+
     score2 = SecurityScore(score=100, max_score=100, percentage=100.0, grade=SecurityGrade.A)
     assert score2.percentage == 100.0
-    
+
     # Out of bounds
     with pytest.raises(ValidationError):
         SecurityScore(score=50, max_score=100, percentage=150.0, grade=SecurityGrade.A)
@@ -228,7 +219,7 @@ def test_security_analysis_result_get_critical_issues():
         SecurityIssue(severity=SeverityLevel.LOW, description="Low 1"),
     ]
     result = SecurityAnalysisResult(available=True, issues=issues)
-    
+
     critical = result.get_critical_issues()
     assert len(critical) == 2
     assert all(issue.severity == SeverityLevel.CRITICAL for issue in critical)
@@ -242,7 +233,7 @@ def test_security_analysis_result_get_high_issues():
         SecurityIssue(severity=SeverityLevel.HIGH, description="High 2"),
     ]
     result = SecurityAnalysisResult(available=True, issues=issues)
-    
+
     high = result.get_high_issues()
     assert len(high) == 2
     assert all(issue.severity == SeverityLevel.HIGH for issue in high)
@@ -256,7 +247,7 @@ def test_security_analysis_result_get_enabled_mitigations():
         "CFG": MitigationInfo(enabled=True, description="CFG"),
     }
     result = SecurityAnalysisResult(available=True, mitigations=mitigations)
-    
+
     enabled = result.get_enabled_mitigations()
     assert len(enabled) == 2
     assert "ASLR" in enabled
@@ -272,7 +263,7 @@ def test_security_analysis_result_get_disabled_mitigations():
         "SafeSEH": MitigationInfo(enabled=False, description="SafeSEH"),
     }
     result = SecurityAnalysisResult(available=True, mitigations=mitigations)
-    
+
     disabled = result.get_disabled_mitigations()
     assert len(disabled) == 2
     assert "DEP" in disabled
@@ -287,13 +278,13 @@ def test_security_analysis_result_has_mitigation():
         "DEP": MitigationInfo(enabled=False, description="DEP"),
     }
     result = SecurityAnalysisResult(available=True, mitigations=mitigations)
-    
+
     # Enabled mitigation
     assert result.has_mitigation("ASLR") is True
-    
+
     # Disabled mitigation
     assert result.has_mitigation("DEP") is False
-    
+
     # Non-existent mitigation
     assert result.has_mitigation("CFG") is False
 
@@ -310,7 +301,7 @@ def test_security_analysis_result_count_issues_by_severity():
         SecurityIssue(severity=SeverityLevel.LOW, description="L3"),
     ]
     result = SecurityAnalysisResult(available=True, issues=issues)
-    
+
     counts = result.count_issues_by_severity()
     assert counts["critical"] == 2
     assert counts["high"] == 1
@@ -322,7 +313,7 @@ def test_security_analysis_result_count_issues_by_severity():
 def test_security_analysis_result_count_issues_empty():
     """Test count_issues_by_severity with no issues."""
     result = SecurityAnalysisResult(available=True)
-    
+
     counts = result.count_issues_by_severity()
     assert all(count == 0 for count in counts.values())
 
@@ -332,20 +323,20 @@ def test_security_analysis_result_is_secure():
     # Secure with default threshold (70)
     result1 = SecurityAnalysisResult(available=True, score=75)
     assert result1.is_secure() is True
-    
+
     # Insecure with default threshold
     result2 = SecurityAnalysisResult(available=True, score=65)
     assert result2.is_secure() is False
-    
+
     # At threshold
     result3 = SecurityAnalysisResult(available=True, score=70)
     assert result3.is_secure() is True
-    
+
     # Custom threshold
     result4 = SecurityAnalysisResult(available=True, score=60)
     assert result4.is_secure(threshold=50) is True
     assert result4.is_secure(threshold=70) is False
-    
+
     # No score
     result5 = SecurityAnalysisResult(available=True)
     assert result5.is_secure() is False
@@ -356,14 +347,14 @@ def test_security_analysis_result_score_validation():
     # Valid scores
     result1 = SecurityAnalysisResult(available=True, score=0)
     assert result1.score == 0
-    
+
     result2 = SecurityAnalysisResult(available=True, score=100)
     assert result2.score == 100
-    
+
     # Out of range
     with pytest.raises(ValidationError):
         SecurityAnalysisResult(available=True, score=-1)
-    
+
     with pytest.raises(ValidationError):
         SecurityAnalysisResult(available=True, score=101)
 
@@ -372,31 +363,20 @@ def test_security_analysis_result_pe_fields():
     """Test SecurityAnalysisResult PE-specific fields."""
     dll_chars = {"dynamic_base": True, "nx_compat": True}
     load_config = {"guard_cf": True, "size": 64}
-    
+
     result = SecurityAnalysisResult(
-        available=True,
-        dll_characteristics=dll_chars,
-        load_config=load_config
+        available=True, dll_characteristics=dll_chars, load_config=load_config
     )
-    
+
     assert result.dll_characteristics == dll_chars
     assert result.load_config == load_config
 
 
 def test_security_analysis_result_with_security_score():
     """Test SecurityAnalysisResult with SecurityScore."""
-    security_score = SecurityScore(
-        score=85,
-        max_score=100,
-        percentage=85.0,
-        grade=SecurityGrade.B
-    )
-    result = SecurityAnalysisResult(
-        available=True,
-        score=85,
-        security_score=security_score
-    )
-    
+    security_score = SecurityScore(score=85, max_score=100, percentage=85.0, grade=SecurityGrade.B)
+    result = SecurityAnalysisResult(available=True, score=85, security_score=security_score)
+
     assert result.security_score.grade == SecurityGrade.B
     assert result.security_score.percentage == 85.0
 
@@ -404,7 +384,7 @@ def test_security_analysis_result_with_security_score():
 def test_authenticode_analysis_result_defaults():
     """Test AuthenticodeAnalysisResult default values."""
     result = AuthenticodeAnalysisResult(available=True)
-    
+
     assert result.signed is False
     assert result.valid is None
     assert result.signer is None
@@ -419,9 +399,9 @@ def test_authenticode_analysis_result_complete():
     timestamp = datetime(2024, 1, 15, 12, 0, 0)
     certs = [
         {"subject": "CN=Test", "issuer": "CN=Root"},
-        {"subject": "CN=Root", "issuer": "CN=Root"}
+        {"subject": "CN=Root", "issuer": "CN=Root"},
     ]
-    
+
     result = AuthenticodeAnalysisResult(
         available=True,
         signed=True,
@@ -430,9 +410,9 @@ def test_authenticode_analysis_result_complete():
         timestamp=timestamp,
         signature_algorithm="RSA",
         digest_algorithm="SHA256",
-        certificates=certs
+        certificates=certs,
     )
-    
+
     assert result.signed is True
     assert result.valid is True
     assert result.signer == "Test Signer"
@@ -445,12 +425,9 @@ def test_authenticode_analysis_result_complete():
 def test_authenticode_analysis_result_signed_but_invalid():
     """Test AuthenticodeAnalysisResult for signed but invalid signature."""
     result = AuthenticodeAnalysisResult(
-        available=True,
-        signed=True,
-        valid=False,
-        signer="Untrusted Signer"
+        available=True, signed=True, valid=False, signer="Untrusted Signer"
     )
-    
+
     assert result.signed is True
     assert result.valid is False
     assert result.signer == "Untrusted Signer"
@@ -465,7 +442,7 @@ def test_security_analysis_result_features():
         "pie": True,
     }
     result = SecurityAnalysisResult(available=True, features=features)
-    
+
     assert result.features["stack_canary"] is True
     assert result.features["fortify_source"] is False
     assert len(result.features) == 4
@@ -478,17 +455,17 @@ def test_security_analysis_result_recommendations():
             priority=SeverityLevel.HIGH,
             mitigation="ASLR",
             recommendation="Enable ASLR",
-            impact="Prevents exploitation"
+            impact="Prevents exploitation",
         ),
         Recommendation(
             priority=SeverityLevel.MEDIUM,
             mitigation="Code Signing",
             recommendation="Sign binary",
-            impact="Ensures integrity"
+            impact="Ensures integrity",
         ),
     ]
     result = SecurityAnalysisResult(available=True, recommendations=recs)
-    
+
     assert len(result.recommendations) == 2
     assert result.recommendations[0].priority == SeverityLevel.HIGH
 
@@ -500,6 +477,6 @@ def test_security_analysis_result_vulnerabilities():
         {"cve": "CVE-2024-5678", "severity": "medium"},
     ]
     result = SecurityAnalysisResult(available=True, vulnerabilities=vulns)
-    
+
     assert len(result.vulnerabilities) == 2
     assert result.vulnerabilities[0]["cve"] == "CVE-2024-1234"

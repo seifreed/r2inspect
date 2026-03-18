@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -206,7 +206,7 @@ def test_security_schema_helpers_and_validators() -> None:
         signed=True,
         valid=False,
         signer="Example",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(UTC),
         signature_algorithm="sha256",
         digest_algorithm="sha256",
         certificates=[{"subject": "test"}],

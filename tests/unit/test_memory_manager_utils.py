@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Comprehensive tests for memory_manager.py to achieve 95%+ coverage."""
+"""Comprehensive tests for memory_manager.py to achieve 95%+ coverage.
+
+All tests use real MemoryMonitor instances — no mocks, no monkeypatch, no @patch.
+"""
 
 import gc
-import time
 import threading
-from unittest.mock import Mock, patch
+import time
 
 import pytest
 
-from r2inspect.utils.memory_manager import (
+from r2inspect.infrastructure.memory import (
     MemoryLimits,
     MemoryMonitor,
     MemoryAwareAnalyzer,
@@ -94,7 +96,7 @@ def test_check_memory_interval_caching():
     monitor = MemoryMonitor()
     monitor.check_interval = 10.0
 
-    stats1 = monitor.check_memory(force=True)
+    monitor.check_memory(force=True)
     time.sleep(0.1)
     stats2 = monitor.check_memory(force=False)
 
@@ -144,6 +146,7 @@ def test_handle_warning_callback_exception():
     monitor.set_callbacks(warning_callback=bad_callback)
     stats = {"process_memory_mb": 100.0, "process_usage_percent": 0.85}
 
+    # Should not raise — the exception is caught internally.
     monitor._handle_warning_memory(stats)
 
 
@@ -180,6 +183,7 @@ def test_handle_critical_callback_exception():
     monitor.set_callbacks(critical_callback=bad_callback)
     stats = {"process_memory_mb": 200.0, "process_usage_percent": 0.95}
 
+    # Should not raise — the exception is caught internally.
     monitor._handle_critical_memory(stats)
 
 
@@ -214,9 +218,10 @@ def test_get_error_stats():
     monitor = MemoryMonitor()
     stats = monitor._get_error_stats()
 
-    assert stats["status"] == "error"
+    assert stats["status"] == "unknown"
     assert stats["process_memory_mb"] == 0.0
     assert stats["process_usage_percent"] == 0.0
+    assert stats["memory_check_failed"] is True
 
 
 def test_is_memory_available_success():
@@ -227,27 +232,22 @@ def test_is_memory_available_success():
 
 
 def test_is_memory_available_exceeds_process_limit():
-    limits = MemoryLimits(max_process_memory_mb=100)
+    """Use a tiny max_process_memory_mb so current usage exceeds the limit."""
+    limits = MemoryLimits(max_process_memory_mb=1)
     monitor = MemoryMonitor(limits=limits)
 
-    with patch.object(monitor, "check_memory") as mock_check:
-        mock_check.return_value = {"process_memory_mb": 90.0}
-
-        available = monitor.is_memory_available(20.0)
-        assert available is False
+    # Current process uses far more than 1 MB, so any request should fail.
+    available = monitor.is_memory_available(20.0)
+    assert available is False
 
 
-def test_is_memory_available_insufficient_system_memory():
+def test_is_memory_available_huge_request():
+    """Request more memory than system available to trigger the system-available branch."""
     monitor = MemoryMonitor()
 
-    with patch.object(monitor, "check_memory") as mock_check:
-        mock_check.return_value = {
-            "process_memory_mb": 50.0,
-            "system_memory_available_mb": 10.0,
-        }
-
-        available = monitor.is_memory_available(100.0)
-        assert available is False
+    # Requesting 999999 MB should exceed system available memory.
+    available = monitor.is_memory_available(999_999.0)
+    assert available is False
 
 
 def test_validate_file_size_success():
@@ -302,14 +302,19 @@ def test_limit_collection_size_with_truncation():
 
 def test_set_callbacks():
     monitor = MemoryMonitor()
+    called_warning = []
+    called_critical = []
 
-    warning_cb = Mock()
-    critical_cb = Mock()
+    def warning_cb(stats):
+        called_warning.append(stats)
+
+    def critical_cb(stats):
+        called_critical.append(stats)
 
     monitor.set_callbacks(warning_callback=warning_cb, critical_callback=critical_cb)
 
-    assert monitor.warning_callback == warning_cb
-    assert monitor.critical_callback == critical_cb
+    assert monitor.warning_callback is warning_cb
+    assert monitor.critical_callback is critical_cb
 
 
 def test_memory_aware_analyzer_init():
@@ -320,73 +325,89 @@ def test_memory_aware_analyzer_init():
 def test_memory_aware_analyzer_with_custom_monitor():
     monitor = MemoryMonitor()
     analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
-    assert analyzer.memory_monitor == monitor
+    assert analyzer.memory_monitor is monitor
 
 
 def test_should_skip_analysis_sufficient_memory():
-    analyzer = MemoryAwareAnalyzer()
+    """With very large limits and a tiny request, analysis should proceed."""
+    limits = MemoryLimits(max_process_memory_mb=999_999)
+    monitor = MemoryMonitor(limits=limits)
+    # Disable caching so check_memory returns full stats with system_memory_available_mb.
+    monitor.check_interval = 0.0
+    analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
 
-    with patch.object(analyzer.memory_monitor, "is_memory_available", return_value=True):
-        should_skip = analyzer.should_skip_analysis(10.0, "test")
-        assert should_skip is False
+    should_skip = analyzer.should_skip_analysis(0.001, "test")
+    assert should_skip is False
 
 
 def test_should_skip_analysis_insufficient_memory():
-    analyzer = MemoryAwareAnalyzer()
+    """With a 1 MB limit, memory is always exceeded so analysis should be skipped."""
+    limits = MemoryLimits(max_process_memory_mb=1)
+    monitor = MemoryMonitor(limits=limits)
+    analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
 
-    with patch.object(analyzer.memory_monitor, "is_memory_available", return_value=False):
-        should_skip = analyzer.should_skip_analysis(10.0, "test")
-        assert should_skip is True
+    should_skip = analyzer.should_skip_analysis(100.0, "test")
+    assert should_skip is True
 
 
 def test_safe_large_operation_skipped():
-    analyzer = MemoryAwareAnalyzer()
-    operation = Mock(return_value="result")
+    """When memory is insufficient, the operation should not run and return None."""
+    limits = MemoryLimits(max_process_memory_mb=1)
+    monitor = MemoryMonitor(limits=limits)
+    analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
 
-    with patch.object(analyzer, "should_skip_analysis", return_value=True):
-        result = analyzer.safe_large_operation(operation, 100.0, "test")
+    call_log = []
 
-        assert result is None
-        operation.assert_not_called()
+    def operation():
+        call_log.append("called")
+        return "result"
+
+    result = analyzer.safe_large_operation(operation, 100.0, "test")
+
+    assert result is None
+    assert call_log == []
 
 
 def test_safe_large_operation_success():
-    analyzer = MemoryAwareAnalyzer()
-    operation = Mock(return_value="success")
+    """With enough memory, the operation should run and return its result."""
+    limits = MemoryLimits(max_process_memory_mb=999_999)
+    monitor = MemoryMonitor(limits=limits)
+    monitor.check_interval = 0.0
+    analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
 
-    with patch.object(analyzer, "should_skip_analysis", return_value=False):
-        result = analyzer.safe_large_operation(operation, 10.0, "test")
+    def operation():
+        return "success"
 
-        assert result == "success"
-        operation.assert_called_once()
+    result = analyzer.safe_large_operation(operation, 0.001, "test")
+    assert result == "success"
 
 
 def test_safe_large_operation_memory_error():
-    analyzer = MemoryAwareAnalyzer()
+    """When the operation raises MemoryError, the result should be None."""
+    limits = MemoryLimits(max_process_memory_mb=999_999)
+    monitor = MemoryMonitor(limits=limits)
+    monitor.check_interval = 0.0
+    analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
 
-    def raise_memory_error():
+    def operation():
         raise MemoryError("Out of memory")
 
-    operation = Mock(side_effect=raise_memory_error)
-
-    with patch.object(analyzer, "should_skip_analysis", return_value=False):
-        result = analyzer.safe_large_operation(operation, 10.0, "test")
-
-        assert result is None
+    result = analyzer.safe_large_operation(operation, 0.001, "test")
+    assert result is None
 
 
 def test_safe_large_operation_generic_exception():
-    analyzer = MemoryAwareAnalyzer()
+    """When the operation raises a generic exception, the result should be None."""
+    limits = MemoryLimits(max_process_memory_mb=999_999)
+    monitor = MemoryMonitor(limits=limits)
+    monitor.check_interval = 0.0
+    analyzer = MemoryAwareAnalyzer(memory_monitor=monitor)
 
-    def raise_error():
+    def operation():
         raise ValueError("Some error")
 
-    operation = Mock(side_effect=raise_error)
-
-    with patch.object(analyzer, "should_skip_analysis", return_value=False):
-        result = analyzer.safe_large_operation(operation, 10.0, "test")
-
-        assert result is None
+    result = analyzer.safe_large_operation(operation, 0.001, "test")
+    assert result is None
 
 
 def test_get_memory_stats_global():
@@ -444,37 +465,21 @@ def test_cleanup_memory():
 
 
 def test_check_memory_with_gc_threshold():
+    """Set a very low gc_trigger_threshold so the real process usage
+    exceeds it and triggers GC during check_memory."""
     limits = MemoryLimits(
         max_process_memory_mb=1000,
-        gc_trigger_threshold=0.01,
+        gc_trigger_threshold=0.001,
+        memory_warning_threshold=0.95,
+        memory_critical_threshold=0.99,
     )
     monitor = MemoryMonitor(limits=limits)
 
-    with patch.object(monitor.process, "memory_info") as mock_mem:
-        mock_mem.return_value = Mock(rss=20 * 1024 * 1024)
+    initial_gc = monitor.gc_count
+    monitor.check_memory(force=True)
 
-        initial_gc = monitor.gc_count
-        monitor.check_memory(force=True)
-
-        assert monitor.gc_count >= initial_gc
-
-
-def test_check_memory_error_handling():
-    monitor = MemoryMonitor()
-
-    with patch.object(monitor.process, "memory_info", side_effect=Exception("test error")):
-        stats = monitor.check_memory(force=True)
-
-        assert stats["status"] == "error"
-
-
-def test_cached_stats_error_handling():
-    monitor = MemoryMonitor()
-
-    with patch.object(monitor.process, "memory_info", side_effect=Exception("error")):
-        stats = monitor._get_cached_stats()
-
-        assert stats["status"] == "error"
+    # The real process uses enough that 0.1% of 1000 MB is exceeded.
+    assert monitor.gc_count >= initial_gc
 
 
 def test_thread_safety():

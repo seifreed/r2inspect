@@ -5,7 +5,7 @@ import logging
 import os
 from pathlib import Path
 
-from r2inspect.utils.logger import _handler_is_closed, setup_logger
+from r2inspect.infrastructure.logging import _handler_is_closed, setup_logger
 
 
 def test_logger_thread_safe_false_file_handler(tmp_path: Path) -> None:

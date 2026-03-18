@@ -99,9 +99,7 @@ def test_analyze_export_returns_result_with_empty_characteristics_when_inner_exc
         def get_function_info(self, _address: int) -> list:
             raise RuntimeError("func info error")
 
-    adapter = AdapterRaisingOnFuncInfo(
-        exports=[{"name": "export_fn", "vaddr": 0x1000}]
-    )
+    adapter = AdapterRaisingOnFuncInfo(exports=[{"name": "export_fn", "vaddr": 0x1000}])
     analyzer = _make_analyzer(adapter)
     exports = analyzer.get_exports()
     assert len(exports) == 1
@@ -146,6 +144,15 @@ def test_get_export_characteristics_empty_func_info_sets_not_is_function():
     assert result.get("is_function") is False
 
 
+def test_get_export_characteristics_dict_func_info_sets_function_fields():
+    adapter = StubAdapter(func_info=[{"size": 33, "cc": 4}])
+    analyzer = _make_analyzer(adapter)
+    result = analyzer._get_export_characteristics({"name": "fn", "vaddr": 0x2200})
+    assert result.get("is_function") is True
+    assert result.get("function_size") == 33
+    assert result.get("complexity") == 4
+
+
 # ---------------------------------------------------------------------------
 # _get_export_characteristics – suspicious name (lines 115-119)
 # ---------------------------------------------------------------------------
@@ -182,6 +189,27 @@ def test_update_export_stats_forwarded_export_increments_counter():
     analyzer._update_export_stats(stats, exp)
     assert stats["forwarded_exports"] == 1
     assert stats["function_exports"] == 1
+
+
+def test_update_export_stats_forwarded_non_function_does_not_increment_data_counter():
+    analyzer = _make_analyzer(StubAdapter())
+    stats = {
+        "total_exports": 0,
+        "function_exports": 0,
+        "data_exports": 0,
+        "forwarded_exports": 0,
+        "suspicious_exports": 0,
+        "export_names": [],
+    }
+    exp = {
+        "name": "ForwardedDataLike",
+        "is_forwarded": True,
+        "characteristics": {"is_function": False},
+    }
+    analyzer._update_export_stats(stats, exp)
+    assert stats["forwarded_exports"] == 1
+    assert stats["data_exports"] == 0
+    assert stats["function_exports"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -267,4 +295,29 @@ def test_get_export_statistics_returns_defaults_on_exception():
     analyzer = _make_analyzer(adapter)
     stats = analyzer.get_export_statistics()
     assert stats["total_exports"] == 0
+    assert stats["export_names"] == []
+
+
+def test_analyze_export_adds_error_when_characteristics_raise():
+    analyzer = _make_analyzer(StubAdapter())
+
+    def _raise(_exp):
+        raise RuntimeError("characteristics fail")
+
+    analyzer._get_export_characteristics = _raise  # type: ignore[method-assign]
+    result = analyzer._analyze_export({"name": "X", "vaddr": 1})
+    assert result["name"] == "X"
+    assert result["error"] == "characteristics fail"
+
+
+def test_get_export_statistics_sets_total_then_handles_update_error():
+    analyzer = _make_analyzer(StubAdapter())
+    analyzer.get_exports = lambda: [{"name": "A"}]  # type: ignore[method-assign]
+
+    def _raise(_stats, _exp):
+        raise RuntimeError("update fail")
+
+    analyzer._update_export_stats = _raise  # type: ignore[method-assign]
+    stats = analyzer.get_export_statistics()
+    assert stats["total_exports"] == 1
     assert stats["export_names"] == []

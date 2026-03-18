@@ -357,7 +357,7 @@ def test_batch_run_quiet_mode(tmp_path):
 # analyzer_runner (application re-export of utils)
 # ---------------------------------------------------------------------------
 
-from r2inspect.application.analyzer_runner import run_analyzer_on_file
+from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
 
 
 def test_run_analyzer_on_file_returns_none_for_nonexistent():
@@ -379,7 +379,6 @@ def test_run_analyzer_on_file_returns_none_when_no_analyze_method():
 # ---------------------------------------------------------------------------
 
 from r2inspect.application.use_cases.analyze_binary import AnalyzeBinaryUseCase
-from r2inspect.application.analysis_service import AnalysisService
 
 
 class _FakeInspector:
@@ -388,12 +387,19 @@ class _FakeInspector:
 
 
 def test_analyze_binary_use_case_basic():
+    from r2inspect.schemas.results_models import AnalysisResult
+
     use_case = AnalyzeBinaryUseCase()
     result = use_case.run(_FakeInspector(), {}, reset_stats=True, include_statistics=True)
-    assert result["result"] == "ok"
+    assert isinstance(result, AnalysisResult)
+    # The typed result wraps the raw data -- verify round-trip via to_dict
+    d = result.to_dict()
+    assert isinstance(d, dict)
 
 
 def test_analyze_binary_use_case_no_reset_no_stats():
+    from r2inspect.schemas.results_models import AnalysisResult
+
     use_case = AnalyzeBinaryUseCase()
     result = use_case.run(
         _FakeInspector(),
@@ -402,18 +408,21 @@ def test_analyze_binary_use_case_no_reset_no_stats():
         include_statistics=False,
         validate_schemas=False,
     )
-    assert result["result"] == "ok"
-    assert "error_statistics" not in result
+    assert isinstance(result, AnalysisResult)
+    d = result.to_dict()
+    assert "error_statistics" not in d
 
 
 def test_analyze_binary_use_case_custom_service():
+    from r2inspect.schemas.results_models import AnalysisResult
+
     class CustomService(AnalysisService):
         def execute(self, inspector, options):
             return {"custom": True}
 
     use_case = AnalyzeBinaryUseCase(analysis_service=CustomService())
     result = use_case.run(_FakeInspector(), {})
-    assert result["custom"] is True
+    assert isinstance(result, AnalysisResult)
 
 
 # ---------------------------------------------------------------------------
@@ -478,8 +487,14 @@ def test_build_file_overview_defaults():
 
 def test_build_file_overview_with_data():
     results = _make_results(
-        file_info={"name": "sample.exe", "file_type": "PE32", "size": 1024,
-                   "architecture": "x86", "md5": "aabbcc", "sha256": "ddeeff"},
+        file_info={
+            "name": "sample.exe",
+            "file_type": "PE32",
+            "size": 1024,
+            "architecture": "x86",
+            "md5": "aabbcc",
+            "sha256": "ddeeff",
+        },
         pe_info={"compilation_timestamp": "2020-01-01"},
     )
     ov = _build_file_overview(results)
@@ -582,8 +597,13 @@ def test_result_aggregator_generate_indicators_suspicious_api():
 def test_result_aggregator_executive_summary_keys():
     agg = ResultAggregator()
     summary = agg.generate_executive_summary({})
-    for key in ("file_overview", "security_assessment", "threat_indicators",
-                "technical_details", "recommendations"):
+    for key in (
+        "file_overview",
+        "security_assessment",
+        "threat_indicators",
+        "technical_details",
+        "recommendations",
+    ):
         assert key in summary
 
 
@@ -657,9 +677,15 @@ class _StubLoader:
         self._stats = stats
 
 
-def _make_loader(registered=("a", "b", "c"), loaded=("a",),
-                 hits=5, misses=3, load_count=4,
-                 failed=0, load_times=None):
+def _make_loader(
+    registered=("a", "b", "c"),
+    loaded=("a",),
+    hits=5,
+    misses=3,
+    load_count=4,
+    failed=0,
+    load_times=None,
+):
     registry = {k: object() for k in registered}
     cache = {k: object() for k in loaded}
     stats = {

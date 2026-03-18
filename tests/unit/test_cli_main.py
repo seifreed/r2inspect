@@ -7,7 +7,7 @@ from rich.console import Console
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.cli_main import CLIArgs, _dispatch_command, run_cli
 from r2inspect.config import Config
-from r2inspect.utils.logger import get_logger
+from r2inspect.infrastructure.logging import get_logger
 
 
 def _make_console():

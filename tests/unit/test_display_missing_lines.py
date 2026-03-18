@@ -125,9 +125,7 @@ def test_display_rich_header_available() -> None:
         "rich_header": {
             "available": True,
             "xor_key": "0x12345678",
-            "compilers": [
-                {"name": "MSVC", "version": "19.0", "count": 5}
-            ],
+            "compilers": [{"name": "MSVC", "version": "19.0", "count": 5}],
         }
     }
     _display_rich_header(results)

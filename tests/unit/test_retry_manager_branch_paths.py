@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from r2inspect.utils.retry_manager import (
+from r2inspect.infrastructure.retry_manager import (
     RetryConfig,
     RetryManager,
     RetryStrategy,
@@ -473,7 +473,7 @@ def test_reset_retry_stats_module_function_resets_global():
 
 def test_configure_retry_for_command_updates_global_config():
     """Lines 377-378: configure_retry_for_command sets config on global manager."""
-    from r2inspect.utils import retry_manager as rm
+    import r2inspect.infrastructure.retry_manager as rm
 
     custom = RetryConfig(max_attempts=11, base_delay=0.0, jitter=False)
     configure_retry_for_command("test_branch_type", custom)

@@ -1,18 +1,28 @@
-"""Comprehensive tests for pipeline/analysis_pipeline.py execution paths."""
+"""Comprehensive tests for pipeline/analysis_pipeline.py execution paths.
+
+All tests use real AnalysisPipeline, real AnalysisStage subclasses, and real
+ThreadSafeContext -- no mocks, no monkeypatch, no @patch.
+"""
 
 from __future__ import annotations
 
 import os
 import time
-from unittest.mock import Mock
 
 import pytest
 
-from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage, ThreadSafeContext
+from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
+from r2inspect.pipeline.pipeline_parallel_runtime import get_effective_workers
+from r2inspect.pipeline.stage_models import ThreadSafeContext
 
 
-class _MockStage(AnalysisStage):
-    """Mock stage for testing."""
+# ---------------------------------------------------------------------------
+# Concrete AnalysisStage subclasses with controlled behaviour
+# ---------------------------------------------------------------------------
+
+
+class _StubStage(AnalysisStage):
+    """Stage that returns a predetermined result dict."""
 
     def __init__(
         self,
@@ -31,14 +41,14 @@ class _MockStage(AnalysisStage):
 
 
 class _FailingStage(AnalysisStage):
-    """Stage that always fails."""
+    """Stage that always raises RuntimeError."""
 
     def _execute(self, _context: dict[str, object]) -> dict[str, object]:
         raise RuntimeError("Stage failed intentionally")
 
 
 class _SlowStage(AnalysisStage):
-    """Stage that sleeps for testing timeouts."""
+    """Stage that sleeps for a configurable delay (for timeout tests)."""
 
     def __init__(self, name: str, delay: float, timeout: float | None = None) -> None:
         super().__init__(name=name, timeout=timeout)
@@ -47,6 +57,30 @@ class _SlowStage(AnalysisStage):
     def _execute(self, _context: dict[str, object]) -> dict[str, object]:
         time.sleep(self._delay)
         return {self.name: {"success": True}}
+
+
+# ---------------------------------------------------------------------------
+# Real callback tracker (replaces Mock)
+# ---------------------------------------------------------------------------
+
+
+class _CallbackTracker:
+    """Tracks calls to a progress callback without any mock library."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, int, int]] = []
+
+    @property
+    def call_count(self) -> int:
+        return len(self.calls)
+
+    def __call__(self, name: str, current: int, total: int) -> None:
+        self.calls.append((name, current, total))
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 class TestAnalysisPipelineBasics:
@@ -69,7 +103,7 @@ class TestAnalysisPipelineBasics:
     def test_add_stage(self) -> None:
         """Test adding a stage to the pipeline."""
         pipeline = AnalysisPipeline()
-        stage = _MockStage("test_stage")
+        stage = _StubStage("test_stage")
 
         result = pipeline.add_stage(stage)
 
@@ -80,8 +114,8 @@ class TestAnalysisPipelineBasics:
     def test_add_multiple_stages(self) -> None:
         """Test adding multiple stages."""
         pipeline = AnalysisPipeline()
-        stage1 = _MockStage("stage1")
-        stage2 = _MockStage("stage2")
+        stage1 = _StubStage("stage1")
+        stage2 = _StubStage("stage2")
 
         pipeline.add_stage(stage1).add_stage(stage2)
 
@@ -92,7 +126,7 @@ class TestAnalysisPipelineBasics:
     def test_remove_stage_existing(self) -> None:
         """Test removing an existing stage."""
         pipeline = AnalysisPipeline()
-        stage = _MockStage("test_stage")
+        stage = _StubStage("test_stage")
         pipeline.add_stage(stage)
 
         result = pipeline.remove_stage("test_stage")
@@ -111,7 +145,7 @@ class TestAnalysisPipelineBasics:
     def test_get_stage_existing(self) -> None:
         """Test getting an existing stage by name."""
         pipeline = AnalysisPipeline()
-        stage = _MockStage("test_stage")
+        stage = _StubStage("test_stage")
         pipeline.add_stage(stage)
 
         result = pipeline.get_stage("test_stage")
@@ -129,9 +163,9 @@ class TestAnalysisPipelineBasics:
     def test_list_stages(self) -> None:
         """Test listing all stage names."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
-        pipeline.add_stage(_MockStage("stage2"))
-        pipeline.add_stage(_MockStage("stage3"))
+        pipeline.add_stage(_StubStage("stage1"))
+        pipeline.add_stage(_StubStage("stage2"))
+        pipeline.add_stage(_StubStage("stage3"))
 
         result = pipeline.list_stages()
 
@@ -140,8 +174,8 @@ class TestAnalysisPipelineBasics:
     def test_clear(self) -> None:
         """Test clearing all stages."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage1"))
+        pipeline.add_stage(_StubStage("stage2"))
 
         pipeline.clear()
 
@@ -150,15 +184,15 @@ class TestAnalysisPipelineBasics:
     def test_len(self) -> None:
         """Test __len__ returns number of stages."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage1"))
+        pipeline.add_stage(_StubStage("stage2"))
 
         assert len(pipeline) == 2
 
     def test_repr(self) -> None:
         """Test __repr__ string representation."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
+        pipeline.add_stage(_StubStage("stage1"))
 
         result = repr(pipeline)
 
@@ -173,7 +207,7 @@ class TestSequentialExecution:
     def test_execute_sequential_single_stage(self) -> None:
         """Test sequential execution with single stage."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1", {"stage1": {"data": "result"}}))
+        pipeline.add_stage(_StubStage("stage1", {"stage1": {"data": "result"}}))
 
         result = pipeline.execute(parallel=False)
 
@@ -183,9 +217,9 @@ class TestSequentialExecution:
     def test_execute_sequential_multiple_stages(self) -> None:
         """Test sequential execution with multiple stages."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1", {"stage1": {"value": 1}}))
-        pipeline.add_stage(_MockStage("stage2", {"stage2": {"value": 2}}))
-        pipeline.add_stage(_MockStage("stage3", {"stage3": {"value": 3}}))
+        pipeline.add_stage(_StubStage("stage1", {"stage1": {"value": 1}}))
+        pipeline.add_stage(_StubStage("stage2", {"stage2": {"value": 2}}))
+        pipeline.add_stage(_StubStage("stage3", {"stage3": {"value": 3}}))
 
         result = pipeline.execute(parallel=False)
 
@@ -199,7 +233,7 @@ class TestSequentialExecution:
     def test_execute_sequential_with_options(self) -> None:
         """Test sequential execution passes options to context."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
+        pipeline.add_stage(_StubStage("stage1"))
 
         options = {"batch_mode": True, "verbose": False}
         result = pipeline.execute(options=options, parallel=False)
@@ -210,8 +244,8 @@ class TestSequentialExecution:
     def test_execute_sequential_skipped_stage(self) -> None:
         """Test sequential execution skips stages with false condition."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1", condition=lambda ctx: False))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage1", condition=lambda ctx: False))
+        pipeline.add_stage(_StubStage("stage2"))
 
         result = pipeline.execute(parallel=False)
 
@@ -223,7 +257,7 @@ class TestSequentialExecution:
         """Test sequential execution continues after failed stage."""
         pipeline = AnalysisPipeline()
         pipeline.add_stage(_FailingStage("failing"))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage2"))
 
         result = pipeline.execute(parallel=False)
 
@@ -238,7 +272,7 @@ class TestParallelExecution:
     def test_execute_parallel_single_stage(self) -> None:
         """Test parallel execution with single stage."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1", {"stage1": {"data": "result"}}))
+        pipeline.add_stage(_StubStage("stage1", {"stage1": {"data": "result"}}))
 
         result = pipeline.execute_parallel()
 
@@ -248,9 +282,9 @@ class TestParallelExecution:
     def test_execute_parallel_independent_stages(self) -> None:
         """Test parallel execution with independent stages."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1", {"stage1": {"value": 1}}))
-        pipeline.add_stage(_MockStage("stage2", {"stage2": {"value": 2}}))
-        pipeline.add_stage(_MockStage("stage3", {"stage3": {"value": 3}}))
+        pipeline.add_stage(_StubStage("stage1", {"stage1": {"value": 1}}))
+        pipeline.add_stage(_StubStage("stage2", {"stage2": {"value": 2}}))
+        pipeline.add_stage(_StubStage("stage3", {"stage3": {"value": 3}}))
 
         result = pipeline.execute_parallel()
 
@@ -261,10 +295,10 @@ class TestParallelExecution:
     def test_execute_parallel_with_dependencies(self) -> None:
         """Test parallel execution respects stage dependencies."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1", {"stage1": {"value": 1}}))
-        pipeline.add_stage(_MockStage("stage2", {"stage2": {"value": 2}}, dependencies=["stage1"]))
+        pipeline.add_stage(_StubStage("stage1", {"stage1": {"value": 1}}))
+        pipeline.add_stage(_StubStage("stage2", {"stage2": {"value": 2}}, dependencies=["stage1"]))
         pipeline.add_stage(
-            _MockStage("stage3", {"stage3": {"value": 3}}, dependencies=["stage1", "stage2"])
+            _StubStage("stage3", {"stage3": {"value": 3}}, dependencies=["stage1", "stage2"])
         )
 
         result = pipeline.execute_parallel()
@@ -277,9 +311,9 @@ class TestParallelExecution:
     def test_execute_parallel_skipped_stages(self) -> None:
         """Test parallel execution handles skipped stages."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
-        pipeline.add_stage(_MockStage("skipped", condition=lambda ctx: False))
-        pipeline.add_stage(_MockStage("stage3"))
+        pipeline.add_stage(_StubStage("stage1"))
+        pipeline.add_stage(_StubStage("skipped", condition=lambda ctx: False))
+        pipeline.add_stage(_StubStage("stage3"))
 
         result = pipeline.execute_parallel()
 
@@ -291,7 +325,7 @@ class TestParallelExecution:
         """Test parallel execution handles failed stages."""
         pipeline = AnalysisPipeline()
         pipeline.add_stage(_FailingStage("failing"))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage2"))
 
         result = pipeline.execute_parallel()
 
@@ -342,77 +376,73 @@ class TestProgressCallback:
     def test_set_progress_callback(self) -> None:
         """Test setting progress callback."""
         pipeline = AnalysisPipeline()
-        callback = Mock()
+        tracker = _CallbackTracker()
 
-        pipeline.set_progress_callback(callback)
+        pipeline.set_progress_callback(tracker)
 
-        assert pipeline._progress_callback is callback
+        assert pipeline._progress_callback is tracker
 
     def test_execute_with_progress(self) -> None:
         """Test execute_with_progress calls callback."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage1"))
+        pipeline.add_stage(_StubStage("stage2"))
 
-        callback = Mock()
-        result = pipeline.execute_with_progress(callback)
+        tracker = _CallbackTracker()
+        result = pipeline.execute_with_progress(tracker)
 
         assert "stage1" in result
         assert "stage2" in result
         # Callback should be called for each stage
-        assert callback.call_count == 2
+        assert tracker.call_count == 2
 
     def test_progress_callback_parameters(self) -> None:
         """Test progress callback receives correct parameters."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
-        pipeline.add_stage(_MockStage("stage2"))
+        pipeline.add_stage(_StubStage("stage1"))
+        pipeline.add_stage(_StubStage("stage2"))
 
-        calls = []
+        tracker = _CallbackTracker()
+        pipeline.execute_with_progress(tracker)
 
-        def capture_callback(name: str, current: int, total: int) -> None:
-            calls.append((name, current, total))
-
-        pipeline.execute_with_progress(capture_callback)
-
-        assert len(calls) == 2
-        assert calls[0] == ("stage1", 1, 2)
-        assert calls[1] == ("stage2", 2, 2)
+        assert len(tracker.calls) == 2
+        assert tracker.calls[0] == ("stage1", 1, 2)
+        assert tracker.calls[1] == ("stage2", 2, 2)
 
     def test_sequential_execution_with_progress_callback(self) -> None:
         """Test sequential execution uses progress callback if set."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
+        pipeline.add_stage(_StubStage("stage1"))
 
-        callback = Mock()
-        pipeline.set_progress_callback(callback)
+        tracker = _CallbackTracker()
+        pipeline.set_progress_callback(tracker)
 
-        result = pipeline._execute_sequential()
+        pipeline._execute_sequential()
 
         # Callback should be called
-        assert callback.call_count == 1
+        assert tracker.call_count == 1
 
     def test_progress_callback_exception_handling(self) -> None:
-        """Test progress callback exceptions propagate (not caught)."""
+        """Test progress callback exceptions are caught gracefully."""
         pipeline = AnalysisPipeline()
-        pipeline.add_stage(_MockStage("stage1"))
+        pipeline.add_stage(_StubStage("stage1"))
 
         def failing_callback(name: str, current: int, total: int) -> None:
             raise RuntimeError("Callback failed")
 
-        # Exception should propagate since execute_with_progress doesn't catch it
-        with pytest.raises(RuntimeError, match="Callback failed"):
-            pipeline.execute_with_progress(failing_callback)
+        # Callback exceptions are caught and logged — pipeline continues
+        result = pipeline.execute_with_progress(failing_callback)
+        assert isinstance(result, dict)
 
 
 class TestEffectiveWorkers:
-    """Test _get_effective_workers method."""
+    """Test get_effective_workers function."""
 
     def test_effective_workers_default(self) -> None:
         """Test effective workers with default max_workers."""
         pipeline = AnalysisPipeline()
 
-        result = pipeline._get_effective_workers()
+        result = get_effective_workers(pipeline.max_workers)
 
         # Should be min(4, cpu_count)
         assert result >= 1
@@ -423,7 +453,7 @@ class TestEffectiveWorkers:
         # Test mode sets R2INSPECT_MAX_WORKERS to 1 in conftest
         pipeline = AnalysisPipeline(max_workers=2)
 
-        result = pipeline._get_effective_workers()
+        result = get_effective_workers(pipeline.max_workers)
 
         # In test mode, env var caps to 1
         assert result == 1
@@ -435,7 +465,7 @@ class TestEffectiveWorkers:
             os.environ["R2INSPECT_MAX_WORKERS"] = "3"
             pipeline = AnalysisPipeline(max_workers=5)
 
-            result = pipeline._get_effective_workers()
+            result = get_effective_workers(pipeline.max_workers)
 
             assert result == 3
         finally:
@@ -451,7 +481,7 @@ class TestEffectiveWorkers:
             os.environ["R2INSPECT_MAX_WORKERS"] = "invalid"
             pipeline = AnalysisPipeline(max_workers=4)
 
-            result = pipeline._get_effective_workers()
+            result = get_effective_workers(pipeline.max_workers)
 
             assert result == 4
         finally:
@@ -467,7 +497,7 @@ class TestEffectiveWorkers:
             os.environ["R2INSPECT_MAX_WORKERS"] = "0"
             pipeline = AnalysisPipeline(max_workers=4)
 
-            result = pipeline._get_effective_workers()
+            result = get_effective_workers(pipeline.max_workers)
 
             assert result == 4
         finally:
@@ -539,7 +569,7 @@ class TestPipelineErrorHandling:
         """Test pipeline raises when no stages can execute."""
         pipeline = AnalysisPipeline()
         # Add stage that depends on non-existent stage
-        pipeline.add_stage(_MockStage("stage1", dependencies=["nonexistent"]))
+        pipeline.add_stage(_StubStage("stage1", dependencies=["nonexistent"]))
 
         with pytest.raises(RuntimeError, match="No stages can execute"):
             pipeline.execute_parallel()
@@ -547,11 +577,10 @@ class TestPipelineErrorHandling:
     def test_circular_dependency_detection(self) -> None:
         """Test pipeline handles circular dependencies gracefully."""
         pipeline = AnalysisPipeline()
-        # These won't create actual circular dependency in the simple mock
-        # but tests the warning path
-        pipeline.add_stage(_MockStage("stage1", dependencies=["stage2"]))
-        pipeline.add_stage(_MockStage("stage2", dependencies=["stage3"]))
-        pipeline.add_stage(_MockStage("stage3"))
+        # Chain: stage3 (no deps) -> stage2 (depends on stage3) -> stage1 (depends on stage2)
+        pipeline.add_stage(_StubStage("stage1", dependencies=["stage2"]))
+        pipeline.add_stage(_StubStage("stage2", dependencies=["stage3"]))
+        pipeline.add_stage(_StubStage("stage3"))
 
         # Should complete without crash
         result = pipeline.execute_parallel()
@@ -563,7 +592,7 @@ class TestPipelineErrorHandling:
         """Test stage exceptions are caught in parallel mode."""
         pipeline = AnalysisPipeline()
         pipeline.add_stage(_FailingStage("failing"))
-        pipeline.add_stage(_MockStage("normal"))
+        pipeline.add_stage(_StubStage("normal"))
 
         result = pipeline.execute_parallel()
 

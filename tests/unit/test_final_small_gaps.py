@@ -16,10 +16,10 @@ import pytest
 
 import r2inspect.pipeline.stages_format as _sf_mod
 import r2inspect.registry.analyzer_registry as _ar_mod
-import r2inspect.utils.analyzer_runner as _arn_mod
+import r2inspect.adapters.analyzer_runner as _arn_mod
 from r2inspect.config import Config
 from r2inspect.config_store import ConfigStore
-from r2inspect.core.inspector_helpers import InspectorExecutionMixin
+from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.error_handling.policies import ErrorHandlingStrategy, ErrorPolicy
 from r2inspect.error_handling.unified_handler import handle_errors
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
@@ -33,8 +33,8 @@ from r2inspect.modules.simhash_analyzer import SimHashAnalyzer
 from r2inspect.modules.string_analyzer import StringAnalyzer
 from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage
 from r2inspect.registry.default_registry import create_default_registry
-from r2inspect.utils.analyzer_runner import run_analyzer_on_file
-from r2inspect.utils.memory_manager import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
+from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
+from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
 
 # ---------------------------------------------------------------------------
 # 1. utils/memory_manager.py - lines 116, 120-122, 184-185, 356-363
@@ -329,6 +329,50 @@ def test_format_analysis_stage_skips_missing_analyzer_class():
     assert pe_info == {}
 
 
+def test_format_analysis_stage_optional_analyzer_failure_keeps_base_pe_info():
+    """Optional PE analyzers should not abort the base PE analysis result."""
+    from r2inspect.pipeline.stages_format import FormatAnalysisStage
+
+    class _PEAnalyzer:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        def analyze(self) -> dict[str, Any]:
+            return {"machine": "x86"}
+
+    class _ExplodingAnalyzer:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        def analyze(self) -> dict[str, Any]:
+            raise RuntimeError("boom")
+
+    class _Registry:
+        def get_analyzer_class(self, name: str):
+            mapping = {
+                "pe_analyzer": _PEAnalyzer,
+                "authenticode": _ExplodingAnalyzer,
+            }
+            return mapping.get(name)
+
+    class _Config:
+        analyze_authenticode = True
+        analyze_overlay = False
+        analyze_resources = False
+        analyze_mitigations = False
+
+    stage = FormatAnalysisStage(
+        registry=_Registry(),
+        adapter=_NullAdapter(),
+        config=_Config(),
+        filename="/tmp/_dummy",
+    )
+    context = {"metadata": {"file_format": "PE"}, "results": {}}
+    result = stage._execute(context)
+    assert result["pe_info"]["machine"] == "x86"
+    assert "authenticode" not in result["pe_info"]
+
+
 # ---------------------------------------------------------------------------
 # 5. modules/elf_analyzer.py - lines 121-122, 176-179, 239-240
 # ---------------------------------------------------------------------------
@@ -431,7 +475,7 @@ def test_rich_header_extraction_exception_returns_none():
 
 
 # ---------------------------------------------------------------------------
-# 7. utils/analyzer_runner.py - lines 27-31
+# 7. adapters/analyzer_runner.py - lines 20-24
 # ---------------------------------------------------------------------------
 
 
@@ -465,7 +509,8 @@ def test_analyzer_runner_calls_analyze_method():
     old = _arn_mod.open_r2_adapter
     _arn_mod.open_r2_adapter = _fake_open_r2_adapter
     try:
-        result = run_analyzer_on_file(_AnalyzerFactory, "/tmp/_dummy")
+        with tempfile.NamedTemporaryFile() as handle:
+            result = run_analyzer_on_file(_AnalyzerFactory, handle.name)
     finally:
         _arn_mod.open_r2_adapter = old
     assert result == {"ok": True}

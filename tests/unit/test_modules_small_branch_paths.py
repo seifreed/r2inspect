@@ -34,6 +34,7 @@ from r2inspect.modules.string_classification import classify_string_type
 # domain_helpers.py
 # ---------------------------------------------------------------------------
 
+
 def test_shannon_entropy_empty_bytes_returns_zero() -> None:
     """shannon_entropy returns 0.0 for empty bytes."""
     assert shannon_entropy(b"") == 0.0
@@ -75,8 +76,10 @@ def test_normalize_section_name_returns_empty_for_none() -> None:
 # packer_helpers.py
 # ---------------------------------------------------------------------------
 
+
 def test_calculate_section_entropy_returns_zero_for_zero_size() -> None:
     """calculate_section_entropy returns 0.0 when section size is 0."""
+
     def never_called(addr, size):
         raise AssertionError("should not be called")
 
@@ -86,6 +89,7 @@ def test_calculate_section_entropy_returns_zero_for_zero_size() -> None:
 
 def test_calculate_section_entropy_returns_zero_on_exception() -> None:
     """calculate_section_entropy returns 0.0 when read_bytes_fn raises."""
+
     def failing_reader(addr, size):
         raise OSError("read error")
 
@@ -95,6 +99,7 @@ def test_calculate_section_entropy_returns_zero_on_exception() -> None:
 
 def test_calculate_section_entropy_too_large_size_returns_zero() -> None:
     """calculate_section_entropy returns 0.0 when section size exceeds 10MB."""
+
     def never_called(addr, size):
         raise AssertionError("should not be called")
 
@@ -105,6 +110,7 @@ def test_calculate_section_entropy_too_large_size_returns_zero() -> None:
 # ---------------------------------------------------------------------------
 # anti_analysis_helpers.py
 # ---------------------------------------------------------------------------
+
 
 def test_detect_obfuscation_triggers_with_high_jump_count() -> None:
     """detect_obfuscation detects code obfuscation when jmp count is high."""
@@ -123,6 +129,7 @@ def test_detect_obfuscation_triggers_with_high_jump_count() -> None:
 
 def test_detect_self_modifying_triggers_with_cs_modification() -> None:
     """detect_self_modifying returns technique when code segment modification found."""
+
     def cmd_fn(pattern):
         return "0x1000: mov cs:something"
 
@@ -133,6 +140,7 @@ def test_detect_self_modifying_triggers_with_cs_modification() -> None:
 
 def test_detect_api_hashing_triggers_with_hash_string() -> None:
     """detect_api_hashing returns technique when hash patterns found."""
+
     def cmd_fn(pattern):
         return "0x2000: hash_function"
 
@@ -143,6 +151,7 @@ def test_detect_api_hashing_triggers_with_hash_string() -> None:
 
 def test_detect_environment_checks_adds_check_on_output() -> None:
     """detect_environment_checks appends a check when command output is non-empty."""
+
     def cmd_fn(command):
         return "0x3000: cpuid"
 
@@ -155,6 +164,7 @@ def test_detect_environment_checks_adds_check_on_output() -> None:
 # ---------------------------------------------------------------------------
 # exploit_mitigation_rules.py
 # ---------------------------------------------------------------------------
+
 
 def test_generate_recommendations_aslr_enabled_no_high_entropy_adds_rec() -> None:
     """generate_recommendations adds high entropy ASLR rec when ASLR on but no high entropy."""
@@ -192,14 +202,45 @@ def test_generate_recommendations_32bit_no_safe_seh_adds_rec() -> None:
     assert any(r["mitigation"] == "SafeSEH" for r in recs)
 
 
+def test_generate_recommendations_when_multiple_mitigations_disabled() -> None:
+    result = {
+        "mitigations": {
+            "ASLR": {"enabled": False, "high_entropy": False},
+            "DEP": {"enabled": False},
+            "CFG": {"enabled": False},
+            "Integrity": {"enabled": False},
+            "StackCookies": {"enabled": False},
+            "SafeSEH": {"enabled": True},
+            "Authenticode": {"enabled": False},
+        },
+        "pe_info": {"is_64bit": True},
+    }
+
+    recs = generate_recommendations(result)
+    mitigations = {item["mitigation"] for item in recs}
+    assert "ASLR" in mitigations
+    assert "DEP/NX" in mitigations
+    assert "Control Flow Guard" in mitigations
+    assert "Digital signature" in mitigations
+    assert "Stack Cookies" in mitigations
+    assert "Code Signing" in mitigations
+
+
 # ---------------------------------------------------------------------------
 # pe_analyzer.py
 # ---------------------------------------------------------------------------
+
 
 def test_pe_analyzer_supports_format_returns_true_for_pe() -> None:
     """PEAnalyzer.supports_format returns True for PE format."""
     analyzer = PEAnalyzer(adapter=None)
     assert analyzer.supports_format("PE") is True
+
+
+def test_pe_analyzer_category_and_description() -> None:
+    analyzer = PEAnalyzer(adapter=None)
+    assert analyzer.get_category() == "format"
+    assert "PE" in analyzer.get_description()
 
 
 def test_pe_analyzer_supports_format_returns_false_for_elf() -> None:
@@ -216,9 +257,47 @@ def test_pe_analyzer_determine_pe_format_delegates() -> None:
     assert isinstance(result, str)
 
 
+class _PEAnalyzerAdapter:
+    def get_file_info(self) -> dict[str, dict[str, object]]:
+        return {
+            "bin": {
+                "arch": "x86",
+                "machine": "i386",
+                "bits": 32,
+                "endian": "little",
+                "subsys": "windows",
+                "format": "pe32",
+            }
+        }
+
+    def get_imports(self) -> list[dict[str, str]]:
+        return [{"libname": "KERNEL32.dll", "name": "CreateFileW"}]
+
+    def get_resources_info(self) -> list[dict[str, object]]:
+        return []
+
+    def get_pe_version_info_text(self) -> str:
+        return "ProductVersion: 1.0.0.0"
+
+
+def test_pe_analyzer_analyze_runs_full_path() -> None:
+    analyzer = PEAnalyzer(adapter=_PEAnalyzerAdapter())
+    result = analyzer.analyze()
+    assert result["format"] == "PE"
+    assert isinstance(result["security_features"], dict)
+    assert isinstance(result["imphash"], str)
+
+
+def test_pe_analyzer_get_version_info_delegates() -> None:
+    analyzer = PEAnalyzer(adapter=_PEAnalyzerAdapter())
+    version_info = analyzer.get_version_info()
+    assert isinstance(version_info, dict)
+
+
 # ---------------------------------------------------------------------------
 # search_helpers.py
 # ---------------------------------------------------------------------------
+
 
 def test_search_text_returns_empty_string_when_adapter_is_none() -> None:
     """search_text returns empty string when adapter is None."""
@@ -254,9 +333,30 @@ def test_search_hex_delegates_to_adapter() -> None:
     assert result == "hex:deadbeef"
 
 
+class _MockLikeSearchAdapter:
+    __module__ = "unittest.mock"
+
+    def search_text(self, pattern: str) -> str:
+        return f"found:{pattern}"
+
+    def search_hex(self, pattern: str) -> str:
+        return f"hex:{pattern}"
+
+
+def test_search_text_returns_empty_for_mock_like_adapter() -> None:
+    adapter = _MockLikeSearchAdapter()
+    assert search_text(adapter, None, "test") == ""
+
+
+def test_search_hex_returns_empty_for_mock_like_adapter() -> None:
+    adapter = _MockLikeSearchAdapter()
+    assert search_hex(adapter, None, "deadbeef") == ""
+
+
 # ---------------------------------------------------------------------------
 # string_classification.py
 # ---------------------------------------------------------------------------
+
 
 def test_classify_string_type_url_pattern() -> None:
     """classify_string_type returns 'url' for http:// strings."""
@@ -280,10 +380,11 @@ def test_classify_string_type_returns_none_for_plain_string() -> None:
 # pe_resources.py - exception paths
 # ---------------------------------------------------------------------------
 
+
 def test_get_resource_info_returns_empty_list_on_exception() -> None:
     """get_resource_info returns empty list when adapter raises an exception."""
     from r2inspect.modules.pe_resources import get_resource_info
-    from r2inspect.utils.logger import get_logger
+    from r2inspect.infrastructure.logging import get_logger
 
     class BrokenAdapter:
         def get_resources_info(self):
@@ -297,7 +398,7 @@ def test_get_resource_info_returns_empty_list_on_exception() -> None:
 def test_get_resource_info_returns_data_when_adapter_works() -> None:
     """get_resource_info extends resources when adapter returns resource data."""
     from r2inspect.modules.pe_resources import get_resource_info
-    from r2inspect.utils.logger import get_logger
+    from r2inspect.infrastructure.logging import get_logger
 
     class GoodAdapter:
         def get_resources_info(self):
@@ -311,7 +412,7 @@ def test_get_resource_info_returns_data_when_adapter_works() -> None:
 def test_get_version_info_returns_empty_dict_on_exception() -> None:
     """get_version_info returns empty dict when adapter raises an exception."""
     from r2inspect.modules.pe_resources import get_version_info
-    from r2inspect.utils.logger import get_logger
+    from r2inspect.infrastructure.logging import get_logger
 
     class BrokenAdapter:
         def get_pe_version_info_text(self):
@@ -325,7 +426,7 @@ def test_get_version_info_returns_empty_dict_on_exception() -> None:
 def test_get_version_info_returns_data_when_adapter_works() -> None:
     """get_version_info parses version info when adapter returns text."""
     from r2inspect.modules.pe_resources import get_version_info
-    from r2inspect.utils.logger import get_logger
+    from r2inspect.infrastructure.logging import get_logger
 
     class GoodAdapter:
         def get_pe_version_info_text(self):
@@ -339,6 +440,7 @@ def test_get_version_info_returns_data_when_adapter_works() -> None:
 # ---------------------------------------------------------------------------
 # authenticode_analyzer.py - exception paths
 # ---------------------------------------------------------------------------
+
 
 def test_extract_cn_entry_returns_none_for_out_of_bounds() -> None:
     """_extract_cn_entry returns None when pos+10 >= len(pkcs7_data)."""

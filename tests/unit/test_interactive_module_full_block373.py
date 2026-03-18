@@ -3,7 +3,7 @@ from __future__ import annotations
 import builtins
 
 from r2inspect.cli import interactive
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 class FakeInspector:

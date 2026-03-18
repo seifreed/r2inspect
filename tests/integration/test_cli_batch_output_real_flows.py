@@ -11,7 +11,7 @@ from r2inspect.config import Config
 
 pytestmark = [pytest.mark.requires_r2, pytest.mark.integration]
 
-FIXTURE_DIR = Path("samples/fixtures")
+FIXTURE_DIR = Path(__file__).resolve().parents[2] / "samples" / "fixtures"
 
 
 def _prepare_batch_dir(tmp_path: Path) -> Path:

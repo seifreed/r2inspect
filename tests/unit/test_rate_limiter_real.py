@@ -1,9 +1,10 @@
 """Comprehensive tests for rate limiter - 0% coverage target"""
+
 import time
 import threading
 import pytest
 
-from r2inspect.utils.rate_limiter import (
+from r2inspect.infrastructure.rate_limiter import (
     TokenBucket,
     AdaptiveRateLimiter,
     BatchRateLimiter,
@@ -45,11 +46,11 @@ def test_token_bucket_acquire_timeout():
 def test_token_bucket_acquire_no_timeout():
     bucket = TokenBucket(capacity=1, refill_rate=100.0)
     bucket.acquire(tokens=1)
-    
+
     def delayed_acquire():
         time.sleep(0.02)
         bucket.acquire(tokens=1, timeout=None)
-    
+
     thread = threading.Thread(target=delayed_acquire)
     thread.daemon = True
     thread.start()
@@ -110,12 +111,12 @@ def test_adaptive_rate_limiter_adjust_rate_high_error():
     # Record many errors
     for _ in range(10):
         limiter.record_error()
-    
+
     original_rate = limiter.current_rate
     time.sleep(0.1)
     for _ in range(5):
         limiter.record_error()
-    
+
     # Rate should decrease
     assert limiter.current_rate <= original_rate
 
@@ -125,7 +126,7 @@ def test_adaptive_rate_limiter_adjust_rate_low_error():
     # Record many successes
     for _ in range(20):
         limiter.record_success()
-    
+
     # Rate might increase (if enough time passed)
     assert limiter.current_rate >= limiter.base_rate * 0.8
 
@@ -136,7 +137,6 @@ def test_adaptive_rate_limiter_check_system_load():
         memory_threshold=0.8,
         cpu_threshold=0.9,
     )
-    original_rate = limiter.current_rate
     limiter._check_system_load()
     # Rate may change based on system state
 
@@ -145,7 +145,7 @@ def test_adaptive_rate_limiter_get_stats():
     limiter = AdaptiveRateLimiter(base_rate=5.0)
     limiter.record_success()
     limiter.record_error()
-    
+
     stats = limiter.get_stats()
     assert "current_rate" in stats
     assert "base_rate" in stats
@@ -173,7 +173,7 @@ def test_adaptive_rate_limiter_moderate_error_rate():
         limiter.record_success()
     for _ in range(3):
         limiter.record_error()
-    
+
     original_rate = limiter.current_rate
     limiter._adjust_rate()
     # Should reduce rate
@@ -192,7 +192,6 @@ def test_adaptive_rate_limiter_system_load_exception():
     limiter = AdaptiveRateLimiter(base_rate=5.0)
     # Force system check
     limiter.last_system_check = time.time() - 10.0
-    original_rate = limiter.current_rate
     limiter._check_system_load()
     # Should handle any errors gracefully
 
@@ -253,7 +252,7 @@ def test_batch_rate_limiter_release_success():
     limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=100.0, enable_adaptive=True)
     limiter.acquire(timeout=0.1)
     limiter.release_success()
-    
+
     stats = limiter.get_stats()
     assert stats["files_processed"] == 1
     assert stats["files_failed"] == 0
@@ -263,7 +262,7 @@ def test_batch_rate_limiter_release_error():
     limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=100.0, enable_adaptive=True)
     limiter.acquire(timeout=0.1)
     limiter.release_error("timeout")
-    
+
     stats = limiter.get_stats()
     assert stats["files_processed"] == 0
     assert stats["files_failed"] == 1
@@ -273,7 +272,7 @@ def test_batch_rate_limiter_get_stats():
     limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=10.0, enable_adaptive=True)
     limiter.acquire(timeout=0.1)
     limiter.release_success()
-    
+
     stats = limiter.get_stats()
     assert "files_processed" in stats
     assert "files_failed" in stats
@@ -294,21 +293,21 @@ def test_batch_rate_limiter_adaptive_stats():
     limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=10.0, enable_adaptive=True)
     limiter.acquire(timeout=0.1)
     limiter.release_success()
-    
+
     stats = limiter.get_stats()
     assert "current_rate" in stats  # From AdaptiveRateLimiter
 
 
 def test_batch_rate_limiter_semaphore_timeout():
     limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=100.0)
-    
+
     # Acquire the only semaphore
     limiter.semaphore.acquire(blocking=False)
-    
+
     # Try to acquire should timeout
     result = limiter.acquire(timeout=0.05)
     assert result is False
-    
+
     # Release for cleanup
     limiter.semaphore.release()
 
@@ -320,11 +319,11 @@ def test_batch_rate_limiter_rate_limit_failure():
         burst_size=1,
         enable_adaptive=False,
     )
-    
+
     # First acquire should work (burst allows it)
     assert limiter.acquire(timeout=0.1) is True
     limiter.release_success()
-    
+
     # Second acquire should fail due to rate limit
     result = limiter.acquire(timeout=0.05)
     if not result:
@@ -344,7 +343,7 @@ def test_batch_rate_limiter_acquire_exception():
 
     try:
         limiter.acquire(timeout=0.1)
-        assert False, "Should have raised"
+        pytest.fail("Should have raised")
     except RuntimeError:
         pass
 
@@ -357,13 +356,13 @@ def test_batch_rate_limiter_wait_time_tracking():
         rate_per_second=10.0,
         enable_adaptive=False,
     )
-    
+
     # First acquire should be fast
     start = time.time()
     limiter.acquire(timeout=1.0)
     first_wait = time.time() - start
     limiter.release_success()
-    
+
     stats = limiter.get_stats()
     assert stats["max_wait_time"] >= first_wait - 0.01
 
@@ -379,41 +378,41 @@ def test_cleanup_memory():
 
 def test_cleanup_memory_psutil_unavailable():
     # Test graceful handling if psutil fails
-    result = cleanup_memory()
+    cleanup_memory()
     # Should not crash
 
 
 def test_token_bucket_concurrent_access():
     bucket = TokenBucket(capacity=10, refill_rate=100.0)
     results = []
-    
+
     def acquire_tokens():
         results.append(bucket.acquire(tokens=1, timeout=0.1))
-    
+
     threads = [threading.Thread(target=acquire_tokens) for _ in range(5)]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    
+
     # All should succeed
     assert all(results)
 
 
 def test_adaptive_rate_limiter_concurrent_record():
     limiter = AdaptiveRateLimiter(base_rate=5.0)
-    
+
     def record_ops():
         for _ in range(10):
             limiter.record_success()
             limiter.record_error()
-    
+
     threads = [threading.Thread(target=record_ops) for _ in range(3)]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    
+
     stats = limiter.get_stats()
     assert stats["recent_operations"] == 60
 
@@ -424,18 +423,18 @@ def test_batch_rate_limiter_concurrent_usage():
         rate_per_second=100.0,
         enable_adaptive=False,
     )
-    
+
     def process_file():
         if limiter.acquire(timeout=1.0):
             time.sleep(0.01)
             limiter.release_success()
-    
+
     threads = [threading.Thread(target=process_file) for _ in range(5)]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    
+
     stats = limiter.get_stats()
     assert stats["files_processed"] == 5
 
@@ -443,7 +442,7 @@ def test_batch_rate_limiter_concurrent_usage():
 def test_adaptive_rate_limiter_bucket_update_threshold():
     limiter = AdaptiveRateLimiter(base_rate=5.0)
     limiter.current_rate = 5.05  # Very close to bucket rate
-    
+
     # Should not update bucket if difference is small
     limiter.acquire_permit(timeout=0.1)
     # Bucket rate should remain close to original
@@ -457,7 +456,7 @@ def test_batch_rate_limiter_non_adaptive_release():
     )
     limiter.acquire(timeout=0.1)
     limiter.release_success()
-    
+
     # Should not call record_success on TokenBucket
     stats = limiter.get_stats()
     assert stats["files_processed"] == 1
@@ -465,14 +464,14 @@ def test_batch_rate_limiter_non_adaptive_release():
 
 def test_adaptive_rate_limiter_recent_window():
     limiter = AdaptiveRateLimiter(base_rate=5.0)
-    
+
     # Add old events
     limiter.error_window.append(time.time() - 120)
     limiter.success_window.append(time.time() - 120)
-    
+
     # Add recent events
     limiter.record_success()
-    
+
     stats = limiter.get_stats()
     # Recent operations should only count events within window
     assert stats["recent_operations"] <= 2
@@ -521,7 +520,7 @@ def test_batch_rate_limiter_adaptive_error_propagation():
     limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=10.0, enable_adaptive=True)
     limiter.acquire(timeout=0.1)
     limiter.release_error("test_error")
-    
+
     # Error should be recorded in adaptive limiter
     assert isinstance(limiter.rate_limiter, AdaptiveRateLimiter)
     assert len(limiter.rate_limiter.error_window) == 1

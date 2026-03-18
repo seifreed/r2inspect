@@ -1,0 +1,297 @@
+[
+  {
+    "path": "r2inspect/utils/file_type.py",
+    "miss": 14,
+    "pct": 82.71604938271605
+  },
+  {
+    "path": "r2inspect/modules/ccbhash_analyzer.py",
+    "miss": 13,
+    "pct": 93.33333333333333
+  },
+  {
+    "path": "r2inspect/modules/simhash_analyzer.py",
+    "miss": 13,
+    "pct": 96.26436781609195
+  },
+  {
+    "path": "r2inspect/modules/pe_security.py",
+    "miss": 12,
+    "pct": 77.35849056603773
+  },
+  {
+    "path": "r2inspect/modules/string_analyzer.py",
+    "miss": 12,
+    "pct": 88.3495145631068
+  },
+  {
+    "path": "r2inspect/modules/import_domain.py",
+    "miss": 12,
+    "pct": 88.46153846153847
+  },
+  {
+    "path": "r2inspect/pipeline/stages_format.py",
+    "miss": 12,
+    "pct": 93.54838709677419
+  },
+  {
+    "path": "r2inspect/config.py",
+    "miss": 10,
+    "pct": 89.1304347826087
+  },
+  {
+    "path": "r2inspect/registry/analyzer_registry.py",
+    "miss": 10,
+    "pct": 92.95774647887323
+  },
+  {
+    "path": "r2inspect/modules/pe_imports.py",
+    "miss": 9,
+    "pct": 85.0
+  },
+  {
+    "path": "r2inspect/utils/magic_detector.py",
+    "miss": 8,
+    "pct": 96.27906976744185
+  },
+  {
+    "path": "r2inspect/modules/packer_helpers.py",
+    "miss": 7,
+    "pct": 92.13483146067416
+  },
+  {
+    "path": "r2inspect/cli/display_sections_helpers.py",
+    "miss": 7,
+    "pct": 94.0677966101695
+  },
+  {
+    "path": "r2inspect/modules/rich_header_search.py",
+    "miss": 7,
+    "pct": 94.61538461538461
+  },
+  {
+    "path": "r2inspect/modules/binlex_analyzer.py",
+    "miss": 7,
+    "pct": 97.50889679715303
+  },
+  {
+    "path": "r2inspect/registry/entry_points.py",
+    "miss": 6,
+    "pct": 88.67924528301887
+  },
+  {
+    "path": "r2inspect/cli/batch_workers.py",
+    "miss": 6,
+    "pct": 91.17647058823529
+  },
+  {
+    "path": "r2inspect/modules/elf_domain.py",
+    "miss": 6,
+    "pct": 91.89189189189189
+  },
+  {
+    "path": "r2inspect/schemas/format.py",
+    "miss": 6,
+    "pct": 95.16129032258064
+  },
+  {
+    "path": "r2inspect/utils/rate_limiter.py",
+    "miss": 6,
+    "pct": 96.3855421686747
+  },
+  {
+    "path": "r2inspect/modules/crypto_analyzer.py",
+    "miss": 6,
+    "pct": 96.61016949152543
+  },
+  {
+    "path": "r2inspect/modules/bindiff_analyzer.py",
+    "miss": 6,
+    "pct": 97.11538461538461
+  },
+  {
+    "path": "r2inspect/modules/overlay_analyzer.py",
+    "miss": 6,
+    "pct": 97.52066115702479
+  },
+  {
+    "path": "r2inspect/modules/domain_helpers.py",
+    "miss": 5,
+    "pct": 86.11111111111111
+  },
+  {
+    "path": "r2inspect/modules/crypto_domain.py",
+    "miss": 5,
+    "pct": 87.8048780487805
+  },
+  {
+    "path": "r2inspect/modules/pe_analyzer.py",
+    "miss": 5,
+    "pct": 88.88888888888889
+  },
+  {
+    "path": "r2inspect/pipeline/stages_metadata.py",
+    "miss": 5,
+    "pct": 91.80327868852459
+  },
+  {
+    "path": "r2inspect/utils/memory_manager.py",
+    "miss": 5,
+    "pct": 96.95121951219512
+  },
+  {
+    "path": "r2inspect/modules/authenticode_analyzer.py",
+    "miss": 5,
+    "pct": 97.25274725274726
+  },
+  {
+    "path": "r2inspect/cli/batch_processing.py",
+    "miss": 5,
+    "pct": 98.14814814814815
+  },
+  {
+    "path": "r2inspect/schemas/base.py",
+    "miss": 4,
+    "pct": 90.2439024390244
+  },
+  {
+    "path": "r2inspect/modules/binbloom_analysis.py",
+    "miss": 4,
+    "pct": 90.69767441860465
+  },
+  {
+    "path": "r2inspect/modules/anti_analysis_helpers.py",
+    "miss": 4,
+    "pct": 93.75
+  },
+  {
+    "path": "r2inspect/lazy_loader.py",
+    "miss": 4,
+    "pct": 96.92307692307692
+  },
+  {
+    "path": "r2inspect/modules/elf_analyzer.py",
+    "miss": 4,
+    "pct": 97.29729729729729
+  },
+  {
+    "path": "r2inspect/modules/binbloom_analyzer.py",
+    "miss": 4,
+    "pct": 98.82352941176471
+  },
+  {
+    "path": "r2inspect/config_store.py",
+    "miss": 3,
+    "pct": 87.5
+  },
+  {
+    "path": "r2inspect/modules/elf_security_domain.py",
+    "miss": 3,
+    "pct": 88.46153846153847
+  },
+  {
+    "path": "r2inspect/modules/macho_security_domain.py",
+    "miss": 3,
+    "pct": 90.0
+  },
+  {
+    "path": "r2inspect/application/batch_stats.py",
+    "miss": 3,
+    "pct": 90.9090909090909
+  },
+  {
+    "path": "r2inspect/registry/metadata_extraction.py",
+    "miss": 3,
+    "pct": 92.6829268292683
+  },
+  {
+    "path": "r2inspect/pipeline/stages_hashing.py",
+    "miss": 3,
+    "pct": 93.61702127659575
+  },
+  {
+    "path": "r2inspect/schemas/converters.py",
+    "miss": 3,
+    "pct": 95.94594594594595
+  },
+  {
+    "path": "r2inspect/application/batch_discovery.py",
+    "miss": 3,
+    "pct": 96.15384615384616
+  },
+  {
+    "path": "r2inspect/modules/section_analyzer.py",
+    "miss": 3,
+    "pct": 98.88888888888889
+  },
+  {
+    "path": "r2inspect/modules/search_helpers.py",
+    "miss": 2,
+    "pct": 88.88888888888889
+  },
+  {
+    "path": "r2inspect/modules/pe_resources.py",
+    "miss": 2,
+    "pct": 91.66666666666667
+  },
+  {
+    "path": "r2inspect/modules/function_domain.py",
+    "miss": 2,
+    "pct": 93.10344827586206
+  },
+  {
+    "path": "r2inspect/utils/hashing.py",
+    "miss": 2,
+    "pct": 96.92307692307692
+  },
+  {
+    "path": "r2inspect/cli/commands/base.py",
+    "miss": 2,
+    "pct": 97.26027397260275
+  },
+  {
+    "path": "r2inspect/infrastructure/r2_session.py",
+    "miss": 2,
+    "pct": 99.07407407407408
+  },
+  {
+    "path": "r2inspect/modules/yara_analyzer.py",
+    "miss": 2,
+    "pct": 99.2
+  },
+  {
+    "path": "r2inspect/error_handling/stats.py",
+    "miss": 1,
+    "pct": 87.5
+  },
+  {
+    "path": "r2inspect/modules/string_classification.py",
+    "miss": 1,
+    "pct": 95.83333333333333
+  },
+  {
+    "path": "r2inspect/modules/exploit_mitigation_rules.py",
+    "miss": 1,
+    "pct": 96.0
+  },
+  {
+    "path": "r2inspect/schemas/hashing.py",
+    "miss": 1,
+    "pct": 97.05882352941177
+  },
+  {
+    "path": "r2inspect/cli/commands/analysis_output.py",
+    "miss": 1,
+    "pct": 98.0
+  },
+  {
+    "path": "r2inspect/cli/display_sections_hashing.py",
+    "miss": 1,
+    "pct": 99.3006993006993
+  },
+  {
+    "path": "r2inspect/modules/compiler_domain.py",
+    "miss": 1,
+    "pct": 99.35897435897436
+  }
+]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.utils import r2_helpers
+import r2inspect.infrastructure.r2_helpers as r2_helpers
 
 
 class _TextR2:

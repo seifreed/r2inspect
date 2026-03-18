@@ -9,7 +9,7 @@ from r2inspect.cli.analysis_runner import (
     setup_analysis_options,
     setup_single_file_output,
 )
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 def test_setup_single_file_output(tmp_path):

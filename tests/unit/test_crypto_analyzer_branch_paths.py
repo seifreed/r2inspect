@@ -138,6 +138,17 @@ class DictValueAdapter(EmptyAdapter):
         return {"name": "CryptEncrypt", "libname": "advapi32.dll", "plt": 0x4000}
 
 
+class InvalidHexAdapter(EmptyAdapter):
+    """Adapter whose read_bytes() result has a non-hex `.hex()` representation."""
+
+    class _BadHexBytes:
+        def hex(self) -> str:
+            return "ZZ_NOT_HEX"
+
+    def read_bytes(self, vaddr: int, size: int):
+        return self._BadHexBytes()
+
+
 # ---------------------------------------------------------------------------
 # detect() - exception path (lines 48-50)
 # ---------------------------------------------------------------------------
@@ -263,6 +274,13 @@ def test_calculate_section_entropy_with_data():
     result = analyzer._calculate_section_entropy({"vaddr": 0x1000, "size": 16})
     assert isinstance(result, float)
     assert result >= 0.0
+
+
+def test_calculate_section_entropy_invalid_hex_returns_zero():
+    """bytes.fromhex ValueError branch returns 0.0 (lines 257-258)."""
+    analyzer = CryptoAnalyzer(InvalidHexAdapter())
+    result = analyzer._calculate_section_entropy({"vaddr": 0x1000, "size": 16})
+    assert result == 0.0
 
 
 def test_calculate_section_entropy_exception_path():

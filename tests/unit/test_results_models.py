@@ -139,9 +139,7 @@ def test_import_info_to_dict():
 
 
 def test_export_info_creation():
-    export_info = ExportInfo(
-        name="DllMain", address="0x10001000", ordinal=1, size=256
-    )
+    export_info = ExportInfo(name="DllMain", address="0x10001000", ordinal=1, size=256)
     assert export_info.name == "DllMain"
     assert export_info.ordinal == 1
 
@@ -347,9 +345,7 @@ def test_crypto_no_crypto():
 
 
 def test_indicator_creation():
-    indicator = Indicator(
-        type="Packer", description="UPX detected", severity="High"
-    )
+    indicator = Indicator(type="Packer", description="UPX detected", severity="High")
     assert indicator.type == "Packer"
     assert indicator.severity == "High"
 
@@ -376,9 +372,7 @@ def test_analysis_result_creation():
 
 def test_analysis_result_with_data():
     file_info = FileInfo(name="test.exe", size=1024)
-    result = AnalysisResult(
-        file_info=file_info, execution_time=1.5, error=None
-    )
+    result = AnalysisResult(file_info=file_info, execution_time=1.5, error=None)
     assert result.file_info.name == "test.exe"
     assert result.execution_time == 1.5
 
@@ -446,9 +440,7 @@ def test_analysis_result_get_high_severity_indicators():
     high_indicator = Indicator(type="Packer", severity="High")
     critical_indicator = Indicator(type="Anti-Debug", severity="Critical")
     low_indicator = Indicator(type="Test", severity="Low")
-    result = AnalysisResult(
-        indicators=[high_indicator, critical_indicator, low_indicator]
-    )
+    result = AnalysisResult(indicators=[high_indicator, critical_indicator, low_indicator])
     high_severity = result.get_high_severity_indicators()
     assert len(high_severity) == 2
     assert high_indicator in high_severity

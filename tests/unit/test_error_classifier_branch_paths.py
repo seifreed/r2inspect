@@ -1,4 +1,5 @@
 """Branch-path tests for r2inspect/error_handling/classifier.py."""
+
 from __future__ import annotations
 
 import threading
@@ -160,6 +161,7 @@ def test_classify_uses_direct_mapping_for_module_not_found():
 
 def test_classify_falls_back_to_inheritance_for_unknown():
     """Lines 118-120: unknown exception type uses _classify_by_inheritance."""
+
     class WeirdError(Exception):
         pass
 
@@ -170,6 +172,7 @@ def test_classify_falls_back_to_inheritance_for_unknown():
 
 def test_classify_falls_back_to_inheritance_for_r2pipe_message():
     """Lines 118-120: r2pipe string in message -> R2PIPE category."""
+
     class SomeError(Exception):
         pass
 
@@ -196,6 +199,7 @@ def test_classify_with_none_context_uses_empty_dict():
 
 def test_classify_by_inheritance_subclass_of_os_error():
     """Lines 143-148: subclass of mapped exception type is recognized."""
+
     class CustomOSError(OSError):
         pass
 
@@ -213,6 +217,7 @@ def test_classify_by_inheritance_subclass_of_import_error():
 
 def test_classify_by_inheritance_r2pipe_in_type_name():
     """Lines 149-150: r2pipe in exception type name -> R2PIPE."""
+
     class r2pipeConnectionError(Exception):
         pass
 
@@ -276,6 +281,7 @@ def test_adjust_downgrades_memory_critical_for_large_file():
 
 def test_adjust_r2pipe_initialization_phase_becomes_critical():
     """Lines 182-183: R2PIPE error during initialization becomes CRITICAL."""
+
     class R2Error(Exception):
         pass
 
@@ -299,14 +305,18 @@ def test_is_recoverable_critical_is_false():
 def test_is_recoverable_memory_error_cleanup_available_true():
     """Lines 198-199: MemoryError recoverable when memory_cleanup_available=True."""
     exc = MemoryError("oom")
-    info = ErrorClassifier.classify(exc, context={"file_size_mb": 200, "memory_cleanup_available": True})
+    info = ErrorClassifier.classify(
+        exc, context={"file_size_mb": 200, "memory_cleanup_available": True}
+    )
     assert info.recoverable is True
 
 
 def test_is_recoverable_memory_error_cleanup_available_false():
     """Lines 198-199: MemoryError not recoverable when memory_cleanup_available=False."""
     exc = MemoryError("oom")
-    info = ErrorClassifier.classify(exc, context={"file_size_mb": 200, "memory_cleanup_available": False})
+    info = ErrorClassifier.classify(
+        exc, context={"file_size_mb": 200, "memory_cleanup_available": False}
+    )
     assert info.recoverable is False
 
 
@@ -354,7 +364,9 @@ def test_suggest_action_memory_non_critical():
     """Lines 221-222: non-critical memory error suggests GC."""
     exc = MemoryError("oom")
     info = ErrorClassifier.classify(exc, context={"file_size_mb": 200})
-    assert "garbage" in info.suggested_action.lower() or "collection" in info.suggested_action.lower()
+    assert (
+        "garbage" in info.suggested_action.lower() or "collection" in info.suggested_action.lower()
+    )
 
 
 def test_suggest_action_file_access_file_not_found():
@@ -368,7 +380,10 @@ def test_suggest_action_file_access_permission_error():
     """Lines 227-228: PermissionError suggests checking permissions."""
     exc = PermissionError("denied")
     info = ErrorClassifier.classify(exc)
-    assert "permission" in info.suggested_action.lower() or "privilege" in info.suggested_action.lower()
+    assert (
+        "permission" in info.suggested_action.lower()
+        or "privilege" in info.suggested_action.lower()
+    )
 
 
 def test_suggest_action_file_access_other_falls_to_default():
@@ -380,6 +395,7 @@ def test_suggest_action_file_access_other_falls_to_default():
 
 def test_suggest_action_r2pipe():
     """Lines 230-231: R2PIPE category suggests retry."""
+
     class R2Error(Exception):
         pass
 
@@ -404,6 +420,7 @@ def test_suggest_action_input_validation():
 
 def test_suggest_action_unknown_category_returns_default():
     """Line 239: UNKNOWN category returns the default suggestion."""
+
     class WeirdError(Exception):
         pass
 
@@ -542,6 +559,7 @@ def test_error_recovery_manager_thread_safe_concurrent_access():
 
 def test_error_handler_success_path_returns_value():
     """Line 346: function returns normally."""
+
     @error_handler()
     def func():
         return 42
@@ -551,6 +569,7 @@ def test_error_handler_success_path_returns_value():
 
 def test_error_handler_catches_exception_and_returns_fallback():
     """Lines 348-371: exception is caught and fallback is returned."""
+
     @error_handler(fallback_result="fb")
     def func():
         raise ValueError("bad")
@@ -560,7 +579,7 @@ def test_error_handler_catches_exception_and_returns_fallback():
 
 def test_error_handler_category_override():
     """Lines 360-361: specified category overrides classified category."""
-    results = []
+    _results = []
 
     @error_handler(category=ErrorCategory.ANALYSIS, fallback_result=None)
     def func():
@@ -573,6 +592,7 @@ def test_error_handler_category_override():
 
 def test_error_handler_severity_override():
     """Lines 362-363: specified severity overrides classified severity."""
+
     @error_handler(severity=ErrorSeverity.LOW, fallback_result="done")
     def func():
         raise ValueError("mild problem")
@@ -582,6 +602,7 @@ def test_error_handler_severity_override():
 
 def test_error_handler_reraises_critical_non_recoverable():
     """Lines 372-374: non-recoverable CRITICAL error is re-raised."""
+
     @error_handler(category=ErrorCategory.MEMORY, severity=ErrorSeverity.CRITICAL)
     def func():
         raise MemoryError("OOM")
@@ -592,6 +613,7 @@ def test_error_handler_reraises_critical_non_recoverable():
 
 def test_error_handler_with_extra_context():
     """Lines 350-354: context is merged into func_context."""
+
     @error_handler(context={"phase": "test"}, fallback_result="ok")
     def func():
         raise ValueError("bad")
@@ -601,6 +623,7 @@ def test_error_handler_with_extra_context():
 
 def test_error_handler_preserves_function_name():
     """Lines 343: @functools.wraps preserves __name__."""
+
     @error_handler()
     def my_named_function():
         return "ok"
@@ -641,6 +664,7 @@ def test_safe_execute_with_keyword_args():
 
 def test_safe_execute_returns_fallback_on_error():
     """Lines 404-417: exception triggers fallback return."""
+
     def broken():
         raise ValueError("fail")
 
@@ -649,6 +673,7 @@ def test_safe_execute_returns_fallback_on_error():
 
 def test_safe_execute_with_context():
     """Lines 404-408: context dict is built from func info."""
+
     def broken():
         raise ValueError("fail")
 
@@ -760,4 +785,4 @@ def test_file_access_recovery_returns_none():
 # Import the global manager to verify strategy count
 # ---------------------------------------------------------------------------
 
-from r2inspect.error_handling.classifier import global_error_manager  # noqa: E402
+from r2inspect.error_handling.classifier import global_error_manager

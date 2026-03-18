@@ -236,9 +236,7 @@ def test_hashing_strategy_repr_representation(tmp_path: Path) -> None:
     test_file = tmp_path / "sample.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(
-        str(test_file), max_file_size=50000, min_file_size=5
-    )
+    strategy = TestHashingStrategy(str(test_file), max_file_size=50000, min_file_size=5)
     repr_str = repr(strategy)
 
     assert "TestHashingStrategy" in repr_str

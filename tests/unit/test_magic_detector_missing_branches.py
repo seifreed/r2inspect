@@ -10,7 +10,7 @@ import tempfile
 
 import pytest
 
-from r2inspect.utils.magic_detector import (
+from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
     detect_file_type,
     get_file_threat_level,
@@ -21,6 +21,7 @@ from r2inspect.utils.magic_detector import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _write_tmp(data: bytes) -> str:
     fd, path = tempfile.mkstemp()
@@ -47,8 +48,8 @@ def _make_pe(machine: int = 0x8664, pe_offset: int = 0x40) -> bytes:
 def _make_elf(elf_class: int, endian: int, machine: int) -> bytes:
     """Build a minimal ELF binary."""
     hdr = bytearray(b"\x7fELF")
-    hdr.append(elf_class)   # EI_CLASS: 1=32-bit, 2=64-bit
-    hdr.append(endian)      # EI_DATA:  1=LE, 2=BE
+    hdr.append(elf_class)  # EI_CLASS: 1=32-bit, 2=64-bit
+    hdr.append(endian)  # EI_DATA:  1=LE, 2=BE
     hdr.extend(b"\x00" * 12)
     if endian == 1:
         hdr.extend(struct.pack("<H", machine))
@@ -72,6 +73,7 @@ def _make_macho(magic_le: int, cpu_type: int, big_endian_cpu: bool = False) -> b
 # ---------------------------------------------------------------------------
 # Cache
 # ---------------------------------------------------------------------------
+
 
 def test_cache_hit_returns_same_dict():
     path = _write_tmp(b"\x7fELF\x02\x01\x00" + b"\x00" * 50)
@@ -100,6 +102,7 @@ def test_clear_cache_empties_all_entries():
 # Non-existent file
 # ---------------------------------------------------------------------------
 
+
 def test_nonexistent_file_returns_zero_confidence():
     detector = MagicByteDetector()
     result = detector.detect_file_type("/tmp/__no_such_file_r2inspect_test__.bin")
@@ -111,6 +114,7 @@ def test_nonexistent_file_returns_zero_confidence():
 # ---------------------------------------------------------------------------
 # PE validation branches (_validate_pe_format)
 # ---------------------------------------------------------------------------
+
 
 def test_pe_validation_header_too_short_gives_low_confidence():
     # MZ followed by fewer than 64 bytes total
@@ -153,6 +157,7 @@ def test_pe_validation_pe_header_beyond_read_buffer():
 # ---------------------------------------------------------------------------
 # DOCX validation branches (_validate_docx_format)
 # ---------------------------------------------------------------------------
+
 
 def test_docx_detection_multiple_office_indicators():
     content = b"PK\x03\x04" + b"\x00" * 50 + b"word/_rels/[Content_Types].xml" + b"\x00" * 500
@@ -216,6 +221,7 @@ def test_docx_validation_exception_path_returns_zero():
 # ---------------------------------------------------------------------------
 # ELF details (_analyze_elf_details)
 # ---------------------------------------------------------------------------
+
 
 def test_elf32_little_endian_x86():
     path = _write_tmp(_make_elf(1, 1, 0x03))
@@ -290,6 +296,7 @@ def test_analyze_elf_details_header_too_short():
 # ---------------------------------------------------------------------------
 # PE details (_analyze_pe_details)
 # ---------------------------------------------------------------------------
+
 
 def test_pe_details_x86():
     path = _write_tmp(_make_pe(machine=0x014C))
@@ -388,6 +395,7 @@ def test_pe_details_pe_offset_beyond_header():
 # Mach-O details (_analyze_macho_details)
 # ---------------------------------------------------------------------------
 
+
 def test_macho32_little_endian_x86():
     # File bytes \xce\xfa\xed\xfe → struct.unpack("<I") = 0xFEEDFACE → Big endian
     # File bytes \xfe\xed\xfa\xce → struct.unpack("<I") = 0xCEFAEDFE → Little endian
@@ -478,6 +486,7 @@ def test_analyze_macho_details_unknown_magic():
 # Fallback detection (_fallback_detection)
 # ---------------------------------------------------------------------------
 
+
 def test_fallback_exe_extension_marks_executable_and_threat():
     path = _write_tmp(b"\x00" * 32)
     exe_path = path + ".exe"
@@ -553,6 +562,7 @@ def test_fallback_elf_bytes_in_header_marks_threat():
 # Category and type helpers
 # ---------------------------------------------------------------------------
 
+
 def test_get_format_category_executables():
     d = MagicByteDetector()
     assert d._get_format_category("PE32") == "Executable"
@@ -619,8 +629,20 @@ def test_is_document_format():
 
 def test_is_potential_threat_known_formats():
     d = MagicByteDetector()
-    for fmt in ["PE32", "ELF32", "ELF64", "PDF", "DOC", "DOCX", "RTF",
-                "SWF", "JAVA_CLASS", "DEX", "UPX", "NSIS"]:
+    for fmt in [
+        "PE32",
+        "ELF32",
+        "ELF64",
+        "PDF",
+        "DOC",
+        "DOCX",
+        "RTF",
+        "SWF",
+        "JAVA_CLASS",
+        "DEX",
+        "UPX",
+        "NSIS",
+    ]:
         assert d._is_potential_threat(fmt) is True
 
 
@@ -634,6 +656,7 @@ def test_is_potential_threat_safe_formats():
 # ---------------------------------------------------------------------------
 # Module-level functions
 # ---------------------------------------------------------------------------
+
 
 def test_module_detect_file_type_nonexistent():
     result = detect_file_type("/tmp/__ghost_r2inspect_missing__.bin")

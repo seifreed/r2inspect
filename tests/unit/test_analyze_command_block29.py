@@ -4,7 +4,7 @@ from pathlib import Path
 
 from r2inspect.cli.commands.analyze_command import AnalyzeCommand
 from r2inspect.cli.commands.base import CommandContext
-from r2inspect.utils.output import OutputFormatter
+from r2inspect.cli.output_formatters import OutputFormatter
 
 
 def test_analyze_command_helpers(tmp_path: Path, capsys):
@@ -28,3 +28,13 @@ def test_analyze_command_helpers(tmp_path: Path, capsys):
     csv_file = tmp_path / "out.csv"
     cmd._output_csv_results(formatter, str(csv_file))
     assert csv_file.exists()
+
+
+def test_analyze_command_add_statistics_to_results_calls_output_helper():
+    cmd = AnalyzeCommand(CommandContext.create())
+    results = {"file_info": {"name": "sample"}}
+    # Call the method directly - it delegates to analysis_output.add_statistics_to_results
+    cmd._add_statistics_to_results(results)
+    # Verify it ran without error and results is still a valid dict
+    assert isinstance(results, dict)
+    assert "file_info" in results

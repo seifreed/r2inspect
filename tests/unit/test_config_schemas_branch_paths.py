@@ -19,6 +19,7 @@ from r2inspect.config_store import ConfigStore
 
 # ----- GeneralConfig validation -----
 
+
 def test_general_config_negative_max_strings_raises() -> None:
     with pytest.raises(ValueError, match="max_strings"):
         GeneralConfig(max_strings=-1)
@@ -42,6 +43,7 @@ def test_general_config_defaults_valid() -> None:
 
 # ----- YaraConfig validation -----
 
+
 def test_yara_config_zero_timeout_raises() -> None:
     with pytest.raises(ValueError, match="timeout"):
         YaraConfig(timeout=0)
@@ -58,6 +60,7 @@ def test_yara_config_valid() -> None:
 
 
 # ----- PackerConfig validation -----
+
 
 def test_packer_config_entropy_below_zero_raises() -> None:
     with pytest.raises(ValueError, match="entropy_threshold"):
@@ -78,6 +81,7 @@ def test_packer_config_valid_boundary() -> None:
 
 # ----- StringsConfig validation -----
 
+
 def test_strings_config_zero_min_length_raises() -> None:
     with pytest.raises(ValueError, match="min_length"):
         StringsConfig(min_length=0)
@@ -94,6 +98,7 @@ def test_strings_config_valid() -> None:
 
 
 # ----- OutputConfig validation -----
+
 
 def test_output_config_negative_indent_raises() -> None:
     with pytest.raises(ValueError, match="json_indent"):
@@ -118,6 +123,7 @@ def test_output_config_valid() -> None:
 
 # ----- VirusTotalConfig validation -----
 
+
 def test_virustotal_config_zero_timeout_raises() -> None:
     with pytest.raises(ValueError, match="timeout"):
         VirusTotalConfig(timeout=0)
@@ -139,6 +145,7 @@ def test_virustotal_config_is_configured_true() -> None:
 
 
 # ----- R2InspectConfig from_dict -----
+
 
 def test_r2inspect_config_from_dict_with_all_sections() -> None:
     data = {
@@ -193,6 +200,7 @@ def test_r2inspect_config_from_dict_empty() -> None:
 
 
 # ----- ConfigStore -----
+
 
 def test_config_store_load_returns_dict(tmp_path) -> None:
     path = tmp_path / "cfg.json"

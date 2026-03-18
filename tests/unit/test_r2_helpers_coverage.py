@@ -38,6 +38,7 @@ from r2inspect.infrastructure.r2_helpers import (
 # _parse_address
 # ---------------------------------------------------------------------------
 
+
 def test_parse_address_no_at_sign():
     base, addr = _parse_address("aflj")
     assert base == "aflj"
@@ -78,6 +79,7 @@ def test_parse_address_preserves_whitespace_stripping():
 # _parse_size
 # ---------------------------------------------------------------------------
 
+
 def test_parse_size_single_word_returns_none():
     assert _parse_size("aflj") is None
 
@@ -97,6 +99,7 @@ def test_parse_size_invalid_number_returns_none():
 # ---------------------------------------------------------------------------
 # _parse_section_header
 # ---------------------------------------------------------------------------
+
 
 def test_parse_section_header_nt_headers():
     assert _parse_section_header("IMAGE_NT_HEADERS", None) == "nt_headers"
@@ -119,10 +122,11 @@ def test_parse_section_header_unknown_returns_current():
 # _parse_key_value_pair
 # ---------------------------------------------------------------------------
 
+
 def test_parse_key_value_pair_hex_value():
     result = {"nt_headers": {}, "file_header": {}, "optional_header": {}}
     _parse_key_value_pair("Magic: 0x10b", result, "optional_header")
-    assert result["optional_header"]["Magic"] == 0x10b
+    assert result["optional_header"]["Magic"] == 0x10B
 
 
 def test_parse_key_value_pair_string_value():
@@ -140,6 +144,7 @@ def test_parse_key_value_pair_invalid_hex_stays_string():
 # ---------------------------------------------------------------------------
 # _parse_elf_headers_text
 # ---------------------------------------------------------------------------
+
 
 def test_parse_elf_headers_text_returns_list():
     text = "type: PT_LOAD\nflags: r-x\noffset: 0x1000\nvaddr: 0x400000\n"
@@ -170,26 +175,31 @@ def test_parse_elf_headers_text_skips_no_colon_lines():
 # _select_json_policy
 # ---------------------------------------------------------------------------
 
+
 def test_select_json_policy_analysis_command_returns_analysis_policy():
     from r2inspect.error_handling.presets import R2_ANALYSIS_POLICY
+
     policy = _select_json_policy("aaa", None)
     assert policy is R2_ANALYSIS_POLICY
 
 
 def test_select_json_policy_list_default_returns_list_policy():
     from r2inspect.error_handling.presets import R2_JSON_LIST_POLICY
+
     policy = _select_json_policy("iij", [])
     assert policy is R2_JSON_LIST_POLICY
 
 
 def test_select_json_policy_dict_default_returns_dict_policy():
     from r2inspect.error_handling.presets import R2_JSON_DICT_POLICY
+
     policy = _select_json_policy("ij", {})
     assert policy is R2_JSON_DICT_POLICY
 
 
 def test_select_json_policy_af_command_returns_analysis_policy():
     from r2inspect.error_handling.presets import R2_ANALYSIS_POLICY
+
     policy = _select_json_policy("af", None)
     assert policy is R2_ANALYSIS_POLICY
 
@@ -197,6 +207,7 @@ def test_select_json_policy_af_command_returns_analysis_policy():
 # ---------------------------------------------------------------------------
 # Minimal fake r2 instances
 # ---------------------------------------------------------------------------
+
 
 class FakeR2:
     """Fake r2pipe-like object returning controlled data."""
@@ -228,6 +239,7 @@ class ErrorR2:
 # safe_cmd
 # ---------------------------------------------------------------------------
 
+
 def test_safe_cmd_returns_text_result():
     r2 = FakeR2(cmd_result="file info text")
     result = safe_cmd(r2, "i")
@@ -250,8 +262,10 @@ def test_safe_cmd_default_empty_string():
 # safe_cmdj
 # ---------------------------------------------------------------------------
 
+
 def test_safe_cmdj_parses_valid_json():
     import json
+
     data = {"key": "value"}
     r2 = FakeR2(cmd_result=json.dumps(data))
     result = safe_cmdj(r2, "ij", {})
@@ -280,6 +294,7 @@ def test_safe_cmdj_returns_default_on_exception():
 # safe_cmdj_any
 # ---------------------------------------------------------------------------
 
+
 def test_safe_cmdj_any_uses_cmdj_when_available():
     r2 = FakeR2(json_result={"from": "cmdj"})
     result = safe_cmdj_any(r2, "ij", {})
@@ -288,6 +303,7 @@ def test_safe_cmdj_any_uses_cmdj_when_available():
 
 def test_safe_cmdj_any_falls_back_to_safe_cmdj_on_error():
     import json
+
     data = {"fallback": True}
     r2 = FakeR2(cmd_result=json.dumps(data), json_result=None)
     result = safe_cmdj_any(r2, "ij", {})
@@ -310,8 +326,10 @@ def test_safe_cmdj_any_no_cmdj_method():
 # safe_cmd_list / safe_cmd_dict
 # ---------------------------------------------------------------------------
 
+
 def test_safe_cmd_list_returns_list():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps([{"name": "func"}]))
     result = safe_cmd_list(r2, "aflj")
     assert isinstance(result, list)
@@ -326,6 +344,7 @@ def test_safe_cmd_list_returns_empty_on_error():
 
 def test_safe_cmd_dict_returns_dict():
     import json
+
     r2 = FakeR2(cmd_result=json.dumps({"format": "PE"}))
     result = safe_cmd_dict(r2, "ij")
     assert isinstance(result, dict)
@@ -341,6 +360,7 @@ def test_safe_cmd_dict_returns_empty_on_error():
 # ---------------------------------------------------------------------------
 # _handle_search
 # ---------------------------------------------------------------------------
+
 
 class FakeAdapterSearch:
     def search_hex_json(self, pattern: str) -> list:
@@ -389,6 +409,7 @@ def test_handle_search_xj_no_method_returns_none():
 # ---------------------------------------------------------------------------
 # _handle_simple
 # ---------------------------------------------------------------------------
+
 
 class FakeSimpleAdapter:
     def get_functions(self) -> list:
@@ -518,6 +539,7 @@ def test_handle_simple_unmapped_command_returns_none():
 # _handle_disasm
 # ---------------------------------------------------------------------------
 
+
 class FakeDisasmAdapter:
     def get_disasm(self, address=None, size=None) -> dict:
         return {"ops": [], "address": address}
@@ -569,6 +591,7 @@ def test_handle_disasm_none_adapter_base_returns_none():
 # ---------------------------------------------------------------------------
 # _handle_bytes
 # ---------------------------------------------------------------------------
+
 
 class FakeBytesAdapter:
     def read_bytes_list(self, address: int, size: int) -> list:
@@ -628,6 +651,7 @@ def test_handle_bytes_p8_empty_data_returns_empty_string():
 # _maybe_use_adapter
 # ---------------------------------------------------------------------------
 
+
 def test_maybe_use_adapter_none_returns_none():
     result = _maybe_use_adapter(None, "aflj")
     assert result is None
@@ -668,6 +692,7 @@ def test_maybe_use_adapter_unknown_command_returns_none():
 # ---------------------------------------------------------------------------
 # cmd / cmdj / cmd_list
 # ---------------------------------------------------------------------------
+
 
 def test_cmd_uses_adapter_result_when_string():
     adapter = FakeSimpleAdapter()
@@ -724,6 +749,7 @@ def test_cmd_list_returns_empty_on_non_list():
 # _cmd_fallback / _cmdj_fallback
 # ---------------------------------------------------------------------------
 
+
 def test_cmd_fallback_none_r2_returns_empty_string():
     result = _cmd_fallback(None, "i")
     assert result == ""
@@ -745,6 +771,7 @@ def test_cmdj_fallback_none_r2_returns_default():
 # ---------------------------------------------------------------------------
 # parse_pe_header_text
 # ---------------------------------------------------------------------------
+
 
 def test_parse_pe_header_text_returns_none_on_empty():
     class EmptyR2:
@@ -779,6 +806,7 @@ def test_parse_pe_header_text_parses_sections():
 # _get_headers_json
 # ---------------------------------------------------------------------------
 
+
 def test_get_headers_json_via_get_headers_json_method():
     class FakeR2WithMethod:
         def get_headers_json(self) -> list:
@@ -810,6 +838,7 @@ def test_get_headers_json_dict_wrapped_in_list():
 # ---------------------------------------------------------------------------
 # get_pe_headers
 # ---------------------------------------------------------------------------
+
 
 def test_get_pe_headers_with_valid_headers_list():
     class FakeR2WithHeaders:
@@ -857,6 +886,7 @@ def test_get_pe_headers_skips_non_dict_items():
 # get_elf_headers
 # ---------------------------------------------------------------------------
 
+
 def test_get_elf_headers_with_json_method():
     class FakeR2WithELF:
         def get_headers_json(self) -> list:
@@ -892,6 +922,7 @@ def test_get_elf_headers_returns_empty_on_no_data():
 # get_macho_headers
 # ---------------------------------------------------------------------------
 
+
 def test_get_macho_headers_with_json_method():
     class FakeR2WithMachO:
         def get_headers_json(self) -> list:
@@ -914,6 +945,7 @@ def test_get_macho_headers_returns_empty_on_no_data():
 # ---------------------------------------------------------------------------
 # _run_cmd_with_timeout: invalid env timeout falls back (lines 105-108)
 # ---------------------------------------------------------------------------
+
 
 def test_run_cmd_with_timeout_invalid_env_timeout_uses_default():
     """Cover lines 105-108: R2INSPECT_CMD_TIMEOUT_SECONDS set to non-numeric."""
@@ -953,8 +985,10 @@ def test_run_cmd_with_timeout_valid_env_timeout():
 # _get_headers_json: non-dict/non-list returns None (line 548)
 # ---------------------------------------------------------------------------
 
+
 def test_get_headers_json_non_dict_non_list_returns_none():
     """Cover line 548: headers is not dict/list -> return None."""
+
     class R2WithStringHeaders:
         def get_headers_json(self):
             return "some string header"  # truthy but not dict or list
@@ -967,8 +1001,10 @@ def test_get_headers_json_non_dict_non_list_returns_none():
 # get_macho_headers: dict headers returns list (line 588)
 # ---------------------------------------------------------------------------
 
+
 def test_get_macho_headers_with_dict_headers_returns_list():
     """Cover line 588: headers is a dict -> return [headers]."""
+
     class R2WithDictHeaders:
         def get_headers_json(self):
             return {"cmd": "LC_SEGMENT_64", "cmdsize": 72}  # dict, not list
@@ -983,8 +1019,10 @@ def test_get_macho_headers_with_dict_headers_returns_list():
 # get_macho_headers: text fallback with non-empty output (line 604)
 # ---------------------------------------------------------------------------
 
+
 def test_get_macho_headers_text_fallback_returns_empty_list():
     """Cover line 604: headers_output is non-empty but Mach-O parsing returns []."""
+
     class R2WithTextHeaders:
         def get_headers_json(self):
             return None  # falsy -> fallback to text
@@ -999,6 +1037,7 @@ def test_get_macho_headers_text_fallback_returns_empty_list():
 # ---------------------------------------------------------------------------
 # _run_cmd_with_timeout: actual thread timeout (lines 115-116)
 # ---------------------------------------------------------------------------
+
 
 def test_run_cmd_with_timeout_actual_thread_timeout():
     """Cover lines 115-116: thread doesn't complete within timeout."""

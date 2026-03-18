@@ -100,7 +100,7 @@ class TestParseSearchResults:
         """Test handling of whitespace."""
         input_str = "  0x1000 10 data  \n  0x2000 20 more  "
         result = parse_search_results(input_str)
-        assert len(result) == 1
+        assert result == ["0x1000", "0x2000"]
 
 
 class TestXorString:
@@ -220,6 +220,14 @@ class TestFindSuspicious:
         result = find_suspicious(strings)
         assert len(result) > 0
 
+    def test_find_suspicious_registry_short_roots(self):
+        strings = ["HKCR\\CLSID", "HKU\\S-1-5-18", "HKCC\\Software"]
+        result = find_suspicious(strings)
+        registry_matches = [item["string"] for item in result if item["type"] == "registry"]
+        assert "HKCR\\CLSID" in registry_matches
+        assert "HKU\\S-1-5-18" in registry_matches
+        assert "HKCC\\Software" in registry_matches
+
     def test_find_suspicious_api_calls(self):
         """Test detection of API calls."""
         strings = ["VirtualAlloc", "CreateRemoteThread"]
@@ -237,6 +245,9 @@ class TestFindSuspicious:
         strings = ["Global\\MutexName", "Local\\SomeMutex"]
         result = find_suspicious(strings)
         assert len(result) > 0
+        mutex_matches = [item["matches"] for item in result if item["type"] == "mutex"]
+        assert ["Global\\MutexName"] in mutex_matches
+        assert ["Local\\SomeMutex"] in mutex_matches
 
     def test_find_suspicious_base64(self):
         """Test detection of base64 strings."""

@@ -8,8 +8,13 @@ import pytest
 from r2inspect.cli import analysis_runner, validators
 from r2inspect.error_handling.policies import ErrorHandlingStrategy, ErrorPolicy
 from r2inspect.error_handling.unified_handler import handle_errors, reset_circuit_breakers
-from r2inspect.utils.error_handler import ErrorCategory, ErrorInfo, ErrorSeverity, reset_error_stats
-from r2inspect.utils.retry_manager import global_retry_manager, reset_retry_stats
+from r2inspect.error_handling.classifier import (
+    ErrorCategory,
+    ErrorInfo,
+    ErrorSeverity,
+    reset_error_stats,
+)
+from r2inspect.infrastructure.retry_manager import global_retry_manager, reset_retry_stats
 
 
 @pytest.mark.unit
@@ -70,7 +75,7 @@ def test_add_statistics_to_results_with_error_retry_and_circuit() -> None:
         recoverable=False,
         suggested_action="fix",
     )
-    from r2inspect.utils.error_handler import global_error_manager
+    from r2inspect.error_handling.classifier import global_error_manager
 
     global_error_manager.handle_error(error_info)
 

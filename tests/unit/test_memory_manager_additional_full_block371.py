@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from r2inspect.utils import memory_manager
+import r2inspect.infrastructure.memory as memory_manager
 
 
 def test_memory_manager_threshold_paths_and_callbacks() -> None:

@@ -132,8 +132,8 @@ def test_validate_existing_path_not_called_when_check_exists_false(tmp_path: Pat
 
 
 def test_validate_existing_path_socket_raises():
-    import tempfile
     import os
+
     # Use a short path in /tmp to avoid AF_UNIX path length limit (108 chars on macOS)
     short_dir = tempfile.mkdtemp(prefix="/tmp/r2t_")
     sock_path = Path(short_dir) / "s.sock"

@@ -1,43 +1,40 @@
 """Comprehensive tests for elf_analyzer.py - 100% coverage target."""
 
-from unittest.mock import Mock, patch, MagicMock
+from r2inspect.modules.elf_analyzer import ELFAnalyzer
 
 
 def test_elf_analyzer_init():
     """Test ElfAnalyzer initialization."""
-    # Basic initialization test
-    obj = Mock()
-    assert obj is not None
+    analyzer = ELFAnalyzer(adapter=None)
+    assert analyzer is not None
 
 
-def test_elf_analyzer_basic_functionality():
-    """Test basic functionality of elf_analyzer."""
-    # Placeholder for basic functionality test
-    assert True
+def test_elf_analyzer_category():
+    """Test ELFAnalyzer category."""
+    analyzer = ELFAnalyzer(adapter=None)
+    assert analyzer.get_category() == "format"
 
 
-def test_elf_analyzer_error_handling():
-    """Test error handling in elf_analyzer."""
-    # Placeholder for error handling test
-    try:
-        # Simulate error condition
-        pass
-    except Exception:
-        pass
-    assert True
+def test_elf_analyzer_description():
+    """Test ELFAnalyzer description."""
+    analyzer = ELFAnalyzer(adapter=None)
+    desc = analyzer.get_description()
+    assert "ELF" in desc
+
+
+def test_elf_analyzer_supports_format():
+    """Test ELFAnalyzer format support."""
+    analyzer = ELFAnalyzer(adapter=None)
+    assert analyzer.supports_format("ELF") is True
+    assert analyzer.supports_format("elf") is True
+    assert analyzer.supports_format("ELF32") is True
+    assert analyzer.supports_format("ELF64") is True
+    assert analyzer.supports_format("PE") is False
+    assert analyzer.supports_format("MACHO") is False
 
 
 def test_elf_analyzer_edge_cases():
     """Test edge cases in elf_analyzer."""
-    # Placeholder for edge case testing
-    assert True
-
-
-def test_elf_analyzer_integration():
-    """Test integration scenarios for elf_analyzer."""
-    # Placeholder for integration test
-    assert True
-
-
-# Additional coverage tests would go here
-# These are stubs to ensure files exist and pass
+    analyzer = ELFAnalyzer(adapter=None, config=None)
+    assert analyzer.supports_format("") is False
+    assert analyzer.supports_format("elf32") is True

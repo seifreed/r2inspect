@@ -1,4 +1,5 @@
 """Branch-path tests for r2inspect/cli/validators.py."""
+
 from __future__ import annotations
 
 import os

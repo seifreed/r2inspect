@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.utils.error_handler import (
+from r2inspect.error_handling.classifier import (
     ErrorCategory,
     ErrorSeverity,
     error_handler,

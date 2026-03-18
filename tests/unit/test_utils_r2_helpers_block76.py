@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from r2inspect.utils import r2_helpers
-from r2inspect.utils.retry_manager import get_retry_stats, reset_retry_stats
+import r2inspect.infrastructure.r2_helpers as r2_helpers
+from r2inspect.infrastructure.retry_manager import get_retry_stats, reset_retry_stats
 
 
 class DummyR2:
