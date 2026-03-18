@@ -17,7 +17,6 @@ from ..domain.analysis.import_risk import (
     matches_known_api,
 )
 
-
 __all__ = [
     "get_risk_level",
     "count_suspicious_indicators",

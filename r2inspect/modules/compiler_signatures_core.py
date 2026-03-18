@@ -3,7 +3,6 @@
 
 from .compiler_signature_constants import SECTION_EH_FRAME, SECTION_RDATA, SECTION_TEXT
 
-
 CORE_COMPILER_SIGNATURES = {
     "MSVC": {
         "strings": [
