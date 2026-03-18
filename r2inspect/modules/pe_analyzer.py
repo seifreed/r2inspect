@@ -4,7 +4,7 @@
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
 from .pe_imports import calculate_imphash as _calculate_imphash
 from .pe_info import get_compilation_info as _get_compilation_info
 from .pe_info import get_file_characteristics as _get_file_characteristics

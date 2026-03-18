@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Template method base for hashing analyzers."""
 
-import os
-import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from ..domain import HashResult
+from .hashing_strategy_support import (
+    run_hash_analysis as _run_hash_analysis_impl,
+    validate_hash_file as _validate_hash_file_impl,
+    validate_strategy_init as _validate_strategy_init_impl,
+)
 
 
 class HashingStrategy(ABC):
@@ -32,16 +34,7 @@ class HashingStrategy(ABC):
         Raises:
             ValueError: If filepath is empty or size limits are invalid
         """
-        if not filepath:
-            raise ValueError("filepath cannot be empty")
-
-        if max_file_size <= 0 or min_file_size < 0:
-            raise ValueError("File size limits must be positive")
-
-        if min_file_size > max_file_size:
-            raise ValueError("min_file_size cannot exceed max_file_size")
-
-        self._filepath = Path(filepath)
+        self._filepath = _validate_strategy_init_impl(filepath, max_file_size, min_file_size)
         self.filepath: Path = self._filepath
         self.r2: Any = r2_instance
         self.max_file_size = max_file_size
@@ -72,44 +65,7 @@ class HashingStrategy(ABC):
                 'method_used': str | None
             }
         """
-        start_time = time.time()
-
-        result = HashResult(hash_type=self._get_hash_type())
-
-        try:
-            # Step 1: Validate file
-            validation_error = self._validate_file()
-            if validation_error:
-                result.error = validation_error
-                result.execution_time = time.time() - start_time
-                return result.to_dict()
-
-            result.file_size = self._filepath.stat().st_size
-
-            # Step 2: Check library availability
-            library_available, error_message = self._check_library_availability()
-            if not library_available:
-                result.error = error_message or "Required library not available"
-                result.execution_time = time.time() - start_time
-                return result.to_dict()
-
-            result.available = True
-
-            # Step 3: Calculate hash
-            hash_value, method_used, error = self._calculate_hash()
-            if error:
-                result.error = error
-            else:
-                result.hash_value = hash_value
-                result.method_used = method_used
-
-        except Exception as e:
-            result.error = f"Unexpected error in {self._get_hash_type()} analysis: {str(e)}"
-
-        finally:
-            result.execution_time = time.time() - start_time
-
-        return result.to_dict()
+        return _run_hash_analysis_impl(self)
 
     def _validate_file(self) -> str | None:
         """
@@ -123,38 +79,7 @@ class HashingStrategy(ABC):
         Returns:
             Error message string if validation fails, None if successful
         """
-        try:
-            # Check file existence
-            if not self._filepath.exists():
-                return f"File does not exist: {self.filepath}"
-
-            # Check if path is a file (not directory)
-            if not self._filepath.is_file():
-                return f"Path is not a regular file: {self.filepath}"
-
-            # Check file size
-            file_size = self._filepath.stat().st_size
-
-            if file_size < self.min_file_size:
-                return (
-                    f"File too small for analysis ({file_size} bytes, "
-                    f"minimum: {self.min_file_size} bytes)"
-                )
-
-            if file_size > self.max_file_size:
-                return (
-                    f"File too large for analysis ({file_size} bytes, "
-                    f"maximum: {self.max_file_size} bytes)"
-                )
-
-        except OSError as e:
-            return f"Cannot access file statistics: {str(e)}"
-
-        # Check read permissions
-        if not os.access(self._filepath, os.R_OK):
-            return f"File is not readable: {self.filepath}"
-
-        return None
+        return _validate_hash_file_impl(self._filepath, self.min_file_size, self.max_file_size)
 
     @abstractmethod
     def _check_library_availability(self) -> tuple[bool, str | None]:
@@ -335,7 +260,6 @@ class R2HashingStrategy(HashingStrategy):
         min_file_size: int = 1,
     ) -> None:
         self.adapter = adapter
-        self.r2 = adapter
         super().__init__(
             filepath=filepath,
             r2_instance=adapter,

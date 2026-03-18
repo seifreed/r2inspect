@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Base pydantic schemas for analyzer results."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 
 class AnalysisResultBase(BaseModel):
@@ -38,23 +38,19 @@ class AnalysisResultBase(BaseModel):
     execution_time: float | None = Field(None, ge=0.0, description="Execution time in seconds")
 
     timestamp: datetime | None = Field(
-        default_factory=datetime.utcnow, description="When the analysis was performed"
+        default_factory=lambda: datetime.now(UTC),
+        description="When the analysis was performed",
     )
 
     analyzer_name: str | None = Field(
         None, description="Name of the analyzer that produced this result"
     )
 
-    class Config:
-        """Pydantic configuration"""
-
-        extra = "ignore"
-        # Use JSON serialization
-        json_encoders = {datetime: lambda v: v.isoformat()}
-        # Enable validation on assignment
-        validate_assignment = True
-        # Use enum values instead of enum objects
-        use_enum_values = True
+    model_config = ConfigDict(
+        extra="ignore",
+        validate_assignment=True,
+        use_enum_values=True,
+    )
 
     @field_validator("execution_time")
     @classmethod
@@ -71,6 +67,13 @@ class AnalysisResultBase(BaseModel):
         if v is not None:
             return v.lower().strip()
         return v
+
+    @field_serializer("timestamp", when_used="json")
+    def serialize_timestamp(self, value: datetime | None) -> str | None:
+        """Serialize timestamps without relying on deprecated json_encoders."""
+        if value is None:
+            return None
+        return value.isoformat()
 
     def model_dump_safe(self, **kwargs: Any) -> dict[str, Any]:
         """

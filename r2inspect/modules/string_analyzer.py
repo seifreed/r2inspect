@@ -4,8 +4,8 @@
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
-from ..utils.command_helpers import cmdj as cmdj_helper
-from ..utils.logger import get_logger
+from ..infrastructure.command_helpers import cmdj as cmdj_helper
+from ..infrastructure.logging import get_logger
 from .search_helpers import search_hex
 from .string_domain import (
     build_xor_matches,
@@ -81,7 +81,7 @@ class StringAnalyzer(BaseAnalyzer):
                 strings = strings[: self.max_strings]
 
         except Exception as e:
-            logger.error(f"Error extracting strings: {e}")
+            logger.error("Error extracting strings: %s", e)
 
         return strings
 
@@ -91,7 +91,7 @@ class StringAnalyzer(BaseAnalyzer):
             result = self._fetch_string_entries("izj")
             return extract_strings_from_entries(result, self.min_length)
         except Exception as e:
-            logger.error(f"Error extracting ASCII strings: {e}")
+            logger.error("Error extracting ASCII strings: %s", e)
         return []
 
     def _extract_unicode_strings(self) -> list[str]:
@@ -100,7 +100,7 @@ class StringAnalyzer(BaseAnalyzer):
             result = self._fetch_string_entries("izuj")
             return extract_strings_from_entries(result, self.min_length)
         except Exception as e:
-            logger.error(f"Error extracting Unicode strings: {e}")
+            logger.error("Error extracting Unicode strings: %s", e)
         return []
 
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
@@ -116,7 +116,7 @@ class StringAnalyzer(BaseAnalyzer):
 
             return build_xor_matches(search_string, _search_hex)
         except Exception as e:
-            logger.error(f"Error in XOR search: {e}")
+            logger.error("Error in XOR search: %s", e)
 
         return []
 

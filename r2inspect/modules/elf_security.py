@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..utils.r2_helpers import get_elf_headers
+from ..infrastructure.r2_helpers import get_elf_headers
 from .elf_security_domain import has_nx, has_relro, has_stack_canary, is_pie, path_features
 
 
@@ -27,7 +27,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         features["pie"] = is_pie(adapter.get_file_info())
         features.update(path_features(dynamic_info))
     except Exception as exc:
-        logger.debug(f"Error checking security features: {exc}")
+        logger.debug("Error checking security features: %s", exc)
 
     return features
 
@@ -37,6 +37,6 @@ def _get_dynamic_info_text(adapter: Any) -> str:
     if callable(getter):
         result = getter()
         return result if isinstance(result, str) else str(result)
-    from ..utils.command_helpers import cmd as cmd_helper
+    from ..infrastructure.command_helpers import cmd as cmd_helper
 
-    return cmd_helper(adapter, None, "id")
+    return str(cmd_helper(adapter, None, "id"))

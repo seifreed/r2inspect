@@ -39,3 +39,15 @@ class R2CommandInterface(Protocol):
 
 class AnalyzerBackend(BinaryAnalyzerInterface, Protocol):
     """Backend interface used by analyzers."""
+
+
+class MagicDetectorLike(Protocol):
+    """libmagic-compatible detector."""
+
+    def from_file(self, path: str) -> str: ...
+
+
+class MagicDetectorProviderLike(Protocol):
+    """Factory/provider for MIME and description detectors."""
+
+    def get_detectors(self) -> tuple[MagicDetectorLike, MagicDetectorLike] | None: ...

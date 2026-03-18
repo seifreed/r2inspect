@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..utils.r2_helpers import get_pe_headers
+from ..infrastructure.r2_helpers import get_pe_headers
 
 
 def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
@@ -28,7 +28,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         _apply_authenticode_feature(features, pe_header)
 
     except Exception as exc:
-        logger.error(f"Error checking security features: {exc}")
+        logger.error("Error checking security features: %s", exc)
 
     return features
 
@@ -48,7 +48,7 @@ def _apply_security_flags_from_header(
     features["seh"] = not bool(dll_characteristics & 0x0400)
     features["guard_cf"] = bool(dll_characteristics & 0x4000)
 
-    logger.debug(f"DllCharacteristics: 0x{dll_characteristics:04x}")
+    logger.debug("DllCharacteristics: 0x%04x", dll_characteristics)
     logger.debug(
         "Security features: ASLR=%s, DEP=%s, SEH=%s, CFG=%s",
         features["aslr"],
@@ -76,9 +76,9 @@ def _get_pe_security_text(adapter: Any) -> str:
     if callable(getter):
         result = getter()
         return result if isinstance(result, str) else str(result)
-    from ..utils.command_helpers import cmd as cmd_helper
+    from ..infrastructure.command_helpers import cmd as cmd_helper
 
-    return cmd_helper(adapter, None, "iHH")
+    return str(cmd_helper(adapter, None, "iHH"))
 
 
 def _apply_authenticode_feature(

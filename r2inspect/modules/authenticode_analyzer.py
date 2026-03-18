@@ -7,8 +7,17 @@ from typing import Any
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..utils.logger import get_logger
-from ..utils.r2_suppress import silent_cmdj
+from ..infrastructure.logging import get_logger
+from ..infrastructure.r2_suppress import silent_cmdj
+from .authenticode_parsing_support import (
+    get_security_directory as _get_security_directory_impl,
+    parse_pkcs7 as _parse_pkcs7_impl,
+    read_win_certificate as _read_win_certificate_impl,
+)
+from .authenticode_result_support import (
+    apply_security_directory as _apply_security_directory_impl,
+    init_authenticode_result as _init_authenticode_result_impl,
+)
 
 logger = get_logger(__name__)
 
@@ -34,19 +43,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             Dictionary containing signature information
         """
         try:
-            result: dict[str, Any] = self._init_result_structure(
-                {
-                    "has_signature": False,
-                    "signature_valid": False,
-                    "certificates": [],
-                    "timestamp": None,
-                    "signature_offset": None,
-                    "signature_size": None,
-                    "security_directory": None,
-                    "errors": [],
-                }
-            )
-            result["available"] = True
+            result = _init_authenticode_result_impl(self._init_result_structure)
 
             if not self._has_required_headers():
                 result["available"] = False
@@ -57,12 +54,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 result["has_signature"] = False
                 return result
 
-            result["has_signature"] = True
-            result["security_directory"] = {
-                "offset": security_dir.get("paddr", 0),
-                "size": security_dir.get("size", 0),
-                "virtual_address": security_dir.get("vaddr", 0),
-            }
+            _apply_security_directory_impl(result, security_dir)
 
             cert_info = self._read_win_certificate(security_dir, result)
             if cert_info:
@@ -79,7 +71,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return result
 
         except Exception as e:
-            logger.error(f"Error analyzing Authenticode signature: {e}")
+            logger.error("Error analyzing Authenticode signature: %s", e)
             result["available"] = False
             result["has_signature"] = False
             result["signature_valid"] = False
@@ -94,46 +86,23 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return bool(optional_header)
 
     def _get_security_directory(self) -> dict[str, Any] | None:
-        data_dirs = self._cmdj("iDj", [])
-        if not isinstance(data_dirs, list):
-            return None
-        for dd in data_dirs:
-            if isinstance(dd, dict) and dd.get("name") == "SECURITY":
-                return dd
-        return None
+        return _get_security_directory_impl(self._cmdj)
 
     def _read_win_certificate(
         self, security_dir: dict[str, Any], result: dict[str, Any]
     ) -> dict[str, Any] | None:
-        cert_offset = security_dir.get("paddr", 0)
-        cert_size = security_dir.get("size", 0)
-        if cert_offset == 0 or cert_size == 0:
-            result["errors"].append("Invalid security directory")
-            return None
-
-        result["signature_offset"] = cert_offset
-        result["signature_size"] = cert_size
-        win_cert_data = self._cmdj(f"pxj 8 @ {cert_offset}", [])
-        if not (win_cert_data and len(win_cert_data) >= 8):
-            return None
-
-        cert_length, cert_revision, cert_type = self._parse_win_cert_header(win_cert_data)
-        cert_info = {
-            "length": cert_length,
-            "revision": hex(cert_revision),
-            "type": self._get_cert_type_name(cert_type),
-            "type_value": hex(cert_type),
-        }
-
-        if cert_type == 0x0002:
-            cert_info["format"] = "PKCS#7"
-            pkcs7_info = self._parse_pkcs7(cert_offset + 8, cert_length - 8)
-            if pkcs7_info:
-                cert_info.update(pkcs7_info)
-
-        return cert_info
+        return _read_win_certificate_impl(
+            cmdj=self._cmdj,
+            security_dir=security_dir,
+            result=result,
+            parse_header_fn=self._parse_win_cert_header,
+            get_cert_type_name_fn=self._get_cert_type_name,
+            parse_pkcs7_fn=self._parse_pkcs7,
+        )
 
     def _parse_win_cert_header(self, data: list[int]) -> tuple[int, int, int]:
+        if len(data) < 8:
+            raise ValueError(f"WIN_CERTIFICATE header requires 8 bytes, got {len(data)}")
         cert_length = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)
         cert_revision = data[4] | (data[5] << 8)
         cert_type = data[6] | (data[7] << 8)
@@ -151,30 +120,16 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _parse_pkcs7(self, offset: int, size: int) -> dict[str, Any] | None:
         """Parse PKCS#7 signature data."""
-        try:
-            result: dict[str, Any] = {
-                "signer_info": [],
-                "certificates_chain": [],
-                "digest_algorithm": None,
-                "encryption_algorithm": None,
-                "has_timestamp": False,
-            }
-
-            pkcs7_data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])
-            if not pkcs7_data:
-                return None
-
-            result["digest_algorithm"] = self._detect_digest_algorithm(pkcs7_data)
-            result["encryption_algorithm"] = self._detect_encryption_algorithm(pkcs7_data)
-            result["signer_info"] = self._extract_common_names(pkcs7_data, offset)
-            if self._has_timestamp(pkcs7_data):
-                result["has_timestamp"] = True
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error parsing PKCS#7: {e}")
-            return None
+        return _parse_pkcs7_impl(
+            cmdj=self._cmdj,
+            offset=offset,
+            size=size,
+            logger=logger,
+            detect_digest_algorithm_fn=self._detect_digest_algorithm,
+            detect_encryption_algorithm_fn=self._detect_encryption_algorithm,
+            extract_common_names_fn=self._extract_common_names,
+            has_timestamp_fn=self._has_timestamp,
+        )
 
     def _detect_digest_algorithm(self, pkcs7_data: list[int]) -> str | None:
         sha256_oid = [0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]
@@ -215,7 +170,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             if cn_str and cn_str.isprintable():
                 return {"common_name": cn_str, "offset": offset + pos}
         except Exception as exc:
-            logger.debug(f"Failed to decode signer common name at {offset + pos}: {exc}")
+            logger.debug("Failed to decode signer common name at %s: %s", offset + pos, exc)
         return None
 
     def _has_timestamp(self, pkcs7_data: list[int]) -> bool:
@@ -238,7 +193,6 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Find a byte pattern in data."""
         pattern_len = len(pattern)
         data_len = len(data)
-
         for i in range(data_len - pattern_len + 1):
             if data[i : i + pattern_len] == pattern:
                 return True
@@ -249,7 +203,6 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         positions = []
         pattern_len = len(pattern)
         data_len = len(data)
-
         for i in range(data_len - pattern_len + 1):
             if data[i : i + pattern_len] == pattern:
                 positions.append(i)
@@ -258,64 +211,39 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _compute_authenticode_hash(self) -> dict[str, str | None] | None:
         """Compute the Authenticode hash of the PE file."""
         try:
-            # Get file size
             file_info = self._cmdj("ij", {})
             if not file_info:
                 return None
-
             file_size = file_info.get("core", {}).get("size", 0)
             if file_size == 0:
                 return None
-
-            # Get PE header offset
             pe_header = self._cmdj("ihj", {})
             if not pe_header:
                 return None
-
-            # Get checksum field offset (it should be excluded from hash)
             optional_header = self._cmdj("iHj", {})
             if not optional_header:
                 return None
-
-            # Calculate regions to hash (excluding checksum and certificate table)
-            # This is a simplified version - full implementation would need to:
-            # 1. Hash from start to checksum field
-            # 2. Skip checksum (4 bytes)
-            # 3. Hash from after checksum to certificate table entry
-            # 4. Skip certificate table entry (8 bytes)
-            # 5. Hash from after certificate table entry to start of certificate data
-
-            # For now, return a placeholder indicating the hash regions
             return {
                 "algorithm": "SHA256",
                 "note": "Authenticode hash calculation regions identified",
                 "file_size": file_size,
                 "regions": "Multiple regions excluding checksum and certificate data",
             }
-
-        except Exception as e:
-            logger.error(f"Error computing Authenticode hash: {e}")
+        except Exception as exc:
+            logger.error("Error computing Authenticode hash: %s", exc)
             return None
 
     def _verify_signature_integrity(self, signature_info: dict[str, Any]) -> bool:
         """Verify the integrity of the signature."""
         try:
-            # Basic checks for signature validity
             if not signature_info.get("has_signature"):
                 return False
-
-            # Check if certificate data is present and valid
             if not signature_info.get("certificates"):
                 return False
-
-            # Check for errors during parsing
             if signature_info.get("errors"):
                 return False
-
-            # Check security directory is valid
             sec_dir = signature_info.get("security_directory")
             return not (not sec_dir or sec_dir.get("size", 0) == 0)
-
-        except Exception as e:
-            logger.error(f"Error verifying signature: {e}")
+        except Exception as exc:
+            logger.error("Error verifying signature: %s", exc)
             return False

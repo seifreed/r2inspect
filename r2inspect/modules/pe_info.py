@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..utils.r2_helpers import get_pe_headers
+from ..infrastructure.r2_helpers import get_pe_headers
 from .pe_info_domain import (
     PE32_PLUS,
     apply_optional_header_info,
@@ -44,7 +44,7 @@ def get_pe_headers_info(adapter: Any, filepath: str | None, logger: Any) -> dict
             info["entry_point"] = compute_entry_point(bin_info, entry_info)
             info = apply_optional_header_info(info, pe_header)
     except Exception as exc:
-        logger.error(f"Error getting PE headers: {exc}")
+        logger.error("Error getting PE headers: %s", exc)
     return info
 
 
@@ -52,7 +52,7 @@ def _fetch_pe_header(adapter: Any, logger: Any) -> dict[str, Any] | None:
     try:
         return get_pe_headers(adapter)
     except Exception as exc:
-        logger.debug(f"Could not get PE header details: {exc}")
+        logger.debug("Could not get PE header details: %s", exc)
         return None
 
 
@@ -63,7 +63,7 @@ def _get_entry_info(adapter: Any, logger: Any) -> list[dict[str, Any]] | None:
             if isinstance(entry_info, list):
                 return entry_info
     except Exception as exc:
-        logger.debug(f"Could not get entry point from iej: {exc}")
+        logger.debug("Could not get entry point from iej: %s", exc)
     return None
 
 
@@ -74,10 +74,10 @@ def _get_file_description(filepath: str | None, logger: Any) -> str | None:
         import magic
 
         file_desc = str(magic.from_file(filepath)).lower()
-        logger.debug(f"Magic file description: {file_desc}")
+        logger.debug("Magic file description: %s", file_desc)
         return file_desc
     except Exception as exc:
-        logger.debug(f"Could not use magic for file type: {exc}")
+        logger.debug("Could not use magic for file type: %s", exc)
         return None
 
 
@@ -97,10 +97,10 @@ def get_file_characteristics(adapter: Any, filepath: str | None, logger: Any) ->
                 else:
                     characteristics.update(characteristics_from_bin(bin_info, filepath))
             except Exception as exc:
-                logger.debug(f"Could not get PE characteristics: {exc}")
+                logger.debug("Could not get PE characteristics: %s", exc)
                 characteristics.update(characteristics_from_bin(bin_info, filepath))
     except Exception as exc:
-        logger.error(f"Error getting file characteristics: {exc}")
+        logger.error("Error getting file characteristics: %s", exc)
 
     return characteristics
 
@@ -117,7 +117,7 @@ def get_compilation_info(adapter: Any, logger: Any) -> dict[str, Any]:
             if compiler_info:
                 info["compiler_info"] = compiler_info
     except Exception as exc:
-        logger.error(f"Error getting compilation info: {exc}")
+        logger.error("Error getting compilation info: %s", exc)
     return info
 
 
@@ -142,5 +142,5 @@ def get_subsystem_info(adapter: Any, logger: Any) -> dict[str, Any]:
             subsystem = bin_info.get("subsys", "Unknown")
             info.update(build_subsystem_info(subsystem))
     except Exception as exc:
-        logger.error(f"Error getting subsystem info: {exc}")
+        logger.error("Error getting subsystem info: %s", exc)
     return info

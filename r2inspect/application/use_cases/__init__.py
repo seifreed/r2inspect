@@ -1,5 +1,11 @@
 """Application use cases."""
 
-from .analyze_binary import AnalyzeBinaryUseCase
+from .analyze_binary import AnalyzeBinaryRequest, AnalyzeBinaryUseCase
+from .run_batch_analysis import RunBatchAnalysisUseCase, RunBatchRequest
 
-__all__ = ["AnalyzeBinaryUseCase"]
+__all__ = [
+    "AnalyzeBinaryRequest",
+    "AnalyzeBinaryUseCase",
+    "RunBatchAnalysisUseCase",
+    "RunBatchRequest",
+]

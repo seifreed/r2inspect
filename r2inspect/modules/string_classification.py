@@ -17,7 +17,10 @@ API_PATTERNS = [
     "CreateProcess",
 ]
 
-REGISTRY_ROOTS = ["HKEY_", "HKLM", "HKCU", "SOFTWARE\\", "SYSTEM\\"]
+REGISTRY_ROOT_PATTERN = re.compile(
+    r"^(?:HKEY_[A-Z_]+|HKLM|HKCU|HKCR|HKU|HKCC|SOFTWARE|SYSTEM)\\",
+    re.IGNORECASE,
+)
 
 
 def is_api_string(value: str) -> bool:
@@ -33,7 +36,7 @@ def is_url_string(value: str) -> bool:
 
 
 def is_registry_string(value: str) -> bool:
-    return any(root in value.upper() for root in REGISTRY_ROOTS)
+    return REGISTRY_ROOT_PATTERN.match(value) is not None
 
 
 def classify_string_type(value: str) -> str | None:
@@ -41,7 +44,7 @@ def classify_string_type(value: str) -> str | None:
         return "url"
     if re.match(r"[a-z]:\\", value, re.IGNORECASE) or value.startswith("/"):
         return "path"
-    if re.match(r"HKEY_|SOFTWARE\\\\|SYSTEM\\\\", value, re.IGNORECASE):
+    if is_registry_string(value):
         return "registry"
     if re.match(r"^[A-Z][\\w]*[A-Z]", value) or is_api_string(value):
         return "api"

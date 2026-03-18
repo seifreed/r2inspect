@@ -3,8 +3,8 @@
 
 from typing import Any
 
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.command_helpers import cmdj as cmdj_helper
+from ..infrastructure.command_helpers import cmd as cmd_helper
+from ..infrastructure.command_helpers import cmdj as cmdj_helper
 from .pe_info_domain import normalize_resource_entries, parse_version_info_text
 
 
@@ -17,7 +17,7 @@ def get_resource_info(adapter: Any, logger: Any) -> list[dict[str, Any]]:
         if res_info:
             resources.extend(normalize_resource_entries(res_info))
     except Exception as exc:
-        logger.error(f"Error getting resource info: {exc}")
+        logger.error("Error getting resource info: %s", exc)
 
     return resources
 
@@ -31,6 +31,6 @@ def get_version_info(adapter: Any, logger: Any) -> dict[str, str]:
         if version_result:
             version_info = parse_version_info_text(version_result)
     except Exception as exc:
-        logger.error(f"Error getting version info: {exc}")
+        logger.error("Error getting version info: %s", exc)
 
     return version_info

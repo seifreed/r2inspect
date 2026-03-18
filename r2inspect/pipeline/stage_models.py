@@ -32,8 +32,15 @@ class AnalysisStage:
         self.timeout = timeout
         self.metadata: dict[str, Any] = metadata or {}
 
-    def can_execute(self, completed_stages: set[str]) -> bool:
-        return all(dep in completed_stages for dep in self.dependencies)
+    def can_execute(
+        self, completed_stages: set[str], failed_stages: set[str] | None = None
+    ) -> bool:
+        if not all(dep in completed_stages for dep in self.dependencies):
+            return False
+        if failed_stages and not self.optional:
+            if any(dep in failed_stages for dep in self.dependencies):
+                return False
+        return True
 
     def should_execute(self, context: dict[str, Any]) -> bool:
         if self.condition is None:
@@ -41,7 +48,7 @@ class AnalysisStage:
         try:
             return bool(self.condition(context))
         except Exception as e:
-            logger.warning(f"Condition check failed for stage '{self.name}': {e}")
+            logger.warning("Condition check failed for stage '%s': %s", self.name, e)
             return False
 
     def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
@@ -50,13 +57,13 @@ class AnalysisStage:
 
     def execute(self, context: dict[str, Any]) -> dict[str, Any]:
         if not self.should_execute(context):
-            logger.debug(f"Skipping stage '{self.name}' (condition not met)")
+            logger.debug("Skipping stage '%s' (condition not met)", self.name)
             return {}
         try:
-            logger.debug(f"Executing stage '{self.name}'")
+            logger.debug("Executing stage '%s'", self.name)
             return self._execute(context)
         except Exception as e:
-            logger.error(f"Stage '{self.name}' failed: {e}")
+            logger.error("Stage '%s' failed: %s", self.name, e)
             # Return error structure under results
             context.setdefault("results", {})
             context["results"][self.name] = {"error": str(e), "success": False}
@@ -100,15 +107,24 @@ class ThreadSafeContext:
         with self._lock:
             return self._data.get(key, default)
 
+    def merge_results(self, stage_result: dict[str, Any]) -> None:
+        """Atomically merge stage results into the context results dict."""
+        if not stage_result:
+            return
+        with self._lock:
+            self._data.setdefault("results", {}).update(stage_result)
+
     def get_all(self) -> dict[str, Any]:
         """
-        Get complete copy of context data.
+        Get deep copy of context data (nested dicts are independent copies).
 
         Returns:
-            Copy of all context data
+            Deep copy of all context data
         """
+        import copy
+
         with self._lock:
-            return self._data.copy()
+            return copy.deepcopy(self._data)
 
     def set(self, key: str, value: Any) -> None:
         """

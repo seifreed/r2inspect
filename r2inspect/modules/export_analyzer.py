@@ -5,7 +5,7 @@ from typing import Any
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -53,13 +53,13 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 for exp in exports:
                     # Skip if export is not a dictionary (malformed data)
                     if not isinstance(exp, dict):
-                        logger.debug(f"Skipping malformed export data: {type(exp)} - {exp}")
+                        logger.debug("Skipping malformed export data: %s - %s", type(exp), exp)
                         continue
                     export_analysis = self._analyze_export(exp)
                     exports_info.append(export_analysis)
 
         except Exception as e:
-            logger.error(f"Error getting exports: {e}")
+            logger.error("Error getting exports: %s", e)
 
         return exports_info
 
@@ -81,7 +81,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             analysis["characteristics"] = self._get_export_characteristics(exp)
 
         except Exception as e:
-            logger.error(f"Error analyzing export: {e}")
+            logger.error("Error analyzing export: %s", e)
             analysis["error"] = str(e)
 
         return analysis
@@ -130,13 +130,13 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                         characteristics["complexity"] = func.get("cc", 0)  # Cyclomatic complexity
                         characteristics["is_function"] = True
                     else:
-                        logger.debug(f"Function info returned non-dict: {type(func)} - {func}")
+                        logger.debug("Function info returned non-dict: %s - %s", type(func), func)
                         characteristics["is_function"] = False
                 else:
                     characteristics["is_function"] = False
 
         except Exception as e:
-            logger.error(f"Error getting export characteristics: {e}")
+            logger.error("Error getting export characteristics: %s", e)
 
         return characteristics
 
@@ -161,13 +161,13 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                     self._update_export_stats(stats, exp)
 
         except Exception as e:
-            logger.error(f"Error getting export statistics: {e}")
+            logger.error("Error getting export statistics: %s", e)
 
         return stats
 
     def _update_export_stats(self, stats: dict[str, Any], exp: Any) -> None:
         if not isinstance(exp, dict):
-            logger.debug(f"Skipping malformed export data in statistics: {type(exp)} - {exp}")
+            logger.debug("Skipping malformed export data in statistics: %s - %s", type(exp), exp)
             return
 
         stats["export_names"].append(exp.get("name", "unknown"))
@@ -177,7 +177,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         if exp.get("characteristics", {}).get("is_function"):
             stats["function_exports"] += 1
-        else:
+        elif not exp.get("is_forwarded"):
             stats["data_exports"] += 1
 
         if exp.get("characteristics", {}).get("suspicious_name"):

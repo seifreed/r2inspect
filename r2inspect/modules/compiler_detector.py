@@ -1,10 +1,34 @@
 #!/usr/bin/env python3
 """Compiler detection module."""
 
-from typing import Any, cast
+from typing import Any
 
-from ..utils.command_helpers import cmd as cmd_helper
-from ..utils.logger import get_logger
+from ..infrastructure.command_helpers import cmd as cmd_helper
+from ..abstractions.command_helper_mixin import CommandHelperMixin
+from ..infrastructure.logging import get_logger
+from .compiler_detector_collection_support import (
+    coerce_dict_list as _coerce_dict_list_impl2,
+    get_file_format as _get_file_format_impl2,
+    get_file_info as _get_file_info_impl2,
+    get_imports as _get_imports_impl2,
+    get_sections as _get_sections_impl2,
+    get_strings as _get_strings_impl2,
+    get_strings_raw as _get_strings_raw_impl2,
+    get_symbols as _get_symbols_impl2,
+)
+from .compiler_detector_result_support import (
+    gather_detection_inputs as _gather_detection_inputs_impl,
+    init_compiler_result as _init_compiler_result_impl,
+)
+from .compiler_detector_support import (
+    analyze_rich_header as _analyze_rich_header_logic,
+    apply_best_compiler as _apply_best_compiler_logic,
+    apply_rich_header_detection as _apply_rich_header_detection_logic,
+    coerce_dict_list as _coerce_dict_list_logic,
+    detect_compiler_version as _detect_compiler_version_logic,
+    detect_file_format as _detect_file_format_logic,
+    score_compilers as _score_compilers_logic,
+)
 from .compiler_domain import (
     calculate_compiler_score,
     detect_clang_version,
@@ -34,12 +58,12 @@ logger = get_logger(__name__)
 # Constants
 
 
-class CompilerDetector:
+class CompilerDetector(CommandHelperMixin):
     """Detects compiler information from binaries."""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         self.adapter = adapter
-        self.r2 = adapter
+        self.r2 = adapter  # required by CommandHelperMixin
         self.config = config
 
         # Compiler signatures and patterns
@@ -62,25 +86,12 @@ class CompilerDetector:
 
         logger.debug("Starting compiler detection...")
 
-        results: dict[str, Any] = {
-            "detected": False,
-            "compiler": "Unknown",
-            "version": "Unknown",
-            "confidence": 0.0,
-            "details": {},
-            "signatures_found": [],
-            "rich_header_info": {},
-        }
+        results = _init_compiler_result_impl()
 
         try:
-            # Get file format first
-            file_format = self._get_file_format()
-
-            # Gather information from binary
-            strings_data = self._get_strings()
-            imports_data = self._get_imports()
-            sections_data = self._get_sections()
-            symbols_data = self._get_symbols()
+            file_format, strings_data, imports_data, sections_data, symbols_data = (
+                _gather_detection_inputs_impl(self)
+            )
 
             # PE-specific analysis
             if file_format == "PE":
@@ -100,30 +111,15 @@ class CompilerDetector:
             )
 
         except Exception as e:
-            logger.error(f"Error during compiler detection: {e}")
+            logger.error("Error during compiler detection: %s", e)
             results["error"] = str(e)
 
         return results
 
     def _apply_rich_header_detection(self, results: dict[str, Any]) -> bool:
-        rich_header = self._analyze_rich_header()
-        results["rich_header_info"] = rich_header
-        if not (rich_header.get("available") and rich_header.get("compilers")):
-            return False
-
-        for compiler_entry in rich_header["compilers"]:
-            compiler_name = compiler_entry.get("compiler_name", "")
-            if "MSVC" in compiler_name or "Utc" in compiler_name:
-                results["detected"] = True
-                results["compiler"] = "MSVC"
-                results["confidence"] = 0.95
-                results["version"] = map_msvc_version_from_rich(compiler_name)
-                results["details"] = {"detection_method": "Rich Header Analysis"}
-                logger.debug(
-                    f"Detected {results['compiler']} {results['version']} from Rich Header"
-                )
-                return True
-        return False
+        return _apply_rich_header_detection_logic(
+            self, results, map_msvc_version=map_msvc_version_from_rich, logger=logger
+        )
 
     def _score_compilers(
         self,
@@ -132,17 +128,14 @@ class CompilerDetector:
         sections_data: list[str],
         symbols_data: list[str],
     ) -> dict[str, float]:
-        compiler_scores: dict[str, float] = {}
-        for compiler_name, signatures in self.compiler_signatures.items():
-            score = calculate_compiler_score(
-                cast(dict[str, list[str]], signatures),
-                strings_data,
-                imports_data,
-                sections_data,
-                symbols_data,
-            )
-            compiler_scores[compiler_name] = score
-        return compiler_scores
+        return _score_compilers_logic(
+            self.compiler_signatures,
+            strings_data,
+            imports_data,
+            sections_data,
+            symbols_data,
+            calculate_score=calculate_compiler_score,
+        )
 
     def _apply_best_compiler(
         self,
@@ -152,127 +145,80 @@ class CompilerDetector:
         imports_data: list[str],
         file_format: str,
     ) -> None:
-        if not compiler_scores:
-            return
-        best_compiler = max(compiler_scores, key=lambda key: compiler_scores[key])
-        best_score = compiler_scores[best_compiler]
-
-        if best_score <= 0.3:
-            return
-        results["detected"] = True
-        results["compiler"] = best_compiler
-        results["confidence"] = best_score
-        results["version"] = self._detect_compiler_version(
-            best_compiler, strings_data, imports_data
+        _apply_best_compiler_logic(
+            results,
+            compiler_scores,
+            strings_data,
+            imports_data,
+            file_format,
+            detect_version=self._detect_compiler_version,
+            detection_method_fn=detection_method,
         )
-        results["details"] = {
-            "all_scores": compiler_scores,
-            "file_format": file_format,
-            "detection_method": detection_method(best_compiler, best_score),
-        }
 
     def _get_file_format(self) -> str:
         """Detect file format (PE, ELF, Mach-O)"""
-        try:
-            file_info = self._get_file_info()  # Get file info in JSON
-            if file_info and "bin" in file_info:
-                format_info = file_info["bin"].get("class", "").upper()
-                if "PE" in format_info:
-                    return "PE"
-                elif "ELF" in format_info:
-                    return "ELF"
-                elif "MACH" in format_info:
-                    return "Mach-O"
-            return "Unknown"
-        except Exception as e:
-            logger.debug(f"Error detecting file format: {e}")
-            return "Unknown"
+        return _get_file_format_impl2(self, _detect_file_format_logic, logger)
 
     def _get_strings(self) -> list[str]:
-        """Extract strings from binary"""
-        try:
-            if self.adapter is not None and hasattr(self.adapter, "get_strings"):
-                entries = self.adapter.get_strings()
-                return [entry.get("string", "") for entry in entries if entry.get("string")]
-            strings_output = self._get_strings_raw()
-            return parse_strings_output(strings_output)
-        except Exception as e:
-            logger.error(f"Error extracting strings: {e}")
-            return []
+        """Extract strings from binary."""
+        return self._safe_call(
+            lambda: (
+                [e.get("string", "") for e in self.adapter.get_strings() if e.get("string")]
+                if self.adapter is not None and hasattr(self.adapter, "get_strings")
+                else parse_strings_output(self._get_strings_raw())
+            ),
+            default=[],
+            error_msg="Error extracting strings",
+        )
 
     def _get_imports(self) -> list[str]:
-        """Get imported functions and libraries"""
-        try:
-            imports_data = self._get_imports_raw()
-            return extract_import_names(imports_data)
-        except Exception as e:
-            logger.error(f"Error getting imports: {e}")
-            return []
+        """Get imported functions and libraries."""
+        return self._safe_call(
+            lambda: extract_import_names(self._get_imports_raw()),
+            default=[],
+            error_msg="Error getting imports",
+        )
 
     def _get_sections(self) -> list[str]:
-        """Get section names"""
-        try:
-            sections_data = self._get_sections_raw()
-            return extract_section_names(sections_data)
-        except Exception as e:
-            logger.error(f"Error getting sections: {e}")
-            return []
+        """Get section names."""
+        return self._safe_call(
+            lambda: extract_section_names(self._get_sections_raw()),
+            default=[],
+            error_msg="Error getting sections",
+        )
 
     def _get_symbols(self) -> list[str]:
-        """Get symbol names"""
-        try:
-            symbols_data = self._get_symbols_raw()
-            return extract_symbol_names(symbols_data)
-        except Exception as e:
-            logger.error(f"Error getting symbols: {e}")
-            return []
+        """Get symbol names."""
+        return self._safe_call(
+            lambda: extract_symbol_names(self._get_symbols_raw()),
+            default=[],
+            error_msg="Error getting symbols",
+        )
 
     def _analyze_rich_header(self) -> dict[str, Any]:
         """Analyze Rich Header for PE files (MSVC specific)"""
-        try:
-            # Use the RichHeaderAnalyzer module for proper analysis
-            from .rich_header_analyzer import RichHeaderAnalyzer
-
-            # Get the file path from r2
-            file_info = self._get_file_info()
-            if not file_info or "core" not in file_info:
-                return {}
-
-            filepath = file_info["core"].get("file", "")
-            if not filepath:
-                return {}
-
-            # Analyze Rich Header
-            rich_analyzer = RichHeaderAnalyzer(self.adapter, filepath)
-            rich_info = rich_analyzer.analyze()
-
-            return rich_info
-        except Exception as e:
-            logger.error(f"Error analyzing Rich header: {e}")
-            return {}
+        return _analyze_rich_header_logic(self, logger=logger)
 
     def _detect_compiler_version(
         self, compiler: str, strings_data: list[str], imports_data: list[str]
     ) -> str:
         """Detect specific compiler version"""
-
-        version_detectors = {
-            "MSVC": self._detect_msvc_version,
-            "GCC": self._detect_gcc_version,
-            "Clang": self._detect_clang_version,
-            "Intel": self._detect_intel_version,
-            "Borland": self._detect_borland_version,
-            "MinGW": self._detect_mingw_version,
-            "Go": self._detect_go_version,
-            "Rust": self._detect_rust_version,
-            "Delphi": self._detect_delphi_version,
-        }
-
-        detector = version_detectors.get(compiler)
-        if detector:
-            return detector(strings_data, imports_data)
-
-        return "Unknown"
+        return _detect_compiler_version_logic(
+            compiler,
+            strings_data,
+            imports_data,
+            detectors={
+                "MSVC": self._detect_msvc_version,
+                "GCC": self._detect_gcc_version,
+                "Clang": self._detect_clang_version,
+                "Intel": self._detect_intel_version,
+                "Borland": self._detect_borland_version,
+                "MinGW": self._detect_mingw_version,
+                "Go": self._detect_go_version,
+                "Rust": self._detect_rust_version,
+                "Delphi": self._detect_delphi_version,
+            },
+        )
 
     def _detect_msvc_version(self, strings_data: list[str], imports_data: list[str]) -> str:
         """Detect MSVC version"""
@@ -311,33 +257,21 @@ class CompilerDetector:
         return "Unknown"
 
     def _get_file_info(self) -> dict[str, Any]:
-        if self.adapter is not None and hasattr(self.adapter, "get_file_info"):
-            return cast(dict[str, Any], self.adapter.get_file_info())
-        return {}
+        return _get_file_info_impl2(self)
 
     @staticmethod
     def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-        if isinstance(value, dict):
-            return [value]
-        return []
+        return _coerce_dict_list_logic(value)
 
     def _get_imports_raw(self) -> list[dict[str, Any]]:
-        if self.adapter is not None and hasattr(self.adapter, "get_imports"):
-            return self._coerce_dict_list(self.adapter.get_imports())
-        return []
+        return self._coerce_dict_list(self._get_via_adapter("get_imports"))
 
     def _get_sections_raw(self) -> list[dict[str, Any]]:
-        if self.adapter is not None and hasattr(self.adapter, "get_sections"):
-            return self._coerce_dict_list(self.adapter.get_sections())
-        return []
+        return self._coerce_dict_list(self._get_via_adapter("get_sections"))
 
     def _get_symbols_raw(self) -> list[dict[str, Any]]:
-        if self.adapter is not None and hasattr(self.adapter, "get_symbols"):
-            return self._coerce_dict_list(self.adapter.get_symbols())
-        return []
+        return self._coerce_dict_list(self._get_via_adapter("get_symbols"))
 
     def _get_strings_raw(self) -> str:
-        result = cmd_helper(self.adapter, self.r2, "izz~..")
+        result = cmd_helper(self.adapter, self.adapter, "izz~..")
         return result if isinstance(result, str) else ""

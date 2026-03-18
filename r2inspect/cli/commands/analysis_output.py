@@ -8,7 +8,7 @@ from typing import Any
 
 from ...application.analysis_service import default_analysis_service
 from ...error_handling.stats import get_circuit_breaker_stats, get_error_stats, get_retry_stats
-from ...utils.output import OutputFormatter
+from ...cli.output_formatters import OutputFormatter
 
 
 def print_status_if_needed(
@@ -113,7 +113,7 @@ def _write_output(
     label: str,
 ) -> None:
     if output_file:
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(content)
         console.print(f"[green]{label} results saved to: {output_file}[/green]")
     else:

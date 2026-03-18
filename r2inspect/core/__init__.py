@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Core analysis components for r2inspect."""
 
-from .constants import (
+from ..infrastructure import r2_session
+from ..domain.constants import (
     HUGE_FILE_THRESHOLD_MB,
     LARGE_FILE_THRESHOLD_MB,
     MIN_EXECUTABLE_SIZE_BYTES,
@@ -21,6 +22,7 @@ __all__ = [
     "FileValidator",
     "PipelineBuilder",
     "ResultAggregator",
+    "r2_session",
     # Constants
     "MIN_EXECUTABLE_SIZE_BYTES",
     "MIN_HEADER_SIZE_BYTES",

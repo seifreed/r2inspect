@@ -3,15 +3,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from ..interfaces import AnalyzerBackend
-from ..registry.analyzer_registry import AnalyzerRegistry
-from ..utils.analyzer_factory import create_analyzer
-from ..utils.logger import get_logger
+from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, AnalyzerRegistryLike
 from .analysis_pipeline import AnalysisStage
+from .stages_common import default_analyzer_factory
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SecurityStage(AnalysisStage):
@@ -19,10 +18,11 @@ class SecurityStage(AnalysisStage):
 
     def __init__(
         self,
-        registry: AnalyzerRegistry,
+        registry: AnalyzerRegistryLike,
         adapter: AnalyzerBackend,
         config: Any,
         filename: str,
+        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
     ) -> None:
         super().__init__(
             name="security",
@@ -34,6 +34,7 @@ class SecurityStage(AnalysisStage):
         self.adapter = adapter
         self.config = config
         self.filename = filename
+        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         file_format = context.get("metadata", {}).get("file_format", "Unknown")
@@ -54,7 +55,7 @@ class SecurityStage(AnalysisStage):
         pe_analyzer_class = self.registry.get_analyzer_class("pe_analyzer")
         if pe_analyzer_class:
             try:
-                analyzer = create_analyzer(
+                analyzer = self.analyzer_factory(
                     pe_analyzer_class,
                     adapter=self.adapter,
                     config=self.config,
@@ -64,7 +65,7 @@ class SecurityStage(AnalysisStage):
                 context["results"]["security"] = data
                 return {"security": data}
             except Exception as e:
-                logger.warning(f"PE security analysis failed: {e}")
+                logger.warning("PE security analysis failed: %s", e)
                 context["results"]["security"] = {"error": str(e)}
                 return {"security": {"error": str(e)}}
         return None
@@ -73,7 +74,7 @@ class SecurityStage(AnalysisStage):
         mitigation_class = self.registry.get_analyzer_class("exploit_mitigation")
         if mitigation_class:
             try:
-                analyzer = create_analyzer(
+                analyzer = self.analyzer_factory(
                     mitigation_class, adapter=self.adapter, config=self.config
                 )
                 mitigations = analyzer.analyze()
@@ -82,7 +83,7 @@ class SecurityStage(AnalysisStage):
                 else:
                     context["results"]["security"] = mitigations
             except Exception as e:
-                logger.debug(f"Mitigation analysis failed: {e}")
+                logger.debug("Mitigation analysis failed: %s", e)
                 return None
             return {"security": context["results"].get("security", {})}
         return None

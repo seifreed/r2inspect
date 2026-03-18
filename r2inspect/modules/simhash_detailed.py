@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Callable
 from typing import Any
 
 from ..abstractions.result_builder import init_result, mark_unavailable
+from ..domain.services.simhash import build_feature_stats
 
 
 def run_detailed_simhash_analysis(
@@ -111,23 +111,7 @@ def run_detailed_simhash_analysis(
             results["similarity_groups"] = similar_groups
 
         # Feature statistics
-        feature_stats: dict[str, Any] = {
-            "total_strings": len(strings_features),
-            "total_opcodes": len(opcodes_features),
-            "total_features": len(combined_features),
-            "unique_strings": len(set(strings_features)) if strings_features else 0,
-            "unique_opcodes": len(set(opcodes_features)) if opcodes_features else 0,
-        }
-
-        # Add frequency analysis
-        if combined_features:
-            feature_counter = Counter(combined_features)
-            feature_stats["most_common_features"] = feature_counter.most_common(10)
-            feature_stats["feature_diversity"] = len(set(combined_features)) / len(
-                combined_features
-            )
-
-        results["feature_stats"] = feature_stats
+        results["feature_stats"] = build_feature_stats(strings_features, opcodes_features)
 
         log_debug(f"SimHash analysis completed: {len(combined_features)} total features")
         log_debug(f"Binary SimHash: {hex(combined_simhash.value) if combined_features else 'N/A'}")

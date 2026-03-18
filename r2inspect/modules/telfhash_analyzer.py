@@ -12,9 +12,20 @@ except ImportError:
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy
-from ..utils.file_type import is_elf_file
-from ..utils.logger import get_logger
-from ..utils.ssdeep_loader import get_ssdeep
+from ..infrastructure.file_type import is_elf_file, is_pe_file
+from ..infrastructure.logging import get_logger
+from ..infrastructure.ssdeep_loader import get_ssdeep
+from .telfhash_analysis import (
+    analyze_symbols as _analyze_symbols_impl,
+    is_elf_binary as _is_elf_binary_impl,
+)
+from .telfhash_support import (
+    extract_symbol_names as _extract_symbol_names_impl,
+    filter_symbols_for_telfhash as _filter_symbols_for_telfhash_impl,
+    normalize_telfhash_value as _normalize_telfhash_value_impl,
+    parse_telfhash_result as _parse_telfhash_result_impl,
+    should_skip_symbol as _should_skip_symbol_impl,
+)
 
 logger = get_logger(__name__)
 
@@ -60,33 +71,22 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
             # Calculate telfhash using the official telfhash library
             telfhash_result = telfhash(str(self.filepath))
-            logger.debug(f"Telfhash function returned: {type(telfhash_result)} = {telfhash_result}")
+            logger.debug(
+                "Telfhash function returned: %s = %s", type(telfhash_result), telfhash_result
+            )
 
-            # Parse result based on return type
-            hash_value = None
-            message = None
-            if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
-                # telfhash returns a list with one dictionary for single file
-                result_dict = telfhash_result[0]
-                hash_value = self._normalize_telfhash_value(result_dict.get("telfhash"))
-                message = cast(str | None, result_dict.get("msg"))
-            elif isinstance(telfhash_result, dict):
-                # Extract the actual hash from the result dictionary
-                hash_value = self._normalize_telfhash_value(telfhash_result.get("telfhash"))
-                message = cast(str | None, telfhash_result.get("msg"))
-            else:
-                hash_value = self._normalize_telfhash_value(telfhash_result)
+            hash_value, message = _parse_telfhash_result_impl(telfhash_result)
 
             if message and not hash_value:
                 return None, None, message
 
             if hash_value:
-                logger.debug(f"Telfhash calculated: {hash_value}")
+                logger.debug("Telfhash calculated: %s", hash_value)
                 return hash_value, "python_library", None
             return None, None, "Telfhash calculation returned no hash"
 
         except Exception as e:
-            logger.error(f"Error calculating telfhash: {e}")
+            logger.error("Error calculating telfhash: %s", e)
             return None, None, f"Telfhash calculation failed: {str(e)}"
 
     def _get_hash_type(self) -> str:
@@ -115,81 +115,12 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             Dictionary containing detailed telfhash analysis results
         """
-        logger.debug(f"Starting detailed telfhash analysis for {self.filepath}")
-
-        results: dict[str, Any] = {
-            "available": TELFHASH_AVAILABLE,
-            "telfhash": None,
-            "symbol_count": 0,
-            "filtered_symbols": 0,
-            "symbols_used": [],
-            "error": None,
-            "is_elf": False,
-        }
-
-        if not TELFHASH_AVAILABLE:
-            results["error"] = "telfhash library not available"
-            logger.error("telfhash library not available")
-            return results
-
-        try:
-            # Check if file is ELF
-            if not self._is_elf_file():
-                results["error"] = "File is not an ELF binary"
-                logger.warning(f"File {self.filepath} is not an ELF binary")
-                return results
-
-            results["is_elf"] = True
-
-            # Get symbols from ELF
-            symbols = self._get_elf_symbols()
-            results["symbol_count"] = len(symbols)
-
-            # Filter symbols for telfhash calculation
-            filtered_symbols = self._filter_symbols_for_telfhash(symbols)
-            results["filtered_symbols"] = len(filtered_symbols)
-
-            # Extract symbol names and sort them
-            symbol_names = self._extract_symbol_names(filtered_symbols)
-            results["symbols_used"] = symbol_names[:20]  # Store first 20 for reference
-
-            # Calculate telfhash using the official telfhash library
-            try:
-                telfhash_result = telfhash(str(self.filepath))
-                logger.debug(
-                    f"Telfhash function returned: {type(telfhash_result)} = {telfhash_result}"
-                )
-
-                if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
-                    # telfhash returns a list with one dictionary for single file
-                    result_dict = telfhash_result[0]
-                    results["telfhash"] = self._normalize_telfhash_value(
-                        result_dict.get("telfhash")
-                    )
-                    if result_dict.get("msg") and not results["telfhash"]:
-                        results["error"] = result_dict.get("msg")
-                    logger.debug(f"Telfhash calculated: {results['telfhash']}")
-                elif isinstance(telfhash_result, dict):
-                    # Extract the actual hash from the result dictionary
-                    results["telfhash"] = self._normalize_telfhash_value(
-                        telfhash_result.get("telfhash")
-                    )
-                    if telfhash_result.get("msg") and not results["telfhash"]:
-                        results["error"] = telfhash_result.get("msg")
-                    logger.debug(f"Telfhash calculated: {results['telfhash']}")
-                else:
-                    results["telfhash"] = self._normalize_telfhash_value(telfhash_result)
-                    logger.debug(f"Telfhash calculated: {results['telfhash']}")
-
-            except Exception as e:
-                logger.error(f"Error calling telfhash function: {e}")
-                results["error"] = f"Telfhash calculation failed: {e}"
-
-        except Exception as e:
-            logger.error(f"Telfhash analysis failed: {e}")
-            results["error"] = str(e)
-
-        return results
+        return _analyze_symbols_impl(
+            self,
+            telfhash_available=TELFHASH_AVAILABLE,
+            telfhash_fn=telfhash,
+            logger=logger,
+        )
 
     def _is_elf_file(self) -> bool:
         """
@@ -198,17 +129,12 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             True if file is ELF, False otherwise
         """
-        try:
-            if self.r2 is None:
-                return False
-            if is_elf_file(self.filepath, self.adapter, self.r2, logger=logger):
-                return True
-            info_cmd = self._cmdj("ij", {})
-            return self._has_elf_symbols(info_cmd)
-
-        except Exception as e:
-            logger.error(f"Error checking if file is ELF: {e}")
-            return False
+        return _is_elf_binary_impl(
+            self,
+            logger=logger,
+            is_elf_file_fn=is_elf_file,
+            is_pe_file_fn=is_pe_file,
+        )
 
     def _has_elf_symbols(self, info_cmd: dict[str, Any] | None) -> bool:
         try:
@@ -220,7 +146,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             os_info = str(info_cmd["bin"].get("os", "")).lower()
             return "linux" in os_info or "unix" in os_info
         except Exception as exc:
-            logger.debug(f"Failed to inspect ELF symbols: {exc}")
+            logger.debug("Failed to inspect ELF symbols: %s", exc)
             return False
 
     def _get_elf_symbols(self) -> list[dict[str, Any]]:
@@ -237,11 +163,11 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 logger.warning("No symbols found in ELF file")
                 return []
 
-            logger.debug(f"Found {len(symbols)} total symbols")
+            logger.debug("Found %s total symbols", len(symbols))
             return symbols
 
         except Exception as e:
-            logger.error(f"Failed to extract symbols: {e}")
+            logger.error("Failed to extract symbols: %s", e)
             return []
 
     def _filter_symbols_for_telfhash(self, symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -259,32 +185,8 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             List of filtered symbols suitable for telfhash
         """
-        filtered: list[dict[str, Any]] = []
-
-        for sym in symbols:
-            sym_type = sym.get("type", "").upper()
-            sym_bind = sym.get("bind", "").upper()
-            sym_name = sym.get("name", "")
-
-            # Filter by type: FUNC (functions) and OBJECT (data objects)
-            if sym_type not in {"FUNC", "OBJECT"}:
-                continue
-
-            # Filter by binding: exclude LOCAL symbols
-            if sym_bind == "LOCAL":
-                continue
-
-            # Must have a name
-            if not sym_name or sym_name.strip() == "":
-                continue
-
-            # Skip some common unwanted symbols
-            if self._should_skip_symbol(sym_name):
-                continue
-
-            filtered.append(sym)
-
-        logger.debug(f"Filtered {len(filtered)} symbols from {len(symbols)} total")
+        filtered = _filter_symbols_for_telfhash_impl(symbols)
+        logger.debug("Filtered %s symbols from %s total", len(filtered), len(symbols))
         return filtered
 
     def _should_skip_symbol(self, symbol_name: str) -> bool:
@@ -297,26 +199,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             True if symbol should be skipped, False otherwise
         """
-        # Skip empty or very short names
-        if len(symbol_name) < 2:
-            return True
-
-        # Skip some common unwanted prefixes/patterns
-        skip_patterns = [
-            "__",  # Internal symbols
-            "_GLOBAL_",  # Global offset table entries
-            "_DYNAMIC",  # Dynamic section symbols
-            ".L",  # Local labels
-            "_edata",  # End of data
-            "_end",  # End of program
-            "_start",  # Program start (sometimes too generic)
-        ]
-
-        for pattern in skip_patterns:
-            if symbol_name.startswith(pattern):
-                return True
-
-        return False
+        return _should_skip_symbol_impl(symbol_name)
 
     def _extract_symbol_names(self, symbols: list[dict[str, Any]]) -> list[str]:
         """
@@ -328,27 +211,13 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             Sorted list of symbol names
         """
-        names: list[str] = []
-
-        for sym in symbols:
-            name = sym.get("name", "").strip()
-            if name:
-                names.append(name)
-
-        # Sort names for consistent hash calculation
-        names.sort()
-
-        logger.debug(f"Extracted {len(names)} symbol names for telfhash")
+        names = _extract_symbol_names_impl(symbols)
+        logger.debug("Extracted %s symbol names for telfhash", len(names))
         return names
 
     @staticmethod
     def _normalize_telfhash_value(value: Any) -> str | None:
-        if not isinstance(value, str):
-            return None
-        cleaned = value.strip()
-        if not cleaned or cleaned == "-":
-            return None
-        return cleaned
+        return _normalize_telfhash_value_impl(value)
 
     @staticmethod
     def compare_hashes(hash1: str, hash2: str) -> int | None:
@@ -386,7 +255,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 return None
             return cast(int, ssdeep_module.compare(hash1, hash2))
         except Exception as e:
-            logger.warning(f"Telfhash comparison failed: {e}")
+            logger.warning("Telfhash comparison failed: %s", e)
             return None
 
     @staticmethod
@@ -421,5 +290,5 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 return TelfhashAnalyzer._normalize_telfhash_value(result.get("telfhash"))
             return TelfhashAnalyzer._normalize_telfhash_value(result)
         except Exception as e:
-            logger.warning(f"Failed to calculate telfhash: {e}")
+            logger.warning("Failed to calculate telfhash: %s", e)
             return None

@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """Impfuzzy hash calculation for PE imports."""
 
-from collections import defaultdict
-from typing import Any, cast
+from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy
-from ..utils.file_type import is_pe_file
-from ..utils.logger import get_logger
-from ..utils.ssdeep_loader import get_ssdeep
+from ..infrastructure.file_type import is_pe_file
+from ..infrastructure.logging import get_logger
+from ..infrastructure.ssdeep_loader import get_ssdeep
+from .impfuzzy_support import (
+    analyze_imports as _analyze_imports_impl,
+    calculate_impfuzzy_from_file as _calculate_impfuzzy_from_file_impl,
+    compare_hashes as _compare_hashes_impl,
+    extract_imports as _extract_imports_impl,
+    process_imports as _process_imports_impl,
+)
 
 logger = get_logger(__name__)
 
@@ -72,7 +78,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
             impfuzzy_hash = pyimpfuzzy.get_impfuzzy(str(self.filepath))
 
             if impfuzzy_hash:
-                logger.debug(f"Impfuzzy hash calculated: {impfuzzy_hash}")
+                logger.debug("Impfuzzy hash calculated: %s", impfuzzy_hash)
                 return impfuzzy_hash, "python_library", None
             else:
                 return (
@@ -82,7 +88,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 )
 
         except Exception as e:
-            logger.error(f"Error calculating impfuzzy hash: {e}")
+            logger.error("Error calculating impfuzzy hash: %s", e)
             return None, None, f"Impfuzzy calculation failed: {str(e)}"
 
     def _get_hash_type(self) -> str:
@@ -104,76 +110,13 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             Dictionary containing detailed impfuzzy analysis results
         """
-        logger.debug(f"Starting detailed impfuzzy analysis for {self.filepath}")
-
-        results: dict[str, Any] = {
-            "available": False,
-            "impfuzzy_hash": None,
-            "import_count": 0,
-            "dll_count": 0,
-            "imports_processed": [],
-            "error": None,
-            "library_available": IMPFUZZY_AVAILABLE,
-        }
-
-        if not IMPFUZZY_AVAILABLE:
-            results["error"] = "pyimpfuzzy library not available"
-            logger.warning("pyimpfuzzy library not available for impfuzzy calculation")
-            return results
-
-        try:
-            # Check if file is PE
-            if not self._is_pe_file():
-                results["error"] = "File is not a PE binary"
-                logger.debug(f"File {self.filepath} is not a PE binary")
-                return results
-
-            # Extract imports using r2pipe
-            imports_data = self._extract_imports()
-            if not imports_data:
-                results["error"] = "No imports found or failed to extract imports"
-                logger.debug("No imports found in PE file")
-                return results
-
-            # Process imports into dll.function format
-            processed_imports = self._process_imports(imports_data)
-            if not processed_imports:
-                results["error"] = "No valid imports found after processing"
-                logger.debug("No valid imports found after processing")
-                return results
-
-            # Calculate impfuzzy hash
-            impfuzzy_hash = pyimpfuzzy.get_impfuzzy(str(self.filepath))
-            if not impfuzzy_hash:
-                results["error"] = "Failed to calculate impfuzzy hash"
-                logger.debug("Failed to calculate impfuzzy hash")
-                return results
-
-            # Count unique DLLs
-            unique_dlls = set()
-            for imp_str in processed_imports:
-                dll_name = imp_str.split(".")[0]
-                unique_dlls.add(dll_name)
-
-            results.update(
-                {
-                    "available": True,
-                    "impfuzzy_hash": impfuzzy_hash,
-                    "import_count": len(processed_imports),
-                    "dll_count": len(unique_dlls),
-                    "imports_processed": processed_imports[:50],  # Limit to first 50 for display
-                    "total_imports": len(processed_imports),
-                }
-            )
-
-            logger.debug(f"Impfuzzy calculated successfully: {impfuzzy_hash}")
-            logger.debug(f"Processed {len(processed_imports)} imports from {len(unique_dlls)} DLLs")
-
-        except Exception as e:
-            logger.error(f"Impfuzzy analysis failed: {e}")
-            results["error"] = str(e)
-
-        return results
+        logger.debug("Starting detailed impfuzzy analysis for %s", self.filepath)
+        return _analyze_imports_impl(
+            self,
+            impfuzzy_available=IMPFUZZY_AVAILABLE,
+            pyimpfuzzy=pyimpfuzzy,
+            logger=logger,
+        )
 
     def _is_pe_file(self) -> bool:
         """
@@ -191,38 +134,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             List of import dictionaries or None if extraction fails
         """
-        try:
-            # Get import information in JSON format
-            imports: list[dict[str, Any]] = []
-            if self.adapter is not None and hasattr(self.adapter, "get_imports"):
-                raw_imports = self.adapter.get_imports()
-            else:
-                raw_imports = self._cmdj("iij", [])
-
-            if isinstance(raw_imports, list):
-                imports = [imp for imp in raw_imports if isinstance(imp, dict)]
-            elif isinstance(raw_imports, dict):
-                imports = [raw_imports]
-
-            if not imports:
-                logger.debug("No imports found with 'iij' command")
-                # Try alternative command
-                raw_imports = self._cmdj("ii", [])
-                if isinstance(raw_imports, list):
-                    imports = [imp for imp in raw_imports if isinstance(imp, dict)]
-                elif isinstance(raw_imports, dict):
-                    imports = [raw_imports]
-
-            if not imports:
-                logger.debug("No imports found with any method")
-                return []
-
-            logger.debug(f"Extracted {len(imports)} import entries")
-            return imports
-
-        except Exception as e:
-            logger.error(f"Error extracting imports: {e}")
-            return []
+        return _extract_imports_impl(self, logger=logger)
 
     def _process_imports(self, imports_data: list[dict[str, Any]]) -> list[str]:
         """
@@ -234,54 +146,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             List of strings in format "dll.function"
         """
-        processed_imports: list[str] = []
-        dll_funcs = defaultdict(list)
-
-        try:
-            for imp in imports_data:
-                if not isinstance(imp, dict):
-                    continue
-                # Extract DLL name
-                dll = (
-                    imp.get("libname")
-                    or imp.get("lib")
-                    or imp.get("library")
-                    or imp.get("module")
-                    or "unknown"
-                )
-
-                # Extract function name
-                func_name = (
-                    imp.get("name") or imp.get("func") or imp.get("function") or imp.get("symbol")
-                )
-
-                if func_name and func_name != "unknown":
-                    # Normalize names to lowercase
-                    dll_clean = dll.lower().replace(".dll", "")
-                    func_clean = func_name.lower()
-
-                    # Remove ordinals and prefixes
-                    if func_clean.startswith("ord_"):
-                        continue  # Skip ordinal imports
-
-                    # Add to dll_funcs mapping
-                    dll_funcs[dll_clean].append(func_clean)
-
-            # Convert to flat list in dll.function format
-            for dll, functions in dll_funcs.items():
-                for func in functions:
-                    processed_imports.append(f"{dll}.{func}")
-
-            # Sort imports for consistency
-            processed_imports.sort()
-
-            logger.debug(f"Processed imports into {len(processed_imports)} dll.function entries")
-
-            return processed_imports
-
-        except Exception as e:
-            logger.error(f"Error processing imports: {e}")
-            return []
+        return _process_imports_impl(imports_data, logger=logger)
 
     @staticmethod
     def compare_hashes(hash1: str, hash2: str) -> int | None:
@@ -305,22 +170,13 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
             >>> if similarity is not None and similarity > 70:
             ...     print("Very similar")
         """
-        if not IMPFUZZY_AVAILABLE:
-            return None
-
-        if not hash1 or not hash2:
-            return None
-
-        try:
-            # pyimpfuzzy uses ssdeep comparison internally
-            ssdeep_module = get_ssdeep()
-            if ssdeep_module is None:
-                logger.warning("ssdeep library required for impfuzzy comparison")
-                return None
-            return cast(int, ssdeep_module.compare(hash1, hash2))
-        except Exception as e:
-            logger.warning(f"Impfuzzy comparison failed: {e}")
-            return None
+        return _compare_hashes_impl(
+            hash1,
+            hash2,
+            impfuzzy_available=IMPFUZZY_AVAILABLE,
+            logger=logger,
+            get_ssdeep_fn=get_ssdeep,
+        )
 
     @staticmethod
     def is_available() -> bool:
@@ -343,11 +199,9 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             Impfuzzy hash string or None if calculation fails
         """
-        if not IMPFUZZY_AVAILABLE:
-            return None
-
-        try:
-            return cast(str | None, pyimpfuzzy.get_impfuzzy(filepath))
-        except Exception as e:
-            logger.error(f"Error calculating impfuzzy from file: {e}")
-            return None
+        return _calculate_impfuzzy_from_file_impl(
+            filepath,
+            impfuzzy_available=IMPFUZZY_AVAILABLE,
+            pyimpfuzzy=pyimpfuzzy,
+            logger=logger,
+        )

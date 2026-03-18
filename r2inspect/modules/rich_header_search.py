@@ -6,12 +6,12 @@ from __future__ import annotations
 import struct
 from typing import Any, cast
 
-from ..utils.logger import get_logger
-from .rich_header_domain import (
+from ..domain.services.rich_header import (
     build_rich_header_result,
     decode_rich_header,
     validate_decoded_entries,
 )
+from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -51,7 +51,7 @@ class RichHeaderSearchMixin:
             return self._pattern_based_rich_search(data)
 
         except Exception as e:
-            logger.error(f"Error in manual Rich Header search: {e}")
+            logger.error("Error in manual Rich Header search: %s", e)
             return None
 
     def _read_manual_search_bytes(self) -> bytes | None:
@@ -67,7 +67,7 @@ class RichHeaderSearchMixin:
         """Find all signature offsets for a Rich/DanS pair."""
         rich_offsets = self._find_all_occurrences(data, rich_sig)
         dans_offsets = self._find_all_occurrences(data, dans_sig)
-        logger.debug(f"Manual search found Rich at: {rich_offsets}, DanS at: {dans_offsets}")
+        logger.debug("Manual search found Rich at: %s, DanS at: %s", rich_offsets, dans_offsets)
         if not rich_offsets or not dans_offsets:
             return None
         return rich_offsets, dans_offsets
@@ -123,25 +123,23 @@ class RichHeaderSearchMixin:
             for rich_pos in rich_positions:
                 if not self._is_valid_rich_key(data, rich_pos):
                     continue
-                dans_pos = self._find_dans_before_rich(data, rich_pos)
-                if dans_pos is None:
-                    continue
-                rich_data = self._try_extract_rich_at_offsets(dans_pos, rich_pos)
-                if rich_data:
-                    logger.debug(
-                        f"Pattern-based search found Rich Header at DanS:{dans_pos}, Rich:{rich_pos}"
-                    )
-                    return rich_data
+                for dans_pos in self._find_dans_candidates_before_rich(data, rich_pos):
+                    rich_data = self._try_extract_rich_at_offsets(dans_pos, rich_pos)
+                    if rich_data:
+                        logger.debug(
+                            f"Pattern-based search found Rich Header at DanS:{dans_pos}, Rich:{rich_pos}"
+                        )
+                        return rich_data
             return None
 
         except Exception as e:
-            logger.debug(f"Error in pattern-based Rich Header search: {e}")
+            logger.debug("Error in pattern-based Rich Header search: %s", e)
             return None
 
     def _find_rich_positions(self, data: bytes) -> list[int]:
         """Find positions of 'Rich' signature."""
         positions: list[int] = []
-        for i in range(len(data) - 8):
+        for i in range(len(data) - 7):
             if data[i : i + 4] == b"Rich":
                 positions.append(i)
         return positions
@@ -155,10 +153,16 @@ class RichHeaderSearchMixin:
 
     def _find_dans_before_rich(self, data: bytes, rich_pos: int) -> int | None:
         """Find DanS signature before Rich within a window."""
+        candidates = self._find_dans_candidates_before_rich(data, rich_pos)
+        return candidates[0] if candidates else None
+
+    def _find_dans_candidates_before_rich(self, data: bytes, rich_pos: int) -> list[int]:
+        """Find all DanS signatures before Rich within a window."""
+        candidates: list[int] = []
         for j in range(max(0, rich_pos - 512), rich_pos):
             if data[j : j + 4] == b"DanS":
-                return j
-        return None
+                candidates.append(j)
+        return candidates
 
     def _try_extract_rich_at_offsets(
         self, dans_offset: int, rich_offset: int
@@ -195,7 +199,7 @@ class RichHeaderSearchMixin:
             return build_rich_header_result(decoded_entries, xor_key)
 
         except Exception as e:
-            logger.debug(f"Error extracting Rich Header: {e}")
+            logger.debug("Error extracting Rich Header: %s", e)
             return None
 
     def _validate_rich_size(self, rich_size: int) -> bool:

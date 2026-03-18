@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -13,8 +15,8 @@ from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, T
 
 from ..application.use_cases import AnalyzeBinaryUseCase
 from ..factory import create_inspector
-from ..utils.logger import get_logger
-from ..utils.output import OutputFormatter
+from ..infrastructure.logging import get_logger
+from ..cli.output_formatters import OutputFormatter
 
 console = Console()
 logger = get_logger(__name__)
@@ -55,7 +57,8 @@ def process_single_file(
             verbose=False,
         ) as inspector:
             analysis_options = {**options, "batch_mode": True}
-            results = AnalyzeBinaryUseCase().run(inspector, analysis_options)
+            result = AnalyzeBinaryUseCase().run(inspector, analysis_options)
+            results = result.to_dict()
             results["filename"] = str(file_path)
             results["relative_path"] = str(file_path.relative_to(batch_path))
 
@@ -63,8 +66,22 @@ def process_single_file(
                 formatter = OutputFormatter(results)
                 json_output = formatter.to_json()
                 json_file = output_path / f"{file_path.stem}_analysis.json"
-                with open(json_file, "w") as f:
-                    f.write(json_output)
+                # Write atomically: write to temp file then rename to prevent partial files
+                tmp_file = json_file.with_suffix(".json.tmp")
+                try:
+                    with open(tmp_file, "w", encoding="utf-8") as f:
+                        f.write(json_output)
+                    try:
+                        os.replace(str(tmp_file), str(json_file))
+                    except OSError:
+                        shutil.move(str(tmp_file), str(json_file))
+                except Exception:
+                    # Clean up partial temp file on failure
+                    try:
+                        tmp_file.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                    raise
 
             rate_limiter.release_success()
             return file_path, results, None
@@ -135,6 +152,8 @@ def process_files_parallel(
                         if results is None:
                             failed_files.append((str(file_path), "Empty results"))
                         else:
-                            file_key = file_path.name
+                            # Use full path as key to avoid collisions
+                            # between files with the same basename in different dirs
+                            file_key = str(file_path)
                             all_results[file_key] = results
         progress.stop()
