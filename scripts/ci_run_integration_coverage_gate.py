@@ -38,6 +38,43 @@ PRIORITY_MAP: dict[str, str] = {
     "r2inspect/registry/registry_queries.py": "C",
     "r2inspect/schemas/results_loader.py": "C",
     "r2inspect/schemas/converters.py": "C",
+    "r2inspect/domain/analysis_runtime.py": "E",
+    "r2inspect/domain/constants.py": "E",
+    "r2inspect/domain/entities.py": "E",
+    "r2inspect/domain/format_types.py": "E",
+    "r2inspect/domain/result_builder.py": "E",
+    "r2inspect/domain/results.py": "E",
+    "r2inspect/domain/services/binbloom.py": "E",
+    "r2inspect/domain/services/binlex.py": "E",
+    "r2inspect/domain/services/exploit_mitigation.py": "E",
+    "r2inspect/domain/services/function_analysis.py": "E",
+    "r2inspect/domain/services/hashing.py": "E",
+    "r2inspect/domain/services/import_analysis.py": "E",
+    "r2inspect/domain/services/overlay_analysis.py": "E",
+    "r2inspect/domain/services/resource_analysis.py": "E",
+    "r2inspect/domain/services/rich_header_compiler_support.py": "E",
+    "r2inspect/domain/services/rich_header_decode_support.py": "E",
+    "r2inspect/domain/services/rich_header.py": "E",
+    "r2inspect/domain/services/section_analysis.py": "E",
+    "r2inspect/domain/services/simhash.py": "E",
+    "r2inspect/domain/formats/anti_analysis.py": "E",
+    "r2inspect/domain/formats/bindiff_compare.py": "E",
+    "r2inspect/domain/formats/bindiff_indicator.py": "E",
+    "r2inspect/domain/formats/bindiff.py": "E",
+    "r2inspect/domain/formats/compiler.py": "E",
+    "r2inspect/domain/formats/crypto.py": "E",
+    "r2inspect/domain/formats/elf_security.py": "E",
+    "r2inspect/domain/formats/elf.py": "E",
+    "r2inspect/domain/formats/import_analysis.py": "E",
+    "r2inspect/domain/formats/macho_security.py": "E",
+    "r2inspect/domain/formats/macho.py": "E",
+    "r2inspect/domain/formats/pe_info.py": "E",
+    "r2inspect/domain/formats/similarity.py": "E",
+    "r2inspect/domain/formats/string.py": "E",
+    "r2inspect/domain/formats/telfhash.py": "E",
+    "r2inspect/domain/analysis/import_collection.py": "E",
+    "r2inspect/domain/analysis/import_risk.py": "E",
+    "r2inspect/domain/hashing/simhash_compare.py": "E",
 }
 
 PHASE_LABELS = {
@@ -45,8 +82,9 @@ PHASE_LABELS = {
     "B": "Fase B — cli/ux",
     "C": "Fase C — registry/schemas",
     "D": "Fase D — resiliencia",
+    "E": "Fase E — domain layer",
 }
-PHASE_PRIORITY = ["A", "B", "C", "D"]
+PHASE_PRIORITY = ["A", "B", "C", "D", "E"]
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
