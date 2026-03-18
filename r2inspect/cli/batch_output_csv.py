@@ -7,7 +7,6 @@ import csv
 from pathlib import Path
 from typing import Any
 
-
 FIELDNAMES = [
     "name",
     "size",

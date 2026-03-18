@@ -8,7 +8,6 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-
 RETRYABLE_EXCEPTIONS = (TimeoutError, ConnectionError, OSError)
 RETRYABLE_ERROR_MESSAGES = (
     "timeout",

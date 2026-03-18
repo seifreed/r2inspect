@@ -14,7 +14,6 @@ from ..domain.analysis.import_collection import (
     safe_len,
 )
 
-
 __all__ = [
     "safe_len",
     "normalize_import_entries",

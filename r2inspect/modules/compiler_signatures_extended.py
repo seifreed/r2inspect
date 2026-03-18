@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Secondary compiler signatures."""
 
-
 EXTENDED_COMPILER_SIGNATURES = {
     "VB.NET": {"strings": [r"VB\.NET"], "imports": [], "sections": [], "symbols": []},
     "Managed C++": {

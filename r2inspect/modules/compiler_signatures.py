@@ -12,7 +12,6 @@ from .compiler_signature_constants import (
 from .compiler_signatures_core import CORE_COMPILER_SIGNATURES
 from .compiler_signatures_extended import EXTENDED_COMPILER_SIGNATURES
 
-
 COMPILER_SIGNATURES = {
     **CORE_COMPILER_SIGNATURES,
     **EXTENDED_COMPILER_SIGNATURES,

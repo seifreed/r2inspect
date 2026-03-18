@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 PE_CHARACTERISTIC_FLAGS: dict[int, str] = {
     0x00000020: "IMAGE_SCN_CNT_CODE",
     0x00000040: "IMAGE_SCN_CNT_INITIALIZED_DATA",
