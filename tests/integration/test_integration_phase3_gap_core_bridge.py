@@ -13,11 +13,9 @@ if str(ROOT) not in sys.path:
 
 from tests.unit.test_base_analyzer_completion import *
 from tests.unit.test_core_file_validator_memory_block352 import *
-from tests.unit.test_compiler_domain_branch_paths import *
 from tests.unit.test_file_validator_branch_paths import *
 from tests.unit.test_file_validator_validation import *
 from tests.unit.test_hashing_branch_paths import *
-from tests.unit.test_import_domain_branch_paths import *
 from tests.unit.test_lazy_loader_block241 import *
 from tests.unit.test_macho_analyzer_branch_paths import *
 from tests.unit.test_packer_detector_branch_paths import *
