@@ -73,7 +73,7 @@ def count_unique_signatures(function_signatures: dict[str, dict[str, Any]]) -> i
 
 
 def build_similar_function_groups(
-    function_signatures: dict[str, dict[str, Any]]
+    function_signatures: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Group functions that share the same signature."""
     signature_groups: dict[str, list[str]] = defaultdict(list)
