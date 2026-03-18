@@ -42,6 +42,6 @@ from tests.unit.test_macho_analyzer_extra_coverage import *
 from tests.unit.test_macho_security_paths import *
 
 # Pipeline stages under 90%
-from tests.unit.test_pipeline_stages_detection_coverage import *
-from tests.unit.test_pipeline_stages_detection_branch_paths import *
-from tests.unit.test_pipeline_stages_security_branch_paths import *
+from tests.unit.product.test_pipeline_stage_behaviors import *
+from tests.unit.product.test_pipeline_common_behaviors import *
+from tests.unit.product.test_pipeline_metadata_security_behaviors import *
