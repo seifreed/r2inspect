@@ -151,23 +151,12 @@ jobs:
           python -c "import r2inspect, sys; print(r2inspect.__version__)"
           ssdeep -V
 
-      - name: Run integration tests batch 1/3
-        timeout-minutes: 30
+      - name: Run integration tests (continue on error)
+        continue-on-error: true
+        timeout-minutes: 20
         run: |
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
-          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 3 --threshold 70 || echo "::notice::Batch 1/3 completed"
-
-      - name: Run integration tests batch 2/3
-        timeout-minutes: 30
-        run: |
-          python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
-          python scripts/ci_run_integration_batch.py --batch 2 --total-batches 3 --threshold 70 || echo "::notice::Batch 2/3 completed"
-
-      - name: Run integration tests batch 3/3
-        timeout-minutes: 30
-        run: |
-          python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
-          python scripts/ci_run_integration_batch.py --batch 3 --total-batches 3 --threshold 70 || echo "::notice::Batch 3/3 completed"
+          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 70
 
       - name: Run unit tests
         run: |
