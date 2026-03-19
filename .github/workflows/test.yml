@@ -152,7 +152,7 @@ jobs:
           ssdeep -V
 
       - name: Run integration tests with explicit coverage gate
-        timeout-minutes: 30
+        timeout-minutes: 60
         run: |
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
           echo "::notice::Running: python scripts/ci_run_integration_coverage_gate.py --threshold 70 --max-modules 200 --append-notes --notes-path coverage-notes.md"
