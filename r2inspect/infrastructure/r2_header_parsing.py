@@ -200,6 +200,21 @@ def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
     return headers
 
 
+def _parse_macho_headers_text(text_output: str) -> list[dict[str, Any]]:
+    """Parse Mach-O header text output (ih) into a list of dicts."""
+    headers: list[dict[str, Any]] = []
+    for raw_line in text_output.split("\n"):
+        line = raw_line.strip()
+        if not line or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        parsed_key = key.strip().lower()
+        parsed_value = value.strip()
+        if parsed_key in {"type", "flags", "offset", "vaddr", "paddr", "filesz", "memsz"}:
+            headers.append({parsed_key: parsed_value})
+    return headers
+
+
 def get_macho_headers(
     r2_instance: Any,
     safe_cmdj_func: Callable[[Any, str, Any], Any],
@@ -225,6 +240,6 @@ def get_macho_headers(
         )
         if not headers_output:
             return []
-        return []
+        return _parse_macho_headers_text(headers_output)
 
     return cast(list[dict[str, Any]] | None, _get_headers())

@@ -27,7 +27,7 @@ def detect_fat_macho_arches(filename: str) -> set[str]:
                 nfat_arch = struct.unpack(">I", header[4:8])[0]
             elif magic_be == 0xBEBAFECA:
                 entry_unpack = "<IIIII"
-                nfat_arch = struct.unpack(">I", header[4:8])[0]
+                nfat_arch = struct.unpack("<I", header[4:8])[0]
             else:
                 return set()
             arches: set[str] = set()
