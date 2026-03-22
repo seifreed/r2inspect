@@ -1,16 +1,5 @@
 import r2inspect.infrastructure.r2_helpers as r2_helpers
-
-
-class FakeR2:
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command)
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_validate_r2_data_dict_and_list():

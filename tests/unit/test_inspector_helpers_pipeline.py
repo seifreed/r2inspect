@@ -12,27 +12,11 @@ from r2inspect.pipeline.stage_models import AnalysisStage
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.registry.categories import AnalyzerCategory
 from r2inspect.abstractions.base_analyzer import BaseAnalyzer
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # FakeR2 -- lightweight stand-in for an r2pipe session
-# ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, {})
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
-
-
-# ---------------------------------------------------------------------------
-# Tiny real analyzers used to populate the registry in tests
 # ---------------------------------------------------------------------------
 
 
