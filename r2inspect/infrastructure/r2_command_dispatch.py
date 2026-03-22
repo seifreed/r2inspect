@@ -197,8 +197,6 @@ def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
 def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
     if adapter is None:
         return None
-    if adapter.__class__.__module__.startswith("unittest.mock"):
-        return None
     search_result = _handle_search(adapter, command)
     if search_result is not None:
         return search_result

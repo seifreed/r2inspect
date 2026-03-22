@@ -32,7 +32,6 @@ class BaseAnalyzer(ABC):
     ):
         """Initialize base analyzer with adapter/config/filepath."""
         self.adapter: Any = adapter
-        self.r2: Any = adapter
         self.config: Any = config
         self.filepath = _normalize_filepath(filepath)
         self._extra_params = kwargs

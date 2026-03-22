@@ -58,14 +58,8 @@ def get_symbols(detector: Any, logger: Any) -> list[str]:
 
 
 def get_strings_raw(detector: Any) -> str:
-    result = cmd_helper(detector.adapter, detector.r2, "izz~..")
+    result = cmd_helper(detector.adapter, detector.adapter, "izz~..")
     return result if isinstance(result, str) else ""
-
-
-def coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-    return [item for item in value if isinstance(item, dict)]
 
 
 def get_file_info(detector: Any) -> dict[str, Any]:

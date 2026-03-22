@@ -218,7 +218,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         try:
             # Get program headers - iHj doesn't exist, use alternative
             # For ELF, we should use ih command instead
-            ph_info = get_elf_headers(self.r2)
+            ph_info = get_elf_headers(self.adapter)
 
             if ph_info:
                 for header in ph_info:

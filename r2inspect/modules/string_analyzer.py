@@ -104,7 +104,7 @@ class StringAnalyzer(BaseAnalyzer):
         return []
 
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
-        result = cmdj_helper(self.adapter, self.r2, cmd, [])
+        result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         return result if isinstance(result, list) else []
 
     def search_xor(self, search_string: str) -> list[dict[str, Any]]:

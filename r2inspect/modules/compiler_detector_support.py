@@ -111,14 +111,6 @@ def detect_compiler_version(
     return detector(strings_data, imports_data) if detector else "Unknown"
 
 
-def coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-    if isinstance(value, list):
-        return [item for item in value if isinstance(item, dict)]
-    if isinstance(value, dict):
-        return [value]
-    return []
-
-
 def analyze_rich_header(detector: Any, *, logger: Any) -> dict[str, Any]:
     try:
         from .rich_header_analyzer import RichHeaderAnalyzer

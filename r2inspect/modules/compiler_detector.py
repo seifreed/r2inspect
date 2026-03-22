@@ -7,7 +7,6 @@ from ..infrastructure.command_helpers import cmd as cmd_helper
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
 from .compiler_detector_collection_support import (
-    coerce_dict_list as _coerce_dict_list_impl2,
     get_file_format as _get_file_format_impl2,
     get_file_info as _get_file_info_impl2,
     get_imports as _get_imports_impl2,
@@ -24,7 +23,6 @@ from .compiler_detector_support import (
     analyze_rich_header as _analyze_rich_header_logic,
     apply_best_compiler as _apply_best_compiler_logic,
     apply_rich_header_detection as _apply_rich_header_detection_logic,
-    coerce_dict_list as _coerce_dict_list_logic,
     detect_compiler_version as _detect_compiler_version_logic,
     detect_file_format as _detect_file_format_logic,
     score_compilers as _score_compilers_logic,
