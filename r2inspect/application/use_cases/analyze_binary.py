@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ...domain.result_builder import build_analysis_result
+from ..result_mapper import build_analysis_result
 from ...schemas.results_models import AnalysisResult
 from ..analysis_service import AnalysisService, default_analysis_service
 
