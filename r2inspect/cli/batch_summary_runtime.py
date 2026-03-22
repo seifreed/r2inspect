@@ -25,12 +25,14 @@ def create_batch_summary_output(
         write_csv_results(csv_file, all_results)
     elif output_json and output_csv:
         csv_file, csv_filename = determine_csv_file_path(output_path, timestamp)
-        output_filename = (
-            f"{output_path.name} + individual JSONs"
-            if output_path.suffix == ".csv"
-            else f"{csv_filename} + individual JSONs"
-        )
         write_csv_results(csv_file, all_results)
+        json_output_path = (
+            output_path.parent if output_path.suffix in (".csv", ".json") else output_path
+        )
+        json_filename = create_json_batch_summary(
+            all_results, failed_files, json_output_path, timestamp
+        )
+        output_filename = f"{csv_filename} + {json_filename}" if json_filename else csv_filename
     elif output_json and not output_csv:
         output_filename = create_json_batch_summary(
             all_results, failed_files, output_path, timestamp

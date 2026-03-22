@@ -59,6 +59,8 @@ def find_executable_files_by_magic(
             console.print("[yellow]Falling back to file extension detection[/yellow]")
             return []
         console.print(f"[yellow]{message}[/yellow]")
+
+    if init_errors:
         return []
 
     if verbose:

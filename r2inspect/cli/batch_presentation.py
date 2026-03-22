@@ -62,7 +62,8 @@ def display_batch_results(
     console.print("\n[bold green]Analysis Complete![/bold green]")
     console.print(f"[green]Processed: {success_count}/{total_count} files[/green]")
     console.print(f"[blue]Time: {elapsed_time:.1f}s[/blue]")
-    console.print(f"[cyan]Rate: {success_count / elapsed_time:.1f} files/sec[/cyan]")
+    rate = success_count / elapsed_time if elapsed_time > 0 else 0.0
+    console.print(f"[cyan]Rate: {rate:.1f} files/sec[/cyan]")
 
     if verbose and rate_stats:
         display_rate_limiter_stats(console, rate_stats)
