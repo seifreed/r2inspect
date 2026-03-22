@@ -29,7 +29,7 @@ from .compiler_detector_support import (
     detect_file_format as _detect_file_format_logic,
     score_compilers as _score_compilers_logic,
 )
-from .compiler_domain import (
+from ..domain.formats.compiler import (
     calculate_compiler_score,
     detect_clang_version,
     detect_gcc_version,
@@ -63,7 +63,6 @@ class CompilerDetector(CommandHelperMixin):
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         self.adapter = adapter
-        self.r2 = adapter  # required by CommandHelperMixin
         self.config = config
 
         # Compiler signatures and patterns
@@ -258,10 +257,6 @@ class CompilerDetector(CommandHelperMixin):
 
     def _get_file_info(self) -> dict[str, Any]:
         return _get_file_info_impl2(self)
-
-    @staticmethod
-    def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-        return _coerce_dict_list_logic(value)
 
     def _get_imports_raw(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports"))

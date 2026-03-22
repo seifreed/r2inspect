@@ -10,7 +10,7 @@ from .pe_info import get_compilation_info as _get_compilation_info
 from .pe_info import get_file_characteristics as _get_file_characteristics
 from .pe_info import get_pe_headers_info as _get_pe_headers_info
 from .pe_info import get_subsystem_info as _get_subsystem_info
-from .pe_info_domain import determine_pe_format as _determine_pe_format
+from ..domain.formats.pe_info import determine_pe_format as _determine_pe_format
 from .pe_resources import get_resource_info as _get_resource_info
 from .pe_resources import get_version_info as _get_version_info
 from .pe_security import get_security_features as _get_security_features

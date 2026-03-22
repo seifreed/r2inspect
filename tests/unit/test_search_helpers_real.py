@@ -19,8 +19,8 @@ class DummyAdapter:
 
 def test_search_helpers_normalize_pattern():
     adapter = DummyAdapter()
-    assert search_text(adapter, None, "  nop  ") == "text:nop"
+    assert search_text(adapter, "  nop  ") == "text:nop"
     assert adapter.text_calls == ["nop"]
 
-    assert search_hex(adapter, None, " 90  ") == "hex:90"
+    assert search_hex(adapter, " 90  ") == "hex:90"
     assert adapter.hex_calls == ["90"]

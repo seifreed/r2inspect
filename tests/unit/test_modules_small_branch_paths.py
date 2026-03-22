@@ -301,13 +301,13 @@ def test_pe_analyzer_get_version_info_delegates() -> None:
 
 def test_search_text_returns_empty_string_when_adapter_is_none() -> None:
     """search_text returns empty string when adapter is None."""
-    result = search_text(None, None, "pattern")
+    result = search_text(None, "pattern")
     assert result == ""
 
 
 def test_search_hex_returns_empty_string_when_adapter_is_none() -> None:
     """search_hex returns empty string when adapter is None."""
-    result = search_hex(None, None, "deadbeef")
+    result = search_hex(None, "deadbeef")
     assert result == ""
 
 
@@ -322,14 +322,14 @@ class _AdapterWithSearch:
 def test_search_text_delegates_to_adapter() -> None:
     """search_text calls adapter.search_text when adapter has the method."""
     adapter = _AdapterWithSearch()
-    result = search_text(adapter, None, "test")
+    result = search_text(adapter, "test")
     assert result == "found:test"
 
 
 def test_search_hex_delegates_to_adapter() -> None:
     """search_hex calls adapter.search_hex when adapter has the method."""
     adapter = _AdapterWithSearch()
-    result = search_hex(adapter, None, "deadbeef")
+    result = search_hex(adapter, "deadbeef")
     assert result == "hex:deadbeef"
 
 
@@ -343,14 +343,14 @@ class _MockLikeSearchAdapter:
         return f"hex:{pattern}"
 
 
-def test_search_text_returns_empty_for_mock_like_adapter() -> None:
+def test_search_text_delegates_to_adapter_method() -> None:
     adapter = _MockLikeSearchAdapter()
-    assert search_text(adapter, None, "test") == ""
+    assert search_text(adapter, "test") == "found:test"
 
 
-def test_search_hex_returns_empty_for_mock_like_adapter() -> None:
+def test_search_hex_delegates_to_adapter_method() -> None:
     adapter = _MockLikeSearchAdapter()
-    assert search_hex(adapter, None, "deadbeef") == ""
+    assert search_hex(adapter, "deadbeef") == "hex:deadbeef"
 
 
 # ---------------------------------------------------------------------------

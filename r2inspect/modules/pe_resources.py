@@ -5,7 +5,7 @@ from typing import Any
 
 from ..infrastructure.command_helpers import cmd as cmd_helper
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
-from .pe_info_domain import normalize_resource_entries, parse_version_info_text
+from ..domain.formats.pe_info import normalize_resource_entries, parse_version_info_text
 
 
 def get_resource_info(adapter: Any, logger: Any) -> list[dict[str, Any]]:

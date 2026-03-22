@@ -82,28 +82,28 @@ class _SearchStub:
 
 def test_search_text_with_adapter():
     stub = _SearchStub()
-    result = search_text(stub, None, "hello")
+    result = search_text(stub, "hello")
     assert result == "text:hello"
 
 
 def test_search_text_no_adapter():
-    assert search_text(None, None, "hello") == ""
+    assert search_text(None, "hello") == ""
 
 
 def test_search_text_strips_whitespace():
     stub = _SearchStub()
-    result = search_text(stub, None, "  hello  ")
+    result = search_text(stub, "  hello  ")
     assert result == "text:hello"
 
 
 def test_search_hex_with_adapter():
     stub = _SearchStub()
-    result = search_hex(stub, None, "deadbeef")
+    result = search_hex(stub, "deadbeef")
     assert result == "hex:deadbeef"
 
 
 def test_search_hex_no_adapter():
-    assert search_hex(None, None, "deadbeef") == ""
+    assert search_hex(None, "deadbeef") == ""
 
 
 # ---------------------------------------------------------------------------

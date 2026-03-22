@@ -33,7 +33,7 @@ from .import_analyzer_support import (
 )
 from .domain_helpers import clamp_score
 from .import_categories import get_api_categories
-from .import_domain import (
+from ..domain.formats.import_analysis import (
     NETWORK_CATEGORY,
     assess_api_risk,
     build_api_categories,

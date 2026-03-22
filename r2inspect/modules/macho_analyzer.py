@@ -8,7 +8,7 @@ from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
 from ..infrastructure.r2_helpers import get_macho_headers
-from .macho_domain import (
+from ..domain.formats.macho import (
     build_load_commands,
     build_sections,
     dylib_timestamp_to_string,

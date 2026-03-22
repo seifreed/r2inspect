@@ -8,7 +8,7 @@ from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
 from ..infrastructure.r2_helpers import get_elf_headers
-from .elf_domain import (
+from ..domain.formats.elf import (
     find_section_by_name,
     parse_build_id_data,
     parse_comment_compiler_info,

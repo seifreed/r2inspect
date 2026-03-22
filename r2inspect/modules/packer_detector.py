@@ -99,7 +99,6 @@ class PackerDetector(CommandHelperMixin):
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         self.adapter = adapter
-        self.r2 = adapter  # required by CommandHelperMixin
         if config is None:
             raise ValueError("config must be provided")
         self.config = config
@@ -219,10 +218,10 @@ class PackerDetector(CommandHelperMixin):
         return cast(dict[str, Any], self._get_via_adapter("get_file_info", "ij", as_dict=True))
 
     def _search_text(self, pattern: str) -> str:
-        return search_text(self.adapter, self.adapter, pattern)
+        return search_text(self.adapter, pattern)
 
     def _search_hex(self, pattern: str) -> str:
-        return search_hex(self.adapter, self.adapter, pattern)
+        return search_hex(self.adapter, pattern)
 
     def _read_bytes(self, addr: int, size: int) -> bytes:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):

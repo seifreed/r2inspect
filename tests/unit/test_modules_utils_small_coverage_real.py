@@ -33,10 +33,10 @@ def test_search_helpers_adapter_and_none(samples_dir: Path) -> None:
     sample = samples_dir / "hello_pe.exe"
     with create_inspector(str(sample)) as inspector:
         adapter = inspector.adapter
-        assert search_helpers.search_text(None, None, " test ") == ""
-        assert isinstance(search_helpers.search_text(adapter, None, " test "), str)
-        assert search_helpers.search_hex(None, None, " ff ") == ""
-        assert isinstance(search_helpers.search_hex(adapter, None, " ff "), str)
+        assert search_helpers.search_text(None, " test ") == ""
+        assert isinstance(search_helpers.search_text(adapter, " test "), str)
+        assert search_helpers.search_hex(None, " ff ") == ""
+        assert isinstance(search_helpers.search_hex(adapter, " ff "), str)
 
 
 def test_domain_helpers_entropy_and_clamp() -> None:

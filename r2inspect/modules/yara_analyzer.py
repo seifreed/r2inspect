@@ -56,7 +56,6 @@ class YaraAnalyzer(CommandHelperMixin):
         filepath: str | None = None,
     ) -> None:
         self.adapter = adapter
-        self.r2 = adapter  # required by CommandHelperMixin
         if config is None:
             raise ValueError("config must be provided")
         self.config = config

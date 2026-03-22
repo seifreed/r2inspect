@@ -15,7 +15,7 @@ from .anti_analysis_support import (
     detect_timing_checks,
     find_suspicious_apis,
 )
-from .anti_analysis_domain import (
+from ..domain.formats.anti_analysis import (
     ANTI_DEBUG_APIS,
     ENVIRONMENT_CHECK_COMMANDS,
     INJECTION_APIS,
@@ -60,7 +60,6 @@ class AntiAnalysisDetector(CommandHelperMixin):
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         self.adapter = adapter
-        self.r2 = adapter  # required by CommandHelperMixin
         self.config = config
 
         self.anti_debug_apis = ANTI_DEBUG_APIS
@@ -177,15 +176,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
         )
 
     def _search_opcode(self, pattern: str) -> str:
-        return search_text(self.adapter, self.adapter, pattern)
-
-    @staticmethod
-    def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-        if isinstance(value, dict):
-            return [value]
-        return []
+        return search_text(self.adapter, pattern)
 
     def _get_imports(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports", "iij"))

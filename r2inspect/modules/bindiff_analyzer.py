@@ -18,7 +18,7 @@ from .bindiff_analysis_support import (
     extract_structural_features,
     generate_signatures,
 )
-from .bindiff_domain import (
+from ..domain.formats.bindiff import (
     build_behavioral_signature,
     build_function_signature,
     build_string_signature,
