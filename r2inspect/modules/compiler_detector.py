@@ -7,25 +7,25 @@ from ..infrastructure.command_helpers import cmd as cmd_helper
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
 from .compiler_detector_collection_support import (
-    get_file_format as _get_file_format_impl2,
-    get_file_info as _get_file_info_impl2,
-    get_imports as _get_imports_impl2,
-    get_sections as _get_sections_impl2,
-    get_strings as _get_strings_impl2,
-    get_strings_raw as _get_strings_raw_impl2,
-    get_symbols as _get_symbols_impl2,
+    get_file_format as _collect_file_format,
+    get_file_info as _collect_file_info,
+    get_imports as _collect_imports,
+    get_sections as _collect_sections,
+    get_strings as _collect_strings,
+    get_strings_raw as _collect_strings_raw,
+    get_symbols as _collect_symbols,
 )
 from .compiler_detector_result_support import (
-    gather_detection_inputs as _gather_detection_inputs_impl,
-    init_compiler_result as _init_compiler_result_impl,
+    gather_detection_inputs as _gather_detection_inputs,
+    init_compiler_result as _init_compiler_result,
 )
 from .compiler_detector_support import (
-    analyze_rich_header as _analyze_rich_header_logic,
-    apply_best_compiler as _apply_best_compiler_logic,
-    apply_rich_header_detection as _apply_rich_header_detection_logic,
-    detect_compiler_version as _detect_compiler_version_logic,
-    detect_file_format as _detect_file_format_logic,
-    score_compilers as _score_compilers_logic,
+    analyze_rich_header as _analyze_rich_header,
+    apply_best_compiler as _apply_best_compiler,
+    apply_rich_header_detection as _apply_rich_header_detection,
+    detect_compiler_version as _detect_compiler_version,
+    detect_file_format as _detect_file_format,
+    score_compilers as _score_compilers,
 )
 from ..domain.formats.compiler import (
     calculate_compiler_score,
@@ -87,11 +87,11 @@ class CompilerDetector(CommandHelperMixin):
 
         logger.debug("Starting compiler detection...")
 
-        results = _init_compiler_result_impl()
+        results = _init_compiler_result()
 
         try:
             file_format, strings_data, imports_data, sections_data, symbols_data = (
-                _gather_detection_inputs_impl(self)
+                _gather_detection_inputs(self)
             )
 
             # PE-specific analysis
@@ -108,7 +108,9 @@ class CompilerDetector(CommandHelperMixin):
             )
 
             logger.debug(
-                f"Compiler detection completed: {results['compiler']} (confidence: {results['confidence']:.2f})"
+                "Compiler detection completed: %s (confidence: %.2f)",
+                results["compiler"],
+                results["confidence"],
             )
 
         except Exception as e:
@@ -118,7 +120,7 @@ class CompilerDetector(CommandHelperMixin):
         return results
 
     def _apply_rich_header_detection(self, results: dict[str, Any]) -> bool:
-        return _apply_rich_header_detection_logic(
+        return _apply_rich_header_detection(
             self, results, map_msvc_version=map_msvc_version_from_rich, logger=logger
         )
 
@@ -129,7 +131,7 @@ class CompilerDetector(CommandHelperMixin):
         sections_data: list[str],
         symbols_data: list[str],
     ) -> dict[str, float]:
-        return _score_compilers_logic(
+        return _score_compilers(
             self.compiler_signatures,
             strings_data,
             imports_data,
@@ -146,7 +148,7 @@ class CompilerDetector(CommandHelperMixin):
         imports_data: list[str],
         file_format: str,
     ) -> None:
-        _apply_best_compiler_logic(
+        _apply_best_compiler(
             results,
             compiler_scores,
             strings_data,
@@ -158,7 +160,7 @@ class CompilerDetector(CommandHelperMixin):
 
     def _get_file_format(self) -> str:
         """Detect file format (PE, ELF, Mach-O)"""
-        return _get_file_format_impl2(self, _detect_file_format_logic, logger)
+        return _collect_file_format(self, _detect_file_format, logger)
 
     def _get_strings(self) -> list[str]:
         """Extract strings from binary."""
@@ -198,13 +200,13 @@ class CompilerDetector(CommandHelperMixin):
 
     def _analyze_rich_header(self) -> dict[str, Any]:
         """Analyze Rich Header for PE files (MSVC specific)"""
-        return _analyze_rich_header_logic(self, logger=logger)
+        return _analyze_rich_header(self, logger=logger)
 
     def _detect_compiler_version(
         self, compiler: str, strings_data: list[str], imports_data: list[str]
     ) -> str:
         """Detect specific compiler version"""
-        return _detect_compiler_version_logic(
+        return _detect_compiler_version(
             compiler,
             strings_data,
             imports_data,
@@ -258,7 +260,7 @@ class CompilerDetector(CommandHelperMixin):
         return "Unknown"
 
     def _get_file_info(self) -> dict[str, Any]:
-        return _get_file_info_impl2(self)
+        return _collect_file_info(self)
 
     def _get_imports_raw(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports"))

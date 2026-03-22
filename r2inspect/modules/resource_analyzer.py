@@ -31,7 +31,7 @@ from .resource_support import (
 )
 from .resource_parsing import ResourceParsingMixin
 from .resource_version import ResourceVersionMixin
-from .domain_helpers import entropy_from_ints
+from ..domain.services.binary_helpers import entropy_from_ints
 from .pe_resource_defaults import RESOURCE_TYPES
 from .string_extraction import split_null_terminated
 

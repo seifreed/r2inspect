@@ -25,7 +25,7 @@ from r2inspect.modules.crypto_detection_support import (
     find_suspicious_patterns,
     detect_crypto_libraries,
 )
-from r2inspect.modules.domain_helpers import shannon_entropy
+from r2inspect.domain.services.binary_helpers import shannon_entropy
 from r2inspect.domain.formats.string import parse_search_results
 
 

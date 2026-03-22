@@ -15,7 +15,7 @@ from .crypto_detection_support import (
 )
 from .crypto_constants import CRYPTO_CONSTANTS
 from ..domain.formats.crypto import consolidate_detections, detect_algorithms_from_strings
-from .domain_helpers import shannon_entropy
+from ..domain.services.binary_helpers import shannon_entropy
 from .search_helpers import search_hex, search_text
 from ..domain.formats.string import parse_search_results
 

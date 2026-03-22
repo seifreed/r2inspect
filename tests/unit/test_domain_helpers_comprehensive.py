@@ -2,7 +2,7 @@
 """Comprehensive tests for domain_helpers.py module."""
 
 import math
-from r2inspect.modules.domain_helpers import (
+from r2inspect.domain.services.binary_helpers import (
     shannon_entropy,
     entropy_from_ints,
     clamp_score,

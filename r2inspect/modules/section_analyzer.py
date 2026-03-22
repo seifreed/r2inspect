@@ -27,7 +27,11 @@ from .section_analyzer_support import (
     analyze_single_section as _analyze_single_section_impl,
     get_section_characteristics as _get_section_characteristics_impl,
 )
-from .domain_helpers import STANDARD_PE_SECTIONS, shannon_entropy, suspicious_section_name_indicator
+from ..domain.services.binary_helpers import (
+    STANDARD_PE_SECTIONS,
+    shannon_entropy,
+    suspicious_section_name_indicator,
+)
 
 logger = get_logger(__name__)
 

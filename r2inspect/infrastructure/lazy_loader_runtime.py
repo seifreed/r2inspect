@@ -78,7 +78,9 @@ def load_analyzer_class(loader: Any, name: str, *, logger: Any) -> type[Any] | N
     except ImportError as exc:
         with loader._cache_lock:
             loader._stats["failed_loads"] += 1
-        logger.error(f"Failed to import module '{spec.module_path}' for analyzer '{name}': {exc}")
+        logger.error(
+            "Failed to import module '%s' for analyzer '%s': %s", spec.module_path, name, exc
+        )
         raise
     except AttributeError as exc:
         with loader._cache_lock:

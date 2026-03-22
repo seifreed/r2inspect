@@ -31,7 +31,7 @@ from .import_analyzer_support import (
     is_candidate_api_string as _is_candidate_api_string_impl,
     matches_known_api as _matches_known_api_impl,
 )
-from .domain_helpers import clamp_score
+from ..domain.services.binary_helpers import clamp_score
 from .import_categories import get_api_categories
 from ..domain.formats.import_analysis import (
     NETWORK_CATEGORY,
