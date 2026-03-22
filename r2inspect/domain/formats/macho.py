@@ -44,7 +44,7 @@ def dylib_timestamp_to_string(timestamp: int) -> tuple[str | None, int | None]:
     try:
         compile_date = datetime.fromtimestamp(timestamp)
         return compile_date.strftime("%a %b %d %H:%M:%S %Y"), timestamp
-    except Exception:
+    except (OSError, OverflowError, ValueError):
         return None, timestamp
 
 

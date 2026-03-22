@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Base analyzer interface and shared utilities."""
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any

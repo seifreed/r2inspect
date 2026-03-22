@@ -1,7 +1,6 @@
 """Domain models exposed at package level."""
 
 from .analysis_runtime import AnalysisRuntimeStats, BatchRunResult
-from .result_builder import build_analysis_result
 from .constants import (
     CONFIDENCE_API,
     CONFIDENCE_CONSTANT,
@@ -57,7 +56,6 @@ from .analysis import (
 __all__ = [
     "AnalysisRuntimeStats",
     "BatchRunResult",
-    "build_analysis_result",
     "AnalyzerResult",
     "HashResult",
     # Domain entities

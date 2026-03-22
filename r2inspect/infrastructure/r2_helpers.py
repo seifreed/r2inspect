@@ -5,9 +5,6 @@ import os
 from typing import Any
 
 from ..adapters.validation import (
-    _clean_list_items,
-    _validate_dict_data,
-    _validate_list_data,
     validate_r2_data,
 )
 from ..error_handling.presets import R2_ANALYSIS_POLICY, R2_JSON_DICT_POLICY, R2_JSON_LIST_POLICY

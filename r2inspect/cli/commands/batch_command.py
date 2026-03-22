@@ -120,8 +120,9 @@ class BatchCommand(Command):
         if not verbose:
             configure_batch_logging()
         if quiet:
-            logging.getLogger("r2inspect").setLevel(logging.CRITICAL)
-            logging.getLogger("r2inspect.modules").setLevel(logging.CRITICAL)
+            from ..command_runtime import configure_logging_levels
+
+            configure_logging_levels(verbose=False, quiet=True)
 
     def _setup_analysis_options(
         self,

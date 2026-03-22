@@ -1,14 +1,11 @@
 """SSDeep fuzzy hashing and comparison."""
 
-import os
-import shutil
 import subprocess  # nosec B404 - required for calling ssdeep binary safely
-import tempfile
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..adapters.file_system import default_file_system
+from ..infrastructure.file_system import default_file_system
 from ..security.validators import FileValidator
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
@@ -31,13 +28,13 @@ class SSDeepAnalyzer(HashingStrategy):
     def __init__(
         self,
         filepath: str,
-        r2_instance: Any | None = None,
+        adapter: Any | None = None,
         max_file_size: int = 100 * 1024 * 1024,
         min_file_size: int = 1,
     ) -> None:
         super().__init__(
             filepath=filepath,
-            r2_instance=r2_instance,
+            adapter=adapter,
             max_file_size=max_file_size,
             min_file_size=min_file_size,
         )
@@ -123,7 +120,7 @@ class SSDeepAnalyzer(HashingStrategy):
             validated_path = validator.validate_path(str(self.filepath), check_exists=True)
             safe_filepath = validator.sanitize_for_subprocess(validated_path)
         except ValueError as e:
-            raise RuntimeError(f"File path validation failed: {e}")
+            raise RuntimeError(f"File path validation failed: {e}") from e
 
         # Run ssdeep command with validated path
         # SECURITY: shell=False prevents shell injection, timeout prevents DoS
@@ -154,9 +151,9 @@ class SSDeepAnalyzer(HashingStrategy):
             raise RuntimeError("Could not parse ssdeep output")
 
         except subprocess.TimeoutExpired:
-            raise RuntimeError("ssdeep command timed out")
+            raise RuntimeError("ssdeep command timed out") from None
         except subprocess.SubprocessError as e:
-            raise RuntimeError(f"ssdeep subprocess error: {e}")
+            raise RuntimeError(f"ssdeep subprocess error: {e}") from e
 
     def _is_ssdeep_binary_available(self) -> bool:
         """

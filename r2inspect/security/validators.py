@@ -23,7 +23,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
 from pathlib import Path
 
 from .validator_support import (
@@ -97,7 +96,7 @@ class FileValidator:
             try:
                 self.allowed_directory = Path(allowed_directory).resolve(strict=True)
             except (OSError, RuntimeError) as e:
-                raise ValueError(f"Invalid allowed directory: {e}")
+                raise ValueError(f"Invalid allowed directory: {e}") from e
 
     def validate_path(self, filepath: str, check_exists: bool = True) -> Path:
         """

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..adapters.magic_adapter import MagicAdapter
+from .magic_adapter import MagicAdapter
 from ..interfaces import MagicDetectorProviderLike
 
 
