@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ..result_mapper import build_analysis_result
-from ...schemas.results_models import AnalysisResult
 from ..analysis_service import AnalysisService, default_analysis_service
 
 if TYPE_CHECKING:
     from ...core.inspector import R2Inspector
+    from ...schemas.results_models import AnalysisResult
 
 
 @dataclass(frozen=True)
