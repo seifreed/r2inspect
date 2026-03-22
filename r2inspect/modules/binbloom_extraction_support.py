@@ -32,7 +32,7 @@ def extract_mnemonics_from_pdfj(
     disasm = (
         analyzer.adapter.get_disasm(address=func_addr)
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
-        else analyzer._cmdj("pdfj", {})
+        else analyzer._cmdj(f"pdfj @ {func_addr}", {})
     )
     if not disasm or "ops" not in disasm:
         return []
@@ -48,7 +48,7 @@ def extract_mnemonics_from_pdj(
     disasm_list = (
         analyzer.adapter.get_disasm(address=func_addr, size=200)
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
-        else analyzer._cmd_list("pdj 200")
+        else analyzer._cmd_list(f"pdj 200 @ {func_addr}")
     )
     if not isinstance(disasm_list, list):
         return []
@@ -64,7 +64,7 @@ def extract_mnemonics_from_text(
     instructions_text = (
         analyzer.adapter.get_disasm_text(address=func_addr, size=100)
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm_text")
-        else analyzer._cmd("pi 100")
+        else analyzer._cmd(f"pi 100 @ {func_addr}")
     )
     if not instructions_text or not instructions_text.strip():
         return []
