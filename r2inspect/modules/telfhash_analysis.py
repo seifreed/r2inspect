@@ -67,7 +67,7 @@ def analyze_symbols(
 
 def is_elf_binary(analyzer: Any, *, logger: Any, is_elf_file_fn: Any, is_pe_file_fn: Any) -> bool:
     try:
-        if analyzer.r2 is None:
+        if analyzer.adapter is None:
             return False
         file_path = Path(analyzer.filepath)
         if file_path.exists():
@@ -76,9 +76,9 @@ def is_elf_binary(analyzer: Any, *, logger: Any, is_elf_file_fn: Any, is_pe_file
                     return False
             except OSError:
                 return False
-        if is_elf_file_fn(analyzer.filepath, analyzer.adapter, analyzer.r2, logger=logger):
+        if is_elf_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
             return True
-        if is_pe_file_fn(analyzer.filepath, analyzer.adapter, analyzer.r2, logger=logger):
+        if is_pe_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
             return False
         info_cmd = analyzer._cmdj("ij", {})
         if isinstance(info_cmd, dict):

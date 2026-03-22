@@ -83,7 +83,11 @@ class CompilerDetector(CommandHelperMixin):
         return self.detect_compiler()
 
     def detect_compiler(self) -> dict[str, Any]:
-        """Main function to detect compiler information"""
+        """Detect compiler used to build the binary.
+
+        Returns a dict with keys: compiler, version, confidence, method, error.
+        For PE files, Rich Header analysis is attempted first.
+        """
 
         logger.debug("Starting compiler detection...")
 

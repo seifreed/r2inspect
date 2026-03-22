@@ -228,6 +228,7 @@ def _cmdj_fallback(r2_fallback: Any, command: str, default: Any) -> Any:
 
 
 def cmd(adapter: Any, r2_fallback: Any, command: str) -> str:
+    """Execute a text command, trying the adapter first then r2_fallback."""
     adapter_result = _maybe_use_adapter(adapter, command)
     if isinstance(adapter_result, str):
         return adapter_result
@@ -235,6 +236,7 @@ def cmd(adapter: Any, r2_fallback: Any, command: str) -> str:
 
 
 def cmdj(adapter: Any, r2_fallback: Any, command: str, default: Any) -> Any:
+    """Execute a JSON command, trying the adapter first then r2_fallback."""
     adapter_result = _maybe_use_adapter(adapter, command)
     if adapter_result is not None:
         return adapter_result
@@ -242,6 +244,7 @@ def cmdj(adapter: Any, r2_fallback: Any, command: str, default: Any) -> Any:
 
 
 def cmd_list(adapter: Any, r2_fallback: Any, command: str) -> list[Any]:
+    """Execute a JSON command and return the result as a list."""
     result = cmdj(adapter, r2_fallback, command, [])
     return result if isinstance(result, list) else []
 

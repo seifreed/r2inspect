@@ -8,7 +8,7 @@ from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
-from .packer_helpers import (
+from ..domain.services.packer_scoring import (
     analyze_entropy,
     analyze_sections,
     count_imports,

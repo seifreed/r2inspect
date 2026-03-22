@@ -16,7 +16,15 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class AnalyzeBinaryRequest:
-    """Input model for binary analysis execution."""
+    """Input model for binary analysis execution.
+
+    Attributes:
+        inspector: The R2Inspector instance managing the r2pipe session.
+        options: Analysis options (e.g. detect_packer, custom_yara).
+        reset_stats: Whether to reset service statistics before analysis.
+        include_statistics: Whether to enrich results with execution stats.
+        validate_schemas: Whether to validate output against Pydantic schemas.
+    """
 
     inspector: R2Inspector
     options: dict[str, Any]
