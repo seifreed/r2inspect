@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.modules.macho_domain import (
+from r2inspect.domain.formats.macho import (
     build_load_commands,
     build_sections,
     dylib_timestamp_to_string,

@@ -2,7 +2,7 @@
 """Tests for compiler_domain module."""
 
 import pytest
-from r2inspect.modules.compiler_domain import (
+from r2inspect.domain.formats.compiler import (
     calculate_compiler_score,
     detection_method,
     map_msvc_version_from_rich,

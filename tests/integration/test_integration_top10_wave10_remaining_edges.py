@@ -12,7 +12,7 @@ from r2inspect.modules.binbloom_analysis import run_binbloom_analysis
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.modules.pe_imports import calculate_imphash
-from r2inspect.modules.similarity_scoring import (
+from r2inspect.domain.formats.similarity import (
     jaccard_similarity,
     normalized_difference_similarity,
 )

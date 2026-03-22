@@ -65,25 +65,32 @@ class DetectionStage(AnalysisStage):
         return results
 
     def _run_analyzer(
-        self, context: dict[str, Any], analyzer_name: str, result_key: str
+        self,
+        context: dict[str, Any],
+        analyzer_name: str,
+        result_key: str,
+        *,
+        analyze_args: tuple[Any, ...] = (),
+        error_default: Any = None,
     ) -> dict[str, Any] | None:
         analyzer_class = self.registry.get_analyzer_class(analyzer_name)
-        if analyzer_class:
-            try:
-                analyzer = self.analyzer_factory(
-                    analyzer_class,
-                    adapter=self.adapter,
-                    config=self.config,
-                    filename=self.filename,
-                )
-                data = analyzer.detect()
-                context["results"][result_key] = data
-                return {result_key: data}
-            except Exception as e:
-                logger.warning("Analyzer '%s' failed: %s", analyzer_name, e)
-                context["results"][result_key] = {"error": str(e)}
-                return {result_key: {"error": str(e)}}
-        return None
+        if not analyzer_class:
+            return None
+        try:
+            analyzer = self.analyzer_factory(
+                analyzer_class,
+                adapter=self.adapter,
+                config=self.config,
+                filename=self.filename,
+            )
+            data = analyzer.analyze(*analyze_args)
+            context["results"][result_key] = data
+            return {result_key: data}
+        except Exception as e:
+            logger.warning("Analyzer '%s' failed: %s", analyzer_name, e)
+            fallback = error_default if error_default is not None else {"error": str(e)}
+            context["results"][result_key] = fallback
+            return {result_key: fallback}
 
     def _run_packer_detection(self, context: dict[str, Any]) -> dict[str, Any] | None:
         return self._run_analyzer(context, "packer_detector", "packer")
@@ -95,40 +102,14 @@ class DetectionStage(AnalysisStage):
         return self._run_analyzer(context, "anti_analysis", "anti_analysis")
 
     def _run_compiler_detection(self, context: dict[str, Any]) -> dict[str, Any] | None:
-        analyzer_class = self.registry.get_analyzer_class("compiler_detector")
-        if analyzer_class:
-            try:
-                analyzer = self.analyzer_factory(
-                    analyzer_class,
-                    adapter=self.adapter,
-                    config=self.config,
-                    filename=self.filename,
-                )
-                data = analyzer.detect_compiler()
-                context["results"]["compiler"] = data
-                return {"compiler": data}
-            except Exception as e:
-                logger.warning("Compiler detection failed: %s", e)
-                context["results"]["compiler"] = {"error": str(e)}
-                return {"compiler": {"error": str(e)}}
-        return None
+        return self._run_analyzer(context, "compiler_detector", "compiler")
 
     def _run_yara_analysis(self, context: dict[str, Any]) -> dict[str, Any] | None:
-        analyzer_class = self.registry.get_analyzer_class("yara_analyzer")
-        if analyzer_class:
-            try:
-                analyzer = self.analyzer_factory(
-                    analyzer_class,
-                    adapter=self.adapter,
-                    config=self.config,
-                    filename=self.filename,
-                )
-                custom_rules = self.options.get("custom_yara")
-                data = analyzer.scan(custom_rules)
-                context["results"]["yara_matches"] = data
-                return {"yara_matches": data}
-            except Exception as e:
-                logger.warning("YARA analysis failed: %s", e)
-                context["results"]["yara_matches"] = []
-                return {"yara_matches": []}
-        return None
+        custom_rules = self.options.get("custom_yara")
+        return self._run_analyzer(
+            context,
+            "yara_analyzer",
+            "yara_matches",
+            analyze_args=(custom_rules,),
+            error_default=[],
+        )

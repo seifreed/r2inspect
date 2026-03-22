@@ -4,7 +4,7 @@ from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnalyzer
 from r2inspect.modules.export_analyzer import ExportAnalyzer
 from r2inspect.modules.import_analyzer import ImportAnalyzer
-from r2inspect.modules.import_domain import find_suspicious_patterns
+from r2inspect.domain.formats.import_analysis import find_suspicious_patterns
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.section_analyzer import SectionAnalyzer

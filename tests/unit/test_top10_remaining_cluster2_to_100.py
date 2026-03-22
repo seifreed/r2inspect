@@ -11,12 +11,13 @@ from r2inspect.config import Config
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
-from r2inspect.modules import crypto_domain
+from r2inspect.domain.formats import crypto as crypto_domain
 from r2inspect.modules import domain_helpers
 from r2inspect.modules.pe_analyzer import PEAnalyzer
 from r2inspect.pipeline.stages_metadata import MetadataStage
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.infrastructure.memory import MemoryMonitor, MemoryLimits
+from r2inspect.domain.formats import crypto as crypto_domain
 
 
 def test_crypto_analyzer_entropy_invalid_hex_and_method_fallbacks() -> None:

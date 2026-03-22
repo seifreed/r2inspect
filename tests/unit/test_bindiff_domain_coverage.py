@@ -2,7 +2,7 @@
 
 import pytest
 
-from r2inspect.modules.bindiff_domain import (
+from r2inspect.domain.formats.bindiff import (
     build_behavioral_signature,
     build_function_signature,
     build_string_signature,

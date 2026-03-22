@@ -78,7 +78,7 @@ class _RaisingCategorizeAnalyzer(ImportAnalyzer):
         return default if default is not None else []
 
     def analyze_api_usage(self, imports: list) -> dict[str, Any]:
-        from r2inspect.modules.import_domain import categorize_apis
+        from r2inspect.domain.formats.import_analysis import categorize_apis
 
         raise RuntimeError("simulated categorize error")
 

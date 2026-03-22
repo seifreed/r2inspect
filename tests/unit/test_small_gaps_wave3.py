@@ -14,7 +14,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 # 1. r2inspect/modules/string_domain.py - lines 29, 87, 88, 100, 101
 # ---------------------------------------------------------------------------
-from r2inspect.modules.string_domain import (
+from r2inspect.domain.formats.string import (
     decode_base64,
     decode_hex,
     filter_strings,
@@ -502,7 +502,7 @@ def test_inspector_helpers_importable():
 # ---------------------------------------------------------------------------
 # 19. r2inspect/modules/compiler_domain.py - lines 39, 41
 # ---------------------------------------------------------------------------
-from r2inspect.modules.compiler_domain import detection_method
+from r2inspect.domain.formats.compiler import detection_method
 
 
 def test_detection_method_gcc_branch():
@@ -681,7 +681,7 @@ def test_detect_injection_apis_returns_indicator_with_two_or_more():
 # ---------------------------------------------------------------------------
 # 31. r2inspect/modules/bindiff_domain.py - line 296
 # ---------------------------------------------------------------------------
-from r2inspect.modules.bindiff_domain import calculate_overall_similarity
+from r2inspect.domain.formats.bindiff import calculate_overall_similarity
 
 
 def test_calculate_overall_similarity_normal():
@@ -716,7 +716,7 @@ def test_suspicious_section_name_indicator_returns_message_on_match():
 # ---------------------------------------------------------------------------
 # 33. r2inspect/modules/similarity_scoring.py - line 14
 # ---------------------------------------------------------------------------
-from r2inspect.modules.similarity_scoring import jaccard_similarity
+from r2inspect.domain.formats.similarity import jaccard_similarity
 
 
 def test_jaccard_similarity_both_empty():

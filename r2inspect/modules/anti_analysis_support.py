@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .anti_analysis_domain import (
+from ..domain.formats.anti_analysis import (
     ENVIRONMENT_CHECK_COMMANDS,
     INJECTION_APIS,
     SUSPICIOUS_API_CATEGORIES,

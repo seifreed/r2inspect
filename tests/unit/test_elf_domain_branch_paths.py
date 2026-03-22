@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.modules.elf_domain import (
+from r2inspect.domain.formats.elf import (
     build_section_read_commands,
     find_section_by_name,
     parse_build_id_data,

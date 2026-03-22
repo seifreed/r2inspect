@@ -62,6 +62,10 @@ class YaraAnalyzer(CommandHelperMixin):
         self.rules_path = str(config.get_yara_rules_path())
         self.filepath = filepath  # Store filepath directly to avoid r2 dependency
 
+    def analyze(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
+        """Unified entry point for pipeline dispatch."""
+        return self.scan(custom_rules_path)
+
     def scan(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
         """Scan file with YARA rules"""
         matches: list[dict[str, Any]] = []

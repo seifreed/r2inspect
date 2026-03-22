@@ -21,7 +21,7 @@ from r2inspect.domain.services.rich_header import (
 # ---------------------------------------------------------------------------
 # compiler_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.compiler_domain import (
+from r2inspect.domain.formats.compiler import (
     calculate_compiler_score,
     detect_clang_version,
     detect_gcc_version,
@@ -33,7 +33,7 @@ from r2inspect.modules.compiler_domain import (
 # ---------------------------------------------------------------------------
 # elf_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.elf_domain import (
+from r2inspect.domain.formats.elf import (
     find_section_by_name,
     parse_build_id_data,
     parse_comment_compiler_info,
@@ -45,7 +45,7 @@ from r2inspect.modules.elf_domain import (
 # ---------------------------------------------------------------------------
 # macho_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.macho_domain import (
+from r2inspect.domain.formats.macho import (
     build_load_commands,
     build_sections,
     dylib_timestamp_to_string,
@@ -56,7 +56,7 @@ from r2inspect.modules.macho_domain import (
 # ---------------------------------------------------------------------------
 # pe_info_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.pe_info_domain import (
+from r2inspect.domain.formats.pe_info import (
     apply_optional_header_info,
     characteristics_from_bin,
     determine_pe_file_type,
@@ -67,7 +67,7 @@ from r2inspect.modules.pe_info_domain import (
 # ---------------------------------------------------------------------------
 # string_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.string_domain import (
+from r2inspect.domain.formats.string import (
     build_xor_matches,
     decode_base64,
     decode_hex,
@@ -80,7 +80,7 @@ from r2inspect.modules.string_domain import (
 # ---------------------------------------------------------------------------
 # import_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.import_domain import (
+from r2inspect.domain.formats.import_analysis import (
     assess_api_risk,
     build_api_categories,
     categorize_apis,
@@ -932,7 +932,7 @@ def test_assess_api_risk_registry_trigger() -> None:
 
 
 def test_assess_api_risk_network_trigger() -> None:
-    from r2inspect.modules.import_domain import NETWORK_CATEGORY
+    from r2inspect.domain.formats.import_analysis import NETWORK_CATEGORY
 
     categories = {NETWORK_CATEGORY: {"count": 3, "apis": ["InternetOpen"] * 3}}
     suspicious, score = assess_api_risk(categories)

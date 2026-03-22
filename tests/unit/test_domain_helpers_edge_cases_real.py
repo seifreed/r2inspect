@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from r2inspect.modules import elf_domain, macho_domain
+from r2inspect.domain.formats import elf as elf_domain, macho_domain
 
 
 def test_elf_domain_edge_cases() -> None:

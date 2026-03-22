@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-import r2inspect.modules.crypto_domain as cd
-import r2inspect.modules.macho_security_domain as msd
-import r2inspect.modules.elf_security_domain as esd
+import r2inspect.domain.formats.crypto as cd
+import r2inspect.domain.formats.macho_security as msd
+import r2inspect.domain.formats.elf_security as esd
 
 
 # ---------------------------------------------------------------------------

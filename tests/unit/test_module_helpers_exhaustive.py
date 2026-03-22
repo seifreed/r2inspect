@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from r2inspect.modules import crypto_domain, domain_helpers, search_helpers
+from r2inspect.domain.formats import crypto as crypto_domain, domain_helpers, search_helpers
 from r2inspect.modules.security_scoring import _grade_from_percentage, build_security_score
-from r2inspect.modules.similarity_scoring import (
+from r2inspect.domain.formats.similarity import (
     jaccard_similarity,
     normalized_difference_similarity,
 )

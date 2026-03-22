@@ -213,34 +213,36 @@ def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
     return None
 
 
-def _cmd_fallback(_r2: Any, command: str) -> str:
-    if _r2 is None or not hasattr(_r2, "cmd"):
+def _cmd_fallback(r2_fallback: Any, command: str) -> str:
+    if r2_fallback is None or not hasattr(r2_fallback, "cmd"):
         return ""
-    return safe_cmd(_r2, command, "")
+    return safe_cmd(r2_fallback, command, "")
 
 
-def _cmdj_fallback(_r2: Any, command: str, default: Any) -> Any:
-    if _r2 is None or (not hasattr(_r2, "cmd") and not hasattr(_r2, "cmdj")):
+def _cmdj_fallback(r2_fallback: Any, command: str, default: Any) -> Any:
+    if r2_fallback is None or (
+        not hasattr(r2_fallback, "cmd") and not hasattr(r2_fallback, "cmdj")
+    ):
         return default
-    return safe_cmdj_any(_r2, command, default)
+    return safe_cmdj_any(r2_fallback, command, default)
 
 
-def cmd(adapter: Any, _r2: Any, command: str) -> str:
+def cmd(adapter: Any, r2_fallback: Any, command: str) -> str:
     adapter_result = _maybe_use_adapter(adapter, command)
     if isinstance(adapter_result, str):
         return adapter_result
-    return _cmd_fallback(_r2, command)
+    return _cmd_fallback(r2_fallback, command)
 
 
-def cmdj(adapter: Any, _r2: Any, command: str, default: Any) -> Any:
+def cmdj(adapter: Any, r2_fallback: Any, command: str, default: Any) -> Any:
     adapter_result = _maybe_use_adapter(adapter, command)
     if adapter_result is not None:
         return adapter_result
-    return _cmdj_fallback(_r2, command, default)
+    return _cmdj_fallback(r2_fallback, command, default)
 
 
-def cmd_list(adapter: Any, _r2: Any, command: str) -> list[Any]:
-    result = cmdj(adapter, _r2, command, [])
+def cmd_list(adapter: Any, r2_fallback: Any, command: str) -> list[Any]:
+    result = cmdj(adapter, r2_fallback, command, [])
     return result if isinstance(result, list) else []
 
 

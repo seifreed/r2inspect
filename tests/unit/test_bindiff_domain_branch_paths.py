@@ -11,7 +11,7 @@ Targets lines:
   287-304 calculate_overall_similarity
 """
 
-from r2inspect.modules.bindiff_domain import (
+from r2inspect.domain.formats.bindiff import (
     calculate_cyclomatic_complexity,
     calculate_overall_similarity,
     calculate_rolling_hash,

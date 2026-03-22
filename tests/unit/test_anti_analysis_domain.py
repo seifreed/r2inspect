@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for anti_analysis_domain module."""
 
-from r2inspect.modules.anti_analysis_domain import (
+from r2inspect.domain.formats.anti_analysis import (
     ANTI_DEBUG_APIS,
     ENVIRONMENT_CHECK_COMMANDS,
     INJECTION_APIS,

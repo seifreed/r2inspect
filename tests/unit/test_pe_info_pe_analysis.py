@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from r2inspect.modules import pe_info
-from r2inspect.modules.pe_info_domain import PE32_PLUS
+from r2inspect.domain.formats.pe_info import PE32_PLUS
 
 
 # ---------------------------------------------------------------------------

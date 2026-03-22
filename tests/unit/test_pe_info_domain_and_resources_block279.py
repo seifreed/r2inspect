@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.modules import pe_info_domain, pe_resources
+from r2inspect.domain.formats import pe_info as pe_info_domain, pe_resources
 
 
 class DummyAdapter:

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
-from r2inspect.modules.bindiff_domain import (
+from r2inspect.domain.formats.bindiff import (
     calculate_cyclomatic_complexity,
     calculate_overall_similarity,
     calculate_rolling_hash,

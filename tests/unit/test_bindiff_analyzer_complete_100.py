@@ -1,6 +1,6 @@
 """Comprehensive tests for bindiff_analyzer.py - 100% coverage target."""
 
-from r2inspect.modules.bindiff_domain import (
+from r2inspect.domain.formats.bindiff import (
     calculate_overall_similarity,
     categorize_similarity,
     calculate_rolling_hash,

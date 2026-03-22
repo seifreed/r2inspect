@@ -10,7 +10,7 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 from r2inspect.modules.crypto_constants import CRYPTO_CONSTANTS
-from r2inspect.modules.crypto_domain import (
+from r2inspect.domain.formats.crypto import (
     consolidate_detections,
     detect_algorithms_from_strings,
     _is_candidate_string,
@@ -26,7 +26,7 @@ from r2inspect.modules.crypto_detection_support import (
     detect_crypto_libraries,
 )
 from r2inspect.modules.domain_helpers import shannon_entropy
-from r2inspect.modules.string_domain import parse_search_results
+from r2inspect.domain.formats.string import parse_search_results
 
 
 # ---------------------------------------------------------------------------

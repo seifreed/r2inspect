@@ -2,7 +2,7 @@
 """Tests for string_domain module."""
 
 import pytest
-from r2inspect.modules.string_domain import (
+from r2inspect.domain.formats.string import (
     filter_strings,
     parse_search_results,
     xor_string,

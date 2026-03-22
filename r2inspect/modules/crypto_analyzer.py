@@ -30,6 +30,10 @@ class CryptoAnalyzer(CommandHelperMixin):
         self.config = config
         self.crypto_constants = CRYPTO_CONSTANTS
 
+    def analyze(self) -> dict[str, Any]:
+        """Unified entry point for pipeline dispatch."""
+        return self.detect()
+
     def detect(self) -> dict[str, Any]:
         """Detect cryptographic patterns and algorithms."""
         return self._safe_call(

@@ -11,20 +11,20 @@ from r2inspect.domain.services import function_analysis as function_domain
 from r2inspect.error_handling import classifier as error_handler
 from r2inspect.infrastructure import command_helpers, r2_helpers, r2_session
 from r2inspect.modules import (
-    crypto_domain,
-    elf_domain,
-    import_domain,
-    macho_domain,
     pe_imports,
-    pe_info_domain,
     resource_analyzer as resource_analysis,
     security_scoring,
-    similarity_scoring,
     simhash_detailed,
-    string_domain,
 )
 from r2inspect.schemas import results_loader
 from r2inspect.schemas.results_models import AnalysisResult
+from r2inspect.domain.formats import pe_info as pe_info_domain
+from r2inspect.domain.formats import import_analysis as import_domain
+from r2inspect.domain.formats import elf as elf_domain
+from r2inspect.domain.formats import macho as macho_domain
+from r2inspect.domain.formats import string as string_domain
+from r2inspect.domain.formats import crypto as crypto_domain
+from r2inspect.domain.formats import similarity as similarity_scoring
 
 
 @dataclass

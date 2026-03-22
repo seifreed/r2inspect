@@ -8,16 +8,16 @@ import pytest
 from r2inspect.factory import create_inspector
 from r2inspect.modules import (
     domain_helpers,
-    pe_info_domain,
     pe_resources,
     search_helpers,
     security_scoring,
-    similarity_scoring,
     string_classification,
     string_extraction,
 )
 import r2inspect.infrastructure.command_helpers as command_helpers
 import r2inspect.infrastructure.hashing as hashing
+from r2inspect.domain.formats import pe_info as pe_info_domain
+from r2inspect.domain.formats import similarity as similarity_scoring
 
 
 class DummyLogger:
