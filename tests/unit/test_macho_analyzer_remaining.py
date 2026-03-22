@@ -8,30 +8,7 @@ import json
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
-
-
-class FakeR2:
-    """Lightweight fake r2pipe instance for testing."""
-
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        if command in self.cmdj_map:
-            value = self.cmdj_map[command]
-            if isinstance(value, Exception):
-                raise value
-            return value
-        return {}
-
-    def cmd(self, command):
-        if command in self.cmd_map:
-            value = self.cmd_map[command]
-            if isinstance(value, Exception):
-                raise value
-            return value
-        return ""
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _make_analyzer(cmdj_map=None, cmd_map=None):

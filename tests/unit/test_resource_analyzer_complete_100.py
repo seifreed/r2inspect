@@ -9,44 +9,7 @@ from typing import Any
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer, run_resource_analysis
-
-
-class FakeR2:
-    """Fake r2pipe instance returning predetermined responses by command.
-
-    - cmdj_map: responses for FakeR2.cmdj(command) -- JSON commands like iDj, iRj, iSj
-    - cmd_map: responses for FakeR2.cmd(command) -- text commands like p8
-    """
-
-    def __init__(
-        self,
-        cmdj_map: dict[str, Any] | None = None,
-        cmd_map: dict[str, str] | None = None,
-    ):
-        self.cmdj_map: dict[str, Any] = cmdj_map or {}
-        self.cmd_map: dict[str, str] = cmd_map or {}
-
-    def cmdj(self, command: str) -> Any:
-        if command in self.cmdj_map:
-            value = self.cmdj_map[command]
-            if isinstance(value, Exception):
-                raise value
-            return value
-        return None
-
-    def cmd(self, command: str) -> str:
-        if command in self.cmd_map:
-            value = self.cmd_map[command]
-            if isinstance(value, Exception):
-                raise value
-            return value
-        # Prefix matching for p8 commands with addresses
-        for key, value in self.cmd_map.items():
-            if key in command:
-                if isinstance(value, Exception):
-                    raise value
-                return value
-        return ""
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _bytes_to_hex(data: list[int]) -> str:

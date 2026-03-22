@@ -23,6 +23,7 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.telfhash_analyzer import TELFHASH_AVAILABLE, TelfhashAnalyzer
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 ELF_FIXTURE = "samples/fixtures/hello_elf"
@@ -31,20 +32,6 @@ ELF_FIXTURE = "samples/fixtures/hello_elf"
 # ---------------------------------------------------------------------------
 # Minimal fake backends
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Minimal r2pipe-like object."""
-
-    def __init__(self, cmd_map=None, cmdj_map=None):
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command):
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command):
-        return self._cmdj_map.get(command)
 
 
 class DirectFakeAdapter:

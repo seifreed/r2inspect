@@ -20,29 +20,12 @@ from r2inspect.domain.formats.string import (
     xor_string,
 )
 from r2inspect.modules.string_extraction import extract_strings_from_entries
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # FakeR2 – lightweight stand-in for an r2pipe handle
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        val = self.cmdj_map.get(command, {})
-        if isinstance(val, Exception):
-            raise val
-        return val
-
-    def cmd(self, command):
-        val = self.cmd_map.get(command, "")
-        if isinstance(val, Exception):
-            raise val
-        return val
 
 
 # ---------------------------------------------------------------------------

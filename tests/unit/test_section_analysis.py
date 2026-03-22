@@ -9,29 +9,12 @@ from __future__ import annotations
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.section_analyzer import SectionAnalyzer
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # FakeR2 -- deterministic stand-in for r2pipe
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Minimal r2pipe stand-in that returns pre-configured responses."""
-
-    def __init__(
-        self,
-        cmd_map: dict | None = None,
-        cmdj_map: dict | None = None,
-    ) -> None:
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command: str) -> str:
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command: str):
-        return self._cmdj_map.get(command)
 
 
 # ---------------------------------------------------------------------------

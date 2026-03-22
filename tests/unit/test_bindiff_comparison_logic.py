@@ -21,22 +21,9 @@ from r2inspect.domain.formats.bindiff import (
     compare_string_features,
     compare_structural_features,
 )
+from r2inspect.testing.fake_r2 import FakeR2
 
 SAMPLES_DIR = Path(__file__).parent.parent.parent / "samples" / "fixtures"
-
-
-class FakeR2:
-    """Minimal r2pipe stand-in that returns pre-configured responses."""
-
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, {})
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
 
 
 def _make_adapter(cmdj_map=None, cmd_map=None):

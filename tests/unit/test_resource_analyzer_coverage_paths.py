@@ -4,48 +4,7 @@ from typing import Any
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
-
-
-class FakeR2:
-    """Fake r2pipe instance that returns predetermined responses."""
-
-    def __init__(
-        self,
-        cmdj_map: dict[str, Any] | None = None,
-        cmd_map: dict[str, str] | None = None,
-    ):
-        self.cmdj_map: dict[str, Any] = cmdj_map or {}
-        self.cmd_map: dict[str, str] = cmd_map or {}
-
-    def cmdj(self, command: str) -> Any:
-        if command in self.cmdj_map:
-            value = self.cmdj_map[command]
-            if isinstance(value, Exception):
-                raise value
-            return value
-        # Try prefix matching for pxj/p8 commands with addresses
-        for key, value in self.cmdj_map.items():
-            if command.startswith(key.split(" @")[0]) and key.endswith(
-                command.split("@ ")[-1] if "@ " in command else ""
-            ):
-                if isinstance(value, Exception):
-                    raise value
-                return value
-        return {}
-
-    def cmd(self, command: str) -> str:
-        if command in self.cmd_map:
-            value = self.cmd_map[command]
-            if isinstance(value, Exception):
-                raise value
-            return value
-        # Prefix matching for p8 commands
-        for key, value in self.cmd_map.items():
-            if key in command:
-                if isinstance(value, Exception):
-                    raise value
-                return value
-        return ""
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _make_analyzer(

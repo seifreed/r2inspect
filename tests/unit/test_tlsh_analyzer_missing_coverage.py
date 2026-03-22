@@ -4,20 +4,7 @@ from pathlib import Path
 
 from r2inspect.modules.tlsh_analyzer import TLSHAnalyzer, TLSH_AVAILABLE
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-
-
-class FakeR2:
-    """Minimal radare2 pipe stand-in."""
-
-    def __init__(self, *, cmdj_responses=None, cmd_responses=None):
-        self._cmdj = cmdj_responses or {}
-        self._cmd = cmd_responses or {}
-
-    def cmdj(self, command):
-        return self._cmdj.get(command, {})
-
-    def cmd(self, command):
-        return self._cmd.get(command, "")
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _make_adapter(**kwargs):
