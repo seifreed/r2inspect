@@ -28,6 +28,13 @@ logger = get_logger(__name__)
 global_error_manager = ErrorRecoveryManager(logger, _error_stats)
 
 
+def reset_global_error_manager() -> None:
+    """Reset global error manager state (useful for test isolation)."""
+    from .classifier_runtime import reset_manager_stats
+
+    reset_manager_stats(global_error_manager)
+
+
 def error_handler(
     category: ErrorCategory = ErrorCategory.UNKNOWN,
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import threading
 from collections.abc import Callable
@@ -121,8 +122,6 @@ class ThreadSafeContext:
         Returns:
             Deep copy of all context data
         """
-        import copy
-
         with self._lock:
             return copy.deepcopy(self._data)
 

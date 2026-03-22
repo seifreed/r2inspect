@@ -46,6 +46,11 @@ def timeout_handler(signum: int, frame: Any) -> None:
 _COMPILED_CACHE: dict[str, Any] = {}
 
 
+def clear_yara_cache() -> None:
+    """Clear the compiled YARA rules cache (useful for test isolation)."""
+    _COMPILED_CACHE.clear()
+
+
 class YaraAnalyzer(CommandHelperMixin):
     """YARA rules analysis"""
 

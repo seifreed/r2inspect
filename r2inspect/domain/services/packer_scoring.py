@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from ..domain.services.binary_helpers import shannon_entropy
+from .binary_helpers import shannon_entropy
 
 
 def find_packer_signature(

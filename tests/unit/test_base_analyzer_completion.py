@@ -46,7 +46,7 @@ def test_base_analyzer_initialization_with_filepath(tmp_path: Path) -> None:
 
     assert analyzer.filepath == Path(test_file)
     assert analyzer.adapter is None
-    assert analyzer.r2 is None
+    assert analyzer.adapter is None
     assert analyzer.config is None
 
 
@@ -73,7 +73,7 @@ def test_base_analyzer_initialization_with_adapter() -> None:
     analyzer = ConcreteAnalyzer(adapter=adapter)
 
     assert analyzer.adapter is adapter
-    assert analyzer.r2 is adapter
+    assert analyzer.adapter is adapter
 
 
 def test_base_analyzer_initialization_with_config() -> None:
@@ -497,7 +497,7 @@ def test_base_analyzer_repr_representation(tmp_path: Path) -> None:
 
     assert "ConcreteAnalyzer" in repr_str
     assert "filepath=" in repr_str
-    assert "r2=<r2pipe>" in repr_str
+    assert "adapter=<adapter>" in repr_str
     assert "config=<Config>" in repr_str
 
 
@@ -506,5 +506,5 @@ def test_base_analyzer_repr_representation_no_adapter_config() -> None:
     repr_str = repr(analyzer)
 
     assert "ConcreteAnalyzer" in repr_str
-    assert "r2=None" in repr_str
+    assert "adapter=None" in repr_str
     assert "config=None" in repr_str
