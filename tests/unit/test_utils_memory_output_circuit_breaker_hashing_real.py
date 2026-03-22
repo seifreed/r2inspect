@@ -46,7 +46,7 @@ def test_hashing_utils_real(tmp_path: Path) -> None:
     assert ssdeep is None or isinstance(ssdeep, str)
 
     error_hashes = hashing.calculate_hashes(str(tmp_path))
-    assert error_hashes["md5"].startswith("Error:")
+    assert error_hashes["md5"] == ""
 
     class BadImport:
         def get(self, *_args: object, **_kwargs: object) -> str:

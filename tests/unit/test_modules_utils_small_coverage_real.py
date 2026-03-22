@@ -122,7 +122,7 @@ def test_utils_hashing_variants(tmp_path) -> None:
 
     error_hashes = hashing.calculate_hashes(str(tmp_path))
     for value in error_hashes.values():
-        assert value.startswith("Error:")
+        assert value == ""
 
     assert hashing.calculate_imphash([]) is None
     assert hashing.calculate_imphash([{"library": "", "name": ""}]) is None

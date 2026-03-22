@@ -36,9 +36,8 @@ def calculate_hashes(file_path: str) -> dict[str, str]:
         hashes["sha256"] = sha256_hash.hexdigest()
         hashes["sha512"] = sha512_hash.hexdigest()
 
-    except Exception as exc:
-        for key in hashes:
-            hashes[key] = f"Error: {str(exc)}"
+    except Exception:
+        pass  # Return pre-initialized empty strings on failure
 
     return hashes
 

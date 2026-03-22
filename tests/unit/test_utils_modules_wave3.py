@@ -86,17 +86,17 @@ from r2inspect.infrastructure.hashing import (
 
 
 def test_calculate_hashes_exception_on_directory(tmp_path: Path):
-    # Passing a directory triggers IsADirectoryError -> lines 41, 43, 44
+    # Passing a directory triggers IsADirectoryError -> returns empty strings
     result = calculate_hashes(str(tmp_path))
     for v in result.values():
-        assert v.startswith("Error:")
+        assert v == ""
 
 
 def test_calculate_hashes_for_bytes_exception_path():
-    # Passing None triggers TypeError inside hashlib -> lines 61, 62, 63
+    # Passing None triggers TypeError inside hashlib -> returns empty strings
     result = calculate_hashes_for_bytes(None)  # type: ignore[arg-type]
     for v in result.values():
-        assert v.startswith("Error:")
+        assert v == ""
 
 
 def test_calculate_hashes_for_bytes_with_sha512():

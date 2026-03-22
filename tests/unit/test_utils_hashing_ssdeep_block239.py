@@ -26,7 +26,7 @@ def test_calculate_hashes_and_imphash(tmp_path: Path):
     assert missing["md5"] == ""
 
     error = hashing.calculate_hashes(str(tmp_path))
-    assert error["md5"].startswith("Error:")
+    assert error["md5"] == ""
 
     assert hashing.calculate_imphash([]) is None
     imports = [

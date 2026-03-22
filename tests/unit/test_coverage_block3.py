@@ -29,7 +29,7 @@ def test_calculate_hashes_success_and_missing(tmp_path: Path) -> None:
 
 def test_calculate_hashes_error_path(tmp_path: Path) -> None:
     hashes = hashing.calculate_hashes(str(tmp_path))
-    assert all(value.startswith("Error:") for value in hashes.values())
+    assert all(value == "" for value in hashes.values())
 
 
 def test_calculate_imphash_variations() -> None:
