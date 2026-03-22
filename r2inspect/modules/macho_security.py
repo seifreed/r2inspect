@@ -5,7 +5,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .macho_security_domain import has_arc, has_stack_canary, is_encrypted, is_pie, is_signed
+from ..domain.formats.macho_security import (
+    has_arc,
+    has_stack_canary,
+    is_encrypted,
+    is_pie,
+    is_signed,
+)
 
 
 def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:

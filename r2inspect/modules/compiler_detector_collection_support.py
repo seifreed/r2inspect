@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from ..infrastructure.command_helpers import cmd as cmd_helper
-from .compiler_domain import (
+from ..domain.formats.compiler import (
     extract_import_names,
     extract_section_names,
     extract_symbol_names,

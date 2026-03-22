@@ -20,16 +20,24 @@ class CommandHelperMixin:
     """Provide standardized command helper wrappers for adapters/r2 instances."""
 
     adapter: Any
-    r2: Any
 
     def _cmd(self, command: str) -> str:
-        return str(cmd_helper(self.adapter, self.r2, command))
+        return str(cmd_helper(self.adapter, self.adapter, command))
 
     def _cmdj(self, command: str, default: Any | None = None) -> Any:
-        return cmdj_helper(self.adapter, self.r2, command, default)
+        return cmdj_helper(self.adapter, self.adapter, command, default)
 
     def _cmd_list(self, command: str) -> list[Any]:
-        return cast(list[Any], cmd_list_helper(self.adapter, self.r2, command))
+        return cast(list[Any], cmd_list_helper(self.adapter, self.adapter, command))
+
+    @staticmethod
+    def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
+        """Coerce a value to a list of dicts, returning [] for non-list inputs."""
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        if isinstance(value, dict):
+            return [value]
+        return []
 
     def _get_via_adapter(
         self,

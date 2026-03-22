@@ -45,8 +45,8 @@ def test_string_extraction_helpers():
 
 def test_search_helpers():
     adapter = DummyAdapter()
-    assert search_helpers.search_text(adapter, None, " a ") == "match:a"
-    assert search_helpers.search_hex(adapter, None, " ff ") == "0x1"
+    assert search_helpers.search_text(adapter, " a ") == "match:a"
+    assert search_helpers.search_hex(adapter, " ff ") == "0x1"
 
 
 def test_string_analyzer_flow():

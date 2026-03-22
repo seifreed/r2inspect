@@ -14,10 +14,10 @@ from .crypto_detection_support import (
     find_suspicious_patterns as build_suspicious_patterns,
 )
 from .crypto_constants import CRYPTO_CONSTANTS
-from .crypto_domain import consolidate_detections, detect_algorithms_from_strings
+from ..domain.formats.crypto import consolidate_detections, detect_algorithms_from_strings
 from .domain_helpers import shannon_entropy
 from .search_helpers import search_hex, search_text
-from .string_domain import parse_search_results
+from ..domain.formats.string import parse_search_results
 
 logger = get_logger(__name__)
 
@@ -27,7 +27,6 @@ class CryptoAnalyzer(CommandHelperMixin):
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         self.adapter = adapter
-        self.r2 = adapter  # required by CommandHelperMixin
         self.config = config
         self.crypto_constants = CRYPTO_CONSTANTS
 
@@ -145,14 +144,6 @@ class CryptoAnalyzer(CommandHelperMixin):
     def _parse_search_results(self, result: str) -> list[str]:
         return parse_search_results(result)
 
-    @staticmethod
-    def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-        if isinstance(value, dict):
-            return [value]
-        return []
-
     def _get_imports(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports") or [])
 
@@ -163,10 +154,10 @@ class CryptoAnalyzer(CommandHelperMixin):
         return self._coerce_dict_list(self._get_via_adapter("get_strings") or [])
 
     def _search_text(self, pattern: str) -> str:
-        return search_text(self.adapter, self.adapter, pattern)
+        return search_text(self.adapter, pattern)
 
     def _search_hex(self, hex_pattern: str) -> str:
-        return search_hex(self.adapter, self.adapter, hex_pattern)
+        return search_hex(self.adapter, hex_pattern)
 
     def _read_bytes(self, vaddr: int, size: int) -> bytes:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):

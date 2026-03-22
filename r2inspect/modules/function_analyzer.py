@@ -47,7 +47,6 @@ class FunctionAnalyzer(CommandHelperMixin):
         self, adapter: Any, config: Any | None = None, filename: str | None = None
     ) -> None:
         self.adapter = adapter
-        self.r2 = adapter  # required by CommandHelperMixin
         self.config = config
         self._file_size_mb = self._get_file_size_mb(filename)
         self.functions_cache: list[dict[str, Any]] | None = None

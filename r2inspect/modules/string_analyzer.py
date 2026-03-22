@@ -7,7 +7,7 @@ from ..abstractions import BaseAnalyzer
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
 from ..infrastructure.logging import get_logger
 from .search_helpers import search_hex
-from .string_domain import (
+from ..domain.formats.string import (
     build_xor_matches,
     decode_base64,
     decode_hex,
@@ -112,7 +112,7 @@ class StringAnalyzer(BaseAnalyzer):
         try:
 
             def _search_hex(pattern: str) -> str:
-                return search_hex(self.adapter, self.r2, pattern)
+                return search_hex(self.adapter, pattern)
 
             return build_xor_matches(search_string, _search_hex)
         except Exception as e:

@@ -19,7 +19,7 @@ from .telfhash_analysis import (
     analyze_symbols as _analyze_symbols_impl,
     is_elf_binary as _is_elf_binary_impl,
 )
-from .telfhash_support import (
+from ..domain.formats.telfhash import (
     extract_symbol_names as _extract_symbol_names_impl,
     filter_symbols_for_telfhash as _filter_symbols_for_telfhash_impl,
     normalize_telfhash_value as _normalize_telfhash_value_impl,

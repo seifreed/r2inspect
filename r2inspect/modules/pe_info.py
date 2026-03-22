@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..infrastructure.r2_helpers import get_pe_headers
-from .pe_info_domain import (
+from ..domain.formats.pe_info import (
     PE32_PLUS,
     apply_optional_header_info,
     build_subsystem_info,

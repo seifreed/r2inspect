@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..infrastructure.r2_helpers import get_elf_headers
-from .elf_security_domain import has_nx, has_relro, has_stack_canary, is_pie, path_features
+from ..domain.formats.elf_security import has_nx, has_relro, has_stack_canary, is_pie, path_features
 
 
 def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:

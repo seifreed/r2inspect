@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from .import_domain import NETWORK_CATEGORY
+from ..domain.formats.import_analysis import NETWORK_CATEGORY
 
 API_CATEGORIES: dict[str, list[str]] = {
     "Process/Thread Management": [

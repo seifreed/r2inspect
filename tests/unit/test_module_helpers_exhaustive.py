@@ -105,6 +105,6 @@ def test_search_helpers_normalization() -> None:
             return f"hex:{pattern}"
 
     adapter = DummyAdapter()
-    assert search_helpers.search_text(adapter, None, " test ") == "text:test"
-    assert search_helpers.search_hex(adapter, None, " ff ") == "hex:ff"
-    assert search_helpers.search_text(None, None, "x") == ""
+    assert search_helpers.search_text(adapter, " test ") == "text:test"
+    assert search_helpers.search_hex(adapter, " ff ") == "hex:ff"
+    assert search_helpers.search_text(None, "x") == ""
