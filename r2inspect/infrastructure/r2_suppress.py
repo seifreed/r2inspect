@@ -63,7 +63,7 @@ def silent_cmdj(
             if result is not None or (default is not None and result == default):
                 return result
             parsed = _try_cmd_parse(r2_instance, command, default)
-            if parsed is not None or parsed == default:
+            if parsed is not None:
                 return parsed
             logger.debug(
                 "text parsing produced no result for %s, using safe_cmdj fallback", command
