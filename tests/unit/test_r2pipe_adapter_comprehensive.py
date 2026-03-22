@@ -544,11 +544,11 @@ def test_cached_query_second_call_uses_cache():
     assert result1 == result2
 
 
-def test_r2_property_accessor():
+def test_adapter_stores_r2_instance():
     """The r2 property should return the underlying r2 instance."""
     r2 = FakeR2()
     adapter = R2PipeAdapter(r2)
-    assert adapter.r2 is r2
+    assert adapter._r2 is r2
 
 
 def test_execute_command_json_list():

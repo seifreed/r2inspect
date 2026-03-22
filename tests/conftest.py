@@ -198,6 +198,24 @@ def cleanup_r2_processes():
         pass
 
 
+@pytest.fixture(autouse=True)
+def _reset_global_state():
+    """Auto-reset shared singletons between tests for isolation."""
+    yield
+    try:
+        from r2inspect.modules.yara_analyzer import clear_yara_cache
+
+        clear_yara_cache()
+    except ImportError:
+        pass
+    try:
+        from r2inspect.error_handling.classifier import reset_global_error_manager
+
+        reset_global_error_manager()
+    except ImportError:
+        pass
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Run display_sections tests early to avoid coverage interference."""
     display_items = []

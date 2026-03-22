@@ -1,22 +1,7 @@
 import json
 
 from r2inspect.infrastructure.r2_suppress import _parse_raw_result, silent_cmdj
-
-
-class FakeR2:
-    def __init__(self, cmdj_result=None, cmd_result=""):
-        self.cmdj_result = cmdj_result
-        self.cmd_result = cmd_result
-
-    def cmdj(self, _command):
-        if isinstance(self.cmdj_result, Exception):
-            raise self.cmdj_result
-        return self.cmdj_result
-
-    def cmd(self, _command):
-        if isinstance(self.cmd_result, Exception):
-            raise self.cmd_result
-        return self.cmd_result
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_parse_raw_result_json():

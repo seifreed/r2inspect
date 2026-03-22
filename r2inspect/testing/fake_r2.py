@@ -34,6 +34,9 @@ class FakeR2:
                 return value
         return None
 
+    def quit(self) -> None:
+        """No-op quit for r2session compatibility."""
+
     def cmd(self, command: str) -> str:
         if command in self.cmd_map:
             value = self.cmd_map[command]

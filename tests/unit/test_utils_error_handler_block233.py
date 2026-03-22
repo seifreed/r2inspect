@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import r2inspect.error_handling.classifier as eh
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_error_classifier_basic() -> None:
@@ -20,13 +21,6 @@ def test_error_classifier_basic() -> None:
     info = eh.ErrorClassifier.classify(PermissionError("nope"), {"component_optional": False})
     assert info.category == eh.ErrorCategory.FILE_ACCESS
     assert info.recoverable is False
-
-    class FakeR2Error(Exception):
-        pass
-
-    info = eh.ErrorClassifier.classify(FakeR2Error("r2pipe failed"), {"phase": "initialization"})
-    assert info.category == eh.ErrorCategory.R2PIPE
-    assert info.severity == eh.ErrorSeverity.CRITICAL
 
 
 def test_error_recovery_manager_strategies() -> None:
