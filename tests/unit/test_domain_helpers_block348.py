@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import base64
 
+from r2inspect.domain.formats import elf as elf_domain
+from r2inspect.domain.formats import macho as macho_domain
+from r2inspect.domain.formats import string as string_domain
 from r2inspect.modules import (
-    elf_domain,
-    macho_domain,
     pe_resources,
     rich_header_domain,
-    string_domain,
 )
 
 

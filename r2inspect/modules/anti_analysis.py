@@ -66,6 +66,10 @@ class AntiAnalysisDetector(CommandHelperMixin):
         self.vm_artifacts = VM_ARTIFACTS
         self.sandbox_indicators = SANDBOX_INDICATORS
 
+    def analyze(self) -> dict[str, Any]:
+        """Unified entry point for pipeline dispatch."""
+        return self.detect()
+
     def detect(self) -> dict[str, Any]:
         """Detect anti-analysis techniques with detailed evidence"""
         anti_analysis = _run_detail_detector(

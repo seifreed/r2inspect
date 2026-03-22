@@ -78,6 +78,10 @@ class CompilerDetector(CommandHelperMixin):
             "VCRUNTIME140_1.dll": "Visual Studio 2019/2022 (14.2+)",
         }
 
+    def analyze(self) -> dict[str, Any]:
+        """Unified entry point for pipeline dispatch."""
+        return self.detect_compiler()
+
     def detect_compiler(self) -> dict[str, Any]:
         """Main function to detect compiler information"""
 

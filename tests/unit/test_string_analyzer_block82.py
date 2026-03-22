@@ -7,7 +7,7 @@ import r2pipe
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.string_analyzer import StringAnalyzer
-from r2inspect.modules.string_domain import parse_search_results, xor_string
+from r2inspect.domain.formats.string import parse_search_results, xor_string
 
 
 def test_string_analyzer_basic(tmp_path: Path):

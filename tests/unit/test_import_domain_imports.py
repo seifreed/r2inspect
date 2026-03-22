@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for import_domain.py module."""
 
-from r2inspect.modules.import_domain import (
+from r2inspect.domain.formats.import_analysis import (
     NETWORK_CATEGORY,
     INJECTION_APIS,
     ANTI_ANALYSIS_APIS,

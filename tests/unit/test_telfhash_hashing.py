@@ -16,7 +16,7 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer, TELFHASH_AVAILABLE
-from r2inspect.modules.telfhash_support import (
+from r2inspect.domain.formats.telfhash import (
     extract_symbol_names,
     filter_symbols_for_telfhash,
     normalize_telfhash_value,

@@ -5,7 +5,7 @@ import pytest
 
 import base64
 
-from r2inspect.modules.string_domain import (
+from r2inspect.domain.formats.string import (
     SUSPICIOUS_PATTERNS,
     build_xor_matches,
     decode_base64,

@@ -119,6 +119,10 @@ class PackerDetector(CommandHelperMixin):
             "MPRESS": [b"MPRESS", b".MPRESS"],
         }
 
+    def analyze(self) -> dict[str, Any]:
+        """Unified entry point for pipeline dispatch."""
+        return self.detect()
+
     def detect(self) -> dict[str, Any]:
         """Coordinate all detection techniques and return a unified packing verdict."""
         scorer = PackerEvidenceScorer()

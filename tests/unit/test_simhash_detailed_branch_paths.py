@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from r2inspect.modules.simhash_detailed import run_detailed_simhash_analysis
-from r2inspect.modules.similarity_scoring import (
+from r2inspect.domain.formats.similarity import (
     jaccard_similarity,
     normalized_difference_similarity,
 )

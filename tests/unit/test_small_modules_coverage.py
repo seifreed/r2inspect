@@ -334,7 +334,7 @@ def test_machoc_hash_differs_for_different_mnemonics():
 # ---------------------------------------------------------------------------
 # 5. similarity_scoring
 # ---------------------------------------------------------------------------
-from r2inspect.modules.similarity_scoring import (
+from r2inspect.domain.formats.similarity import (
     jaccard_similarity,
     normalized_difference_similarity,
 )
@@ -530,7 +530,7 @@ def test_split_null_terminated_limit():
 # ---------------------------------------------------------------------------
 # 9. crypto_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.crypto_domain import (
+from r2inspect.domain.formats.crypto import (
     consolidate_detections,
     detect_algorithms_from_strings,
 )

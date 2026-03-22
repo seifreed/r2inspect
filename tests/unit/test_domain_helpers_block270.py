@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from r2inspect.modules import elf_domain, macho_domain
+from r2inspect.domain.formats import elf as elf_domain, macho_domain
 
 
 @pytest.mark.unit

@@ -9,7 +9,7 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.string_analyzer import StringAnalyzer
-from r2inspect.modules.string_domain import (
+from r2inspect.domain.formats.string import (
     build_xor_matches,
     decode_base64,
     decode_hex,

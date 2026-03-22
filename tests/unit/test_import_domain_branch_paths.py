@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from r2inspect.modules.import_domain import (
+from r2inspect.domain.formats.import_analysis import (
     NETWORK_CATEGORY,
     assess_api_risk,
     count_import_categories,

@@ -561,7 +561,7 @@ def test_memory_aware_analyzer_skips_when_memory_unavailable():
 # r2inspect/modules/import_domain.py  -- lines 102-113
 # ---------------------------------------------------------------------------
 
-from r2inspect.modules.import_domain import (
+from r2inspect.domain.formats.import_analysis import (
     INJECTION_APIS,
     NETWORK_APIS,
     build_api_categories,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from r2inspect.config import Config
-from r2inspect.modules.import_domain import find_suspicious_patterns
+from r2inspect.domain.formats.import_analysis import find_suspicious_patterns
 from r2inspect.modules.import_analyzer import NETWORK_CATEGORY, ImportAnalyzer
 
 

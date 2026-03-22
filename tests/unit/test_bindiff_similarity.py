@@ -249,7 +249,7 @@ def test_bindiff_similarity_scoring():
 
 
 def test_bindiff_categorize_similarity():
-    from r2inspect.modules.bindiff_domain import categorize_similarity
+    from r2inspect.domain.formats.bindiff import categorize_similarity
 
     assert categorize_similarity(0.95) == "Very High"
     assert categorize_similarity(0.75) == "High"
@@ -258,14 +258,14 @@ def test_bindiff_categorize_similarity():
 
 
 def test_bindiff_calculate_overall_similarity():
-    from r2inspect.modules.bindiff_domain import calculate_overall_similarity
+    from r2inspect.domain.formats.bindiff import calculate_overall_similarity
 
     score = calculate_overall_similarity(0.8, 0.7, 0.9, 0.6, 0.5)
     assert 0.0 <= score <= 1.0
 
 
 def test_bindiff_compare_structural_features():
-    from r2inspect.modules.bindiff_domain import compare_structural_features
+    from r2inspect.domain.formats.bindiff import compare_structural_features
 
     features1 = {
         "architecture": "x86",
@@ -285,7 +285,7 @@ def test_bindiff_compare_structural_features():
 
 
 def test_bindiff_compare_function_features():
-    from r2inspect.modules.bindiff_domain import compare_function_features
+    from r2inspect.domain.formats.bindiff import compare_function_features
 
     features1 = {"function_count": 10, "function_sizes": [100, 200, 150]}
     features2 = {"function_count": 12, "function_sizes": [100, 210, 145]}
@@ -295,7 +295,7 @@ def test_bindiff_compare_function_features():
 
 
 def test_bindiff_rolling_hash():
-    from r2inspect.modules.bindiff_domain import calculate_rolling_hash
+    from r2inspect.domain.formats.bindiff import calculate_rolling_hash
 
     data = b"test binary data for hashing"
     hash_value = calculate_rolling_hash(data)
@@ -303,7 +303,7 @@ def test_bindiff_rolling_hash():
 
 
 def test_bindiff_api_detection():
-    from r2inspect.modules.bindiff_domain import is_crypto_api, is_network_api, is_suspicious_api
+    from r2inspect.domain.formats.bindiff import is_crypto_api, is_network_api, is_suspicious_api
 
     assert is_crypto_api("CryptEncrypt") is True
     assert is_crypto_api("RegularFunc") is False
@@ -316,7 +316,7 @@ def test_bindiff_api_detection():
 
 
 def test_bindiff_string_indicators():
-    from r2inspect.modules.bindiff_domain import (
+    from r2inspect.domain.formats.bindiff import (
         has_crypto_indicators,
         has_network_indicators,
         has_persistence_indicators,

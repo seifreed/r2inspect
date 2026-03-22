@@ -1,15 +1,13 @@
-from r2inspect.modules import (
-    compiler_domain,
-    crypto_domain,
-    elf_domain,
-    elf_security_domain,
-    macho_domain,
-    macho_security_domain,
-    pe_info_domain,
-    rich_header_domain,
-    similarity_scoring,
-    string_domain,
-)
+from r2inspect.domain.formats import compiler as compiler_domain
+from r2inspect.domain.formats import crypto as crypto_domain
+from r2inspect.domain.formats import elf as elf_domain
+from r2inspect.domain.formats import elf_security as elf_security_domain
+from r2inspect.domain.formats import macho as macho_domain
+from r2inspect.domain.formats import macho_security as macho_security_domain
+from r2inspect.domain.formats import pe_info as pe_info_domain
+from r2inspect.domain.formats import similarity as similarity_scoring
+from r2inspect.domain.formats import string as string_domain
+from r2inspect.modules import rich_header_domain
 
 
 def test_compiler_domain_helpers():

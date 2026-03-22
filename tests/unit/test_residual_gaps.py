@@ -13,14 +13,14 @@ import pydantic
 import pytest
 
 import r2inspect.factory as _factory_mod
-import r2inspect.modules.string_domain as _sd_mod
+import r2inspect.domain.formats.string as _sd_mod
 import r2inspect.core.analyzer_factory as _af_mod
 from r2inspect.core.file_validator import FileValidator
 from r2inspect.core.inspector import R2Inspector
 from r2inspect.core.pipeline_builder import PipelineBuilder
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.modules.packer_detector import PackerDetector
-from r2inspect.modules.string_domain import decode_base64
+from r2inspect.domain.formats.string import decode_base64
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.schemas.base import AnalysisResultBase

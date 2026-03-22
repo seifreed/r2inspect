@@ -1,5 +1,5 @@
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
-from r2inspect.modules.string_domain import decode_base64, decode_hex, filter_strings
+from r2inspect.domain.formats.string import decode_base64, decode_hex, filter_strings
 
 
 class FakeR2:

@@ -274,10 +274,10 @@ def test_json_output_formatter_nested():
 # ---------------------------------------------------------------------------
 # 19. macho_security_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.macho_security_domain import has_arc
-from r2inspect.modules.macho_security_domain import has_stack_canary as macho_has_stack_canary
-from r2inspect.modules.macho_security_domain import is_encrypted, is_signed
-from r2inspect.modules.macho_security_domain import is_pie as macho_is_pie
+from r2inspect.domain.formats.macho_security import has_arc
+from r2inspect.domain.formats.macho_security import has_stack_canary as macho_has_stack_canary
+from r2inspect.domain.formats.macho_security import is_encrypted, is_signed
+from r2inspect.domain.formats.macho_security import is_pie as macho_is_pie
 
 
 def test_macho_is_pie_dylib():
@@ -370,9 +370,9 @@ def test_macho_is_signed_none():
 # ---------------------------------------------------------------------------
 # 21. elf_security_domain
 # ---------------------------------------------------------------------------
-from r2inspect.modules.elf_security_domain import has_nx, has_relro, path_features
-from r2inspect.modules.elf_security_domain import has_stack_canary as elf_has_stack_canary
-from r2inspect.modules.elf_security_domain import is_pie as elf_is_pie
+from r2inspect.domain.formats.elf_security import has_nx, has_relro, path_features
+from r2inspect.domain.formats.elf_security import has_stack_canary as elf_has_stack_canary
+from r2inspect.domain.formats.elf_security import is_pie as elf_is_pie
 
 
 def test_elf_has_nx_true():

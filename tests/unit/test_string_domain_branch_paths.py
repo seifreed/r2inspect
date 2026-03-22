@@ -7,7 +7,7 @@ import base64
 
 import pytest
 
-from r2inspect.modules.string_domain import (
+from r2inspect.domain.formats.string import (
     build_xor_matches,
     decode_base64,
     decode_hex,

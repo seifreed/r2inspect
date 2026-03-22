@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from r2inspect.modules.compiler_domain import (
+from r2inspect.domain.formats.compiler import (
     _check_import_signatures,
     _check_section_signatures,
     _check_string_signatures,

@@ -1,4 +1,4 @@
-from r2inspect.modules import import_domain
+from r2inspect.domain.formats import import_analysis as import_domain
 from r2inspect.modules.export_analyzer import ExportAnalyzer
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.import_analyzer import ImportAnalyzer

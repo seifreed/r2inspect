@@ -4,7 +4,12 @@ import logging
 
 import pytest
 
-from r2inspect.modules import elf_domain, macho_domain, pe_resources, rich_header_domain
+from r2inspect.domain.formats import (
+    elf as elf_domain,
+    macho_domain,
+    pe_resources,
+    rich_header_domain,
+)
 
 
 class DummyAdapter:

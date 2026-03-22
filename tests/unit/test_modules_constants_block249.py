@@ -1,6 +1,6 @@
+from r2inspect.domain.formats import anti_analysis as anti_analysis_domain
 from r2inspect.domain.services.rich_header import COMPILER_PRODUCTS
 from r2inspect.modules import (
-    anti_analysis_domain,
     compiler_signatures,
     crypto_constants,
     pe_resource_defaults,

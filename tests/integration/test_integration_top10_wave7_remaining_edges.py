@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import binascii
 
-from r2inspect.modules import string_domain as string_domain_module
+from r2inspect.domain.formats import string as string_domain_module
 from r2inspect.registry.entry_points import EntryPointLoader
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for compiler_domain module."""
 
-from r2inspect.modules.compiler_domain import (
+from r2inspect.domain.formats.compiler import (
     calculate_compiler_score,
     detect_clang_version,
     detect_gcc_version,

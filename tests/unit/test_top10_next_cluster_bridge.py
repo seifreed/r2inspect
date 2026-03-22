@@ -22,7 +22,7 @@ from r2inspect.modules.pe_info import (
     get_pe_headers_info,
     get_subsystem_info,
 )
-from r2inspect.modules.pe_info_domain import (
+from r2inspect.domain.formats.pe_info import (
     apply_optional_header_info,
     build_subsystem_info,
     characteristics_from_bin,
