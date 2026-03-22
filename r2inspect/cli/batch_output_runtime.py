@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any, cast
 
@@ -44,8 +43,9 @@ def configure_batch_logging(verbose: bool, quiet: bool, *, configure_batch_loggi
         configure_batch_logging_fn()
 
     if quiet:
-        logging.getLogger("r2inspect").setLevel(logging.CRITICAL)
-        logging.getLogger("r2inspect.modules").setLevel(logging.CRITICAL)
+        from .command_runtime import configure_logging_levels
+
+        configure_logging_levels(verbose=False, quiet=True)
 
 
 def prepare_batch_run(

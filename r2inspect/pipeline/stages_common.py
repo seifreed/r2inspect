@@ -4,13 +4,13 @@
 from __future__ import annotations
 
 import inspect
-import logging
 from typing import Any
 
+from ..infrastructure.logging import get_logger
 from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, ResultAggregatorFactoryLike
 from .analysis_pipeline import AnalysisStage
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def default_analyzer_factory(analyzer_class: type[Any], **kwargs: Any) -> Any:
@@ -38,7 +38,7 @@ def default_analyzer_factory(analyzer_class: type[Any], **kwargs: Any) -> Any:
         try:
             return analyzer_class(**fallback_kwargs)
         except TypeError:
-            raise exc
+            raise exc from None
 
 
 def default_result_aggregator_factory() -> Any:

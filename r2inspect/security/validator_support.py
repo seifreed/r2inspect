@@ -32,7 +32,7 @@ def resolve_path(filepath: str, check_exists: bool) -> Path:
             return path.resolve(strict=True)
         return path.resolve(strict=False)
     except (OSError, RuntimeError) as exc:
-        raise ValueError(f"Path resolution failed: {exc}")
+        raise ValueError(f"Path resolution failed: {exc}") from exc
 
 
 def validate_allowed_directory(resolved_path: Path, allowed_directory: Path | None) -> None:
@@ -40,10 +40,10 @@ def validate_allowed_directory(resolved_path: Path, allowed_directory: Path | No
         return
     try:
         resolved_path.relative_to(allowed_directory)
-    except ValueError:
+    except ValueError as exc:
         raise ValueError(
             f"Path is outside allowed directory: {resolved_path} not in {allowed_directory}"
-        )
+        ) from exc
 
 
 def validate_existing_path(original_path: str, resolved_path: Path, check_exists: bool) -> None:
