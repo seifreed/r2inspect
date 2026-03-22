@@ -66,10 +66,17 @@ def apply_skipped_stages(
     remaining: list[AnalysisStage],
     completed: set[str],
     completed_lock: threading.Lock,
+    remaining_lock: threading.Lock | None = None,
 ) -> int:
     skipped_count = 0
     for stage in skipped_stages:
-        remaining.remove(stage)
+        if remaining_lock is not None:
+            with remaining_lock:
+                if stage in remaining:
+                    remaining.remove(stage)
+        else:
+            if stage in remaining:
+                remaining.remove(stage)
         with completed_lock:
             completed.add(stage.name)
         skipped_count += 1

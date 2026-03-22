@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import functools
+import logging
 import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from enum import Enum
 from typing import Any, TypedDict
+
+logger = logging.getLogger(__name__)
 
 
 class CircuitState(Enum):
@@ -173,9 +176,11 @@ class R2CommandCircuitBreaker:
             return result
         except CircuitBreakerError:
             self._record_command_stats(command_type, False, 0.0)
+            logger.warning("Circuit breaker open for command type '%s'", command_type)
             return None if command.endswith("j") else ""
-        except Exception:
+        except Exception as exc:
             self._record_command_stats(command_type, False, time.time() - start_time)
+            logger.error("r2 command '%s' (type=%s) failed: %s", command, command_type, exc)
             return None if command.endswith("j") else ""
 
     def _record_command_stats(

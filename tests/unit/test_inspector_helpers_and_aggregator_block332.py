@@ -128,6 +128,6 @@ def test_result_aggregator_indicators_and_summary() -> None:
     assert "file_overview" in summary
     assert summary["file_overview"]["toolset"]
 
-    # Trigger error handling in executive summary.
-    bad_summary = agg.generate_executive_summary({"file_info": None})
-    assert "error" in bad_summary
+    # None values are now normalized to safe defaults, so summary should succeed.
+    safe_summary = agg.generate_executive_summary({"file_info": None})
+    assert "file_overview" in safe_summary

@@ -58,7 +58,7 @@ class HashingStage(AnalysisStage):
 
     def _supports_format(self, name: str, file_format: str) -> bool:
         metadata = self.registry.get_metadata(name)
-        return not (metadata and not metadata.supports_format(file_format))
+        return metadata is None or metadata.supports_format(file_format)
 
     def _build_hashing_analyzer(self, analyzer_class: type[Any]) -> Any:
         return self.analyzer_factory(

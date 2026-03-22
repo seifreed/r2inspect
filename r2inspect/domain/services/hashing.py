@@ -18,9 +18,8 @@ def calculate_hashes_for_bytes(data: bytes, *, include_sha512: bool = False) -> 
         hashes["sha256"] = hashlib.sha256(data).hexdigest()
         if include_sha512:
             hashes["sha512"] = hashlib.sha512(data).hexdigest()
-    except Exception as exc:
-        for key in hashes:
-            hashes[key] = f"Error: {str(exc)}"
+    except Exception:
+        pass  # Return pre-initialized empty strings on failure
 
     return hashes
 
