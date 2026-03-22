@@ -216,7 +216,7 @@ class YaraAnalyzer(CommandHelperMixin):
         self.create_default_rules()
         try:
             return yara.compile(
-                sources={"default": (Path(self.rules_path) / "packer_detection.yar").read_text()}
+                sources={"default": (Path(rules_path) / "packer_detection.yar").read_text()}
             )
         except Exception as exc:
             logger.error("Failed to compile default YARA rules: %s", exc)

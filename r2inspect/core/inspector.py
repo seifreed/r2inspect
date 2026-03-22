@@ -170,7 +170,7 @@ def _clear_adapter_cache(adapter: Any) -> None:
 def _decide_parallel_execution(adapter: Any, config: Any, _logger: Any) -> bool:
     """Return True when parallel pipeline execution is both configured and safe."""
     use_parallel = bool(config.typed_config.pipeline.parallel_execution)
-    if use_parallel and not getattr(adapter, "thread_safe", True):
+    if use_parallel and not getattr(adapter, "thread_safe", False):
         _logger.info("Disabling parallel pipeline execution: backend is not thread-safe")
         return False
     return use_parallel

@@ -167,7 +167,7 @@ class R2PipeCachedQueryMixin:
                 cache=address is None,
             )
         except Exception:
-            return []
+            return {} if size is None else []
 
     def get_cfg(self, address: int | None = None) -> Any:
         self._maybe_force_error("get_cfg")
@@ -182,7 +182,7 @@ class R2PipeCachedQueryMixin:
                 cache=address is None,
             )
         except Exception:
-            return {}
+            return []
 
     def get_strings_basic(self) -> list[dict[str, Any]]:
         return cast(

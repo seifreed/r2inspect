@@ -64,7 +64,7 @@ def analyze_import(imp: dict[str, Any], analyzer: Any, *, logger: Any) -> dict[s
 def check_import_forwarding(strings: list[Any], *, logger: Any) -> dict[str, Any]:
     try:
         if not strings:
-            return {"detected": False, "forwards": []}
+            return {"detected": False, "forwards": [], "count": 0}
         forwards = []
         for string_entry in strings:
             if isinstance(string_entry, dict) and "string" in string_entry:
@@ -83,4 +83,4 @@ def check_import_forwarding(strings: list[Any], *, logger: Any) -> dict[str, Any
         }
     except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
         logger.error("Error checking import forwarding: %s", exc)
-        return {"detected": False, "forwards": []}
+        return {"detected": False, "forwards": [], "count": 0}
