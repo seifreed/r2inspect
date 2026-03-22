@@ -120,7 +120,7 @@ def is_pe_executable(header: bytes, file_handle: Any) -> bool:
                 return True
         except (OSError, ValueError):
             pass
-    return True
+    return False
 
 
 def is_elf_executable(header: bytes) -> bool:
