@@ -70,8 +70,8 @@ def detect_via_header_bytes(filename: str) -> str | None:
 def default_hash_calculator(filename: str) -> dict[str, str]:
     data = Path(filename).read_bytes()
     return {
-        "md5": hashlib.md5(data).hexdigest(),
-        "sha1": hashlib.sha1(data).hexdigest(),
+        "md5": hashlib.md5(data, usedforsecurity=False).hexdigest(),
+        "sha1": hashlib.sha1(data, usedforsecurity=False).hexdigest(),
         "sha256": hashlib.sha256(data).hexdigest(),
         "sha512": hashlib.sha512(data).hexdigest(),
     }

@@ -8,6 +8,8 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+_secure_rng = random.SystemRandom()
+
 RETRYABLE_EXCEPTIONS = (TimeoutError, ConnectionError, OSError)
 RETRYABLE_ERROR_MESSAGES = (
     "timeout",
@@ -54,10 +56,10 @@ def calculate_delay(attempt: int, config: Any, retry_strategy_enum: Any) -> floa
     elif config.strategy == retry_strategy_enum.LINEAR_BACKOFF:
         delay *= max(1, attempt)
     elif config.strategy == retry_strategy_enum.RANDOM_JITTER:
-        delay = random.uniform(config.base_delay, config.max_delay)
+        delay = _secure_rng.uniform(config.base_delay, config.max_delay)
     delay = min(delay, config.max_delay)
     if config.jitter:
-        delay += random.uniform(0, min(0.1, delay / 4))
+        delay += _secure_rng.uniform(0, min(0.1, delay / 4))
     return float(delay)
 
 

@@ -9,7 +9,6 @@ from rich.table import Table
 
 from .display_base import ANALYZED_FUNCTIONS_LABEL, SIMILAR_GROUPS_LABEL, TOTAL_FUNCTIONS_LABEL
 
-
 # --- BinDiff support ---
 
 

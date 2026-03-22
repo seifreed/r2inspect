@@ -1,6 +1,6 @@
 """SSDeep fuzzy hashing and comparison."""
 
-import subprocess  # nosec B404 - required for calling ssdeep binary safely
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +34,7 @@ class SSDeepAnalyzer(HashingStrategy):
     ) -> None:
         super().__init__(
             filepath=filepath,
-            adapter=adapter,
+            r2_instance=adapter,
             max_file_size=max_file_size,
             min_file_size=min_file_size,
         )
@@ -130,9 +130,8 @@ class SSDeepAnalyzer(HashingStrategy):
                 capture_output=True,
                 text=True,
                 timeout=30,
-                shell=False,  # CRITICAL: Never use shell=True with user input
+                shell=False,
                 check=False,
-                # nosec B603 - arguments are fixed and path is validated
             )
 
             if result.returncode != 0:

@@ -13,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 from ..error_handling.classifier import ErrorCategory, ErrorSeverity, error_handler
 from ..infrastructure.logging import get_logger
@@ -280,7 +280,7 @@ class InspectorLifecycleMixin:
     def _cleanup(self) -> None:
         _cleanup(self)
 
-    def __enter__(self) -> InspectorLifecycleMixin:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

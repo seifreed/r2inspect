@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 import platform
 import struct
 import time
@@ -12,6 +13,8 @@ from typing import Any
 
 import psutil
 import r2pipe
+
+_log = logging.getLogger(__name__)
 
 
 def detect_fat_macho_arches(filename: str) -> set[str]:
@@ -74,7 +77,8 @@ def terminate_radare2_processes(filename: str) -> None:
             cmdline = info.get("cmdline") or []
             if any(filename in part for part in cmdline):
                 proc.terminate()
-        except Exception:
+        except Exception as exc:
+            _log.debug("Failed to inspect/terminate radare2 process: %s", exc)
             continue
 
 
@@ -106,5 +110,5 @@ def force_close_process(r2_instance: Any) -> None:
         return
     try:
         process.terminate()
-    except Exception:
-        pass
+    except Exception as exc:
+        _log.debug("Failed to terminate r2 process: %s", exc)

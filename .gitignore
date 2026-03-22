@@ -23,3 +23,11 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# Claude Code artifacts
+.claude/
+CLAUDE.md
+**/CLAUDE.md
+
+# Accidental literal glob directories
+**/\*\*/
