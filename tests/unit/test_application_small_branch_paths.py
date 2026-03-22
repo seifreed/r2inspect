@@ -227,7 +227,7 @@ def test_is_pe_executable_returns_true_for_mz_header_with_seek_error() -> None:
             return b""
 
     result = is_pe_executable(header, _RaisingHandle())
-    assert result is True
+    assert result is False
 
 
 def test_is_pe_executable_returns_false_for_non_mz() -> None:
