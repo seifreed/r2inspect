@@ -204,7 +204,7 @@ class RichHeaderDirectMixin:
     @staticmethod
     def _get_pe_offset(data: bytes) -> int | None:
         pe_offset = int(struct.unpack("<I", data[0x3C : 0x3C + 4])[0])
-        if pe_offset >= len(data) - 4:
+        if pe_offset > len(data) - 4:
             return None
         return int(pe_offset)
 

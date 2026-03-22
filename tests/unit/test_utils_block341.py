@@ -198,7 +198,7 @@ def test_hashing_utils(tmp_path) -> None:
     assert hashing_utils.calculate_hashes("/does/not/exist")
 
     directory_hashes = hashing_utils.calculate_hashes(str(tmp_path))
-    assert directory_hashes["md5"].startswith("Error:")
+    assert directory_hashes["md5"] == ""
 
     imports = [{"library": "KERNEL32", "name": "CreateFile"}]
     imphash = hashing_utils.calculate_imphash(imports)

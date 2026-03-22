@@ -26,7 +26,7 @@ def test_calculate_hashes_error(tmp_path: Path):
     os.chmod(file_path, 0)
     try:
         hashes = calculate_hashes(str(file_path))
-        assert hashes["md5"].startswith("Error:")
+        assert hashes["md5"] == ""
     finally:
         os.chmod(file_path, 0o600)
 

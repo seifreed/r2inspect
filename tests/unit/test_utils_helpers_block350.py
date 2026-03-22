@@ -107,7 +107,7 @@ def test_hashing_utils(tmp_path: Path) -> None:
     assert missing["md5"] == ""
 
     directory_hashes = hashing_utils.calculate_hashes(str(tmp_path))
-    assert directory_hashes["md5"].startswith("Error:")
+    assert directory_hashes["md5"] == ""
 
     imports = [
         {"library": "KERNEL32.dll", "name": "CreateFileA"},

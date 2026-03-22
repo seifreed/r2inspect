@@ -42,6 +42,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         Returns:
             Dictionary containing signature information
         """
+        result: dict[str, Any] = {}
         try:
             result = _init_authenticode_result_impl(self._init_result_structure)
 
