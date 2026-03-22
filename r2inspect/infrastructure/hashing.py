@@ -36,8 +36,10 @@ def calculate_hashes(file_path: str) -> dict[str, str]:
         hashes["sha256"] = sha256_hash.hexdigest()
         hashes["sha512"] = sha512_hash.hexdigest()
 
-    except Exception:
-        pass  # Return pre-initialized empty strings on failure
+    except Exception as exc:
+        import logging
+
+        logging.getLogger(__name__).debug("Hash calculation failed for %s: %s", file_path, exc)
 
     return hashes
 

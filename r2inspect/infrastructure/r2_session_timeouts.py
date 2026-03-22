@@ -22,8 +22,8 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
             if timed_out.is_set():
                 try:
                     r2.quit()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Failed to quit orphaned r2 instance: %s", exc)
             else:
                 result_holder["r2"] = r2
         except Exception as exc:
@@ -39,8 +39,8 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
             from .r2_session_cleanup import terminate_radare2_processes
 
             terminate_radare2_processes(session.filename)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to terminate orphaned radare2 processes: %s", exc)
         raise TimeoutError(f"r2pipe.open() timed out after {timeout:.3f}s")
     if result_holder["error"] is not None:
         raise result_holder["error"]

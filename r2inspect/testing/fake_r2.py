@@ -16,10 +16,10 @@ class FakeR2:
     def __init__(
         self,
         cmdj_map: dict[str, Any] | None = None,
-        cmd_map: dict[str, str] | None = None,
+        cmd_map: dict[str, str | Exception] | None = None,
     ):
         self.cmdj_map: dict[str, Any] = cmdj_map or {}
-        self.cmd_map: dict[str, str] = cmd_map or {}
+        self.cmd_map: dict[str, str | Exception] = cmd_map or {}
 
     def cmdj(self, command: str) -> Any:
         if command in self.cmdj_map:

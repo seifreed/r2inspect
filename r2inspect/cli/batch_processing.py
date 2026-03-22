@@ -228,7 +228,7 @@ def run_batch_analysis(
         setup_batch_output_directory=setup_batch_output_directory,
         find_files_to_process=find_files_wrapper,
         setup_rate_limiter=setup_rate_limiter,
-        default_batch_service=_build_batch_service_facade(default_batch_service, deps),
+        batch_service=_build_batch_service_facade(default_batch_service, deps),
         create_batch_summary=create_batch_summary,
         display_no_files_message=display_no_files_message,
         display_batch_results=display_batch_results,

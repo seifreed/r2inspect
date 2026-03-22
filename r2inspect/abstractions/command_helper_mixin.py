@@ -30,7 +30,7 @@ class CommandHelperMixin:
         return cmdj_helper(self.adapter, self.adapter, command, default)
 
     def _cmd_list(self, command: str) -> list[Any]:
-        return cast(list[Any], cmd_list_helper(self.adapter, self.adapter, command))
+        return list(cmd_list_helper(self.adapter, self.adapter, command))
 
     @staticmethod
     def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
