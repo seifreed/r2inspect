@@ -99,9 +99,7 @@ def run_detailed_simhash_analysis(
         # Function-level SimHashes
         if function_features:
             results["function_simhashes"] = function_features
-            results["total_functions"] = len(
-                [f for f in function_features.values() if f.get("simhash")]
-            )
+            results["total_functions"] = len(function_features)
             results["analyzed_functions"] = len(
                 [f for f in function_features.values() if f.get("simhash")]
             )

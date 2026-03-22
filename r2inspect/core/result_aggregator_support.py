@@ -40,7 +40,10 @@ DEFAULTS: dict[str, Any] = {
 
 def normalize_results(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Populate missing top-level result buckets with safe defaults."""
-    return {key: analysis_results.get(key, default) for key, default in DEFAULTS.items()}
+    return {
+        key: default if (val := analysis_results.get(key, default)) is None else val
+        for key, default in DEFAULTS.items()
+    }
 
 
 def count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
