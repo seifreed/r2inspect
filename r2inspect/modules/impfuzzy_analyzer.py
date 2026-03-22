@@ -125,7 +125,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             True if file is PE, False otherwise
         """
-        return is_pe_file(self.filepath, self.adapter, self.r2, logger=logger)
+        return is_pe_file(self.filepath, self.adapter, self.adapter, logger=logger)
 
     def _extract_imports(self) -> list[dict[str, Any]]:
         """

@@ -21,6 +21,8 @@ class CommandHelperMixin:
 
     adapter: Any
 
+    # cmd/cmdj/cmd_list take (adapter, r2_fallback, command). The adapter
+    # serves both roles: high-level query interface and r2pipe fallback.
     def _cmd(self, command: str) -> str:
         return str(cmd_helper(self.adapter, self.adapter, command))
 

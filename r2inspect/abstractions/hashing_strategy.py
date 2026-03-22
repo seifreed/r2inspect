@@ -36,7 +36,7 @@ class HashingStrategy(ABC):
         """
         self._filepath = _validate_strategy_init_impl(filepath, max_file_size, min_file_size)
         self.filepath: Path = self._filepath
-        self.r2: Any = r2_instance
+        self.adapter: Any = r2_instance
         self.max_file_size = max_file_size
         self.min_file_size = min_file_size
 

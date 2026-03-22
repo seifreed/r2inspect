@@ -26,10 +26,10 @@ class RichHeaderDirectMixin:
     _try_extract_rich_at_offsets: Any  # provided by RichHeaderSearchMixin
 
     def _is_pe_file(self) -> bool:
-        if not self.r2:
+        if not self.adapter:
             logger.error("r2 instance is None")
             return False
-        return is_pe_file(self.filepath, self.adapter, self.r2, logger=logger)
+        return is_pe_file(self.filepath, self.adapter, self.adapter, logger=logger)
 
     def _check_magic_bytes(self) -> bool:
         try:
@@ -97,7 +97,7 @@ class RichHeaderDirectMixin:
         cmd_helper = getattr(analyzer_module, "cmdj_helper", cmdj_helper)
         for pattern in patterns:
             try:
-                found = cmd_helper(self.adapter, self.r2, f"/xj {pattern}", {})
+                found = cmd_helper(self.adapter, self.adapter, f"/xj {pattern}", {})
                 if found:
                     results.extend(found)
                     logger.debug("Found %s pattern %s at %s locations", label, pattern, len(found))
