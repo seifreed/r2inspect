@@ -1,4 +1,4 @@
-from r2inspect.modules import domain_helpers, packer_helpers
+from r2inspect.domain.services import binary_helpers as domain_helpers, packer_helpers
 from r2inspect.modules.packer_detector import PackerDetector
 
 

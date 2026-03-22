@@ -793,7 +793,7 @@ def test_detect_environment_checks_empty_output():
 # ---------------------------------------------------------------------------
 # 11. domain_helpers
 # ---------------------------------------------------------------------------
-from r2inspect.modules.domain_helpers import (
+from r2inspect.domain.services.binary_helpers import (
     clamp_score,
     count_suspicious_imports,
     entropy_from_ints,

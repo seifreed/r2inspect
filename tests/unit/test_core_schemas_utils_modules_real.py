@@ -20,7 +20,7 @@ from r2inspect.modules.anti_analysis_helpers import (
     detect_self_modifying,
     match_suspicious_api,
 )
-from r2inspect.modules.domain_helpers import (
+from r2inspect.domain.services.binary_helpers import (
     clamp_score,
     count_suspicious_imports,
     entropy_from_ints,

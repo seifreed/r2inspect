@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .domain_helpers import clamp_score
+from ..domain.services.binary_helpers import clamp_score
 
 MITIGATION_SCORES = {
     "ASLR": {"enabled": 15, "high_entropy": 5},

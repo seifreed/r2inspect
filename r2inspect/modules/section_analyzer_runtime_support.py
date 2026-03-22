@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from .domain_helpers import shannon_entropy
+from ..domain.services.binary_helpers import shannon_entropy
 
 
 def analyze_sections(analyzer: Any, logger: Any) -> list[dict[str, Any]]:

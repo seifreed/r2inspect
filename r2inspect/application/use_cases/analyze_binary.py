@@ -4,18 +4,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..result_mapper import build_analysis_result
 from ...schemas.results_models import AnalysisResult
 from ..analysis_service import AnalysisService, default_analysis_service
+
+if TYPE_CHECKING:
+    from ...core.inspector import R2Inspector
 
 
 @dataclass(frozen=True)
 class AnalyzeBinaryRequest:
     """Input model for binary analysis execution."""
 
-    inspector: Any
+    inspector: R2Inspector
     options: dict[str, Any]
     reset_stats: bool = True
     include_statistics: bool = True
@@ -40,7 +43,7 @@ class AnalyzeBinaryUseCase:
 
     def run(
         self,
-        inspector: Any,
+        inspector: R2Inspector,
         options: dict[str, Any],
         *,
         reset_stats: bool = True,

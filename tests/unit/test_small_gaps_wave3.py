@@ -699,7 +699,7 @@ def test_calculate_overall_similarity_mixed():
 # ---------------------------------------------------------------------------
 # 32. r2inspect/modules/domain_helpers.py - line 64
 # ---------------------------------------------------------------------------
-from r2inspect.modules.domain_helpers import suspicious_section_name_indicator
+from r2inspect.domain.services.binary_helpers import suspicious_section_name_indicator
 
 
 def test_suspicious_section_name_indicator_returns_none_on_no_match():
