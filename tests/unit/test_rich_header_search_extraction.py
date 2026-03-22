@@ -13,28 +13,12 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_search import RichHeaderSearchMixin
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe stand-in routing cmd/cmdj via lookup maps
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Minimal r2pipe stand-in that routes cmd via a callback or map."""
-
-    def __init__(self, *, cmd_map=None, cmdj_map=None, cmd_fn=None):
-        self.cmd_map = cmd_map or {}
-        self.cmdj_map = cmdj_map or {}
-        self._cmd_fn = cmd_fn
-
-    def cmd(self, command):
-        if self._cmd_fn is not None:
-            return self._cmd_fn(command)
-        return self.cmd_map.get(command, "")
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, {})
 
 
 # ---------------------------------------------------------------------------

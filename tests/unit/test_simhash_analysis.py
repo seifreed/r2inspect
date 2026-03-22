@@ -8,6 +8,7 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 SAMPLE = "samples/fixtures/hello_pe.exe"
@@ -16,20 +17,6 @@ SAMPLE = "samples/fixtures/hello_pe.exe"
 # ---------------------------------------------------------------------------
 # FakeR2 -- minimal r2pipe-compatible object
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Fake r2pipe backend returning pre-configured responses."""
-
-    def __init__(self, cmd_map=None, cmdj_map=None):
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command):
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command):
-        return self._cmdj_map.get(command)
 
 
 def _make_adapter(cmd_map=None, cmdj_map=None):

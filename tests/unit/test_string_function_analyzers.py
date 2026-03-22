@@ -1,17 +1,6 @@
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.domain.formats.string import decode_base64, decode_hex, filter_strings
-
-
-class FakeR2:
-    def __init__(self, cmd_map=None, cmdj_map=None):
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command):
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command):
-        return self._cmdj_map.get(command)
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 class _Strings:

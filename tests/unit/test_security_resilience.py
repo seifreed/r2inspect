@@ -12,14 +12,7 @@ from r2inspect.modules.ssdeep_analyzer import SSDEEP_LIBRARY_AVAILABLE, SSDeepAn
 from r2inspect.modules.telfhash_analyzer import TELFHASH_AVAILABLE, TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
-
-
-class FakeR2:
-    def __init__(self, cmdj_map=None):
-        self._cmdj_map = cmdj_map or {}
-
-    def cmdj(self, command):
-        return self._cmdj_map.get(command)
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 class ConfigStub:

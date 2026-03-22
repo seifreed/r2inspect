@@ -17,27 +17,12 @@ from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.infrastructure.memory import MemoryMonitor
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # Lightweight fakes that satisfy the real interfaces without spawning r2pipe
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Minimal r2pipe stand-in."""
-
-    def __init__(
-        self, cmdj_map: dict[str, Any] | None = None, cmd_map: dict[str, Any] | None = None
-    ):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command: str) -> Any:
-        return self.cmdj_map.get(command, {})
-
-    def cmd(self, command: str) -> str:
-        return self.cmd_map.get(command, "")
 
 
 class FakeFileValidator:

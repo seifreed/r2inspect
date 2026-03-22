@@ -6,18 +6,7 @@ from r2inspect.domain.services.rich_header import (
     parse_clear_data_entries,
     parse_compiler_entries,
 )
-
-
-class FakeR2:
-    def __init__(self, cmd_map=None, cmdj_map=None):
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command):
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command):
-        return self._cmdj_map.get(command)
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_parse_clear_data_entries():

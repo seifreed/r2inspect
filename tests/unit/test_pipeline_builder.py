@@ -2,14 +2,7 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.core.pipeline_builder import PipelineBuilder
 from r2inspect.registry.default_registry import create_default_registry
-
-
-class FakeR2:
-    def cmdj(self, _command):
-        return {}
-
-    def cmd(self, _command):
-        return ""
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_pipeline_builder_builds_expected_stages():

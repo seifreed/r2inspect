@@ -14,29 +14,12 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules import pe_imports
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe-like backend driven by command maps
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Minimal r2pipe-like object backed by static command maps."""
-
-    def __init__(
-        self,
-        cmd_map: dict[str, str] | None = None,
-        cmdj_map: dict[str, Any] | None = None,
-    ):
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command: str) -> str:
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command: str) -> Any:
-        return self._cmdj_map.get(command)
 
 
 def _make_adapter(

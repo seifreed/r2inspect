@@ -5,18 +5,7 @@ import json
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.packer_detector import PackerDetector
-
-
-class FakeR2:
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, {})
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _make_detector(imports=None, sections=None, strings=None, file_info=None, cmd_map=None):

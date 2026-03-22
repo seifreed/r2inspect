@@ -14,18 +14,7 @@ from r2inspect.modules.string_classification import is_api_string, is_path_strin
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
-
-
-class FakeR2:
-    def __init__(self, cmd_map=None, cmdj_map=None):
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command):
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command):
-        return self._cmdj_map.get(command)
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_ssdeep_parse_output():

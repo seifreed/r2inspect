@@ -5,18 +5,7 @@ import tempfile
 from pathlib import Path
 
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
-
-
-class FakeR2:
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, {})
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _make_elf_file():

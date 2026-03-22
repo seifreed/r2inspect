@@ -12,25 +12,12 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.tlsh_analyzer import TLSHAnalyzer, TLSH_AVAILABLE
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Lightweight stand-in for an r2pipe instance."""
-
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, {})
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
 
 
 def _make_adapter(cmdj_map=None, cmd_map=None):

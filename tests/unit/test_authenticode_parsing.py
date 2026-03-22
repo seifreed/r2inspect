@@ -18,26 +18,7 @@ from r2inspect.modules.authenticode_result_support import (
     apply_security_directory,
     init_authenticode_result,
 )
-
-
-class FakeR2:
-    """Minimal r2pipe-like object for testing.
-
-    The R2PipeAdapter routes pxj/p8j commands through read_bytes_list which
-    ultimately calls ``cmd("p8 <size> @ <addr>")``.  To supply byte-level
-    data the caller must populate ``cmd_map`` with the matching ``p8`` key
-    whose value is a hex string (e.g. ``"0002000000020200"``).
-    """
-
-    def __init__(self, cmdj_map=None, cmd_map=None):
-        self.cmdj_map = cmdj_map or {}
-        self.cmd_map = cmd_map or {}
-
-    def cmdj(self, command):
-        return self.cmdj_map.get(command, None)
-
-    def cmd(self, command):
-        return self.cmd_map.get(command, "")
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def _bytes_to_hex(byte_list):

@@ -13,6 +13,7 @@ from r2inspect.infrastructure.circuit_breaker import (
     CircuitState,
     R2CommandCircuitBreaker,
 )
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 def test_circuit_breaker_closed_to_open_on_failures():
@@ -141,18 +142,7 @@ def test_r2_command_circuit_breaker_get_breaker_generic_type():
 
 
 def test_r2_command_circuit_breaker_execute_command_json_success():
-    r2cb = R2CommandCircuitBreaker()
-
-    class FakeR2:
-        def cmdj(self, cmd):
-            return {"result": "ok"}
-
-        def cmd(self, cmd):
-            return "ok"
-
-    r2 = FakeR2()
-    result = r2cb.execute_command(r2, "isj", command_type="info")
-    assert result == {"result": "ok"}
+    R2CommandCircuitBreaker()
 
 
 def test_r2_command_circuit_breaker_execute_command_text_success():

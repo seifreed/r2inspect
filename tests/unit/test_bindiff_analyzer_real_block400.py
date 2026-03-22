@@ -41,29 +41,12 @@ from r2inspect.modules.string_classification import (
     is_registry_string,
     is_url_string,
 )
+from r2inspect.testing.fake_r2 import FakeR2
 
 
 # ---------------------------------------------------------------------------
 # FakeR2 -- deterministic stand-in for r2pipe
 # ---------------------------------------------------------------------------
-
-
-class FakeR2:
-    """Minimal r2pipe stand-in that returns pre-configured JSON responses."""
-
-    def __init__(
-        self,
-        cmd_map: dict | None = None,
-        cmdj_map: dict | None = None,
-    ) -> None:
-        self._cmd_map = cmd_map or {}
-        self._cmdj_map = cmdj_map or {}
-
-    def cmd(self, command: str) -> str:
-        return self._cmd_map.get(command, "")
-
-    def cmdj(self, command: str):
-        return self._cmdj_map.get(command)
 
 
 # ---------------------------------------------------------------------------
