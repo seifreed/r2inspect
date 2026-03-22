@@ -74,6 +74,6 @@ def analyzer_repr(instance: Any) -> str:
     return (
         f"{instance.__class__.__name__}("
         f"filepath={instance.filepath!r}, "
-        f"r2={'<r2pipe>' if instance.r2 else None}, "
+        f"adapter={'<adapter>' if instance.adapter else None}, "
         f"config={'<Config>' if instance.config else None})"
     )
