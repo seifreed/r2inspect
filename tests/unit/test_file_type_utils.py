@@ -238,7 +238,10 @@ class TestIsPeFile:
         result = is_pe_file(str(pe), adapter, _StubR2(), logger=custom_logger)
         assert result is True
 
-    @pytest.mark.skipif(os.getuid() == 0, reason="Root bypasses permission checks")
+    @pytest.mark.skipif(
+        getattr(os, "getuid", lambda: -1)() == 0,
+        reason="Root bypasses permission checks; os.getuid unavailable on Windows",
+    )
     def test_permission_error_falls_through(self, tmp_path: Path):
         pe = _write_pe(tmp_path)
         os.chmod(pe, 0o000)
@@ -369,7 +372,10 @@ class TestIsElfFile:
         result = is_elf_file(str(elf), adapter, _StubR2(), logger=custom_logger)
         assert result is True
 
-    @pytest.mark.skipif(os.getuid() == 0, reason="Root bypasses permission checks")
+    @pytest.mark.skipif(
+        getattr(os, "getuid", lambda: -1)() == 0,
+        reason="Root bypasses permission checks; os.getuid unavailable on Windows",
+    )
     def test_permission_error_falls_through(self, tmp_path: Path):
         elf = _write_elf(tmp_path)
         os.chmod(elf, 0o000)
