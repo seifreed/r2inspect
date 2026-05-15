@@ -53,7 +53,7 @@ def _make_adapter_empty() -> R2PipeAdapter:
     return R2PipeAdapter(FakeR2())
 
 
-class TestRichHeaderSearch(RichHeaderSearchMixin):
+class _RichHeaderSearchHost(RichHeaderSearchMixin):
     """Test wrapper for RichHeaderSearchMixin backed by a real R2PipeAdapter."""
 
     def __init__(self, adapter):
@@ -97,20 +97,20 @@ def _build_rich_blob(
 def test_manual_rich_search_basic():
     blob, _rich_offset = _build_rich_blob()
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._manual_rich_search()
     assert isinstance(result, (dict, type(None)))
 
 
 def test_manual_rich_search_no_data():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._manual_rich_search()
     assert result is None
 
 
 def test_manual_rich_search_no_adapter():
-    search = TestRichHeaderSearch(None)
+    search = _RichHeaderSearchHost(None)
     result = search._manual_rich_search()
     assert result is None
 
@@ -121,7 +121,7 @@ def test_manual_rich_search_exception():
         raise Exception("Read error")
 
     adapter = R2PipeAdapter(FakeR2(cmd_fn=exploding_cmd))
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._manual_rich_search()
     assert result is None
 
@@ -134,14 +134,14 @@ def test_manual_rich_search_exception():
 def test_read_manual_search_bytes_valid():
     blob = b"\x00" * 2048
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._read_manual_search_bytes()
     assert result is not None
     assert len(result) == 2048
 
 
 def test_read_manual_search_bytes_no_adapter():
-    search = TestRichHeaderSearch(None)
+    search = _RichHeaderSearchHost(None)
     result = search._read_manual_search_bytes()
     assert result is None
 
@@ -151,14 +151,14 @@ def test_read_manual_search_bytes_no_method():
     class Bare:
         pass
 
-    search = TestRichHeaderSearch(Bare())
+    search = _RichHeaderSearchHost(Bare())
     result = search._read_manual_search_bytes()
     assert result is None
 
 
 def test_read_manual_search_bytes_empty():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._read_manual_search_bytes()
     assert result is None
 
@@ -171,7 +171,7 @@ def test_read_manual_search_bytes_empty():
 def test_find_signature_offsets_both_found():
     adapter = _make_adapter_empty()
     data = b"\x00" * 50 + b"DanS" + b"\x00" * 100 + b"Rich" + b"\x00" * 50
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_signature_offsets(data, b"Rich", b"DanS")
     assert result is not None
     rich_offsets, dans_offsets = result
@@ -182,7 +182,7 @@ def test_find_signature_offsets_both_found():
 def test_find_signature_offsets_rich_missing():
     adapter = _make_adapter_empty()
     data = b"\x00" * 50 + b"DanS" + b"\x00" * 100
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_signature_offsets(data, b"Rich", b"DanS")
     assert result is None
 
@@ -190,7 +190,7 @@ def test_find_signature_offsets_rich_missing():
 def test_find_signature_offsets_dans_missing():
     adapter = _make_adapter_empty()
     data = b"\x00" * 50 + b"Rich" + b"\x00" * 100
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_signature_offsets(data, b"Rich", b"DanS")
     assert result is None
 
@@ -203,7 +203,7 @@ def test_find_signature_offsets_dans_missing():
 def test_find_all_occurrences_single():
     adapter = _make_adapter_empty()
     data = b"\x00" * 50 + b"Rich" + b"\x00" * 100
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_all_occurrences(data, b"Rich")
     assert len(result) == 1
     assert result[0] == 50
@@ -212,7 +212,7 @@ def test_find_all_occurrences_single():
 def test_find_all_occurrences_multiple():
     adapter = _make_adapter_empty()
     data = b"Rich" + b"\x00" * 50 + b"Rich" + b"\x00" * 50 + b"Rich"
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_all_occurrences(data, b"Rich")
     assert len(result) == 3
 
@@ -220,7 +220,7 @@ def test_find_all_occurrences_multiple():
 def test_find_all_occurrences_none():
     adapter = _make_adapter_empty()
     data = b"\x00" * 200
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_all_occurrences(data, b"Rich")
     assert len(result) == 0
 
@@ -228,7 +228,7 @@ def test_find_all_occurrences_none():
 def test_find_all_occurrences_overlapping():
     adapter = _make_adapter_empty()
     data = b"AAA"
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_all_occurrences(data, b"AA")
     assert len(result) == 2
 
@@ -247,21 +247,21 @@ def test_try_signature_pairs_valid():
         xor_key=xor_key, prodid=prodid, count=count, dans_offset=100
     )
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._try_signature_pairs([rich_offset], [100], b"Rich", b"DanS")
     assert isinstance(result, (dict, type(None)))
 
 
 def test_try_signature_pairs_invalid_distance():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._try_signature_pairs([1000], [100], b"Rich", b"DanS")
     assert result is None
 
 
 def test_try_signature_pairs_wrong_order():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._try_signature_pairs([100], [200], b"Rich", b"DanS")
     assert result is None
 
@@ -273,19 +273,19 @@ def test_try_signature_pairs_wrong_order():
 
 def test_offset_pair_valid_correct():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._offset_pair_valid(100, 150, 512) is True
 
 
 def test_offset_pair_valid_too_far():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._offset_pair_valid(100, 700, 512) is False
 
 
 def test_offset_pair_valid_wrong_order():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._offset_pair_valid(200, 100, 512) is False
 
 
@@ -297,7 +297,7 @@ def test_offset_pair_valid_wrong_order():
 def test_pattern_based_rich_search_found():
     blob, _rich_offset = _build_rich_blob(dans_offset=100)
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._pattern_based_rich_search(blob)
     assert isinstance(result, (dict, type(None)))
 
@@ -305,14 +305,14 @@ def test_pattern_based_rich_search_found():
 def test_pattern_based_rich_search_no_rich():
     adapter = _make_adapter_empty()
     data = b"\x00" * 500
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._pattern_based_rich_search(data)
     assert result is None
 
 
 def test_pattern_based_rich_search_exception():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._pattern_based_rich_search(b"malformed")
     assert result is None
 
@@ -325,7 +325,7 @@ def test_pattern_based_rich_search_exception():
 def test_find_rich_positions_single():
     adapter = _make_adapter_empty()
     data = b"\x00" * 100 + b"Rich" + b"\x00" * 100
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_rich_positions(data)
     assert len(result) == 1
     assert result[0] == 100
@@ -334,7 +334,7 @@ def test_find_rich_positions_single():
 def test_find_rich_positions_multiple():
     adapter = _make_adapter_empty()
     data = b"Rich" + b"\x00" * 50 + b"Rich" + b"\x00" * 50
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_rich_positions(data)
     assert len(result) == 2
 
@@ -342,7 +342,7 @@ def test_find_rich_positions_multiple():
 def test_find_rich_positions_none():
     adapter = _make_adapter_empty()
     data = b"\x00" * 200
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_rich_positions(data)
     assert len(result) == 0
 
@@ -355,28 +355,28 @@ def test_find_rich_positions_none():
 def test_is_valid_rich_key_valid():
     adapter = _make_adapter_empty()
     data = b"Rich" + struct.pack("<I", 0x12345678)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._is_valid_rich_key(data, 0) is True
 
 
 def test_is_valid_rich_key_zero():
     adapter = _make_adapter_empty()
     data = b"Rich" + struct.pack("<I", 0)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._is_valid_rich_key(data, 0) is False
 
 
 def test_is_valid_rich_key_all_ones():
     adapter = _make_adapter_empty()
     data = b"Rich" + struct.pack("<I", 0xFFFFFFFF)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._is_valid_rich_key(data, 0) is False
 
 
 def test_is_valid_rich_key_out_of_bounds():
     adapter = _make_adapter_empty()
     data = b"Rich"
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._is_valid_rich_key(data, 0) is False
 
 
@@ -388,7 +388,7 @@ def test_is_valid_rich_key_out_of_bounds():
 def test_find_dans_before_rich_found():
     adapter = _make_adapter_empty()
     data = b"\x00" * 50 + b"DanS" + b"\x00" * 100
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_dans_before_rich(data, 150)
     assert result == 50
 
@@ -396,7 +396,7 @@ def test_find_dans_before_rich_found():
 def test_find_dans_before_rich_not_found():
     adapter = _make_adapter_empty()
     data = b"\x00" * 200
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_dans_before_rich(data, 150)
     assert result is None
 
@@ -404,7 +404,7 @@ def test_find_dans_before_rich_not_found():
 def test_find_dans_before_rich_too_far():
     adapter = _make_adapter_empty()
     data = b"DanS" + b"\x00" * 600
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._find_dans_before_rich(data, 600)
     assert result is None
 
@@ -416,7 +416,7 @@ def test_find_dans_before_rich_too_far():
 
 def test_validate_rich_size_valid():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._validate_rich_size(16) is True
     assert search._validate_rich_size(100) is True
     assert search._validate_rich_size(512) is True
@@ -424,14 +424,14 @@ def test_validate_rich_size_valid():
 
 def test_validate_rich_size_too_small():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._validate_rich_size(8) is False
     assert search._validate_rich_size(4) is False
 
 
 def test_validate_rich_size_too_large():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     assert search._validate_rich_size(513) is False
     assert search._validate_rich_size(1000) is False
 
@@ -448,7 +448,7 @@ def test_extract_xor_key_valid():
     # So place xor_bytes at offset 4 in the blob
     blob = b"\x00" * 4 + xor_bytes + b"\x00" * 100
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     # rich_offset=0 => reads at offset 4
     result = search._extract_xor_key(0)
     assert result == xor_key
@@ -458,13 +458,13 @@ def test_extract_xor_key_zero():
     xor_bytes = struct.pack("<I", 0)
     blob = b"\x00" * 4 + xor_bytes + b"\x00" * 100
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._extract_xor_key(0)
     assert result is None
 
 
 def test_extract_xor_key_no_adapter():
-    search = TestRichHeaderSearch(None)
+    search = _RichHeaderSearchHost(None)
     result = search._extract_xor_key(0)
     assert result is None
 
@@ -473,7 +473,7 @@ def test_extract_xor_key_insufficient_bytes():
     # Blob too short — only 2 bytes available at offset 4
     blob = b"\x00" * 6
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     # read_bytes_list returns short list (2 bytes), _extract_xor_key sees len < 4
     result = search._extract_xor_key(0)
     assert result is None
@@ -488,13 +488,13 @@ def test_extract_encoded_data_valid():
     data = b"DanS" + struct.pack("<II", 0x12345678, 10)
     blob = data + b"\x00" * 100
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._extract_encoded_data(0, len(data))
     assert result == data
 
 
 def test_extract_encoded_data_no_adapter():
-    search = TestRichHeaderSearch(None)
+    search = _RichHeaderSearchHost(None)
     result = search._extract_encoded_data(0, 16)
     assert result is None
 
@@ -503,7 +503,7 @@ def test_extract_encoded_data_insufficient_bytes():
     # Blob is only 2 bytes — requested 16
     blob = b"\x00\x01"
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._extract_encoded_data(0, 16)
     assert result is None
 
@@ -522,14 +522,14 @@ def test_try_extract_rich_at_offsets_complete():
         xor_key=xor_key, prodid=prodid, count=count, dans_offset=100
     )
     adapter = _make_adapter_from_blob(blob)
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._try_extract_rich_at_offsets(100, rich_offset)
     assert isinstance(result, (dict, type(None)))
 
 
 def test_try_extract_rich_at_offsets_invalid_size():
     adapter = _make_adapter_empty()
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._try_extract_rich_at_offsets(100, 105)
     assert result is None
 
@@ -539,6 +539,6 @@ def test_try_extract_rich_at_offsets_exception():
         raise Exception("Read error")
 
     adapter = R2PipeAdapter(FakeR2(cmd_fn=exploding_cmd))
-    search = TestRichHeaderSearch(adapter)
+    search = _RichHeaderSearchHost(adapter)
     result = search._try_extract_rich_at_offsets(100, 120)
     assert result is None

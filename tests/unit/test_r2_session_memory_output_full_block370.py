@@ -48,7 +48,7 @@ class FakeR2Dual(FakeR2):
         raise RuntimeError("boom")
 
 
-class TestSession(R2Session):
+class _FakeR2Session(R2Session):
     def __init__(self, filename: str, fake_r2: FakeR2) -> None:
         super().__init__(filename)
         self._fake_r2 = fake_r2
@@ -73,7 +73,7 @@ class TestSession(R2Session):
         return self._fake_r2
 
 
-class ErrorSession(TestSession):
+class ErrorSession(_FakeR2Session):
     def _run_basic_info_check(self) -> bool:
         raise RuntimeError("basic error")
 
@@ -120,7 +120,7 @@ def test_r2_session_open_paths(tmp_path: Path) -> None:
     test_file.write_bytes(b"TEST")
 
     fake = FakeR2()
-    session = TestSession(str(test_file), fake)
+    session = _FakeR2Session(str(test_file), fake)
     opened = session.open(file_size_mb=1.0)
     assert opened is fake
     assert session.is_open is True
@@ -190,6 +190,10 @@ def test_r2_session_initial_analysis_paths(monkeypatch) -> None:
     # Force command timeouts to hit False path
     monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "aa,aaa")
     assert session._perform_initial_analysis(file_size_mb=1) is False
+    # Conftest sets R2INSPECT_TEST_MODE=1 for the whole session, so flipping
+    # session._test_mode alone is not enough — _is_test_mode reads the env var
+    # first. Override the env to "0" so the non-test-mode branch is exercised.
+    monkeypatch.setenv("R2INSPECT_TEST_MODE", "0")
     session._test_mode = False
     assert session._perform_initial_analysis(file_size_mb=10) is False
 
@@ -352,12 +356,16 @@ def test_memory_manager_cached_and_error_paths() -> None:
         def memory_info(self) -> object:
             raise RuntimeError("boom")
 
-    monitor.process = BadProcess()  # type: ignore[assignment]
+    monitor.process = BadProcess()
     stats_error = monitor.check_memory(force=True)
-    assert stats_error["status"] == "error"
+    # When memory_info() raises, _get_error_stats() reports status="unknown"
+    # (intentionally not "normal" — see comment on _get_error_stats — so
+    # callers don't treat an instrumentation failure as "0% usage / all good").
+    assert stats_error["status"] == "unknown"
+    assert stats_error["memory_check_failed"] is True
 
     stats_cached_error = monitor._get_cached_stats()
-    assert stats_cached_error["status"] == "error"
+    assert stats_cached_error["status"] == "unknown"
 
 
 def test_output_formatter_branches() -> None:

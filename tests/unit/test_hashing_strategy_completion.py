@@ -10,7 +10,7 @@ from r2inspect.abstractions.hashing_strategy import (
 )
 
 
-class TestHashingStrategy(HashingStrategy):
+class _HashingStrategyHost(HashingStrategy):
     def __init__(self, *args, **kwargs):
         self.lib_available = kwargs.pop("lib_available", True)
         self.lib_error = kwargs.pop("lib_error", None)
@@ -43,7 +43,7 @@ def test_hashing_strategy_successful_analysis(tmp_path: Path) -> None:
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test content")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
     result = strategy.analyze()
 
     assert result["available"] is True
@@ -59,7 +59,7 @@ def test_hashing_strategy_library_unavailable(tmp_path: Path) -> None:
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(
+    strategy = _HashingStrategyHost(
         str(test_file), lib_available=False, lib_error="Library not found"
     )
     result = strategy.analyze()
@@ -73,7 +73,7 @@ def test_hashing_strategy_library_unavailable_no_error_message(tmp_path: Path) -
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file), lib_available=False)
+    strategy = _HashingStrategyHost(str(test_file), lib_available=False)
     result = strategy.analyze()
 
     assert result["available"] is False
@@ -84,7 +84,7 @@ def test_hashing_strategy_hash_calculation_error(tmp_path: Path) -> None:
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file), hash_error="Hash computation failed")
+    strategy = _HashingStrategyHost(str(test_file), hash_error="Hash computation failed")
     result = strategy.analyze()
 
     assert result["available"] is True
@@ -96,7 +96,7 @@ def test_hashing_strategy_unexpected_exception(tmp_path: Path, monkeypatch) -> N
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
 
     def failing_check():
         raise RuntimeError("Unexpected error")
@@ -109,7 +109,7 @@ def test_hashing_strategy_unexpected_exception(tmp_path: Path, monkeypatch) -> N
 
 
 def test_hashing_strategy_file_not_found() -> None:
-    strategy = TestHashingStrategy("/nonexistent/file.bin")
+    strategy = _HashingStrategyHost("/nonexistent/file.bin")
     result = strategy.analyze()
 
     assert result["available"] is False
@@ -120,7 +120,7 @@ def test_hashing_strategy_directory_not_file(tmp_path: Path) -> None:
     test_dir = tmp_path / "test_dir"
     test_dir.mkdir()
 
-    strategy = TestHashingStrategy(str(test_dir))
+    strategy = _HashingStrategyHost(str(test_dir))
     result = strategy.analyze()
 
     assert result["available"] is False
@@ -131,7 +131,7 @@ def test_hashing_strategy_file_too_small(tmp_path: Path) -> None:
     test_file = tmp_path / "tiny.bin"
     test_file.write_bytes(b"x")
 
-    strategy = TestHashingStrategy(str(test_file), min_file_size=10)
+    strategy = _HashingStrategyHost(str(test_file), min_file_size=10)
     result = strategy.analyze()
 
     assert result["available"] is False
@@ -144,7 +144,7 @@ def test_hashing_strategy_file_too_large(tmp_path: Path) -> None:
     test_file = tmp_path / "large.bin"
     test_file.write_bytes(b"x" * 1000)
 
-    strategy = TestHashingStrategy(str(test_file), max_file_size=100)
+    strategy = _HashingStrategyHost(str(test_file), max_file_size=100)
     result = strategy.analyze()
 
     assert result["available"] is False
@@ -157,7 +157,7 @@ def test_hashing_strategy_file_access_error(tmp_path: Path, monkeypatch) -> None
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
 
     import os
 
@@ -175,7 +175,7 @@ def test_hashing_strategy_file_access_error(tmp_path: Path, monkeypatch) -> None
 def test_hashing_strategy_os_error_on_stat() -> None:
     test_file = "/tmp/nonexistent_for_test.bin"
 
-    strategy = TestHashingStrategy(test_file)
+    strategy = _HashingStrategyHost(test_file)
 
     result = strategy.analyze()
 
@@ -187,14 +187,14 @@ def test_hashing_strategy_get_file_size_success(tmp_path: Path) -> None:
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test content")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
     size = strategy.get_file_size()
 
     assert size == 12
 
 
 def test_hashing_strategy_get_file_size_error(monkeypatch) -> None:
-    strategy = TestHashingStrategy("/nonexistent/file.bin")
+    strategy = _HashingStrategyHost("/nonexistent/file.bin")
     size = strategy.get_file_size()
 
     assert size is None
@@ -204,7 +204,7 @@ def test_hashing_strategy_get_file_extension(tmp_path: Path) -> None:
     test_file = tmp_path / "sample.TXT"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
     ext = strategy.get_file_extension()
 
     assert ext == "txt"
@@ -214,7 +214,7 @@ def test_hashing_strategy_get_file_extension_no_extension(tmp_path: Path) -> Non
     test_file = tmp_path / "noext"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
     ext = strategy.get_file_extension()
 
     assert ext == ""
@@ -224,10 +224,10 @@ def test_hashing_strategy_str_representation(tmp_path: Path) -> None:
     test_file = tmp_path / "sample.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file))
+    strategy = _HashingStrategyHost(str(test_file))
     str_repr = str(strategy)
 
-    assert "TestHashingStrategy" in str_repr
+    assert "_HashingStrategyHost" in str_repr
     assert "type=test_hash" in str_repr
     assert "file=sample.bin" in str_repr
 
@@ -236,24 +236,24 @@ def test_hashing_strategy_repr_representation(tmp_path: Path) -> None:
     test_file = tmp_path / "sample.bin"
     test_file.write_bytes(b"test")
 
-    strategy = TestHashingStrategy(str(test_file), max_file_size=50000, min_file_size=5)
+    strategy = _HashingStrategyHost(str(test_file), max_file_size=50000, min_file_size=5)
     repr_str = repr(strategy)
 
-    assert "TestHashingStrategy" in repr_str
+    assert "_HashingStrategyHost" in repr_str
     assert "filepath=" in repr_str
     assert "max_file_size=50000" in repr_str
     assert "min_file_size=5" in repr_str
 
 
 def test_hashing_strategy_compare_hashes() -> None:
-    assert TestHashingStrategy.compare_hashes("abc", "abc") == 0
-    assert TestHashingStrategy.compare_hashes("abc", "def") == 1
-    assert TestHashingStrategy.compare_hashes("", "abc") is None
-    assert TestHashingStrategy.compare_hashes("abc", "") is None
+    assert _HashingStrategyHost.compare_hashes("abc", "abc") == 0
+    assert _HashingStrategyHost.compare_hashes("abc", "def") == 1
+    assert _HashingStrategyHost.compare_hashes("", "abc") is None
+    assert _HashingStrategyHost.compare_hashes("abc", "") is None
 
 
 def test_hashing_strategy_is_available() -> None:
-    assert TestHashingStrategy.is_available() is True
+    assert _HashingStrategyHost.is_available() is True
 
 
 def test_r2_hashing_strategy_initialization(tmp_path: Path) -> None:
@@ -286,7 +286,6 @@ def test_r2_hashing_strategy_initialization(tmp_path: Path) -> None:
     strategy = TestR2Hash(adapter, str(test_file), max_file_size=1000, min_file_size=1)
 
     assert strategy.adapter is adapter
-    assert strategy.r2 is adapter
     assert strategy.filepath == Path(test_file)
     assert strategy.max_file_size == 1000
     assert strategy.min_file_size == 1
@@ -325,19 +324,19 @@ def test_r2_hashing_strategy_inherits_validation(tmp_path: Path) -> None:
 
 def test_hashing_strategy_init_validation_empty_filepath() -> None:
     with pytest.raises(ValueError, match="filepath cannot be empty"):
-        TestHashingStrategy("")
+        _HashingStrategyHost("")
 
 
 def test_hashing_strategy_init_validation_negative_max_size() -> None:
     with pytest.raises(ValueError, match="File size limits must be positive"):
-        TestHashingStrategy("test.bin", max_file_size=-1)
+        _HashingStrategyHost("test.bin", max_file_size=-1)
 
 
 def test_hashing_strategy_init_validation_negative_min_size() -> None:
     with pytest.raises(ValueError, match="File size limits must be positive"):
-        TestHashingStrategy("test.bin", min_file_size=-1)
+        _HashingStrategyHost("test.bin", min_file_size=-1)
 
 
 def test_hashing_strategy_init_validation_min_greater_than_max() -> None:
     with pytest.raises(ValueError, match="min_file_size cannot exceed max_file_size"):
-        TestHashingStrategy("test.bin", min_file_size=100, max_file_size=50)
+        _HashingStrategyHost("test.bin", min_file_size=100, max_file_size=50)

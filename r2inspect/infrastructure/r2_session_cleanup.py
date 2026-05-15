@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import psutil
-import r2pipe
 
 _log = logging.getLogger(__name__)
 
@@ -54,12 +53,17 @@ def select_r2_flags(session: Any, *, logger: Any) -> list[str]:
         flags.append("-M")
     if os.environ.get("R2INSPECT_DISABLE_PLUGINS", "").strip():
         flags.append("-NN")
+    # Detect fat Mach-O by magic regardless of extension — malware routinely
+    # ships fat Mach-O payloads under misleading names like `.bin` or no
+    # suffix. The magic check is an 8-byte read and returns set() for any
+    # non-fat input, so it is safe to run unconditionally.
+    arches = detect_fat_macho_arches(session.filename)
     path = Path(session.filename)
-    if path.suffix.lower() in {".macho", ".dylib"}:
-        arches = detect_fat_macho_arches(session.filename)
-        host = platform.machine().lower()
+    is_macho_by_ext = path.suffix.lower() in {".macho", ".dylib"}
+    if arches or is_macho_by_ext:
         if "-NN" not in flags:
             flags.append("-NN")
+        host = platform.machine().lower()
         if "arm64" in arches and "arm" in host:
             flags.extend(["-a", "arm", "-b", "64"])
         elif "x86_64" in arches:

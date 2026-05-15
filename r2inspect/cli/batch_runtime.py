@@ -45,9 +45,13 @@ def setup_rate_limiter(
 
 
 def _safe_exit(code: int = 0) -> None:
-    if os.getenv("R2INSPECT_TEST_SAFE_EXIT"):
+    # os._exit() bypasses cleanup and would terminate an embedding process
+    # (notably the pytest runner) with no chance to handle it. Only take the
+    # hard path in a real CLI run; under pytest raise SystemExit so callers
+    # like ensure_batch_shutdown stay testable and never kill the suite.
+    if os.getenv("R2INSPECT_TEST_SAFE_EXIT") or _pytest_running():
         raise SystemExit(code)
-    os._exit(code)  # pragma: no cover
+    os._exit(code)
 
 
 def _pytest_running() -> bool:
@@ -59,7 +63,7 @@ def _pytest_running() -> bool:
             bool(os.getenv("PYTEST_CURRENT_TEST")),
             _coverage_test_env_enabled(),
             any("pytest" in arg for arg in sys.argv),
-            "pytest" in sys.modules,  # pragma: no cover
+            "pytest" in sys.modules,
         )
     )
 
@@ -107,10 +111,7 @@ def _flush_coverage_data() -> None:
     try:
         if os.getenv("R2INSPECT_TEST_COVERAGE_SAVE_ERROR"):
             raise RuntimeError("Simulated coverage save error")
-        if _pytest_running():
-            cov.save()
-            return
-        cov.save()  # pragma: no cover
+        cov.save()
     except Exception as e:
         logger.debug("Error saving coverage: %s", e)
 
