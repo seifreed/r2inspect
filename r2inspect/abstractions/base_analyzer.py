@@ -3,6 +3,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from typing import Any
 
 from .base_analyzer_support import (
@@ -104,7 +105,7 @@ class BaseAnalyzer(ABC):
         *,
         error_message: str,
         set_available: bool = True,
-    ):
+    ) -> AbstractContextManager[None]:
         return _analysis_context(
             self._log_error,
             result,

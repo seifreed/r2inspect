@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
-RECOMMENDATION_RULES = [
+RecommendationPredicate = Callable[[dict[str, Any]], Any]
+
+RECOMMENDATION_RULES: list[tuple[RecommendationPredicate, str]] = [
     (
         lambda results: results["packer"].get("is_packed"),
         "File appears packed; consider unpacking before deeper analysis.",

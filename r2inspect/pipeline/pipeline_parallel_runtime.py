@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from concurrent.futures import as_completed
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from .pipeline_runtime_common import (
     build_threadsafe_context,
@@ -18,7 +19,12 @@ from .pipeline_runtime_common import (
 )
 from .stage_models import AnalysisStage, ThreadSafeContext
 
+if TYPE_CHECKING:
+    from .analysis_pipeline import AnalysisPipeline
+
 logger = logging.getLogger(__name__)
+
+StageExecutor = Callable[[AnalysisStage, ThreadSafeContext], tuple[dict[str, Any], bool]]
 
 
 def get_effective_workers(max_workers: int | None) -> int:
@@ -111,9 +117,9 @@ def submit_ready_stages(
     executor: ThreadPoolExecutor,
     ready_stages: list[AnalysisStage],
     ts_context: ThreadSafeContext,
-    stage_executor,
-) -> dict[Any, AnalysisStage]:
-    future_to_stage: dict[Any, AnalysisStage] = {}
+    stage_executor: StageExecutor,
+) -> dict[Future[tuple[dict[str, Any], bool]], AnalysisStage]:
+    future_to_stage: dict[Future[tuple[dict[str, Any], bool]], AnalysisStage] = {}
     for stage in ready_stages:
         future = executor.submit(stage_executor, stage, ts_context)
         future_to_stage[future] = stage
@@ -186,7 +192,9 @@ def execute_stage_with_timeout(
         return error_result(stage.name, str(exc)), False
 
 
-def execute_parallel_pipeline(pipeline, options: dict[str, Any] | None = None) -> dict[str, Any]:
+def execute_parallel_pipeline(
+    pipeline: AnalysisPipeline, options: dict[str, Any] | None = None
+) -> dict[str, Any]:
     pipeline._execution_count += 1
     execution_id = pipeline._execution_count
 

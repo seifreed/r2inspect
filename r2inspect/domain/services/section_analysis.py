@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
+
+SuspiciousNameDetector = Callable[[str, list[str]], str | None]
 
 PE_CHARACTERISTIC_FLAGS: dict[int, str] = {
     0x00000020: "IMAGE_SCN_CNT_CODE",
@@ -51,7 +54,7 @@ SUSPICIOUS_SECTION_NAMES: tuple[str, ...] = (
 
 
 def build_section_name_indicators(
-    name: str, standard_sections: set[str], suspicious_name_detector
+    name: str, standard_sections: set[str], suspicious_name_detector: SuspiciousNameDetector
 ) -> list[str]:
     indicators: list[str] = []
     if isinstance(name, str) and name not in standard_sections and not name.startswith("."):

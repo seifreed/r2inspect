@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Iterable
 from pathlib import Path
+
+DangerousCharsChecker = Callable[[str], Iterable[str]]
 
 
 def validate_basic_path(
     filepath: str,
     max_path_length: int,
     dangerous_chars: frozenset[str],
-    check_dangerous_chars,
+    check_dangerous_chars: DangerousCharsChecker,
 ) -> None:
     if not filepath:
         raise ValueError("File path cannot be empty")
@@ -54,7 +57,7 @@ def validate_existing_path(original_path: str, resolved_path: Path, check_exists
     _ = original_path
 
 
-def sanitize_for_subprocess(filepath: Path, check_dangerous_chars) -> str:
+def sanitize_for_subprocess(filepath: Path, check_dangerous_chars: DangerousCharsChecker) -> str:
     if not isinstance(filepath, Path):
         raise TypeError("filepath must be a Path object from validate_path()")
     abs_path = str(filepath.absolute())

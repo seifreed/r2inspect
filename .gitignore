@@ -29,5 +29,8 @@ __pycache__/
 CLAUDE.md
 **/CLAUDE.md
 
+# Local-only tooling (not part of the published repo)
+scripts/quality_gate.sh
+
 # Accidental literal glob directories
 **/\*\*/

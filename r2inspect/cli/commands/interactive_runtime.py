@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from ...cli.output_formatters import OutputFormatter
+
+CommandHandler = Callable[[], None]
 
 
 def display_welcome(console: Any) -> None:
@@ -24,7 +27,7 @@ def display_welcome(console: Any) -> None:
 def execute_command(command: Any, cmd: str, inspector: Any, options: dict[str, Any]) -> None:
     from .. import display_results
 
-    command_handlers = {
+    command_handlers: dict[str, CommandHandler] = {
         "analyze": lambda: run_analyze(command, inspector, options, display_results),
         "strings": lambda: show_strings(command.context.console, inspector),
         "info": lambda: show_file_info(command.context.console, inspector),

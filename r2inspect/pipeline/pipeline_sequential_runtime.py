@@ -3,17 +3,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
 
 from .pipeline_runtime_common import build_context, merge_into_plain_context
 
+if TYPE_CHECKING:
+    from .analysis_pipeline import AnalysisPipeline
+
 logger = logging.getLogger(__name__)
+
+ProgressCallback = Callable[[str, int, int], None]
 
 
 def execute_sequential_pipeline(
-    pipeline,
+    pipeline: AnalysisPipeline,
     options: dict[str, Any] | None = None,
-    progress_callback=None,
+    progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     pipeline._execution_count += 1
     execution_id = pipeline._execution_count
@@ -87,8 +93,8 @@ def execute_sequential_pipeline(
 
 
 def execute_with_progress_pipeline(
-    pipeline,
-    progress_callback,
+    pipeline: AnalysisPipeline,
+    progress_callback: ProgressCallback,
     options: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Backward-compatible wrapper that delegates to execute_sequential_pipeline."""

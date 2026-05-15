@@ -62,6 +62,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "pre-commit>=3.0.0",
     "bandit>=1.7.0",
+    "pip-audit>=2.7.0",
     "mutmut>=2.4.0",
 ]
 docker = [
@@ -137,21 +138,8 @@ select = [
 ]
 ignore = [
     "E501",  # line too long (handled by black)
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
-    "W191",  # indentation contains tabs
-    "E722",  # do not use bare except
-    "B904",  # raise from None
-    "B007",  # unused loop variable
-    "ARG001", # unused function argument
-    "ARG003", # unused class method argument
-    "SIM102", # use single if
-    "SIM105", # use contextlib.suppress
-    "SIM110", # use any()
-    "SIM116", # use dict instead of if-elif
-    "SIM401", # use dict.get
-    "F401",  # unused imports in some __init__ files
-    "UP047", # avoid PEP 695 type parameter enforcement
+    "B008",  # function calls in argument defaults (idiomatic for click/typer/fastapi)
+    "UP047", # PEP 695 type parameter syntax (project still supports py3.13 baseline)
 ]
 exclude = [
     ".bzr",
@@ -196,7 +184,9 @@ ensure_newline_before_comments = true
 python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
 ignore_missing_imports = true
 no_implicit_optional = true
 warn_redundant_casts = true
@@ -204,7 +194,7 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_optional = true
-exclude = "^(venv|env|\\.venv|build|dist|\\.qlty|bench_samples|benchmarks|samples|templates)/"
+exclude = "^(venv|env|\\.venv|build|dist|\\.qlty|bench_samples|benchmarks|samples|templates|tests)/"
 
 [tool.pytest.ini_options]
 markers = [
@@ -217,14 +207,10 @@ markers = [
 [tool.pylint.messages_control]
 max-line-length = 100
 disable = [
-    "C0114",  # missing-module-docstring
+    "C0114",  # missing-module-docstring (docstring policy handled by pydocstyle)
     "C0115",  # missing-class-docstring
     "C0116",  # missing-function-docstring
-    "R0903",  # too-few-public-methods
-    "R0913",  # too-many-arguments
-    "W0511",  # fixme
-    "C0103",  # invalid-name
-    "R0801",  # duplicate-code
+    "R0801",  # duplicate-code (false positives across analyzer modules)
 ]
 
 [tool.pylint.format]
@@ -235,12 +221,8 @@ good-names = ["i", "j", "k", "ex", "Run", "_", "r2", "e", "f"]
 
 [tool.bandit]
 exclude_dirs = ["tests", "venv", "env", ".venv", ".qlty"]
-skips = [
-    "B101",  # assert_used - needed for tests
-    "B601",  # paramiko_calls - false positives
-    "B602",  # subprocess_popen_with_shell_equals_true - needed for some operations
-]
-severity = "medium"
+severity = "low"
+confidence = "low"
 
 [tool.pydocstyle]
 convention = "google"
@@ -271,10 +253,10 @@ omit = [
 ]
 
 [tool.coverage.report]
+# Inline coverage suppressions (`# pragma: no cover`) are forbidden by project policy.
+# Only structural exclusions for code that is not meant to execute are listed here.
 exclude_lines = [
-    "pragma: no cover",
     "def __repr__",
-    "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",

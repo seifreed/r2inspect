@@ -152,6 +152,11 @@ def ensure_sample_fixture_tree(_session_samples_dir: Path) -> None:
         target = sample_fixtures / source.name
         if target.exists():
             continue
+        # `target.exists()` returns False for a dangling symlink (the link itself
+        # is present but its destination is gone — e.g. a stale pytest tmpdir from
+        # a previous run). Remove it so `symlink_to` below doesn't FileExistsError.
+        if target.is_symlink():
+            target.unlink()
         try:
             target.symlink_to(source)
         except OSError:
