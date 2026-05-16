@@ -38,7 +38,4 @@ def is_encrypted(headers: list[dict[str, Any]] | None) -> bool:
 
 
 def is_signed(headers: list[dict[str, Any]] | None) -> bool:
-    for header in headers or []:
-        if header.get("type") == "LC_CODE_SIGNATURE":
-            return True
-    return False
+    return any(header.get("type") == "LC_CODE_SIGNATURE" for header in headers or [])

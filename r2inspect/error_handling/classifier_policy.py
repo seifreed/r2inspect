@@ -71,7 +71,7 @@ class ErrorClassifier:
     @classmethod
     def _adjust_classification(
         cls,
-        exception: Exception,
+        _exception: Exception,
         category: ErrorCategory,
         severity: ErrorSeverity,
         context: dict[str, Any],
@@ -104,7 +104,7 @@ class ErrorClassifier:
         exception: Exception,
         category: ErrorCategory,
         severity: ErrorSeverity,
-        context: dict[str, Any],
+        _context: dict[str, Any],
     ) -> str:
         return _suggest_action(
             exception,

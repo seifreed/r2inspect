@@ -29,9 +29,12 @@ def get_file_size_mb(filename: str | None) -> float | None:
 
 def should_run_full_analysis(config: Any | None, file_size_mb: float | None) -> bool:
     try:
-        if config and getattr(config, "typed_config", None):
-            if config.typed_config.analysis.deep_analysis:
-                return True
+        if (
+            config
+            and getattr(config, "typed_config", None)
+            and config.typed_config.analysis.deep_analysis
+        ):
+            return True
     except (AttributeError, TypeError, ValueError, RuntimeError):
         pass
     if file_size_mb is not None:

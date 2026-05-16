@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import threading
@@ -77,10 +78,8 @@ def process_single_file(
                         shutil.move(str(tmp_file), str(json_file))
                 except Exception:
                     # Clean up partial temp file on failure
-                    try:
+                    with contextlib.suppress(OSError):
                         tmp_file.unlink(missing_ok=True)
-                    except OSError:
-                        pass
                     raise
 
             rate_limiter.release_success()

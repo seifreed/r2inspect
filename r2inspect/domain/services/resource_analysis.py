@@ -219,9 +219,12 @@ def build_suspicious_resources(
 
         header_data = None
         type_name = _resource_type_name(resource)
-        if type_name in ["RT_RCDATA", "UNKNOWN"]:
-            if _resource_size(resource) > 1024 and _resource_offset(resource) > 0:
-                header_data = header_reader(resource)
+        if (
+            type_name in ["RT_RCDATA", "UNKNOWN"]
+            and _resource_size(resource) > 1024
+            and _resource_offset(resource) > 0
+        ):
+            header_data = header_reader(resource)
         suspicious.extend(check_resource_embedded_pe(resource, header_data))
 
     return suspicious

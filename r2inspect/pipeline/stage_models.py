@@ -38,10 +38,11 @@ class AnalysisStage:
     ) -> bool:
         if not all(dep in completed_stages for dep in self.dependencies):
             return False
-        if failed_stages and not self.optional:
-            if any(dep in failed_stages for dep in self.dependencies):
-                return False
-        return True
+        return not (
+            failed_stages
+            and not self.optional
+            and any(dep in failed_stages for dep in self.dependencies)
+        )
 
     def should_execute(self, context: dict[str, Any]) -> bool:
         if self.condition is None:

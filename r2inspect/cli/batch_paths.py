@@ -10,7 +10,7 @@ from ..application.options import build_analysis_options
 
 
 def setup_batch_mode(
-    batch: str,
+    _batch: str,
     extensions: str | None,
     output_json: bool,
     output_csv: bool,

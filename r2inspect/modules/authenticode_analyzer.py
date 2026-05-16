@@ -194,10 +194,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Find a byte pattern in data."""
         pattern_len = len(pattern)
         data_len = len(data)
-        for i in range(data_len - pattern_len + 1):
-            if data[i : i + pattern_len] == pattern:
-                return True
-        return False
+        return any(data[i : i + pattern_len] == pattern for i in range(data_len - pattern_len + 1))
 
     def _find_all_patterns(self, data: list[int], pattern: list[int]) -> list[int]:
         """Find all occurrences of a byte pattern in data."""

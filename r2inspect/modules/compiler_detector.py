@@ -99,9 +99,8 @@ class CompilerDetector(CommandHelperMixin):
             )
 
             # PE-specific analysis
-            if file_format == "PE":
-                if self._apply_rich_header_detection(results):
-                    return results
+            if file_format == "PE" and self._apply_rich_header_detection(results):
+                return results
 
             # Score each compiler
             compiler_scores = self._score_compilers(

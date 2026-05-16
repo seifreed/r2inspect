@@ -66,10 +66,7 @@ def is_candidate_api_string(string_val: str, imported_apis: list[str]) -> bool:
 
 def matches_known_api(string_val: str, api_categories: dict[str, Any]) -> bool:
     """Check if a string matches any known API in categories."""
-    for _, apis in api_categories.items():
-        if any(api in string_val for api in apis):
-            return True
-    return False
+    return any(any(api in string_val for api in apis) for apis in api_categories.values())
 
 
 __all__ = [

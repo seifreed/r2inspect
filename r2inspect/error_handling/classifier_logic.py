@@ -35,9 +35,11 @@ def adjust_classification(
     error_severity_high: Any,
     error_severity_critical: Any,
 ) -> tuple[Any, Any]:
-    if context.get("analysis_type") in ["pe_analysis", "elf_analysis", "macho_analysis"]:
-        if severity == error_severity_medium:
-            severity = error_severity_high
+    if (
+        context.get("analysis_type") in ["pe_analysis", "elf_analysis", "macho_analysis"]
+        and severity == error_severity_medium
+    ):
+        severity = error_severity_high
     # NOTE: batch_mode no longer downgrades severity — HIGH errors in batch
     # must remain HIGH to avoid silent data corruption.
     if category == error_category_memory and context.get("file_size_mb", 0) > 100:

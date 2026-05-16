@@ -111,10 +111,7 @@ def _bin_info_has_pe(bin_info: dict[str, Any]) -> bool:
 
 
 def _bin_info_has_elf(bin_info: dict[str, Any]) -> bool:
-    for key in ("format", "type", "class"):
-        if "elf" in str(bin_info.get(key, "")).lower():
-            return True
-    return False
+    return any("elf" in str(bin_info.get(key, "")).lower() for key in ("format", "type", "class"))
 
 
 __all__ = ["is_elf_file", "is_pe_file"]

@@ -33,7 +33,6 @@ def get_valid_pe_end(calculate_pe_end: Callable[[], int], file_size: int) -> int
 
 
 def calculate_pe_end(
-    cmdj: Callable[[str, Any], Any],
     *,
     logger: Any,
     get_sections_fn: Callable[[], list[dict[str, Any]]],

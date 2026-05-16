@@ -90,7 +90,6 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _calculate_pe_end(self) -> int:
         """Calculate where the PE structure ends."""
         return _calculate_pe_end_impl(
-            self._cmdj,
             logger=logger,
             get_sections_fn=self._get_sections,
             get_max_section_end_fn=self._get_max_section_end,

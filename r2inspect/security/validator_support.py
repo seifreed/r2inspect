@@ -12,7 +12,6 @@ DangerousCharsChecker = Callable[[str], Iterable[str]]
 def validate_basic_path(
     filepath: str,
     max_path_length: int,
-    dangerous_chars: frozenset[str],
     check_dangerous_chars: DangerousCharsChecker,
 ) -> None:
     if not filepath:

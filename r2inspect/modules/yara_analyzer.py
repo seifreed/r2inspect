@@ -38,8 +38,8 @@ class TimeoutException(Exception):
     pass
 
 
-def timeout_handler(signum: int, frame: Any) -> None:
-    """Signal handler for compilation timeout."""
+def timeout_handler(_signum: int, _frame: Any) -> None:
+    """Signal handler for compilation timeout (signal API mandates the args)."""
     raise TimeoutException("YARA compilation timed out")
 
 

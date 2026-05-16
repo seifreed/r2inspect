@@ -135,7 +135,6 @@ class FileValidator:
         _validate_basic_path_impl(
             filepath,
             self.MAX_PATH_LENGTH,
-            self.DANGEROUS_CHARS,
             self._check_dangerous_chars,
         )
 

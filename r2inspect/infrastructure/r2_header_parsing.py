@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from typing import Any, cast
 
@@ -56,10 +57,8 @@ def _parse_key_value_pair(
     parsed_value: str | int = value_str
 
     if value_str.startswith("0x"):
-        try:
+        with contextlib.suppress(ValueError):
             parsed_value = int(value_str, 16)
-        except ValueError:
-            pass
 
     result[current_section][key] = parsed_value
 
