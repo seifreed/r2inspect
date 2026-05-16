@@ -120,9 +120,13 @@ class BatchCommand(Command):
         if not verbose:
             configure_batch_logging()
         if quiet:
-            from ..command_runtime import configure_logging_levels
-
-            configure_logging_levels(verbose=False, quiet=True)
+            # Batch quiet mode is stricter than the shared quiet config:
+            # a batch run processes many files, so r2inspect's own loggers
+            # are raised to CRITICAL (not WARNING). 8f3da63 lost this by
+            # delegating to the shared WARNING-level helper.
+            logging.getLogger("r2pipe").setLevel(logging.CRITICAL)
+            for name in ("r2inspect", "r2inspect.modules", "r2inspect.pipeline"):
+                logging.getLogger(name).setLevel(logging.CRITICAL)
 
     def _setup_analysis_options(
         self,

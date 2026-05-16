@@ -227,7 +227,10 @@ def test_is_pe_executable_returns_true_for_mz_header_with_seek_error() -> None:
             return b""
 
     result = is_pe_executable(header, _RaisingHandle())
-    assert result is False
+    # MZ magic present + seek error -> the function falls back to True
+    # (matches this test's name/docstring; the assertion had been flipped
+    # to False to accommodate the 8f3da63 regression).
+    assert result is True
 
 
 def test_is_pe_executable_returns_false_for_non_mz() -> None:

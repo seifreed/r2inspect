@@ -120,7 +120,11 @@ def is_pe_executable(header: bytes, file_handle: Any) -> bool:
                 return True
         except (OSError, ValueError):
             pass
-    return False
+    # The MZ magic alone marks a DOS/PE executable; for batch *discovery*
+    # an MZ file is worth analyzing even when the PE signature could not be
+    # confirmed at e_lfanew (truncated/packed headers). 8f3da63 silently
+    # flipped this fallback to False, hiding such files from discovery.
+    return True
 
 
 def is_elf_executable(header: bytes) -> bool:
