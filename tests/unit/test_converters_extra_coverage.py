@@ -47,8 +47,11 @@ def test_dict_to_model_non_strict_failure():
     data = {"name": "test", "value": "not_an_int"}
     model = dict_to_model(data, OptionalModel, strict=False)
     assert model.name == "test"
-    # value could not be parsed; falls back to default
-    assert model.value == 0
+    # Non-strict fallback uses model_construct (canonical contract:
+    # test_schemas_converters_branch_paths.test_dict_to_model_invalid_data_strict_false_uses_construct).
+    # The original value is preserved, not coerced to the field default, so
+    # the caller can see exactly what came in.
+    assert model.value == "not_an_int"
 
 
 def test_model_to_dict():

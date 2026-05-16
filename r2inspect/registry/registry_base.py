@@ -49,9 +49,9 @@ class AnalyzerRegistryBaseMixin:
         if self.is_base_analyzer(analyzer_class):
             if not hasattr(analyzer_class, "analyze"):
                 return False, "BaseAnalyzer subclass must implement analyze() method"
-            if hasattr(analyzer_class.analyze, "__isabstractmethod__"):
-                if analyzer_class.analyze.__isabstractmethod__:
-                    return False, "analyze() method is not implemented (still abstract)"
-        if not hasattr(analyzer_class, "__init__"):  # pragma: no cover
-            return False, "Analyzer class must have __init__ method"
+            if (
+                hasattr(analyzer_class.analyze, "__isabstractmethod__")
+                and analyzer_class.analyze.__isabstractmethod__
+            ):
+                return False, "analyze() method is not implemented (still abstract)"
         return True, None

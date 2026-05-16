@@ -36,28 +36,16 @@ def dict_to_model_impl(
         try:
             return model_class.model_validate(filtered)
         except ValidationError as inner_exc:
-            # Build instance with only the fields that individually validate,
-            # coercing invalid ones to their defaults.
+            # Last resort for non-strict mode: build the instance without
+            # validation so the caller still gets a populated model and the
+            # original (even out-of-range) values are preserved rather than
+            # silently coerced or the call raising.
             logger.warning(
-                "Lenient construction for %s failed: %s. Using field defaults for bad values.",
+                "Lenient validation for %s failed: %s. Constructing without validation.",
                 model_class.__name__,
                 inner_exc,
             )
-            # Identify which fields caused the validation error and exclude them.
-            # Use the error details from Pydantic to pinpoint bad fields.
-            bad_fields: set[str] = set()
-            for error in inner_exc.errors():
-                loc = error.get("loc", ())
-                if loc:
-                    bad_fields.add(str(loc[0]))
-            safe_fields = {k: v for k, v in filtered.items() if k not in bad_fields}
-            if bad_fields:
-                logger.debug("Excluded invalid fields for %s: %s", model_class.__name__, bad_fields)
-            try:
-                return model_class.model_validate(safe_fields)
-            except ValidationError:
-                # All remaining fields with defaults only
-                return model_class.model_validate({})
+            return model_class.model_construct(**filtered)
 
 
 def model_to_dict_impl(
