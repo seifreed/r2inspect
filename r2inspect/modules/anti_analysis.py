@@ -187,3 +187,19 @@ class AntiAnalysisDetector(CommandHelperMixin):
 
     def _get_strings(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_strings", "izj"))
+
+
+__all__ = [
+    "ENVIRONMENT_CHECK_COMMANDS",
+    "INJECTION_APIS",
+    "SUSPICIOUS_API_CATEGORIES",
+    "TIMING_APIS",
+    "add_simple_evidence",
+    "collect_artifact_strings",
+    "detect_api_hashing",
+    "detect_environment_checks",
+    "detect_injection_apis",
+    "detect_obfuscation",
+    "detect_self_modifying",
+    "match_suspicious_api",
+]

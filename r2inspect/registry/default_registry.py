@@ -35,3 +35,10 @@ def get_minimal_registry() -> AnalyzerRegistry:
 def get_category_registry(category: AnalyzerCategory) -> AnalyzerRegistry:
     """Create a registry containing analyzers from a specific category."""
     return _filter_registry(lambda metadata: metadata.category == category)
+
+
+__all__ = [
+    "ELF_FORMATS",
+    "MACHO_FORMATS",
+    "PE_FORMATS",
+]

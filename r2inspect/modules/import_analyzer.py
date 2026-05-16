@@ -220,3 +220,9 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         except Exception as exc:
             logger.error("Error checking import forwarding from strings: %s", exc)
             return {"detected": False, "forwards": []}
+
+
+__all__ = [
+    "NETWORK_CATEGORY",
+    "re",
+]

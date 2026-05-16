@@ -141,3 +141,13 @@ def calculate_overall_similarity(
     behavioral: float,
 ) -> float:
     return _calculate_overall_similarity_impl(structural, function, string, byte, behavioral)
+
+
+__all__ = [
+    "CRYPTO_APIS",
+    "CRYPTO_TERMS",
+    "NETWORK_APIS",
+    "NETWORK_TERMS",
+    "PERSIST_TERMS",
+    "SUSPICIOUS_APIS",
+]

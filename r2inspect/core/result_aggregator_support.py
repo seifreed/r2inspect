@@ -73,3 +73,14 @@ SUMMARY_BUILDERS = summary_builders
 def get_summary_builders() -> dict[str, Any]:
     """Return the canonical executive-summary builder mapping."""
     return SUMMARY_BUILDERS()
+
+
+__all__ = [
+    "build_file_overview",
+    "build_security_assessment",
+    "build_technical_details",
+    "build_threat_indicators",
+    "generate_executive_summary",
+    "generate_indicators",
+    "generate_recommendations",
+]

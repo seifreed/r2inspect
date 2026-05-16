@@ -59,3 +59,32 @@ def get_macho_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
 
 def _get_headers_json(r2_instance: Any) -> list[dict[str, Any]] | None:
     return _resolve_headers_json(r2_instance, safe_cmdj)
+
+
+__all__ = [
+    "R2_ANALYSIS_POLICY",
+    "R2_JSON_DICT_POLICY",
+    "R2_JSON_LIST_POLICY",
+    "_cmd_fallback",
+    "_cmdj_fallback",
+    "_handle_bytes",
+    "_handle_disasm",
+    "_handle_search",
+    "_handle_simple",
+    "_maybe_use_adapter",
+    "_parse_address",
+    "_parse_elf_headers_text",
+    "_parse_key_value_pair",
+    "_parse_section_header",
+    "_parse_size",
+    "_run_cmd_with_timeout",
+    "_select_json_policy",
+    "cmd",
+    "cmd_list",
+    "cmdj",
+    "os",
+    "safe_cmd_dict",
+    "safe_cmd_list",
+    "safe_cmdj_any",
+    "validate_r2_data",
+]

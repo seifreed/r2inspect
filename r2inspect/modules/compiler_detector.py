@@ -9,11 +9,6 @@ from ..infrastructure.logging import get_logger
 from .compiler_detector_collection_support import (
     get_file_format as _collect_file_format,
     get_file_info as _collect_file_info,
-    get_imports as _collect_imports,
-    get_sections as _collect_sections,
-    get_strings as _collect_strings,
-    get_strings_raw as _collect_strings_raw,
-    get_symbols as _collect_symbols,
 )
 from .compiler_detector_result_support import (
     gather_detection_inputs as _gather_detection_inputs,
@@ -277,3 +272,13 @@ class CompilerDetector(CommandHelperMixin):
     def _get_strings_raw(self) -> str:
         result = cmd_helper(self.adapter, self.adapter, "izz~..")
         return result if isinstance(result, str) else ""
+
+
+__all__ = [
+    "DLL_ADVAPI32",
+    "DLL_SHELL32",
+    "SECTION_DATA",
+    "SECTION_EH_FRAME",
+    "SECTION_RDATA",
+    "SECTION_TEXT",
+]

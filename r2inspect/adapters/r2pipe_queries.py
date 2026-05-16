@@ -73,3 +73,15 @@ class R2PipeQueryMixin(
                 f"Error retrieving {error_label}",
             ),
         )
+
+
+__all__ = [
+    "is_valid_r2_response",
+    "safe_cmd",
+    "safe_cmd_dict",
+    "safe_cmdj",
+    "sanitize_r2_output",
+    "validate_address",
+    "validate_r2_data",
+    "validate_size",
+]

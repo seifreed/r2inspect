@@ -253,3 +253,10 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
         if result is None:
             logger.error("Error calculating SimHash from file")
         return result
+
+
+__all__ = [
+    "cast",
+    "init_result",
+    "mark_unavailable",
+]

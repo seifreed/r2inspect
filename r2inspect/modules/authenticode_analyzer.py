@@ -245,3 +245,11 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         except Exception as exc:
             logger.error("Error verifying signature: %s", exc)
             return False
+
+
+__all__ = [
+    "datetime",
+    "hashlib",
+    "silent_cmdj",
+    "struct",
+]

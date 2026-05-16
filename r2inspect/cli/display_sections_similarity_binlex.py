@@ -104,3 +104,9 @@ def _add_binlex_top_ngrams(
                     clean_ngram = clean_ngram[:47] + "..."
                 ngram_strs.append(f"• {clean_ngram} ({count})")
             table.add_row(f"Top {n}-grams", "\n".join(ngram_strs))
+
+
+__all__ = [
+    "SIMILAR_GROUPS_LABEL",
+    "re",
+]

@@ -5,7 +5,6 @@ This module keeps a patchable batch-processing facade while delegating leaf
 operations to support and runtime modules with narrower responsibilities.
 """
 
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -234,3 +233,32 @@ def run_batch_analysis(
         display_batch_results=display_batch_results,
         looks_like_batch_result=_looks_like_batch_result,
     )
+
+
+__all__ = [
+    "_is_executable_signature",
+    "check_executable_signature",
+    "collect_batch_statistics",
+    "create_json_batch_summary",
+    "determine_csv_file_path",
+    "ensure_batch_shutdown",
+    "_flush_coverage_data",
+    "get_csv_fieldnames",
+    "is_elf_executable",
+    "is_macho_executable",
+    "is_pe_executable",
+    "is_script_executable",
+    "process_single_file",
+    "_pytest_running",
+    "_safe_exit",
+    "schedule_forced_exit",
+    "setup_analysis_options",
+    "setup_batch_mode",
+    "setup_single_file_output",
+    "update_compiler_stats",
+    "update_crypto_stats",
+    "update_file_type_stats",
+    "update_indicator_stats",
+    "update_packer_stats",
+    "write_csv_results",
+]

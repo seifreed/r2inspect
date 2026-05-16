@@ -235,3 +235,8 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def get_security_features(self) -> dict[str, bool]:
         """Check for Mach-O security features"""
         return _get_security_features(self.adapter, logger)
+
+
+__all__ = [
+    "re",
+]

@@ -111,3 +111,16 @@ class PipelineBuilder:
 
 
 __all__ = ["PipelineBuilder"]
+
+
+__all__ += [
+    "AnalyzerStage",
+    "DetectionStage",
+    "FileInfoStage",
+    "FormatAnalysisStage",
+    "FormatDetectionStage",
+    "HashingStage",
+    "IndicatorStage",
+    "MetadataStage",
+    "SecurityStage",
+]

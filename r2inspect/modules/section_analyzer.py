@@ -221,3 +221,9 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         flag_counts: dict[str, int],
     ) -> float:
         return update_section_summary(summary, section, flag_counts)
+
+
+__all__ = [
+    "build_section_characteristics",
+    "shannon_entropy",
+]

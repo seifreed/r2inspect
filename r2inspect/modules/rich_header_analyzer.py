@@ -10,7 +10,6 @@ from ..domain.services.rich_header import (
     parse_compiler_entries,
 )
 from ..adapters.analyzer_runner import run_analyzer_on_file
-from ..infrastructure.command_helpers import cmdj as cmdj_helper
 from ..infrastructure.logging import get_logger
 from .rich_header_debug import RichHeaderDebugMixin
 from .rich_header_direct import RichHeaderDirectMixin
@@ -167,3 +166,9 @@ class RichHeaderAnalyzer(
             logger.error("Error calculating RichPE hash from file")
             return None
         return cast(str | None, results.get("richpe_hash"))
+
+
+__all__ = [
+    "default_file_system",
+    "pefile",
+]

@@ -235,3 +235,8 @@ class FormatDetectionStage(AnalysisStage):
             return "Mach-O"
 
         return None
+
+
+__all__ = [
+    "FormatAnalysisStage",
+]

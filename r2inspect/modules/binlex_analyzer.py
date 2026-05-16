@@ -225,3 +225,8 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
             BinlexResult | None,
             _calculate_binlex_from_file(BinlexAnalyzer, filepath, ngram_sizes, logger=logger),
         )
+
+
+__all__ = [
+    "jaccard_similarity",
+]

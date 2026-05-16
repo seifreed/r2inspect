@@ -223,3 +223,10 @@ class R2Session:
 
 
 __all__ = ["R2Session"]
+
+
+__all__ += [
+    "platform",
+    "psutil",
+    "r2pipe",
+]

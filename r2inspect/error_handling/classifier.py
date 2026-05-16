@@ -15,7 +15,6 @@ from .classifier_recovery import (
 from .classifier_runtime import (
     ErrorRecoveryManager,
     build_error_handler as _build_error_handler,
-    _log_error as _runtime_log_error,
     register_default_recovery_strategies as _register_default_recovery_strategies,
     reset_manager_stats as _reset_manager_stats,
     safe_execute_call as _safe_execute_call,
@@ -127,3 +126,8 @@ def get_error_stats() -> dict[str, Any]:
 def reset_error_stats() -> None:
     """Reset error statistics"""
     _reset_manager_stats(global_error_manager)
+
+
+__all__ = [
+    "ErrorInfo",
+]

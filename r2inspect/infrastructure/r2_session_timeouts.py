@@ -112,3 +112,8 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
     except Exception as exc:
         logger.warning("Analysis command failed, continuing with basic r2 setup: %s", exc)
         return True
+
+
+__all__ = [
+    "time",
+]

@@ -248,3 +248,11 @@ class FunctionAnalyzer(CommandHelperMixin):
     def _analyze_function_coverage(self, functions: list[dict[str, Any]]) -> dict[str, Any]:
         """Analyze function coverage and detection quality"""
         return _analyze_function_coverage_impl(functions)
+
+
+__all__ = [
+    "Path",
+    "VERY_LARGE_FILE_THRESHOLD_MB",
+    "build_function_stats",
+    "extract_mnemonics_from_text",
+]

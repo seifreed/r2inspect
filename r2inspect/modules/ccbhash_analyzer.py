@@ -265,3 +265,8 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         if result is None:
             logger.error("Error calculating CCBHash from file")
         return result
+
+
+__all__ = [
+    "hashlib",
+]

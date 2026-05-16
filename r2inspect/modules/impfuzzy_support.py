@@ -171,3 +171,8 @@ def calculate_impfuzzy_from_file(
     except Exception as exc:
         logger.error("Error calculating impfuzzy from file: %s", exc)
         return None
+
+
+__all__ = [
+    "get_ssdeep",
+]

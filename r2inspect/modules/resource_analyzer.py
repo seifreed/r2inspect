@@ -210,3 +210,12 @@ class ResourceAnalyzer(
             return []
         header_data = self._cmdj(f"pxj 2 @ {offset}", [])
         return check_resource_embedded_pe(res, header_data)
+
+
+__all__ = [
+    "build_icon_entries",
+    "build_manifest_info",
+    "build_resource_statistics",
+    "build_suspicious_resources",
+    "decode_resource_text",
+]

@@ -130,3 +130,8 @@ class BatchCommand(Command):
         xor: str | None = None,
     ) -> dict[str, Any]:
         return build_analysis_options(yara, xor)
+
+
+__all__ = [
+    "logging",
+]

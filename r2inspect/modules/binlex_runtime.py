@@ -168,3 +168,9 @@ def calculate_binlex_from_file(
     if result is None:
         logger.error("Error calculating Binlex from file")
     return result
+
+
+__all__ = [
+    "Counter",
+    "defaultdict",
+]

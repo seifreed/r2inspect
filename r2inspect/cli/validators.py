@@ -154,3 +154,9 @@ __all__ = [
     "validate_threads_input",
     "validate_yara_input",
 ]
+
+
+__all__ += [
+    "Path",
+    "sys",
+]

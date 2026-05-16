@@ -100,3 +100,8 @@ def find_files_to_process(
     if not extensions:
         return []
     return find_files_by_extensions(batch_path, extensions, recursive)
+
+
+__all__ = [
+    "check_executable_signature",
+]

@@ -147,3 +147,8 @@ class R2PipeAdapter(R2PipeQueryMixin):
     def _maybe_force_error(self, method: str) -> None:
         if self._fault_injector is not None:
             self._fault_injector(method)
+
+
+__all__ = [
+    "BinaryAnalyzerInterface",
+]

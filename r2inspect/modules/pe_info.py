@@ -144,3 +144,8 @@ def get_subsystem_info(adapter: Any, logger: Any) -> dict[str, Any]:
     except Exception as exc:
         logger.error("Error getting subsystem info: %s", exc)
     return info
+
+
+__all__ = [
+    "PE32_PLUS",
+]

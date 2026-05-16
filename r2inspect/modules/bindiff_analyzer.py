@@ -238,3 +238,8 @@ class BinDiffAnalyzer:
         except Exception as e:
             logger.debug("Error comparing behavioral features: %s", e)
             return 0.0
+
+
+__all__ = [
+    "hashlib",
+]

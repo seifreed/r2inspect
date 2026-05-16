@@ -275,3 +275,8 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _parse_build_id_data(self, build_id_data: str | None) -> str | None:
         return parse_build_id_data(build_id_data)
+
+
+__all__ = [
+    "re",
+]

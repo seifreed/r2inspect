@@ -46,3 +46,17 @@ def create_batch_summary(
     )
     show_summary_table(all_results)
     return output_filename
+
+
+__all__ = [
+    "build_large_row",
+    "build_small_row",
+    "build_summary_table_large",
+    "build_summary_table_small",
+    "collect_yara_matches",
+    "compiler_name",
+    "extract_compile_time",
+    "render_summary_row",
+    "_show_summary_table_default",
+    "simplify_file_type",
+]

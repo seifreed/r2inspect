@@ -213,3 +213,8 @@ class BinbloomMixin:
     @staticmethod
     def deserialize_bloom(bloom_b64: str) -> BloomFilter | None:
         return _deserialize_bloom_impl(bloom_b64, BloomFilter, logger)
+
+
+__all__ = [
+    "cast",
+]
