@@ -13,9 +13,10 @@ def memory_recovery(logger: Any) -> Any | None:
     for _ in range(3):
         collected += gc.collect()
     logger.info("Performed aggressive garbage collection, freed %d objects", collected)
-    # Raise to signal that the original operation was NOT recovered —
-    # callers must retry explicitly rather than accepting None as success.
-    raise MemoryError("Memory recovery attempted; caller should retry the operation")
+    # gc done: signal successful recovery. Raising here would only be
+    # swallowed by ErrorRecoveryManager.handle_error's except clause,
+    # silently turning every memory recovery into a failure.
+    return None
 
 
 def r2pipe_recovery(error_info: Any) -> Any | None:

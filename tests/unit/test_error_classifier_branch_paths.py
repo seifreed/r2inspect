@@ -19,7 +19,6 @@ from r2inspect.error_handling.classifier import (
     safe_execute,
 )
 
-
 # ---------------------------------------------------------------------------
 # ErrorInfo.__init__ (lines 53-60)
 # ---------------------------------------------------------------------------
@@ -257,11 +256,13 @@ def test_adjust_does_not_upgrade_non_medium_severity():
     assert info.severity in (ErrorSeverity.CRITICAL, ErrorSeverity.HIGH)
 
 
-def test_adjust_downgrades_high_to_medium_in_batch_mode():
-    """Lines 174-175: HIGH severity reduced to MEDIUM in batch mode."""
+def test_batch_mode_does_not_downgrade_high_severity():
+    """batch_mode must NOT downgrade severity: a HIGH error stays HIGH in
+    batch mode, so batch runs cannot silently mask data corruption
+    (see the NOTE in classifier_logic.adjust_classification)."""
     exc = FileNotFoundError("missing")
     info = ErrorClassifier.classify(exc, context={"batch_mode": True})
-    assert info.severity == ErrorSeverity.MEDIUM
+    assert info.severity == ErrorSeverity.HIGH
 
 
 def test_adjust_does_not_downgrade_non_high_in_batch_mode():

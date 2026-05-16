@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Coverage tests for r2inspect/error_handling/classifier.py"""
+
 from __future__ import annotations
 
 import threading
@@ -19,7 +20,6 @@ from r2inspect.error_handling.classifier import (
     reset_error_stats,
     safe_execute,
 )
-
 
 # ---------------------------------------------------------------------------
 # ErrorSeverity / ErrorCategory enum coverage
@@ -193,10 +193,12 @@ def test_adjust_classification_macho_analysis_type():
     assert info.severity == ErrorSeverity.HIGH
 
 
-def test_adjust_classification_batch_mode_downgrades_high_to_medium():
+def test_adjust_classification_batch_mode_keeps_high_severity():
+    # batch_mode intentionally no longer downgrades severity: HIGH stays HIGH
+    # so batch runs cannot silently mask data corruption.
     exc = FileNotFoundError("missing")
     info = ErrorClassifier.classify(exc, context={"batch_mode": True})
-    assert info.severity == ErrorSeverity.MEDIUM
+    assert info.severity == ErrorSeverity.HIGH
 
 
 def test_adjust_classification_memory_large_file():

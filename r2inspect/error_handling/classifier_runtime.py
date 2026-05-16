@@ -8,15 +8,24 @@ from collections import defaultdict, deque
 from collections.abc import Callable
 from typing import Any
 
+from ..infrastructure.logging import get_logger
+from .classifier_logic import error_stats as _default_error_stats
+
 
 class ErrorRecoveryManager:
-    """Manage error recovery strategies and aggregate error stats."""
+    """Manage error recovery strategies and aggregate error stats.
+
+    ``logger`` and ``error_stats`` are injectable; both default to the
+    standard implementations so the manager is usable with no arguments.
+    """
 
     def __init__(
-        self, logger: Any, error_stats: Callable[[Any, list[Any], int], dict[str, Any]]
+        self,
+        logger: Any = None,
+        error_stats: Callable[[Any, list[Any], int], dict[str, Any]] | None = None,
     ) -> None:
-        self._logger = logger
-        self._error_stats = error_stats
+        self._logger = logger if logger is not None else get_logger(__name__)
+        self._error_stats = error_stats if error_stats is not None else _default_error_stats
         self.recovery_strategies: dict[Any, Callable[[Any], Any]] = {}
         self.error_counts: defaultdict[Any, int] = defaultdict(int)
         self.recent_errors: deque[Any] = deque(maxlen=100)
@@ -24,6 +33,11 @@ class ErrorRecoveryManager:
 
     def register_recovery_strategy(self, category: Any, strategy: Callable[[Any], Any]) -> None:
         self.recovery_strategies[category] = strategy
+
+    def _log_error(self, error_info: Any) -> None:
+        # Instance-bound entry point kept as a stable contract; the severity
+        # routing itself lives in the module-level _emit_log helper.
+        _emit_log(self._logger, error_info)
 
     _MAX_ERROR_CATEGORIES = 10000
 
@@ -37,7 +51,7 @@ class ErrorRecoveryManager:
                 for k in to_drop[: len(self.error_counts) - self._MAX_ERROR_CATEGORIES]:
                     del self.error_counts[k]
             self.recent_errors.append(error_info)
-            _log_error(self._logger, error_info)
+            self._log_error(error_info)
             if error_info.category in self.recovery_strategies and error_info.recoverable:
                 try:
                     result = self.recovery_strategies[error_info.category](error_info)
@@ -151,7 +165,7 @@ def reset_manager_stats(manager: ErrorRecoveryManager) -> None:
     manager.recent_errors.clear()
 
 
-def _log_error(logger: Any, error_info: Any) -> None:
+def _emit_log(logger: Any, error_info: Any) -> None:
     error_dict = error_info.to_dict()
     severity = error_info.severity.value
     if severity == "critical":
