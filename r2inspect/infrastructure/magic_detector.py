@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import struct
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -26,6 +25,7 @@ class MagicByteDetector:
     """Enhanced file type detection with precise magic byte patterns."""
 
     MAGIC_PATTERNS: dict[str, dict[str, Any]] = _MAGIC_PATTERNS
+    _EXEC_EXTRA = ("SWF", "JAVA_CLASS", "DEX")
 
     def __init__(self) -> None:
         self.cache: dict[str, dict[str, Any]] = {}
@@ -56,8 +56,7 @@ class MagicByteDetector:
             self.cache[cache_key] = result
             return result
 
-        # Reject special files that could block indefinitely on read
-        # (e.g., /dev/zero, named pipes, device nodes)
+        # Reject special files (e.g. /dev/zero, pipes, device nodes) that could block on read
         try:
             if not path.stat().st_mode & 0o100000:  # S_IFREG — regular file check
                 self.cache[cache_key] = result
@@ -155,16 +154,12 @@ class MagicByteDetector:
             return "Archive"
         if format_name in ["PDF", "DOC", "DOCX", "RTF"]:
             return "Document"
-        if format_name in ["SWF", "JAVA_CLASS", "DEX"]:
+        if format_name in self._EXEC_EXTRA:
             return "Bytecode"
         return "Other"
 
     def _is_executable_format(self, format_name: str) -> bool:
-        return format_name.startswith(("PE", "ELF", "MACHO")) or format_name in [
-            "SWF",
-            "JAVA_CLASS",
-            "DEX",
-        ]
+        return format_name.startswith(("PE", "ELF", "MACHO")) or format_name in self._EXEC_EXTRA
 
     def _is_archive_format(self, format_name: str) -> bool:
         return format_name in ["ZIP", "RAR", "7ZIP"]

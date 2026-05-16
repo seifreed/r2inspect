@@ -11,7 +11,6 @@ FILE_LIMITS = {
     PROJECT_ROOT / "r2inspect" / "infrastructure" / "r2_command_dispatch.py": 290,
     PROJECT_ROOT / "r2inspect" / "modules" / "function_analyzer_support.py": 300,
     PROJECT_ROOT / "r2inspect" / "modules" / "binbloom_mixin.py": 340,
-    PROJECT_ROOT / "r2inspect" / "modules" / "bindiff_domain.py": 320,
     PROJECT_ROOT / "r2inspect" / "modules" / "elf_analyzer.py": 290,
     PROJECT_ROOT / "r2inspect" / "modules" / "macho_analyzer.py": 300,
     PROJECT_ROOT / "r2inspect" / "modules" / "ssdeep_analyzer.py": 320,

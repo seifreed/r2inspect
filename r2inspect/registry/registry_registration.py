@@ -97,13 +97,7 @@ class AnalyzerRegistryRegistrationMixin:
         )
         category = self._ensure_category(analyzer_class, category)
 
-        if name in self._analyzers:
-            _logger.warning(
-                "Overwriting analyzer registration '%s': %s -> %s",
-                name,
-                self._analyzers[name].analyzer_class.__name__,
-                analyzer_class.__name__,
-            )
+        self._warn_if_overwriting(name, analyzer_class)
         self._analyzers[name] = self._build_metadata(
             name=name,
             analyzer_class=analyzer_class,
@@ -112,6 +106,16 @@ class AnalyzerRegistryRegistrationMixin:
             required=required,
             dependencies=dependencies,
             description=description,
+        )
+
+    def _warn_if_overwriting(self, name: str, analyzer_class: type) -> None:
+        if name not in self._analyzers:
+            return
+        _logger.warning(
+            "Overwriting analyzer registration '%s': %s -> %s",
+            name,
+            self._analyzers[name].analyzer_class.__name__,
+            analyzer_class.__name__,
         )
 
     def _validate_registration_name(self, name: str) -> None:

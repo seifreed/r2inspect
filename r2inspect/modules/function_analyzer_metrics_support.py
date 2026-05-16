@@ -27,37 +27,38 @@ def calculate_std_dev(values: list[float]) -> float:
         return 0.0
 
 
+def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int]]:
+    with_size = 0
+    with_blocks = 0
+    sizes: list[int] = []
+    for func in functions:
+        if not isinstance(func, dict):
+            continue
+        size = coerce_positive_int(func.get("size"))
+        if size > 0:
+            with_size += 1
+            sizes.append(size)
+        if coerce_positive_int(func.get("nbbs")) > 0:
+            with_blocks += 1
+    return with_size, with_blocks, sizes
+
+
 def analyze_function_coverage(functions: Any) -> dict[str, Any]:
     try:
         if not isinstance(functions, list):
             return {}
+        total = len(functions)
+        with_size, with_blocks, sizes = _accumulate_function_stats(functions)
         coverage: dict[str, Any] = {
-            "total_functions": len(functions),
-            "functions_with_size": 0,
-            "functions_with_blocks": 0,
-            "total_code_coverage": 0,
-            "avg_function_size": 0,
+            "total_functions": total,
+            "functions_with_size": with_size,
+            "functions_with_blocks": with_blocks,
+            "total_code_coverage": sum(sizes) if sizes else 0,
+            "avg_function_size": (sum(sizes) / len(sizes)) if sizes else 0,
         }
-        sizes = []
-        for func in functions:
-            if not isinstance(func, dict):
-                continue
-            size = coerce_positive_int(func.get("size"))
-            if size > 0:
-                coverage["functions_with_size"] += 1
-                sizes.append(size)
-            if coerce_positive_int(func.get("nbbs")) > 0:
-                coverage["functions_with_blocks"] += 1
-        if sizes:
-            coverage["total_code_coverage"] = sum(sizes)
-            coverage["avg_function_size"] = sum(sizes) / len(sizes)
-        if coverage["total_functions"] > 0:
-            coverage["size_coverage_percent"] = (
-                coverage["functions_with_size"] / coverage["total_functions"]
-            ) * 100
-            coverage["block_coverage_percent"] = (
-                coverage["functions_with_blocks"] / coverage["total_functions"]
-            ) * 100
+        if total > 0:
+            coverage["size_coverage_percent"] = with_size / total * 100
+            coverage["block_coverage_percent"] = with_blocks / total * 100
         return coverage
     except (TypeError, ValueError, AttributeError):
         return {}

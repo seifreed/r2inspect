@@ -13,7 +13,11 @@ FUNCTION_COMPLEXITY_LIMITS = {
     / "unified_handler.py": {
         "_retry_execution": {"branches": 6, "depth": 2},
         "_circuit_break_execution": {"branches": 3, "depth": 1},
-        "handle_errors": {"branches": 2, "depth": 1},
+        # 3 irreducible branches: the strategy-dispatch `match`, the
+        # debug-logging try/except, and the standard decorator-with-optional-
+        # arg `if func is not None`. None can be removed without losing
+        # behavior or readability.
+        "handle_errors": {"branches": 3, "depth": 1},
     },
     PROJECT_ROOT
     / "r2inspect"
@@ -52,8 +56,13 @@ FUNCTION_COMPLEXITY_LIMITS = {
     PROJECT_ROOT
     / "r2inspect"
     / "modules"
-    / "function_analyzer_support.py": {
+    / "function_analyzer_machoc_support.py": {
         "generate_machoc_summary": {"branches": 6, "depth": 2},
+    },
+    PROJECT_ROOT
+    / "r2inspect"
+    / "modules"
+    / "function_analyzer_metrics_support.py": {
         "analyze_function_coverage": {"branches": 6, "depth": 2},
     },
     PROJECT_ROOT

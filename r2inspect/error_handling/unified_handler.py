@@ -22,9 +22,6 @@ from ..infrastructure.logging import get_logger
 from .policies import ErrorHandlingStrategy, ErrorPolicy
 from .unified_handler_circuit_support import (
     CircuitBreakerState,
-    CircuitState,
-    _circuit_breakers,
-    _circuit_lock,
     get_circuit_breaker as _get_circuit_breaker_impl,
     get_circuit_breaker_stats as _get_circuit_breaker_stats_impl,
     reset_circuit_breakers as _reset_circuit_breakers_impl,
@@ -132,20 +129,14 @@ def handle_errors(
         @handle_errors(ErrorPolicy(ErrorHandlingStrategy.RETRY, max_retries=3))
         def get_data():
             return risky_operation()
-
-        @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value={}))
-        def get_metadata():
-            return parse_metadata()
     """
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
-        # Create unique identifier for this function
         func_id = f"{fn.__module__}.{fn.__qualname__}"
 
         @functools.wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
-                # Select execution strategy based on policy
                 match policy.strategy:
                     case ErrorHandlingStrategy.FAIL_FAST:
                         return fn(*args, **kwargs)
@@ -159,7 +150,6 @@ def handle_errors(
                         assert_never(unreachable)
 
             except Exception as e:
-                # Log error details for debugging
                 logger.debug(
                     f"Error in {func_id}: {type(e).__name__}: {e}",
                     extra={

@@ -192,25 +192,14 @@ def execute_stage_with_timeout(
         return error_result(stage.name, str(exc)), False
 
 
-def execute_parallel_pipeline(
-    pipeline: AnalysisPipeline, options: dict[str, Any] | None = None
-) -> dict[str, Any]:
-    pipeline._execution_count += 1
-    execution_id = pipeline._execution_count
-
-    logger.info(
-        "Starting parallel pipeline execution #%s with %s stages",
-        execution_id,
-        len(pipeline.stages),
-    )
-
-    ts_context = build_threadsafe_context(options, execution_id)
+def _run_parallel_rounds(
+    pipeline: AnalysisPipeline, ts_context: ThreadSafeContext
+) -> dict[str, int]:
     completed: set[str] = set()
     failed: set[str] = set()
     completed_lock = threading.Lock()
     remaining_lock = threading.Lock()
     remaining = list(pipeline.stages)
-
     executed_count = 0
     skipped_count = 0
     failed_count = 0
@@ -270,11 +259,26 @@ def execute_parallel_pipeline(
             executed_count += stats["executed"]
             failed_count += stats["failed"]
 
+    return {"executed": executed_count, "skipped": skipped_count, "failed": failed_count}
+
+
+def execute_parallel_pipeline(
+    pipeline: AnalysisPipeline, options: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    pipeline._execution_count += 1
+    execution_id = pipeline._execution_count
+    logger.info(
+        "Starting parallel pipeline execution #%s with %s stages",
+        execution_id,
+        len(pipeline.stages),
+    )
+    ts_context = build_threadsafe_context(options, execution_id)
+    counts = _run_parallel_rounds(pipeline, ts_context)
     logger.info(
         "Parallel pipeline execution #%s complete: %s succeeded, %s failed, %s skipped",
         execution_id,
-        executed_count,
-        failed_count,
-        skipped_count,
+        counts["executed"],
+        counts["failed"],
+        counts["skipped"],
     )
     return cast(dict[str, Any], ts_context.get("results", {}))

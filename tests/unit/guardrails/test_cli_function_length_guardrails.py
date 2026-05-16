@@ -20,11 +20,18 @@ FUNCTION_LIMITS = {
     PROJECT_ROOT
     / "r2inspect"
     / "cli"
+    # Limits recalibrated after the real implementations moved here from thin
+    # base.py re-export shims (the old "4" reflected the shim, not the body).
+    / "command_runtime.py": {
+        "configure_logging_levels": 16,
+        "configure_quiet_logging": 10,
+        "apply_thread_settings": 16,
+    },
+    PROJECT_ROOT
+    / "r2inspect"
+    / "cli"
     / "commands"
     / "base.py": {
-        "configure_logging_levels": 4,
-        "configure_quiet_logging": 4,
-        "apply_thread_settings": 4,
         "_setup_analysis_options": 20,
         "_get_config": 15,
     },
