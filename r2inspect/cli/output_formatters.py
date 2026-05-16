@@ -67,8 +67,10 @@ class OutputFormatter:
     def _format_file_size(self, size_bytes: Any) -> str:
         return self._csv_formatter._format_file_size(size_bytes)
 
-    def _clean_file_type(self, file_type: Any) -> str:
-        return str(self._csv_formatter._clean_file_type(file_type))
+    def _clean_file_type(self, file_type: Any) -> Any:
+        # Delegate verbatim: the CSV cleaner already passes non-str values
+        # through unchanged; forcing str() here corrupted numeric/None types.
+        return self._csv_formatter._clean_file_type(file_type)
 
     def _flatten_results(self, data: Any, prefix: str = "") -> list[dict[str, str]]:
         return _formatter_views.flatten_results(data, prefix)

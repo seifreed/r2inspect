@@ -72,10 +72,13 @@ def test_retry_manager_calculate_delay_strategies() -> None:
 def test_retry_on_failure_decorator_and_retry_r2_operation() -> None:
     attempts = {"count": 0}
 
+    # auto_retry=True is what wraps the call in retry_operation; auto_retry=False
+    # is the no-retry command-normalization path (see
+    # test_utils_retry_manager_edges_real.test_retry_on_failure_wrapper_paths).
     @retry_on_failure(
         command_type="generic",
         config=RetryConfig(max_attempts=2, base_delay=0.0, jitter=False),
-        auto_retry=False,
+        auto_retry=True,
     )
     def flaky_call(*_args: object, **_kwargs: object) -> str:
         attempts["count"] += 1

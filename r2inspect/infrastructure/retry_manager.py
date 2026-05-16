@@ -85,6 +85,12 @@ class RetryManager:
         return _is_retryable_command_impl(command, self.UNSTABLE_COMMANDS)
 
     def is_retryable_error(self, exception: Exception) -> bool:
+        # The sentinel exceptions are an explicit caller contract and must be
+        # honored by type, independent of message/RETRYABLE_EXCEPTIONS.
+        if isinstance(exception, NonRetryableError):
+            return False
+        if isinstance(exception, RetryableError):
+            return True
         return _is_retryable_error_impl(
             exception,
             self.RETRYABLE_EXCEPTIONS,

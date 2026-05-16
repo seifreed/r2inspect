@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import random
 import time
 from collections.abc import Callable
@@ -10,13 +11,26 @@ from typing import Any
 
 _secure_rng = random.SystemRandom()
 
-RETRYABLE_EXCEPTIONS = (TimeoutError, ConnectionError, OSError)
+# JSONDecodeError covers malformed r2pipe JSON responses, which are
+# transient and worth retrying (BrokenPipeError is an OSError subclass).
+RETRYABLE_EXCEPTIONS = (
+    TimeoutError,
+    ConnectionError,
+    OSError,
+    json.JSONDecodeError,
+)
 RETRYABLE_ERROR_MESSAGES = (
     "timeout",
     "temporarily unavailable",
+    "resource temporarily unavailable",
     "resource busy",
+    "device busy",
     "connection reset",
     "broken pipe",
+    "try again",
+    "no json object could be decoded",
+    "expecting value: line 1 column 1",
+    "extra data: line 1 column 2",
 )
 UNSTABLE_COMMANDS = ("aa", "aaa", "aaaa", "aflj", "izj", "iSj", "isj")
 
@@ -70,7 +84,9 @@ def calculate_delay(attempt: int, config: Any, retry_strategy_enum: Any) -> floa
     elif config.strategy == retry_strategy_enum.LINEAR_BACKOFF:
         delay *= max(1, attempt)
     elif config.strategy == retry_strategy_enum.RANDOM_JITTER:
-        delay = _secure_rng.uniform(config.base_delay, config.max_delay)
+        # base_delay plus up to one extra base_delay of jitter, i.e.
+        # [base_delay, 2*base_delay] — not the full [base_delay, max_delay].
+        delay = config.base_delay + _secure_rng.uniform(0, config.base_delay)
     delay = min(delay, config.max_delay)
     if config.jitter:
         delay += _secure_rng.uniform(0, min(0.1, delay / 4))
