@@ -1,6 +1,5 @@
 import os
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -270,6 +269,9 @@ def test_result_aggregator_summary_and_indicators():
     indicators = aggregator.generate_indicators(analysis_results)
     assert indicators
 
-    broken = {"file_info": None}
-    error_summary = aggregator.generate_executive_summary(broken)
+    # normalize_results now coerces a None bucket to its safe default
+    # (commit c446573), so {"file_info": None} no longer reaches the error
+    # branch. A non-dict input genuinely cannot be normalized and exercises
+    # the generate_executive_summary except-handler as intended.
+    error_summary = aggregator.generate_executive_summary(None)
     assert "error" in error_summary

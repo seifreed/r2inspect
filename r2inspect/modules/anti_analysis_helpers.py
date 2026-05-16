@@ -77,8 +77,11 @@ def detect_obfuscation(
         call_density = (call_count / code_size_bytes) * 100
         is_obfuscated = jmp_density > 1.0 or call_density > 2.0
     else:
-        # Fallback to absolute thresholds when code size is unknown
-        is_obfuscated = jmp_count > 500 or call_count > 1000
+        # Fallback to absolute thresholds when code size is unknown.
+        # These match the original pre-refactor sensitivity (>100 jmps or
+        # >200 calls); commit 8f3da63 silently raised them to 500/1000,
+        # which regressed obfuscation detection for unsized code.
+        is_obfuscated = jmp_count > 100 or call_count > 200
 
     if is_obfuscated:
         techniques.append(
@@ -124,9 +127,11 @@ def detect_injection_apis(
     for imp in imports or []:
         if imp.get("name") in injection_apis:
             injection_found += 1
-    # Require all 3 injection APIs (VirtualAllocEx + WriteProcessMemory + CreateRemoteThread)
-    # to reduce false positives on debuggers, profilers, and system utilities
-    if injection_found >= 3:
+    # Two or more injection-related APIs together are the established
+    # detection threshold. Commit 8f3da63 silently raised this to 3 under a
+    # "refactor" label, regressing detection of classic 2-call injection
+    # (e.g. WriteProcessMemory + CreateRemoteThread).
+    if injection_found >= 2:
         return [
             {
                 "technique": "DLL Injection",
