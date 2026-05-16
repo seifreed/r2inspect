@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import secrets
 import threading
 import time
 from collections.abc import Callable
@@ -15,6 +14,7 @@ from .retry_manager_support import (
     calculate_delay as _calculate_delay_impl,
     check_timeout as _check_timeout_impl,
     get_retry_config as _get_retry_config_impl,
+    get_stats as _get_stats_impl,
     init_retry_stats as _init_retry_stats,
     is_retryable_command as _is_retryable_command_impl,
     is_retryable_error as _is_retryable_error_impl,
@@ -165,19 +165,7 @@ class RetryManager:
         _wait_for_retry_impl(attempt, config, self.calculate_delay, logger=logger)
 
     def get_stats(self) -> dict[str, Any]:
-        with self.lock:
-            return {
-                "total_retries": self.retry_stats["total_retries"],
-                "successful_retries": self.retry_stats["successful_retries"],
-                "failed_after_retries": self.retry_stats["failed_after_retries"],
-                "success_rate": (
-                    self.retry_stats["successful_retries"]
-                    / max(1, self.retry_stats["total_retries"])
-                )
-                * 100,
-                "commands_retried": dict(self.retry_stats["commands_retried"]),
-                "error_types_retried": dict(self.retry_stats["error_types_retried"]),
-            }
+        return _get_stats_impl(self.retry_stats, self.lock)
 
     def reset_stats(self) -> None:
         with self.lock:

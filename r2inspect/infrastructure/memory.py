@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-import gc
 import os
 import threading
 import time
-import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 import psutil
 
 from .logging import get_logger
 from .memory_monitor_support import (
+    check_memory as _check_memory_impl,
     get_cached_stats as _get_cached_stats_impl,
+    get_error_stats as _get_error_stats_impl,
     handle_critical_memory as _handle_critical_memory_impl,
     handle_warning_memory as _handle_warning_memory_impl,
     is_memory_available as _is_memory_available_impl,
@@ -26,12 +26,6 @@ if TYPE_CHECKING:
     from ..interfaces import MemoryMonitorLike
 
 logger = get_logger(__name__)
-
-
-def _collect_garbage() -> None:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", ResourceWarning)
-        gc.collect()
 
 
 @dataclass
@@ -60,49 +54,7 @@ class MemoryMonitor:
         self.critical_callback: Callable[[dict[str, Any]], Any] | None = None
 
     def check_memory(self, force: bool = False) -> dict[str, Any]:
-        now = time.time()
-        if not force and (now - self.last_check) < self.check_interval:
-            return self._get_cached_stats()
-
-        with self.lock:
-            try:
-                memory_info = self.process.memory_info()
-                memory_mb = memory_info.rss / 1024 / 1024
-                self.peak_memory_mb = max(self.peak_memory_mb, memory_mb)
-
-                system_memory = psutil.virtual_memory()
-                system_memory_mb = system_memory.total / 1024 / 1024
-                system_available_mb = system_memory.available / 1024 / 1024
-                process_usage_percent = memory_mb / self.limits.max_process_memory_mb
-                system_usage_percent = system_memory.percent / 100.0
-                self.last_check = now
-
-                stats = {
-                    "process_memory_mb": memory_mb,
-                    "process_memory_limit_mb": self.limits.max_process_memory_mb,
-                    "process_usage_percent": process_usage_percent,
-                    "system_memory_total_mb": system_memory_mb,
-                    "system_memory_available_mb": system_available_mb,
-                    "system_usage_percent": system_usage_percent,
-                    "peak_memory_mb": self.peak_memory_mb,
-                    "memory_warnings": self.memory_warnings,
-                    "gc_count": self.gc_count,
-                    "status": "normal",
-                }
-
-                if process_usage_percent >= self.limits.memory_critical_threshold:
-                    stats["status"] = "critical"
-                    self._handle_critical_memory(stats)
-                elif process_usage_percent >= self.limits.memory_warning_threshold:
-                    stats["status"] = "warning"
-                    self._handle_warning_memory(stats)
-                elif process_usage_percent >= self.limits.gc_trigger_threshold:
-                    self._trigger_gc()
-
-                return stats
-            except Exception as exc:
-                logger.error("Error checking memory: %s", exc)
-                return self._get_error_stats()
+        return _check_memory_impl(self, force=force, logger=logger)
 
     def _handle_warning_memory(self, stats: dict[str, Any]) -> None:
         _handle_warning_memory_impl(self, stats, logger=logger)
@@ -112,10 +64,7 @@ class MemoryMonitor:
 
     def _trigger_gc(self, aggressive: bool = False) -> None:
         self.gc_count = _trigger_gc_impl(
-            _collect_garbage,
-            aggressive=aggressive,
-            logger=logger,
-            gc_count=self.gc_count,
+            aggressive=aggressive, logger=logger, gc_count=self.gc_count
         )
 
     def _get_cached_stats(self) -> dict[str, Any]:
@@ -126,15 +75,7 @@ class MemoryMonitor:
         )
 
     def _get_error_stats(self) -> dict[str, Any]:
-        # Report status as "unknown" instead of "normal" (0% usage) to prevent
-        # callers from treating memory-check failures as "all is well".
-        return {
-            "process_memory_mb": 0.0,
-            "process_memory_limit_mb": self.limits.max_process_memory_mb,
-            "process_usage_percent": 0.0,
-            "status": "unknown",
-            "memory_check_failed": True,
-        }
+        return _get_error_stats_impl(self.limits.max_process_memory_mb)
 
     def is_memory_available(self, required_mb: float) -> bool:
         return _is_memory_available_impl(self, required_mb)
@@ -219,8 +160,7 @@ def get_global_memory_monitor() -> MemoryMonitor:
 
 
 class _MemoryMonitorProxy:
-    """Thin proxy so that ``global_memory_monitor.xxx`` still works at
-    module level without eagerly creating the real instance."""
+    """Lazy module-level proxy: forwards attribute access to the singleton."""
 
     def __getattr__(self, name: str) -> Any:
         return getattr(get_global_memory_monitor(), name)
@@ -229,7 +169,7 @@ class _MemoryMonitorProxy:
         setattr(get_global_memory_monitor(), name, value)
 
 
-global_memory_monitor: MemoryMonitor = _MemoryMonitorProxy()  # type: ignore[assignment]
+global_memory_monitor: MemoryMonitor = cast("MemoryMonitor", _MemoryMonitorProxy())
 
 
 def get_memory_stats() -> dict[str, Any]:

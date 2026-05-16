@@ -31,6 +31,20 @@ def init_retry_stats() -> dict[str, Any]:
     }
 
 
+def get_stats(retry_stats: Any, lock: Any) -> dict[str, Any]:
+    with lock:
+        total = retry_stats["total_retries"]
+        successful = retry_stats["successful_retries"]
+        return {
+            "total_retries": total,
+            "successful_retries": successful,
+            "failed_after_retries": retry_stats["failed_after_retries"],
+            "success_rate": successful / max(1, total) * 100,
+            "commands_retried": dict(retry_stats["commands_retried"]),
+            "error_types_retried": dict(retry_stats["error_types_retried"]),
+        }
+
+
 def is_retryable_command(command: str, unstable_commands: tuple[str, ...]) -> bool:
     command_base = command.split(" ", 1)[0].strip()
     return bool(command_base) and command_base in unstable_commands

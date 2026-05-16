@@ -22,6 +22,11 @@ from ..infrastructure.logging import get_logger
 from .policies import ErrorHandlingStrategy, ErrorPolicy
 from .unified_handler_circuit_support import (
     CircuitBreakerState,
+    # Re-exported as part of this facade's public surface (consumed by
+    # callers and tests via r2inspect.error_handling.unified_handler).
+    CircuitState as CircuitState,
+    _circuit_breakers as _circuit_breakers,
+    _circuit_lock as _circuit_lock,
     get_circuit_breaker as _get_circuit_breaker_impl,
     get_circuit_breaker_stats as _get_circuit_breaker_stats_impl,
     reset_circuit_breakers as _reset_circuit_breakers_impl,

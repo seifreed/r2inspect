@@ -159,9 +159,12 @@ def test_record_failure_above_threshold_stays_open():
 # ---------------------------------------------------------------------------
 
 
-def test_should_attempt_reset_no_failure_time_returns_false():
+def test_should_attempt_reset_no_failure_time_returns_true():
+    # Documented safety behavior: an OPEN circuit with no recorded failure
+    # time must still be allowed to reset, otherwise it could stay stuck
+    # OPEN forever (see _should_attempt_reset in unified_handler_circuit_support).
     cb = CircuitBreakerState(_make_policy(circuit_timeout=10))
-    assert cb._should_attempt_reset() is False
+    assert cb._should_attempt_reset() is True
 
 
 def test_should_attempt_reset_before_timeout_returns_false():

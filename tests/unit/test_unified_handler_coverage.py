@@ -112,9 +112,11 @@ def test_circuit_breaker_record_success_from_closed_resets_count():
 
 
 def test_circuit_breaker_should_attempt_reset_no_failure_time():
+    # No recorded failure time -> reset is allowed (documented safety path
+    # so a circuit cannot get permanently stuck OPEN).
     policy = _make_policy(circuit_timeout=60)
     cb = CircuitBreakerState(policy)
-    assert cb._should_attempt_reset() is False
+    assert cb._should_attempt_reset() is True
 
 
 def test_circuit_breaker_should_not_attempt_reset_before_timeout():
