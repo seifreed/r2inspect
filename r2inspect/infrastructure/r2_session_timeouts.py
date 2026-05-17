@@ -8,8 +8,6 @@ import threading
 import time
 from typing import Any
 
-import r2pipe
-
 
 def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger: Any) -> Any:
     result_holder: dict[str, Any] = {"r2": None, "error": None}
@@ -17,7 +15,7 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
 
     def _runner() -> None:
         try:
-            r2 = r2pipe.open(session.filename, flags=flags)
+            r2 = session._opener(session.filename, flags=flags)
             # If we timed out while opening, close the orphan immediately
             if timed_out.is_set():
                 try:

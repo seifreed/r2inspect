@@ -3,6 +3,7 @@
 
 import os
 import platform
+from collections.abc import Callable
 from types import TracebackType
 from typing import Any, Literal
 
@@ -54,14 +55,17 @@ class R2Session:
         _cleanup_required: Flag indicating if cleanup is needed
     """
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, opener: Callable[..., Any] | None = None):
         """
         Initialize R2Session with a file path.
 
         Args:
             filename: Path to the binary file to analyze
+            opener: r2pipe-compatible opener; defaults to ``r2pipe.open``.
+                Tests inject a deterministic opener instead of patching r2pipe.
         """
         self.filename = filename
+        self._opener: Callable[..., Any] = opener if opener is not None else r2pipe.open
         self.r2: Any | None = None
         self._cleanup_required = False
         self._test_mode = os.environ.get("R2INSPECT_TEST_MODE", "").lower() in {

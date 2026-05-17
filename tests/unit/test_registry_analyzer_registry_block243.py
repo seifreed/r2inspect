@@ -1,4 +1,3 @@
-import os
 from types import SimpleNamespace
 
 import pytest
@@ -50,7 +49,7 @@ def test_analyzer_metadata_validation_and_format_support():
         AnalyzerMetadata(name="demo", analyzer_class=DemoAnalyzer, category="bad")  # type: ignore[arg-type]
 
 
-def test_registry_base_analyzer_and_auto_extract(monkeypatch):
+def test_registry_base_analyzer_and_auto_extract():
     registry = AnalyzerRegistry(lazy_loading=False)
     assert registry.is_base_analyzer(DemoAnalyzer) is True
     assert registry.is_base_analyzer(BadAnalyzer) is False
@@ -116,7 +115,7 @@ def test_registry_validate_analyzer_and_category_parse():
         registry._parse_category(123)
 
 
-def test_registry_lazy_registration_and_fallback(monkeypatch):
+def test_registry_lazy_registration_and_fallback():
     registry = AnalyzerRegistry(lazy_loading=True)
 
     registry.register(
@@ -167,7 +166,7 @@ def test_registry_execution_order_and_cycles():
         registry.resolve_execution_order(["missing"])
 
 
-def test_registry_entry_points(monkeypatch):
+def test_registry_entry_points():
     registry = AnalyzerRegistry(lazy_loading=False)
 
     class EP:
@@ -183,12 +182,9 @@ def test_registry_entry_points(monkeypatch):
 
     eps = [EP("provider", provider), EP("class", DemoAnalyzer), EP("bad", 123)]
 
-    monkeypatch.setattr(
-        "r2inspect.registry.entry_points.entry_points",
-        lambda: SimpleNamespace(select=lambda group=None: eps),
+    loaded = registry.load_entry_points(
+        entry_points_fn=lambda: SimpleNamespace(select=lambda group=None: eps)
     )
-
-    loaded = registry.load_entry_points()
     assert loaded == 2
     assert registry.is_registered("prov") is True
 
