@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import sys
 import threading
 from pathlib import Path
 
@@ -72,34 +71,22 @@ def test_get_ssdeep_double_check_inside_lock() -> None:
     assert results[0] is original_module
 
 
+def _raise_ssdeep_import_error() -> object:
+    raise ImportError("Blocked for test")
+
+
 def test_get_ssdeep_returns_none_when_import_blocked() -> None:
     """get_ssdeep returns None and caches None when ssdeep import is blocked."""
     import r2inspect.infrastructure.ssdeep_loader as sl
 
     original_module = sl._ssdeep_module
-    original_ssdeep_in_sys = sys.modules.get("ssdeep", _SENTINEL := object())
-
-    class _BlockSSDeep:
-        def find_spec(self, name, path, target=None):
-            if name == "ssdeep":
-                raise ImportError("Blocked for test")
-            return None
-
-    blocker = _BlockSSDeep()
-    sys.meta_path.insert(0, blocker)
-    sys.modules.pop("ssdeep", None)
     sl._ssdeep_module = None
 
     try:
-        result = sl.get_ssdeep()
+        result = sl.get_ssdeep(importer=_raise_ssdeep_import_error)
         assert result is None
         assert sl._ssdeep_module is None
     finally:
-        sys.meta_path.remove(blocker)
-        if original_ssdeep_in_sys is _SENTINEL:
-            sys.modules.pop("ssdeep", None)
-        else:
-            sys.modules["ssdeep"] = original_ssdeep_in_sys
         sl._ssdeep_module = original_module
 
 

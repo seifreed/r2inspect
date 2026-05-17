@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -130,22 +129,20 @@ def test_hashing_utils(tmp_path: Path) -> None:
         assert ssdeep
 
 
+def _raise_ssdeep_import_error() -> object:
+    raise ImportError("ssdeep blocked for test")
+
+
 def test_ssdeep_loader_success_and_failure() -> None:
     ssdeep_loader._ssdeep_module = None
     module = ssdeep_loader.get_ssdeep()
     if module is not None:
         assert ssdeep_loader.get_ssdeep() is module
 
-    original_sys_path = list(sys.path)
-    original_module = sys.modules.pop("ssdeep", None)
     try:
-        sys.path = []
         ssdeep_loader._ssdeep_module = None
-        assert ssdeep_loader.get_ssdeep() is None
+        assert ssdeep_loader.get_ssdeep(importer=_raise_ssdeep_import_error) is None
     finally:
-        sys.path = original_sys_path
-        if original_module is not None:
-            sys.modules["ssdeep"] = original_module
         ssdeep_loader._ssdeep_module = None
 
 

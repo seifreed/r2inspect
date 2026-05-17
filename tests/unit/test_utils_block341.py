@@ -218,31 +218,34 @@ def test_hashing_utils(tmp_path) -> None:
 
 
 def test_ssdeep_loader_cache() -> None:
-    sentinel = object()
-    ssdeep_loader._ssdeep_module = sentinel
-    assert ssdeep_loader.get_ssdeep() is sentinel
-
-    ssdeep_loader._ssdeep_module = None
-    fake = ModuleType("ssdeep")
-
-    def _hash_from_file(_path: str):
-        return "hash"
-
-    fake.hash_from_file = _hash_from_file
-    sys.modules["ssdeep"] = fake
+    # _ssdeep_module is a process-global cache: snapshot and restore it so
+    # this test never poisons get_ssdeep() for tests that run afterwards.
+    original_module = ssdeep_loader._ssdeep_module
     try:
-        module = ssdeep_loader.get_ssdeep()
+        sentinel = object()
+        ssdeep_loader._ssdeep_module = sentinel
+        assert ssdeep_loader.get_ssdeep() is sentinel
+
+        ssdeep_loader._ssdeep_module = None
+        fake = ModuleType("ssdeep")
+
+        def _hash_from_file(_path: str):
+            return "hash"
+
+        fake.hash_from_file = _hash_from_file
+        module = ssdeep_loader.get_ssdeep(importer=lambda: fake)
         assert module is fake
-    finally:
-        sys.modules.pop("ssdeep", None)
+
         ssdeep_loader._ssdeep_module = None
 
-    class BadModule:
-        def hash_from_file(self, _path: str) -> str:
-            raise RuntimeError("boom")
+        class BadModule:
+            def hash_from_file(self, _path: str) -> str:
+                raise RuntimeError("boom")
 
-    ssdeep_loader._ssdeep_module = BadModule()
-    assert hashing_utils.calculate_ssdeep("/tmp/missing") is None
+        ssdeep_loader._ssdeep_module = BadModule()
+        assert hashing_utils.calculate_ssdeep("/tmp/missing") is None
+    finally:
+        ssdeep_loader._ssdeep_module = original_module
 
 
 def test_error_handler_and_recovery() -> None:
