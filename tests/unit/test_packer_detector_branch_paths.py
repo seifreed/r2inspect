@@ -8,7 +8,6 @@ import pytest
 
 from r2inspect.modules.packer_detector import PackerDetector
 
-
 # ---------------------------------------------------------------------------
 # Stub helpers
 # ---------------------------------------------------------------------------
@@ -405,21 +404,19 @@ def test_calculate_heuristic_score_handles_non_mapping_summary():
     assert score == 0.0
 
 
-def test_search_hex_routes_through_search_helper(monkeypatch):
-    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
-    sentinel = "0xdeadbeef"
+def test_search_hex_routes_through_search_helper():
+    class _HexSearchAdapter(AdapterWithAllMethods):
+        def search_hex(self, pattern: str) -> str:
+            return "0xdeadbeef"
 
-    monkeypatch.setattr(
-        "r2inspect.modules.packer_detector.search_hex", lambda *_args, **_kwargs: sentinel
-    )
-    assert detector._search_hex("aa") == sentinel
+    detector = PackerDetector(_HexSearchAdapter(), StubConfig())
+    assert detector._search_hex("aa") == "0xdeadbeef"
 
 
-def test_search_text_routes_through_search_helper(monkeypatch):
-    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
-    sentinel = "match"
+def test_search_text_routes_through_search_helper():
+    class _TextSearchAdapter(AdapterWithAllMethods):
+        def search_text(self, pattern: str) -> str:
+            return "match"
 
-    monkeypatch.setattr(
-        "r2inspect.modules.packer_detector.search_text", lambda *_args, **_kwargs: sentinel
-    )
-    assert detector._search_text("hello") == sentinel
+    detector = PackerDetector(_TextSearchAdapter(), StubConfig())
+    assert detector._search_text("hello") == "match"

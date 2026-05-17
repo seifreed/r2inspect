@@ -6,10 +6,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import pytest
 
 from r2inspect.modules import pe_info
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +22,17 @@ class StubLogger:
         self.errors: list[str] = []
         self.debugs: list[str] = []
 
-    def error(self, msg: str) -> None:
-        self.errors.append(msg)
+    @staticmethod
+    def _fmt(msg: str, args: tuple[Any, ...]) -> str:
+        return msg % args if args else msg
 
-    def debug(self, msg: str) -> None:
-        self.debugs.append(msg)
+    def error(self, msg: str, *args: Any) -> None:
+        self.errors.append(self._fmt(msg, args))
 
-    def warning(self, msg: str) -> None:
+    def debug(self, msg: str, *args: Any) -> None:
+        self.debugs.append(self._fmt(msg, args))
+
+    def warning(self, msg: str, *args: Any) -> None:
         pass
 
 
@@ -180,14 +182,13 @@ def test_fetch_pe_header_returns_dict_or_none_for_valid_adapter():
     assert result is None or isinstance(result, dict)
 
 
-def test_fetch_pe_header_logs_and_returns_none_when_get_pe_headers_raises(monkeypatch):
+def test_fetch_pe_header_logs_and_returns_none_when_get_pe_headers_raises():
     log = StubLogger()
 
     def _raise(_adapter):
         raise RuntimeError("boom headers")
 
-    monkeypatch.setattr(pe_info, "get_pe_headers", _raise)
-    result = pe_info._fetch_pe_header(AdapterWithFullBin(), log)
+    result = pe_info._fetch_pe_header(AdapterWithFullBin(), log, get_pe_headers_fn=_raise)
     assert result is None
     assert any("Could not get PE header details" in msg for msg in log.debugs)
 
@@ -272,14 +273,15 @@ def test_get_file_characteristics_returns_empty_on_exception():
     assert len(log.errors) > 0
 
 
-def test_get_file_characteristics_falls_back_to_bin_when_get_pe_headers_raises(monkeypatch):
+def test_get_file_characteristics_falls_back_to_bin_when_get_pe_headers_raises():
     log = StubLogger()
 
     def _raise(_adapter):
         raise RuntimeError("header parse failed")
 
-    monkeypatch.setattr(pe_info, "get_pe_headers", _raise)
-    result = pe_info.get_file_characteristics(AdapterWithFullBin(), "sample.exe", log)
+    result = pe_info.get_file_characteristics(
+        AdapterWithFullBin(), "sample.exe", log, get_pe_headers_fn=_raise
+    )
     assert "has_debug" in result
     assert "is_dll" in result
     assert any("Could not get PE characteristics" in msg for msg in log.debugs)

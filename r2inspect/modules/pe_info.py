@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from ..infrastructure.r2_helpers import get_pe_headers
@@ -48,9 +49,13 @@ def get_pe_headers_info(adapter: Any, filepath: str | None, logger: Any) -> dict
     return info
 
 
-def _fetch_pe_header(adapter: Any, logger: Any) -> dict[str, Any] | None:
+def _fetch_pe_header(
+    adapter: Any,
+    logger: Any,
+    get_pe_headers_fn: Callable[[Any], Any] | None = None,
+) -> dict[str, Any] | None:
     try:
-        return get_pe_headers(adapter)
+        return (get_pe_headers_fn or get_pe_headers)(adapter)
     except Exception as exc:
         logger.debug("Could not get PE header details: %s", exc)
         return None
@@ -81,7 +86,12 @@ def _get_file_description(filepath: str | None, logger: Any) -> str | None:
         return None
 
 
-def get_file_characteristics(adapter: Any, filepath: str | None, logger: Any) -> dict[str, Any]:
+def get_file_characteristics(
+    adapter: Any,
+    filepath: str | None,
+    logger: Any,
+    get_pe_headers_fn: Callable[[Any], Any] | None = None,
+) -> dict[str, Any]:
     characteristics: dict[str, Any] = {}
     try:
         pe_info = adapter.get_file_info()
@@ -90,7 +100,7 @@ def get_file_characteristics(adapter: Any, filepath: str | None, logger: Any) ->
             characteristics["has_debug"] = "debug" in bin_info
 
             try:
-                pe_header = get_pe_headers(adapter)
+                pe_header = (get_pe_headers_fn or get_pe_headers)(adapter)
                 header_flags = characteristics_from_header(pe_header)
                 if header_flags:
                     characteristics.update(header_flags)
