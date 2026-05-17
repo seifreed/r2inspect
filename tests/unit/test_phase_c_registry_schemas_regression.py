@@ -130,24 +130,38 @@ def test_dict_to_model_non_strict_constructs_invalid_data() -> None:
 
 
 def test_convert_results_swallows_conversion_error_when_strict_false() -> None:
-    class _ExplodingModel(BaseModel):  # pragma: no cover
+    class _ExplodingModel(BaseModel):
         available: int
 
-    converters.ResultConverter._schema_registry.clear()
-    converters.ResultConverter.register_schema("broken", _ExplodingModel)
+    # _schema_registry is process-global class state: snapshot + restore so
+    # clearing it here cannot wipe the import-time defaults for later tests.
+    _original = dict(converters.ResultConverter._schema_registry)
+    try:
+        converters.ResultConverter._schema_registry.clear()
+        converters.ResultConverter.register_schema("broken", _ExplodingModel)
 
-    converted = converters.ResultConverter.convert_results({"broken": "not-a-dict"}, strict=False)
-    assert converted["broken"] == "not-a-dict"
+        converted = converters.ResultConverter.convert_results(
+            {"broken": "not-a-dict"}, strict=False
+        )
+        assert converted["broken"] == "not-a-dict"
+    finally:
+        converters.ResultConverter._schema_registry.clear()
+        converters.ResultConverter._schema_registry.update(_original)
 
 
 def test_convert_results_raises_nothing_and_returns_raw_when_model_conversion_fails() -> None:
     class _ExplodingModel(BaseModel):
         available: int
 
-    converters.ResultConverter._schema_registry.clear()
-    converters.ResultConverter.register_schema("broken", _ExplodingModel)
+    _original = dict(converters.ResultConverter._schema_registry)
+    try:
+        converters.ResultConverter._schema_registry.clear()
+        converters.ResultConverter.register_schema("broken", _ExplodingModel)
 
-    converted = converters.ResultConverter.convert_results(
-        {"broken": "also-not-a-dict"}, strict=True
-    )
-    assert "broken" not in converted
+        converted = converters.ResultConverter.convert_results(
+            {"broken": "also-not-a-dict"}, strict=True
+        )
+        assert "broken" not in converted
+    finally:
+        converters.ResultConverter._schema_registry.clear()
+        converters.ResultConverter._schema_registry.update(_original)

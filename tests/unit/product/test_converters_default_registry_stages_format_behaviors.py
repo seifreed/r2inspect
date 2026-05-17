@@ -66,20 +66,27 @@ def test_converters_strict_and_validation_behaviors() -> None:
     assert "error" not in model_to_dict(base, exclude_none=True)
     assert validate_result(base) is True
 
-    ResultConverter._schema_registry.clear()
-    ResultConverter.register_schema("demo_hash", AnalysisResultBase)
-    converted = ResultConverter.convert_result("demo_hash", {"available": True}, strict=True)
-    assert converted.analyzer_name == "demo_hash"
+    # _schema_registry is process-global class state: snapshot + restore so
+    # clearing it here cannot wipe the import-time defaults for later tests.
+    _original = dict(ResultConverter._schema_registry)
+    try:
+        ResultConverter._schema_registry.clear()
+        ResultConverter.register_schema("demo_hash", AnalysisResultBase)
+        converted = ResultConverter.convert_result("demo_hash", {"available": True}, strict=True)
+        assert converted.analyzer_name == "demo_hash"
 
-    converted_many = ResultConverter.convert_results(
-        {
-            "demo_hash": {"available": True},
-            "unknown_hash": {"available": True},
-        },
-        strict=False,
-    )
-    assert set(converted_many) == {"demo_hash", "unknown_hash"}
-    assert isinstance(ResultConverter.list_registered_schemas(), dict)
+        converted_many = ResultConverter.convert_results(
+            {
+                "demo_hash": {"available": True},
+                "unknown_hash": {"available": True},
+            },
+            strict=False,
+        )
+        assert set(converted_many) == {"demo_hash", "unknown_hash"}
+        assert isinstance(ResultConverter.list_registered_schemas(), dict)
+    finally:
+        ResultConverter._schema_registry.clear()
+        ResultConverter._schema_registry.update(_original)
 
     assert safe_convert(None, _Model, default=_Model(name="fallback")).name == "fallback"
 

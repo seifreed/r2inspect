@@ -165,50 +165,57 @@ def test_security_schema_helpers():
 
 
 def test_converters_and_safe_convert():
-    ResultConverter._schema_registry.clear()
-    ResultConverter.register_schema("ssdeep", HashAnalysisResult)
+    # _schema_registry is process-global class state: snapshot + restore so
+    # clearing it here cannot wipe the import-time defaults for later tests.
+    _original = dict(ResultConverter._schema_registry)
+    try:
+        ResultConverter._schema_registry.clear()
+        ResultConverter.register_schema("ssdeep", HashAnalysisResult)
 
-    schema = ResultConverter.get_schema("SSDEEP")
-    assert schema is HashAnalysisResult
+        schema = ResultConverter.get_schema("SSDEEP")
+        assert schema is HashAnalysisResult
 
-    ok = dict_to_model(
-        {"available": True, "hash_type": "ssdeep", "hash_value": "x"}, HashAnalysisResult
-    )
-    assert ok.hash_type == "ssdeep"
+        ok = dict_to_model(
+            {"available": True, "hash_type": "ssdeep", "hash_value": "x"}, HashAnalysisResult
+        )
+        assert ok.hash_type == "ssdeep"
 
-    with pytest.raises(ValidationError):
-        dict_to_model(
+        with pytest.raises(ValidationError):
+            dict_to_model(
+                {"available": True, "hash_type": "bad", "hash_value": "x"},
+                HashAnalysisResult,
+                strict=True,
+            )
+
+        invalid = dict_to_model(
             {"available": True, "hash_type": "bad", "hash_value": "x"},
             HashAnalysisResult,
-            strict=True,
+            strict=False,
         )
+        assert invalid.hash_type == "bad"
 
-    invalid = dict_to_model(
-        {"available": True, "hash_type": "bad", "hash_value": "x"},
-        HashAnalysisResult,
-        strict=False,
-    )
-    assert invalid.hash_type == "bad"
+        as_dict = model_to_dict(ok)
+        assert as_dict["hash_type"] == "ssdeep"
+        assert validate_result(ok) is True
 
-    as_dict = model_to_dict(ok)
-    assert as_dict["hash_type"] == "ssdeep"
-    assert validate_result(ok) is True
+        converted = ResultConverter.convert_result(
+            "ssdeep", {"available": True, "hash_type": "ssdeep", "hash_value": "x"}
+        )
+        assert isinstance(converted, HashAnalysisResult)
 
-    converted = ResultConverter.convert_result(
-        "ssdeep", {"available": True, "hash_type": "ssdeep", "hash_value": "x"}
-    )
-    assert isinstance(converted, HashAnalysisResult)
+        results = ResultConverter.convert_results(
+            {"ssdeep": {"available": True, "hash_type": "bad", "hash_value": "x"}},
+            strict=False,
+        )
+        assert isinstance(results["ssdeep"], HashAnalysisResult)
+        assert results["ssdeep"].hash_type == "bad"
 
-    results = ResultConverter.convert_results(
-        {"ssdeep": {"available": True, "hash_type": "bad", "hash_value": "x"}},
-        strict=False,
-    )
-    assert isinstance(results["ssdeep"], HashAnalysisResult)
-    assert results["ssdeep"].hash_type == "bad"
-
-    assert safe_convert(None, HashAnalysisResult) is None
-    assert safe_convert("nope", HashAnalysisResult, default=ok) is ok
-    assert safe_convert(ok, HashAnalysisResult) is ok
+        assert safe_convert(None, HashAnalysisResult) is None
+        assert safe_convert("nope", HashAnalysisResult, default=ok) is ok
+        assert safe_convert(ok, HashAnalysisResult) is ok
+    finally:
+        ResultConverter._schema_registry.clear()
+        ResultConverter._schema_registry.update(_original)
 
 
 def test_security_validators_path_and_yara(tmp_path: Path):
