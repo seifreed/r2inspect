@@ -128,7 +128,6 @@ def test_analyze_command_print_status_when_console_output(tmp_path):
 def test_batch_command_setup_batch_mode_defaults_output(tmp_path):
     cmd = BatchCommand(_make_context(tmp_path))
     recursive, auto_detect, output = cmd._setup_batch_mode(
-        _batch="/tmp",
         extensions=None,
         output_json=True,
         output_csv=False,

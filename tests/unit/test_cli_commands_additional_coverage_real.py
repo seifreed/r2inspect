@@ -192,9 +192,7 @@ def test_batch_command_error_and_logging(tmp_path: Path) -> None:
     context = CommandContext.create()
     cmd = _BatchCommandError(context=context)
 
-    recursive, auto_detect, output_dir = cmd._setup_batch_mode(
-        str(tmp_path), None, True, False, None
-    )
+    recursive, auto_detect, output_dir = cmd._setup_batch_mode(None, True, False, None)
     assert recursive is True
     assert auto_detect is True
     assert output_dir == "output"

@@ -45,7 +45,7 @@ def test_cli_batch_processing_signature_and_extension_helpers(tmp_path: Path) ->
 
 
 def test_cli_batch_processing_output_setup_behaviors(tmp_path: Path) -> None:
-    recursive, auto_detect, output = setup_batch_mode("batch", None, False, True, None)
+    recursive, auto_detect, output = setup_batch_mode(None, False, True, None)
     assert recursive is True
     assert auto_detect is True
     assert output == "output"

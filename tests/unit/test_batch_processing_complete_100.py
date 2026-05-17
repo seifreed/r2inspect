@@ -22,7 +22,6 @@ def test_batch_processing_setup_analysis_options_none():
 def test_batch_processing_setup_batch_mode():
     """Test setup_batch_mode returns expected tuple."""
     recursive, auto_detect, output = setup_batch_mode(
-        "/tmp",
         extensions=None,
         output_json=True,
         output_csv=False,
@@ -35,7 +34,6 @@ def test_batch_processing_setup_batch_mode():
 def test_batch_processing_setup_batch_mode_with_output():
     """Test setup_batch_mode with custom output."""
     recursive, auto_detect, output = setup_batch_mode(
-        "/tmp",
         extensions=".exe,.dll",
         output_json=False,
         output_csv=True,

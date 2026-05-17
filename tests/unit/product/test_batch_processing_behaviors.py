@@ -154,7 +154,7 @@ def test_batch_processing_magic_fallback_uses_header_detection(tmp_path: Path) -
 
 
 def test_batch_processing_setup_helpers_cover_default_outputs(tmp_path: Path) -> None:
-    recursive, auto_detect, output = setup_batch_mode("batch", None, True, False, None)
+    recursive, auto_detect, output = setup_batch_mode(None, True, False, None)
     assert recursive is True
     assert auto_detect is True
     assert output == "output"
@@ -164,7 +164,7 @@ def test_batch_processing_setup_helpers_cover_default_outputs(tmp_path: Path) ->
 
 
 def test_batch_processing_support_helpers_cover_output_and_stats(tmp_path: Path, capsys) -> None:
-    recursive, auto_detect, output = setup_batch_mode("batch", None, True, False, None)
+    recursive, auto_detect, output = setup_batch_mode(None, True, False, None)
     assert recursive is True
     assert auto_detect is True
     assert output == "output"

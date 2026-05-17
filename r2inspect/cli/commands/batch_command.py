@@ -25,7 +25,6 @@ class BatchCommand(Command):
         try:
             apply_thread_settings(config, threads)
             recursive, auto_detect, output_dir = self._setup_batch_mode(
-                batch_dir,
                 extensions,
                 args.get("output_json", False),
                 args.get("output_csv", False),
@@ -63,7 +62,6 @@ class BatchCommand(Command):
 
     def _setup_batch_mode(
         self,
-        _batch: str,
         extensions: str | None,
         output_json: bool,
         output_csv: bool,

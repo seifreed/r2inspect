@@ -16,16 +16,9 @@ from r2inspect.cli.batch_processing import (
     _pytest_running,
     _safe_exit,
     check_executable_signature,
-    display_batch_results,
-    display_failed_files,
-    display_memory_stats,
-    display_no_files_message,
-    display_rate_limiter_stats,
     ensure_batch_shutdown,
-    find_executable_files_by_magic,
     find_files_by_extensions,
     find_files_to_process,
-    handle_main_error,
     schedule_forced_exit,
     setup_analysis_options,
     setup_batch_mode,
@@ -419,28 +412,28 @@ def test_setup_batch_output_directory_existing(tmp_path):
 
 
 def test_setup_batch_mode_default():
-    recursive, auto_detect, output = setup_batch_mode("batch", None, False, False, None)
+    recursive, auto_detect, output = setup_batch_mode(None, False, False, None)
     assert recursive is True
     assert auto_detect is True
     assert output is None
 
 
 def test_setup_batch_mode_with_extensions():
-    recursive, auto_detect, output = setup_batch_mode("batch", "exe,dll", False, False, None)
+    recursive, auto_detect, output = setup_batch_mode("exe,dll", False, False, None)
     assert recursive is True
     assert auto_detect is False
     assert output is None
 
 
 def test_setup_batch_mode_with_output():
-    recursive, auto_detect, output = setup_batch_mode("batch", None, True, False, "custom_output")
+    recursive, auto_detect, output = setup_batch_mode(None, True, False, "custom_output")
     assert recursive is True
     assert auto_detect is True
     assert output == "custom_output"
 
 
 def test_setup_batch_mode_auto_output():
-    recursive, auto_detect, output = setup_batch_mode("batch", None, True, False, None)
+    recursive, auto_detect, output = setup_batch_mode(None, True, False, None)
     assert output == "output"
 
 

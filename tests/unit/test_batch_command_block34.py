@@ -10,7 +10,7 @@ def test_batch_command_helpers(tmp_path: Path):
     cmd = BatchCommand(CommandContext.create())
 
     recursive, auto, output = cmd._setup_batch_mode(
-        str(tmp_path), None, output_json=True, output_csv=False, output=None
+        None, output_json=True, output_csv=False, output=None
     )
     assert recursive is True
     assert auto is True

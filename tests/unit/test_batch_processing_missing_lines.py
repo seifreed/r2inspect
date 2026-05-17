@@ -165,7 +165,6 @@ def test_schedule_forced_exit_disabled() -> None:
 def test_setup_batch_mode_with_extensions() -> None:
     """Test setup_batch_mode with extensions specified"""
     recursive, use_auto_detect, output = batch_processing.setup_batch_mode(
-        batch="/tmp",
         extensions=".exe,.dll",
         output_json=False,
         output_csv=False,
@@ -180,7 +179,6 @@ def test_setup_batch_mode_with_extensions() -> None:
 def test_setup_batch_mode_no_extensions_with_output() -> None:
     """Test setup_batch_mode without extensions but with output formats"""
     recursive, use_auto_detect, output = batch_processing.setup_batch_mode(
-        batch="/tmp",
         extensions=None,
         output_json=True,
         output_csv=False,
@@ -195,7 +193,6 @@ def test_setup_batch_mode_no_extensions_with_output() -> None:
 def test_setup_batch_mode_with_output_specified() -> None:
     """Test setup_batch_mode with output already specified"""
     recursive, use_auto_detect, output = batch_processing.setup_batch_mode(
-        batch="/tmp",
         extensions=None,
         output_json=True,
         output_csv=False,

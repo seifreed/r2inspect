@@ -28,7 +28,6 @@ from r2inspect.cli.commands.version_command import VersionCommand
 from r2inspect.config import Config
 from r2inspect.error_handling.policies import ErrorHandlingStrategy, ErrorPolicy
 from r2inspect.error_handling.unified_handler import (
-    get_circuit_breaker_stats,
     handle_errors,
     reset_circuit_breakers,
 )
@@ -553,7 +552,7 @@ def test_batch_command_and_processing_real(tmp_path: Path) -> None:
     context.console = console
 
     batch_cmd = BatchCommand(context)
-    batch_cmd._setup_batch_mode("batch", None, True, False, None)
+    batch_cmd._setup_batch_mode(None, True, False, None)
     batch_cmd._setup_analysis_options(yara="rules", xor="aa")
     batch_cmd._handle_error(RuntimeError("boom"), verbose=False)
 
@@ -952,7 +951,7 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
             output_filename="summary.csv",
         )
 
-        batch_processing.setup_batch_mode("batch", None, True, False, None)
+        batch_processing.setup_batch_mode(None, True, False, None)
         batch_processing.setup_single_file_output(True, False, None, "sample.bin")
         batch_processing.setup_single_file_output(False, True, None, "sample.bin")
         batch_processing.setup_analysis_options(None, None)

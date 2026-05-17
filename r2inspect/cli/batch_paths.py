@@ -10,13 +10,17 @@ from ..application.options import build_analysis_options
 
 
 def setup_batch_mode(
-    _batch: str,
     extensions: str | None,
     output_json: bool,
     output_csv: bool,
     output: str | None,
 ) -> tuple[bool, bool, str | None]:
-    """Setup batch mode parameters."""
+    """Setup batch mode parameters.
+
+    The batch directory is not an input to this normalization (recursion is
+    always on and auto-detect derives from ``extensions``); callers pass only
+    the options.
+    """
     recursive = True
     use_auto_detect = not extensions
 

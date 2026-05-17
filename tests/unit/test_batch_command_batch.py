@@ -8,17 +8,13 @@ All unittest.mock usage replaced with concrete fakes.
 """
 
 import logging
-from io import StringIO
-from pathlib import Path
 from typing import Any
 
 import pytest
-from rich.console import Console
 
 from r2inspect.cli.commands.batch_command import BatchCommand
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.config import Config
-
 
 # ---------------------------------------------------------------------------
 # Concrete fakes
@@ -336,7 +332,6 @@ def test_execute_exception_normal(sample_batch_dir):
 def test_setup_batch_mode_default():
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
-        _batch="/path/to/batch",
         extensions=None,
         output_json=False,
         output_csv=False,
@@ -350,7 +345,6 @@ def test_setup_batch_mode_default():
 def test_setup_batch_mode_with_extensions():
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
-        _batch="/path/to/batch",
         extensions="exe,dll",
         output_json=False,
         output_csv=False,
@@ -364,7 +358,6 @@ def test_setup_batch_mode_with_extensions():
 def test_setup_batch_mode_json_output():
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
-        _batch="/path/to/batch",
         extensions=None,
         output_json=True,
         output_csv=False,
@@ -378,7 +371,6 @@ def test_setup_batch_mode_json_output():
 def test_setup_batch_mode_csv_output():
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
-        _batch="/path/to/batch",
         extensions=None,
         output_json=False,
         output_csv=True,
@@ -392,7 +384,6 @@ def test_setup_batch_mode_csv_output():
 def test_setup_batch_mode_custom_output():
     command = BatchCommand()
     recursive, auto_detect, output_dir = command._setup_batch_mode(
-        _batch="/path/to/batch",
         extensions=None,
         output_json=True,
         output_csv=True,

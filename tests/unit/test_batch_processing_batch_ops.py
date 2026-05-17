@@ -163,7 +163,7 @@ def test_display_batch_results_verbose(tmp_path, capsys):
 def test_setup_batch_mode_defaults():
     """Test batch mode setup with defaults."""
     recursive, use_auto_detect, output = setup_batch_mode(
-        batch="test_dir", extensions=None, output_json=False, output_csv=False, output=None
+        extensions=None, output_json=False, output_csv=False, output=None
     )
     assert recursive is True
     assert use_auto_detect is True
@@ -173,7 +173,7 @@ def test_setup_batch_mode_defaults():
 def test_setup_batch_mode_with_extensions():
     """Test batch mode setup with specific extensions."""
     recursive, use_auto_detect, output = setup_batch_mode(
-        batch="test_dir", extensions="exe,dll", output_json=False, output_csv=False, output=None
+        extensions="exe,dll", output_json=False, output_csv=False, output=None
     )
     assert recursive is True
     assert use_auto_detect is False
@@ -182,7 +182,7 @@ def test_setup_batch_mode_with_extensions():
 def test_setup_batch_mode_with_json_output():
     """Test batch mode setup with JSON output."""
     recursive, use_auto_detect, output = setup_batch_mode(
-        batch="test_dir", extensions=None, output_json=True, output_csv=False, output=None
+        extensions=None, output_json=True, output_csv=False, output=None
     )
     assert output == "output"
 
@@ -190,7 +190,7 @@ def test_setup_batch_mode_with_json_output():
 def test_setup_batch_mode_with_csv_output():
     """Test batch mode setup with CSV output."""
     recursive, use_auto_detect, output = setup_batch_mode(
-        batch="test_dir", extensions=None, output_json=False, output_csv=True, output=None
+        extensions=None, output_json=False, output_csv=True, output=None
     )
     assert output == "output"
 
@@ -198,7 +198,6 @@ def test_setup_batch_mode_with_csv_output():
 def test_setup_batch_mode_custom_output():
     """Test batch mode setup with custom output directory."""
     recursive, use_auto_detect, output = setup_batch_mode(
-        batch="test_dir",
         extensions=None,
         output_json=True,
         output_csv=False,

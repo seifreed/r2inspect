@@ -35,7 +35,6 @@ def test_batch_command_setup_batch_mode_defaults_output(tmp_path):
     """Test _setup_batch_mode returns defaults."""
     cmd = BatchCommand(_make_context(tmp_path))
     recursive, auto_detect, output = cmd._setup_batch_mode(
-        _batch="/tmp",
         extensions=None,
         output_json=True,
         output_csv=False,
@@ -70,7 +69,6 @@ def test_batch_command_setup_batch_mode_with_output(tmp_path):
     """Test _setup_batch_mode with custom output path."""
     cmd = BatchCommand(_make_context(tmp_path))
     recursive, auto_detect, output = cmd._setup_batch_mode(
-        _batch="/tmp",
         extensions=".exe",
         output_json=False,
         output_csv=True,
