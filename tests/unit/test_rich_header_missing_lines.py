@@ -2,7 +2,7 @@
 
 All mocks replaced with real objects using FakeR2 + R2PipeAdapter,
 real pefile objects, real temp files, and simple data-holder classes.
-NO mocks, NO monkeypatch, NO @patch.
+NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

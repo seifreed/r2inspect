@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extra coverage tests for function_analyzer module.
 
-No unittest.mock, no MagicMock, no patch. Real Config, real objects, plain adapters.
+No the stdlib mock library, no mock objects, no patch. Real Config, real objects, plain adapters.
 """
 
 import pytest

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for r2inspect/modules/export_analyzer.py - PE/ELF export analysis.
 
-All tests use a real StubAdapter (no mocks, no monkeypatch, no @patch).
+All tests use a real StubAdapter (no mocks, no monkeypatch, no patch decorators).
 The adapter exposes get_exports() and get_function_info(addr) which are the
 two r2 dispatch routes used by ExportAnalyzer via _cmd_list("iEj") and
 _cmd_list("afij @ <addr>").

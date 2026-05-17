@@ -1,6 +1,6 @@
 """Comprehensive tests for simhash analyzer - targeting 13% -> 100% coverage.
 
-Rewritten to use FakeR2 + R2PipeAdapter -- NO mocks, NO monkeypatch, NO @patch.
+Rewritten to use FakeR2 + R2PipeAdapter -- NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for import_analyzer.py - focusing on real analysis without mocks.
 
-No unittest.mock usage; uses real Config objects instead of MagicMock.
+No the stdlib mock library usage; uses real Config objects instead of mock objects.
 """
 
 from r2inspect.config import Config

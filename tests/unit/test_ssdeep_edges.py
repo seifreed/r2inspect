@@ -1,6 +1,6 @@
 """Edge case tests for ssdeep_analyzer.py - library-only implementation.
 
-Zero mocks, zero monkeypatch, zero @patch.  Uses real temp files, the
+Zero mocks, zero monkeypatch, zero patch decorators.  Uses real temp files, the
 ``get_ssdeep_fn`` injection seam, and hand-rolled stub modules.
 """
 

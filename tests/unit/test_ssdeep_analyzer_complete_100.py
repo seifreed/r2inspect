@@ -1,6 +1,6 @@
 """Comprehensive tests for ssdeep_analyzer.py - library-only implementation.
 
-NO mocks, NO monkeypatch, NO @patch.  Uses hand-rolled stub doubles, the
+NO mocks, NO monkeypatch, NO patch decorators.  Uses hand-rolled stub doubles, the
 ``get_ssdeep_fn`` dependency-injection seam, and real temp files to exercise
 every surviving branch in the production code.
 """

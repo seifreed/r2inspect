@@ -1,7 +1,7 @@
 """Coverage-path tests for RichHeaderAnalyzer.
 
 All mocks replaced with real objects using FakeR2 + R2PipeAdapter.
-NO mocks, NO monkeypatch, NO @patch.
+NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations
@@ -607,7 +607,7 @@ def test_rich_header_build_direct_rich_result() -> None:
 
 
 # ---------------------------------------------------------------------------
-# pefile mixin tests - use real lightweight objects instead of MagicMock
+# pefile mixin tests - use real lightweight objects instead of mock objects
 # ---------------------------------------------------------------------------
 
 

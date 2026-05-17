@@ -1,4 +1,4 @@
-"""Comprehensive tests for crypto_analyzer.py -- no mocks, no monkeypatch, no @patch."""
+"""Comprehensive tests for crypto_analyzer.py -- no mocks, no monkeypatch, no patch decorators."""
 
 from __future__ import annotations
 

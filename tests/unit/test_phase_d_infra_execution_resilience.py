@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Resilience-focused regression tests for execution utilities (Fase D).
 
-NO mocks, NO @patch. Uses real objects, monkeypatch, and SimpleNamespace stubs.
+NO mocks, NO patch decorators. Uses real objects, monkeypatch, and SimpleNamespace stubs.
 """
 
 from __future__ import annotations

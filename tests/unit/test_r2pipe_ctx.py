@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for r2pipe_context.py -- zero mocks, zero monkeypatch, zero @patch.
+"""Tests for r2pipe_context.py -- zero mocks, zero monkeypatch, zero patch decorators.
 
 Uses the FakeR2 pattern: a plain object with cmdj_map / cmd_map dicts
 that is fed into R2PipeAdapter.  For the context-manager helpers we test

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for memory_manager.py to achieve 95%+ coverage.
 
-All tests use real MemoryMonitor instances — no mocks, no monkeypatch, no @patch.
+All tests use real MemoryMonitor instances — no mocks, no monkeypatch, no patch decorators.
 """
 
 import gc

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extra coverage tests for schemas/converters module.
 
-No unittest.mock, no MagicMock, no patch. Real objects only.
+No the stdlib mock library, no mock objects, no patch. Real objects only.
 """
 
 import pytest

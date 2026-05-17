@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Branch-path tests for r2inspect/infrastructure/hashing.py.
 
-No unittest.mock, no MagicMock, no patch. Real code only.
+No the stdlib mock library, no mock objects, no patch. Real code only.
 
 Missing lines targeted:
 15-46 (calculate_hashes), 49-65 (calculate_hashes_for_bytes),

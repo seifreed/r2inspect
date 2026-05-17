@@ -1,6 +1,6 @@
 """Phase 2 regression coverage for CLI command parsing output paths and batch output branches.
 
-No unittest.mock, no MagicMock, no patch. Real objects, real Console(file=StringIO()).
+No the stdlib mock library, no mock objects, no patch. Real objects, real Console(file=StringIO()).
 """
 
 from __future__ import annotations

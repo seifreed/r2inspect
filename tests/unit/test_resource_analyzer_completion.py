@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for resource_analyzer - complete coverage.
 
-Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO @patch.
+Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

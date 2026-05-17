@@ -1,6 +1,6 @@
 """
 Comprehensive unit tests for multiple r2inspect modules.
-No mocks, no unittest.mock, no MagicMock, no patch.
+No mocks, no the stdlib mock library, no mock objects, no patch.
 Plain functions, no test classes.
 """
 

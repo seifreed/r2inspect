@@ -1,6 +1,6 @@
 """Tests for cli/commands/interactive_command.py - targeting uncovered handlers.
 
-NO mocks, NO @patch. Uses real Console(file=StringIO()), real CommandContext,
+NO mocks, NO patch decorators. Uses real Console(file=StringIO()), real CommandContext,
 and a FakeInspector stub.
 """
 

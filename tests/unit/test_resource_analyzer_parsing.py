@@ -1,7 +1,7 @@
 """Comprehensive tests for resource_analyzer.py parsing edge cases.
 
 All tests use FakeR2 + R2PipeAdapter -> real ResourceAnalyzer. No mocks,
-no monkeypatch, no @patch.
+no monkeypatch, no patch decorators.
 """
 
 import pytest

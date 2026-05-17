@@ -1,4 +1,4 @@
-"""Section analysis tests -- real code, no mocks, no monkeypatch, no @patch.
+"""Section analysis tests -- real code, no mocks, no monkeypatch, no patch decorators.
 
 Uses FakeR2 + R2PipeAdapter to exercise SectionAnalyzer through the
 production adapter stack.  Section data arrives via the ``iSj`` r2 command;

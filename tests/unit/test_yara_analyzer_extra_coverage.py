@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extra coverage tests for yara_analyzer module.
 
-All tests use real objects — NO mocks, NO monkeypatch, NO @patch.
+All tests use real objects — NO mocks, NO monkeypatch, NO patch decorators.
 YaraAnalyzer is exercised through FakeR2 + R2PipeAdapter.
 Real YARA rule files are created via tmp_path.
 """

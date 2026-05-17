@@ -1,6 +1,6 @@
 """Coverage gap tests for rich_header_analyzer and yara_analyzer.
 
-No unittest.mock / MagicMock / patch.  Module-level attribute monkey-patching is used
+No the stdlib mock library / mock objects / patch.  Module-level attribute monkey-patching is used
 where the real execution path cannot be triggered by input alone.  Every monkey-patch
 is restored in a finally block so tests remain isolated.
 

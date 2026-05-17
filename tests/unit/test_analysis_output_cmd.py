@@ -2,7 +2,7 @@
 """Tests for r2inspect/cli/commands/analysis_output.py - Output formatting and display.
 
 All tests use real objects (Console, OutputFormatter, tmp_path files).
-No mocks, no monkeypatch, no @patch.
+No mocks, no monkeypatch, no patch decorators.
 """
 
 import io

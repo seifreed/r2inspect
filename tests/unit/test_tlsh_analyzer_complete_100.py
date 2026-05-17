@@ -1,7 +1,7 @@
 """Comprehensive tests for tlsh_analyzer.py - 100% coverage target.
 
 All tests use real objects (FakeR2 + R2PipeAdapter pattern).
-NO mocks, NO monkeypatch, NO @patch.
+NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 import os

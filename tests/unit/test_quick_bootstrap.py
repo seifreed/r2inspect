@@ -1,4 +1,4 @@
-"""Tests for scripts/quick_bootstrap.py — no mocks, no monkeypatch, no @patch.
+"""Tests for scripts/quick_bootstrap.py — no mocks, no monkeypatch, no patch decorators.
 
 Every test uses real temp files (tmp_path), real Config objects, real function
 calls, and subprocess for CLI entry-point tests.

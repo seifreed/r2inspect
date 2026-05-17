@@ -1,6 +1,6 @@
 """Infrastructure and security gap tests (phase 3).
 
-NO mocks, NO @patch. Uses real objects, monkeypatch, and plain stubs.
+NO mocks, NO patch decorators. Uses real objects, monkeypatch, and plain stubs.
 """
 
 from __future__ import annotations

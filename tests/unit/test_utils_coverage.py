@@ -1,6 +1,6 @@
 """Tests for file_type, hashing, output_csv, r2_suppress, analyzer_factory, logger, ssdeep_loader, stages_common.
 
-Rules: no mocks, no unittest.mock, no MagicMock, no patch — plain stubs only.
+Rules: no mocks, no the stdlib mock library, no mock objects, no patch — plain stubs only.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for modules/resource_analyzer.py run_resource_analysis function.
 
-Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO @patch.
+Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

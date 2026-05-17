@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive tests for YARA analyzer - complete coverage.
 
-Rewritten to use real code paths: NO mocks, NO monkeypatch, NO @patch.
+Rewritten to use real code paths: NO mocks, NO monkeypatch, NO patch decorators.
 Uses FakeR2Adapter for the adapter and real YARA rule files via tmp_path.
 """
 

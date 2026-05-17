@@ -1,7 +1,7 @@
 """Comprehensive tests for r2pipe_adapter.py - 100% coverage target.
 
 All tests use FakeR2 + real R2PipeAdapter code paths. No mocks, no
-monkeypatch, no @patch.
+monkeypatch, no patch decorators.
 """
 
 import pytest

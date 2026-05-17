@@ -1,6 +1,6 @@
 """Comprehensive tests for telfhash_analyzer.py - hashing functionality.
 
-NO mocks, NO monkeypatch, NO @patch.
+NO mocks, NO monkeypatch, NO patch decorators.
 Uses FakeR2 + R2PipeAdapter for adapter-dependent tests.
 Uses real temporary ELF files for file-based tests.
 """

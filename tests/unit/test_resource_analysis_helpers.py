@@ -1,6 +1,6 @@
 """Tests for run_resource_analysis using real ResourceAnalyzer + FakeR2Adapter.
 
-NO mocks, NO monkeypatch, NO @patch.
+NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

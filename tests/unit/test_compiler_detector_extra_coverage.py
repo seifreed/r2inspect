@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extra coverage tests for compiler_detector module.
 
-No unittest.mock, no MagicMock, no patch. Real objects and plain adapters only.
+No the stdlib mock library, no mock objects, no patch. Real objects and plain adapters only.
 """
 
 import pytest

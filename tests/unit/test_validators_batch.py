@@ -3,7 +3,7 @@
 Comprehensive tests for r2inspect/cli/validators.py module.
 Tests input validation, security checks, and error handling.
 
-NO mocks, NO @patch. Uses real tmp_path, real os.environ, real objects.
+NO mocks, NO patch decorators. Uses real tmp_path, real os.environ, real objects.
 """
 
 import os

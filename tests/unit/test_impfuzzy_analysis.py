@@ -1,4 +1,4 @@
-"""Tests for r2inspect/modules/impfuzzy_analyzer.py -- no mocks, no monkeypatch, no @patch."""
+"""Tests for r2inspect/modules/impfuzzy_analyzer.py -- no mocks, no monkeypatch, no patch decorators."""
 
 from __future__ import annotations
 

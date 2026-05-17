@@ -1,6 +1,6 @@
 """Comprehensive tests for authenticode_analyzer.py - 100% coverage target.
 
-Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO @patch.
+Uses FakeR2 + R2PipeAdapter exclusively. NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for r2pipe_context.py -- no mocks, no monkeypatch, no @patch.
+"""Tests for r2pipe_context.py -- no mocks, no monkeypatch, no patch decorators.
 
 Uses FakeR2 + R2PipeAdapter to test actual adapter behavior through
 the context-manager helpers in r2pipe_context.

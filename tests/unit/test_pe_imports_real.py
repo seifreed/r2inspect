@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for modules/pe_imports.py -- no mocks, no monkeypatch, no @patch.
+"""Tests for modules/pe_imports.py -- no mocks, no monkeypatch, no patch decorators.
 
 Uses FakeR2 + R2PipeAdapter. PE imports use the ``iij`` command.
 """

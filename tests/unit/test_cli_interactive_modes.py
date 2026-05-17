@@ -1,6 +1,6 @@
 """Tests for cli/interactive.py - targeting uncovered code paths.
 
-NO mocks, NO @patch. Uses a real Console(file=StringIO()) and
+NO mocks, NO patch decorators. Uses a real Console(file=StringIO()) and
 a FakeInspector stub to exercise interactive mode functions.
 """
 

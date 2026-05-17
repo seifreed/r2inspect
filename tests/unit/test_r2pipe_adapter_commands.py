@@ -1,6 +1,6 @@
 """Comprehensive tests for adapters/r2pipe_adapter.py commands and error handling.
 
-All tests use FakeR2Adapter + R2PipeAdapter -- NO mocks, NO monkeypatch, NO @patch.
+All tests use FakeR2Adapter + R2PipeAdapter -- NO mocks, NO monkeypatch, NO patch decorators.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Phase A baseline coverage smoke tests.
 
-NO mocks, NO @patch, NO MagicMock. Real objects and dependency injection.
+NO mocks, NO patch decorators, NO mock objects. Real objects and dependency injection.
 """
 
 from __future__ import annotations

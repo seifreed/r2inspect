@@ -2,7 +2,7 @@
 
 All mocks replaced with real objects: FakeR2 + R2PipeAdapter for adapter
 tests, real temp files for file-based tests.  NO mocks, NO monkeypatch,
-NO @patch.
+NO patch decorators.
 """
 
 import os

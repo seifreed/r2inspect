@@ -10,7 +10,7 @@ Wave-3 coverage tests targeting specific missing lines:
 - r2inspect/modules/bindiff_analyzer.py  lines 113-115, 179, 199, 271
 - r2inspect/modules/compiler_detector.py lines 275, 279, 283, 322-324
 
-Rules: no unittest.mock / MagicMock / patch; real code + plain functions only.
+Rules: no the stdlib mock library / mock objects / patch; real code + plain functions only.
 Module-level monkey-patching (saving/restoring originals) is allowed.
 """
 

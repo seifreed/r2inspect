@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for r2inspect/cli/display_base.py — no mocks, no monkeypatch, no @patch.
+"""Tests for r2inspect/cli/display_base.py — no mocks, no monkeypatch, no patch decorators.
 
 Uses real Console(file=StringIO()) to capture output and real data structures.
 """

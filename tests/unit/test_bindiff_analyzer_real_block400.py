@@ -1,6 +1,6 @@
 """Comprehensive tests for bindiff analyzer - targeting 100% coverage.
 
-NO mocks, NO monkeypatch, NO @patch.
+NO mocks, NO monkeypatch, NO patch decorators.
 Uses FakeR2 + R2PipeAdapter for BinDiffAnalyzer through the production
 adapter stack.  Tests domain functions directly where appropriate.
 """

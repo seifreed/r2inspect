@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Supplemental pytest unit tests for uncovered lines.
 
-No mocks, no unittest.mock, no MagicMock, no patch. Stub adapters only
+No mocks, no the stdlib mock library, no mock objects, no patch. Stub adapters only
 (plain classes with the exact methods each analyzer calls).
 """
 

@@ -1,4 +1,4 @@
-"""Tests for anti_analysis branch paths -- no mocks, no monkeypatch, no @patch.
+"""Tests for anti_analysis branch paths -- no mocks, no monkeypatch, no patch decorators.
 
 Uses FakeR2 + R2PipeAdapter for AntiAnalysisDetector.
 """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests targeting missing coverage lines in import_analyzer.py and yara_analyzer.py.
 
-No mocks, no unittest.mock, no MagicMock, no patch. Real code only.
+No mocks, no the stdlib mock library, no mock objects, no patch. Real code only.
 """
 
 from __future__ import annotations

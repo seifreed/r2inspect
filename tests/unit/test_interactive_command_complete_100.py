@@ -1,6 +1,6 @@
 """Comprehensive tests for interactive_command.py - 100% coverage target.
 
-NO mocks, NO @patch. Uses real Console(file=StringIO()), real CommandContext,
+NO mocks, NO patch decorators. Uses real Console(file=StringIO()), real CommandContext,
 and a FakeInspector stub to exercise all code paths.
 """
 

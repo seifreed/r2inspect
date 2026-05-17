@@ -1,7 +1,7 @@
 """Tests for cli/commands/analyze_command.py - edge cases and error paths.
 
 All tests use real objects: real Config, real Console(file=StringIO()),
-real CommandContext, real OutputFormatter. No mocks, no monkeypatch, no @patch.
+real CommandContext, real OutputFormatter. No mocks, no monkeypatch, no patch decorators.
 """
 
 import logging

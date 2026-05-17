@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extra coverage tests for macho_analyzer module.
 
-NO mocks, NO @patch. Uses FakeR2 + R2PipeAdapter and real objects.
+NO mocks, NO patch decorators. Uses FakeR2 + R2PipeAdapter and real objects.
 """
 
 from __future__ import annotations

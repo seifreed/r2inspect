@@ -1,7 +1,7 @@
 """Comprehensive tests for pipeline/analysis_pipeline.py execution paths.
 
 All tests use real AnalysisPipeline, real AnalysisStage subclasses, and real
-ThreadSafeContext -- no mocks, no monkeypatch, no @patch.
+ThreadSafeContext -- no mocks, no monkeypatch, no patch decorators.
 """
 
 from __future__ import annotations
