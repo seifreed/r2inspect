@@ -92,16 +92,15 @@ def test_hashing_strategy_hash_calculation_error(tmp_path: Path) -> None:
     assert result["hash_value"] is None
 
 
-def test_hashing_strategy_unexpected_exception(tmp_path: Path, monkeypatch) -> None:
+def test_hashing_strategy_unexpected_exception(tmp_path: Path) -> None:
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"test")
 
-    strategy = _HashingStrategyHost(str(test_file))
+    class _RaisingCheckHost(_HashingStrategyHost):
+        def _check_library_availability(self) -> tuple[bool, str | None]:
+            raise RuntimeError("Unexpected error")
 
-    def failing_check():
-        raise RuntimeError("Unexpected error")
-
-    monkeypatch.setattr(strategy, "_check_library_availability", failing_check)
+    strategy = _RaisingCheckHost(str(test_file))
     result = strategy.analyze()
 
     assert "Unexpected error in test_hash analysis" in result["error"]
@@ -153,20 +152,18 @@ def test_hashing_strategy_file_too_large(tmp_path: Path) -> None:
     assert "maximum: 100 bytes" in result["error"]
 
 
-def test_hashing_strategy_file_access_error(tmp_path: Path, monkeypatch) -> None:
-    test_file = tmp_path / "test.bin"
-    test_file.write_bytes(b"test")
-
-    strategy = _HashingStrategyHost(str(test_file))
-
+def test_hashing_strategy_file_access_error(tmp_path: Path) -> None:
     import os
 
-    def mock_access(path, mode):
-        return False
+    test_file = tmp_path / "test.bin"
+    test_file.write_bytes(b"test")
+    os.chmod(test_file, 0o000)
 
-    monkeypatch.setattr(os, "access", mock_access)
-
-    result = strategy.analyze()
+    try:
+        strategy = _HashingStrategyHost(str(test_file))
+        result = strategy.analyze()
+    finally:
+        os.chmod(test_file, 0o600)
 
     assert result["available"] is False
     assert "not readable" in result["error"]
@@ -193,7 +190,7 @@ def test_hashing_strategy_get_file_size_success(tmp_path: Path) -> None:
     assert size == 12
 
 
-def test_hashing_strategy_get_file_size_error(monkeypatch) -> None:
+def test_hashing_strategy_get_file_size_error() -> None:
     strategy = _HashingStrategyHost("/nonexistent/file.bin")
     size = strategy.get_file_size()
 
