@@ -26,27 +26,38 @@ import pytest
 # ---------------------------------------------------------------------------
 
 
-# -- lines 68-69: magic import failure path via module reload ---------------
+# -- lines 68-69: magic import-failure path via the resolver seam -----------
+
+
+def _failing_magic_importer() -> Any:
+    raise ImportError("blocked for test")
 
 
 def test_magic_import_failure_sets_magic_none():
-    """Cover except/None branch of the magic import guard."""
-    import importlib
-    import r2inspect.cli.batch_processing as bp
+    """Cover the except->None branch of the magic import guard.
 
-    original_magic = sys.modules.get("magic", "__NOT_PRESENT__")
-    # Block the magic import so the except branch fires on reload
-    sys.modules["magic"] = None  # type: ignore[assignment]
+    Drives the real resolve_magic_module except path through its importer
+    seam (no sys.modules / importlib.reload). The lazy cache sentinel is
+    reset and restored in finally exactly as the runtime manages it.
+    """
+    import r2inspect.cli.batch_processing as bp
+    import r2inspect.cli.batch_discovery_runtime as rt
+
+    saved_bp_magic = bp.magic
+    saved_rt_magic = rt.magic
     try:
-        importlib.reload(bp)
-        # New lazy loader may keep the uninitialized sentinel instead of None.
-        assert bp.magic is None or bp.magic is bp._MAGIC_UNINITIALIZED
+        # Sentinel both caches so _init_magic's resolver re-resolves and
+        # hits the importer (which raises -> except -> magic = None).
+        bp.magic = bp._MAGIC_UNINITIALIZED
+        rt.magic = rt._MAGIC_UNINITIALIZED
+        result = bp._init_magic(
+            resolve_fn=lambda: rt.resolve_magic_module(importer=_failing_magic_importer)
+        )
+        assert result is None
+        assert bp.magic is None
     finally:
-        if original_magic == "__NOT_PRESENT__":
-            sys.modules.pop("magic", None)
-        else:
-            sys.modules["magic"] = original_magic
-        importlib.reload(bp)
+        rt.magic = saved_rt_magic
+        bp.magic = saved_bp_magic
 
 
 # -- line 188: os._exit path in _safe_exit ----------------------------------
