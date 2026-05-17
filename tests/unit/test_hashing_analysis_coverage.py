@@ -6,7 +6,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import pytest
 
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
@@ -14,7 +13,6 @@ from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
-
 
 # ---------------------------------------------------------------------------
 # Stub adapter – covers all adapter method calls used by the analyzers above
@@ -119,13 +117,8 @@ def test_impfuzzy_compare_hashes_none_inputs() -> None:
     assert ImpfuzzyAnalyzer.compare_hashes("abc", "") is None
 
 
-def test_impfuzzy_compare_hashes_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    import r2inspect.modules.impfuzzy_analyzer as mod
-
-    original = mod.IMPFUZZY_AVAILABLE
-    monkeypatch.setattr(mod, "IMPFUZZY_AVAILABLE", False)
-    assert ImpfuzzyAnalyzer.compare_hashes("abc", "abc") is None
-    monkeypatch.setattr(mod, "IMPFUZZY_AVAILABLE", original)
+def test_impfuzzy_compare_hashes_when_unavailable() -> None:
+    assert ImpfuzzyAnalyzer.compare_hashes("abc", "abc", impfuzzy_available=False) is None
 
 
 def test_impfuzzy_calculate_from_nonexistent_file() -> None:
@@ -134,11 +127,11 @@ def test_impfuzzy_calculate_from_nonexistent_file() -> None:
     assert result is None
 
 
-def test_impfuzzy_calculate_from_file_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    import r2inspect.modules.impfuzzy_analyzer as mod
-
-    monkeypatch.setattr(mod, "IMPFUZZY_AVAILABLE", False)
-    assert ImpfuzzyAnalyzer.calculate_impfuzzy_from_file("/any/file.exe") is None
+def test_impfuzzy_calculate_from_file_when_unavailable() -> None:
+    assert (
+        ImpfuzzyAnalyzer.calculate_impfuzzy_from_file("/any/file.exe", impfuzzy_available=False)
+        is None
+    )
 
 
 def test_impfuzzy_process_imports_basic(tmp_path: Path) -> None:

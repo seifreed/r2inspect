@@ -149,7 +149,9 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return _process_imports_impl(imports_data, logger=logger)
 
     @staticmethod
-    def compare_hashes(hash1: str, hash2: str) -> int | None:
+    def compare_hashes(
+        hash1: str, hash2: str, impfuzzy_available: bool | None = None
+    ) -> int | None:
         """
         Compare two impfuzzy hashes and return similarity score.
 
@@ -173,7 +175,9 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return _compare_hashes_impl(
             hash1,
             hash2,
-            impfuzzy_available=IMPFUZZY_AVAILABLE,
+            impfuzzy_available=(
+                IMPFUZZY_AVAILABLE if impfuzzy_available is None else impfuzzy_available
+            ),
             logger=logger,
             get_ssdeep_fn=get_ssdeep,
         )
@@ -189,7 +193,9 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return IMPFUZZY_AVAILABLE
 
     @staticmethod
-    def calculate_impfuzzy_from_file(filepath: str) -> str | None:
+    def calculate_impfuzzy_from_file(
+        filepath: str, impfuzzy_available: bool | None = None
+    ) -> str | None:
         """
         Calculate impfuzzy hash directly from a file path.
 
@@ -201,7 +207,9 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         """
         return _calculate_impfuzzy_from_file_impl(
             filepath,
-            impfuzzy_available=IMPFUZZY_AVAILABLE,
+            impfuzzy_available=(
+                IMPFUZZY_AVAILABLE if impfuzzy_available is None else impfuzzy_available
+            ),
             pyimpfuzzy=pyimpfuzzy,
             logger=logger,
         )
