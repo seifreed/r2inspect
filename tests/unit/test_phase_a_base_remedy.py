@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Phase A baseline coverage smoke tests.
 
-NO mocks, NO @patch, NO MagicMock. Uses real objects and monkeypatch only.
+NO mocks, NO @patch, NO MagicMock. Real objects and dependency injection.
 """
 
 from __future__ import annotations
@@ -43,13 +43,12 @@ def _make_args(**overrides: Any) -> CLIArgs:
     return CLIArgs(**base)
 
 
-def test_main_keyboard_interrupt_exits_with_code_one(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        cli_main, "run_cli", lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt())
-    )
+def test_main_keyboard_interrupt_exits_with_code_one() -> None:
+    def _interrupt(_args: object) -> None:
+        raise KeyboardInterrupt()
 
     with pytest.raises(SystemExit) as exc:
-        main()
+        main(run_cli_fn=_interrupt)
 
     assert exc.value.code == 1
 
@@ -89,7 +88,6 @@ class _FakeCommand:
 def test_dispatch_command_routes_to_expected_command(
     kwargs: dict[str, Any],
     expected_exit: int,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from r2inspect.cli.cli_entry import CommandDispatch
 
@@ -99,14 +97,11 @@ def test_dispatch_command_routes_to_expected_command(
 
     fake = _FakeCommand(expected_exit)
 
-    # Replace build_dispatch at the cli_main module level (where it's imported)
     def _fake_dispatch(_context, _args):
         return CommandDispatch(command=fake, payload={})
 
-    monkeypatch.setattr(cli_main, "build_dispatch", _fake_dispatch)
-
     with pytest.raises(SystemExit) as exc:
-        _dispatch_command(ctx, args)
+        _dispatch_command(ctx, args, build_dispatch_fn=_fake_dispatch)
 
     assert exc.value.code == expected_exit
     assert fake.execute_called

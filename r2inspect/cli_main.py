@@ -23,6 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -63,16 +64,19 @@ class CLIArgs:
     version: bool
 
 
-def main(**kwargs: Any) -> None:
+def main(*, run_cli_fn: Callable[[CLIArgs], None] | None = None, **kwargs: Any) -> None:
     """
     r2inspect - Advanced malware analysis tool using radare2 and r2pipe.
 
     Modular Command Pattern implementation with delegated execution.
+
+    ``run_cli_fn`` defaults to the real ``run_cli``; tests inject a
+    deterministic runner instead of patching the module.
     """
     args: CLIArgs | None = None
     try:
         args = CLIArgs(**kwargs)
-        run_cli(args)
+        (run_cli_fn or run_cli)(args)
     except KeyboardInterrupt:
         console.print("\n[yellow]Analysis interrupted by user[/yellow]")
         sys.exit(1)
@@ -181,9 +185,14 @@ def _build_context(verbose: bool, quiet: bool, batch: str | None) -> CommandCont
 def _dispatch_command(
     context: CommandContext,
     args: CLIArgs,
+    build_dispatch_fn: Callable[[CommandContext, CLIArgs], Any] | None = None,
 ) -> None:
-    """Dispatch to the appropriate command based on CLI arguments."""
-    dispatch = build_dispatch(context, args)
+    """Dispatch to the appropriate command based on CLI arguments.
+
+    ``build_dispatch_fn`` defaults to the real ``build_dispatch``; tests
+    inject a deterministic dispatch builder instead of patching the module.
+    """
+    dispatch = (build_dispatch_fn or build_dispatch)(context, args)
     sys.exit(dispatch.command.execute(dispatch.payload))
 
 
