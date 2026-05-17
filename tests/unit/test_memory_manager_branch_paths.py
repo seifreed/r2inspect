@@ -240,7 +240,9 @@ def test_get_error_stats_returns_zero_memory():
 
     assert stats["process_memory_mb"] == 0.0
     assert stats["process_usage_percent"] == 0.0
-    assert stats["status"] == "error"
+    # Failed-probe fail-safe contract: status="unknown" + memory_check_failed.
+    assert stats["status"] == "unknown"
+    assert stats["memory_check_failed"] is True
     assert "process_memory_limit_mb" in stats
 
 

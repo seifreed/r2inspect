@@ -34,8 +34,12 @@ def test_memory_monitor_gc_trigger_and_error_paths() -> None:
 
     monitor.process = _BadProcess()
     error_stats = monitor.check_memory(force=True)
-    assert error_stats["status"] == "error"
-    assert monitor._get_cached_stats()["status"] == "error"
+    # A failed memory probe is a deliberate fail-safe: status="unknown"
+    # (never "normal"/"error") plus memory_check_failed=True, so callers
+    # never treat a broken probe as "all is well".
+    assert error_stats["status"] == "unknown"
+    assert error_stats["memory_check_failed"] is True
+    assert monitor._get_cached_stats()["status"] == "unknown"
 
 
 def test_memory_monitor_limits_and_safe_ops() -> None:
