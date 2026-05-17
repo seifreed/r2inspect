@@ -49,6 +49,7 @@ class BinDiffAnalyzer:
 
     def __init__(self, adapter: Any, filepath: str) -> None:
         self.adapter = adapter
+        self.r2 = adapter
         self.filepath = filepath
         self.filename = Path(filepath).name
 
