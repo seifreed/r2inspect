@@ -83,6 +83,9 @@ class AnalyzerRegistry(
         else:
             self._lazy_loader = None
         self._base_analyzer_class: type | None = None  # Lazy-loaded to avoid circular imports
+        # DI seam: tests inject a raising importer to exercise the
+        # base-analyzer ImportError path without patching sys.modules.
+        self._base_analyzer_importer: Callable[[], type] | None = None
 
     def load_entry_points(
         self,

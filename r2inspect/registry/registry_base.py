@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
 from typing import Any
 
 from .categories import AnalyzerCategory
@@ -13,13 +14,18 @@ class AnalyzerRegistryBaseMixin:
     """Introspection helpers shared by the analyzer registry."""
 
     _base_analyzer_class: type | None
+    _base_analyzer_importer: Callable[[], type] | None
 
     def _get_base_analyzer_class(self) -> type | None:
         if self._base_analyzer_class is None:
             try:
-                from ..abstractions.base_analyzer import BaseAnalyzer
+                importer = self._base_analyzer_importer
+                if importer is None:
+                    from ..abstractions.base_analyzer import BaseAnalyzer
 
-                self._base_analyzer_class = BaseAnalyzer
+                    self._base_analyzer_class = BaseAnalyzer
+                else:
+                    self._base_analyzer_class = importer()
             except ImportError:
                 pass
         return self._base_analyzer_class

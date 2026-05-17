@@ -293,19 +293,16 @@ def test_registry_registration_error_paths(tmp_path):
         sys.path.remove(str(tmp_path))
 
 
+def _raise_base_analyzer_import_error() -> type:
+    raise ImportError("base_analyzer blocked for test")
+
+
 def test_registry_is_base_analyzer_import_error():
     registry = AnalyzerRegistry(lazy_loading=False)
-    original = sys.modules.get("r2inspect.abstractions.base_analyzer")
-    sys.modules["r2inspect.abstractions.base_analyzer"] = None
     registry._base_analyzer_class = None
-    try:
-        assert registry._get_base_analyzer_class() is None
-        assert registry.is_base_analyzer(_TestAnalyzer()) is False
-    finally:
-        if original is not None:
-            sys.modules["r2inspect.abstractions.base_analyzer"] = original
-        else:
-            del sys.modules["r2inspect.abstractions.base_analyzer"]
+    registry._base_analyzer_importer = _raise_base_analyzer_import_error
+    assert registry._get_base_analyzer_class() is None
+    assert registry.is_base_analyzer(_TestAnalyzer()) is False
 
 
 def test_registry_filters_and_execution_order():
