@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import struct
 from pathlib import Path
 
@@ -9,6 +8,7 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
+from tests.helpers import env_vars
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
@@ -38,46 +38,43 @@ def _open_session(sample: Path) -> tuple[R2Session, R2PipeAdapter]:
     return session, R2PipeAdapter(r2)
 
 
-def test_r2_session_fat_macho_detection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_r2_session_fat_macho_detection(tmp_path: Path) -> None:
     fat_path = tmp_path / "fat.bin"
     header = struct.pack(">I", 0xCAFEBABE) + struct.pack(">I", 1)
     arch_entry = struct.pack(">IIIII", 0x01000007, 0, 0, 0, 0)
     fat_path.write_bytes(header + arch_entry)
 
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "1")
-    monkeypatch.setenv("R2INSPECT_DISABLE_PLUGINS", "1")
-    session = R2Session(str(fat_path))
-    arches = session._detect_fat_macho_arches()
-    assert "x86_64" in arches
+    with env_vars(R2INSPECT_TEST_MODE="1", R2INSPECT_DISABLE_PLUGINS="1"):
+        session = R2Session(str(fat_path))
+        arches = session._detect_fat_macho_arches()
+        assert "x86_64" in arches
 
-    flags = session._select_r2_flags()
-    assert "-2" in flags
-    assert "-M" in flags
-    assert "-NN" in flags
+        flags = session._select_r2_flags()
+        assert "-2" in flags
+        assert "-M" in flags
+        assert "-NN" in flags
 
-    non_fat = tmp_path / "plain.bin"
-    non_fat.write_bytes(b"MZ" + b"\x00" * 6)
-    plain_session = R2Session(str(non_fat))
-    assert plain_session._detect_fat_macho_arches() == set()
+        non_fat = tmp_path / "plain.bin"
+        non_fat.write_bytes(b"MZ" + b"\x00" * 6)
+        plain_session = R2Session(str(non_fat))
+        assert plain_session._detect_fat_macho_arches() == set()
 
 
-def test_r2_session_timeouts_and_analysis_controls(
-    samples_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_r2_session_timeouts_and_analysis_controls(samples_dir: Path) -> None:
     pe_path = samples_dir / "hello_pe.exe"
     session, _adapter = _open_session(pe_path)
     try:
-        monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "i")
-        assert session._run_cmd_with_timeout("i", 0.01) is False
+        with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="i"):
+            assert session._run_cmd_with_timeout("i", 0.01) is False
 
-        monkeypatch.delenv("R2INSPECT_FORCE_CMD_TIMEOUT", raising=False)
-        assert session._run_cmd_with_timeout("i", 1.0) is True
+        with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT=None):
+            assert session._run_cmd_with_timeout("i", 1.0) is True
 
-        monkeypatch.setenv("R2INSPECT_ANALYSIS_DEPTH", "0")
-        assert session._perform_initial_analysis(0.1) is True
+        with env_vars(R2INSPECT_ANALYSIS_DEPTH="0"):
+            assert session._perform_initial_analysis(0.1) is True
 
-        monkeypatch.setenv("R2INSPECT_ANALYSIS_DEPTH", "1")
-        assert session._perform_initial_analysis(1_000_000.0) is True
+        with env_vars(R2INSPECT_ANALYSIS_DEPTH="1"):
+            assert session._perform_initial_analysis(1_000_000.0) is True
     finally:
         session.close()
 
@@ -162,7 +159,7 @@ def test_resource_version_and_strings(tmp_path: Path) -> None:
         assert analyzer._extract_version_strings(version_payload)
 
         class _InlineResourceAnalyzer(ResourceAnalyzer):
-            def _read_version_info_data(self, _offset: int, _size: int):  # type: ignore[override]
+            def _read_version_info_data(self, offset: int, size: int) -> list[int] | None:
                 return list(data)
 
         inline_analyzer = _InlineResourceAnalyzer(adapter)
