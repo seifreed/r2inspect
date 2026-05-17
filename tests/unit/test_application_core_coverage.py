@@ -41,6 +41,75 @@ def test_is_executable_signature_unknown():
     assert _is_executable_signature("image/png", "PNG image data") is False
 
 
+def test_is_executable_signature_modern_pe_mime():
+    # Newer libmagic reports PE files with the IANA media type instead of the
+    # legacy ``application/x-dosexec``; discovery must still treat it as a
+    # binary worth analyzing.
+    assert _is_executable_signature("application/vnd.microsoft.portable-executable", "") is True
+    assert _is_executable_signature("application/x-mach-binary", "") is True
+
+
+def _write_minimal_pe(path: Path) -> Path:
+    data = bytearray(128)
+    data[0:2] = b"MZ"
+    data[60:64] = (64).to_bytes(4, "little")
+    data[64:68] = b"PE\x00\x00"
+    path.write_bytes(data)
+    return path
+
+
+def test_discover_executables_finds_pe_when_magic_unrecognized(tmp_path):
+    """Header bytes are authoritative when libmagic fails to classify a PE.
+
+    Regression for 8f3da63-era discovery silently dropping real PE files whose
+    libmagic mime/description drifted out of the static signature lists.
+    """
+    exe = _write_minimal_pe(tmp_path / "sample.exe")
+
+    class UnrecognizedMagic:
+        def from_file(self, _path):
+            return "PE with unknown signature 0, Unknown processor 0x0000"
+
+    class UnrecognizedMime:
+        def from_file(self, _path):
+            return "application/x-unrecognized-by-this-libmagic"
+
+    class FakeMagicModule:
+        def Magic(self, mime=False):
+            return UnrecognizedMime() if mime else UnrecognizedMagic()
+
+    executables, init_errors, file_errors, scanned = discover_executables_by_magic(
+        tmp_path, magic_module=FakeMagicModule()
+    )
+    assert exe in executables
+    assert init_errors == []
+    assert scanned == 1
+
+
+def test_discover_executables_excludes_text_when_magic_unrecognized(tmp_path):
+    """The header fallback must not over-match plain non-executable files."""
+    note = tmp_path / "notes.txt"
+    note.write_text("this is just some plain text " * 4)  # >= 64 bytes, no exe header
+
+    class TextMagic:
+        def from_file(self, _path):
+            return "ASCII text"
+
+    class TextMime:
+        def from_file(self, _path):
+            return "text/plain"
+
+    class FakeMagicModule:
+        def Magic(self, mime=False):
+            return TextMime() if mime else TextMagic()
+
+    executables, init_errors, file_errors, scanned = discover_executables_by_magic(
+        tmp_path, magic_module=FakeMagicModule()
+    )
+    assert executables == []
+    assert scanned == 1
+
+
 def test_iter_files_non_recursive(tmp_path):
     (tmp_path / "a.exe").write_bytes(b"\x00" * 10)
     (tmp_path / "sub").mkdir()

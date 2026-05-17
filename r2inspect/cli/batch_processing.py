@@ -160,15 +160,11 @@ def find_executable_files_by_magic(
     )
 
     for message in init_errors:
-        if message == "python-magic not available; skipping magic-based detection":
-            console.print(f"[yellow]{message}[/yellow]")
-            return []
         if message.startswith("Error initializing magic:"):
             console.print(f"[red]{message}[/red]")
             console.print("[yellow]Falling back to file extension detection[/yellow]")
             return []
         console.print(f"[yellow]{message}[/yellow]")
-        return []
 
     if verbose:
         console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")

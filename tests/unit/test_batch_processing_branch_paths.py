@@ -27,7 +27,6 @@ from r2inspect.cli.batch_processing import (
     setup_batch_output_directory,
 )
 
-
 # ---------------------------------------------------------------------------
 # Simple PE-style file used across several tests
 # ---------------------------------------------------------------------------
@@ -87,18 +86,24 @@ def test_is_script_executable_with_shebang() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_find_executable_files_by_magic_no_magic_returns_empty_and_logs(
+def test_find_executable_files_by_magic_no_magic_falls_back_to_header(
     tmp_path: Path, capsys
 ) -> None:
-    """find_executable_files_by_magic returns [] and prints warning when magic is None."""
-    (tmp_path / "sample.bin").write_bytes(b"MZ" + b"\x00" * 100)
+    """When magic is None, discovery falls back to header detection (not skipped).
+
+    Previously this branch silently returned [] (8f3da63-era regression); the
+    documented contract (tests/unit/product/test_batch_processing_behaviors.py)
+    is that an unavailable libmagic must degrade to header-byte detection.
+    """
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"MZ" + b"\x00" * 100)
     original = batch_processing.magic
     try:
         batch_processing.magic = None
         result = find_executable_files_by_magic(tmp_path, recursive=False, verbose=False)
     finally:
         batch_processing.magic = original
-    assert result == []
+    assert result == [sample]
     out = capsys.readouterr().out
     assert "python-magic" in out or "not available" in out
 

@@ -8,9 +8,11 @@ from typing import Any
 EXECUTABLE_SIGNATURES = {
     "application/x-dosexec",
     "application/x-msdownload",
+    "application/vnd.microsoft.portable-executable",
     "application/x-executable",
     "application/x-sharedlib",
     "application/x-pie-executable",
+    "application/x-mach-binary",
     "application/octet-stream",
 }
 
@@ -35,6 +37,33 @@ def _is_executable_signature(mime_type: str, description: str) -> bool:
 
 def _iter_files(directory: Path, recursive: bool) -> list[Path]:
     return list(directory.rglob("*")) if recursive else list(directory.glob("*"))
+
+
+def discover_executables_by_header(
+    directory: str | Path,
+    *,
+    recursive: bool = False,
+) -> tuple[list[Path], list[tuple[Path, str]], int]:
+    """Discover executables by reading header bytes (no libmagic dependency).
+
+    This is the fallback used when python-magic is unavailable so batch mode
+    still finds PE/ELF/Mach-O/script files instead of silently scanning none.
+    """
+    directory = Path(directory)
+    regular_files = [f for f in _iter_files(directory, recursive) if f.is_file()]
+
+    executable_files: list[Path] = []
+    file_errors: list[tuple[Path, str]] = []
+    for file_path in regular_files:
+        try:
+            if file_path.stat().st_size < 64:
+                continue
+            if check_executable_signature(file_path):
+                executable_files.append(file_path)
+        except OSError as exc:
+            file_errors.append((file_path, str(exc)))
+
+    return executable_files, file_errors, len(regular_files)
 
 
 def init_magic_detectors(
@@ -63,8 +92,11 @@ def discover_executables_by_magic(
         return [], init_errors, file_errors, 0
 
     if magic_tuple is None:
-        init_errors.append("python-magic not available; skipping magic-based detection")
-        return [], init_errors, file_errors, 0
+        header_files, header_errors, scanned = discover_executables_by_header(
+            directory, recursive=recursive
+        )
+        init_errors.append("python-magic not available; using header-signature detection")
+        return header_files, init_errors, file_errors + header_errors, scanned
 
     mime_magic, desc_magic = magic_tuple
     regular_files = [f for f in _iter_files(directory, recursive) if f.is_file()]
@@ -81,7 +113,14 @@ def discover_executables_by_magic(
             file_errors.append((file_path, str(exc)))
             continue
 
-        if _is_executable_signature(mime_type, description):
+        # libmagic output drifts between versions (e.g. PE files now report
+        # ``application/vnd.microsoft.portable-executable`` / "PE with unknown
+        # signature" instead of "PE32 executable"). The header-byte check is
+        # version-independent and authoritative, so it backs up the magic
+        # classification rather than the discovery silently dropping the file.
+        if _is_executable_signature(mime_type, description) or check_executable_signature(
+            file_path
+        ):
             executable_files.append(file_path)
 
     return executable_files, init_errors, file_errors, len(regular_files)
