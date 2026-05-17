@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, cast
 
@@ -43,9 +44,14 @@ def configure_batch_logging(verbose: bool, quiet: bool, *, configure_batch_loggi
         configure_batch_logging_fn()
 
     if quiet:
-        from .command_runtime import configure_logging_levels
-
-        configure_logging_levels(verbose=False, quiet=True)
+        # Batch quiet mode is stricter than the shared quiet config:
+        # a batch run processes many files, so r2inspect's own loggers
+        # are raised to CRITICAL (not WARNING). 8f3da63 lost this by
+        # delegating to the shared WARNING-level helper; restored to match
+        # BatchCommand._configure_batch_logging (commit 03aab98).
+        logging.getLogger("r2pipe").setLevel(logging.CRITICAL)
+        for name in ("r2inspect", "r2inspect.modules", "r2inspect.pipeline"):
+            logging.getLogger(name).setLevel(logging.CRITICAL)
 
 
 def prepare_batch_run(

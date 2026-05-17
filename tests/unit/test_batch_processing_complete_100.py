@@ -1,7 +1,5 @@
 """Comprehensive tests for batch_processing.py - 100% coverage target."""
 
-from pathlib import Path
-
 from r2inspect.cli.batch_paths import (
     setup_analysis_options,
     setup_batch_mode,
@@ -24,7 +22,7 @@ def test_batch_processing_setup_analysis_options_none():
 def test_batch_processing_setup_batch_mode():
     """Test setup_batch_mode returns expected tuple."""
     recursive, auto_detect, output = setup_batch_mode(
-        batch="/tmp",
+        "/tmp",
         extensions=None,
         output_json=True,
         output_csv=False,
@@ -37,7 +35,7 @@ def test_batch_processing_setup_batch_mode():
 def test_batch_processing_setup_batch_mode_with_output():
     """Test setup_batch_mode with custom output."""
     recursive, auto_detect, output = setup_batch_mode(
-        batch="/tmp",
+        "/tmp",
         extensions=".exe,.dll",
         output_json=False,
         output_csv=True,
