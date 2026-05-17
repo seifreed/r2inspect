@@ -8,6 +8,7 @@ import platform
 import struct
 import time
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +48,9 @@ def detect_fat_macho_arches(filename: str) -> set[str]:
         return set()
 
 
-def select_r2_flags(session: Any, *, logger: Any) -> list[str]:
+def select_r2_flags(
+    session: Any, *, logger: Any, machine_fn: Callable[[], str] | None = None
+) -> list[str]:
     # -N skips the user/system radare2rc: analysis must be deterministic and
     # must never inherit an analyst rc that (e.g. cfg.debug=true) would
     # debug-launch the sample on open. The conditional -NN branches below are
@@ -67,7 +70,7 @@ def select_r2_flags(session: Any, *, logger: Any) -> list[str]:
     if arches or is_macho_by_ext:
         if "-NN" not in flags:
             flags.append("-NN")
-        host = platform.machine().lower()
+        host = (machine_fn if machine_fn is not None else platform.machine)().lower()
         if "arm64" in arches and "arm" in host:
             flags.extend(["-a", "arm", "-b", "64"])
         elif "x86_64" in arches:

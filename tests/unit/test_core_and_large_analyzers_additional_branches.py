@@ -12,6 +12,8 @@ from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 
+from tests.helpers import env_vars
+
 
 class DummyR2:
     def __init__(self, response: str = "ok", delay: float | None = None, fail: bool = False):
@@ -49,33 +51,31 @@ def _write_fat_macho(path: Path, endian: str, arches: list[int]) -> None:
     path.write_bytes(data)
 
 
-def test_r2_session_additional_branches(tmp_path: Path, monkeypatch) -> None:
+def test_r2_session_additional_branches(tmp_path: Path) -> None:
     fat_path = tmp_path / "fat.bin"
     _write_fat_macho(fat_path, "big", [0x01000007, 0x0100000C])
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "1")
-    monkeypatch.setenv("R2INSPECT_DISABLE_PLUGINS", "1")
-    monkeypatch.setattr("platform.machine", lambda: "arm64")
+    with env_vars(R2INSPECT_TEST_MODE="1", R2INSPECT_DISABLE_PLUGINS="1"):
+        session = R2Session(str(fat_path))
+        flags = session._select_r2_flags(machine_fn=lambda: "arm64")
+        assert "-M" in flags
+        assert "-NN" in flags
+        assert "-a" in flags and "-b" in flags
 
-    session = R2Session(str(fat_path))
-    flags = session._select_r2_flags()
-    assert "-M" in flags
-    assert "-NN" in flags
-    assert "-a" in flags and "-b" in flags
+        little_path = tmp_path / "fat_le.bin"
+        _write_fat_macho(little_path, "little", [0x01000007])
+        session_le = R2Session(str(little_path))
+        assert session_le._detect_fat_macho_arches() == {"x86_64"}
 
-    little_path = tmp_path / "fat_le.bin"
-    _write_fat_macho(little_path, "little", [0x01000007])
-    session_le = R2Session(str(little_path))
-    assert session_le._detect_fat_macho_arches() == {"x86_64"}
+        empty_path = tmp_path / "empty.bin"
+        empty_path.write_bytes(b"\x00")
+        no_fat = R2Session(str(empty_path))
 
-    empty_path = tmp_path / "empty.bin"
-    empty_path.write_bytes(b"\x00")
-    no_fat = R2Session(str(empty_path))
-    monkeypatch.setenv("R2INSPECT_DISABLE_PLUGINS", "true")
-    flags_no_fat = no_fat._select_r2_flags()
-    assert "-NN" in flags_no_fat
+    with env_vars(R2INSPECT_TEST_MODE="1", R2INSPECT_DISABLE_PLUGINS="true"):
+        flags_no_fat = no_fat._select_r2_flags()
+        assert "-NN" in flags_no_fat
 
 
-def test_r2_session_cmd_and_analysis_branches(monkeypatch) -> None:
+def test_r2_session_cmd_and_analysis_branches() -> None:
     session = R2Session("/tmp/sample")
     session.r2 = DummyR2(response="short")
     session._cleanup_required = True
@@ -90,23 +90,21 @@ def test_r2_session_cmd_and_analysis_branches(monkeypatch) -> None:
     assert session._run_cmd_with_timeout("i", 0.1) is False
 
     session.r2 = DummyR2()
-    monkeypatch.setenv("R2INSPECT_ANALYSIS_DEPTH", "0")
-    assert session._perform_initial_analysis(1.0) is True
+    with env_vars(R2INSPECT_ANALYSIS_DEPTH="0"):
+        assert session._perform_initial_analysis(1.0) is True
 
-    monkeypatch.delenv("R2INSPECT_ANALYSIS_DEPTH", raising=False)
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "1")
-    assert session._perform_initial_analysis(6.0) is True
+    with env_vars(R2INSPECT_ANALYSIS_DEPTH=None, R2INSPECT_TEST_MODE="1"):
+        assert session._perform_initial_analysis(6.0) is True
 
-    monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "aa")
-    assert session._perform_initial_analysis(1.0) is False
+        with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="aa"):
+            assert session._perform_initial_analysis(1.0) is False
 
-    monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "aaa")
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "0")
-    session._test_mode = False
-    assert session._perform_initial_analysis(0.1) is False
+    with env_vars(R2INSPECT_TEST_MODE="0", R2INSPECT_FORCE_CMD_TIMEOUT="aaa"):
+        session._test_mode = False
+        assert session._perform_initial_analysis(0.1) is False
 
-    session.r2 = None
-    assert session._perform_initial_analysis(0.1) is True
+        session.r2 = None
+        assert session._perform_initial_analysis(0.1) is True
 
 
 def test_r2_session_open_exception_path() -> None:

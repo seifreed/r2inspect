@@ -157,8 +157,8 @@ class R2Session:
                 self.close()
             raise
 
-    def _select_r2_flags(self) -> list[str]:
-        return _select_r2_flags_impl(self, logger=logger)
+    def _select_r2_flags(self, *, machine_fn: Callable[[], str] | None = None) -> list[str]:
+        return _select_r2_flags_impl(self, logger=logger, machine_fn=machine_fn)
 
     def _detect_fat_macho_arches(self) -> set[str]:
         return _detect_fat_macho_arches_impl(self.filename)
