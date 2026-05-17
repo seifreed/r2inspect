@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -12,13 +12,32 @@ from .r2pipe_adapter import R2PipeAdapter
 
 _logger = logging.getLogger(__name__)
 
+DEFAULT_R2_FLAGS = ["-2", "-N"]
+
 
 @contextmanager
-def open_r2pipe(filepath: str, flags: list[str] | None = None) -> Iterator[Any]:
-    """Open an r2pipe session with consistent flags."""
-    import r2pipe
+def open_r2pipe(
+    filepath: str,
+    flags: list[str] | None = None,
+    *,
+    opener: Callable[..., Any] | None = None,
+) -> Iterator[Any]:
+    """Open an r2pipe session with consistent flags.
 
-    r2 = r2pipe.open(filepath, flags=flags or ["-2"])
+    ``-N`` skips the user/system radare2rc so analysis is deterministic and
+    independent of the analyst's environment. It is also a safety guard: an rc
+    with ``e cfg.debug=true`` would otherwise make radare2 debug-launch the
+    sample on open (executing the malware and hanging the pipe).
+
+    ``opener`` defaults to ``r2pipe.open``; tests inject a deterministic
+    opener instead of patching r2pipe.
+    """
+    if opener is None:
+        import r2pipe
+
+        opener = r2pipe.open
+
+    r2 = opener(filepath, flags=flags or list(DEFAULT_R2_FLAGS))
     try:
         yield r2
     finally:
@@ -26,9 +45,14 @@ def open_r2pipe(filepath: str, flags: list[str] | None = None) -> Iterator[Any]:
 
 
 @contextmanager
-def open_r2_adapter(filepath: str, flags: list[str] | None = None) -> Iterator[R2PipeAdapter]:
+def open_r2_adapter(
+    filepath: str,
+    flags: list[str] | None = None,
+    *,
+    opener: Callable[..., Any] | None = None,
+) -> Iterator[R2PipeAdapter]:
     """Open an r2pipe session and wrap it in an adapter."""
-    with open_r2pipe(filepath, flags=flags) as r2:
+    with open_r2pipe(filepath, flags=flags, opener=opener) as r2:
         yield R2PipeAdapter(r2)
 
 

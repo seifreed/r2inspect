@@ -28,7 +28,9 @@ def test_r2_session_open_close_and_flags():
     r2 = session.open(file_size_mb)
     assert r2 is not None
     assert session.is_open is True
-    assert "-2" in session._select_r2_flags()
+    flags = session._select_r2_flags()
+    assert "-2" in flags
+    assert "-N" in flags  # analysis must not inherit the analyst's radare2rc
 
     session.close()
     assert session.is_open is False

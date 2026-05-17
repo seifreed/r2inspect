@@ -6,13 +6,15 @@ that is fed into R2PipeAdapter.  For the context-manager helpers we test
 _close_r2pipe directly with purpose-built fake process objects.
 """
 
-import types
-
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.adapters.r2pipe_context import _close_r2pipe
-
+from r2inspect.adapters.r2pipe_context import (
+    DEFAULT_R2_FLAGS,
+    _close_r2pipe,
+    open_r2_adapter,
+    open_r2pipe,
+)
 
 # ── FakeR2 ──────────────────────────────────────────────────────────
 
@@ -280,6 +282,43 @@ class TestAdapterContextUsage:
 
 
 # ── Nested adapter usage ────────────────────────────────────────────
+
+
+class _RecordingOpener:
+    """Concrete r2pipe.open stand-in that records the flags it was given."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, filepath, flags=None):
+        self.calls.append((filepath, flags))
+        return FakeR2()
+
+
+class TestOpenR2PipeFlags:
+    """The default open flags must keep analysis rc-independent and safe."""
+
+    def test_default_flags_skip_radare2rc(self):
+        opener = _RecordingOpener()
+        with open_r2pipe("/sample.bin", opener=opener):
+            pass
+        assert opener.calls == [("/sample.bin", ["-2", "-N"])]
+        # -N is the safety guard: never inherit an analyst rc that could
+        # debug-launch the sample on open.
+        assert "-N" in opener.calls[0][1]
+        assert DEFAULT_R2_FLAGS == ["-2", "-N"]
+
+    def test_explicit_flags_are_respected(self):
+        opener = _RecordingOpener()
+        with open_r2pipe("/sample.bin", flags=["-2", "-NN", "-a", "arm"], opener=opener):
+            pass
+        assert opener.calls[0][1] == ["-2", "-NN", "-a", "arm"]
+
+    def test_open_r2_adapter_passes_opener_through(self):
+        opener = _RecordingOpener()
+        with open_r2_adapter("/sample.bin", opener=opener) as adapter:
+            assert isinstance(adapter, R2PipeAdapter)
+        assert opener.calls[0][1] == ["-2", "-N"]
 
 
 class TestNestedAdapters:

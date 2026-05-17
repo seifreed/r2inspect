@@ -48,7 +48,11 @@ def detect_fat_macho_arches(filename: str) -> set[str]:
 
 
 def select_r2_flags(session: Any, *, logger: Any) -> list[str]:
-    flags = ["-2"]
+    # -N skips the user/system radare2rc: analysis must be deterministic and
+    # must never inherit an analyst rc that (e.g. cfg.debug=true) would
+    # debug-launch the sample on open. The conditional -NN branches below are
+    # a strict superset and remain correct alongside -N.
+    flags = ["-2", "-N"]
     if session._is_test_mode:
         flags.append("-M")
     if os.environ.get("R2INSPECT_DISABLE_PLUGINS", "").strip():
