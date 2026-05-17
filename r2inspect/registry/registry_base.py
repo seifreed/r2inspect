@@ -54,4 +54,6 @@ class AnalyzerRegistryBaseMixin:
                 and analyzer_class.analyze.__isabstractmethod__
             ):
                 return False, "analyze() method is not implemented (still abstract)"
+        if not hasattr(analyzer_class, "__init__"):
+            return False, "Analyzer class must have __init__ method"
         return True, None
