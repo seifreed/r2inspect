@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-import importlib
-
-import pytest
-
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 
 
-def test_entry_points_noop(monkeypatch):
+def test_entry_points_noop():
     registry = AnalyzerRegistry(lazy_loading=False)
 
     def _fake_entry_points():
         return {}
 
-    monkeypatch.setattr("r2inspect.registry.entry_points.entry_points", _fake_entry_points)
-    loaded = registry.load_entry_points(group="missing")
+    loaded = registry.load_entry_points(group="missing", entry_points_fn=_fake_entry_points)
     assert loaded == 0

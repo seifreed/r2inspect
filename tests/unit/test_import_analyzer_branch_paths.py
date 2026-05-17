@@ -11,10 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
 
 from r2inspect.modules.import_analyzer import ImportAnalyzer
-
 
 # ---------------------------------------------------------------------------
 # Adapter helpers (plain Python classes - no mocks)
@@ -78,7 +76,6 @@ class _RaisingCategorizeAnalyzer(ImportAnalyzer):
         return default if default is not None else []
 
     def analyze_api_usage(self, imports: list) -> dict[str, Any]:
-        from r2inspect.domain.formats.import_analysis import categorize_apis
 
         raise RuntimeError("simulated categorize error")
 
@@ -578,7 +575,7 @@ def test_check_import_forwarding_no_strings_returns_not_detected():
 # ---------------------------------------------------------------------------
 
 
-def test_check_import_forwarding_string_entries_checked_against_pattern(monkeypatch):
+def test_check_import_forwarding_string_entries_checked_against_pattern():
     class _StringsReturnAnalyzer(ImportAnalyzer):
         def _cmdj(self, command: str, default: Any = None) -> Any:
             if command == "izj":

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+from collections.abc import Callable
 from importlib.metadata import entry_points
 from typing import Any
 
@@ -12,8 +13,9 @@ from typing import Any
 class EntryPointLoader:
     """Load analyzers registered via Python entry points."""
 
-    def __init__(self, registry: Any) -> None:
+    def __init__(self, registry: Any, entry_points_fn: Callable[[], Any] | None = None) -> None:
         self._registry = registry
+        self._entry_points_fn = entry_points_fn or entry_points
 
     def load(self, group: str = "r2inspect.analyzers") -> int:
         loaded = 0
@@ -26,7 +28,7 @@ class EntryPointLoader:
 
     def _get_entry_points_group(self, group: str) -> list[Any]:
         try:
-            return list(entry_points().select(group=group))
+            return list(self._entry_points_fn().select(group=group))
         except Exception:
             logging.getLogger(__name__).debug("No entry points available")
             return []

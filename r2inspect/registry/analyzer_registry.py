@@ -2,6 +2,8 @@
 """Analyzer registry for managing analyzer discovery and metadata."""
 
 import os
+from collections.abc import Callable
+from typing import Any
 
 from .categories import AnalyzerCategory
 from .entry_points import EntryPointLoader
@@ -82,7 +84,11 @@ class AnalyzerRegistry(
             self._lazy_loader = None
         self._base_analyzer_class: type | None = None  # Lazy-loaded to avoid circular imports
 
-    def load_entry_points(self, group: str = "r2inspect.analyzers") -> int:
+    def load_entry_points(
+        self,
+        group: str = "r2inspect.analyzers",
+        entry_points_fn: Callable[[], Any] | None = None,
+    ) -> int:
         """
         Load external analyzers registered via Python entry points.
 
@@ -96,4 +102,4 @@ class AnalyzerRegistry(
         Returns:
             Number of analyzers (or providers) loaded
         """
-        return EntryPointLoader(self).load(group)
+        return EntryPointLoader(self, entry_points_fn).load(group)

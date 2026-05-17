@@ -1,6 +1,6 @@
 """Environment-variable isolation helpers for tests.
 
-Replaces the forbidden ``monkeypatch.setenv``/``monkeypatch.delenv`` with a
+Replaces the forbidden pytest environment-patching fixtures with a
 hand-rolled context manager that snapshots and restores ``os.environ``.
 """
 

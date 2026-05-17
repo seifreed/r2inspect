@@ -93,7 +93,7 @@ def test_interactive_command_handle_error_paths() -> None:
 
 
 @pytest.mark.requires_r2
-def test_run_interactive_mode_sequence(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_interactive_mode_sequence() -> None:
     sample = _fixture_path("hello_pe.exe")
     commands = iter(
         [
@@ -109,6 +109,5 @@ def test_run_interactive_mode_sequence(monkeypatch: pytest.MonkeyPatch) -> None:
             "quit",
         ]
     )
-    monkeypatch.setattr("builtins.input", lambda _: next(commands))
     with create_inspector(str(sample), config=Config(), verbose=False) as inspector:
-        run_interactive_mode(inspector, {})
+        run_interactive_mode(inspector, {}, input_fn=lambda _prompt="": next(commands))
