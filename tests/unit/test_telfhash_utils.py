@@ -12,7 +12,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.telfhash_analyzer import TELFHASH_AVAILABLE, TelfhashAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # Minimal fake r2 backend
 # ---------------------------------------------------------------------------
@@ -162,8 +161,9 @@ def test_telfhash_analyzer_is_elf_file_no_r2(tmp_path):
     filepath = _make_elf_file(tmp_path)
     adapter = _elf_adapter(filepath)
     analyzer = TelfhashAnalyzer(adapter, filepath)
-    # Force r2 to None to exercise the early-return branch
-    analyzer.r2 = None
+    # No live adapter -> _is_elf_file early-returns False. (The analyzer holds
+    # its r2 handle as `.adapter`; the old `.r2` attribute no longer exists.)
+    analyzer.adapter = None
     assert analyzer._is_elf_file() is False
 
 

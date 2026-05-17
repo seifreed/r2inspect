@@ -106,6 +106,11 @@ def cap_test_resources(tmp_path_factory: pytest.TempPathFactory) -> None:
     # Disable r2 plugins to reduce memory overhead
     os.environ.setdefault("R2INSPECT_DISABLE_PLUGINS", "1")
 
+    # Bound telfhash quickly in tests: telfhash 0.9.8 infinite-loops on
+    # PT_LOAD-less ELFs, so fixtures that exercise that path must fail fast
+    # instead of taking the 30s production timeout.
+    os.environ.setdefault("R2INSPECT_TELFHASH_TIMEOUT_SECONDS", "3")
+
     # Use shallow analysis depth (aa instead of aaa)
     os.environ.setdefault("R2INSPECT_ANALYSIS_DEPTH", "1")
 
