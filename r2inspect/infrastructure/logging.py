@@ -7,6 +7,7 @@ import logging
 import logging.handlers
 import sys
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 _logger_lock = threading.Lock()
@@ -19,7 +20,11 @@ def _handler_is_closed(handler: logging.Handler) -> bool:
 
 
 def setup_logger(
-    name: str = "r2inspect", level: int = logging.INFO, thread_safe: bool = True
+    name: str = "r2inspect",
+    level: int = logging.INFO,
+    thread_safe: bool = True,
+    *,
+    file_handler_factory: Callable[[], logging.Handler] | None = None,
 ) -> logging.Logger:
     """Setup a logger with console and file handlers."""
     with _logger_lock:
@@ -48,8 +53,10 @@ def setup_logger(
             log_dir = Path.home() / ".r2inspect" / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
 
-            if thread_safe:
-                file_handler: logging.Handler = logging.handlers.RotatingFileHandler(
+            if file_handler_factory is not None:
+                file_handler: logging.Handler = file_handler_factory()
+            elif thread_safe:
+                file_handler = logging.handlers.RotatingFileHandler(
                     log_dir / "r2inspect.log",
                     maxBytes=10 * 1024 * 1024,
                     backupCount=5,

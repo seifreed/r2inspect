@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -48,15 +49,20 @@ def create_inspector(
     config: Config | None = None,
     verbose: bool = False,
     memory_monitor: MemoryMonitorLike | None = None,
+    *,
+    session_factory: Callable[[str], Any] | None = None,
+    inspector_factory: Callable[..., R2Inspector] | None = None,
 ) -> R2Inspector:
     """Create an R2Inspector with default dependencies."""
     cfg = config or Config()
     monitor = memory_monitor or get_global_memory_monitor()
+    make_session = session_factory if session_factory is not None else R2Session
+    make_inspector = inspector_factory if inspector_factory is not None else R2Inspector
     validator = FileValidator(filename)
     if not validator.validate():
         raise ValueError(f"File validation failed: {filename}")
     file_size_mb = Path(filename).stat().st_size / (1024 * 1024)
-    session = R2Session(filename)
+    session = make_session(filename)
     r2 = session.open(file_size_mb)
     try:
         adapter, _registry, _pipeline_builder = build_inspector_dependencies(
@@ -81,7 +87,7 @@ def create_inspector(
             memory_monitor=monitor,
             cleanup_callback=session.close,
         )
-        return R2Inspector(
+        return make_inspector(
             filename=filename,
             config=cfg,
             verbose=verbose,
