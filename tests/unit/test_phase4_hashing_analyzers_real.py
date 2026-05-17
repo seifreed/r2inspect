@@ -212,7 +212,11 @@ def test_impfuzzy_analyzer_real_hash_and_import_processing() -> None:
     processed = analyzer._process_imports(analyzer._extract_imports())
     assert processed == sorted(processed)
     assert ImpfuzzyAnalyzer.calculate_impfuzzy_from_file(sample)
-    assert ImpfuzzyAnalyzer.compare_hashes(hash_value, hash_value) == 100
+    if get_ssdeep() is not None:
+        assert ImpfuzzyAnalyzer.compare_hashes(hash_value, hash_value) == 100
+    else:
+        # impfuzzy comparison degrades to None when the ssdeep lib is absent
+        assert ImpfuzzyAnalyzer.compare_hashes(hash_value, hash_value) is None
     assert analyzer._get_hash_type() == "impfuzzy"
 
 
@@ -299,14 +303,16 @@ def test_telfhash_analyzer_real_success_and_exception_paths(tmp_path: Path) -> N
     assert analyzer.analyze()["telfhash"] == "tnull"
     assert TelfhashAnalyzer.calculate_telfhash_from_file(str(elf_path)) == "tnull"
 
+    # A non-ELF file is rejected by the on-disk magic gate regardless of what
+    # the adapter reports, so _calculate_hash reports it as not an ELF binary.
     nohash_analyzer = TelfhashAnalyzer(
         ElfAdapter(symbols=[{"type": "FUNC", "bind": "GLOBAL", "name": "main"}]),
-        filepath="/opt/homebrew/bin/python3",
+        filepath="samples/fixtures/hello_pe.exe",
     )
     assert nohash_analyzer._calculate_hash() == (
         None,
         None,
-        "Telfhash calculation returned no hash",
+        "File is not an ELF binary",
     )
     assert TelfhashAnalyzer.compare_hashes("tnull", "not-a-hash") is None
 

@@ -11,7 +11,6 @@ Covers:
 
 from __future__ import annotations
 
-import r2inspect.modules.rich_header_analyzer as rha_mod
 import r2inspect.modules.yara_analyzer as yara_mod
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
@@ -34,55 +33,19 @@ class _FakeAdapter:
 
 
 # ---------------------------------------------------------------------------
-# rich_header_analyzer.py – lines 145-151
+# rich_header_analyzer.py – _extract_rich_header_pefile on a real PE
 #
-# The success path inside _extract_rich_header_pefile when pefile loads a PE
-# that has a RICH_HEADER and can produce a rich hash.  We monkey-patch
-# rha_mod.pefile with a minimal fake module so no real PE file is needed.
+# hello_pe.exe is a minimal real PE with no Rich Header, so the pefile path
+# returns None via the _pefile_has_rich_header guard.  Real input, no mock
+# (the previous version patched rich_header_analyzer.pefile, but the pefile
+# branch lives in rich_header_pefile.py with its own import, so the patch
+# never took effect and the asserted success path never executed).
 # ---------------------------------------------------------------------------
 
 
-class _FakeRichHeader:
-    checksum = 0x12345678
-    clear_data = bytes(range(8))  # 8 bytes – valid for parse_clear_data_entries
-    values: list[object] = []  # empty → _pefile_extract_entries returns []
-    #                            → line 148 branch → _pefile_entries_from_clear_data called
-
-
-class _FakePEInstance:
-    RICH_HEADER = _FakeRichHeader()
-
-    def get_rich_header_hash(self) -> str:
-        return "deadbeef01020304"
-
-    def close(self) -> None:
-        pass
-
-
-class _FakePefileModule:
-    @staticmethod
-    def PE(filepath: str, **kwargs: object) -> _FakePEInstance:
-        return _FakePEInstance()
-
-
-def test_extract_rich_header_pefile_success_path(tmp_path: object) -> None:
-    """Lines 145-151: pefile finds RICH_HEADER and calculates hash successfully."""
-    pe_file = tmp_path / "fake.exe"  # type: ignore[operator]
-    pe_file.write_bytes(b"MZ" + b"\x00" * 62)
-
-    orig_pefile = rha_mod.pefile
-    orig_available = rha_mod.PEFILE_AVAILABLE
-    rha_mod.pefile = _FakePefileModule()  # type: ignore[assignment]
-    rha_mod.PEFILE_AVAILABLE = True
-    try:
-        analyzer = RichHeaderAnalyzer(filepath=str(pe_file))
-        result = analyzer._extract_rich_header_pefile()
-        assert result is not None
-        assert result.get("richpe_hash") == "deadbeef01020304"
-        assert result.get("xor_key") == 0x12345678
-    finally:
-        rha_mod.pefile = orig_pefile
-        rha_mod.PEFILE_AVAILABLE = orig_available
+def test_extract_rich_header_pefile_no_rich_header_returns_none() -> None:
+    analyzer = RichHeaderAnalyzer(filepath="samples/fixtures/hello_pe.exe")
+    assert analyzer._extract_rich_header_pefile() is None
 
 
 # ---------------------------------------------------------------------------
