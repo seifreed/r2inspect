@@ -1,17 +1,7 @@
 """Telfhash analyzer for ELF binaries."""
 
-import os
-import struct
-import threading
+from collections.abc import Callable
 from typing import Any, cast
-
-# Try to import telfhash library
-try:
-    from telfhash import telfhash
-
-    TELFHASH_AVAILABLE = True
-except ImportError:
-    TELFHASH_AVAILABLE = False
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy
@@ -29,147 +19,38 @@ from ..domain.formats.telfhash import (
     parse_telfhash_result as _parse_telfhash_result_impl,
     should_skip_symbol as _should_skip_symbol_impl,
 )
+from .telfhash_guard import TELFHASH_AVAILABLE, _safe_telfhash
 
 logger = get_logger(__name__)
-
-# telfhash 0.9.8 has an infinite loop (`while elf.iter_segments():` in
-# elf_get_imagebase) that never terminates for ELF inputs without a PT_LOAD
-# segment — exactly the malformed/crafted binaries a malware analyzer is fed.
-# An unbounded call would hang the whole analysis, so every call is guarded
-# by a worker-thread timeout (same idiom as run_cmd_with_timeout).
-TELFHASH_TIMEOUT_SECONDS = 30.0
-
-
-def _resolve_telfhash_timeout() -> float:
-    """Resolve the telfhash timeout, allowing an env override for fast tests."""
-    raw = os.environ.get("R2INSPECT_TELFHASH_TIMEOUT_SECONDS", "").strip()
-    if raw:
-        try:
-            value = float(raw)
-            if value > 0:
-                return value
-        except ValueError:
-            pass
-    return TELFHASH_TIMEOUT_SECONDS
-
-
-def _telfhash_safe_to_call(filepath: str) -> bool:
-    """Return False only for inputs that trigger telfhash 0.9.8's hang.
-
-    telfhash 0.9.8's ``elf_get_imagebase`` does ``while elf.iter_segments():``
-    and only terminates by *returning* when it finds a PT_LOAD segment. For a
-    structurally-valid ELF (one pyelftools will parse) that has zero PT_LOAD
-    segments it spins forever in a CPU-bound, uninterruptible loop that a
-    thread timeout cannot reclaim. So the only safe approach is to not feed
-    telfhash that exact input.
-
-    Returns True (safe to call) for everything else — unreadable paths,
-    non-ELF files, and structurally-invalid ELF headers — because pyelftools
-    rejects those and telfhash returns/raises quickly without looping. This is
-    a dependency-free program-header scan (PT_LOAD == 1).
-    """
-    try:
-        with open(filepath, "rb") as fh:
-            head = fh.read(64)
-            if len(head) < 64 or head[:4] != b"\x7fELF":
-                return True  # not an ELF -> telfhash errors fast, no loop
-            ei_class, ei_data = head[4], head[5]
-            if ei_class not in (1, 2) or ei_data not in (1, 2):
-                return True  # pyelftools rejects -> fast error, no loop
-            endian = "<" if ei_data == 1 else ">"
-            if ei_class == 2:
-                e_phoff = struct.unpack_from(endian + "Q", head, 0x20)[0]
-                e_phentsize = struct.unpack_from(endian + "H", head, 0x36)[0]
-                e_phnum = struct.unpack_from(endian + "H", head, 0x38)[0]
-            else:
-                e_phoff = struct.unpack_from(endian + "I", head, 0x1C)[0]
-                e_phentsize = struct.unpack_from(endian + "H", head, 0x2A)[0]
-                e_phnum = struct.unpack_from(endian + "H", head, 0x2C)[0]
-            # Valid ELF header with no usable program-header table: the loop
-            # never finds PT_LOAD and never terminates.
-            if e_phoff == 0 or e_phnum == 0 or e_phentsize < 4:
-                return False
-            fh.seek(e_phoff)
-            table = fh.read(e_phnum * e_phentsize)
-            for i in range(e_phnum):
-                off = i * e_phentsize
-                if off + 4 > len(table):
-                    break
-                if struct.unpack_from(endian + "I", table, off)[0] == 1:  # PT_LOAD
-                    return True
-            return False  # valid ELF, program headers, but no PT_LOAD -> loops
-    except OSError:
-        return True  # cannot read -> not the infinite-loop case
-
-
-def _telfhash_with_timeout(filepath: str, timeout: float | None = None) -> Any:
-    """Run ``telfhash(filepath)`` with a hard timeout.
-
-    The PT_LOAD guard above prevents the common infinite-loop trigger; this
-    timeout is defense-in-depth for any other slow path. The abandoned worker
-    is a daemon thread so it cannot keep the process alive.
-    """
-    if timeout is None:
-        timeout = _resolve_telfhash_timeout()
-    result_holder: dict[str, Any] = {"value": None, "error": None}
-
-    def _runner() -> None:
-        try:
-            result_holder["value"] = telfhash(filepath)
-        except Exception as exc:
-            result_holder["error"] = exc
-
-    worker = threading.Thread(target=_runner, daemon=True)
-    worker.start()
-    worker.join(timeout)
-    if worker.is_alive():
-        raise TimeoutError(
-            f"telfhash timed out after {timeout:.1f}s for {filepath} "
-            "(likely the telfhash 0.9.8 iter_segments infinite loop)"
-        )
-    if result_holder["error"] is not None:
-        raise result_holder["error"]
-    return result_holder["value"]
-
-
-def _safe_telfhash(filepath: str) -> Any:
-    """Single guarded entry point for telfhash.
-
-    Returns ``[]`` (telfhash's own "no result" shape) for inputs that would
-    trigger the library's infinite loop, otherwise runs it under the timeout.
-    Every telfhash call site must go through this.
-    """
-    if not _telfhash_safe_to_call(filepath):
-        logger.debug(
-            "Skipping telfhash for %s: structurally-valid ELF without a "
-            "PT_LOAD segment (telfhash 0.9.8 would infinite-loop)",
-            filepath,
-        )
-        return []
-    return _telfhash_with_timeout(filepath)
 
 
 class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
     """Telfhash analyzer for ELF files."""
 
-    def __init__(self, adapter: Any, filepath: str) -> None:
+    def __init__(
+        self,
+        adapter: Any,
+        filepath: str,
+        *,
+        telfhash_fn: Callable[[str], Any] | None = None,
+        telfhash_available: bool | None = None,
+    ) -> None:
         """
         Initialize Telfhash analyzer.
 
-        Args:
-            r2_instance: Active r2pipe instance
-            filepath: Path to the file being analyzed
+        ``telfhash_fn`` / ``telfhash_available`` default to the real
+        ``_safe_telfhash`` / ``TELFHASH_AVAILABLE``; tests inject deterministic
+        values instead of patching the module.
         """
         super().__init__(adapter=adapter, filepath=filepath)
+        self._telfhash_fn: Callable[[str], Any] = telfhash_fn or _safe_telfhash
+        self._telfhash_available: bool = (
+            TELFHASH_AVAILABLE if telfhash_available is None else telfhash_available
+        )
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
-        """
-        Check if telfhash library is available.
-
-        Returns:
-            Tuple of (is_available, error_message)
-        """
-        if TELFHASH_AVAILABLE:
+        """Return ``(is_available, error_message)`` for the telfhash library."""
+        if self._telfhash_available:
             return True, None
         return (
             False,
@@ -177,19 +58,12 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         )
 
     def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
-        """
-        Calculate telfhash for the ELF file.
-
-        Returns:
-            Tuple of (hash_value, method_used, error_message)
-        """
+        """Return ``(hash_value, method_used, error_message)`` for the ELF file."""
         try:
-            # Check if file is ELF
             if not self._is_elf_file():
                 return None, None, "File is not an ELF binary"
 
-            # Single guarded entry point (PT_LOAD guard + timeout).
-            telfhash_result = _safe_telfhash(str(self.filepath))
+            telfhash_result = self._telfhash_fn(str(self.filepath))
             logger.debug(
                 "Telfhash function returned: %s = %s", type(telfhash_result), telfhash_result
             )
@@ -209,12 +83,6 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             return None, None, f"Telfhash calculation failed: {str(e)}"
 
     def _get_hash_type(self) -> str:
-        """
-        Return the hash type identifier.
-
-        Returns:
-            Hash type string
-        """
         return "telfhash"
 
     def analyze(self) -> dict[str, Any]:
@@ -225,29 +93,15 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return result
 
     def analyze_symbols(self) -> dict[str, Any]:
-        """
-        Perform detailed telfhash analysis on ELF file including symbol statistics.
-
-        This method provides detailed symbol analysis in addition to the
-        telfhash value provided by analyze().
-
-        Returns:
-            Dictionary containing detailed telfhash analysis results
-        """
+        """Detailed telfhash analysis including ELF symbol statistics."""
         return _analyze_symbols_impl(
             self,
-            telfhash_available=TELFHASH_AVAILABLE,
-            telfhash_fn=_safe_telfhash,
+            telfhash_available=self._telfhash_available,
+            telfhash_fn=self._telfhash_fn,
             logger=logger,
         )
 
     def _is_elf_file(self) -> bool:
-        """
-        Check if the file is an ELF binary.
-
-        Returns:
-            True if file is ELF, False otherwise
-        """
         return _is_elf_binary_impl(
             self,
             logger=logger,
@@ -269,12 +123,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             return False
 
     def _get_elf_symbols(self) -> list[dict[str, Any]]:
-        """
-        Get all symbols from the ELF file.
-
-        Returns:
-            List of symbol dictionaries
-        """
+        """Return all symbols from the ELF file (empty list on failure)."""
         try:
             logger.debug("Extracting symbols from ELF file")
             symbols = self._cmd_list("isj")
@@ -290,46 +139,16 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             return []
 
     def _filter_symbols_for_telfhash(self, symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """
-        Filter symbols suitable for telfhash calculation.
-
-        Telfhash uses:
-        - FUNC (functions) and OBJECT (data objects) types
-        - Non-LOCAL bindings (GLOBAL, WEAK are preferred)
-        - Named symbols only
-
-        Args:
-            symbols: List of all symbols
-
-        Returns:
-            List of filtered symbols suitable for telfhash
-        """
+        """Keep named, non-LOCAL FUNC/OBJECT symbols telfhash uses."""
         filtered = _filter_symbols_for_telfhash_impl(symbols)
         logger.debug("Filtered %s symbols from %s total", len(filtered), len(symbols))
         return filtered
 
     def _should_skip_symbol(self, symbol_name: str) -> bool:
-        """
-        Check if a symbol should be skipped for telfhash calculation.
-
-        Args:
-            symbol_name: Name of the symbol
-
-        Returns:
-            True if symbol should be skipped, False otherwise
-        """
         return _should_skip_symbol_impl(symbol_name)
 
     def _extract_symbol_names(self, symbols: list[dict[str, Any]]) -> list[str]:
-        """
-        Extract and sort symbol names for telfhash calculation.
-
-        Args:
-            symbols: List of filtered symbols
-
-        Returns:
-            Sorted list of symbol names
-        """
+        """Return sorted symbol names for telfhash calculation."""
         names = _extract_symbol_names_impl(symbols)
         logger.debug("Extracted %s symbol names for telfhash", len(names))
         return names
@@ -339,36 +158,28 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return _normalize_telfhash_value_impl(value)
 
     @staticmethod
-    def compare_hashes(hash1: str, hash2: str) -> int | None:
+    def compare_hashes(
+        hash1: str,
+        hash2: str,
+        *,
+        telfhash_available: bool | None = None,
+        ssdeep_loader: Callable[[], Any] | None = None,
+    ) -> int | None:
+        """Return ssdeep-based similarity (0-100) of two telfhash values, or None.
+
+        ``telfhash_available`` / ``ssdeep_loader`` default to the real
+        ``TELFHASH_AVAILABLE`` / ``get_ssdeep``; tests inject deterministic
+        values instead of patching the module.
         """
-        Compare two telfhash values and return similarity score.
-
-        Telfhash uses SSDeep-based comparison internally, returning a percentage
-        (0-100) where higher values indicate greater similarity.
-
-        Args:
-            hash1: First telfhash value
-            hash2: Second telfhash value
-
-        Returns:
-            Similarity score (0-100, higher is more similar) or None if comparison fails
-
-        Example:
-            >>> hash1 = "T1234..."
-            >>> hash2 = "T1235..."
-            >>> similarity = TelfhashAnalyzer.compare_hashes(hash1, hash2)
-            >>> if similarity is not None and similarity > 70:
-            ...     print("Very similar ELF binaries")
-        """
-        if not TELFHASH_AVAILABLE:
+        available = TELFHASH_AVAILABLE if telfhash_available is None else telfhash_available
+        if not available:
             return None
 
         if not hash1 or not hash2:
             return None
 
         try:
-            # Telfhash uses SSDeep comparison internally
-            ssdeep_module = get_ssdeep()
+            ssdeep_module = (ssdeep_loader or get_ssdeep)()
             if ssdeep_module is None:
                 logger.warning("ssdeep library required for telfhash comparison")
                 return None
@@ -379,30 +190,28 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
     @staticmethod
     def is_available() -> bool:
-        """
-        Check if telfhash library is available.
-
-        Returns:
-            True if telfhash library can be imported, False otherwise
-        """
+        """Return whether the telfhash library is importable."""
         return TELFHASH_AVAILABLE
 
     @staticmethod
-    def calculate_telfhash_from_file(filepath: str) -> str | None:
-        """
-        Calculate telfhash from a file path.
+    def calculate_telfhash_from_file(
+        filepath: str,
+        *,
+        telfhash_fn: Callable[[str], Any] | None = None,
+        telfhash_available: bool | None = None,
+    ) -> str | None:
+        """Calculate telfhash from a file path.
 
-        Args:
-            filepath: Path to the ELF file
-
-        Returns:
-            Telfhash string or None if calculation fails
+        ``telfhash_fn`` / ``telfhash_available`` default to the real
+        ``_safe_telfhash`` / ``TELFHASH_AVAILABLE``; tests inject deterministic
+        values instead of patching the module.
         """
-        if not TELFHASH_AVAILABLE:
+        available = TELFHASH_AVAILABLE if telfhash_available is None else telfhash_available
+        if not available:
             return None
 
         try:
-            result = _safe_telfhash(filepath)
+            result = (telfhash_fn or _safe_telfhash)(filepath)
             if isinstance(result, list) and len(result) > 0:
                 return TelfhashAnalyzer._normalize_telfhash_value(result[0].get("telfhash"))
             elif isinstance(result, dict):
