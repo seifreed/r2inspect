@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import hashlib
 import os
-from typing import cast
+from collections.abc import Callable
+from typing import Any, cast
 
 from ..domain.services.hashing import calculate_hashes_for_bytes, calculate_imphash
 from ..infrastructure.ssdeep_loader import get_ssdeep
@@ -44,10 +45,15 @@ def calculate_hashes(file_path: str) -> dict[str, str]:
     return hashes
 
 
-def calculate_ssdeep(file_path: str) -> str | None:
-    """Calculate ssdeep fuzzy hash (requires optional ssdeep library)."""
+def calculate_ssdeep(file_path: str, get_ssdeep_fn: Callable[[], Any] | None = None) -> str | None:
+    """Calculate ssdeep fuzzy hash (requires optional ssdeep library).
+
+    ``get_ssdeep_fn`` defaults to the real loader; tests inject a resolver
+    that returns ``None`` to exercise the unavailable path.
+    """
     try:
-        ssdeep_module = get_ssdeep()
+        resolver = get_ssdeep_fn or get_ssdeep
+        ssdeep_module = resolver()
         if ssdeep_module is None:
             return None
         return cast(str | None, ssdeep_module.hash_from_file(file_path))

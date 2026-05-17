@@ -77,11 +77,13 @@ def find_suspicious(strings: list[str]) -> list[dict[str, Any]]:
     return suspicious
 
 
-def decode_base64(string: str) -> dict[str, Any] | None:
+def decode_base64(
+    string: str, decoder: Callable[[str], bytes] | None = None
+) -> dict[str, Any] | None:
     if not is_base64(string):
         return None
     try:
-        decoded_bytes = base64.b64decode(string)
+        decoded_bytes = (decoder or base64.b64decode)(string)
         decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
         if decoded_str and decoded_str.isprintable():
             return {"original": string, "decoded": decoded_str, "encoding": "base64"}

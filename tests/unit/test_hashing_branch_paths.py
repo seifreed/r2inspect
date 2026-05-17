@@ -13,7 +13,6 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-import pytest
 
 from r2inspect.infrastructure.hashing import (
     calculate_hashes,
@@ -21,7 +20,6 @@ from r2inspect.infrastructure.hashing import (
     calculate_imphash,
     calculate_ssdeep,
 )
-
 
 # ---------------------------------------------------------------------------
 # calculate_hashes – lines 15-46
@@ -208,9 +206,8 @@ def test_calculate_ssdeep_nonexistent_file_returns_none():
     assert result is None
 
 
-def test_calculate_ssdeep_returns_none_when_ssdeep_loader_unavailable(monkeypatch, tmp_path: Path):
+def test_calculate_ssdeep_returns_none_when_ssdeep_loader_unavailable(tmp_path: Path):
     f = tmp_path / "sample.bin"
     f.write_bytes(b"abc")
 
-    monkeypatch.setattr("r2inspect.infrastructure.hashing.get_ssdeep", lambda: None)
-    assert calculate_ssdeep(str(f)) is None
+    assert calculate_ssdeep(str(f), get_ssdeep_fn=lambda: None) is None

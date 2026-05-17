@@ -156,22 +156,10 @@ def test_calculate_imphash_exception():
     assert result is None
 
 
-def test_calculate_ssdeep_no_module(monkeypatch):
-    import sys
-
-    original = sys.modules.get("ssdeep")
-    monkeypatch.setitem(sys.modules, "ssdeep", None)
-
-    import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
-
-    ssdeep_loader._ssdeep_module = None
-
-    result = hashing.calculate_ssdeep("/test.exe")
+def test_calculate_ssdeep_no_module():
+    result = hashing.calculate_ssdeep("/test.exe", get_ssdeep_fn=lambda: None)
 
     assert result is None
-
-    if original is not None:
-        sys.modules["ssdeep"] = original
 
 
 def test_calculate_ssdeep_exception(tmp_path: Path):

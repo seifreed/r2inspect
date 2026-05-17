@@ -27,9 +27,8 @@ def test_entry_points_load_iterates_and_accumulates() -> None:
     assert loader.load() == 3
 
 
-def test_string_domain_decode_base64_binascii_error(monkeypatch) -> None:
-    def _boom(_value: str):
+def test_string_domain_decode_base64_binascii_error() -> None:
+    def _boom(_value: str) -> bytes:
         raise binascii.Error("bad b64")
 
-    monkeypatch.setattr(string_domain_module.base64, "b64decode", _boom)
-    assert string_domain_module.decode_base64("QUJDRA==") is None
+    assert string_domain_module.decode_base64("QUJDRA==", decoder=_boom) is None
