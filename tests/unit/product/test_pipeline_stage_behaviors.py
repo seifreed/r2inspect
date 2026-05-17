@@ -35,6 +35,9 @@ class PackerDetector:
     def detect(self) -> dict[str, Any]:
         return {"packed": False}
 
+    def analyze(self) -> dict[str, Any]:
+        return self.detect()
+
 
 class CompilerDetector:
     def __init__(self, **_: Any) -> None:
@@ -43,13 +46,19 @@ class CompilerDetector:
     def detect_compiler(self) -> dict[str, Any]:
         return {"compiler": "gcc"}
 
+    def analyze(self) -> dict[str, Any]:
+        return self.detect_compiler()
+
 
 class YaraAnalyzer:
     def __init__(self, **_: Any) -> None:
         pass
 
-    def scan(self, _rules=None) -> list[dict[str, str]]:
+    def scan(self, custom_rules_path: str | None = None) -> list[dict[str, str]]:
         return [{"rule": "demo"}]
+
+    def analyze(self, custom_rules_path: str | None = None) -> list[dict[str, str]]:
+        return self.scan(custom_rules_path)
 
 
 class TLSHAnalyzer:
@@ -74,6 +83,9 @@ class CryptoAnalyzer:
 
     def detect(self) -> dict[str, Any]:
         return {"algorithms": ["AES"]}
+
+    def analyze(self) -> dict[str, Any]:
+        return self.detect()
 
 
 def test_detection_stage_runs_enabled_detectors_and_yara() -> None:
