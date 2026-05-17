@@ -9,9 +9,9 @@ from typing import Any
 class MagicAdapter:
     """Thin wrapper around python-magic to keep IO details out of callers."""
 
-    def __init__(self) -> None:
+    def __init__(self, platform: str | None = None) -> None:
         self._magic: Any | None
-        if sys.platform == "win32":
+        if (platform if platform is not None else sys.platform) == "win32":
             # python-magic-bin can crash the interpreter on import in some Windows CI images.
             self._magic = None
             return

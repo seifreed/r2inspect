@@ -14,9 +14,8 @@ from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.registry.entry_points import EntryPointLoader
 
 
-def test_magic_adapter_windows_branch(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("sys.platform", "win32")
-    adapter = MagicAdapter()
+def test_magic_adapter_windows_branch() -> None:
+    adapter = MagicAdapter(platform="win32")
     assert adapter.available is False
 
 
@@ -80,7 +79,7 @@ def test_stages_format_magic_none_and_macho_branch(tmp_path: Path) -> None:
     assert fd._detect_via_basic_magic() == "Mach-O"
 
 
-def test_impfuzzy_exception_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_impfuzzy_exception_paths() -> None:
     analyzer = ImpfuzzyAnalyzer(adapter=None, filepath="/tmp/nonexistent")
 
     class _BadDict(dict):
@@ -94,9 +93,12 @@ def test_impfuzzy_exception_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         def compare(_: str, __: str) -> int:
             raise RuntimeError("compare failed")
 
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.get_ssdeep", lambda: _BadSSDeep())
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.IMPFUZZY_AVAILABLE", True)
-    assert ImpfuzzyAnalyzer.compare_hashes("a", "b") is None
+    assert (
+        ImpfuzzyAnalyzer.compare_hashes(
+            "a", "b", impfuzzy_available=True, get_ssdeep_fn=lambda: _BadSSDeep()
+        )
+        is None
+    )
 
 
 def test_resource_analyzer_exception_branches() -> None:

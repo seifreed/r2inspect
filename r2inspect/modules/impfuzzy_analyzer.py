@@ -150,7 +150,10 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
     @staticmethod
     def compare_hashes(
-        hash1: str, hash2: str, impfuzzy_available: bool | None = None
+        hash1: str,
+        hash2: str,
+        impfuzzy_available: bool | None = None,
+        get_ssdeep_fn: Any | None = None,
     ) -> int | None:
         """
         Compare two impfuzzy hashes and return similarity score.
@@ -179,7 +182,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 IMPFUZZY_AVAILABLE if impfuzzy_available is None else impfuzzy_available
             ),
             logger=logger,
-            get_ssdeep_fn=get_ssdeep,
+            get_ssdeep_fn=get_ssdeep if get_ssdeep_fn is None else get_ssdeep_fn,
         )
 
     @staticmethod
