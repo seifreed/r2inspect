@@ -5,6 +5,7 @@ This module keeps a patchable batch-processing facade while delegating leaf
 operations to support and runtime modules with narrower responsibilities.
 """
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -78,11 +79,16 @@ def _validate_magic_module(candidate: Any) -> Any | None:
     return candidate
 
 
-def _init_magic() -> Any | None:
-    """Initialize python-magic through the shared discovery runtime."""
+def _init_magic(resolve_fn: Callable[[], Any] | None = None) -> Any | None:
+    """Initialize python-magic through the shared discovery runtime.
+
+    ``resolve_fn`` defaults to the shared runtime resolver; tests inject a
+    deterministic resolver instead of patching the import machinery.
+    """
     global magic
     _batch_discovery_runtime.magic = magic
-    magic = _validate_magic_module(_batch_discovery_runtime.resolve_magic_module())
+    resolver = resolve_fn or _batch_discovery_runtime.resolve_magic_module
+    magic = _validate_magic_module(resolver())
     return magic
 
 

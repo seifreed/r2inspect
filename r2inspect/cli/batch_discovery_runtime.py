@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -15,18 +16,32 @@ _MAGIC_UNINITIALIZED = object()
 magic: Any = _MAGIC_UNINITIALIZED
 
 
-def resolve_magic_module() -> Any | None:
-    """Resolve python-magic lazily to avoid import-time native crashes on Windows."""
+def _import_magic() -> Any:
+    import magic as magic_module
+
+    return magic_module
+
+
+def resolve_magic_module(
+    *,
+    platform: str | None = None,
+    importer: Callable[[], Any] | None = None,
+) -> Any | None:
+    """Resolve python-magic lazily to avoid import-time native crashes on Windows.
+
+    ``platform`` and ``importer`` default to the live ``sys.platform`` and a
+    real ``import magic``; tests inject deterministic values instead of
+    patching ``sys`` or ``builtins.__import__``.
+    """
     global magic
     if magic is not _MAGIC_UNINITIALIZED:
         return magic
-    if sys.platform == "win32":
+    current_platform = platform if platform is not None else sys.platform
+    if current_platform == "win32":
         magic = None
         return magic
     try:
-        import magic as magic_module
-
-        magic = magic_module
+        magic = (importer if importer is not None else _import_magic)()
     except Exception:
         magic = None
     return magic

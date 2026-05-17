@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import builtins
-import importlib
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from r2inspect.adapters.magic_adapter import MagicAdapter
-from r2inspect.modules.impfuzzy_analyzer import IMPFUZZY_AVAILABLE, ImpfuzzyAnalyzer
+from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
 from r2inspect.pipeline import stages_format
@@ -33,27 +31,28 @@ def test_magic_adapter_create_detectors_exception() -> None:
     assert adapter.create_detectors() is None
 
 
-def test_batch_processing_magic_resolution_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
-    batch = importlib.import_module("r2inspect.cli.batch_processing")
+def test_batch_processing_magic_resolution_fallbacks() -> None:
+    import r2inspect.cli.batch_discovery_runtime as runtime
+    import r2inspect.cli.batch_processing as batch
 
-    batch.magic = batch._MAGIC_UNINITIALIZED
-    monkeypatch.setattr(batch.sys, "platform", "win32")
-    assert batch._resolve_magic_module() is None
+    saved_runtime_magic = runtime.magic
+    saved_batch_magic = batch.magic
+    try:
+        runtime.magic = runtime._MAGIC_UNINITIALIZED
+        assert runtime.resolve_magic_module(platform="win32") is None
 
-    batch.magic = batch._MAGIC_UNINITIALIZED
-    monkeypatch.setattr(batch.sys, "platform", "linux")
-    original_import = builtins.__import__
+        runtime.magic = runtime._MAGIC_UNINITIALIZED
 
-    def _raising_import(name: str, *args: object, **kwargs: object):
-        if name == "magic":
+        def _failing_importer() -> object:
             raise ImportError("no magic")
-        return original_import(name, *args, **kwargs)
 
-    monkeypatch.setattr(builtins, "__import__", _raising_import)
-    assert batch._resolve_magic_module() is None
+        assert runtime.resolve_magic_module(importer=_failing_importer) is None
 
-    batch.magic = batch._MAGIC_UNINITIALIZED
-    assert batch._init_magic() is None
+        batch.magic = batch._MAGIC_UNINITIALIZED
+        assert batch._init_magic(resolve_fn=lambda: None) is None
+    finally:
+        runtime.magic = saved_runtime_magic
+        batch.magic = saved_batch_magic
 
 
 def test_stages_format_magic_none_and_macho_branch(tmp_path: Path) -> None:

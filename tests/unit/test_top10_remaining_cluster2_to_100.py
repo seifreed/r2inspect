@@ -212,26 +212,24 @@ def test_pe_analyzer_domain_helpers_crypto_domain_and_authenticode(monkeypatch) 
     assert auth._verify_signature_integrity(_BadSig()) is False
 
 
-def test_batch_processing_magic_resolution_branches(monkeypatch) -> None:
-    old_magic = batch_processing.magic
+def test_batch_processing_magic_resolution_branches() -> None:
+    import r2inspect.cli.batch_discovery_runtime as runtime
+
+    old_runtime_magic = runtime.magic
+    old_batch_magic = batch_processing.magic
     try:
-        batch_processing.magic = batch_processing._MAGIC_UNINITIALIZED
-        monkeypatch.setattr(batch_processing.sys, "platform", "win32")
-        assert batch_processing._resolve_magic_module() is None
+        runtime.magic = runtime._MAGIC_UNINITIALIZED
+        assert runtime.resolve_magic_module(platform="win32") is None
+
+        runtime.magic = runtime._MAGIC_UNINITIALIZED
+
+        def _failing_importer():
+            raise ImportError("missing")
+
+        assert runtime.resolve_magic_module(importer=_failing_importer) is None
 
         batch_processing.magic = batch_processing._MAGIC_UNINITIALIZED
-        monkeypatch.setattr(batch_processing.sys, "platform", "linux")
-        real_import = __import__
-
-        def _fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-            if name == "magic":
-                raise ImportError("missing")
-            return real_import(name, globals, locals, fromlist, level)
-
-        monkeypatch.setattr("builtins.__import__", _fake_import)
-        assert batch_processing._resolve_magic_module() is None
-
-        batch_processing.magic = batch_processing._MAGIC_UNINITIALIZED
-        assert batch_processing._init_magic() is None
+        assert batch_processing._init_magic(resolve_fn=lambda: None) is None
     finally:
-        batch_processing.magic = old_magic
+        runtime.magic = old_runtime_magic
+        batch_processing.magic = old_batch_magic
