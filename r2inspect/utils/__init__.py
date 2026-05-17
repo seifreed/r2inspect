@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
-from ..infrastructure.r2_helpers import safe_cmd, safe_cmdj
+from ..infrastructure.r2_helpers import (
+    safe_cmd,
+    safe_cmd_dict,
+    safe_cmd_list,
+    safe_cmdj,
+)
 
-__all__ = ["safe_cmd", "safe_cmdj"]
+__all__ = ["safe_cmd", "safe_cmd_dict", "safe_cmd_list", "safe_cmdj"]
