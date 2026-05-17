@@ -585,6 +585,7 @@ def test_default_registry_all_pe_required_are_format():
 # ---------------------------------------------------------------------------
 
 
+from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
 from r2inspect.pipeline.stages_common import AnalyzerStage, IndicatorStage
 
 
@@ -608,7 +609,8 @@ def test_analyzer_stage_execute_stores_result():
         result_key="test_result",
     )
     context: dict = {"results": {}}
-    stage.execute(context)
+    # _execute is pure; the orchestrator merges its flat return into context.
+    merge_into_plain_context(context, stage.execute(context))
     assert "test_result" in context["results"]
     assert context["results"]["test_result"] == {"value": 42}
 
@@ -626,7 +628,7 @@ def test_analyzer_stage_error_stored_gracefully():
         filename="dummy.bin",
     )
     context: dict = {"results": {}}
-    stage.execute(context)
+    merge_into_plain_context(context, stage.execute(context))
     assert "error" in context["results"]["broken_stage"]
 
 
@@ -639,7 +641,7 @@ def test_analyzer_stage_default_result_key_uses_name():
         filename="dummy.bin",
     )
     context: dict = {"results": {}}
-    stage.execute(context)
+    merge_into_plain_context(context, stage.execute(context))
     assert "my_key" in context["results"]
 
 
@@ -653,7 +655,7 @@ def test_indicator_stage_name_and_deps():
 def test_indicator_stage_execute_writes_indicators():
     stage = IndicatorStage()
     context: dict = {"results": {}}
-    stage.execute(context)
+    merge_into_plain_context(context, stage.execute(context))
     assert "indicators" in context["results"]
     assert isinstance(context["results"]["indicators"], list)
 

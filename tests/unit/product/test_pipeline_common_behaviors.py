@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from tests.helpers import make_stage_context
 
+from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
 from r2inspect.pipeline.stages_common import AnalyzerStage, IndicatorStage
 
 
@@ -62,8 +63,10 @@ def test_analyzer_stage_uses_available_analysis_method_and_stores_by_result_key(
     )
 
     result = stage.execute(context)
-
-    assert result["results"]["custom"]["detected"] is True
+    # execute returns the flat {result_key: result}; the orchestrator merges
+    # it into context["results"] (stages stay pure for the parallel runtime).
+    assert result["custom"]["detected"] is True
+    merge_into_plain_context(context, result)
     assert context["results"]["custom"]["detected"] is True
 
 
@@ -79,8 +82,8 @@ def test_analyzer_stage_records_error_without_crashing_pipeline() -> None:
 
     result = stage.execute(context)
 
-    assert "error" in result["results"]["broken"]
-    assert "broken" in result["results"]["broken"]["error"]
+    assert "error" in result["broken"]
+    assert "broken" in result["broken"]["error"]
 
 
 def test_indicator_stage_generates_indicator_list_from_results() -> None:
@@ -94,6 +97,7 @@ def test_indicator_stage_generates_indicator_list_from_results() -> None:
     stage = IndicatorStage()
 
     result = stage.execute(context)
+    merge_into_plain_context(context, result)
 
     assert isinstance(result["indicators"], list)
     assert context["results"]["indicators"] == result["indicators"]

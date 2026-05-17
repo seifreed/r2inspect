@@ -6,7 +6,6 @@ Rules: no mocks, no unittest.mock, no MagicMock, no patch — plain stubs only.
 from __future__ import annotations
 
 import hashlib
-import io
 import logging
 import sys
 from pathlib import Path
@@ -790,6 +789,7 @@ class _StubBackend:
 
 
 def test_analyzer_stage_stores_result_in_context() -> None:
+    from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
     from r2inspect.pipeline.stages_common import AnalyzerStage
 
     stage = AnalyzerStage(
@@ -800,11 +800,13 @@ def test_analyzer_stage_stores_result_in_context() -> None:
         filename="test.bin",
     )
     context: dict[str, Any] = {"results": {}}
-    stage.execute(context)
+    # _execute is pure; the orchestrator merges its flat return into context.
+    merge_into_plain_context(context, stage.execute(context))
     assert context["results"]["test_analyzer"] == {"found": True, "items": [1, 2, 3]}
 
 
 def test_analyzer_stage_custom_result_key() -> None:
+    from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
     from r2inspect.pipeline.stages_common import AnalyzerStage
 
     stage = AnalyzerStage(
@@ -816,11 +818,12 @@ def test_analyzer_stage_custom_result_key() -> None:
         result_key="custom_key",
     )
     context: dict[str, Any] = {"results": {}}
-    stage.execute(context)
+    merge_into_plain_context(context, stage.execute(context))
     assert "custom_key" in context["results"]
 
 
 def test_analyzer_stage_failing_analyzer_stores_error() -> None:
+    from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
     from r2inspect.pipeline.stages_common import AnalyzerStage
 
     stage = AnalyzerStage(
@@ -831,7 +834,7 @@ def test_analyzer_stage_failing_analyzer_stores_error() -> None:
         filename="test.bin",
     )
     context: dict[str, Any] = {"results": {}}
-    stage.execute(context)
+    merge_into_plain_context(context, stage.execute(context))
     assert "error" in context["results"]["bad_analyzer"]
 
 
@@ -859,11 +862,12 @@ def test_indicator_stage_returns_list() -> None:
 
 
 def test_indicator_stage_populates_context() -> None:
+    from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
     from r2inspect.pipeline.stages_common import IndicatorStage
 
     stage = IndicatorStage()
     context: dict[str, Any] = {"results": {}}
-    stage.execute(context)
+    merge_into_plain_context(context, stage.execute(context))
     assert "indicators" in context["results"]
 
 

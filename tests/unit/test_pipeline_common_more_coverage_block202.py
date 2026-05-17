@@ -47,7 +47,8 @@ def test_analyzer_stage_success(r2_adapter: R2PipeAdapter, samples_dir: Path) ->
         filename=str(samples_dir / "hello_pe.exe"),
     )
     result = stage._execute(ctx)
-    assert "pe" in result["results"]
+    # _execute is pure and returns the flat {result_key: result}.
+    assert "pe" in result
 
 
 def test_analyzer_stage_error_path(samples_dir: Path) -> None:
@@ -60,7 +61,7 @@ def test_analyzer_stage_error_path(samples_dir: Path) -> None:
         filename=str(samples_dir / "hello_pe.exe"),
     )
     result = stage._execute(ctx)
-    assert "error" in result["results"]["pe"]
+    assert "error" in result["pe"]
 
 
 def test_indicator_stage_generation() -> None:

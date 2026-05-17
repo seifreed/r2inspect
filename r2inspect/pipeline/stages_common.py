@@ -75,6 +75,10 @@ class AnalyzerStage(AnalysisStage):
         self.result_key = result_key or name
 
     def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
+        # Pure: returns the flat {result_key: result}; the orchestrator
+        # (merge_into_plain_context / ThreadSafeContext.merge_results) owns
+        # writing it into context["results"]. Required for the parallel
+        # runtime — stages must not mutate the shared context concurrently.
         try:
             analyzer = self.analyzer_factory(
                 self.analyzer_class,
@@ -113,6 +117,9 @@ class IndicatorStage(AnalysisStage):
         self.result_aggregator_factory = result_aggregator_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
+        # Reads context["results"] (populated by upstream stages via the
+        # orchestrator) but does not mutate it; returns the flat result
+        # for the orchestrator to merge. See AnalyzerStage._execute.
         indicators = self.result_aggregator_factory().generate_indicators(
             context.get("results", {})
         )
