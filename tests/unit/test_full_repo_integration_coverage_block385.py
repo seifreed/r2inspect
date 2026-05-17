@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import os
 from pathlib import Path
 
 import pytest
@@ -110,9 +109,8 @@ def _run_analyzer_instance(analyzer):
     raise AttributeError(f"No executable analysis method found for {type(analyzer).__name__}")
 
 
-def test_main_entrypoint_real_help(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("sys.argv", ["r2inspect", "--help"])
-    assert package_main() == 0
+def test_main_entrypoint_real_help() -> None:
+    assert package_main(["--help"]) == 0
 
 
 def test_all_registered_analyzers_run_real(real_adapters) -> None:

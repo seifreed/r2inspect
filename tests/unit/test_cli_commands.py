@@ -191,15 +191,11 @@ def test_interactive_command_should_exit(tmp_path):
     assert cmd._should_exit("other") is False
 
 
-def test_interactive_command_execute_known_commands(tmp_path, monkeypatch):
+def test_interactive_command_execute_known_commands(tmp_path):
     console = _make_console()
     context = _make_context(tmp_path, console=console)
     cmd = InteractiveCommand(context)
     inspector = _FakeInspector()
-
-    from r2inspect.cli import display as display_module
-
-    monkeypatch.setattr(display_module, "console", console)
 
     cmd._execute_interactive_command("strings", inspector, {})
     cmd._execute_interactive_command("info", inspector, {})

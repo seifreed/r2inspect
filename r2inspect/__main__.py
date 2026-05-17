@@ -7,10 +7,14 @@ r2inspect package main entry point
 from r2inspect.cli_main import cli
 
 
-def main() -> int:
-    """Execute the CLI entry point and return an exit code."""
+def main(argv: list[str] | None = None) -> int:
+    """Execute the CLI entry point and return an exit code.
+
+    ``argv`` defaults to ``None``, which lets click read ``sys.argv`` exactly
+    as before; tests pass an explicit list instead of mutating ``sys.argv``.
+    """
     try:
-        cli()
+        cli(args=argv)
     except SystemExit as exc:
         code = exc.code
         return int(code) if code is not None else 0
