@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tests.helpers import write_minimal_pe_file
+from tests.helpers import env_vars, write_minimal_pe_file
 
 from r2inspect.cli import batch_processing
 from r2inspect.cli.batch_processing import (
@@ -82,9 +82,7 @@ class _BadMagicModule:
             raise RuntimeError("boom")
 
 
-def test_cli_batch_processing_magic_and_rate_limit_behaviors(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cli_batch_processing_magic_and_rate_limit_behaviors(tmp_path: Path) -> None:
     original_magic = batch_processing.magic
     try:
         batch_processing.magic = None
@@ -101,9 +99,9 @@ def test_cli_batch_processing_magic_and_rate_limit_behaviors(
     finally:
         batch_processing.magic = original_magic
 
-    monkeypatch.setenv("R2INSPECT_MAX_THREADS", "2")
-    limiter = setup_rate_limiter(threads=10, verbose=False)
-    assert limiter.max_concurrent == 2
+    with env_vars(R2INSPECT_MAX_THREADS="2"):
+        limiter = setup_rate_limiter(threads=10, verbose=False)
+        assert limiter.max_concurrent == 2
 
     options = setup_analysis_options(None, None)
     assert options["full_analysis"] is True

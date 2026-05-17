@@ -3,6 +3,7 @@
 from .batch_fakes import DummyRateLimiter, write_minimal_pe_file
 from .cli_runner import run_cli
 from .console_fakes import CaptureConsole
+from .env import env_vars
 from .module_loading import blocked_import, import_fresh
 from .pipeline_builders import StaticResultStage, make_stage_context
 from .pipeline_fakes import FakeAdapter, FakeConfig
@@ -19,6 +20,7 @@ __all__ = [
     "FakeSession",
     "StaticResultStage",
     "blocked_import",
+    "env_vars",
     "import_fresh",
     "make_stage_context",
     "make_registry",

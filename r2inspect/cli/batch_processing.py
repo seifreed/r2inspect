@@ -66,11 +66,23 @@ _looks_like_batch_result = _support.looks_like_batch_result
 _resolve_magic_module = _batch_discovery_runtime.resolve_magic_module
 
 
+def _validate_magic_module(candidate: Any) -> Any | None:
+    """Return the module only if its ``Magic`` constructor actually works."""
+    if candidate is None:
+        return None
+    try:
+        candidate.Magic(mime=True)
+        candidate.Magic()
+    except Exception:
+        return None
+    return candidate
+
+
 def _init_magic() -> Any | None:
     """Initialize python-magic through the shared discovery runtime."""
     global magic
     _batch_discovery_runtime.magic = magic
-    magic = _batch_discovery_runtime.resolve_magic_module()
+    magic = _validate_magic_module(_batch_discovery_runtime.resolve_magic_module())
     return magic
 
 
