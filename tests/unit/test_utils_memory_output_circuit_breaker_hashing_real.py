@@ -170,11 +170,14 @@ def test_memory_monitor_callbacks_and_errors() -> None:
 
     warning_monitor.process = BadProcess()
     cached_stats = warning_monitor._get_cached_stats()
-    assert cached_stats["status"] == "error"
+    # A failed memory probe reports the deliberate fail-safe sentinel
+    # "unknown" (never "normal"), so callers don't treat it as healthy.
+    assert cached_stats["status"] == "unknown"
+    assert cached_stats["memory_check_failed"] is True
 
     warning_monitor.process = BadProcess()
     error_stats = warning_monitor.check_memory(force=True)
-    assert error_stats["status"] == "error"
+    assert error_stats["status"] == "unknown"
 
     warning_monitor._trigger_gc(aggressive=True)
     assert warning_monitor.gc_count >= 1
