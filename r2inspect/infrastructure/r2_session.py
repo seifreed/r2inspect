@@ -76,12 +76,14 @@ class R2Session:
 
     @property
     def _is_test_mode(self) -> bool:
-        """Check if running in test mode for resource-constrained execution."""
-        env_value = os.environ.get("R2INSPECT_TEST_MODE", "").lower()
-        if env_value in {"1", "true", "yes"}:
-            return True
-        if env_value in {"0", "false", "no"}:
-            return False
+        """Check if running in test mode for resource-constrained execution.
+
+        ``__init__`` already snapshots ``R2INSPECT_TEST_MODE`` into
+        ``_test_mode``; the property returns that snapshot so a caller can
+        override the mode per-instance (e.g. force the production analysis
+        path). Re-reading the env here would make the instance attribute
+        impossible to override whenever the env var is set.
+        """
         return self._test_mode
 
     def _get_open_timeout(self) -> float:
