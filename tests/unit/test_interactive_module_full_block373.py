@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import builtins
-
 from r2inspect.cli import interactive
 from r2inspect.cli.output_formatters import OutputFormatter
 
@@ -36,7 +34,7 @@ def test_show_strings_only_and_helpers() -> None:
     interactive._show_info_table("Info", {"a": 1}, OutputFormatter({}))
 
 
-def test_run_interactive_mode_commands(monkeypatch) -> None:
+def test_run_interactive_mode_commands() -> None:
     inspector = FakeInspector()
     options = {}
 
@@ -59,25 +57,22 @@ def test_run_interactive_mode_commands(monkeypatch) -> None:
     def fake_input(_prompt: str) -> str:
         return next(commands)
 
-    monkeypatch.setattr(builtins, "input", fake_input)
-    interactive.run_interactive_mode(inspector, options)
+    interactive.run_interactive_mode(inspector, options, input_fn=fake_input)
 
 
-def test_run_interactive_mode_keyboard_interrupt(monkeypatch) -> None:
+def test_run_interactive_mode_keyboard_interrupt() -> None:
     inspector = FakeInspector()
 
     def raise_interrupt(_prompt: str) -> str:
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(builtins, "input", raise_interrupt)
-    interactive.run_interactive_mode(inspector, {})
+    interactive.run_interactive_mode(inspector, {}, input_fn=raise_interrupt)
 
 
-def test_run_interactive_mode_eof(monkeypatch) -> None:
+def test_run_interactive_mode_eof() -> None:
     inspector = FakeInspector()
 
     def raise_eof(_prompt: str) -> str:
         raise EOFError
 
-    monkeypatch.setattr(builtins, "input", raise_eof)
-    interactive.run_interactive_mode(inspector, {})
+    interactive.run_interactive_mode(inspector, {}, input_fn=raise_eof)
