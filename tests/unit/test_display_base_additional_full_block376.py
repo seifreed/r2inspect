@@ -35,16 +35,13 @@ def test_format_hash_display_and_table() -> None:
     assert table is not None
 
 
-def test_print_banner_variants(monkeypatch) -> None:
+def test_print_banner_variants() -> None:
     class DummyFiglet:
         def figlet_format(self, text: str, font: str = "slant") -> str:
             return f"{text}-{font}"
 
-    monkeypatch.setattr(display_base, "pyfiglet", DummyFiglet())
-    display_base.print_banner()
-
-    monkeypatch.setattr(display_base, "pyfiglet", None)
-    display_base.print_banner()
+    display_base.print_banner(figlet=DummyFiglet())
+    display_base.print_banner(figlet=None)
 
 
 def test_display_validation_and_yara(tmp_path: Path) -> None:

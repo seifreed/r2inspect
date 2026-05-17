@@ -19,6 +19,8 @@ try:
 except Exception:
     pyfiglet = None
 
+_USE_MODULE_PYFIGLET = object()
+
 
 class _StdoutProxy:
     """Minimal text stream wrapper exposing stdout attributes Rich expects."""
@@ -82,9 +84,14 @@ def create_info_table(title: str, prop_width: int = 15, value_min_width: int = 5
     return table
 
 
-def print_banner() -> None:
-    """Print the CLI banner."""
-    _display_runtime.print_banner(get_console=_get_console, pyfiglet=pyfiglet)
+def print_banner(figlet: Any | None = _USE_MODULE_PYFIGLET) -> None:
+    """Print the CLI banner.
+
+    ``figlet`` defaults to the module's resolved pyfiglet import; tests pass
+    a stub or ``None`` to exercise both banner branches without patching.
+    """
+    resolved = pyfiglet if figlet is _USE_MODULE_PYFIGLET else figlet
+    _display_runtime.print_banner(get_console=_get_console, pyfiglet=resolved)
 
 
 def display_validation_errors(validation_errors: list[str]) -> None:

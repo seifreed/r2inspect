@@ -1,14 +1,16 @@
 import json
-import os
 import time
 
 import r2inspect.infrastructure.r2_helpers as r2_helpers
+from r2inspect.infrastructure.r2_validation import _clean_list_items
 from r2inspect.infrastructure.r2_suppress import (
     R2PipeErrorSuppressor,
     _parse_raw_result,
     silent_cmdj,
     suppress_r2pipe_errors,
 )
+
+from tests.helpers import env_vars
 
 
 class DummyR2:
@@ -61,14 +63,14 @@ def test_r2_suppressor_and_parsing():
         print("suppressed")
 
 
-def test_r2_helpers_validate_and_safe_cmds(monkeypatch):
+def test_r2_helpers_validate_and_safe_cmds():
     assert r2_helpers.validate_r2_data({"a": 1}, "dict") == {"a": 1}
     assert r2_helpers.validate_r2_data([{"name": "a"}], "list") == [{"name": "a"}]
     assert r2_helpers.validate_r2_data("x", "dict") == {}
     assert r2_helpers.validate_r2_data("x", "list") == []
 
     data = [{"name": "a&amp;b"}, "bad"]
-    cleaned = r2_helpers._clean_list_items(data)
+    cleaned = _clean_list_items(data)
     assert cleaned[0]["name"] == "a&b"
 
     r2 = DummyR2(cmd_result=json.dumps({"ok": True}))
@@ -85,11 +87,9 @@ def test_r2_helpers_validate_and_safe_cmds(monkeypatch):
 
     assert r2_helpers.safe_cmd(r2, "ij", default="") == json.dumps({"ok": True})
 
-    monkeypatch.setenv("R2INSPECT_CMD_TIMEOUT_SECONDS", "0.01")
-    r2_slow = DummyR2(cmd_result="done")
-    assert r2_helpers._run_cmd_with_timeout(r2_slow, "sleep", default="timeout") == "timeout"
-
-    monkeypatch.delenv("R2INSPECT_CMD_TIMEOUT_SECONDS", raising=False)
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.01"):
+        r2_slow = DummyR2(cmd_result="done")
+        assert r2_helpers._run_cmd_with_timeout(r2_slow, "sleep", default="timeout") == "timeout"
 
 
 def test_pe_elf_macho_header_helpers():
