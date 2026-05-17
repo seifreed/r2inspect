@@ -1,24 +1,43 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
+import logging
+from pathlib import Path
+from typing import Any
 
 import pytest
+from rich.console import Console
 
 import r2inspect.cli_main as cli_main
+from r2inspect.cli.cli_entry import CommandDispatch, build_dispatch
+from r2inspect.cli.commands import (
+    AnalyzeCommand,
+    BatchCommand,
+    Command,
+    CommandContext,
+    InteractiveCommand,
+)
+from r2inspect.cli.validators import handle_xor_input
 
 
-class FakeCommand:
-    def __init__(self, context):
-        self.context = context
-        self.calls: list[dict[str, object]] = []
+class RecordingCommand(Command):
+    """Hand-rolled Command double that records the payload it executes."""
 
-    def execute(self, args: dict[str, object]) -> int:
+    def __init__(self, context: CommandContext | None = None, *, exit_code: int = 0) -> None:
+        super().__init__(context)
+        self._exit_code = exit_code
+        self.calls: list[dict[str, Any]] = []
+
+    def execute(self, args: dict[str, Any]) -> int:
         self.calls.append(args)
-        return 0
+        return self._exit_code
 
 
-def _args(**overrides):
-    base = {
+def _make_context() -> CommandContext:
+    return CommandContext(console=Console(), logger=logging.getLogger("test-cli-main"))
+
+
+def _args(**overrides: Any) -> cli_main.CLIArgs:
+    base: dict[str, Any] = {
         "filename": "/tmp/sample.bin",
         "interactive": False,
         "output_json": False,
@@ -38,158 +57,117 @@ def _args(**overrides):
     return cli_main.CLIArgs(**(base | overrides))
 
 
-def test_run_cli_sanitizes_xor_and_dispatches_without_validation_errors(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    dispatched: list[tuple[object, cli_main.CLIArgs]] = []
-    context = SimpleNamespace(kind="context")
+def test_run_cli_sanitizes_xor_and_dispatches_without_validation_errors(tmp_path: Path) -> None:
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"MZ" + b"\x00" * 256)
 
-    monkeypatch.setattr(cli_main, "validate_inputs", lambda *_a, **_k: [])
-    monkeypatch.setattr(cli_main, "validate_input_mode", lambda *_a, **_k: None)
-    monkeypatch.setattr(cli_main, "print_banner", lambda: None)
-    monkeypatch.setattr(cli_main, "handle_xor_input", lambda value: "decoded" if value else None)
-    monkeypatch.setattr(cli_main, "_build_context", lambda *_a, **_k: context)
-    monkeypatch.setattr(
-        cli_main, "_dispatch_command", lambda ctx, args: dispatched.append((ctx, args))
+    dispatched: list[tuple[CommandContext, cli_main.CLIArgs]] = []
+
+    def fake_dispatch(ctx: CommandContext, args: cli_main.CLIArgs) -> None:
+        dispatched.append((ctx, args))
+
+    cli_main.run_cli(
+        _args(filename=str(sample), xor="414243", output_json=True),
+        dispatch_fn=fake_dispatch,
     )
-
-    cli_main.run_cli(_args(xor="414243"))
 
     assert dispatched
     dispatched_context, dispatched_args = dispatched[0]
-    assert dispatched_context is context
-    assert dispatched_args.xor == "decoded"
+    assert isinstance(dispatched_context, CommandContext)
+    # run_cli must forward the sanitized xor (real sanitizer is the oracle).
+    assert dispatched_args.xor == handle_xor_input("414243")
 
 
-def test_run_cli_displays_validation_errors_and_exits(monkeypatch: pytest.MonkeyPatch) -> None:
-    displayed: list[list[str]] = []
-
-    monkeypatch.setattr(cli_main, "validate_inputs", lambda *_a, **_k: ["bad-input"])
-    monkeypatch.setattr(
-        cli_main, "display_validation_errors", lambda errors: displayed.append(errors)
-    )
-
+def test_run_cli_displays_validation_errors_and_exits(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
-        cli_main.run_cli(_args())
+        cli_main.run_cli(_args(filename="/nonexistent/zzz_missing_dir/zzz_missing.bin"))
 
     assert exc.value.code == 1
-    assert displayed == [["bad-input"]]
+    assert "Error:" in capsys.readouterr().out
 
 
-def test_dispatch_command_routes_to_analyze_when_not_batch_or_interactive(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    created: list[FakeCommand] = []
+def test_dispatch_command_routes_to_analyze_when_not_batch_or_interactive() -> None:
+    dispatch = build_dispatch(_make_context(), _args())
+    assert isinstance(dispatch.command, AnalyzeCommand)
+    assert dispatch.payload["filename"] == "/tmp/sample.bin"
 
-    def fake_analyze(context):
-        cmd = FakeCommand(context)
-        created.append(cmd)
-        return cmd
+    recording = RecordingCommand()
 
-    monkeypatch.setattr(cli_main, "AnalyzeCommand", fake_analyze)
-    monkeypatch.setattr(
-        cli_main,
-        "BatchCommand",
-        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("batch not expected")),
-    )
-    monkeypatch.setattr(
-        cli_main,
-        "InteractiveCommand",
-        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("interactive not expected")),
-    )
+    def fake_build(ctx: CommandContext, args: cli_main.CLIArgs) -> CommandDispatch:
+        return CommandDispatch(command=recording, payload={"filename": args.filename})
 
     with pytest.raises(SystemExit) as exc:
-        cli_main._dispatch_command(SimpleNamespace(kind="ctx"), _args())
+        cli_main._dispatch_command(_make_context(), _args(), build_dispatch_fn=fake_build)
 
     assert exc.value.code == 0
-    assert created and created[0].calls
+    assert recording.calls == [{"filename": "/tmp/sample.bin"}]
 
 
-def test_build_context_uses_thread_safe_mode_for_batch(monkeypatch: pytest.MonkeyPatch) -> None:
-    created: list[dict[str, object]] = []
+def test_build_context_uses_thread_safe_mode_for_batch() -> None:
+    recorded: list[dict[str, Any]] = []
 
-    def fake_create(**kwargs):
-        created.append(kwargs)
-        return SimpleNamespace()
+    def recording_factory(**kwargs: Any) -> CommandContext:
+        recorded.append(kwargs)
+        return _make_context()
 
-    monkeypatch.setattr(cli_main.CommandContext, "create", staticmethod(fake_create))
+    cli_main._build_context(True, False, "/tmp/batch", context_factory=recording_factory)
+    cli_main._build_context(False, False, None, context_factory=recording_factory)
 
-    cli_main._build_context(verbose=True, quiet=False, batch="/tmp/batch")
-    cli_main._build_context(verbose=False, quiet=False, batch=None)
-
-    assert created[0]["thread_safe"] is True
-    assert created[1]["thread_safe"] is False
+    assert recorded[0]["thread_safe"] is True
+    assert recorded[1]["thread_safe"] is False
 
 
-def test_dispatch_command_routes_to_batch_and_interactive(monkeypatch: pytest.MonkeyPatch) -> None:
-    batch_created: list[FakeCommand] = []
-    interactive_created: list[FakeCommand] = []
+def test_dispatch_command_routes_to_batch_and_interactive() -> None:
+    batch_dispatch = build_dispatch(_make_context(), _args(batch="/tmp/batch"))
+    assert isinstance(batch_dispatch.command, BatchCommand)
+    assert batch_dispatch.payload["batch"] == "/tmp/batch"
 
-    def fake_batch(context):
-        cmd = FakeCommand(context)
-        batch_created.append(cmd)
-        return cmd
+    interactive_dispatch = build_dispatch(_make_context(), _args(interactive=True))
+    assert isinstance(interactive_dispatch.command, InteractiveCommand)
+    assert interactive_dispatch.payload["filename"] == "/tmp/sample.bin"
 
-    def fake_interactive(context):
-        cmd = FakeCommand(context)
-        interactive_created.append(cmd)
-        return cmd
-
-    monkeypatch.setattr(cli_main, "BatchCommand", fake_batch)
-    monkeypatch.setattr(cli_main, "InteractiveCommand", fake_interactive)
-    monkeypatch.setattr(
-        cli_main,
-        "AnalyzeCommand",
-        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("analyze not expected")),
-    )
+    batch_cmd = RecordingCommand()
+    interactive_cmd = RecordingCommand()
 
     with pytest.raises(SystemExit) as exc:
-        cli_main._dispatch_command(SimpleNamespace(kind="ctx"), _args(batch="/tmp/batch"))
+        cli_main._dispatch_command(
+            _make_context(),
+            _args(batch="/tmp/batch"),
+            build_dispatch_fn=lambda c, a: CommandDispatch(command=batch_cmd, payload={"b": 1}),
+        )
     assert exc.value.code == 0
 
     with pytest.raises(SystemExit) as exc:
-        cli_main._dispatch_command(SimpleNamespace(kind="ctx"), _args(interactive=True))
+        cli_main._dispatch_command(
+            _make_context(),
+            _args(interactive=True),
+            build_dispatch_fn=lambda c, a: CommandDispatch(
+                command=interactive_cmd, payload={"i": 1}
+            ),
+        )
     assert exc.value.code == 0
 
-    assert batch_created and batch_created[0].calls
-    assert interactive_created and interactive_created[0].calls
+    assert batch_cmd.calls == [{"b": 1}]
+    assert interactive_cmd.calls == [{"i": 1}]
 
 
-def test_cli_shortcuts_and_main_error_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    version_calls: list[str] = []
-    yara_calls: list[tuple[object, object]] = []
-
-    monkeypatch.setattr(
-        cli_main,
-        "VersionCommand",
-        lambda: SimpleNamespace(execute=lambda _args: version_calls.append("v") or 0),
-    )
-    monkeypatch.setattr(
-        cli_main,
-        "ConfigCommand",
-        lambda: SimpleNamespace(execute=lambda args: yara_calls.append((None, args)) or 0),
-    )
-
+def test_cli_shortcuts_and_main_error_paths(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         cli_main._execute_version()
     assert exc.value.code == 0
+    assert "r2inspect" in capsys.readouterr().out
 
     with pytest.raises(SystemExit) as exc:
         cli_main._execute_list_yara(None, None)
     assert exc.value.code == 0
-    assert version_calls == ["v"]
-    assert len(yara_calls) == 1
+    assert "Rules directory" in capsys.readouterr().out
 
-    printed: list[tuple[tuple[object, ...], dict[str, object]]] = []
-    monkeypatch.setattr(
-        cli_main.console, "print", lambda *args, **kwargs: printed.append((args, kwargs))
-    )
-    monkeypatch.setattr(
-        cli_main, "run_cli", lambda *_a, **_k: (_ for _ in ()).throw(KeyboardInterrupt())
-    )
+    def interrupt_runner(_args: cli_main.CLIArgs) -> None:
+        raise KeyboardInterrupt
 
     with pytest.raises(SystemExit) as exc:
         cli_main.main(
+            run_cli_fn=interrupt_runner,
             filename=None,
             interactive=False,
             output_json=False,
@@ -207,4 +185,4 @@ def test_cli_shortcuts_and_main_error_paths(monkeypatch: pytest.MonkeyPatch) -> 
             version=False,
         )
     assert exc.value.code == 1
-    assert printed
+    assert "interrupted" in capsys.readouterr().out.lower()

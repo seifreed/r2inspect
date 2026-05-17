@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,10 +16,20 @@ class CommandDispatch:
     payload: dict[str, Any]
 
 
-def build_context(verbose: bool, quiet: bool, batch: str | None) -> CommandContext:
-    return CommandContext.create(
-        config=None, verbose=verbose, quiet=quiet, thread_safe=batch is not None
-    )
+def build_context(
+    verbose: bool,
+    quiet: bool,
+    batch: str | None,
+    *,
+    context_factory: Callable[..., CommandContext] | None = None,
+) -> CommandContext:
+    """Build the command context.
+
+    ``context_factory`` defaults to the real ``CommandContext.create``; tests
+    inject a recording factory instead of patching the classmethod.
+    """
+    factory = context_factory or CommandContext.create
+    return factory(config=None, verbose=verbose, quiet=quiet, thread_safe=batch is not None)
 
 
 def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:

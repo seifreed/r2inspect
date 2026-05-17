@@ -125,8 +125,16 @@ def cli(**kwargs: Any) -> None:
     main(**kwargs)
 
 
-def run_cli(args: CLIArgs) -> None:
-    """Primary CLI workflow separated for clarity and testability."""
+def run_cli(
+    args: CLIArgs,
+    *,
+    dispatch_fn: Callable[[CommandContext, CLIArgs], None] | None = None,
+) -> None:
+    """Primary CLI workflow separated for clarity and testability.
+
+    ``dispatch_fn`` defaults to the real ``_dispatch_command``; tests inject a
+    deterministic terminal dispatch instead of patching the module.
+    """
     if args.version:
         _execute_version()
 
@@ -154,7 +162,7 @@ def run_cli(args: CLIArgs) -> None:
     sanitized_xor = handle_xor_input(args.xor)
     context = _build_context(args.verbose, args.quiet, args.batch)
     args_with_xor = CLIArgs(**{**args.__dict__, "xor": sanitized_xor})
-    _dispatch_command(context, args_with_xor)
+    (dispatch_fn or _dispatch_command)(context, args_with_xor)
 
 
 def _execute_list_yara(config: str | None, yara: str | None) -> None:
@@ -177,9 +185,19 @@ def _execute_version() -> None:
     sys.exit(version_cmd.execute({}))
 
 
-def _build_context(verbose: bool, quiet: bool, batch: str | None) -> CommandContext:
-    """Construct a CommandContext with proper thread safety and logging."""
-    return _build_context_impl(verbose, quiet, batch)
+def _build_context(
+    verbose: bool,
+    quiet: bool,
+    batch: str | None,
+    *,
+    context_factory: Callable[..., CommandContext] | None = None,
+) -> CommandContext:
+    """Construct a CommandContext with proper thread safety and logging.
+
+    ``context_factory`` is forwarded to ``build_context`` so tests can record
+    the resolved ``thread_safe`` flag instead of patching the classmethod.
+    """
+    return _build_context_impl(verbose, quiet, batch, context_factory=context_factory)
 
 
 def _dispatch_command(
