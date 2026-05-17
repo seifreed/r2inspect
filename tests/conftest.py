@@ -58,7 +58,7 @@ def samples_dir(_session_samples_dir: Path) -> Path:
 
 
 @pytest.fixture(autouse=True, scope="session")
-def cap_test_resources() -> None:
+def cap_test_resources(tmp_path_factory: pytest.TempPathFactory) -> None:
     """
     Apply aggressive resource caps during tests to avoid overloading the machine.
 
@@ -67,6 +67,11 @@ def cap_test_resources() -> None:
       - Lightweight analysis mode (skips heavy aaa analysis)
       - Disabled r2 plugins to reduce overhead
       - Memory and CPU limits to prevent runaway processes
+      - A neutral radare2rc so analysis never inherits the developer's
+        ~/.radare2rc (an rc with ``e cfg.debug=true`` makes radare2
+        debug-launch the sample on open, hanging r2pipe). Production code
+        already passes ``-N``; this covers tests that call ``r2pipe.open``
+        directly and keeps the suite deterministic across machines/CI.
 
     Caps are configurable via env vars:
       - R2INSPECT_MAX_WORKERS (defaults to 1 in test mode)
@@ -76,7 +81,14 @@ def cap_test_resources() -> None:
       - R2INSPECT_TEST_MAX_CPU_SECONDS (defaults to 300)
       - R2INSPECT_TEST_MAX_AS_MB (defaults to 1024)
       - R2INSPECT_ANALYSIS_DEPTH (defaults to 1 in test mode, use aa not aaa)
+      - R2_RCFILE (defaults to an empty session rc; radare2 loads this
+        instead of ~/.radare2rc)
     """
+    if "R2_RCFILE" not in os.environ:
+        neutral_rc = tmp_path_factory.mktemp("r2rc") / "radare2rc"
+        neutral_rc.write_text("")
+        os.environ["R2_RCFILE"] = str(neutral_rc)
+
     if os.getenv("COV_CORE_SOURCE") and not os.getenv("COVERAGE_PROCESS_START"):
         config_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
         os.environ["COVERAGE_PROCESS_START"] = str(config_path)
