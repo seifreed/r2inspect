@@ -1040,12 +1040,12 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
             os.environ.pop("R2INSPECT_TEST_SAFE_EXIT", None)
             linger.join()
 
-        original_exit = os._exit
-        try:
-            os._exit = lambda _code=0: None  # type: ignore[assignment]
+        # Under pytest, _safe_exit raises SystemExit instead of calling
+        # os._exit (so it never kills the test runner). That is the only
+        # reachable contract here; the os._exit path is unreachable under
+        # pytest by design and must not be forced via runtime patching.
+        with pytest.raises(SystemExit):
             batch_processing._safe_exit(0)
-        finally:
-            os._exit = original_exit
 
         batch_processing.get_csv_fieldnames()
         csv_path = tmp_path / "batch.csv"
