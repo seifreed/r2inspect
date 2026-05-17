@@ -2,6 +2,7 @@
 """Mach-O analysis."""
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
@@ -23,8 +24,19 @@ logger = get_logger(__name__)
 class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Mach-O file analysis using radare2"""
 
-    def __init__(self, adapter: Any, config: Any | None = None) -> None:
+    def __init__(
+        self,
+        adapter: Any,
+        config: Any | None = None,
+        headers_provider: Callable[[Any], list[dict[str, Any]] | None] | None = None,
+    ) -> None:
         super().__init__(adapter=adapter, config=config)
+        self._headers_provider = headers_provider
+
+    def _macho_headers(self) -> list[dict[str, Any]]:
+        """Resolve Mach-O load-command headers via the injected provider or r2."""
+        provider = self._headers_provider or get_macho_headers
+        return provider(self.adapter) or []
 
     def get_category(self) -> str:
         return "format"
@@ -130,7 +142,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         def _load() -> dict[str, Any]:
             info: dict[str, Any] = {}
-            for header in get_macho_headers(self.adapter) or []:
+            for header in self._macho_headers():
                 if header.get("type") != "LC_BUILD_VERSION":
                     continue
                 info["platform"] = header.get("platform", "Unknown")
@@ -152,7 +164,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         def _load() -> dict[str, Any]:
             info: dict[str, Any] = {}
-            for header in get_macho_headers(self.adapter) or []:
+            for header in self._macho_headers():
                 header_type = header.get("type", "")
                 if "LC_VERSION_MIN" not in header_type:
                     continue
@@ -172,7 +184,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         def _load() -> dict[str, Any]:
             info: dict[str, Any] = {}
-            for header in get_macho_headers(self.adapter) or []:
+            for header in self._macho_headers():
                 if header.get("type") != "LC_ID_DYLIB":
                     continue
                 timestamp = header.get("timestamp", 0)
@@ -193,7 +205,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Extract UUID from LC_UUID command."""
 
         def _load() -> str | None:
-            for header in get_macho_headers(self.adapter) or []:
+            for header in self._macho_headers():
                 if header.get("type") == "LC_UUID":
                     uuid = header.get("uuid", "")
                     return str(uuid) if uuid else None
@@ -217,7 +229,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _get_load_commands(self) -> list[dict[str, Any]]:
         """Get Mach-O load commands information."""
         return self._safe_call(
-            lambda: build_load_commands(get_macho_headers(self.adapter) or []),
+            lambda: build_load_commands(self._macho_headers()),
             default=[],
             error_msg="Error getting load commands",
         )

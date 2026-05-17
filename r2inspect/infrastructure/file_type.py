@@ -19,9 +19,11 @@ def is_pe_file(
     r2_instance: Any,
     *,
     logger: Any | None = None,
+    cmdj: Any | None = None,
 ) -> bool:
     """Return True if the file appears to be PE based on magic and r2 info."""
     log = logger or _logger
+    run_cmdj = cmdj or cmdj_helper
 
     try:
         if filepath:
@@ -45,7 +47,7 @@ def is_pe_file(
             return True
 
         try:
-            info_cmd = cmdj_helper(adapter, r2_instance, "ij", {})
+            info_cmd = run_cmdj(adapter, r2_instance, "ij", {})
             if info_cmd and "bin" in info_cmd:
                 bin_info = info_cmd["bin"]
                 if _bin_info_has_pe(bin_info):

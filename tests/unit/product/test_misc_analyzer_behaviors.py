@@ -4,8 +4,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -86,29 +84,18 @@ def test_export_analyzer_reports_suspicious_exports_and_statistics() -> None:
     assert any(item["characteristics"].get("suspicious_name") for item in result["exports"])
 
 
-def test_macho_analyzer_collects_dylib_compilation_info_and_tolerates_bad_headers(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    analyzer = MachOAnalyzer(MinimalAdapter())
-
-    monkeypatch.setattr(
-        "r2inspect.modules.macho_analyzer.get_macho_headers",
-        lambda _r2: [
-            {
-                "type": "LC_ID_DYLIB",
-                "name": "libfoo.dylib",
-                "version": "1.0",
-                "compatibility": "1.0",
-                "timestamp": 1234567890,
-            }
-        ],
-    )
-    info = analyzer._get_compilation_info()
+def test_macho_analyzer_collects_dylib_compilation_info_and_tolerates_bad_headers() -> None:
+    dylib_header = {
+        "type": "LC_ID_DYLIB",
+        "name": "libfoo.dylib",
+        "version": "1.0",
+        "compatibility": "1.0",
+        "timestamp": 1234567890,
+    }
+    with_dylib = MachOAnalyzer(MinimalAdapter(), headers_provider=lambda _adapter: [dylib_header])
+    info = with_dylib._get_compilation_info()
     assert info["dylib_name"] == "libfoo.dylib"
 
-    monkeypatch.setattr(
-        "r2inspect.modules.macho_analyzer.get_macho_headers",
-        lambda _r2: [None],
-    )
-    assert isinstance(analyzer._extract_dylib_info(), dict)
-    assert analyzer._get_load_commands() == []
+    with_bad_headers = MachOAnalyzer(MinimalAdapter(), headers_provider=lambda _adapter: [None])
+    assert isinstance(with_bad_headers._extract_dylib_info(), dict)
+    assert with_bad_headers._get_load_commands() == []

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -28,10 +29,14 @@ _magic_detectors: tuple[Any, Any] | None = None
 _magic_adapter: Any | None = None
 
 
-def _resolved_path(path: str) -> str:
+def _default_resolver(path: str) -> str:
+    return str(Path(path).resolve())
+
+
+def _resolved_path(path: str, resolver: Callable[[str], str] = _default_resolver) -> str:
     """Return an absolute resolved path to avoid symlink-dependent magic detection."""
     try:
-        return str(Path(path).resolve())
+        return resolver(path)
     except Exception:
         return path
 

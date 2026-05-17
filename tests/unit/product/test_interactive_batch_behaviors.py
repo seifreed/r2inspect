@@ -46,16 +46,26 @@ class _Formatter:
         return f"sections:{sections}"
 
 
-def test_interactive_mode_handles_known_unknown_and_exit_commands(monkeypatch) -> None:
+def _scripted_input(commands):
+    iterator = iter(commands)
+
+    def _read(_prompt: str = "") -> str:
+        return next(iterator)
+
+    return _read
+
+
+def test_interactive_mode_handles_known_unknown_and_exit_commands() -> None:
     console = _Console()
     inspector = _Inspector()
-    commands = iter(["strings", "info", "unknown", "quit"])
 
-    monkeypatch.setattr(interactive, "console", console)
-    monkeypatch.setattr(interactive, "OutputFormatter", _Formatter)
-    monkeypatch.setattr("builtins.input", lambda _prompt="": next(commands))
-
-    interactive.run_interactive_mode(inspector, {})
+    interactive.run_interactive_mode(
+        inspector,
+        {},
+        console=console,
+        formatter=_Formatter({}),
+        input_fn=_scripted_input(["strings", "info", "unknown", "quit"]),
+    )
 
     rendered = "\n".join(console.messages)
     assert "alpha" in rendered and "beta" in rendered
@@ -64,10 +74,9 @@ def test_interactive_mode_handles_known_unknown_and_exit_commands(monkeypatch) -
     assert "Exiting interactive mode" in rendered
 
 
-def test_interactive_mode_runs_analyze_and_help(monkeypatch) -> None:
+def test_interactive_mode_runs_analyze_and_help() -> None:
     console = _Console()
     inspector = _Inspector()
-    commands = iter(["help", "analyze", "quit"])
     displayed: list[dict[str, str]] = []
 
     class _FakeResult:
@@ -91,15 +100,15 @@ def test_interactive_mode_runs_analyze_and_help(monkeypatch) -> None:
             assert validate_schemas is False
             return _FakeResult()
 
-    monkeypatch.setattr(interactive, "console", console)
-    monkeypatch.setattr(interactive, "OutputFormatter", _Formatter)
-    monkeypatch.setattr("builtins.input", lambda _prompt="": next(commands))
-    monkeypatch.setattr("r2inspect.application.use_cases.AnalyzeBinaryUseCase", lambda: _UseCase())
-    monkeypatch.setattr(
-        "r2inspect.cli.display.display_results", lambda result: displayed.append(result)
+    interactive.run_interactive_mode(
+        inspector,
+        {"full_analysis": True},
+        console=console,
+        formatter=_Formatter({}),
+        input_fn=_scripted_input(["help", "analyze", "quit"]),
+        analyze_use_case=lambda: _UseCase(),
+        display_fn=lambda result: displayed.append(result),
     )
-
-    interactive.run_interactive_mode(inspector, {"full_analysis": True})
 
     rendered = "\n".join(console.messages)
     assert "Available commands: analyze" in rendered
@@ -107,15 +116,20 @@ def test_interactive_mode_runs_analyze_and_help(monkeypatch) -> None:
 
 
 @pytest.mark.parametrize("side_effect", [KeyboardInterrupt(), EOFError()])
-def test_interactive_mode_exits_cleanly_on_terminal_interrupts(monkeypatch, side_effect) -> None:
+def test_interactive_mode_exits_cleanly_on_terminal_interrupts(side_effect) -> None:
     console = _Console()
     inspector = _Inspector()
 
-    monkeypatch.setattr(interactive, "console", console)
-    monkeypatch.setattr(interactive, "OutputFormatter", _Formatter)
-    monkeypatch.setattr("builtins.input", lambda _prompt="": (_ for _ in ()).throw(side_effect))
+    def _raise(_prompt: str = "") -> str:
+        raise side_effect
 
-    interactive.run_interactive_mode(inspector, {})
+    interactive.run_interactive_mode(
+        inspector,
+        {},
+        console=console,
+        formatter=_Formatter({}),
+        input_fn=_raise,
+    )
 
     assert any("Exiting interactive mode" in message for message in console.messages)
 

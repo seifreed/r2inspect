@@ -120,38 +120,57 @@ def test_authenticode_and_hashing_helpers_expose_consistent_behavior() -> None:
     simhash = SimHashAnalyzer(adapter=Adapter(), filepath="/tmp/f.bin")
     extracted = simhash._extract_opcodes_from_ops([{"opcode": "mov eax, ebx"}, {"mnemonic": "ret"}])
     assert "OP:mov" in extracted
-    simhash.analyze = lambda: {"available": True, "hash_value": 12345}  # type: ignore[method-assign]
-    assert "distance" in simhash.calculate_similarity(54321, hash_type="combined")
 
-    tlsh = TLSHAnalyzer(adapter=Adapter(), filename="/tmp/f.bin")
-    tlsh._get_sections = lambda: [{"name": ".text", "vaddr": 4096, "size": 16}]  # type: ignore[method-assign]
-    tlsh._read_bytes_hex = lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("read"))  # type: ignore[method-assign]
+    class _SimHashWithHash(SimHashAnalyzer):
+        def analyze(self) -> dict[str, Any]:
+            return {"available": True, "hash_value": 12345}
+
+    stubbed_simhash = _SimHashWithHash(adapter=Adapter(), filepath="/tmp/f.bin")
+    assert "distance" in stubbed_simhash.calculate_similarity(54321, hash_type="combined")
+
+    class _TLSHUnreadableSections(TLSHAnalyzer):
+        def _get_sections(self) -> list[dict[str, Any]]:
+            return [{"name": ".text", "vaddr": 4096, "size": 16}]
+
+        def _read_bytes_hex(self, *_args: Any, **_kwargs: Any) -> str:
+            raise RuntimeError("read")
+
+    tlsh = _TLSHUnreadableSections(adapter=Adapter(), filename="/tmp/f.bin")
     assert tlsh._calculate_section_tlsh()[".text"] is None
 
 
-def test_file_type_and_stage_support_fall_back_safely(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+class _NullMagicProvider:
+    def get_detectors(self) -> None:
+        return None
+
+
+def _raise_runtime(*_args: Any, **_kwargs: Any) -> Any:
+    raise RuntimeError("boom")
+
+
+def test_file_type_and_stage_support_fall_back_safely(tmp_path: Path) -> None:
     sample = tmp_path / "f.bin"
     sample.write_bytes(b"\x00" * 32)
 
-    monkeypatch.setattr(Path, "resolve", lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
-    assert _resolved_path("abc.bin") == "abc.bin"
+    assert _resolved_path("abc.bin", resolver=_raise_runtime) == "abc.bin"
 
-    monkeypatch.setattr(
-        "r2inspect.infrastructure.file_type.cmdj_helper",
-        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("ij-fail")),
-    )
     silent_logger = SimpleNamespace(debug=lambda *_a, **_k: None, error=lambda *_a, **_k: None)
     assert (
         file_type_mod.is_pe_file(
-            "x", SimpleNamespace(get_info_text=lambda: ""), None, logger=silent_logger
+            "x",
+            SimpleNamespace(get_info_text=lambda: ""),
+            None,
+            logger=silent_logger,
+            cmdj=_raise_runtime,
         )
         is False
     )
 
-    monkeypatch.setattr("r2inspect.pipeline.stages_format._get_magic_detectors", lambda: None)
-    stage = FileInfoStage(adapter=FileInfoAdapter(), filename=str(sample))
+    stage = FileInfoStage(
+        adapter=FileInfoAdapter(),
+        filename=str(sample),
+        magic_detector_provider=_NullMagicProvider(),
+    )
     result = stage._execute({"results": {}})
     assert result["file_info"]["architecture"] == "x86"
     assert result["file_info"]["mime_type"] is None
