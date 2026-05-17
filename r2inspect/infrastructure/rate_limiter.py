@@ -9,6 +9,7 @@ import threading
 import time
 import warnings
 from collections import deque
+from collections.abc import Callable
 from typing import Any
 
 import psutil
@@ -16,6 +17,18 @@ import psutil
 from .logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _default_system_load() -> tuple[float, float]:
+    """Return (memory_fraction, cpu_fraction) in the 0..1 range from psutil."""
+    return (
+        psutil.virtual_memory().percent / 100.0,
+        psutil.cpu_percent(interval=0.1) / 100.0,
+    )
+
+
+def _default_process_factory() -> Any:
+    return psutil.Process(os.getpid())
 
 
 class TokenBucket:
@@ -57,7 +70,12 @@ class AdaptiveRateLimiter:
         min_rate: float = 0.5,
         memory_threshold: float = 0.8,
         cpu_threshold: float = 0.9,
+        *,
+        system_load_provider: Callable[[], tuple[float, float]] | None = None,
     ):
+        self._system_load_provider: Callable[[], tuple[float, float]] = (
+            system_load_provider if system_load_provider is not None else _default_system_load
+        )
         self.base_rate = base_rate
         self.max_rate = max_rate
         self.min_rate = min_rate
@@ -94,8 +112,7 @@ class AdaptiveRateLimiter:
             return
         self.last_system_check = now
         try:
-            memory_percent = psutil.virtual_memory().percent / 100.0
-            cpu_percent = psutil.cpu_percent(interval=0.1) / 100.0
+            memory_percent, cpu_percent = self._system_load_provider()
             with self.lock:
                 if memory_percent > self.memory_threshold or cpu_percent > self.cpu_threshold:
                     self.current_rate = max(self.min_rate, self.current_rate * 0.7)
@@ -149,11 +166,15 @@ class BatchRateLimiter:
         rate_per_second: float = 5.0,
         burst_size: int = 20,
         enable_adaptive: bool = True,
+        *,
+        rate_limiter: AdaptiveRateLimiter | TokenBucket | None = None,
     ):
         self.max_concurrent = max_concurrent
         self.semaphore = threading.Semaphore(max_concurrent)
-        if enable_adaptive:
-            self.rate_limiter: AdaptiveRateLimiter | TokenBucket = AdaptiveRateLimiter(
+        if rate_limiter is not None:
+            self.rate_limiter: AdaptiveRateLimiter | TokenBucket = rate_limiter
+        elif enable_adaptive:
+            self.rate_limiter = AdaptiveRateLimiter(
                 base_rate=rate_per_second,
                 max_rate=rate_per_second * 2,
                 min_rate=rate_per_second * 0.1,
@@ -223,13 +244,14 @@ class BatchRateLimiter:
         return base_stats
 
 
-def cleanup_memory() -> dict[str, float] | None:
+def cleanup_memory(*, process_factory: Callable[[], Any] | None = None) -> dict[str, float] | None:
     """Force garbage collection to free memory."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ResourceWarning)
         gc.collect()
+    factory = process_factory if process_factory is not None else _default_process_factory
     try:
-        process = psutil.Process(os.getpid())
+        process = factory()
         memory_info = process.memory_info()
         return {
             "rss_mb": memory_info.rss / 1024 / 1024,

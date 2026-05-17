@@ -7,8 +7,6 @@ import time
 import warnings
 from typing import Any, cast
 
-import psutil
-
 
 def _collect_garbage() -> None:
     with warnings.catch_warnings():
@@ -37,7 +35,7 @@ def check_memory(monitor: Any, *, force: bool, logger: Any) -> dict[str, Any]:
         try:
             memory_mb = monitor.process.memory_info().rss / 1024 / 1024
             monitor.peak_memory_mb = max(monitor.peak_memory_mb, memory_mb)
-            system_memory = psutil.virtual_memory()
+            system_memory = monitor._system_memory_provider()
             process_usage_percent = memory_mb / monitor.limits.max_process_memory_mb
             monitor.last_check = now
 

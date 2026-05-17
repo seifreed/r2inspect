@@ -41,10 +41,19 @@ class MemoryLimits:
 
 
 class MemoryMonitor:
-    def __init__(self, limits: MemoryLimits | None = None):
+    def __init__(
+        self,
+        limits: MemoryLimits | None = None,
+        *,
+        process: Any | None = None,
+        system_memory_provider: Callable[[], Any] | None = None,
+    ):
         self.limits = limits or MemoryLimits()
         self.lock = threading.Lock()
-        self.process = psutil.Process(os.getpid())
+        self.process = process if process is not None else psutil.Process(os.getpid())
+        self._system_memory_provider: Callable[[], Any] = (
+            system_memory_provider if system_memory_provider is not None else psutil.virtual_memory
+        )
         self.last_check = time.time()
         self.check_interval = 5.0
         self.memory_warnings = 0

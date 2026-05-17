@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Resilience-focused regression tests for execution utilities (Fase D).
 
-NO mocks, NO patch decorators. Uses real objects, monkeypatch, and SimpleNamespace stubs.
+Real objects only — no mocking framework, no fixture patching, no decorators.
+Collaborators that would otherwise reach psutil are supplied through the
+production dependency-injection seams with hand-rolled doubles.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -31,67 +35,90 @@ from r2inspect.infrastructure.retry_manager import (
 )
 
 
-def test_memory_manager_gc_trigger_and_error_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    monitor = MemoryMonitor(
+class _FakeProcess:
+    """Minimal psutil.Process double exposing only memory_info()."""
+
+    def __init__(self, rss: int) -> None:
+        self._rss = rss
+
+    def memory_info(self) -> SimpleNamespace:
+        return SimpleNamespace(rss=self._rss, vms=self._rss)
+
+
+class _RaisingProcess:
+    def memory_info(self) -> SimpleNamespace:
+        raise RuntimeError("boom")
+
+
+class _RecordingMemoryMonitor(MemoryMonitor):
+    """MemoryMonitor that records _trigger_gc calls instead of running GC."""
+
+    def __init__(
+        self,
+        limits: MemoryLimits | None = None,
+        *,
+        process: Any | None = None,
+        system_memory_provider: Callable[[], Any] | None = None,
+    ) -> None:
+        super().__init__(
+            limits,
+            process=process,
+            system_memory_provider=system_memory_provider,
+        )
+        self.trigger_calls: list[bool] = []
+
+    def _trigger_gc(self, aggressive: bool = False) -> None:
+        self.trigger_calls.append(aggressive)
+
+
+def test_memory_manager_gc_trigger_and_error_paths() -> None:
+    monitor = _RecordingMemoryMonitor(
         MemoryLimits(
             max_process_memory_mb=4.0,
             memory_warning_threshold=0.95,
             memory_critical_threshold=0.99,
             gc_trigger_threshold=0.70,
-        )
+        ),
+        process=_FakeProcess(rss=int(0.78 * 4.0 * 1024 * 1024)),
+        system_memory_provider=lambda: SimpleNamespace(
+            total=8 * 1024 * 1024 * 1024,
+            available=4 * 1024 * 1024 * 1024,
+            percent=20.0,
+        ),
     )
 
-    # Force branch that only triggers _trigger_gc() and keeps status as normal.
-    monitor.process = SimpleNamespace(
-        memory_info=lambda: SimpleNamespace(rss=int(0.78 * 4.0 * 1024 * 1024))
-    )
-    monitor.system_memory = SimpleNamespace(
-        total=8 * 1024 * 1024 * 1024,
-        available=4 * 1024 * 1024 * 1024,
-        percent=20.0,
-    )
-    trigger_calls: list[bool] = []
-    original_trigger = monitor._trigger_gc
+    stats = monitor.check_memory(force=True)
 
-    try:
-        monitor._trigger_gc = lambda aggressive=False: trigger_calls.append(aggressive)  # type: ignore[method-assign]
-        monkeypatch.setattr(memory_module.psutil, "virtual_memory", lambda: monitor.system_memory)
-        stats = monitor.check_memory(force=True)
-
-        assert stats["status"] == "normal"
-        assert trigger_calls == [False]
-    finally:
-        monitor._trigger_gc = original_trigger
+    assert stats["status"] == "normal"
+    assert monitor.trigger_calls == [False]
 
     # Force error handling path returning error stats.
-    monitor.process = SimpleNamespace(
-        memory_info=lambda: (_ for _ in ()).throw(RuntimeError("boom"))
+    failing = MemoryMonitor(
+        MemoryLimits(max_process_memory_mb=4.0),
+        process=_RaisingProcess(),
     )
-    error_stats = monitor.check_memory(force=True)
-    cached_stats = monitor._get_cached_stats()
+    error_stats = failing.check_memory(force=True)
+    cached_stats = failing._get_cached_stats()
     assert error_stats["status"] in ("error", "unknown")
     assert cached_stats["status"] in ("error", "unknown")
 
 
-def test_memory_manager_callbacks_swallow_exceptions(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_memory_manager_callbacks_swallow_exceptions() -> None:
     monitor = MemoryMonitor(
         MemoryLimits(
             max_process_memory_mb=1.0,
             memory_warning_threshold=0.80,
             memory_critical_threshold=0.90,
             gc_trigger_threshold=0.70,
-        )
+        ),
+        process=_FakeProcess(rss=int(0.82 * 1024 * 1024)),
+        system_memory_provider=lambda: SimpleNamespace(
+            total=2 * 1024 * 1024 * 1024,
+            available=1 * 1024 * 1024 * 1024,
+            percent=20.0,
+        ),
     )
 
-    monitor.process = SimpleNamespace(
-        memory_info=lambda: SimpleNamespace(rss=int(0.82 * 1024 * 1024))
-    )
-    monitor.system_memory = SimpleNamespace(
-        total=2 * 1024 * 1024 * 1024,
-        available=1 * 1024 * 1024 * 1024,
-        percent=20.0,
-    )
-    monkeypatch.setattr(memory_module.psutil, "virtual_memory", lambda: monitor.system_memory)
     monitor.set_callbacks(
         warning_callback=lambda _stats: (_ for _ in ()).throw(RuntimeError("warn")),
         critical_callback=lambda _stats: (_ for _ in ()).throw(RuntimeError("crit")),
@@ -212,44 +239,49 @@ def test_retry_manager_re_raise_on_retry_limit() -> None:
     assert stats["failed_after_retries"] >= 1
 
 
-def test_rate_limiter_cleanup_memory_error_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    import r2inspect.infrastructure.rate_limiter as rl_mod
+def test_rate_limiter_cleanup_memory_error_path() -> None:
+    def _raising_factory() -> object:
+        raise RuntimeError("no psutil")
 
-    monkeypatch.setattr(
-        rl_mod.psutil, "Process", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("no psutil"))
-    )
-    assert cleanup_memory() is None
+    assert cleanup_memory(process_factory=_raising_factory) is None
+
+
+class _FailingThenOkBucket:
+    """TokenBucket double: first acquire raises, subsequent acquires succeed."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def acquire(self, tokens: int = 1, timeout: float | None = None) -> bool:
+        self.calls += 1
+        if self.calls == 1:
+            raise RuntimeError("rate fail")
+        return True
 
 
 def test_batch_rate_limiter_acquire_handles_rate_limit_exception() -> None:
-    limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=2.0, enable_adaptive=False)
+    limiter = BatchRateLimiter(
+        max_concurrent=1,
+        rate_per_second=2.0,
+        enable_adaptive=False,
+        rate_limiter=_FailingThenOkBucket(),
+    )
 
-    # Save original acquire method and replace with one that raises
-    original_acquire = limiter.rate_limiter.acquire
-
-    def _failing_acquire(*args, **kwargs):
-        raise RuntimeError("rate fail")
-
-    limiter.rate_limiter.acquire = _failing_acquire
-    try:
-        with pytest.raises(RuntimeError, match="rate fail"):
-            limiter.acquire(timeout=0.1)
-    finally:
-        limiter.rate_limiter.acquire = original_acquire
+    with pytest.raises(RuntimeError, match="rate fail"):
+        limiter.acquire(timeout=0.1)
 
     # After release in exception handler, semaphore should be reusable.
     assert limiter.acquire(timeout=0.1) is True
 
 
-def test_adaptive_rate_limiter_updates_rate_from_system_stress(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import r2inspect.infrastructure.rate_limiter as rl_mod
-
-    limiter = AdaptiveRateLimiter(base_rate=4.0, max_rate=10.0, min_rate=1.0)
+def test_adaptive_rate_limiter_updates_rate_from_system_stress() -> None:
+    limiter = AdaptiveRateLimiter(
+        base_rate=4.0,
+        max_rate=10.0,
+        min_rate=1.0,
+        system_load_provider=lambda: (0.95, 0.95),
+    )
     limiter.last_system_check = 0
-    monkeypatch.setattr(rl_mod.psutil, "virtual_memory", lambda: SimpleNamespace(percent=95.0))
-    monkeypatch.setattr(rl_mod.psutil, "cpu_percent", lambda: 95.0)
     limiter._check_system_load()
 
     assert limiter.current_rate < 4.0
