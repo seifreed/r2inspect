@@ -15,6 +15,8 @@ from typing import Any
 import pytest
 from rich.console import Console
 
+from tests.helpers import env_vars
+
 # ---------------------------------------------------------------------------
 # Stub adapters (plain classes, no mocks)
 # ---------------------------------------------------------------------------
@@ -1049,34 +1051,34 @@ def test_display_base_constants():
 from r2inspect.cli.batch_workers import _cap_threads_for_execution
 
 
-def test_cap_threads_no_env_var(monkeypatch):
-    monkeypatch.delenv("R2INSPECT_MAX_THREADS", raising=False)
-    assert _cap_threads_for_execution(8) == 8
+def test_cap_threads_no_env_var():
+    with env_vars(R2INSPECT_MAX_THREADS=None):
+        assert _cap_threads_for_execution(8) == 8
 
 
-def test_cap_threads_env_var_limits(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_MAX_THREADS", "4")
-    assert _cap_threads_for_execution(8) == 4
+def test_cap_threads_env_var_limits():
+    with env_vars(R2INSPECT_MAX_THREADS="4"):
+        assert _cap_threads_for_execution(8) == 4
 
 
-def test_cap_threads_env_var_larger_than_request(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_MAX_THREADS", "16")
-    assert _cap_threads_for_execution(8) == 8
+def test_cap_threads_env_var_larger_than_request():
+    with env_vars(R2INSPECT_MAX_THREADS="16"):
+        assert _cap_threads_for_execution(8) == 8
 
 
-def test_cap_threads_env_var_invalid(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_MAX_THREADS", "not_a_number")
-    assert _cap_threads_for_execution(8) == 8
+def test_cap_threads_env_var_invalid():
+    with env_vars(R2INSPECT_MAX_THREADS="not_a_number"):
+        assert _cap_threads_for_execution(8) == 8
 
 
-def test_cap_threads_env_var_zero(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_MAX_THREADS", "0")
-    assert _cap_threads_for_execution(8) == 8
+def test_cap_threads_env_var_zero():
+    with env_vars(R2INSPECT_MAX_THREADS="0"):
+        assert _cap_threads_for_execution(8) == 8
 
 
-def test_cap_threads_env_var_negative(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_MAX_THREADS", "-1")
-    assert _cap_threads_for_execution(8) == 8
+def test_cap_threads_env_var_negative():
+    with env_vars(R2INSPECT_MAX_THREADS="-1"):
+        assert _cap_threads_for_execution(8) == 8
 
 
 # ---------------------------------------------------------------------------
