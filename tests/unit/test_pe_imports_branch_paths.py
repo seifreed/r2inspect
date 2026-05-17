@@ -10,10 +10,10 @@ from r2inspect.modules.pe_imports import (
 
 
 class _FakeLogger:
-    def debug(self, msg: str) -> None:
+    def debug(self, msg: str, *args: object) -> None:
         pass
 
-    def error(self, msg: str) -> None:
+    def error(self, msg: str, *args: object) -> None:
         pass
 
 

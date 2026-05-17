@@ -267,8 +267,8 @@ def test_get_security_features_logs_error_when_text_fallback_raises():
         def __init__(self) -> None:
             self.errors: list[str] = []
 
-        def error(self, msg: str) -> None:
-            self.errors.append(msg)
+        def error(self, msg: str, *args: object) -> None:
+            self.errors.append(msg % args if args else msg)
 
         def debug(self, *_args, **_kwargs) -> None:
             return None

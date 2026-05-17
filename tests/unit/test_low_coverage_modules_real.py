@@ -429,11 +429,11 @@ class _ImportLogger:
         self.debug_messages: list[str] = []
         self.error_messages: list[str] = []
 
-    def debug(self, message: str) -> None:
-        self.debug_messages.append(message)
+    def debug(self, message: str, *args: object) -> None:
+        self.debug_messages.append(message % args if args else message)
 
-    def error(self, message: str) -> None:
-        self.error_messages.append(message)
+    def error(self, message: str, *args: object) -> None:
+        self.error_messages.append(message % args if args else message)
 
 
 class _ImportAdapter:
@@ -503,8 +503,8 @@ class _ResourceLogger:
     def __init__(self) -> None:
         self.errors: list[str] = []
 
-    def error(self, message: str) -> None:
-        self.errors.append(message)
+    def error(self, message: str, *args: object) -> None:
+        self.errors.append(message % args if args else message)
 
 
 def test_resource_analysis_and_simhash_detailed() -> None:
