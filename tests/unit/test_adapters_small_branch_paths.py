@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -11,61 +10,25 @@ import pytest
 from r2inspect.adapters.magic_adapter import MagicAdapter
 from r2inspect.adapters.file_system import FileSystemAdapter
 
-
 # ---------------------------------------------------------------------------
 # magic_adapter.py
 # ---------------------------------------------------------------------------
 
 
+def _raise_import_error() -> object:
+    raise ImportError("Blocked for test")
+
+
 def test_magic_adapter_available_false_when_magic_not_importable() -> None:
     """MagicAdapter.available returns False when python-magic is not importable."""
-    original = sys.modules.get("magic", _SENTINEL := object())
-
-    class _BlockMagic:
-        def find_spec(self, name, path, target=None):
-            if name == "magic":
-                raise ImportError("Blocked for test")
-            return None
-
-    blocker = _BlockMagic()
-    sys.meta_path.insert(0, blocker)
-    sys.modules.pop("magic", None)
-
-    try:
-        adapter = MagicAdapter()
-        assert adapter.available is False
-    finally:
-        sys.meta_path.remove(blocker)
-        if original is _SENTINEL:
-            sys.modules.pop("magic", None)
-        else:
-            sys.modules["magic"] = original
+    adapter = MagicAdapter(importer=_raise_import_error)
+    assert adapter.available is False
 
 
 def test_magic_adapter_create_detectors_returns_none_when_unavailable() -> None:
     """MagicAdapter.create_detectors returns None when magic module is not available."""
-    original = sys.modules.get("magic", _SENTINEL := object())
-
-    class _BlockMagic:
-        def find_spec(self, name, path, target=None):
-            if name == "magic":
-                raise ImportError("Blocked for test")
-            return None
-
-    blocker = _BlockMagic()
-    sys.meta_path.insert(0, blocker)
-    sys.modules.pop("magic", None)
-
-    try:
-        adapter = MagicAdapter()
-        result = adapter.create_detectors()
-        assert result is None
-    finally:
-        sys.meta_path.remove(blocker)
-        if original is _SENTINEL:
-            sys.modules.pop("magic", None)
-        else:
-            sys.modules["magic"] = original
+    adapter = MagicAdapter(importer=_raise_import_error)
+    assert adapter.create_detectors() is None
 
 
 def test_magic_adapter_available_true_when_magic_is_importable() -> None:
@@ -76,12 +39,7 @@ def test_magic_adapter_available_true_when_magic_is_importable() -> None:
 
 
 def test_magic_adapter_windows_branch_disables_magic() -> None:
-    original_platform = sys.platform
-    try:
-        sys.platform = "win32"
-        adapter = MagicAdapter()
-    finally:
-        sys.platform = original_platform
+    adapter = MagicAdapter(platform="win32")
     assert adapter.available is False
     assert adapter.create_detectors() is None
 
@@ -89,11 +47,10 @@ def test_magic_adapter_windows_branch_disables_magic() -> None:
 def test_magic_adapter_create_detectors_exception_returns_none() -> None:
     class _BrokenMagicModule:
         class Magic:
-            def __init__(self, *args, **kwargs):
+            def __init__(self, *args: object, **kwargs: object) -> None:
                 raise RuntimeError("boom")
 
-    adapter = MagicAdapter()
-    adapter._magic = _BrokenMagicModule()
+    adapter = MagicAdapter(importer=lambda: _BrokenMagicModule())
     assert adapter.create_detectors() is None
 
 
