@@ -73,7 +73,7 @@ def main(**kwargs: Any) -> None:
     try:
         args = CLIArgs(**kwargs)
         run_cli(args)
-    except KeyboardInterrupt:  # pragma: no cover
+    except KeyboardInterrupt:
         console.print("\n[yellow]Analysis interrupted by user[/yellow]")
         sys.exit(1)
 

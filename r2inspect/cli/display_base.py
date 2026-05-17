@@ -16,7 +16,7 @@ try:
     import pyfiglet as _pyfiglet
 
     pyfiglet = _pyfiglet
-except Exception:  # pragma: no cover - optional dependency
+except Exception:
     pyfiglet = None
 
 

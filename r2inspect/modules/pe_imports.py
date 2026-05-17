@@ -89,8 +89,8 @@ def calculate_imphash(adapter: Any, logger: Any) -> str:
                 continue
 
             for funcname in functions:
-                if not funcname:  # pragma: no cover
-                    continue  # pragma: no cover
+                if not funcname:
+                    continue
 
                 if isinstance(funcname, bytes):
                     funcname = funcname.decode(errors="ignore")

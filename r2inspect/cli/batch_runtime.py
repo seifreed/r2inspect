@@ -93,7 +93,7 @@ def _flush_coverage_data() -> None:
         if os.getenv("R2INSPECT_TEST_COVERAGE_DUMMY"):
 
             class _DummyCoverage:
-                def stop(self) -> None:  # pragma: no cover
+                def stop(self) -> None:
                     return None
 
                 def save(self) -> None:

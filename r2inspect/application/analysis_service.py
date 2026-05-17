@@ -93,4 +93,4 @@ class _AnalysisServiceProxy:
         setattr(get_default_analysis_service(), name, value)
 
 
-default_analysis_service: AnalysisService = _AnalysisServiceProxy()  # type: ignore[assignment]
+default_analysis_service: AnalysisService = cast(AnalysisService, _AnalysisServiceProxy())

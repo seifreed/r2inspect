@@ -47,7 +47,7 @@ try:
     from simhash import Simhash
 
     SIMHASH_AVAILABLE = True
-except ImportError:  # pragma: no cover
+except ImportError:
     logger.warning("simhash not available. Install with: pip install simhash")
     SIMHASH_AVAILABLE = False
     Simhash = None
@@ -88,7 +88,7 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
                 logger.debug("SimHash calculated: %s", hash_hex)
                 return hash_hex, "feature_extraction", None
 
-            return None, None, "Failed to calculate SimHash from features"  # pragma: no cover
+            return None, None, "Failed to calculate SimHash from features"
 
         except Exception as e:
             logger.error("Error calculating SimHash: %s", e)

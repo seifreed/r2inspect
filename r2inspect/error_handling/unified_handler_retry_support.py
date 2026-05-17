@@ -61,9 +61,9 @@ def retry_execution(
             )
             time.sleep(delay)
 
-    if last_exception:  # pragma: no cover
-        raise last_exception  # pragma: no cover
-    raise RuntimeError("Retry execution completed without result")  # pragma: no cover
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("Retry execution completed without result")
 
 
 def fallback_execution(

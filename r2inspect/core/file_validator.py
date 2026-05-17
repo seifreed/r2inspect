@@ -46,7 +46,7 @@ class FileValidator:
             self._validated = True
             return self._validation_result
 
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             logger.error("Error validating file %s: %s", self.filename, e)
             return self._fail_validation()
 

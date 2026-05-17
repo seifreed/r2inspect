@@ -33,7 +33,7 @@ class InteractiveCommand(Command):
 
             return 0
 
-        except KeyboardInterrupt:  # pragma: no cover
+        except KeyboardInterrupt:
             self.context.console.print("\n[yellow]Interactive mode interrupted by user[/yellow]")
             return 1
 
@@ -61,7 +61,7 @@ class InteractiveCommand(Command):
 
                 self._execute_interactive_command(cmd, inspector, options)
 
-            except KeyboardInterrupt:  # pragma: no cover
+            except KeyboardInterrupt:
                 break
             except EOFError:
                 break

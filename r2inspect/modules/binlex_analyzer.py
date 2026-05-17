@@ -65,9 +65,9 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
         super().__init__(adapter=adapter, filepath=filepath)
         self.default_ngram_size = 3  # Default n-gram size
 
-    def analyze(self, ngram_sizes: list[int] | None = None) -> BinlexResult:  # type: ignore[override]
+    def analyze(self, ngram_sizes: list[int] | None = None) -> dict[str, Any]:
         """Run Binlex analysis for all functions."""
-        return cast(BinlexResult, run_binlex_analysis(self, ngram_sizes=ngram_sizes, logger=logger))
+        return run_binlex_analysis(self, ngram_sizes=ngram_sizes, logger=logger)
 
     def _collect_function_signatures(
         self, functions: list[dict[str, Any]], ngram_sizes: list[int]

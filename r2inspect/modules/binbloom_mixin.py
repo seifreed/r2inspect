@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 
 try:
     from pybloom_live import BloomFilter
-except ImportError:  # pragma: no cover
+except ImportError:
     BloomFilter = None
 
 

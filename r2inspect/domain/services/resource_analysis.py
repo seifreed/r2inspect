@@ -85,7 +85,7 @@ def decode_resource_text(raw: bytes) -> str | None:
             text = raw.decode(encoding, errors="ignore")
             if text and any(char.isprintable() for char in text):
                 return text
-        except (UnicodeDecodeError, TypeError):  # pragma: no cover
+        except (UnicodeDecodeError, TypeError):
             pass
 
     return None

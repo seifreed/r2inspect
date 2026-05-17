@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ..domain.analysis_runtime import BatchRunResult
 from .batch_models import BatchDependencies
@@ -79,4 +79,4 @@ class _BatchServiceProxy:
         setattr(get_default_batch_service(), name, value)
 
 
-default_batch_service: BatchAnalysisService = _BatchServiceProxy()  # type: ignore[assignment]
+default_batch_service: BatchAnalysisService = cast(BatchAnalysisService, _BatchServiceProxy())

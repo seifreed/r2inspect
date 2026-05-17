@@ -42,7 +42,12 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Initialize the analyzer."""
         super().__init__(adapter=adapter)
 
-    def analyze(self) -> OverlayResult:  # type: ignore[override]
+    def analyze(self) -> dict[str, Any]:
+        # Public contract matches BaseAnalyzer (dict[str, Any]); the precise
+        # OverlayResult typing is preserved on the private implementation.
+        return cast("dict[str, Any]", self._analyze())
+
+    def _analyze(self) -> OverlayResult:
         """Analyze overlay data."""
         result = self._default_result()
 

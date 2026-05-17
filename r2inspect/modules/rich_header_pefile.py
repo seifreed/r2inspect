@@ -15,7 +15,7 @@ try:
 
     PEFILE_AVAILABLE = True
     logger.debug("pefile library available for Rich Header analysis")
-except ImportError:  # pragma: no cover
+except ImportError:
     PEFILE_AVAILABLE = False
     logger.debug("pefile library not available, using r2pipe fallback")
 

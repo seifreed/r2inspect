@@ -14,7 +14,7 @@ def main() -> int:
     except SystemExit as exc:
         code = exc.code
         return int(code) if code is not None else 0
-    return 0  # pragma: no cover
+    return 0
 
 
 if __name__ == "__main__":

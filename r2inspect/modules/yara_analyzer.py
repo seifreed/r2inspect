@@ -9,7 +9,7 @@ from typing import Any
 
 try:
     import yara
-except Exception:  # pragma: no cover - optional dependency
+except Exception:
     yara = None
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin

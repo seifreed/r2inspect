@@ -19,7 +19,7 @@ class LazyProxy[T]:
                 _instance = MyService()
             return _instance
 
-        my_service: MyService = LazyProxy(_factory)  # type: ignore[assignment]
+        my_service: MyService = cast(MyService, LazyProxy(_factory))
     """
 
     def __init__(self, factory: Callable[[], T]) -> None:

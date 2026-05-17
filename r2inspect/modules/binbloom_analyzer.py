@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
@@ -52,22 +52,19 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
         self.default_capacity = 256  # Default Bloom filter capacity
         self.default_error_rate = 0.001  # 0.1% false positive rate
 
-    def analyze(  # type: ignore[override]
+    def analyze(
         self, capacity: int | None = None, error_rate: float | None = None
-    ) -> BinbloomResult:
+    ) -> dict[str, Any]:
         """Analyze functions using Bloom filters."""
         from .binbloom_analysis import run_binbloom_analysis
 
-        return cast(
-            BinbloomResult,
-            run_binbloom_analysis(
-                analyzer=self,
-                capacity=capacity,
-                error_rate=error_rate,
-                bloom_available=BLOOM_AVAILABLE,
-                log_debug=logger.debug,
-                log_error=logger.error,
-            ),
+        return run_binbloom_analysis(
+            analyzer=self,
+            capacity=capacity,
+            error_rate=error_rate,
+            bloom_available=BLOOM_AVAILABLE,
+            log_debug=logger.debug,
+            log_error=logger.error,
         )
 
     def _collect_function_blooms(
