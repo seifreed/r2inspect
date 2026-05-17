@@ -105,10 +105,9 @@ def consolidate_detections(detected_algos: dict[str, list]) -> list[dict[str, An
         max_confidence = max(e["confidence"] for e in evidences)
         evidence_types = {e["evidence_type"] for e in evidences}
         if len(evidence_types) > 1:
-            # Multi-evidence boost: scale by base confidence to avoid weak
-            # evidence reaching near-certainty. 0.4 base → 0.48, 0.8 base → 0.88
-            boost = max_confidence * 0.1 * (len(evidence_types) - 1)
-            max_confidence = min(max_confidence + boost, 0.95)
+            # Independent evidence types corroborate each other: apply a flat
+            # boost capped below certainty.
+            max_confidence = min(max_confidence + 0.2, 0.95)
         algorithms.append(
             {
                 "algorithm": algo_name,
