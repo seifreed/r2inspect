@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
-import pytest
 from rich.table import Table
 
 from r2inspect.cli.output_formatters import OutputFormatter
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_formatter(extra: dict | None = None) -> OutputFormatter:
+def _make_formatter(
+    extra: dict | None = None, cls: type[OutputFormatter] = OutputFormatter
+) -> OutputFormatter:
     results: dict = {
         "file_info": {
             "name": "sample.exe",
@@ -26,7 +27,7 @@ def _make_formatter(extra: dict | None = None) -> OutputFormatter:
     }
     if extra:
         results.update(extra)
-    return OutputFormatter(results)
+    return cls(results)
 
 
 # ---------------------------------------------------------------------------
@@ -353,13 +354,12 @@ def test_count_duplicate_machoc_wrapper_delegates_to_csv_formatter() -> None:
     assert formatter._count_duplicate_machoc({"a": "h1", "b": "h1"}) == 1
 
 
-def test_to_csv_returns_error_row_when_csv_data_fails(monkeypatch) -> None:
-    formatter = _make_formatter()
+def test_to_csv_returns_error_row_when_csv_data_fails() -> None:
+    class _CsvDataFails(OutputFormatter):
+        def _extract_csv_data(self, data: dict[str, Any]) -> dict[str, Any]:
+            raise RuntimeError("forced csv failure")
 
-    def _raise(_data: dict) -> dict:
-        raise RuntimeError("forced csv failure")
-
-    monkeypatch.setattr(formatter, "_extract_csv_data", _raise)
+    formatter = _make_formatter(cls=_CsvDataFails)
     result = formatter.to_csv()
     assert "CSV Export Failed" in result
 
@@ -371,13 +371,12 @@ def test_to_csv_executes_csv_formatter_path() -> None:
     assert "name" in result.splitlines()[0]
 
 
-def test_format_summary_catches_exceptions(monkeypatch) -> None:
-    formatter = _make_formatter()
+def test_format_summary_catches_exceptions() -> None:
+    class _SummaryFails(OutputFormatter):
+        def _append_file_info_summary(self, summary_lines: list[str]) -> None:
+            raise RuntimeError("summary failure")
 
-    def _raise(_lines: list[str]) -> None:
-        raise RuntimeError("summary failure")
-
-    monkeypatch.setattr(formatter, "_append_file_info_summary", _raise)
+    formatter = _make_formatter(cls=_SummaryFails)
     summary = formatter.format_summary()
     assert "Error generating summary: summary failure" in summary
 

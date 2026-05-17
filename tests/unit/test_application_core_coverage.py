@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import io
 import time
 from pathlib import Path
 from typing import Any
 
-import pytest
+
+from tests.helpers import env_vars
 
 # ---------------------------------------------------------------------------
 # batch_discovery
@@ -190,16 +190,16 @@ def test_add_statistics_no_errors():
     assert "error_statistics" not in results
 
 
-def test_validate_results_env_flag_off(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_VALIDATE_SCHEMAS", "0")
-    svc = AnalysisService()
-    svc.validate_results({"something": {"data": 1}})  # must not raise
+def test_validate_results_env_flag_off():
+    with env_vars(R2INSPECT_VALIDATE_SCHEMAS="0"):
+        svc = AnalysisService()
+        svc.validate_results({"something": {"data": 1}})  # must not raise
 
 
-def test_validate_results_env_flag_on(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_VALIDATE_SCHEMAS", "1")
-    svc = AnalysisService()
-    svc.validate_results({})  # empty results – must not raise
+def test_validate_results_env_flag_on():
+    with env_vars(R2INSPECT_VALIDATE_SCHEMAS="1"):
+        svc = AnalysisService()
+        svc.validate_results({})  # empty results – must not raise
 
 
 def test_has_circuit_breaker_data_empty():
