@@ -37,12 +37,6 @@ FUNCTION_COMPLEXITY_LIMITS = {
     PROJECT_ROOT
     / "r2inspect"
     / "modules"
-    / "ssdeep_analyzer.py": {
-        "_calculate_with_binary": {"branches": 8, "depth": 3},
-    },
-    PROJECT_ROOT
-    / "r2inspect"
-    / "modules"
     / "elf_analyzer.py": {
         "_read_section": {"branches": 8, "depth": 1},
     },

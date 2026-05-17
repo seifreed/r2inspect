@@ -1,39 +1,19 @@
-"""Coverage gap tests for ssdeep_analyzer, rich_header_analyzer, yara_analyzer.
+"""Coverage gap tests for rich_header_analyzer and yara_analyzer.
 
 No unittest.mock / MagicMock / patch.  Module-level attribute monkey-patching is used
 where the real execution path cannot be triggered by input alone.  Every monkey-patch
 is restored in a finally block so tests remain isolated.
 
 Covers:
-  ssdeep_analyzer.py  – lines 76-77, 86, 151, 250-251
-  rich_header_analyzer.py – lines 33-35 (UNREACHABLE, pefile installed – noted below),
-                             145-151, 307, 350-355
+  rich_header_analyzer.py – lines 145-151, 307, 350-355
   yara_analyzer.py    – lines 415-416
-  Lines 265-266 (SIGALRM timeout path) are unreachable from pytest because compilation
-  never actually times out; noted and skipped.
 """
 
 from __future__ import annotations
 
-import os
-import subprocess
-import tempfile
-
-import pytest
-
-try:
-    import ssdeep as ssdeep_lib
-
-    SSDEEP_AVAILABLE = True
-except ImportError:
-    ssdeep_lib = None  # type: ignore[assignment]
-    SSDEEP_AVAILABLE = False
-
 import r2inspect.modules.rich_header_analyzer as rha_mod
-import r2inspect.modules.ssdeep_analyzer as ssdeep_mod
 import r2inspect.modules.yara_analyzer as yara_mod
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
-from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
 
 # ---------------------------------------------------------------------------
@@ -51,180 +31,6 @@ class _FakeConfig:
 
 class _FakeAdapter:
     pass
-
-
-# ---------------------------------------------------------------------------
-# ssdeep_analyzer.py – lines 76-77
-#
-# Triggered when ssdeep_module.hash(file_content) raises a *non-OSError* exception.
-# The outer "except Exception as e" block at line 76 catches it, logs a warning (77),
-# and falls through to the binary fallback.  We arrange for the binary path to also
-# fail (by using a subclass that has no binary) so the full flow completes cleanly.
-# ---------------------------------------------------------------------------
-
-
-class _NoBinarySSDeep(SSDeepAnalyzer):
-    """Subclass where the ssdeep binary is always absent."""
-
-    @staticmethod
-    def _resolve_ssdeep_binary() -> str | None:
-        return None
-
-
-class _RaisingHashSsdeep:
-    """Fake ssdeep module whose hash() raises a RuntimeError (not OSError)."""
-
-    def hash(self, data: bytes) -> str:
-        raise RuntimeError("fake ssdeep failure for line 76-77")
-
-    def hash_from_file(self, path: str) -> str:
-        raise RuntimeError("fake ssdeep failure for line 76-77")
-
-    def compare(self, h1: str, h2: str) -> int:
-        raise RuntimeError("fake compare failure")
-
-
-def test_calculate_hash_outer_except_branch(tmp_path: object) -> None:
-    """Lines 76-77: outer except in _calculate_hash fires when ssdeep.hash() raises."""
-    target = tmp_path / "sample.bin"  # type: ignore[operator]
-    target.write_bytes(b"A" * 512)
-
-    orig = ssdeep_mod.get_ssdeep
-    ssdeep_mod.get_ssdeep = lambda: _RaisingHashSsdeep()
-    try:
-        analyzer = _NoBinarySSDeep(str(target))
-        h, method, err = analyzer._calculate_hash()
-        # hash is None (no library, no binary), error message from binary path
-        assert h is None
-        assert err is not None
-    finally:
-        ssdeep_mod.get_ssdeep = orig
-
-
-# ---------------------------------------------------------------------------
-# ssdeep_analyzer.py – line 86
-#
-# Triggered when _calculate_with_binary() succeeds but returns a falsy hash.
-# We use a subclass that overrides _calculate_with_binary to return (None, …),
-# while the library is suppressed so the binary fallback is actually invoked.
-# ---------------------------------------------------------------------------
-
-
-class _NullHashBinarySSDeep(SSDeepAnalyzer):
-    """Subclass whose binary path always returns a None hash."""
-
-    def _calculate_with_binary(self) -> tuple[str | None, str]:
-        return None, "system_binary"
-
-
-def test_calculate_hash_binary_returns_no_hash(tmp_path: object) -> None:
-    """Line 86: 'SSDeep binary calculation returned no hash' path."""
-    target = tmp_path / "sample.bin"  # type: ignore[operator]
-    target.write_bytes(b"B" * 512)
-
-    orig = ssdeep_mod.get_ssdeep
-    ssdeep_mod.get_ssdeep = lambda: None
-    try:
-        analyzer = _NullHashBinarySSDeep(str(target))
-        h, method, err = analyzer._calculate_hash()
-        assert h is None
-        assert err == "SSDeep binary calculation returned no hash"
-    finally:
-        ssdeep_mod.get_ssdeep = orig
-
-
-# ---------------------------------------------------------------------------
-# ssdeep_analyzer.py – line 151
-#
-# Triggered when subprocess.run() raises subprocess.SubprocessError inside
-# _calculate_with_binary.  We replace ssdeep_mod.subprocess with a minimal
-# fake object that raises on .run() while still exposing the exception classes.
-# ---------------------------------------------------------------------------
-
-
-class _SubprocessErrorSubprocess:
-    """Fake subprocess module whose .run() raises SubprocessError."""
-
-    SubprocessError = subprocess.SubprocessError
-    TimeoutExpired = subprocess.TimeoutExpired
-
-    @staticmethod
-    def run(*args: object, **kwargs: object) -> object:
-        raise subprocess.SubprocessError("injected SubprocessError for line 151")
-
-
-def test_calculate_with_binary_subprocess_error(tmp_path: object) -> None:
-    """Line 151: SubprocessError in _calculate_with_binary is re-raised as RuntimeError."""
-    target = tmp_path / "sample.bin"  # type: ignore[operator]
-    target.write_bytes(b"C" * 512)
-
-    orig_subprocess = ssdeep_mod.subprocess
-    ssdeep_mod.subprocess = _SubprocessErrorSubprocess()
-    try:
-        analyzer = SSDeepAnalyzer(str(target))
-        with pytest.raises(RuntimeError, match="ssdeep subprocess error"):
-            analyzer._calculate_with_binary()
-    finally:
-        ssdeep_mod.subprocess = orig_subprocess
-
-
-# ---------------------------------------------------------------------------
-# ssdeep_analyzer.py – lines 250-251
-#
-# Triggered when temp_dir.cleanup() raises inside the finally block of
-# _compare_with_binary.  We replace tempfile.TemporaryDirectory (on the
-# ssdeep_mod.tempfile namespace, which IS the real tempfile module) with a
-# wrapper class whose cleanup() succeeds then raises.
-#
-# IMPORTANT: we save the real class *before* patching so the wrapper's
-# __init__ can call the original without infinite recursion.
-# ---------------------------------------------------------------------------
-
-_real_TemporaryDirectory = tempfile.TemporaryDirectory  # captured before any patching
-
-
-class _FailCleanupTempDir:
-    """Wrapper around the real TemporaryDirectory whose cleanup() raises."""
-
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        self._real = _real_TemporaryDirectory(*args, **kwargs)
-        self.name = self._real.name
-
-    def cleanup(self) -> None:
-        self._real.cleanup()
-        raise RuntimeError("deliberate cleanup failure for lines 250-251")
-
-
-@pytest.mark.skipif(not SSDEEP_AVAILABLE, reason="ssdeep not installed")
-def test_compare_with_binary_cleanup_exception() -> None:
-    """Lines 250-251: exception from temp_dir.cleanup() is caught and logged."""
-    # Create a real ssdeep hash to compare
-    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
-        f.write(b"D" * 512)
-        fname = f.name
-    try:
-        h = ssdeep_lib.hash_from_file(fname)
-    finally:
-        os.unlink(fname)
-
-    orig_tmpdir = ssdeep_mod.tempfile.TemporaryDirectory
-    ssdeep_mod.tempfile.TemporaryDirectory = _FailCleanupTempDir
-    try:
-        # Result may be None or an int – the important thing is that the
-        # cleanup exception is swallowed, not re-raised.
-        result = SSDeepAnalyzer._compare_with_binary(h, h)
-        assert result is None or isinstance(result, int)
-    finally:
-        ssdeep_mod.tempfile.TemporaryDirectory = orig_tmpdir
-
-
-# ---------------------------------------------------------------------------
-# rich_header_analyzer.py – lines 33-35  (UNREACHABLE)
-#
-# These lines form the "except ImportError" fallback for pefile.  Since pefile
-# IS installed in this environment, the ImportError branch can never be reached
-# at module import time.  No test is written for these lines.
-# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -360,10 +166,6 @@ def test_extract_rich_header_returns_data_via_r2pipe_path() -> None:
 # Triggered when an unexpected exception escapes the try block inside
 # list_available_rules().  We replace yara_mod.os with a thin facade whose
 # path.isfile() raises, causing the outer except to fire.
-#
-# Lines 265-266 (SIGALRM / TimeoutException in _compile_sources_with_timeout)
-# are unreachable from pytest: YARA compilation of small rule sets completes
-# in microseconds, never reaching the 30-second alarm.  These lines are skipped.
 # ---------------------------------------------------------------------------
 
 _real_os = __import__("os")  # reference to the real os module

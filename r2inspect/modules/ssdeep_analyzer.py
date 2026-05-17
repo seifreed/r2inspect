@@ -1,21 +1,15 @@
 """SSDeep fuzzy hashing and comparison."""
 
-import subprocess
-from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..infrastructure.file_system import default_file_system
-from ..security.validators import FileValidator
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
 from .ssdeep_runtime_support import (
-    compare_with_binary as _compare_with_binary_impl,
     compare_with_library as _compare_with_library_impl,
     is_available as _is_available_impl,
-    parse_ssdeep_output as _parse_ssdeep_output_impl,
-    resolve_ssdeep_binary as _resolve_ssdeep_binary_impl,
-    write_temp_hash_file as _write_temp_hash_file_impl,
 )
 
 logger = get_logger(__name__)
@@ -41,7 +35,7 @@ class SSDeepAnalyzer(HashingStrategy):
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """
-        Check if SSDeep is available (either library or binary).
+        Check if the SSDeep Python library is available.
 
         Returns:
             Tuple of (is_available, error_message)
@@ -51,122 +45,48 @@ class SSDeepAnalyzer(HashingStrategy):
 
         return (
             False,
-            "SSDeep not available. Install with: pip install ssdeep or install system binary",
+            "SSDeep not available. Install with: pip install ssdeep",
         )
 
-    def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
+    def _calculate_hash(
+        self, get_ssdeep_fn: Callable[[], Any] | None = None
+    ) -> tuple[str | None, str | None, str | None]:
         """
-        Calculate SSDeep hash for the file.
+        Calculate SSDeep hash for the file using the Python library.
+
+        Args:
+            get_ssdeep_fn: Optional resolver for the ssdeep module, injected by
+                tests; defaults to the module-level loader.
 
         Returns:
             Tuple of (hash_value, method_used, error_message)
         """
-        # Try Python library first
-        ssdeep_module = get_ssdeep()
-        if ssdeep_module is not None:
-            try:
-                file_content = default_file_system.read_bytes(self.filepath)
-                ssdeep_hash = ssdeep_module.hash(file_content)
-                logger.debug("SSDeep hash calculated using Python library: %s", ssdeep_hash)
-                return ssdeep_hash, "python_library", None
-            except OSError:
-                # Fall back to hash_from_file if direct read fails
-                try:
-                    ssdeep_hash = ssdeep_module.hash_from_file(str(self.filepath))
-                    logger.debug("SSDeep hash calculated using hash_from_file: %s", ssdeep_hash)
-                    return ssdeep_hash, "python_library", None
-                except Exception as lib_error:
-                    logger.warning("Python ssdeep library failed: %s", lib_error)
-                    # Continue to try binary method
-            except Exception as e:
-                logger.warning("Python ssdeep library failed: %s", e)
-                # Continue to try binary method
-
-        # Fallback to system binary
-        try:
-            ssdeep_hash, method = self._calculate_with_binary()
-            if ssdeep_hash:
-                logger.debug("SSDeep hash calculated using system binary: %s", ssdeep_hash)
-                return ssdeep_hash, method, None
-            return None, None, "SSDeep binary calculation returned no hash"
-        except Exception as e:
-            logger.error("System ssdeep binary failed: %s", e)
-            return None, None, f"Binary error: {str(e)}"
-
-    def _calculate_with_binary(self) -> tuple[str | None, str]:
-        """
-        Calculate SSDeep hash using system binary.
-
-        Security: Prevents command injection (CWE-78) by:
-        1. Validating file path through FileValidator
-        2. Using subprocess with shell=False
-        3. Passing arguments as list (not string)
-        4. Implementing timeout to prevent DoS
-
-        Returns:
-            Tuple of (hash_value, method_used)
-
-        Raises:
-            RuntimeError: If binary is not available or calculation fails
-        """
-        # Check if ssdeep binary is available
-        ssdeep_path = self._resolve_ssdeep_binary()
-        if not ssdeep_path:
-            raise RuntimeError("ssdeep binary not found in PATH")
-
-        # SECURITY FIX: Validate and sanitize filepath to prevent command injection (CWE-78)
-        try:
-            validator = FileValidator()
-            validated_path = validator.validate_path(str(self.filepath), check_exists=True)
-            safe_filepath = validator.sanitize_for_subprocess(validated_path)
-        except ValueError as e:
-            raise RuntimeError(f"File path validation failed: {e}") from e
-
-        # Run ssdeep command with validated path
-        # SECURITY: shell=False prevents shell injection, timeout prevents DoS
-        try:
-            result = subprocess.run(
-                [ssdeep_path, "-s", safe_filepath],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                shell=False,
-                check=False,
+        resolve_ssdeep = get_ssdeep_fn if get_ssdeep_fn is not None else get_ssdeep
+        ssdeep_module = resolve_ssdeep()
+        if ssdeep_module is None:
+            return (
+                None,
+                None,
+                "SSDeep library not available. Install with: pip install ssdeep",
             )
 
-            if result.returncode != 0:
-                raise RuntimeError(f"ssdeep command failed: {result.stderr}")
-
-            # Parse output - format is: "hash,filename"
-            output_lines = result.stdout.strip().split("\n")
-            for line in output_lines:
-                if line and not line.startswith("ssdeep"):
-                    # Extract hash (everything before the last comma)
-                    parts = line.rsplit(",", 1)
-                    if len(parts) == 2:
-                        ssdeep_hash = parts[0]
-                        return ssdeep_hash, "system_binary"
-
-            raise RuntimeError("Could not parse ssdeep output")
-
-        except subprocess.TimeoutExpired:
-            raise RuntimeError("ssdeep command timed out") from None
-        except subprocess.SubprocessError as e:
-            raise RuntimeError(f"ssdeep subprocess error: {e}") from e
-
-    def _is_ssdeep_binary_available(self) -> bool:
-        """
-        Check if ssdeep binary is available in PATH.
-
-        Returns:
-            True if ssdeep binary is available, False otherwise
-        """
-        return self._resolve_ssdeep_binary() is not None
-
-    @staticmethod
-    def _resolve_ssdeep_binary() -> str | None:
-        """Resolve ssdeep binary to an absolute path to avoid partial-path execution."""
-        return _resolve_ssdeep_binary_impl()
+        try:
+            file_content = default_file_system.read_bytes(self.filepath)
+            ssdeep_hash = ssdeep_module.hash(file_content)
+            logger.debug("SSDeep hash calculated using Python library: %s", ssdeep_hash)
+            return ssdeep_hash, "python_library", None
+        except OSError:
+            # Fall back to hash_from_file if direct read fails
+            try:
+                ssdeep_hash = ssdeep_module.hash_from_file(str(self.filepath))
+                logger.debug("SSDeep hash calculated using hash_from_file: %s", ssdeep_hash)
+                return ssdeep_hash, "python_library", None
+            except Exception as lib_error:
+                logger.warning("Python ssdeep library failed: %s", lib_error)
+                return None, None, f"SSDeep library error: {lib_error}"
+        except Exception as e:
+            logger.warning("Python ssdeep library failed: %s", e)
+            return None, None, f"SSDeep library error: {e}"
 
     def _get_hash_type(self) -> str:
         """
@@ -182,12 +102,6 @@ class SSDeepAnalyzer(HashingStrategy):
         """
         Compare two SSDeep hashes and return similarity score.
 
-        Security: Prevents insecure temporary file handling (CWE-377, CWE-379) by:
-        1. Using TemporaryDirectory for automatic cleanup
-        2. Setting restrictive permissions (0o600) on temp files
-        3. Ensuring cleanup even on exceptions
-        4. Using try-finally for guaranteed cleanup
-
         Args:
             hash1: First SSDeep hash
             hash2: Second SSDeep hash
@@ -198,40 +112,18 @@ class SSDeepAnalyzer(HashingStrategy):
         if not hash1 or not hash2:
             return None
 
-        library_score = SSDeepAnalyzer._compare_with_library(hash1, hash2)
-        if library_score is not None:
-            return library_score
-
-        return SSDeepAnalyzer._compare_with_binary(hash1, hash2)
+        return SSDeepAnalyzer._compare_with_library(hash1, hash2)
 
     @staticmethod
     def _compare_with_library(hash1: str, hash2: str) -> int | None:
         return _compare_with_library_impl(hash1, hash2, get_ssdeep, logger)
 
     @staticmethod
-    def _compare_with_binary(hash1: str, hash2: str) -> int | None:
-        return _compare_with_binary_impl(
-            hash1,
-            hash2,
-            SSDeepAnalyzer._resolve_ssdeep_binary,
-            SSDeepAnalyzer._write_temp_hash_file,
-            logger,
-        )
-
-    @staticmethod
-    def _write_temp_hash_file(path: Path, content: str) -> None:
-        _write_temp_hash_file_impl(path, content)
-
-    @staticmethod
-    def _parse_ssdeep_output(output: str) -> int | None:
-        return _parse_ssdeep_output_impl(output)
-
-    @staticmethod
     def is_available() -> bool:
         """
-        Check if SSDeep is available (either library or binary).
+        Check if the SSDeep Python library is available.
 
         Returns:
             True if SSDeep is available, False otherwise
         """
-        return _is_available_impl(get_ssdeep, SSDeepAnalyzer._resolve_ssdeep_binary)
+        return _is_available_impl(get_ssdeep)

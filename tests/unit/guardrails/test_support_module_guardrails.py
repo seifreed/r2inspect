@@ -34,12 +34,6 @@ FUNCTION_LIMITS = {
     },
     PROJECT_ROOT
     / "r2inspect"
-    / "modules"
-    / "ssdeep_analyzer.py": {
-        "_calculate_with_binary": 65,
-    },
-    PROJECT_ROOT
-    / "r2inspect"
     / "registry"
     / "registry_registration.py": {
         "register": 55,

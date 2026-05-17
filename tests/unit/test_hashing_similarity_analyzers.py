@@ -4,23 +4,15 @@ import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.binbloom_analyzer import BLOOM_AVAILABLE, BinbloomAnalyzer, BloomFilter
-from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
 from r2inspect.domain.formats.bindiff import calculate_cyclomatic_complexity, calculate_rolling_hash
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.simhash_analyzer import SimHashAnalyzer
 from r2inspect.modules.string_classification import is_api_string, is_path_string, is_url_string
-from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
-
-
-def test_ssdeep_parse_output():
-    output = "ssdeep: 1 matches (42)"
-    assert SSDeepAnalyzer._parse_ssdeep_output(output) == 42
-    assert SSDeepAnalyzer._parse_ssdeep_output("no matches") is None
 
 
 def test_telfhash_symbol_filtering_and_names():

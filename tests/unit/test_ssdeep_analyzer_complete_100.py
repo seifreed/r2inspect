@@ -1,32 +1,27 @@
-"""Comprehensive tests for ssdeep_analyzer.py - 100% coverage target.
+"""Comprehensive tests for ssdeep_analyzer.py - library-only implementation.
 
-NO mocks, NO monkeypatch, NO @patch.  Uses subclass overrides and real
-temp files to exercise every branch in the production code.
+NO mocks, NO monkeypatch, NO @patch.  Uses hand-rolled stub doubles, the
+``get_ssdeep_fn`` dependency-injection seam, and real temp files to exercise
+every surviving branch in the production code.
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.ssdeep_runtime_support import (
-    compare_with_binary as _compare_with_binary_impl,
     compare_with_library as _compare_with_library_impl,
     is_available as _is_available_impl,
-    parse_ssdeep_output as _parse_ssdeep_output_impl,
-    write_temp_hash_file as _write_temp_hash_file_impl,
 )
-from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
-
 
 # ---------------------------------------------------------------------------
-# Helpers: subclasses that override behaviour without mocking
+# Helpers: subclasses / stubs that override behaviour without mocking
 # ---------------------------------------------------------------------------
 
 
@@ -46,25 +41,6 @@ class _NeverAvailableSSDeep(SSDeepAnalyzer):
         return False
 
 
-class _NoBinarySSDeep(SSDeepAnalyzer):
-    """Binary resolution always returns None."""
-
-    @staticmethod
-    def _resolve_ssdeep_binary() -> str | None:
-        return None
-
-
-class _FakeBinarySSDeep(SSDeepAnalyzer):
-    """Binary resolution returns a controlled path."""
-
-    _fake_path: str | None = "/usr/bin/ssdeep"
-
-    @staticmethod
-    def _resolve_ssdeep_binary() -> str | None:
-        return _FakeBinarySSDeep._fake_path
-
-
-# Stub ssdeep module for library tests
 class _StubSSDeepModule:
     """Mimics the ssdeep Python library API."""
 
@@ -150,22 +126,7 @@ def test_get_hash_type(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_check_library_availability_true(tmp_path: Path) -> None:
-    f = tmp_path / "a.bin"
-    f.write_bytes(b"A" * 64)
-    analyzer = _AlwaysAvailableSSDeep(str(f))
-    avail, err = analyzer._check_library_availability()
-    assert avail is True
-    assert err is None
-
-
-def test_check_library_availability_false(tmp_path: Path) -> None:
-    """_check_library_availability delegates to SSDeepAnalyzer.is_available().
-
-    Because the production code hardcodes SSDeepAnalyzer.is_available() (not
-    type(self).is_available()), the result depends on the real environment.
-    We verify consistency with the real is_available() result.
-    """
+def test_check_library_availability_consistent_with_is_available(tmp_path: Path) -> None:
     f = tmp_path / "a.bin"
     f.write_bytes(b"A" * 64)
     analyzer = SSDeepAnalyzer(str(f))
@@ -203,22 +164,21 @@ def test_is_available_never_available() -> None:
 
 
 def test_is_available_impl_with_library() -> None:
-    assert _is_available_impl(lambda: _StubSSDeepModule(), lambda: None) is True
+    assert _is_available_impl(lambda: _StubSSDeepModule()) is True
 
 
-def test_is_available_impl_no_library_no_binary() -> None:
-    assert _is_available_impl(lambda: None, lambda: None) is False
+def test_is_available_impl_no_library() -> None:
+    assert _is_available_impl(lambda: None) is False
 
 
 # ---------------------------------------------------------------------------
-# _calculate_hash – library path
+# _calculate_hash – library path (real + injected)
 # ---------------------------------------------------------------------------
 
 
 def test_calculate_hash_library_success(tmp_path: Path) -> None:
     """When the ssdeep Python library is installed, _calculate_hash should work."""
-    ssdeep_mod = get_ssdeep()
-    if ssdeep_mod is None:
+    if get_ssdeep() is None:
         pytest.skip("ssdeep Python library not installed")
     f = tmp_path / "payload.bin"
     f.write_bytes(os.urandom(4096))
@@ -229,89 +189,58 @@ def test_calculate_hash_library_success(tmp_path: Path) -> None:
     assert error is None
 
 
-def test_calculate_hash_no_library_no_binary(tmp_path: Path) -> None:
-    """When nothing is available, _calculate_hash returns an error."""
+def test_calculate_hash_injected_library_success(tmp_path: Path) -> None:
     f = tmp_path / "payload.bin"
     f.write_bytes(b"A" * 256)
-
-    class _NoLib(_NoBinarySSDeep):
-        pass
-
-    analyzer = _NoLib(str(f))
-    # _calculate_hash tries library (get_ssdeep global), then binary (_calculate_with_binary).
-    # _calculate_with_binary will raise RuntimeError because _resolve_ssdeep_binary returns None.
-    h, method, error = analyzer._calculate_hash()
-    if get_ssdeep() is not None:
-        # Library is available, so it will succeed
-        assert h is not None
-    else:
-        # Neither library nor binary available
-        assert error is not None
-
-
-# ---------------------------------------------------------------------------
-# _calculate_with_binary
-# ---------------------------------------------------------------------------
-
-
-def test_calculate_with_binary_no_binary(tmp_path: Path) -> None:
-    f = tmp_path / "file.bin"
-    f.write_bytes(b"X" * 128)
-    analyzer = _NoBinarySSDeep(str(f))
-    with pytest.raises(RuntimeError, match="not found"):
-        analyzer._calculate_with_binary()
-
-
-def test_calculate_with_binary_invalid_path(tmp_path: Path) -> None:
-    """Non-existent file should fail path validation."""
-    analyzer = _FakeBinarySSDeep("/nonexistent/path/file.bin")
-    with pytest.raises((RuntimeError, ValueError)):
-        analyzer._calculate_with_binary()
-
-
-def test_calculate_with_binary_real_binary(tmp_path: Path) -> None:
-    """If ssdeep binary is installed, exercise the real binary path."""
-    import shutil
-
-    ssdeep_bin = shutil.which("ssdeep")
-    if ssdeep_bin is None:
-        pytest.skip("ssdeep binary not installed")
-    f = tmp_path / "test_binary.bin"
-    f.write_bytes(os.urandom(4096))
     analyzer = SSDeepAnalyzer(str(f))
-    h, method = analyzer._calculate_with_binary()
-    assert h is not None
-    assert method == "system_binary"
+    stub = _StubSSDeepModule(hash_result="3:stub:hash")
+    h, method, error = analyzer._calculate_hash(get_ssdeep_fn=lambda: stub)
+    assert h == "3:stub:hash"
+    assert method == "python_library"
+    assert error is None
 
 
-# ---------------------------------------------------------------------------
-# _is_ssdeep_binary_available
-# ---------------------------------------------------------------------------
+def test_calculate_hash_no_library_returns_error(tmp_path: Path) -> None:
+    f = tmp_path / "payload.bin"
+    f.write_bytes(b"A" * 256)
+    analyzer = SSDeepAnalyzer(str(f))
+    h, method, error = analyzer._calculate_hash(get_ssdeep_fn=lambda: None)
+    assert h is None
+    assert method is None
+    assert error is not None
+    assert "not available" in error.lower()
 
 
-def test_is_ssdeep_binary_available_true(tmp_path: Path) -> None:
-    f = tmp_path / "a.bin"
-    f.write_bytes(b"A" * 64)
-    _FakeBinarySSDeep._fake_path = "/usr/bin/ssdeep"
-    analyzer = _FakeBinarySSDeep(str(f))
-    assert analyzer._is_ssdeep_binary_available() is True
+def test_calculate_hash_oserror_falls_back_to_hash_from_file() -> None:
+    """read_bytes raises OSError (missing file) -> hash_from_file succeeds."""
+    analyzer = SSDeepAnalyzer("/nonexistent/r2inspect_ssdeep_complete100.bin")
+    stub = _StubSSDeepModule(hash_from_file_result="3:fromfile:hash")
+    h, method, error = analyzer._calculate_hash(get_ssdeep_fn=lambda: stub)
+    assert h == "3:fromfile:hash"
+    assert method == "python_library"
+    assert error is None
 
 
-def test_is_ssdeep_binary_available_false(tmp_path: Path) -> None:
-    f = tmp_path / "a.bin"
-    f.write_bytes(b"A" * 64)
-    analyzer = _NoBinarySSDeep(str(f))
-    assert analyzer._is_ssdeep_binary_available() is False
+def test_calculate_hash_oserror_then_hash_from_file_fails() -> None:
+    analyzer = SSDeepAnalyzer("/nonexistent/r2inspect_ssdeep_complete100b.bin")
+    stub = _StubSSDeepModule(hash_from_file_result=RuntimeError("hash_from_file boom"))
+    h, method, error = analyzer._calculate_hash(get_ssdeep_fn=lambda: stub)
+    assert h is None
+    assert method is None
+    assert error is not None
+    assert "library error" in error.lower()
 
 
-# ---------------------------------------------------------------------------
-# _resolve_ssdeep_binary (delegates to runtime support)
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_ssdeep_binary_returns_str_or_none() -> None:
-    result = SSDeepAnalyzer._resolve_ssdeep_binary()
-    assert result is None or isinstance(result, str)
+def test_calculate_hash_library_hash_raises_non_oserror(tmp_path: Path) -> None:
+    f = tmp_path / "payload.bin"
+    f.write_bytes(b"A" * 256)
+    analyzer = SSDeepAnalyzer(str(f))
+    stub = _StubSSDeepModule(hash_result=RuntimeError("hash boom"))
+    h, method, error = analyzer._calculate_hash(get_ssdeep_fn=lambda: stub)
+    assert h is None
+    assert method is None
+    assert error is not None
+    assert "library error" in error.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -332,10 +261,8 @@ def test_compare_hashes_both_empty() -> None:
 
 
 def test_compare_hashes_with_library() -> None:
-    ssdeep_mod = get_ssdeep()
-    if ssdeep_mod is None:
+    if get_ssdeep() is None:
         pytest.skip("ssdeep Python library not installed")
-    # Use two identical trivial hashes – score should be 100 or 0 depending on impl
     h = "3:abc:def"
     result = SSDeepAnalyzer.compare_hashes(h, h)
     assert result is not None
@@ -343,7 +270,7 @@ def test_compare_hashes_with_library() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _compare_with_library (runtime support)
+# compare_with_library (runtime support)
 # ---------------------------------------------------------------------------
 
 
@@ -369,100 +296,6 @@ def test_compare_with_library_impl_exception() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _compare_with_binary (runtime support)
-# ---------------------------------------------------------------------------
-
-
-def test_compare_with_binary_impl_no_binary() -> None:
-    logger = _StubLogger()
-    result = _compare_with_binary_impl(
-        "h1",
-        "h2",
-        resolve_binary_fn=lambda: None,
-        write_temp_hash_file_fn=_write_temp_hash_file_impl,
-        logger=logger,
-    )
-    assert result is None
-
-
-def test_compare_with_binary_impl_exception() -> None:
-    logger = _StubLogger()
-
-    def _raise_write(path: Path, content: str) -> None:
-        raise OSError("disk full")
-
-    result = _compare_with_binary_impl(
-        "h1",
-        "h2",
-        resolve_binary_fn=lambda: "/usr/bin/ssdeep",
-        write_temp_hash_file_fn=_raise_write,
-        logger=logger,
-    )
-    assert result is None
-    assert any("failed" in w.lower() or "disk" in w.lower() for w in logger.warnings)
-
-
-# ---------------------------------------------------------------------------
-# _parse_ssdeep_output (runtime support)
-# ---------------------------------------------------------------------------
-
-
-def test_parse_ssdeep_output_match() -> None:
-    output = "file1,file2 matches (92)"
-    assert _parse_ssdeep_output_impl(output) == 92
-
-
-def test_parse_ssdeep_output_no_match() -> None:
-    assert _parse_ssdeep_output_impl("No matches found") is None
-
-
-def test_parse_ssdeep_output_multiple_lines() -> None:
-    output = "header line\nsome info\nfile1 matches file2 (75)\n"
-    assert _parse_ssdeep_output_impl(output) == 75
-
-
-def test_parse_ssdeep_output_empty() -> None:
-    assert _parse_ssdeep_output_impl("") is None
-
-
-def test_parse_ssdeep_output_invalid_number() -> None:
-    output = "file1 matches file2 (abc)"
-    assert _parse_ssdeep_output_impl(output) is None
-
-
-def test_parse_ssdeep_output_parentheses_without_matches() -> None:
-    output = "some text (42) other"
-    assert _parse_ssdeep_output_impl(output) is None
-
-
-# ---------------------------------------------------------------------------
-# _write_temp_hash_file (runtime support)
-# ---------------------------------------------------------------------------
-
-
-def test_write_temp_hash_file_creates_file(tmp_path: Path) -> None:
-    target = tmp_path / "hash_file.txt"
-    _write_temp_hash_file_impl(target, "3:abc:def,testfile\n")
-    assert target.exists()
-    assert target.read_text() == "3:abc:def,testfile\n"
-
-
-def test_write_temp_hash_file_permissions(tmp_path: Path) -> None:
-    target = tmp_path / "perm_file.txt"
-    _write_temp_hash_file_impl(target, "content")
-    mode = target.stat().st_mode & 0o777
-    assert mode == 0o600
-
-
-def test_write_temp_hash_file_exclusive_create(tmp_path: Path) -> None:
-    """O_EXCL should cause failure if file already exists."""
-    target = tmp_path / "existing.txt"
-    target.write_text("already here")
-    with pytest.raises(FileExistsError):
-        _write_temp_hash_file_impl(target, "overwrite attempt")
-
-
-# ---------------------------------------------------------------------------
 # Full analyze() template method integration
 # ---------------------------------------------------------------------------
 
@@ -483,7 +316,6 @@ def test_analyze_unavailable(tmp_path: Path) -> None:
     analyzer = _NeverAvailableSSDeep(str(f))
     result = analyzer.analyze()
     assert isinstance(result, dict)
-    # When unavailable, available should be False
     if not SSDeepAnalyzer.is_available():
         assert result.get("available") is False or result.get("error") is not None
 
@@ -510,8 +342,7 @@ def test_analyze_empty_file(tmp_path: Path) -> None:
 
 def test_get_file_size(tmp_path: Path) -> None:
     f = tmp_path / "sized.bin"
-    data = b"A" * 1024
-    f.write_bytes(data)
+    f.write_bytes(b"A" * 1024)
     analyzer = SSDeepAnalyzer(str(f))
     assert analyzer.get_file_size() == 1024
 

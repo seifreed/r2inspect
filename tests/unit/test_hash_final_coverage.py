@@ -1,8 +1,6 @@
 """Final coverage tests for telfhash_analyzer.py and ssdeep_analyzer.py."""
 
 import os
-import tempfile
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -217,43 +215,16 @@ def test_calculate_hash_oserror_path_unreadable_lines_67_73_74(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# ssdeep_analyzer.py - lines 87-89: binary exception fallback in _calculate_hash
+# ssdeep_analyzer.py: nonexistent file -> library OSError path -> error
 # ---------------------------------------------------------------------------
 
 
-def test_calculate_hash_binary_exception_fallback_lines_87_89():
-    """Cover lines 87-89: binary method raises RuntimeError (non-existent file)."""
-    # Non-existent file: library fails (OSError), binary validator also fails
+def test_calculate_hash_nonexistent_file_returns_error():
+    """Nonexistent file: read_bytes raises OSError, hash_from_file fails, error returned."""
     analyzer = SSDeepAnalyzer(filepath="/nonexistent/path/for_coverage_87_89.bin")
     hash_value, method, error = analyzer._calculate_hash()
     assert hash_value is None
     assert error is not None
-    assert "Binary error" in error or "binary" in error.lower() or "Path" in error
-
-
-# ---------------------------------------------------------------------------
-# ssdeep_analyzer.py - line 146: unreadable file causes ssdeep binary to
-# return empty output, triggering RuntimeError("Could not parse ssdeep output")
-# ---------------------------------------------------------------------------
-
-
-def test_calculate_hash_binary_unparsable_output_line_146(tmp_path):
-    """Cover line 146: ssdeep binary runs but output can't be parsed (unreadable file)."""
-    ssdeep_path = SSDeepAnalyzer._resolve_ssdeep_binary()
-    if not ssdeep_path:
-        pytest.skip("ssdeep binary not available")
-
-    f = tmp_path / "unreadable2.bin"
-    f.write_bytes(b"B" * 10000)
-    os.chmod(str(f), 0o000)
-    try:
-        analyzer = SSDeepAnalyzer(filepath=str(f))
-        hash_value, method, error = analyzer._calculate_hash()
-        # Binary runs on unreadable file, produces no parsable hash lines
-        assert hash_value is None
-        assert error is not None
-    finally:
-        os.chmod(str(f), 0o644)
 
 
 # ---------------------------------------------------------------------------

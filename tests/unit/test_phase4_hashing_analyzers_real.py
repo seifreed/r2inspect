@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-import os
 import subprocess
 import textwrap
 
+import pytest
+
+from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
@@ -56,34 +58,9 @@ class RaisingElfAdapter(ElfAdapter):
         return super().cmdj(command, default)
 
 
-class NoBinarySSDeepAnalyzer(SSDeepAnalyzer):
-    @staticmethod
-    def _resolve_ssdeep_binary() -> str | None:
-        return None
-
-
-class EmptyBinarySSDeepAnalyzer(SSDeepAnalyzer):
-    def _calculate_with_binary(self) -> tuple[str | None, str]:
-        return None, "system_binary"
-
-
 class ForcePEImpfuzzyAnalyzer(ImpfuzzyAnalyzer):
     def _is_pe_file(self) -> bool:
         return True
-
-
-class RealScriptSSDeepAnalyzer(SSDeepAnalyzer):
-    def __init__(self, filepath: str, script_path: str) -> None:
-        super().__init__(filepath)
-        self._script_path = script_path
-
-    def _resolve_ssdeep_binary(self) -> str | None:
-        return self._script_path
-
-
-class SuccessfulFallbackSSDeepAnalyzer(SSDeepAnalyzer):
-    def _calculate_with_binary(self) -> tuple[str | None, str]:
-        return "fallback-hash", "system_binary"
 
 
 class OSErrorPath:
@@ -118,14 +95,10 @@ def build_telfhashable_elf(tmp_path: Path) -> Path:
     source = tmp_path / "telfhash_sample.c"
     obj = tmp_path / "telfhash_sample.o"
     shared = tmp_path / "telfhash_sample.so"
-    source.write_text(
-        textwrap.dedent(
-            """
+    source.write_text(textwrap.dedent("""
             int exported(void) { return 1; }
             int main(void) { return exported(); }
-            """
-        )
-    )
+            """))
     subprocess.run(
         ["clang", "--target=x86_64-linux-gnu", "-fPIC", "-c", str(source), "-o", str(obj)],
         check=True,
@@ -141,7 +114,9 @@ def build_telfhashable_elf(tmp_path: Path) -> Path:
     return shared
 
 
-def test_ssdeep_analyzer_real_library_binary_and_compare() -> None:
+def test_ssdeep_analyzer_real_library_and_compare() -> None:
+    if get_ssdeep() is None:
+        pytest.skip("ssdeep Python library not installed")
     sample = "samples/fixtures/hello_pe.exe"
     analyzer = SSDeepAnalyzer(sample)
 
@@ -154,17 +129,14 @@ def test_ssdeep_analyzer_real_library_binary_and_compare() -> None:
     assert method_used == "python_library"
     assert error is None
 
-    binary_hash, binary_method = analyzer._calculate_with_binary()
-    assert binary_hash
-    assert binary_method == "system_binary"
     assert analyzer._get_hash_type() == "ssdeep"
-    assert SSDeepAnalyzer.compare_hashes(binary_hash, binary_hash) == 100
-    assert SSDeepAnalyzer._parse_ssdeep_output("file matches other (87)") == 87
+    assert SSDeepAnalyzer.compare_hashes(hash_value, hash_value) == 100
     assert SSDeepAnalyzer.is_available() is True
-    assert analyzer._is_ssdeep_binary_available() is True
 
 
 def test_ssdeep_analyzer_real_library_fallback_paths() -> None:
+    if get_ssdeep() is None:
+        pytest.skip("ssdeep Python library not installed")
     oserr_analyzer = SSDeepAnalyzer("samples/fixtures/hello_pe.exe")
     oserr_analyzer.filepath = OSErrorPath()
     hash_value, method_used, error = oserr_analyzer._calculate_hash()
@@ -175,25 +147,24 @@ def test_ssdeep_analyzer_real_library_fallback_paths() -> None:
     typeerr_analyzer = SSDeepAnalyzer("samples/fixtures/hello_pe.exe")
     typeerr_analyzer.filepath = TypeErrorPath()
     hash_value, method_used, error = typeerr_analyzer._calculate_hash()
-    assert hash_value
-    assert method_used == "system_binary"
-    assert error is None
+    assert hash_value is None
+    assert method_used is None
+    assert error is not None
 
     assert SSDeepAnalyzer.compare_hashes("3:abcd:abcd", "not-a-hash") is None
 
 
-def test_ssdeep_analyzer_real_binary_unavailable_branch() -> None:
-    analyzer = NoBinarySSDeepAnalyzer("samples/fixtures/hello_pe.exe")
-    assert analyzer._is_ssdeep_binary_available() is False
-    assert analyzer._compare_with_binary("3:abcd:abcd", "3:abcd:abcd") is None
-    try:
-        analyzer._calculate_with_binary()
-    except RuntimeError as exc:
-        assert "not found in PATH" in str(exc)
+def test_ssdeep_analyzer_library_absent_branch() -> None:
+    analyzer = SSDeepAnalyzer("samples/fixtures/hello_pe.exe")
+    hash_value, method_used, error = analyzer._calculate_hash(get_ssdeep_fn=lambda: None)
+    assert hash_value is None
+    assert method_used is None
+    assert error is not None
+    assert "not available" in error.lower()
     assert SSDeepAnalyzer.compare_hashes("", "") is None
 
 
-def test_ssdeep_analyzer_real_missing_file_and_binary_failure_paths(tmp_path: Path) -> None:
+def test_ssdeep_analyzer_missing_file_and_library_error_paths(tmp_path: Path) -> None:
     missing = tmp_path / "missing.bin"
     analyzer = SSDeepAnalyzer(str(missing))
     hash_value, method_used, error = analyzer._calculate_hash()
@@ -201,47 +172,21 @@ def test_ssdeep_analyzer_real_missing_file_and_binary_failure_paths(tmp_path: Pa
     assert method_used is None
     assert error is not None
 
-    empty_binary = EmptyBinarySSDeepAnalyzer(str(missing))
-    assert empty_binary._calculate_hash() == (
-        None,
-        None,
-        "SSDeep binary calculation returned no hash",
-    )
-    successful_fallback = SuccessfulFallbackSSDeepAnalyzer(str(missing))
-    assert successful_fallback._calculate_hash() == ("fallback-hash", "system_binary", None)
+    class _RaisingModule:
+        def hash(self, data: bytes) -> str:
+            raise RuntimeError("hash boom")
 
-    invalid_path = SSDeepAnalyzer(str(tmp_path / "evil;name.bin"))
-    try:
-        invalid_path._calculate_with_binary()
-    except RuntimeError as exc:
-        assert "File path validation failed" in str(exc)
+        def hash_from_file(self, path: str) -> str:
+            raise RuntimeError("hash_from_file boom")
 
-    parse_script = tmp_path / "fake_ssdeep_parse.sh"
-    parse_script.write_text("#!/bin/sh\nprintf 'header only\\n'\n")
-    os.chmod(parse_script, 0o755)
-    parse_analyzer = RealScriptSSDeepAnalyzer("samples/fixtures/hello_pe.exe", str(parse_script))
-    try:
-        parse_analyzer._calculate_with_binary()
-    except RuntimeError as exc:
-        assert "Could not parse ssdeep output" in str(exc)
-
-    slow_script = tmp_path / "fake_ssdeep_slow.sh"
-    slow_script.write_text("#!/bin/sh\nsleep 35\n")
-    os.chmod(slow_script, 0o755)
-    slow_analyzer = RealScriptSSDeepAnalyzer("samples/fixtures/hello_pe.exe", str(slow_script))
-    try:
-        slow_analyzer._calculate_with_binary()
-    except RuntimeError as exc:
-        assert "timed out" in str(exc)
-
-    fail_script = tmp_path / "fake_ssdeep_fail.sh"
-    fail_script.write_text("#!/bin/sh\necho 'boom' 1>&2\nexit 1\n")
-    os.chmod(fail_script, 0o755)
-    fail_analyzer = RealScriptSSDeepAnalyzer("samples/fixtures/hello_pe.exe", str(fail_script))
-    try:
-        fail_analyzer._calculate_with_binary()
-    except RuntimeError as exc:
-        assert "ssdeep command failed" in str(exc)
+    present = tmp_path / "present.bin"
+    present.write_bytes(b"A" * 256)
+    present_analyzer = SSDeepAnalyzer(str(present))
+    hv, mu, err = present_analyzer._calculate_hash(get_ssdeep_fn=lambda: _RaisingModule())
+    assert hv is None
+    assert mu is None
+    assert err is not None
+    assert "library error" in err.lower()
 
 
 def test_impfuzzy_analyzer_real_hash_and_import_processing() -> None:
