@@ -11,6 +11,13 @@ from typing import Any
 
 _secure_rng = random.SystemRandom()
 
+
+class RetryableError(Exception): ...
+
+
+class NonRetryableError(Exception): ...
+
+
 # JSONDecodeError covers malformed r2pipe JSON responses, which are
 # transient and worth retrying (BrokenPipeError is an OSError subclass).
 RETRYABLE_EXCEPTIONS = (
@@ -69,7 +76,11 @@ def is_retryable_error(
     retryable_exceptions: tuple[type[BaseException], ...],
     retryable_messages: tuple[str, ...],
 ) -> bool:
-    if isinstance(exception, retryable_exceptions):
+    # The sentinel exceptions are an explicit caller contract and must be
+    # honored by type, independent of message/RETRYABLE_EXCEPTIONS.
+    if isinstance(exception, NonRetryableError):
+        return False
+    if isinstance(exception, (RetryableError, *retryable_exceptions)):
         return True
     message = str(exception).lower()
     return any(fragment in message for fragment in retryable_messages)

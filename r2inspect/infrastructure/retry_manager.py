@@ -18,7 +18,9 @@ from .retry_manager_support import (
     init_retry_stats as _init_retry_stats,
     is_retryable_command as _is_retryable_command_impl,
     is_retryable_error as _is_retryable_error_impl,
+    NonRetryableError,
     retry_on_failure_decorator as _retry_on_failure_decorator_impl,
+    RetryableError,
     RETRYABLE_EXCEPTIONS,
     RETRYABLE_ERROR_MESSAGES,
     UNSTABLE_COMMANDS,
@@ -54,12 +56,6 @@ class RetryConfig:
     timeout: float | None = None
 
 
-class RetryableError(Exception): ...
-
-
-class NonRetryableError(Exception): ...
-
-
 class RetryManager:
     DEFAULT_CONFIGS: dict[str, RetryConfig] = {
         "analysis": RetryConfig(max_attempts=3, base_delay=0.2),
@@ -85,16 +81,8 @@ class RetryManager:
         return _is_retryable_command_impl(command, self.UNSTABLE_COMMANDS)
 
     def is_retryable_error(self, exception: Exception) -> bool:
-        # The sentinel exceptions are an explicit caller contract and must be
-        # honored by type, independent of message/RETRYABLE_EXCEPTIONS.
-        if isinstance(exception, NonRetryableError):
-            return False
-        if isinstance(exception, RetryableError):
-            return True
         return _is_retryable_error_impl(
-            exception,
-            self.RETRYABLE_EXCEPTIONS,
-            self.RETRYABLE_ERROR_MESSAGES,
+            exception, self.RETRYABLE_EXCEPTIONS, self.RETRYABLE_ERROR_MESSAGES
         )
 
     def calculate_delay(self, attempt: int, config: RetryConfig) -> float:
