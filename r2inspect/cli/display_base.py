@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Shared helpers, constants, and top-level display entry points."""
 
+import contextvars
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import IO, Any, cast
 
 from rich.console import Console
@@ -47,8 +50,29 @@ console = Console(file=cast(IO[str], _StdoutProxy()))
 DEFAULT_CONSOLE = console
 
 
+_console_override: contextvars.ContextVar[Console | None] = contextvars.ContextVar(
+    "_console_override", default=None
+)
+
+
+@contextmanager
+def _console_scope(console: Console | None) -> Iterator[None]:
+    """Scope an injected console for the duration of a render call."""
+    if console is None:
+        yield
+        return
+    token = _console_override.set(console)
+    try:
+        yield
+    finally:
+        _console_override.reset(token)
+
+
 def _get_console() -> Console:
-    """Resolve the current display console from the public display facade."""
+    """Resolve the current display console (injected scope or facade default)."""
+    override = _console_override.get()
+    if override is not None:
+        return override
     from . import display as display_module
 
     return display_module.console
@@ -120,32 +144,37 @@ def display_yara_rules_table(available_rules: list[dict[str, Any]], rules_path: 
     )
 
 
-def display_error_statistics(error_stats: dict[str, Any]) -> None:
+def display_error_statistics(error_stats: dict[str, Any], console: Console | None = None) -> None:
     """Render verbose error statistics."""
-    _display_runtime.display_error_statistics(error_stats, get_console=_get_console)
+    with _console_scope(console):
+        _display_runtime.display_error_statistics(error_stats, get_console=_get_console)
 
 
 def display_performance_statistics(
-    retry_stats: dict[str, Any], circuit_stats: dict[str, Any]
+    retry_stats: dict[str, Any],
+    circuit_stats: dict[str, Any],
+    console: Console | None = None,
 ) -> None:
     """Render retry and circuit-breaker statistics."""
     from .display_statistics import _display_circuit_breaker_statistics, _display_retry_statistics
 
-    _display_runtime.display_performance_statistics(
-        retry_stats,
-        circuit_stats,
-        get_console=_get_console,
-        display_retry_statistics=_display_retry_statistics,
-        display_circuit_breaker_statistics=_display_circuit_breaker_statistics,
-    )
+    with _console_scope(console):
+        _display_runtime.display_performance_statistics(
+            retry_stats,
+            circuit_stats,
+            get_console=_get_console,
+            display_retry_statistics=_display_retry_statistics,
+            display_circuit_breaker_statistics=_display_circuit_breaker_statistics,
+        )
 
 
-def display_results(results: dict[str, Any]) -> None:
+def display_results(results: dict[str, Any], console: Console | None = None) -> None:
     """Normalize and render analysis results."""
     results = normalize_display_results(results)
     from .display_dispatch import display_results_sections as _display_results_sections
 
-    _display_results_sections(results)
+    with _console_scope(console):
+        _display_results_sections(results)
 
 
 __all__ = [

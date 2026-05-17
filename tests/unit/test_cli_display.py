@@ -30,9 +30,8 @@ def test_create_info_table_columns():
     assert table.columns[1].header == "Value"
 
 
-def test_display_error_statistics_outputs(monkeypatch):
+def test_display_error_statistics_outputs():
     console = _make_console()
-    monkeypatch.setattr(display_module, "console", console)
 
     stats = {
         "total_errors": 2,
@@ -42,7 +41,7 @@ def test_display_error_statistics_outputs(monkeypatch):
         "errors_by_severity": {"critical": 1, "low": 1},
     }
 
-    display_module.display_error_statistics(stats)
+    display_module.display_error_statistics(stats, console=console)
     text = _get_text(console)
 
     assert "Error Statistics" in text
@@ -52,9 +51,8 @@ def test_display_error_statistics_outputs(monkeypatch):
     assert "Critical" in text
 
 
-def test_display_performance_statistics_outputs(monkeypatch):
+def test_display_performance_statistics_outputs():
     console = _make_console()
-    monkeypatch.setattr(display_module, "console", console)
 
     retry_stats = {
         "total_retries": 2,
@@ -65,7 +63,7 @@ def test_display_performance_statistics_outputs(monkeypatch):
     }
     circuit_stats = {"open_count": 1, "total_failures": 0}
 
-    display_module.display_performance_statistics(retry_stats, circuit_stats)
+    display_module.display_performance_statistics(retry_stats, circuit_stats, console=console)
     text = _get_text(console)
 
     assert "Performance Statistics" in text
@@ -75,9 +73,8 @@ def test_display_performance_statistics_outputs(monkeypatch):
     assert "Open Count" in text
 
 
-def test_display_results_file_info_only(monkeypatch):
+def test_display_results_file_info_only():
     console = _make_console()
-    monkeypatch.setattr(display_module, "console", console)
 
     results = {
         "file_info": {
@@ -102,7 +99,7 @@ def test_display_results_file_info_only(monkeypatch):
         }
     }
 
-    display_module.display_results(results)
+    display_module.display_results(results, console=console)
     text = _get_text(console)
 
     assert "File Information" in text

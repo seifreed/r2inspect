@@ -15,9 +15,9 @@ Results = dict[str, Any]
 
 
 def _get_console() -> Console:
-    from . import display as display_module
+    from .display_base import _get_console as _base_get_console
 
-    return display_module.console
+    return _base_get_console()
 
 
 def _display_file_info(results: Results) -> None:
