@@ -260,6 +260,7 @@ class R2HashingStrategy(HashingStrategy):
         min_file_size: int = 1,
     ) -> None:
         self.adapter = adapter
+        self.r2 = adapter
         super().__init__(
             filepath=filepath,
             r2_instance=adapter,
