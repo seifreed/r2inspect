@@ -293,7 +293,23 @@ def _reset_global_state():
     _saved_bdr_magic = _bdr.magic if _bdr is not None else None
     _saved_bp_magic = _bp.magic if _bp is not None else None
 
+    try:
+        from r2inspect.cli import display as _display
+    except ImportError:
+        _display = None
+    try:
+        from r2inspect.cli import display_base as _display_base
+    except ImportError:
+        _display_base = None
+    _saved_display_console = getattr(_display, "console", None)
+    _saved_display_base_console = getattr(_display_base, "console", None)
+
     yield
+
+    if _display is not None and _saved_display_console is not None:
+        _display.console = _saved_display_console
+    if _display_base is not None and _saved_display_base_console is not None:
+        _display_base.console = _saved_display_base_console
 
     if _saved_cwd is not None:
         try:
