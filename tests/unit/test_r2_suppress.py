@@ -19,13 +19,13 @@ def test_silent_cmdj_returns_default_on_none_instance():
 
 
 def test_silent_cmdj_uses_cmdj_result():
-    r2 = FakeR2(cmdj_result={"ok": True})
+    r2 = FakeR2(cmdj_map={"ij": {"ok": True}})
     assert silent_cmdj(r2, "ij", default={}) == {"ok": True}
 
 
 def test_silent_cmdj_falls_back_to_cmd_parse():
     r2 = FakeR2(
-        cmdj_result=json.JSONDecodeError("bad", "doc", 0),
-        cmd_result='{"k": 1}',
+        cmdj_map={"ij": json.JSONDecodeError("bad", "doc", 0)},
+        cmd_map={"ij": '{"k": 1}'},
     )
     assert silent_cmdj(r2, "ij", default={}) == {"k": 1}
