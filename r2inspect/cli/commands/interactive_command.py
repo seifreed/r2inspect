@@ -35,7 +35,8 @@ class InteractiveCommand(Command):
 
         except KeyboardInterrupt:
             self.context.console.print("\n[yellow]Interactive mode interrupted by user[/yellow]")
-            return 1
+            # Ctrl+C is the normal way to leave an interactive REPL — exit 0, not failure.
+            return 0
 
         except Exception as e:
             self._handle_error(e, verbose, "Interactive mode")
