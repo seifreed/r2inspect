@@ -222,12 +222,22 @@ def cleanup_r2_processes():
 
 @pytest.fixture(autouse=True)
 def _reset_global_state():
-    """Auto-reset shared singletons and global logger levels between tests.
+    """Auto-reset shared singletons and global state between tests.
 
-    ``configure_batch_logging()`` mutates these process-global logger levels
-    to WARNING and many callers never invoke ``reset_logging_levels()``,
-    poisoning later ``caplog.at_level(DEBUG)`` tests of ``r2inspect.*``
-    loggers. Snapshot/restore makes that ordering-independent.
+    Several process-global caches are mutated by tests without restoration
+    and poison later, ordering-dependent runs:
+
+    - ``configure_batch_logging()`` lowers the six ``r2inspect.*`` logger
+      levels to WARNING; many callers never call ``reset_logging_levels()``,
+      breaking later ``caplog.at_level(DEBUG)`` tests.
+    - ``ssdeep_loader._ssdeep_module`` is a lazy module cache tests swap to
+      fakes/``None``.
+    - ``ResultConverterImpl._schema_registry`` is a class dict tests
+      ``.clear()``, wiping the import-time default schemas process-wide.
+
+    Snapshot before / restore after makes all three ordering-independent.
+    Restoring only ever re-applies the pre-test value, so a correct test's
+    outcome cannot change.
     """
     import logging as _logging
 
@@ -240,9 +250,28 @@ def _reset_global_state():
         "r2inspect.utils",
     )
     _saved_levels = {name: _logging.getLogger(name).level for name in _logger_names}
+
+    try:
+        import r2inspect.infrastructure.ssdeep_loader as _ssdeep_loader
+    except ImportError:
+        _ssdeep_loader = None
+    _saved_ssdeep = _ssdeep_loader._ssdeep_module if _ssdeep_loader is not None else None
+
+    try:
+        from r2inspect.schemas.converter_runtime import ResultConverterImpl as _RC
+    except ImportError:
+        _RC = None
+    _saved_schema = dict(_RC._schema_registry) if _RC is not None else None
+
     yield
+
     for _name, _level in _saved_levels.items():
         _logging.getLogger(_name).setLevel(_level)
+    if _ssdeep_loader is not None:
+        _ssdeep_loader._ssdeep_module = _saved_ssdeep
+    if _RC is not None and _saved_schema is not None:
+        _RC._schema_registry.clear()
+        _RC._schema_registry.update(_saved_schema)
     try:
         from r2inspect.modules.yara_analyzer import clear_yara_cache
 
