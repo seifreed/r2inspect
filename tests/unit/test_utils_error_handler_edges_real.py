@@ -15,7 +15,10 @@ def test_error_classifier_adjustments_and_actions() -> None:
     assert info.severity == ErrorSeverity.HIGH
 
     info = ErrorClassifier.classify(FileNotFoundError("missing"), {"batch_mode": True})
-    assert info.severity == ErrorSeverity.MEDIUM
+    # batch_mode intentionally does NOT downgrade severity (commit 5236af5 +
+    # the NOTE in classifier_logic.adjust_classification): HIGH stays HIGH so
+    # batch runs cannot silently mask data corruption.
+    assert info.severity == ErrorSeverity.HIGH
     assert "Skip this component" in info.suggested_action
 
     info = ErrorClassifier.classify(MemoryError("mem"), {"file_size_mb": 200})

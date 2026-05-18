@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import r2inspect.infrastructure.r2_helpers as r2_helpers
+import r2inspect.infrastructure.r2_validation as r2_validation
 
 
 class _TextR2:
@@ -21,9 +22,12 @@ def test_validate_and_clean_r2_data_edges() -> None:
     assert r2_helpers.validate_r2_data([], "list") == []
     assert r2_helpers.validate_r2_data("x", "other") == "x"
 
-    assert r2_helpers._validate_dict_data([1]) == {}
-    assert r2_helpers._validate_list_data({"a": 1}) == []
-    cleaned = r2_helpers._clean_list_items([{"name": "a&nbsp;"}, "bad"])
+    # Private validation helpers live in infrastructure.r2_validation (canonical
+    # home after the r2_validation split); r2_helpers re-exports only the public
+    # validate_r2_data.
+    assert r2_validation._validate_dict_data([1]) == {}
+    assert r2_validation._validate_list_data({"a": 1}) == []
+    cleaned = r2_validation._clean_list_items([{"name": "a&nbsp;"}, "bad"])
     assert cleaned[0]["name"] == "a "
 
 

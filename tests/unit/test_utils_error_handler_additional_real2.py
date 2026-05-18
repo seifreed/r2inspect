@@ -14,7 +14,10 @@ def test_error_classifier_context_adjustments() -> None:
         ValueError("bad"),
         {"analysis_type": "pe_analysis", "batch_mode": True},
     )
-    assert info.severity == eh.ErrorSeverity.MEDIUM
+    # batch_mode intentionally does NOT downgrade severity (commit 5236af5 +
+    # the NOTE in classifier_logic.adjust_classification): HIGH stays HIGH so
+    # batch runs cannot silently mask data corruption.
+    assert info.severity == eh.ErrorSeverity.HIGH
 
     info = eh.ErrorClassifier.classify(MemoryError("oom"), {"file_size_mb": 200})
     assert info.category == eh.ErrorCategory.MEMORY
