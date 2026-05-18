@@ -36,16 +36,17 @@ class CryptoAnalyzer(CommandHelperMixin):
 
     def detect(self) -> dict[str, Any]:
         """Detect cryptographic patterns and algorithms."""
-        return self._safe_call(
-            lambda: build_crypto_report(self),
-            default={
+        try:
+            return build_crypto_report(self)
+        except Exception as e:
+            logger.error("Error in crypto detection: %s", e)
+            return {
                 "algorithms": [],
                 "constants": [],
                 "entropy_analysis": {},
                 "suspicious_patterns": [],
-            },
-            error_msg="Error in crypto detection",
-        )
+                "error": str(e),
+            }
 
     def _detect_crypto_constants(self) -> list[dict[str, Any]]:
         return find_crypto_constants(self, logger)
