@@ -30,7 +30,6 @@ from tests.unit.test_telfhash_remaining_gaps import *
 from tests.unit.test_ssdeep_analyzer_complete_100 import *
 from tests.unit.test_ssdeep_analyzer_coverage import *
 from tests.unit.test_ssdeep_analyzer_branch_paths import *
-from tests.unit.test_ssdeep_analyzer_phase2_paths import *
 
 # Security and format analyzers
 from tests.unit.test_anti_analysis_branch_paths import *
