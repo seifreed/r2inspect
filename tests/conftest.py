@@ -234,6 +234,10 @@ def _reset_global_state():
       fakes/``None``.
     - ``ResultConverterImpl._schema_registry`` is a class dict tests
       ``.clear()``, wiping the import-time default schemas process-wide.
+    - ``batch_discovery_runtime.magic`` / ``batch_processing.magic`` are
+      module globals tests reassign (to ``None``/fakes) without restoring.
+    - ``sys.modules['ssdeep']`` is left holding a fake by tests that inject
+      one on ``sys.path`` and only clean up the path.
 
     Snapshot before / restore after makes all three ordering-independent.
     Restoring only ever re-applies the pre-test value, so a correct test's
@@ -268,6 +272,17 @@ def _reset_global_state():
         _RC = None
     _saved_schema = dict(_RC._schema_registry) if _RC is not None else None
 
+    try:
+        import r2inspect.cli.batch_discovery_runtime as _bdr
+    except ImportError:
+        _bdr = None
+    try:
+        import r2inspect.cli.batch_processing as _bp
+    except ImportError:
+        _bp = None
+    _saved_bdr_magic = _bdr.magic if _bdr is not None else None
+    _saved_bp_magic = _bp.magic if _bp is not None else None
+
     yield
 
     for _name, _level in _saved_levels.items():
@@ -278,6 +293,10 @@ def _reset_global_state():
         _sys.modules["ssdeep"] = _saved_ssdeep_mod
     else:
         _sys.modules.pop("ssdeep", None)
+    if _bdr is not None:
+        _bdr.magic = _saved_bdr_magic
+    if _bp is not None:
+        _bp.magic = _saved_bp_magic
     if _RC is not None and _saved_schema is not None:
         _RC._schema_registry.clear()
         _RC._schema_registry.update(_saved_schema)
