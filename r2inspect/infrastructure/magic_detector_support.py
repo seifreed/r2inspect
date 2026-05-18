@@ -187,7 +187,16 @@ def fallback_detection(header: bytes, file_path: Path) -> dict[str, Any]:
             "is_document": True,
             "potential_threat": True,
         }
-    if header.startswith(b"#!") or suffix in {".ps1", ".sh", ".bat"}:
+    # Windows script-executables are an executable threat class (8f3da63
+    # collapsed these into a script-only branch and dropped is_executable).
+    if suffix in {".ps1", ".bat", ".cmd", ".vbs", ".js", ".com", ".scr"}:
+        return {
+            "file_format": "SCRIPT",
+            "format_category": "Executable",
+            "is_executable": True,
+            "potential_threat": True,
+        }
+    if header.startswith(b"#!") or suffix == ".sh":
         return {
             "file_format": "SCRIPT",
             "format_category": "Script",
