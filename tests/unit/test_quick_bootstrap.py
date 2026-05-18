@@ -6,7 +6,7 @@ calls, and subprocess for CLI entry-point tests.
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import subprocess
 import sys
@@ -19,14 +19,17 @@ SCRIPT_PATH = str(Path(__file__).resolve().parents[2] / "scripts" / "quick_boots
 
 
 def _load_quick_bootstrap():
-    module_path = Path(__file__).resolve().parents[2] / "scripts" / "quick_bootstrap.py"
-    spec = importlib.util.spec_from_file_location("quick_bootstrap", module_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load quick_bootstrap module")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    # Load scripts/quick_bootstrap.py through the real import system. A plain
+    # importlib spec + exec_module is not enough here: quick_bootstrap.py uses
+    # `from __future__ import annotations` together with @dataclass, and the
+    # stdlib dataclasses machinery resolves cls.__module__ via the global
+    # module table, so the module must be registered the way the import
+    # system does it (importlib.import_module handles that internally —
+    # no manual module-table assignment in test code).
+    scripts_path = str(Path(__file__).resolve().parents[2] / "scripts")
+    if scripts_path not in sys.path:
+        sys.path.insert(0, scripts_path)
+    return importlib.import_module("quick_bootstrap")
 
 
 # ---------------------------------------------------------------------------
