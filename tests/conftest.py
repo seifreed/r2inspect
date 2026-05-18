@@ -239,11 +239,21 @@ def _reset_global_state():
     - ``sys.modules['ssdeep']`` is left holding a fake by tests that inject
       one on ``sys.path`` and only clean up the path.
 
-    Snapshot before / restore after makes all three ordering-independent.
+    - The current working directory: several tests ``os.chdir(tmp_path)``
+      without restoring it, so later tests resolving relative paths (e.g.
+      ``samples/fixtures/hello_pe.exe``) fail once that tmp dir is removed.
+
+    Snapshot before / restore after makes all of these ordering-independent.
     Restoring only ever re-applies the pre-test value, so a correct test's
     outcome cannot change.
     """
     import logging as _logging
+    import os as _os
+
+    try:
+        _saved_cwd: str | None = _os.getcwd()
+    except OSError:
+        _saved_cwd = None
 
     _logger_names = (
         "r2inspect",
@@ -285,6 +295,11 @@ def _reset_global_state():
 
     yield
 
+    if _saved_cwd is not None:
+        try:
+            _os.chdir(_saved_cwd)
+        except OSError:
+            pass
     for _name, _level in _saved_levels.items():
         _logging.getLogger(_name).setLevel(_level)
     if _ssdeep_loader is not None:
