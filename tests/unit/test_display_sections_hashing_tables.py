@@ -5,6 +5,7 @@ import io
 from rich.console import Console
 from rich.table import Table
 
+from r2inspect.cli.display_base import _console_scope
 from r2inspect.cli.display_sections_hashing import (
     _add_ccbhash_entries,
     _add_impfuzzy_entries,
@@ -26,124 +27,106 @@ def _get_text(console: Console) -> str:
     return console.export_text()
 
 
-def test_display_ssdeep_available(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_ssdeep_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "ssdeep": {
-            "available": True,
-            "hash_value": "3:ABC:XYZ",
-            "method_used": "native",
+    with _console_scope(console):
+        results = {
+            "ssdeep": {
+                "available": True,
+                "hash_value": "3:ABC:XYZ",
+                "method_used": "native",
+            }
         }
-    }
 
-    _display_ssdeep(results)
-    text = _get_text(console)
+        _display_ssdeep(results)
+        text = _get_text(console)
 
-    assert "SSDeep" in text
-    assert "native" in text
-    assert "Available" in text
+        assert "SSDeep" in text
+        assert "native" in text
+        assert "Available" in text
 
 
-def test_display_ssdeep_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_ssdeep_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "ssdeep": {
-            "available": False,
-            "error": "SSDeep library not found",
+    with _console_scope(console):
+        results = {
+            "ssdeep": {
+                "available": False,
+                "error": "SSDeep library not found",
+            }
         }
-    }
 
-    _display_ssdeep(results)
-    text = _get_text(console)
+        _display_ssdeep(results)
+        text = _get_text(console)
 
-    assert "SSDeep" in text
-    assert "Not Available" in text
-    assert "SSDeep library not found" in text
+        assert "SSDeep" in text
+        assert "Not Available" in text
+        assert "SSDeep library not found" in text
 
 
-def test_display_ssdeep_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_ssdeep_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {}
+        _display_ssdeep(results)
+        text = _get_text(console)
 
-    _display_ssdeep(results)
-    text = _get_text(console)
-
-    assert "SSDeep" not in text
+        assert "SSDeep" not in text
 
 
-def test_display_tlsh_available(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_tlsh_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "tlsh": {
-            "available": True,
-            "binary_tlsh": "T1ABC123",
-            "text_section_tlsh": "T1DEF456",
-            "stats": {
-                "functions_analyzed": 50,
-                "functions_with_tlsh": 45,
-            },
+    with _console_scope(console):
+        results = {
+            "tlsh": {
+                "available": True,
+                "binary_tlsh": "T1ABC123",
+                "text_section_tlsh": "T1DEF456",
+                "stats": {
+                    "functions_analyzed": 50,
+                    "functions_with_tlsh": 45,
+                },
+            }
         }
-    }
 
-    _display_tlsh(results)
-    text = _get_text(console)
+        _display_tlsh(results)
+        text = _get_text(console)
 
-    assert "TLSH" in text
-    assert "T1ABC123" in text
-    assert "T1DEF456" in text
-    assert "50" in text
-    assert "45" in text
+        assert "TLSH" in text
+        assert "T1ABC123" in text
+        assert "T1DEF456" in text
+        assert "50" in text
+        assert "45" in text
 
 
-def test_display_tlsh_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_tlsh_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "tlsh": {
-            "available": False,
-            "error": "TLSH computation failed",
+    with _console_scope(console):
+        results = {
+            "tlsh": {
+                "available": False,
+                "error": "TLSH computation failed",
+            }
         }
-    }
 
-    _display_tlsh(results)
-    text = _get_text(console)
+        _display_tlsh(results)
+        text = _get_text(console)
 
-    assert "TLSH" in text
-    assert "Not Available" in text
-    assert "TLSH computation failed" in text
+        assert "TLSH" in text
+        assert "Not Available" in text
+        assert "TLSH computation failed" in text
 
 
-def test_display_tlsh_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_tlsh_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {}
+        _display_tlsh(results)
+        text = _get_text(console)
 
-    _display_tlsh(results)
-    text = _get_text(console)
-
-    assert "TLSH" not in text
+        assert "TLSH" not in text
 
 
 def test_add_tlsh_entries_full_data():
@@ -198,85 +181,73 @@ def test_add_tlsh_entries_missing_text():
     assert len(table.rows) == 4
 
 
-def test_display_telfhash_elf_available(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_telfhash_elf_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "telfhash": {
-            "available": True,
-            "is_elf": True,
-            "telfhash": "t1abc123def456",
-            "symbol_count": 100,
-            "filtered_symbols": 80,
-            "symbols_used": ["symbol1", "symbol2", "symbol3"],
+    with _console_scope(console):
+        results = {
+            "telfhash": {
+                "available": True,
+                "is_elf": True,
+                "telfhash": "t1abc123def456",
+                "symbol_count": 100,
+                "filtered_symbols": 80,
+                "symbols_used": ["symbol1", "symbol2", "symbol3"],
+            }
         }
-    }
 
-    _display_telfhash(results)
-    text = _get_text(console)
+        _display_telfhash(results)
+        text = _get_text(console)
 
-    assert "Telfhash" in text
-    assert "t1abc123def456" in text
-    assert "100" in text
-    assert "80" in text
+        assert "Telfhash" in text
+        assert "t1abc123def456" in text
+        assert "100" in text
+        assert "80" in text
 
 
-def test_display_telfhash_not_elf(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_telfhash_not_elf():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "telfhash": {
-            "available": True,
-            "is_elf": False,
+    with _console_scope(console):
+        results = {
+            "telfhash": {
+                "available": True,
+                "is_elf": False,
+            }
         }
-    }
 
-    _display_telfhash(results)
-    text = _get_text(console)
+        _display_telfhash(results)
+        text = _get_text(console)
 
-    assert "Telfhash" in text
-    assert "Not ELF File" in text
+        assert "Telfhash" in text
+        assert "Not ELF File" in text
 
 
-def test_display_telfhash_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_telfhash_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "telfhash": {
-            "available": False,
-            "error": "Telfhash computation error",
+    with _console_scope(console):
+        results = {
+            "telfhash": {
+                "available": False,
+                "error": "Telfhash computation error",
+            }
         }
-    }
 
-    _display_telfhash(results)
-    text = _get_text(console)
+        _display_telfhash(results)
+        text = _get_text(console)
 
-    assert "Telfhash" in text
-    assert "Not Available" in text
-    assert "Telfhash computation error" in text
+        assert "Telfhash" in text
+        assert "Not Available" in text
+        assert "Telfhash computation error" in text
 
 
-def test_display_telfhash_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_telfhash_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {}
+        _display_telfhash(results)
+        text = _get_text(console)
 
-    _display_telfhash(results)
-    text = _get_text(console)
-
-    assert "Telfhash" not in text
+        assert "Telfhash" not in text
 
 
 def test_add_telfhash_entries_full_data():
@@ -346,83 +317,71 @@ def test_add_telfhash_entries_no_symbols():
     assert len(table.rows) == 3
 
 
-def test_display_impfuzzy_available(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_impfuzzy_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "impfuzzy": {
-            "available": True,
-            "impfuzzy_hash": "96:ABCD:EFG",
-            "import_count": 50,
-            "dll_count": 5,
-            "imports_processed": ["kernel32.CreateFile", "user32.MessageBox"],
+    with _console_scope(console):
+        results = {
+            "impfuzzy": {
+                "available": True,
+                "impfuzzy_hash": "96:ABCD:EFG",
+                "import_count": 50,
+                "dll_count": 5,
+                "imports_processed": ["kernel32.CreateFile", "user32.MessageBox"],
+            }
         }
-    }
 
-    _display_impfuzzy(results)
-    text = _get_text(console)
+        _display_impfuzzy(results)
+        text = _get_text(console)
 
-    assert "Impfuzzy" in text
-    assert "50" in text
-    assert "5" in text
+        assert "Impfuzzy" in text
+        assert "50" in text
+        assert "5" in text
 
 
-def test_display_impfuzzy_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_impfuzzy_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "impfuzzy": {
-            "available": False,
-            "error": "Import parsing failed",
+    with _console_scope(console):
+        results = {
+            "impfuzzy": {
+                "available": False,
+                "error": "Import parsing failed",
+            }
         }
-    }
 
-    _display_impfuzzy(results)
-    text = _get_text(console)
+        _display_impfuzzy(results)
+        text = _get_text(console)
 
-    assert "Impfuzzy" in text
-    assert "Not Available" in text
-    assert "Import parsing failed" in text
+        assert "Impfuzzy" in text
+        assert "Not Available" in text
+        assert "Import parsing failed" in text
 
 
-def test_display_impfuzzy_library_not_available(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_impfuzzy_library_not_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "impfuzzy": {
-            "available": False,
-            "library_available": False,
+    with _console_scope(console):
+        results = {
+            "impfuzzy": {
+                "available": False,
+                "library_available": False,
+            }
         }
-    }
 
-    _display_impfuzzy(results)
-    text = _get_text(console)
+        _display_impfuzzy(results)
+        text = _get_text(console)
 
-    assert "Impfuzzy" in text
-    assert "pyimpfuzzy" in text
+        assert "Impfuzzy" in text
+        assert "pyimpfuzzy" in text
 
 
-def test_display_impfuzzy_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_impfuzzy_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {}
+        _display_impfuzzy(results)
+        text = _get_text(console)
 
-    _display_impfuzzy(results)
-    text = _get_text(console)
-
-    assert "Impfuzzy" not in text
+        assert "Impfuzzy" not in text
 
 
 def test_add_impfuzzy_entries_full_data():
@@ -491,66 +450,57 @@ def test_add_impfuzzy_entries_no_imports():
     assert len(table.rows) == 3
 
 
-def test_display_ccbhash_available(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_ccbhash_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "ccbhash": {
-            "available": True,
-            "binary_ccbhash": "ccb123abc",
-            "total_functions": 100,
-            "analyzed_functions": 95,
-            "unique_hashes": 80,
-            "similar_functions": [],
+    with _console_scope(console):
+        results = {
+            "ccbhash": {
+                "available": True,
+                "binary_ccbhash": "ccb123abc",
+                "total_functions": 100,
+                "analyzed_functions": 95,
+                "unique_hashes": 80,
+                "similar_functions": [],
+            }
         }
-    }
 
-    _display_ccbhash(results)
-    text = _get_text(console)
+        _display_ccbhash(results)
+        text = _get_text(console)
 
-    assert "CCBHash" in text
-    assert "ccb123abc" in text
-    assert "100" in text
-    assert "95" in text
-    assert "80" in text
+        assert "CCBHash" in text
+        assert "ccb123abc" in text
+        assert "100" in text
+        assert "95" in text
+        assert "80" in text
 
 
-def test_display_ccbhash_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_ccbhash_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {
-        "ccbhash": {
-            "available": False,
-            "error": "CCBHash analysis failed",
+    with _console_scope(console):
+        results = {
+            "ccbhash": {
+                "available": False,
+                "error": "CCBHash analysis failed",
+            }
         }
-    }
 
-    _display_ccbhash(results)
-    text = _get_text(console)
+        _display_ccbhash(results)
+        text = _get_text(console)
 
-    assert "CCBHash" in text
-    assert "Not Available" in text
-    assert "CCBHash analysis failed" in text
+        assert "CCBHash" in text
+        assert "Not Available" in text
+        assert "CCBHash analysis failed" in text
 
 
-def test_display_ccbhash_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_display_ccbhash_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {}
+        _display_ccbhash(results)
+        text = _get_text(console)
 
-    _display_ccbhash(results)
-    text = _get_text(console)
-
-    assert "CCBHash" not in text
+        assert "CCBHash" not in text
 
 
 def test_add_ccbhash_entries_basic():
