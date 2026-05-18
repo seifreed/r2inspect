@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -37,16 +37,23 @@ from r2inspect.domain.formats.pe_info import (
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.cli.output_formatters import OutputFormatter
 
+_UNSET = object()
+
 
 class _DummyQuery(r2pipe_queries.R2PipeQueryMixin):
     def __init__(self) -> None:
         self._cache: dict[str, Any] = {}
         self.forced: set[str] = set()
+        self._fake: Any = None
 
-    def _cached_query(  # type: ignore[override]
+    @property
+    def _r2_iface(self) -> Any:
+        return self._fake
+
+    def _cached_query(
         self,
         cmd: str,
-        data_type: str = "list",
+        data_type: Literal["list", "dict"] = "list",
         default: list | dict | None = None,
         error_msg: str = "",
         *,
@@ -63,74 +70,179 @@ class _DummyQuery(r2pipe_queries.R2PipeQueryMixin):
             raise RuntimeError(f"forced:{method}")
 
 
-def test_impfuzzy_analyzer_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+class _PEImpfuzzy(ImpfuzzyAnalyzer):
+    """Impfuzzy double: each hook falls through to the real implementation
+    unless its instance attribute is set (so the real _extract_imports /
+    _process_imports paths can still be exercised via a scripted _cmdj)."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.pe: Any = _UNSET
+        self.extracted: Any = _UNSET
+        self.processed: Any = _UNSET
+        self.cmdj_value: Any = _UNSET
+        self.cmdj_raises = False
+
+    def _is_pe_file(self) -> bool:
+        if self.pe is _UNSET:
+            return super()._is_pe_file()
+        return bool(self.pe)
+
+    def _extract_imports(self) -> list[dict[str, Any]]:
+        if self.extracted is _UNSET:
+            return super()._extract_imports()
+        return list(self.extracted)
+
+    def _process_imports(self, imports_data: list[dict[str, Any]]) -> list[str]:
+        if self.processed is _UNSET:
+            return super()._process_imports(imports_data)
+        return list(self.processed)
+
+    def _cmdj(self, *args: Any, **kwargs: Any) -> Any:
+        if self.cmdj_raises:
+            raise RuntimeError("x")
+        if self.cmdj_value is _UNSET:
+            return super()._cmdj(*args, **kwargs)
+        return self.cmdj_value
+
+
+class _ExportDouble(ExportAnalyzer):
+    cmd_list_value: Any = _UNSET
+    exports_value: Any = _UNSET
+    exports_raises = False
+
+    def _cmd_list(self, command: str) -> Any:
+        if self.cmd_list_value is _UNSET:
+            return super()._cmd_list(command)
+        return self.cmd_list_value
+
+    def get_exports(self) -> Any:
+        if self.exports_raises:
+            raise RuntimeError("x")
+        if self.exports_value is _UNSET:
+            return super().get_exports()
+        return self.exports_value
+
+
+class _ImportDouble(ImportAnalyzer):
+    cmdj_raises = False
+    risk_raises = False
+    imports_value: Any = _UNSET
+
+    def _cmdj(self, *args: Any, **kwargs: Any) -> Any:
+        if self.cmdj_raises:
+            raise RuntimeError("x")
+        return super()._cmdj(*args, **kwargs)
+
+    def _calculate_risk_score(self, name: str) -> Any:
+        if self.risk_raises:
+            raise RuntimeError("x")
+        return super()._calculate_risk_score(name)
+
+    def get_imports(self) -> Any:
+        if self.imports_value is _UNSET:
+            return super().get_imports()
+        return self.imports_value
+
+
+class _CsvFailFormatter(OutputFormatter):
+    def _extract_csv_data(self, data: Any) -> Any:
+        raise RuntimeError("csv fail")
+
+
+class _ResourceDouble(ResourceAnalyzer):
+    cmdj_value: Any = _UNSET
+    cmdj_raises = False
+    resource_string: Any = _UNSET
+    resource_string_raises = False
+
+    def _cmdj(self, cmd: Any = None, default: Any = None) -> Any:
+        if self.cmdj_raises:
+            raise RuntimeError("x")
+        if self.cmdj_value is _UNSET:
+            return super()._cmdj(cmd, default)
+        value = self.cmdj_value
+        if callable(value):
+            return value(cmd, default)
+        return value
+
+    def _read_resource_as_string(self, *args: Any, **kwargs: Any) -> Any:
+        if self.resource_string_raises:
+            raise RuntimeError("x")
+        if self.resource_string is _UNSET:
+            return super()._read_resource_as_string(*args, **kwargs)
+        return self.resource_string
+
+
+class _DummyYA:
+    def __init__(self, *_a: Any, **_k: Any) -> None:
+        pass
+
+    def list_available_rules(self, _p: str) -> list[dict[str, Any]]:
+        return [{"name": "a.yar", "size": 1, "path": "/tmp/a.yar", "relative_path": "a.yar"}]
+
+
+def test_impfuzzy_analyzer_paths(tmp_path: Path) -> None:
     sample = tmp_path / "a.exe"
     sample.write_bytes(b"MZ")
-    analyzer = ImpfuzzyAnalyzer(adapter=SimpleNamespace(), filepath=str(sample))
+    analyzer = _PEImpfuzzy(adapter=SimpleNamespace(), filepath=str(sample))
 
-    monkeypatch.setattr(ImpfuzzyAnalyzer, "is_available", staticmethod(lambda: False))
-    ok, msg = analyzer._check_library_availability()
+    ok, msg = analyzer._check_library_availability(available_fn=lambda: False)
     assert ok is False and "pyimpfuzzy" in str(msg)
-    monkeypatch.setattr(ImpfuzzyAnalyzer, "is_available", staticmethod(lambda: True))
-    assert analyzer._check_library_availability() == (True, None)
+    assert analyzer._check_library_availability(available_fn=lambda: True) == (True, None)
 
-    monkeypatch.setattr(analyzer, "_is_pe_file", lambda: False)
+    analyzer.pe = False
     assert analyzer._calculate_hash()[2] == "File is not a PE binary"
 
-    monkeypatch.setattr(analyzer, "_is_pe_file", lambda: True)
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.pyimpfuzzy",
-        SimpleNamespace(get_impfuzzy=lambda _p: "h"),
+    analyzer.pe = True
+    assert analyzer._calculate_hash(
+        pyimpfuzzy_mod=SimpleNamespace(get_impfuzzy=lambda _p: "h")
+    ) == ("h", "python_library", None)
+    assert "No imports found" in str(
+        analyzer._calculate_hash(pyimpfuzzy_mod=SimpleNamespace(get_impfuzzy=lambda _p: ""))[2]
     )
-    assert analyzer._calculate_hash() == ("h", "python_library", None)
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.pyimpfuzzy",
-        SimpleNamespace(get_impfuzzy=lambda _p: ""),
+
+    assert analyzer.analyze_imports(impfuzzy_available=False)["available"] is False
+    analyzer.pe = False
+    assert (
+        analyzer.analyze_imports(impfuzzy_available=True)["error"] == "File is not a PE binary"
     )
-    assert "No imports found" in str(analyzer._calculate_hash()[2])
 
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.IMPFUZZY_AVAILABLE", False)
-    assert analyzer.analyze_imports()["available"] is False
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.IMPFUZZY_AVAILABLE", True)
-    monkeypatch.setattr(analyzer, "_is_pe_file", lambda: False)
-    assert analyzer.analyze_imports()["error"] == "File is not a PE binary"
+    analyzer.pe = True
+    analyzer.extracted = []
+    assert "No imports found" in str(analyzer.analyze_imports(impfuzzy_available=True)["error"])
 
-    monkeypatch.setattr(analyzer, "_is_pe_file", lambda: True)
-    monkeypatch.setattr(analyzer, "_extract_imports", lambda: [])
-    assert "No imports found" in str(analyzer.analyze_imports()["error"])
+    analyzer.extracted = [{"libname": "KERNEL32.dll", "name": "CreateFileA"}]
+    analyzer.processed = []
+    assert "No valid imports" in str(analyzer.analyze_imports(impfuzzy_available=True)["error"])
 
-    monkeypatch.setattr(
-        analyzer, "_extract_imports", lambda: [{"libname": "KERNEL32.dll", "name": "CreateFileA"}]
+    analyzer.processed = ["kernel32.createfilea"]
+    assert "Failed to calculate" in str(
+        analyzer.analyze_imports(
+            impfuzzy_available=True,
+            pyimpfuzzy_mod=SimpleNamespace(get_impfuzzy=lambda _p: ""),
+        )["error"]
     )
-    monkeypatch.setattr(analyzer, "_process_imports", lambda _x: [])
-    assert "No valid imports" in str(analyzer.analyze_imports()["error"])
 
-    monkeypatch.setattr(analyzer, "_process_imports", lambda _x: ["kernel32.createfilea"])
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.pyimpfuzzy",
-        SimpleNamespace(get_impfuzzy=lambda _p: ""),
+    success = analyzer.analyze_imports(
+        impfuzzy_available=True,
+        pyimpfuzzy_mod=SimpleNamespace(get_impfuzzy=lambda _p: "abc"),
     )
-    assert "Failed to calculate" in str(analyzer.analyze_imports()["error"])
-
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.pyimpfuzzy",
-        SimpleNamespace(get_impfuzzy=lambda _p: "abc"),
-    )
-    success = analyzer.analyze_imports()
     assert success["available"] is True and success["dll_count"] == 1
 
-    analyzer2 = ImpfuzzyAnalyzer(adapter=SimpleNamespace(), filepath=str(sample))
-    monkeypatch.setattr(analyzer2, "_cmdj", lambda *_a, **_k: {"name": "A", "libname": "K.dll"})
+    analyzer2 = _PEImpfuzzy(adapter=SimpleNamespace(), filepath=str(sample))
+    analyzer2.cmdj_value = {"name": "A", "libname": "K.dll"}
     assert analyzer2._extract_imports() == [{"name": "A", "libname": "K.dll"}]
-    monkeypatch.setattr(analyzer2, "_cmdj", lambda *_a, **_k: [])
+    analyzer2.cmdj_value = []
     analyzer2.adapter = None
     assert analyzer2._extract_imports() == []
-    monkeypatch.setattr(
-        analyzer2, "_cmdj", lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("x"))
-    )
+    analyzer2.cmdj_value = _UNSET
+    analyzer2.cmdj_raises = True
     assert analyzer2._extract_imports() == []
 
-    processed = analyzer._process_imports(
+    processed = ImpfuzzyAnalyzer(
+        adapter=SimpleNamespace(), filepath=str(sample)
+    )._process_imports(
         [
             {"libname": "KERNEL32.dll", "name": "CreateFileA"},
             {"libname": "KERNEL32.dll", "name": "ord_1"},
@@ -140,28 +252,45 @@ def test_impfuzzy_analyzer_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     assert processed == ["kernel32.createfilea"]
     assert ImpfuzzyAnalyzer.compare_hashes("", "x") is None
 
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.IMPFUZZY_AVAILABLE", True)
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.get_ssdeep", lambda: None)
-    assert ImpfuzzyAnalyzer.compare_hashes("a", "b") is None
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.get_ssdeep",
-        lambda: SimpleNamespace(compare=lambda _a, _b: (_ for _ in ()).throw(RuntimeError("x"))),
+    assert (
+        ImpfuzzyAnalyzer.compare_hashes(
+            "a", "b", impfuzzy_available=True, get_ssdeep_fn=lambda: None
+        )
+        is None
     )
-    assert ImpfuzzyAnalyzer.compare_hashes("a", "b") is None
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.get_ssdeep",
-        lambda: SimpleNamespace(compare=lambda _a, _b: 73),
+    assert (
+        ImpfuzzyAnalyzer.compare_hashes(
+            "a",
+            "b",
+            impfuzzy_available=True,
+            get_ssdeep_fn=lambda: SimpleNamespace(
+                compare=lambda _a, _b: (_ for _ in ()).throw(RuntimeError("x"))
+            ),
+        )
+        is None
     )
-    assert ImpfuzzyAnalyzer.compare_hashes("a", "b") == 73
+    assert (
+        ImpfuzzyAnalyzer.compare_hashes(
+            "a",
+            "b",
+            impfuzzy_available=True,
+            get_ssdeep_fn=lambda: SimpleNamespace(compare=lambda _a, _b: 73),
+        )
+        == 73
+    )
 
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.IMPFUZZY_AVAILABLE", False)
-    assert ImpfuzzyAnalyzer.calculate_impfuzzy_from_file(str(sample)) is None
-    monkeypatch.setattr("r2inspect.modules.impfuzzy_analyzer.IMPFUZZY_AVAILABLE", True)
-    monkeypatch.setattr(
-        "r2inspect.modules.impfuzzy_analyzer.pyimpfuzzy",
-        SimpleNamespace(get_impfuzzy=lambda _p: "ok"),
+    assert (
+        ImpfuzzyAnalyzer.calculate_impfuzzy_from_file(str(sample), impfuzzy_available=False)
+        is None
     )
-    assert ImpfuzzyAnalyzer.calculate_impfuzzy_from_file(str(sample)) == "ok"
+    assert (
+        ImpfuzzyAnalyzer.calculate_impfuzzy_from_file(
+            str(sample),
+            impfuzzy_available=True,
+            pyimpfuzzy_mod=SimpleNamespace(get_impfuzzy=lambda _p: "ok"),
+        )
+        == "ok"
+    )
 
 
 def test_validation_paths() -> None:
@@ -197,66 +326,62 @@ def test_validation_paths() -> None:
         validation_mod.validate_size("bad")
 
 
-def test_export_and_import_analyzers_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    exp = ExportAnalyzer(adapter=SimpleNamespace())
+def test_export_and_import_analyzers_paths() -> None:
+    exp = _ExportDouble(adapter=SimpleNamespace())
     assert exp.get_category() == "metadata"
     assert exp.supports_format("dll")
-    monkeypatch.setattr(exp, "_cmd_list", lambda _c: [{"name": "DllRun", "vaddr": 1}, "bad"])
+    exp.cmd_list_value = [{"name": "DllRun", "vaddr": 1}, "bad"]
     exports = exp.get_exports()
     assert len(exports) == 1
     ch = exp._get_export_characteristics({"name": "DllInstall", "vaddr": 2})
     assert ch.get("dll_export") is True
-    monkeypatch.setattr(exp, "_cmd_list", lambda _c: [123])
+    exp.cmd_list_value = [123]
     assert exp._get_export_characteristics({"name": "x", "vaddr": 3}).get("is_function") is False
-    monkeypatch.setattr(
-        exp,
-        "get_exports",
-        lambda: [
-            {
-                "name": "a",
-                "is_forwarded": True,
-                "characteristics": {"is_function": True, "suspicious_name": True},
-            },
-            "bad",
-        ],
-    )
+    exp.exports_value = [
+        {
+            "name": "a",
+            "is_forwarded": True,
+            "characteristics": {"is_function": True, "suspicious_name": True},
+        },
+        "bad",
+    ]
     stats = exp.get_export_statistics()
     assert stats["forwarded_exports"] == 1 and stats["suspicious_exports"] == 1
-    monkeypatch.setattr(exp, "get_exports", lambda: (_ for _ in ()).throw(RuntimeError("x")))
+    exp.exports_value = _UNSET
+    exp.exports_raises = True
     assert exp.get_export_statistics()["total_exports"] == 0
 
-    imp = ImportAnalyzer(adapter=SimpleNamespace())
+    imp = _ImportDouble(adapter=SimpleNamespace())
     assert imp.get_category() == "metadata"
     assert imp.supports_format("PE32")
     result = imp.analyze()
     assert "statistics" in result
-    monkeypatch.setattr(imp, "_cmdj", lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("x")))
+    imp.cmdj_raises = True
     assert imp.get_imports() == []
-    monkeypatch.setattr(
-        imp, "_calculate_risk_score", lambda _n: (_ for _ in ()).throw(RuntimeError("x"))
-    )
+    imp.cmdj_raises = False
+    imp.risk_raises = True
     assert "error" in imp._analyze_import({"name": "A"})
-    monkeypatch.setattr(
-        imp,
-        "get_imports",
-        lambda: [{"category": "X", "risk_level": "Low", "library": "k", "name": "CreateFileA"}],
-    )
+    imp.risk_raises = False
+    imp.imports_value = [
+        {"category": "X", "risk_level": "Low", "library": "k", "name": "CreateFileA"}
+    ]
     stats2 = imp.get_import_statistics()
     assert stats2["total_imports"] == 1
-    monkeypatch.setattr(imp, "get_imports", lambda: [])
+    imp.imports_value = []
     imp.adapter = SimpleNamespace(get_strings=lambda: [{"string": "CreateFileA"}])
     assert "CreateFileA" in imp.get_missing_imports()
-    monkeypatch.setattr(
-        "r2inspect.modules.import_analyzer.categorize_apis",
-        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("x")),
+    assert (
+        imp.analyze_api_usage(
+            [{"name": "A"}],
+            categorize_fn=lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("x")),
+        )["risk_score"]
+        == 0
     )
-    assert imp.analyze_api_usage([{"name": "A"}])["risk_score"] == 0
 
 
-def test_output_and_display_base_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    fmt = OutputFormatter({"file_info": {"name": "a", "size": 1, "file_type": "PE", "md5": "m"}})
-    monkeypatch.setattr(
-        fmt, "_extract_csv_data", lambda _d: (_ for _ in ()).throw(RuntimeError("csv fail"))
+def test_output_and_display_base_paths() -> None:
+    fmt = _CsvFailFormatter(
+        {"file_info": {"name": "a", "size": 1, "file_type": "PE", "md5": "m"}}
     )
     assert "CSV Export Failed" in fmt.to_csv()
     assert fmt._flatten_results({"a": [1]})[-1]["field"] == "a[0]"
@@ -309,15 +434,7 @@ def test_output_and_display_base_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     assert display_base.format_hash_display(None) == "N/A"
     assert display_base.format_hash_display("a" * 40, max_length=4).endswith("...")
 
-    class DummyYA:
-        def __init__(self, *_a: Any, **_k: Any) -> None:
-            pass
-
-        def list_available_rules(self, _p: str) -> list[dict[str, Any]]:
-            return [{"name": "a.yar", "size": 1, "path": "/tmp/a.yar", "relative_path": "a.yar"}]
-
-    monkeypatch.setattr("r2inspect.modules.yara_analyzer.YaraAnalyzer", DummyYA)
-    display_base.handle_list_yara_option({}, None)
+    display_base.handle_list_yara_option({}, None, yara_analyzer_cls=_DummyYA)
     display_base.display_validation_errors(["x"])
     display_base.display_error_statistics(
         {
@@ -330,7 +447,7 @@ def test_output_and_display_base_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def test_r2pipe_queries_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_r2pipe_queries_paths() -> None:
     q = _DummyQuery()
     assert q.get_file_info() == {}
     assert q.get_sections() == [{"cmd": "iSj"}]
@@ -339,28 +456,27 @@ def test_r2pipe_queries_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     assert q.get_functions_at(0x10) == []
     q.forced.clear()
 
-    monkeypatch.setattr("r2inspect.adapters.r2pipe_queries.safe_cmdj", lambda *_a, **_k: [{"h": 1}])
+    q._fake = SimpleNamespace(cmdj=lambda _c: [{"h": 1}], cmd=lambda _c: "")
     assert q.get_pe_header() == {"headers": [{"h": 1}]}
-    monkeypatch.setattr("r2inspect.adapters.r2pipe_queries.safe_cmdj", lambda *_a, **_k: {"h": 1})
+    q._fake = SimpleNamespace(cmdj=lambda _c: {"h": 1}, cmd=lambda _c: "")
     assert q.get_pe_header() == {"h": 1}
-    monkeypatch.setattr("r2inspect.adapters.r2pipe_queries.safe_cmdj", lambda *_a, **_k: "x")
+    q._fake = SimpleNamespace(cmdj=lambda _c: "x", cmd=lambda _c: "")
     assert q.get_pe_header() == {}
 
-    monkeypatch.setattr("r2inspect.adapters.r2pipe_queries.safe_cmdj", lambda *_a, **_k: [{"r": 1}])
+    q._fake = SimpleNamespace(cmdj=lambda _c: [{"r": 1}], cmd=lambda _c: "")
     assert q.get_resources_info() == [{"r": 1}]
 
-    monkeypatch.setattr("r2inspect.adapters.r2pipe_queries.safe_cmd", lambda *_a, **_k: "not-hex")
+    q._fake = SimpleNamespace(cmdj=lambda _c: None, cmd=lambda _c: "not-hex")
     assert q.read_bytes(1, 4) == b""
     with pytest.raises(ValueError):
         q.read_bytes(-1, 1)
-    monkeypatch.setattr(
-        "r2inspect.adapters.r2pipe_queries.validate_address",
-        lambda _a: (_ for _ in ()).throw(RuntimeError("x")),
-    )
+    # An empty command response also yields b"" (same contract as a failed
+    # address validation) without patching the validator.
+    q._fake = SimpleNamespace(cmdj=lambda _c: None, cmd=lambda _c: "")
     assert q.read_bytes(1, 1) == b""
 
 
-def test_pe_info_domain_and_pe_info_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_pe_info_domain_and_pe_info_paths(tmp_path: Path) -> None:
     assert determine_pe_file_type({"class": "PE32"}, None, "dll file") == "DLL"
     assert determine_pe_file_type({"class": "PE32"}, None, "portable executable") == "EXE"
     assert determine_pe_file_type({"class": "PE32"}, None, "kernel driver sys") == "SYS"
@@ -411,15 +527,16 @@ def test_pe_info_domain_and_pe_info_paths(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert get_file_characteristics(err_adapter, None, logger) == {}
 
 
-def test_resource_analyzer_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    ra = ResourceAnalyzer(adapter=SimpleNamespace())
-    monkeypatch.setattr(ra, "_cmdj", lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("x")))
+def test_resource_analyzer_paths() -> None:
+    ra = _ResourceDouble(adapter=SimpleNamespace())
+    ra.cmdj_raises = True
     assert ra._parse_resources() == []
+    ra.cmdj_raises = False
 
     cmd_map: dict[str, Any] = {
         "iSj": [{"name": ".rsrc", "paddr": 0}],
     }
-    monkeypatch.setattr(ra, "_cmdj", lambda cmd, default=None: cmd_map.get(cmd, default))
+    ra.cmdj_value = lambda cmd, default=None: cmd_map.get(cmd, default)
     assert ra._parse_resources_manual() == []
 
     data = [0] * 80
@@ -432,22 +549,19 @@ def test_resource_analyzer_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     pos = 40
     data[pos : pos + len(key)] = key
     data[pos + len(key) + 4 : pos + len(key) + 4 + len(val)] = val
-    monkeypatch.setattr(ra, "_cmdj", lambda *_a, **_k: data)
+    ra.cmdj_value = data
     parsed = ra._parse_version_info(1, 100)
     assert parsed and parsed["file_version"]
     assert parsed["strings"].get("FileVersion") == "1.2"
 
     resources = [{"type_name": "RT_MANIFEST", "offset": 1, "size": 10}]
-    monkeypatch.setattr(
-        ra, "_read_resource_as_string", lambda *_a, **_k: "requireAdministrator dpiAware"
-    )
+    ra.resource_string = "requireAdministrator dpiAware"
     out: dict[str, Any] = {}
     ra._extract_manifest(out, resources)
     assert out["manifest"]["requires_admin"] is True
 
-    monkeypatch.setattr(
-        ra, "_read_resource_as_string", lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("x"))
-    )
+    ra.resource_string = _UNSET
+    ra.resource_string_raises = True
     out2: dict[str, Any] = {}
     ra._extract_manifest(out2, resources)
 

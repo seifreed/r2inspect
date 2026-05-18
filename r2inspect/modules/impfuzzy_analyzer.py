@@ -48,14 +48,14 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         """
         super().__init__(adapter=adapter, filepath=filepath)
 
-    def _check_library_availability(self) -> tuple[bool, str | None]:
-        """
-        Check if impfuzzy library is available.
-
-        Returns:
-            Tuple of (is_available, error_message)
-        """
-        if ImpfuzzyAnalyzer.is_available():
+    def _check_library_availability(
+        self, *, available_fn: Any | None = None
+    ) -> tuple[bool, str | None]:
+        """Check impfuzzy availability. ``available_fn`` defaults to the
+        explicit ``ImpfuzzyAnalyzer.is_available`` (not ``self.`` — a
+        BaseAnalyzer-MRO classmethod would mis-bind the 0-arg staticmethod)."""
+        is_available = ImpfuzzyAnalyzer.is_available if available_fn is None else available_fn
+        if is_available():
             return True, None
         return (
             False,
@@ -212,22 +212,19 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
     @staticmethod
     def calculate_impfuzzy_from_file(
-        filepath: str, impfuzzy_available: bool | None = None
+        filepath: str,
+        impfuzzy_available: bool | None = None,
+        *,
+        pyimpfuzzy_mod: Any | None = None,
     ) -> str | None:
-        """
-        Calculate impfuzzy hash directly from a file path.
-
-        Args:
-            filepath: Path to the PE file
-
-        Returns:
-            Impfuzzy hash string or None if calculation fails
-        """
+        """Calculate impfuzzy hash from a file path. ``impfuzzy_available`` /
+        ``pyimpfuzzy_mod`` default to the real module state; tests inject
+        instead of patching the module globals."""
         return _calculate_impfuzzy_from_file_impl(
             filepath,
             impfuzzy_available=(
                 IMPFUZZY_AVAILABLE if impfuzzy_available is None else impfuzzy_available
             ),
-            pyimpfuzzy=pyimpfuzzy,
+            pyimpfuzzy=pyimpfuzzy if pyimpfuzzy_mod is None else pyimpfuzzy_mod,
             logger=logger,
         )

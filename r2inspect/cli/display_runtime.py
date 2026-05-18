@@ -56,15 +56,19 @@ def handle_list_yara_option(
     config_cls: Any,
     display_yara_rules_table: Any,
     get_console: Any,
+    yara_analyzer_cls: Any | None = None,
 ) -> None:
-    from ..modules.yara_analyzer import YaraAnalyzer
+    if yara_analyzer_cls is None:
+        from ..modules.yara_analyzer import YaraAnalyzer
+
+        yara_analyzer_cls = YaraAnalyzer
 
     config_obj = config_cls(config)
 
     class DummyR2:
         pass
 
-    yara_analyzer = YaraAnalyzer(DummyR2(), config_obj)
+    yara_analyzer = yara_analyzer_cls(DummyR2(), config_obj)
     rules_path = yara or getattr(config_obj, "yara_rules_path", "r2inspect/rules/yara")
     rules_path = str(rules_path)
 

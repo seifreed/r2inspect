@@ -124,14 +124,21 @@ def display_validation_errors(validation_errors: list[str]) -> None:
         _get_console().print(f"[red]Error: {error}[/red]")
 
 
-def handle_list_yara_option(config: Any, yara: str | None) -> None:
-    """Handle the ``--list-yara`` option."""
+def handle_list_yara_option(
+    config: Any, yara: str | None, *, yara_analyzer_cls: Any | None = None
+) -> None:
+    """Handle the ``--list-yara`` option.
+
+    ``yara_analyzer_cls`` defaults to the real ``YaraAnalyzer``; tests inject
+    a stub instead of patching the module.
+    """
     _display_runtime.handle_list_yara_option(
         config,
         yara,
         config_cls=Config,
         display_yara_rules_table=display_yara_rules_table,
         get_console=_get_console,
+        yara_analyzer_cls=yara_analyzer_cls,
     )
 
 

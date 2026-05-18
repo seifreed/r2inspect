@@ -166,12 +166,18 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _matches_known_api(self, string_val: str) -> bool:
         return _matches_known_api_impl(string_val, self.api_categories)
 
-    def analyze_api_usage(self, imports: list[dict]) -> dict[str, Any]:
+    def analyze_api_usage(
+        self, imports: list[dict], *, categorize_fn: Any | None = None
+    ) -> dict[str, Any]:
+        """``categorize_fn`` defaults to the module ``categorize_apis``; tests
+        inject a failing categorizer to drive the except branch instead of
+        patching the module."""
         try:
             if not imports:
                 return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
 
-            categories = categorize_apis(imports, self.api_categories)
+            categorize = categorize_apis if categorize_fn is None else categorize_fn
+            categories = categorize(imports, self.api_categories)
             suspicious_apis, risk_score = assess_api_risk(categories)
 
             return {
