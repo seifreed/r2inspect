@@ -7,6 +7,8 @@ from typing import Any
 import pytest
 
 from r2inspect.cli import validators
+from r2inspect.cli.cli_entry import build_dispatch
+from r2inspect.cli.commands import AnalyzeCommand, BatchCommand, InteractiveCommand
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.cli_main import CLIArgs, _build_context, _dispatch_command, main, run_cli
 
@@ -124,79 +126,43 @@ def test_run_cli_with_validation_errors(monkeypatch: pytest.MonkeyPatch) -> None
     assert displayed["errors"] == ["bad input"]
 
 
-def test_run_cli_dispatch_batch_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("r2inspect.cli_main.validate_inputs", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr("r2inspect.cli_main.validate_input_mode", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("r2inspect.cli_main.handle_xor_input", lambda value: value)
-
-    captured = {}
-
-    class FakeCommand:
-        def __init__(self, _context: Any) -> None:
-            captured["init"] = True
-
-        def execute(self, payload: dict[str, Any]) -> int:
-            captured["payload"] = payload
-            return 7
-
-    monkeypatch.setattr("r2inspect.cli_main.BatchCommand", FakeCommand)
-    monkeypatch.setattr("r2inspect.cli_main.VersionCommand", FakeCommand)
-    monkeypatch.setattr("r2inspect.cli_main.InteractiveCommand", FakeCommand)
-    monkeypatch.setattr("r2inspect.cli_main.AnalyzeCommand", FakeCommand)
-    exit_code: list[int] = []
-
-    def fake_exit(code: int = 0) -> None:
-        exit_code.append(code)
-        raise SystemExit(code)
-
-    monkeypatch.setattr("r2inspect.cli_main.sys.exit", fake_exit)
-
-    with pytest.raises(SystemExit) as exc_info:
-        run_cli(
-            CLIArgs(
-                **_cli_kwargs(
-                    batch="/tmp",
-                    threads=4,
-                    verbose=True,
-                    quiet=True,
-                    interactive=False,
-                    output_json=True,
-                )
-            )
+def test_build_dispatch_routes_batch_command() -> None:
+    # The {Batch,Interactive,Analyze}Command classes are constructed in
+    # cli.cli_entry.build_dispatch, not the cli_main module (an old refactor
+    # moved them). Drive the real dispatch builder — no monkeypatch — and
+    # assert the actual command selection + payload contract.
+    ctx = CommandContext.create(config=None, verbose=True, quiet=True, thread_safe=True)
+    args = CLIArgs(
+        **_cli_kwargs(
+            batch="/tmp",
+            threads=4,
+            verbose=True,
+            quiet=True,
+            interactive=False,
+            output_json=True,
         )
-    assert captured.get("init") is True
-    assert exit_code == [7]
-    assert exc_info.value.code == 7
-    assert captured["payload"]["batch"] == "/tmp"
-    assert captured["payload"]["threads"] == 4
+    )
+    dispatch = build_dispatch(ctx, args)
+    assert isinstance(dispatch.command, BatchCommand)
+    assert dispatch.payload["batch"] == "/tmp"
+    assert dispatch.payload["threads"] == 4
+    assert dispatch.payload["output_json"] is True
+    assert dispatch.payload["verbose"] is True
+    assert dispatch.payload["quiet"] is True
 
 
-def test_run_cli_dispatch_interactive_and_analyze(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("r2inspect.cli_main.validate_inputs", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr("r2inspect.cli_main.validate_input_mode", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("r2inspect.cli_main.handle_xor_input", lambda value: value)
-    captured = {}
+def test_build_dispatch_routes_interactive_then_analyze() -> None:
+    ctx = CommandContext.create(config=None, verbose=False, quiet=False, thread_safe=False)
 
-    class FakeCommand:
-        def __init__(self, _context: Any) -> None:
-            captured.setdefault("calls", []).append(self.__class__.__name__)
+    interactive = build_dispatch(
+        ctx, CLIArgs(**_cli_kwargs(interactive=True, filename="/tmp/file"))
+    )
+    assert isinstance(interactive.command, InteractiveCommand)
+    assert interactive.payload["filename"] == "/tmp/file"
 
-        def execute(self, payload: dict[str, Any]) -> int:
-            captured.setdefault("payloads", []).append(payload)
-            return 3
-
-    monkeypatch.setattr("r2inspect.cli_main.InteractiveCommand", FakeCommand)
-    monkeypatch.setattr("r2inspect.cli_main.AnalyzeCommand", FakeCommand)
-    monkeypatch.setattr("r2inspect.cli_main.BatchCommand", FakeCommand)
-    pytest.MonkeyPatch()
-
-    monkeypatch.setattr("sys.exit", lambda code=1: (_ for _ in ()).throw(SystemExit(code)))
-    with pytest.raises(SystemExit):
-        run_cli(CLIArgs(**_cli_kwargs(interactive=True, filename="/tmp/file")))
-    with pytest.raises(SystemExit):
-        run_cli(CLIArgs(**_cli_kwargs(filename="/tmp/file")))
-
-    assert captured["calls"] == ["FakeCommand", "FakeCommand"]
+    analyze = build_dispatch(ctx, CLIArgs(**_cli_kwargs(filename="/tmp/file")))
+    assert isinstance(analyze.command, AnalyzeCommand)
+    assert analyze.payload["filename"] == "/tmp/file"
 
 
 def test_build_context_configures_batch_flag_for_batch_mode(
