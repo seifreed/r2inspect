@@ -98,10 +98,10 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
         if analysis_depth == "0":
             return True
 
-        if file_size_mb >= session._get_huge_file_threshold():
+        if file_size_mb > session._get_huge_file_threshold():
             return True
 
-        if session._is_test_mode or file_size_mb >= session._get_large_file_threshold():
+        if session._is_test_mode or file_size_mb > session._get_large_file_threshold():
             return bool(session._run_cmd_with_timeout("aa", session._get_analysis_timeout()))
 
         return bool(
