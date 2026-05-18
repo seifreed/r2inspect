@@ -30,6 +30,8 @@ from r2inspect.cli.batch_processing import (
     _safe_exit,
 )
 
+from tests.helpers import env_vars
+
 
 class FakeRateLimiter:
     """A real lightweight rate limiter stand-in with the same get_stats contract."""
@@ -504,17 +506,17 @@ def test_ensure_batch_shutdown_with_threads():
     thread.join(timeout=0.5)
 
 
-def test_schedule_forced_exit_disabled(monkeypatch):
+def test_schedule_forced_exit_disabled():
     """Test forced exit when disabled."""
-    monkeypatch.setenv("R2INSPECT_DISABLE_FORCED_EXIT", "1")
-    schedule_forced_exit(delay=0.1)
-    time.sleep(0.2)
+    with env_vars(R2INSPECT_DISABLE_FORCED_EXIT="1"):
+        schedule_forced_exit(delay=0.1)
+        time.sleep(0.2)
 
 
-def test_schedule_forced_exit_enabled(monkeypatch):
+def test_schedule_forced_exit_enabled():
     """Test forced exit schedules timer."""
-    monkeypatch.delenv("R2INSPECT_DISABLE_FORCED_EXIT", raising=False)
-    schedule_forced_exit(delay=10.0)
+    with env_vars(R2INSPECT_DISABLE_FORCED_EXIT=None):
+        schedule_forced_exit(delay=10.0)
 
 
 def test_pytest_running_detection():
@@ -523,39 +525,41 @@ def test_pytest_running_detection():
     assert isinstance(result, bool)
 
 
-def test_pytest_running_with_env(monkeypatch):
+def test_pytest_running_with_env():
     """Test pytest detection with environment variable."""
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "1")
-    assert _pytest_running() is True
+    with env_vars(R2INSPECT_TEST_MODE="1"):
+        assert _pytest_running() is True
 
 
-def test_safe_exit_with_test_mode(monkeypatch):
+def test_safe_exit_with_test_mode():
     """Test safe exit in test mode."""
-    monkeypatch.setenv("R2INSPECT_TEST_SAFE_EXIT", "1")
-    with pytest.raises(SystemExit):
-        _safe_exit(0)
+    with env_vars(R2INSPECT_TEST_SAFE_EXIT="1"):
+        with pytest.raises(SystemExit):
+            _safe_exit(0)
 
 
-def test_flush_coverage_data_no_coverage(monkeypatch):
+def test_flush_coverage_data_no_coverage():
     """Test flushing coverage data when not available."""
-    monkeypatch.setenv("R2INSPECT_TEST_COVERAGE_IMPORT_ERROR", "1")
-    _flush_coverage_data()
+    with env_vars(R2INSPECT_TEST_COVERAGE_IMPORT_ERROR="1"):
+        _flush_coverage_data()
 
 
-def test_flush_coverage_data_none(monkeypatch):
+def test_flush_coverage_data_none():
     """Test flushing coverage data when coverage is None."""
-    monkeypatch.setenv("R2INSPECT_TEST_COVERAGE_NONE", "1")
-    _flush_coverage_data()
+    with env_vars(R2INSPECT_TEST_COVERAGE_NONE="1"):
+        _flush_coverage_data()
 
 
-def test_flush_coverage_data_dummy(monkeypatch):
+def test_flush_coverage_data_dummy():
     """Test flushing coverage data with dummy coverage."""
-    monkeypatch.setenv("R2INSPECT_TEST_COVERAGE_DUMMY", "1")
-    _flush_coverage_data()
+    with env_vars(R2INSPECT_TEST_COVERAGE_DUMMY="1"):
+        _flush_coverage_data()
 
 
-def test_flush_coverage_data_save_error(monkeypatch):
+def test_flush_coverage_data_save_error():
     """Test flushing coverage data with save error."""
-    monkeypatch.setenv("R2INSPECT_TEST_COVERAGE_DUMMY", "1")
-    monkeypatch.setenv("R2INSPECT_TEST_COVERAGE_SAVE_ERROR", "1")
-    _flush_coverage_data()
+    with env_vars(
+        R2INSPECT_TEST_COVERAGE_DUMMY="1",
+        R2INSPECT_TEST_COVERAGE_SAVE_ERROR="1",
+    ):
+        _flush_coverage_data()
