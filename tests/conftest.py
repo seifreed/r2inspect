@@ -222,8 +222,27 @@ def cleanup_r2_processes():
 
 @pytest.fixture(autouse=True)
 def _reset_global_state():
-    """Auto-reset shared singletons between tests for isolation."""
+    """Auto-reset shared singletons and global logger levels between tests.
+
+    ``configure_batch_logging()`` mutates these process-global logger levels
+    to WARNING and many callers never invoke ``reset_logging_levels()``,
+    poisoning later ``caplog.at_level(DEBUG)`` tests of ``r2inspect.*``
+    loggers. Snapshot/restore makes that ordering-independent.
+    """
+    import logging as _logging
+
+    _logger_names = (
+        "r2inspect",
+        "r2inspect.core",
+        "r2inspect.pipeline",
+        "r2inspect.modules",
+        "r2inspect.infrastructure",
+        "r2inspect.utils",
+    )
+    _saved_levels = {name: _logging.getLogger(name).level for name in _logger_names}
     yield
+    for _name, _level in _saved_levels.items():
+        _logging.getLogger(_name).setLevel(_level)
     try:
         from r2inspect.modules.yara_analyzer import clear_yara_cache
 
