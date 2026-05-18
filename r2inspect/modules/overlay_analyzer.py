@@ -111,8 +111,20 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _extend_end_with_certificate(self, max_end: int) -> int:
         return _extend_end_with_certificate_impl(self._cmdj, max_end)
 
-    def _analyze_overlay_content(self, result: OverlayResult, offset: int, size: int) -> None:
-        """Analyze the content of the overlay data."""
+    def _analyze_overlay_content(
+        self,
+        result: OverlayResult,
+        offset: int,
+        size: int,
+        *,
+        calculate_hashes_fn: Any | None = None,
+    ) -> None:
+        """Analyze the content of the overlay data.
+
+        ``calculate_hashes_fn`` defaults to the real
+        ``calculate_hashes_for_bytes``; tests inject a failing hasher to
+        drive the hash-exception branch instead of patching the module.
+        """
         _analyze_overlay_content_impl(
             cmdj=self._cmdj,
             result=cast(dict[str, Any], result),
@@ -120,7 +132,9 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
             size=size,
             logger=logger,
             calculate_entropy_fn=self._calculate_entropy,
-            calculate_hashes_fn=calculate_hashes_for_bytes,
+            calculate_hashes_fn=(
+                calculate_hashes_for_bytes if calculate_hashes_fn is None else calculate_hashes_fn
+            ),
             check_patterns_fn=self._check_patterns,
             determine_overlay_type_fn=self._determine_overlay_type,
             extract_strings_fn=self._extract_strings,

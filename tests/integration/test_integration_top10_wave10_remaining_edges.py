@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from types import SimpleNamespace
+from typing import Any, cast
+
+from tests.helpers import env_vars
 
 from r2inspect.adapters.magic_adapter import MagicAdapter
 from r2inspect.application.analysis_service import AnalysisService
@@ -20,6 +22,39 @@ from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.registry.entry_points import EntryPointLoader
 
 
+class _BadBytes:
+    def hex(self) -> str:
+        return "zz"
+
+
+class _BadBytesCrypto(CryptoAnalyzer):
+    """Crypto double whose _read_bytes yields un-hex-able data."""
+
+    def _read_bytes(self, vaddr: int, size: int) -> bytes:
+        return cast(bytes, _BadBytes())
+
+
+class _NoOverlay(OverlayAnalyzer):
+    """Overlay double: file_size == pe_end (no overlay) and a fixed cmdj."""
+
+    def _get_file_size(self) -> int | None:
+        return 10
+
+    def _get_valid_pe_end(self, file_size: int) -> int | None:
+        return 10
+
+    def _cmdj(self, command: str, default: Any | None = None) -> Any:
+        return [1, 2, 3, 4]
+
+
+class _BadCalcPeEnd(OverlayAnalyzer):
+    """Overlay double whose _calculate_pe_end returns a non-int, exercising
+    the real _get_valid_pe_end conversion-failure branch."""
+
+    def _calculate_pe_end(self) -> int:
+        return cast(int, "x")
+
+
 def test_similarity_scoring_helpers() -> None:
     assert jaccard_similarity(set(), set()) == 1.0
     assert jaccard_similarity({"a"}, set()) == 0.0
@@ -28,7 +63,7 @@ def test_similarity_scoring_helpers() -> None:
     assert normalized_difference_similarity(0, 10) == 0.0
 
 
-def test_analysis_service_paths(monkeypatch) -> None:
+def test_analysis_service_paths() -> None:
     runtime = SimpleNamespace(
         reset=lambda: called.__setitem__("reset", 1),
         collect=lambda: AnalysisRuntimeStats(
@@ -57,17 +92,17 @@ def test_analysis_service_paths(monkeypatch) -> None:
     assert "retry_statistics" in results
     assert "circuit_breaker_statistics" in results
 
-    monkeypatch.setenv("R2INSPECT_VALIDATE_SCHEMAS", "1")
-    svc.validate_results({"a": {"x": 1}, "b": "no-dict"})
+    with env_vars(R2INSPECT_VALIDATE_SCHEMAS="1"):
+        svc.validate_results({"a": {"x": 1}, "b": "no-dict"})
     assert called["convert"] == 1
 
-    monkeypatch.setenv("R2INSPECT_VALIDATE_SCHEMAS", "0")
-    assert AnalysisService._should_validate_schemas() is False
-    prev_convert = called["convert"]
-    svc.validate_results({"a": {"x": 1}})
-    assert called["convert"] == prev_convert
-    monkeypatch.setenv("R2INSPECT_VALIDATE_SCHEMAS", "yes")
-    assert AnalysisService._should_validate_schemas() is True
+    with env_vars(R2INSPECT_VALIDATE_SCHEMAS="0"):
+        assert AnalysisService._should_validate_schemas() is False
+        prev_convert = called["convert"]
+        svc.validate_results({"a": {"x": 1}})
+        assert called["convert"] == prev_convert
+    with env_vars(R2INSPECT_VALIDATE_SCHEMAS="yes"):
+        assert AnalysisService._should_validate_schemas() is True
     assert AnalysisService.has_circuit_breaker_data({}) is False
     assert AnalysisService.has_circuit_breaker_data({"k": 1}) is True
     assert AnalysisService.has_circuit_breaker_data({"a": {"state": "open"}}) is True
@@ -75,41 +110,28 @@ def test_analysis_service_paths(monkeypatch) -> None:
     assert AnalysisService.has_circuit_breaker_data({"a": {"state": "closed", "count": 0}}) is False
 
 
-def test_magic_adapter_paths(monkeypatch) -> None:
-    # win32 branch (lines 16-17) and create_detectors no-magic (line 31)
-    monkeypatch.setattr("r2inspect.adapters.magic_adapter.sys.platform", "win32")
-    win = MagicAdapter()
+def test_magic_adapter_paths() -> None:
+    # win32 branch and create_detectors no-magic
+    win = MagicAdapter(platform="win32")
     assert win.available is False
     assert win.create_detectors() is None
 
-    # import success (22-23)
-    monkeypatch.setattr("r2inspect.adapters.magic_adapter.sys.platform", "darwin")
-    real_import = __import__
-
     class _MagicModule:
         @staticmethod
-        def Magic(mime=False):
+        def Magic(mime: bool = False) -> object:
             _ = mime
             return object()
 
-    def _import_ok(name, *args, **kwargs):
-        if name == "magic":
-            return _MagicModule
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr("builtins.__import__", _import_ok)
-    ok = MagicAdapter()
+    # import success: the importer seam returns a fake magic module
+    ok = MagicAdapter(platform="darwin", importer=lambda: _MagicModule)
     assert ok.available is True
     assert ok.create_detectors() is not None
 
-    # import failure (line 27)
-    def _import_fail(name, *args, **kwargs):
-        if name == "magic":
-            raise RuntimeError("no magic")
-        return real_import(name, *args, **kwargs)
+    # import failure: the importer seam raises
+    def _import_fail() -> Any:
+        raise RuntimeError("no magic")
 
-    monkeypatch.setattr("builtins.__import__", _import_fail)
-    fail = MagicAdapter()
+    fail = MagicAdapter(platform="darwin", importer=_import_fail)
     assert fail.available is False
 
     # create_detectors exception branch (34-35)
@@ -146,87 +168,68 @@ def test_binbloom_analysis_exception_path() -> None:
     assert res["error"] == "boom"
 
 
-def test_crypto_overlay_pe_imports_registry_residuals(monkeypatch) -> None:
+def test_crypto_overlay_pe_imports_registry_residuals() -> None:
     crypto = CryptoAnalyzer(adapter=object())
-    # line 190
-    out = {}
+    out: dict[str, Any] = {}
     crypto._detect_via_strings(out)
     assert out == {}
 
-    # lines 257-258
-    class _BadBytes:
-        def hex(self):
-            return "zz"
+    # un-hex-able section bytes -> entropy 0.0 (real path via subclass double)
+    assert _BadBytesCrypto(adapter=object())._calculate_section_entropy(
+        {"vaddr": 1, "size": 10}
+    ) == 0.0
 
-    crypto._read_bytes = lambda _v, _s: _BadBytes()  # type: ignore[method-assign]
-    assert crypto._calculate_section_entropy({"vaddr": 1, "size": 10}) == 0.0
-
-    # lines 329,334,339
     assert crypto._get_imports() == []
     assert crypto._get_sections() == []
     assert crypto._get_strings() == []
-    # line 350 fallback on object without read_bytes
+    # fallback on an adapter without read_bytes
     assert CryptoAnalyzer(adapter=object())._read_bytes(0, 1) == b""
 
-    # overlay line 56: file_size > pe_end but no overlay
-    ov = OverlayAnalyzer(adapter=SimpleNamespace(cmdj=lambda _c: {}))
-    ov._get_file_size = lambda: 10  # type: ignore[method-assign]
-    ov._get_valid_pe_end = lambda _fs: 10  # type: ignore[method-assign]
+    # file_size == pe_end -> no overlay
+    ov = _NoOverlay(adapter=SimpleNamespace(cmdj=lambda _c: {}))
     r = ov.analyze()
     assert r["has_overlay"] is False
 
-    # overlay lines 112-113 invalid pe_end conversion
-    ov2 = OverlayAnalyzer(adapter=SimpleNamespace(cmdj=lambda _c: {}))
-    ov2._calculate_pe_end = lambda: "x"  # type: ignore[method-assign]
+    # invalid pe_end conversion -> None (real _get_valid_pe_end)
+    ov2 = _BadCalcPeEnd(adapter=SimpleNamespace(cmdj=lambda _c: {}))
     assert ov2._get_valid_pe_end(100) is None
 
-    # overlay lines 186-188 hash exception handling
+    # hash-exception handling via the calculate_hashes_fn DI seam
     res = ov._default_result()
-    ov._cmdj = lambda _cmd, _d=None: [1, 2, 3, 4]  # type: ignore[method-assign]
-    monkeypatch.setattr(
-        "r2inspect.modules.overlay_analyzer.calculate_hashes_for_bytes",
-        lambda _b: (_ for _ in ()).throw(RuntimeError("hash fail")),
-    )
-    ov._analyze_overlay_content(res, 0, 4)
+
+    def _raise_hashes(_b: Any) -> Any:
+        raise RuntimeError("hash fail")
+
+    ov._analyze_overlay_content(res, 0, 4, calculate_hashes_fn=_raise_hashes)
     assert res["overlay_hashes"] == {}
 
-    # overlay line 313 unknown type when patterns truthy but empty iteration
+    # patterns truthy but empty iteration -> unknown
     class _TruthyEmpty:
-        def __bool__(self):
+        def __bool__(self) -> bool:
             return True
 
-        def __iter__(self):
+        def __iter__(self) -> Any:
             return iter(())
 
     assert ov._determine_overlay_type(_TruthyEmpty(), [1, 2, 3, 4]) == "unknown"
 
-    # pe_imports lines 88-89
+    # pe_imports: empty import names -> "" + debug log
     adapter = SimpleNamespace(get_imports=lambda: [{"libname": "KERNEL32.dll", "name": ""}])
     logs: list[str] = []
     logger = SimpleNamespace(debug=lambda m: logs.append(m), error=lambda _m: None)
     assert calculate_imphash(adapter, logger) == ""
     assert any("No valid import strings" in m for m in logs)
 
-    # analyzer_registry lines 635,639
+    # EntryPointLoader real behaviour (no patching of the methods under test)
     registry = AnalyzerRegistry(lazy_loading=False)
-
-    def _callable(self, _ep, _obj):
-        _ = self
-        return 7
-
-    def _derive(self, _ep, _obj):
-        _ = self
-        return "x"
-
-    monkeypatch.setattr(
-        "r2inspect.registry.entry_points.EntryPointLoader._register_entry_point_callable", _callable
-    )
-    monkeypatch.setattr(
-        "r2inspect.registry.entry_points.EntryPointLoader._derive_entry_point_name", _derive
-    )
     loader = EntryPointLoader(registry)
-    assert loader._register_entry_point_callable(object(), lambda _r: None) == 7
-    assert loader._derive_entry_point_name(object(), object()) == "x"
+    ep = SimpleNamespace(name="sample-ep")
 
-    # Avoid leaking env from service tests if run in different order
-    os.environ.pop("R2INSPECT_VALIDATE_SCHEMAS", None)
+    assert loader._register_entry_point_callable(ep, lambda _r: None) == 1
+
+    def _failing_obj(_r: Any) -> None:
+        raise RuntimeError("callable failed")
+
+    assert loader._register_entry_point_callable(ep, _failing_obj) == 0
+    # object() is not a base analyzer -> falls back to str(ep.name)
+    assert loader._derive_entry_point_name(ep, object()) == "sample-ep"
