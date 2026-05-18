@@ -62,20 +62,26 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
             "pyimpfuzzy library not available. Install with: pip install pyimpfuzzy",
         )
 
-    def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
+    def _calculate_hash(
+        self, *, pyimpfuzzy_mod: Any | None = None
+    ) -> tuple[str | None, str | None, str | None]:
         """
         Calculate impfuzzy hash for the PE file.
+
+        ``pyimpfuzzy_mod`` defaults to the real module; tests inject a fake
+        instead of patching the module global.
 
         Returns:
             Tuple of (hash_value, method_used, error_message)
         """
+        impfuzzy_mod = pyimpfuzzy if pyimpfuzzy_mod is None else pyimpfuzzy_mod
         try:
             # Check if file is PE
             if not self._is_pe_file():
                 return None, None, "File is not a PE binary"
 
             # Calculate impfuzzy hash directly from file
-            impfuzzy_hash = pyimpfuzzy.get_impfuzzy(str(self.filepath))
+            impfuzzy_hash = impfuzzy_mod.get_impfuzzy(str(self.filepath))
 
             if impfuzzy_hash:
                 logger.debug("Impfuzzy hash calculated: %s", impfuzzy_hash)
@@ -100,12 +106,19 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         """
         return "impfuzzy"
 
-    def analyze_imports(self) -> dict[str, Any]:
+    def analyze_imports(
+        self,
+        *,
+        impfuzzy_available: bool | None = None,
+        pyimpfuzzy_mod: Any | None = None,
+    ) -> dict[str, Any]:
         """
         Perform detailed impfuzzy analysis on PE file including import statistics.
 
         This method provides detailed import analysis in addition to the
-        impfuzzy hash provided by analyze().
+        impfuzzy hash provided by analyze(). ``impfuzzy_available`` /
+        ``pyimpfuzzy_mod`` default to the real module state; tests inject
+        instead of patching the module globals.
 
         Returns:
             Dictionary containing detailed impfuzzy analysis results
@@ -113,8 +126,10 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         logger.debug("Starting detailed impfuzzy analysis for %s", self.filepath)
         return _analyze_imports_impl(
             self,
-            impfuzzy_available=IMPFUZZY_AVAILABLE,
-            pyimpfuzzy=pyimpfuzzy,
+            impfuzzy_available=(
+                IMPFUZZY_AVAILABLE if impfuzzy_available is None else impfuzzy_available
+            ),
+            pyimpfuzzy=pyimpfuzzy if pyimpfuzzy_mod is None else pyimpfuzzy_mod,
             logger=logger,
         )
 
