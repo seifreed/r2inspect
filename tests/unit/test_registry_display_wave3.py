@@ -4,7 +4,6 @@ and analyzer_registry missing lines."""
 from __future__ import annotations
 
 import io
-import sys
 
 import pytest
 from rich.console import Console
@@ -20,6 +19,7 @@ from r2inspect.cli.display_sections_hashing import (
     _display_telfhash,
     _display_tlsh,
 )
+from r2inspect.cli.display_base import _console_scope
 from r2inspect.cli.display_sections_metadata import (
     _add_rich_header_entries,
     _display_rich_header,
@@ -89,21 +89,17 @@ class PlainDummy:
 # ---------------------------------------------------------------------------
 
 
-def test_ssdeep_unavailable_no_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_ssdeep_unavailable_no_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_ssdeep({"ssdeep": {"available": False}})
+    with _console_scope(c):
+        _display_ssdeep({"ssdeep": {"available": False}})
     assert "Not Available" in _text(c)
 
 
-def test_ssdeep_unavailable_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_ssdeep_unavailable_with_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_ssdeep({"ssdeep": {"available": False, "error": "ssdeep-lib-missing"}})
+    with _console_scope(c):
+        _display_ssdeep({"ssdeep": {"available": False, "error": "ssdeep-lib-missing"}})
     text = _text(c)
     assert "Not Available" in text
     assert "ssdeep-lib-missing" in text
@@ -114,12 +110,10 @@ def test_ssdeep_unavailable_with_error(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_tlsh_unavailable_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_tlsh_unavailable_with_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_tlsh({"tlsh": {"available": False, "error": "tlsh-lib-missing"}})
+    with _console_scope(c):
+        _display_tlsh({"tlsh": {"available": False, "error": "tlsh-lib-missing"}})
     text = _text(c)
     assert "Not Available" in text
     assert "tlsh-lib-missing" in text
@@ -130,34 +124,30 @@ def test_tlsh_unavailable_with_error(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_telfhash_available_is_elf(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_telfhash_available_is_elf():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_telfhash(
-        {
-            "telfhash": {
-                "available": True,
-                "is_elf": True,
-                "telfhash": "T1DEADBEEF",
-                "symbol_count": 10,
-                "filtered_symbols": 3,
-                "symbols_used": ["sym_a", "sym_b"],
+    with _console_scope(c):
+        _display_telfhash(
+            {
+                "telfhash": {
+                    "available": True,
+                    "is_elf": True,
+                    "telfhash": "T1DEADBEEF",
+                    "symbol_count": 10,
+                    "filtered_symbols": 3,
+                    "symbols_used": ["sym_a", "sym_b"],
+                }
             }
-        }
-    )
+        )
     text = _text(c)
     assert "T1DEADBEEF" in text
     assert "Available" in text
 
 
-def test_telfhash_unavailable_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_telfhash_unavailable_with_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_telfhash({"telfhash": {"available": False, "error": "telfhash-err"}})
+    with _console_scope(c):
+        _display_telfhash({"telfhash": {"available": False, "error": "telfhash-err"}})
     text = _text(c)
     assert "Not Available" in text
     assert "telfhash-err" in text
@@ -208,32 +198,28 @@ def test_add_telfhash_entries_many_symbols():
 # ---------------------------------------------------------------------------
 
 
-def test_impfuzzy_unavailable_with_error_no_library(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_impfuzzy_unavailable_with_error_no_library():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_impfuzzy(
-        {
-            "impfuzzy": {
-                "available": False,
-                "error": "impfuzzy-error",
-                "library_available": False,
+    with _console_scope(c):
+        _display_impfuzzy(
+            {
+                "impfuzzy": {
+                    "available": False,
+                    "error": "impfuzzy-error",
+                    "library_available": False,
+                }
             }
-        }
-    )
+        )
     text = _text(c)
     assert "Not Available" in text
     assert "impfuzzy-error" in text
     assert "pyimpfuzzy" in text
 
 
-def test_impfuzzy_unavailable_no_library_no_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_impfuzzy_unavailable_no_library_no_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_impfuzzy({"impfuzzy": {"available": False, "library_available": False}})
+    with _console_scope(c):
+        _display_impfuzzy({"impfuzzy": {"available": False, "library_available": False}})
     text = _text(c)
     assert "pyimpfuzzy" in text
 
@@ -283,12 +269,10 @@ def test_add_impfuzzy_entries_many_imports():
 # ---------------------------------------------------------------------------
 
 
-def test_ccbhash_unavailable_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_ccbhash_unavailable_with_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    _display_ccbhash({"ccbhash": {"available": False, "error": "ccb-error"}})
+    with _console_scope(c):
+        _display_ccbhash({"ccbhash": {"available": False, "error": "ccb-error"}})
     text = _text(c)
     assert "Not Available" in text
     assert "ccb-error" in text
@@ -299,24 +283,22 @@ def test_ccbhash_unavailable_with_error(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_add_ccbhash_entries_no_similar_functions(monkeypatch):
-    from r2inspect.cli import display_sections_hashing
-
+def test_add_ccbhash_entries_no_similar_functions():
     c = _make_console()
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: c)
-    # similar_functions empty triggers early return at line 198
-    _display_ccbhash(
-        {
-            "ccbhash": {
-                "available": True,
-                "binary_ccbhash": "deadbeef" * 8,
-                "total_functions": 10,
-                "analyzed_functions": 10,
-                "unique_hashes": 8,
-                "similar_functions": [],
+    with _console_scope(c):
+        # similar_functions empty triggers early return at line 198
+        _display_ccbhash(
+            {
+                "ccbhash": {
+                    "available": True,
+                    "binary_ccbhash": "deadbeef" * 8,
+                    "total_functions": 10,
+                    "analyzed_functions": 10,
+                    "unique_hashes": 8,
+                    "similar_functions": [],
+                }
             }
-        }
-    )
+        )
     text = _text(c)
     assert "CCBHash" in text
 
@@ -326,57 +308,49 @@ def test_add_ccbhash_entries_no_similar_functions(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_display_rich_header_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_metadata
-
+def test_display_rich_header_not_present():
     c = _make_console()
-    monkeypatch.setattr(display_sections_metadata, "_get_console", lambda: c)
-    _display_rich_header({})
+    with _console_scope(c):
+        _display_rich_header({})
     assert "Rich Header" not in _text(c)
 
 
-def test_display_rich_header_available_is_pe(monkeypatch):
-    from r2inspect.cli import display_sections_metadata
-
+def test_display_rich_header_available_is_pe():
     c = _make_console()
-    monkeypatch.setattr(display_sections_metadata, "_get_console", lambda: c)
-    _display_rich_header(
-        {
-            "rich_header": {
-                "available": True,
-                "is_pe": True,
-                "xor_key": 0xDEAD,
-                "checksum": 0xBEEF,
-                "richpe_hash": "aabbccdd",
-                "compilers": [
-                    {"compiler_name": "MSVC", "count": 3, "build_number": 1900},
-                ],
+    with _console_scope(c):
+        _display_rich_header(
+            {
+                "rich_header": {
+                    "available": True,
+                    "is_pe": True,
+                    "xor_key": 0xDEAD,
+                    "checksum": 0xBEEF,
+                    "richpe_hash": "aabbccdd",
+                    "compilers": [
+                        {"compiler_name": "MSVC", "count": 3, "build_number": 1900},
+                    ],
+                }
             }
-        }
-    )
+        )
     text = _text(c)
     assert "Rich Header" in text
     assert "Available" in text
     assert "aabbccdd" in text
 
 
-def test_display_rich_header_available_not_pe(monkeypatch):
-    from r2inspect.cli import display_sections_metadata
-
+def test_display_rich_header_available_not_pe():
     c = _make_console()
-    monkeypatch.setattr(display_sections_metadata, "_get_console", lambda: c)
-    _display_rich_header({"rich_header": {"available": True, "is_pe": False}})
+    with _console_scope(c):
+        _display_rich_header({"rich_header": {"available": True, "is_pe": False}})
     text = _text(c)
     assert "Rich Header" in text
     assert "Not PE" in text
 
 
-def test_display_rich_header_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_metadata
-
+def test_display_rich_header_not_available_with_error():
     c = _make_console()
-    monkeypatch.setattr(display_sections_metadata, "_get_console", lambda: c)
-    _display_rich_header({"rich_header": {"available": False, "error": "rich-err"}})
+    with _console_scope(c):
+        _display_rich_header({"rich_header": {"available": False, "error": "rich-err"}})
     text = _text(c)
     assert "Not Available" in text
     assert "rich-err" in text
@@ -449,10 +423,14 @@ def test_add_rich_header_entries_five_or_fewer_compilers():
 # ---------------------------------------------------------------------------
 
 
-def test_get_base_analyzer_class_import_error(monkeypatch):
+def _raise_base_analyzer_import_error() -> type:
+    raise ImportError("base_analyzer blocked for test")
+
+
+def test_get_base_analyzer_class_import_error():
     registry = AnalyzerRegistry(lazy_loading=False)
     registry._base_analyzer_class = None
-    monkeypatch.setitem(sys.modules, "r2inspect.abstractions.base_analyzer", None)
+    registry._base_analyzer_importer = _raise_base_analyzer_import_error
     result = registry._get_base_analyzer_class()
     assert result is None
 
@@ -488,14 +466,20 @@ def test_validate_analyzer_abstract_analyze():
 # ---------------------------------------------------------------------------
 
 
-def test_validate_analyzer_no_analyze_attribute(monkeypatch):
-    registry = AnalyzerRegistry(lazy_loading=False)
+class _AlwaysBaseRegistry(AnalyzerRegistry):
+    """Registry whose is_base_analyzer always reports True."""
+
+    def is_base_analyzer(self, analyzer_class: type) -> bool:
+        return True
+
+
+def test_validate_analyzer_no_analyze_attribute():
+    registry = _AlwaysBaseRegistry(lazy_loading=False)
 
     class NoAnalyzeClass:
         def __init__(self) -> None:
             pass
 
-    monkeypatch.setattr(registry, "is_base_analyzer", lambda c: True)
     is_valid, err = registry.validate_analyzer(NoAnalyzeClass)
     assert not is_valid
     assert err is not None
