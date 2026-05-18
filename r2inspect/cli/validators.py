@@ -23,6 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import sys
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -139,9 +140,11 @@ def sanitize_xor_string(xor_input: str | None) -> str | None:
     return _sanitize_xor_string_impl(xor_input)
 
 
-def handle_xor_input(xor: str | None) -> str | None:
+def handle_xor_input(xor: str | None, *, console_obj: Any | None = None) -> str | None:
+    """``console_obj`` defaults to the module console; tests inject a
+    recording console instead of patching the module global."""
     return _handle_xor_input_impl(
-        console,
+        console if console_obj is None else console_obj,
         xor,
         sanitize_xor_string_fn=sanitize_xor_string,
     )

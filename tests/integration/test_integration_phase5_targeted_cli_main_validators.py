@@ -35,101 +35,68 @@ def _cli_kwargs(**overrides: Any) -> dict[str, Any]:
     return base
 
 
-def test_main_uses_run_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_uses_run_cli() -> None:
     captured: dict[str, Any] = {}
 
     def fake_run_cli(args: CLIArgs) -> None:
         captured["args"] = args
 
-    monkeypatch.setattr("r2inspect.cli_main.run_cli", fake_run_cli)
-    kwargs = _cli_kwargs(filename="sample.bin")
-    main(**kwargs)
+    main(run_cli_fn=fake_run_cli, **_cli_kwargs(filename="sample.bin"))
     assert isinstance(captured["args"], CLIArgs)
     assert captured["args"].filename == "sample.bin"
 
 
-def test_main_handles_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_handles_keyboard_interrupt() -> None:
     def fake_run_cli(_: CLIArgs) -> None:
         raise KeyboardInterrupt()
 
-    monkeypatch.setattr("r2inspect.cli_main.run_cli", fake_run_cli)
-    exit_called: list[int] = []
-
-    def fake_exit(code: int) -> None:
-        exit_called.append(code)
-
-    monkeypatch.setattr("sys.exit", fake_exit)
-    main(**_cli_kwargs())
-    assert exit_called == [1]
+    with pytest.raises(SystemExit) as exc:
+        main(run_cli_fn=fake_run_cli, **_cli_kwargs())
+    assert exc.value.code == 1
 
 
-def test_main_handles_generic_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_handles_generic_exception() -> None:
     error = RuntimeError("boom")
 
     def fake_run_cli(_: CLIArgs) -> None:
         raise error
 
-    monkeypatch.setattr("r2inspect.cli_main.run_cli", fake_run_cli)
     captured: dict[str, Any] = {}
 
     def fake_handle_main_error(exc: Exception, verbose: bool) -> None:
         captured["exc"] = exc
         captured["verbose"] = verbose
 
-    monkeypatch.setattr("r2inspect.cli_main.handle_main_error", fake_handle_main_error)
-    main(**_cli_kwargs())
+    main(
+        run_cli_fn=fake_run_cli,
+        error_handler_fn=fake_handle_main_error,
+        **_cli_kwargs(),
+    )
     assert captured["exc"] is error
     assert captured["verbose"] is False
 
 
-def test_run_cli_version_short_circuits(monkeypatch: pytest.MonkeyPatch) -> None:
-    version_calls: list[str] = []
-    fake_exit_codes: list[int] = []
-
-    def fake_exit(code: int = 0) -> None:
-        fake_exit_codes.append(code)
-        raise SystemExit(code)
-
-    def fake_execute_version() -> None:
-        version_calls.append("version")
-        fake_exit(0)
-
-    monkeypatch.setattr("r2inspect.cli_main._execute_version", fake_execute_version)
-    monkeypatch.setattr("r2inspect.cli_main.sys.exit", fake_exit)
-
-    with pytest.raises(SystemExit):
+def test_run_cli_version_short_circuits() -> None:
+    # Real _execute_version runs VersionCommand (prints, returns 0) and
+    # sys.exit(0); no patching needed.
+    with pytest.raises(SystemExit) as exc:
         run_cli(CLIArgs(**_cli_kwargs(version=True, filename="/tmp/a")))
-    assert version_calls == ["version"]
-    assert fake_exit_codes == [0]
+    assert exc.value.code == 0
 
 
-def test_run_cli_with_validation_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        "r2inspect.cli_main.validate_inputs",
-        lambda *_args, **_kwargs: ["bad input"],
-    )
-    exit_mock = pytest.raises(SystemExit, match="1")
-
-    displayed: dict[str, list[str]] = {}
-
-    def fake_exit(code: int) -> None:
-        raise SystemExit(code)
-
-    def fake_display(errors: list[str]) -> None:
-        displayed["errors"] = errors
-
-    monkeypatch.setattr("sys.exit", fake_exit)
-    monkeypatch.setattr("r2inspect.cli_main.display_validation_errors", fake_display)
-
-    with exit_mock:
-        run_cli(CLIArgs(**_cli_kwargs(filename="/tmp/a")))
-    assert displayed["errors"] == ["bad input"]
+def test_run_cli_with_validation_errors(tmp_path: Path) -> None:
+    # A real nonexistent file produces a genuine validation error, so
+    # run_cli displays it and exits 1 through the real path.
+    missing = tmp_path / "nope.bin"
+    with pytest.raises(SystemExit) as exc:
+        run_cli(CLIArgs(**_cli_kwargs(filename=str(missing))))
+    assert exc.value.code == 1
 
 
 def test_build_dispatch_routes_batch_command() -> None:
     # The {Batch,Interactive,Analyze}Command classes are constructed in
     # cli.cli_entry.build_dispatch, not the cli_main module (an old refactor
-    # moved them). Drive the real dispatch builder — no monkeypatch — and
+    # moved them). Drive the real dispatch builder — no patching — and
     # assert the actual command selection + payload contract.
     ctx = CommandContext.create(config=None, verbose=True, quiet=True, thread_safe=True)
     args = CLIArgs(
@@ -165,13 +132,11 @@ def test_build_dispatch_routes_interactive_then_analyze() -> None:
     assert analyze.payload["filename"] == "/tmp/file"
 
 
-def test_build_context_configures_batch_flag_for_batch_mode(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, Any] = {}
-
+def _recording_context_factory(
+    captured: dict[str, Any],
+) -> Any:
     def fake_create(
-        *, config=None, verbose: bool = False, quiet: bool = False, thread_safe: bool = False
+        *, config: Any = None, verbose: bool = False, quiet: bool = False, thread_safe: bool = False
     ) -> CommandContext:
         captured["verbose"] = verbose
         captured["quiet"] = quiet
@@ -184,34 +149,30 @@ def test_build_context_configures_batch_flag_for_batch_mode(
             quiet=quiet,
         )
 
-    monkeypatch.setattr("r2inspect.cli_main.CommandContext.create", fake_create)
-    context = _build_context(verbose=True, quiet=False, batch="/tmp")
+    return fake_create
+
+
+def test_build_context_configures_batch_flag_for_batch_mode() -> None:
+    captured: dict[str, Any] = {}
+    context = _build_context(
+        verbose=True,
+        quiet=False,
+        batch="/tmp",
+        context_factory=_recording_context_factory(captured),
+    )
     assert context.verbose is True
     assert context.quiet is False
     assert captured["thread_safe"] is True
 
 
-def test_build_context_configures_non_batch_flag_for_single_file(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_build_context_configures_non_batch_flag_for_single_file() -> None:
     captured: dict[str, Any] = {}
-
-    def fake_create(
-        *, config=None, verbose: bool = False, quiet: bool = False, thread_safe: bool = False
-    ) -> CommandContext:
-        captured["verbose"] = verbose
-        captured["quiet"] = quiet
-        captured["thread_safe"] = thread_safe
-        return CommandContext(
-            console=SimpleNamespace(),
-            logger=SimpleNamespace(),
-            config=config,
-            verbose=verbose,
-            quiet=quiet,
-        )
-
-    monkeypatch.setattr("r2inspect.cli_main.CommandContext.create", fake_create)
-    context = _build_context(verbose=False, quiet=True, batch=None)
+    context = _build_context(
+        verbose=False,
+        quiet=True,
+        batch=None,
+        context_factory=_recording_context_factory(captured),
+    )
     assert context.verbose is False
     assert context.quiet is True
     assert captured["thread_safe"] is False
@@ -238,27 +199,19 @@ def test_validate_input_mode_errors_for_missing_file() -> None:
         validators.validate_input_mode("/does/not/exist.bin", batch=None)
 
 
-def test_handle_xor_input_returns_warningless_value(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_handle_xor_input_returns_warningless_value() -> None:
     recorded: list[str] = []
+    rec_console = SimpleNamespace(print=lambda message: recorded.append(str(message)))
 
-    monkeypatch.setattr(
-        "r2inspect.cli.validators.console",
-        SimpleNamespace(print=lambda message: recorded.append(str(message))),
-    )
-
-    assert validators.handle_xor_input("abcXYZ") == "abcXYZ"
+    assert validators.handle_xor_input("abcXYZ", console_obj=rec_console) == "abcXYZ"
     assert recorded == []
 
 
-def test_handle_xor_input_filters_invalid_chars(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_handle_xor_input_filters_invalid_chars() -> None:
     recorded: list[str] = []
+    rec_console = SimpleNamespace(print=lambda message: recorded.append(str(message)))
 
-    monkeypatch.setattr(
-        "r2inspect.cli.validators.console",
-        SimpleNamespace(print=lambda message: recorded.append(str(message))),
-    )
-
-    assert validators.handle_xor_input("!@#") is None
+    assert validators.handle_xor_input("!@#", console_obj=rec_console) is None
     assert recorded and "Warning" in recorded[0]
 
 

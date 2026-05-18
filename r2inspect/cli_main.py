@@ -64,14 +64,20 @@ class CLIArgs:
     version: bool
 
 
-def main(*, run_cli_fn: Callable[[CLIArgs], None] | None = None, **kwargs: Any) -> None:
+def main(
+    *,
+    run_cli_fn: Callable[[CLIArgs], None] | None = None,
+    error_handler_fn: Callable[[Exception, bool], None] | None = None,
+    **kwargs: Any,
+) -> None:
     """
     r2inspect - Advanced malware analysis tool using radare2 and r2pipe.
 
     Modular Command Pattern implementation with delegated execution.
 
-    ``run_cli_fn`` defaults to the real ``run_cli``; tests inject a
-    deterministic runner instead of patching the module.
+    ``run_cli_fn`` defaults to the real ``run_cli`` and ``error_handler_fn``
+    to the real ``handle_main_error``; tests inject deterministic callables
+    instead of patching the module.
     """
     args: CLIArgs | None = None
     try:
@@ -82,7 +88,7 @@ def main(*, run_cli_fn: Callable[[CLIArgs], None] | None = None, **kwargs: Any) 
         sys.exit(1)
 
     except Exception as e:
-        handle_main_error(e, args.verbose if args else False)
+        (error_handler_fn or handle_main_error)(e, args.verbose if args else False)
 
 
 @click.command()
