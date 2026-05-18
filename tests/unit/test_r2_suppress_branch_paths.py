@@ -105,7 +105,10 @@ def test_silent_cmdj_catches_non_oserror_from_cmdj():
 
 def test_silent_cmdj_logs_cmdj_fallback(caplog):
     r2 = FakeR2WithValueError()
-    with caplog.at_level(logging.DEBUG):
+    # Scope DEBUG to the r2_suppress logger explicitly: a prior test may have
+    # called configure_batch_logging() which raises r2inspect.infrastructure
+    # to WARNING, and at_level() without a logger only touches the root.
+    with caplog.at_level(logging.DEBUG, logger="r2inspect.infrastructure.r2_suppress"):
         result = silent_cmdj(r2, "ij", default={"fallback": 1})
     assert result == {"fallback": 1}
     assert "cmdj failed for ij, falling back to text parsing" in caplog.text
