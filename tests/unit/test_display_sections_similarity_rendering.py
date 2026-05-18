@@ -4,6 +4,7 @@ import io
 
 from rich.console import Console
 
+from r2inspect.cli.display_base import _console_scope
 from r2inspect.cli.display_sections_similarity import (
     _add_binbloom_binary_signature,
     _add_binbloom_bloom_stats,
@@ -34,67 +35,58 @@ def _get_text(console: Console) -> str:
     return console.export_text()
 
 
-def test_display_binlex_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binlex_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "binlex": {
-            "available": True,
-            "total_functions": 50,
-            "analyzed_functions": 45,
-            "ngram_sizes": [2, 3],
-            "unique_signatures": {2: 30, 3: 35},
-            "similar_functions": {2: [], 3: []},
-            "binary_signature": {2: "abc123", 3: "def456"},
-            "top_ngrams": {},
+    with _console_scope(console):
+        results = {
+            "binlex": {
+                "available": True,
+                "total_functions": 50,
+                "analyzed_functions": 45,
+                "ngram_sizes": [2, 3],
+                "unique_signatures": {2: 30, 3: 35},
+                "similar_functions": {2: [], 3: []},
+                "binary_signature": {2: "abc123", 3: "def456"},
+                "top_ngrams": {},
+            }
         }
-    }
 
-    _display_binlex(results)
-    text = _get_text(console)
+        _display_binlex(results)
+        text = _get_text(console)
 
-    assert "Binlex" in text
-    assert "50" in text
-    assert "45" in text
-    assert "2, 3" in text
+        assert "Binlex" in text
+        assert "50" in text
+        assert "45" in text
+        assert "2, 3" in text
 
 
-def test_display_binlex_not_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binlex_not_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "binlex": {
-            "available": False,
-            "error": "Binlex not installed",
+    with _console_scope(console):
+        results = {
+            "binlex": {
+                "available": False,
+                "error": "Binlex not installed",
+            }
         }
-    }
 
-    _display_binlex(results)
-    text = _get_text(console)
+        _display_binlex(results)
+        text = _get_text(console)
 
-    assert "Binlex" in text
-    assert "Not Available" in text
-    assert "Binlex not installed" in text
+        assert "Binlex" in text
+        assert "Not Available" in text
+        assert "Binlex not installed" in text
 
 
-def test_display_binlex_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binlex_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {}
+        _display_binlex(results)
+        text = _get_text(console)
 
-    _display_binlex(results)
-    text = _get_text(console)
-
-    assert "Binlex" not in text
+        assert "Binlex" not in text
 
 
 def test_add_binlex_basic_stats():
@@ -222,73 +214,64 @@ def test_add_binlex_entries():
     assert len(table.rows) > 0
 
 
-def test_display_binbloom_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binbloom_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "binbloom": {
-            "available": True,
-            "total_functions": 100,
-            "analyzed_functions": 95,
-            "capacity": 1000,
-            "error_rate": 0.01,
-            "unique_signatures": 80,
-            "binary_signature": "bloom_sig",
-            "bloom_stats": {
-                "average_fill_rate": 0.5,
-                "total_filters": 5,
-            },
+    with _console_scope(console):
+        results = {
+            "binbloom": {
+                "available": True,
+                "total_functions": 100,
+                "analyzed_functions": 95,
+                "capacity": 1000,
+                "error_rate": 0.01,
+                "unique_signatures": 80,
+                "binary_signature": "bloom_sig",
+                "bloom_stats": {
+                    "average_fill_rate": 0.5,
+                    "total_filters": 5,
+                },
+            }
         }
-    }
 
-    _display_binbloom(results)
-    text = _get_text(console)
+        _display_binbloom(results)
+        text = _get_text(console)
 
-    assert "Binbloom" in text
-    assert "100" in text
-    assert "95" in text
+        assert "Binbloom" in text
+        assert "100" in text
+        assert "95" in text
 
 
-def test_display_binbloom_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binbloom_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "binbloom": {
-            "available": False,
-            "error": "Test error",
+    with _console_scope(console):
+        results = {
+            "binbloom": {
+                "available": False,
+                "error": "Test error",
+            }
         }
-    }
 
-    _display_binbloom(results)
-    text = _get_text(console)
+        _display_binbloom(results)
+        text = _get_text(console)
 
-    assert "Not Available" in text
-    assert "Test error" in text
+        assert "Not Available" in text
+        assert "Test error" in text
 
 
-def test_display_binbloom_library_not_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binbloom_library_not_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "binbloom": {
-            "available": False,
-            "library_available": False,
+    with _console_scope(console):
+        results = {
+            "binbloom": {
+                "available": False,
+                "library_available": False,
+            }
         }
-    }
 
-    _display_binbloom(results)
-    text = _get_text(console)
+        _display_binbloom(results)
+        text = _get_text(console)
 
-    assert "pybloom-live" in text
+        assert "pybloom-live" in text
 
 
 def test_add_binbloom_stats():
@@ -499,229 +482,193 @@ def test_add_binbloom_bloom_stats_empty():
     assert len(table.rows) == 0
 
 
-def test_display_binbloom_signature_details_not_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binbloom_signature_details_not_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
+    with _console_scope(console):
+        binbloom_info = {"available": False}
 
-    binbloom_info = {"available": False}
+        _display_binbloom_signature_details(binbloom_info)
+        text = _get_text(console)
 
-    _display_binbloom_signature_details(binbloom_info)
-    text = _get_text(console)
-
-    assert "Signature Details" not in text
+        assert "Signature Details" not in text
 
 
-def test_display_binbloom_signature_details_single_signature(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binbloom_signature_details_single_signature():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
+    with _console_scope(console):
+        binbloom_info = {"available": True, "unique_signatures": 1}
 
-    binbloom_info = {"available": True, "unique_signatures": 1}
+        _display_binbloom_signature_details(binbloom_info)
+        text = _get_text(console)
 
-    _display_binbloom_signature_details(binbloom_info)
-    text = _get_text(console)
-
-    assert "Signature Details" not in text
+        assert "Signature Details" not in text
 
 
-def test_display_binbloom_signature_details_with_data(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_binbloom_signature_details_with_data():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    binbloom_info = {
-        "available": True,
-        "unique_signatures": 3,
-        "function_signatures": {
-            "func1&nbsp;test&amp;x": {"signature": "sig1"},
-            "func2": {"signature": "sig1"},
-            "func3": {"signature": "sig2"},
-            "func4": {"signature": "sig2" * 50},
-        },
-    }
-
-    _display_binbloom_signature_details(binbloom_info)
-    text = _get_text(console)
-
-    assert "Signature Details" in text
-
-
-def test_display_simhash_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
-    console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "simhash": {
+    with _console_scope(console):
+        binbloom_info = {
             "available": True,
-            "feature_stats": {
-                "total_features": 100,
-                "total_strings": 50,
-                "total_opcodes": 50,
-                "feature_diversity": 0.8,
+            "unique_signatures": 3,
+            "function_signatures": {
+                "func1&nbsp;test&amp;x": {"signature": "sig1"},
+                "func2": {"signature": "sig1"},
+                "func3": {"signature": "sig2"},
+                "func4": {"signature": "sig2" * 50},
             },
         }
-    }
 
-    _display_simhash(results)
-    text = _get_text(console)
+        _display_binbloom_signature_details(binbloom_info)
+        text = _get_text(console)
 
-    assert "SimHash" in text
-    assert "100" in text
+        assert "Signature Details" in text
 
 
-def test_display_simhash_not_available_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_simhash_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "simhash": {
-            "available": False,
-            "error": "SimHash failed",
+    with _console_scope(console):
+        results = {
+            "simhash": {
+                "available": True,
+                "feature_stats": {
+                    "total_features": 100,
+                    "total_strings": 50,
+                    "total_opcodes": 50,
+                    "feature_diversity": 0.8,
+                },
+            }
         }
-    }
 
-    _display_simhash(results)
-    text = _get_text(console)
+        _display_simhash(results)
+        text = _get_text(console)
 
-    assert "Not Available" in text
-    assert "SimHash failed" in text
+        assert "SimHash" in text
+        assert "100" in text
 
 
-def test_display_simhash_library_not_available(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_simhash_not_available_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "simhash": {
-            "available": False,
-            "library_available": False,
+    with _console_scope(console):
+        results = {
+            "simhash": {
+                "available": False,
+                "error": "SimHash failed",
+            }
         }
-    }
 
-    _display_simhash(results)
-    text = _get_text(console)
+        _display_simhash(results)
+        text = _get_text(console)
 
-    assert "simhash library" in text
+        assert "Not Available" in text
+        assert "SimHash failed" in text
 
 
-def test_display_bindiff_comparison_ready(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_simhash_library_not_available():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "bindiff": {
-            "comparison_ready": True,
-            "filename": "test.exe",
+    with _console_scope(console):
+        results = {
+            "simhash": {
+                "available": False,
+                "library_available": False,
+            }
         }
-    }
 
-    _display_bindiff(results)
-    text = _get_text(console)
+        _display_simhash(results)
+        text = _get_text(console)
 
-    assert "BinDiff" in text
-    assert "Comparison Ready" in text
+        assert "simhash library" in text
 
 
-def test_display_bindiff_not_ready_with_error(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_bindiff_comparison_ready():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "bindiff": {
-            "comparison_ready": False,
-            "error": "BinDiff error",
+    with _console_scope(console):
+        results = {
+            "bindiff": {
+                "comparison_ready": True,
+                "filename": "test.exe",
+            }
         }
-    }
 
-    _display_bindiff(results)
-    text = _get_text(console)
+        _display_bindiff(results)
+        text = _get_text(console)
 
-    assert "Not Available" in text
-    assert "BinDiff error" in text
+        assert "BinDiff" in text
+        assert "Comparison Ready" in text
 
 
-def test_display_bindiff_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_bindiff_not_ready_with_error():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {}
-
-    _display_bindiff(results)
-    text = _get_text(console)
-
-    assert "BinDiff" not in text
-
-
-def test_display_machoc_functions_basic(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
-    console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {
-        "functions": {
-            "total_functions": 50,
-            "machoc_hashes": {
-                "func1": "hash1",
-                "func2": "hash2",
-                "func3": "hash1",
-            },
+    with _console_scope(console):
+        results = {
+            "bindiff": {
+                "comparison_ready": False,
+                "error": "BinDiff error",
+            }
         }
-    }
 
-    _display_machoc_functions(results)
-    text = _get_text(console)
+        _display_bindiff(results)
+        text = _get_text(console)
 
-    assert "Function Analysis" in text
-    assert "50" in text
-    assert "2" in text
-    assert "1" in text
+        assert "Not Available" in text
+        assert "BinDiff error" in text
 
 
-def test_display_machoc_functions_no_hashes(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_bindiff_not_present():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {}
 
-    results = {
-        "functions": {
-            "total_functions": 50,
+        _display_bindiff(results)
+        text = _get_text(console)
+
+        assert "BinDiff" not in text
+
+
+def test_display_machoc_functions_basic():
+    console = _make_console()
+    with _console_scope(console):
+        results = {
+            "functions": {
+                "total_functions": 50,
+                "machoc_hashes": {
+                    "func1": "hash1",
+                    "func2": "hash2",
+                    "func3": "hash1",
+                },
+            }
         }
-    }
 
-    _display_machoc_functions(results)
-    text = _get_text(console)
+        _display_machoc_functions(results)
+        text = _get_text(console)
 
-    assert "Function Analysis" in text
-    assert "0" in text
+        assert "Function Analysis" in text
+        assert "50" in text
+        assert "2" in text
+        assert "1" in text
 
 
-def test_display_machoc_functions_not_present(monkeypatch):
-    from r2inspect.cli import display_sections_similarity
-
+def test_display_machoc_functions_no_hashes():
     console = _make_console()
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
+    with _console_scope(console):
+        results = {
+            "functions": {
+                "total_functions": 50,
+            }
+        }
 
-    results = {}
+        _display_machoc_functions(results)
+        text = _get_text(console)
 
-    _display_machoc_functions(results)
-    text = _get_text(console)
+        assert "Function Analysis" in text
+        assert "0" in text
 
-    assert "Function Analysis" not in text
+
+def test_display_machoc_functions_not_present():
+    console = _make_console()
+    with _console_scope(console):
+        results = {}
+
+        _display_machoc_functions(results)
+        text = _get_text(console)
+
+        assert "Function Analysis" not in text
