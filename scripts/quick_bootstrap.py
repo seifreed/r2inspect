@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 
 DEFAULT_GSD_TOOLS_PATH = str(Path.home() / ".codex/get-shit-done/bin/gsd-tools.cjs")
@@ -988,8 +988,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
-    args = parse_args()
+def main(*, deps: dict[str, Any] | None = None) -> int:
+    # ``deps`` defaults to the module-level gate/arg functions; tests inject
+    # deterministic replacements instead of patching the module.
+    _d: dict[str, Any] = deps or {}
+    _parse_args = _d.get("parse_args", parse_args)
+    _eval_requirements = _d.get(
+        "evaluate_requirements_contract_gate", evaluate_requirements_contract_gate
+    )
+    _eval_milestone = _d.get(
+        "evaluate_milestone_governance_gate", evaluate_milestone_governance_gate
+    )
+    _eval_traceability = _d.get(
+        "evaluate_traceability_drift_gate", evaluate_traceability_drift_gate
+    )
+    _build_matrix = _d.get(
+        "build_requirement_coverage_matrix", build_requirement_coverage_matrix
+    )
+    _format_gate_failures = _d.get("format_gate_failures", format_gate_failures)
+
+    args = _parse_args()
     command = args.command
     if command is None:
         raise BootstrapError("Missing command. Use `bootstrap`, `close`, or `milestone`.")
@@ -1019,7 +1037,7 @@ def main() -> int:
         governance_exception = _parse_governance_exception_payload(args)
 
         if milestone_command == "precheck":
-            result = evaluate_milestone_governance_gate(planning_root, milestone_version)
+            result = _eval_milestone(planning_root, milestone_version)
             passed = bool(result.get("passed", False))
             precheck_retry = (
                 f"python scripts/quick_bootstrap.py milestone precheck {milestone_version}"
@@ -1031,7 +1049,7 @@ def main() -> int:
                 "passed": passed,
                 "failure_groups": result.get("failure_groups", {}),
                 "retry_command": precheck_retry,
-                "checklist": format_gate_failures(result, precheck_retry),
+                "checklist": _format_gate_failures(result, precheck_retry),
             }
             print(json.dumps(output, ensure_ascii=True))
             return 0
@@ -1059,7 +1077,7 @@ def main() -> int:
             )
             return 0
 
-        requirements_result = evaluate_requirements_contract_gate(planning_root)
+        requirements_result = _eval_requirements(planning_root)
         if not bool(requirements_result.get("passed", False)):
             retry_command = (
                 f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
@@ -1080,7 +1098,7 @@ def main() -> int:
             scope="all",
         )
 
-        traceability_result = evaluate_traceability_drift_gate(
+        traceability_result = _eval_traceability(
             planning_root,
             scope="all",
         )
@@ -1111,13 +1129,13 @@ def main() -> int:
             touched_requirement_ids=traceability_touched_ids,
         )
 
-        result = evaluate_milestone_governance_gate(planning_root, milestone_version)
+        result = _eval_milestone(planning_root, milestone_version)
         if not bool(result.get("passed", False)):
             retry_command = (
                 f"python scripts/quick_bootstrap.py milestone complete {milestone_version}"
             )
             record_milestone_gate_activity(state_path, milestone_version, "complete", False)
-            print(format_gate_failures(result, retry_command))
+            print(_format_gate_failures(result, retry_command))
             return 1
 
         record_milestone_gate_activity(state_path, milestone_version, "complete", True)
@@ -1138,7 +1156,7 @@ def main() -> int:
             raise BootstrapError("Missing roadmap subcommand. Use `create` or `revise`.")
         planning_root = Path(args.planning_root)
         state_path = Path(args.state_path)
-        requirements_result = evaluate_requirements_contract_gate(planning_root)
+        requirements_result = _eval_requirements(planning_root)
         retry_command = f"python scripts/quick_bootstrap.py roadmap {roadmap_command}"
         if not bool(requirements_result.get("passed", False)):
             record_requirements_gate_activity(
@@ -1219,7 +1237,7 @@ def main() -> int:
             print(json.dumps(output, ensure_ascii=True))
             return 0
 
-        requirements_result = evaluate_requirements_contract_gate(
+        requirements_result = _eval_requirements(
             planning_root,
             scope="touched",
             touched_requirement_ids=touched_ids,
@@ -1246,7 +1264,7 @@ def main() -> int:
             True,
             scope="touched",
         )
-        traceability_result = evaluate_traceability_drift_gate(
+        traceability_result = _eval_traceability(
             planning_root,
             scope="touched",
             touched_requirement_ids=touched_ids,
@@ -1294,7 +1312,7 @@ def main() -> int:
             raise BootstrapError("Missing requirements subcommand. Use `precheck`.")
         planning_root = Path(args.planning_root)
         state_path = Path(args.state_path)
-        result = evaluate_requirements_contract_gate(planning_root)
+        result = _eval_requirements(planning_root)
         passed = bool(result.get("passed", False))
         retry_command = "python scripts/quick_bootstrap.py requirements precheck"
         checklist = format_requirements_contract_failures(result, retry_command)
@@ -1324,9 +1342,9 @@ def main() -> int:
         matrix_detail = getattr(args, "matrix_detail", "compact")
         if traceability_scope == "phase" and not str(traceability_phase_id or "").strip():
             raise BootstrapError("--phase-id is required when --scope phase.")
-        result = evaluate_traceability_drift_gate(planning_root, scope="all")
+        result = _eval_traceability(planning_root, scope="all")
         try:
-            matrix_payload = build_requirement_coverage_matrix(
+            matrix_payload = _build_matrix(
                 planning_root,
                 scope=traceability_scope,
                 phase_id=traceability_phase_id,

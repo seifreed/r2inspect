@@ -1,23 +1,25 @@
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 
-def _load_quick_bootstrap():
-    module_path = Path(__file__).resolve().parents[2] / "scripts" / "quick_bootstrap.py"
-    spec = importlib.util.spec_from_file_location("quick_bootstrap", module_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load quick_bootstrap module")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+def _load_quick_bootstrap() -> Any:
+    # Load through the real import system: quick_bootstrap.py combines
+    # `from __future__ import annotations` with @dataclass, so the module
+    # must be registered the way the import system does it (a bare
+    # spec/exec_module is not enough); importlib.import_module handles that
+    # with no manual module-table assignment in test code.
+    scripts_path = str(Path(__file__).resolve().parents[2] / "scripts")
+    if scripts_path not in sys.path:
+        sys.path.insert(0, scripts_path)
+    return importlib.import_module("quick_bootstrap")
 
 
-def test_completion_aborts_without_state_mutation_on_gate_failure(monkeypatch, tmp_path, capsys):
+def test_completion_aborts_without_state_mutation_on_gate_failure(tmp_path, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
@@ -40,41 +42,31 @@ def test_completion_aborts_without_state_mutation_on_gate_failure(monkeypatch, t
             "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
         }
 
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
-    )
-    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_gate)
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_traceability_drift_gate",
-        lambda _planning_root, **_kwargs: {
+    deps = {
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+        "evaluate_milestone_governance_gate": fake_gate,
+        "evaluate_traceability_drift_gate": lambda _planning_root, **_kwargs: {
             "passed": True,
             "failure_groups": {},
             "retry_command": "unused",
             "scope": "all",
             "touched_requirement_ids": [],
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "parse_args",
-        lambda: quick_bootstrap.argparse.Namespace(
+        "parse_args": lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
             milestone_command="complete",
             version="v1.1",
             planning_root=str(planning_root),
             state_path=str(state_path),
         ),
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "format_gate_failures",
-        lambda _result, retry_command: f"blocked\nRetry: {retry_command}",
-    )
+        "format_gate_failures": lambda _result, retry_command: f"blocked\nRetry: {retry_command}",
+    }
 
-    exit_code = quick_bootstrap.main()
+    exit_code = quick_bootstrap.main(deps=deps)
     output = capsys.readouterr().out
     after = state_path.read_text(encoding="utf-8")
 
@@ -85,51 +77,41 @@ def test_completion_aborts_without_state_mutation_on_gate_failure(monkeypatch, t
     assert "milestone complete v1.1 gate passed" not in after
 
 
-def test_completion_records_evidence_when_gate_passes(monkeypatch, tmp_path, capsys):
+def test_completion_records_evidence_when_gate_passes(tmp_path, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: baseline\n", encoding="utf-8")
 
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: {
+    deps = {
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+        "evaluate_milestone_governance_gate": lambda _planning_root, _version: {
             "passed": True,
             "failure_groups": {},
             "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_traceability_drift_gate",
-        lambda _planning_root, **_kwargs: {
+        "evaluate_traceability_drift_gate": lambda _planning_root, **_kwargs: {
             "passed": True,
             "failure_groups": {},
             "retry_command": "unused",
             "scope": "all",
             "touched_requirement_ids": [],
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "parse_args",
-        lambda: quick_bootstrap.argparse.Namespace(
+        "parse_args": lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
             milestone_command="complete",
             version="v1.1",
             planning_root=str(planning_root),
             state_path=str(state_path),
         ),
-    )
+    }
 
-    exit_code = quick_bootstrap.main()
+    exit_code = quick_bootstrap.main(deps=deps)
     payload = json.loads(capsys.readouterr().out)
     state_text = state_path.read_text(encoding="utf-8")
 
@@ -139,7 +121,7 @@ def test_completion_records_evidence_when_gate_passes(monkeypatch, tmp_path, cap
     assert "milestone complete v1.1 gate passed" in state_text
 
 
-def test_blocked_completion_keeps_completion_state_unadvanced(monkeypatch, tmp_path, capsys):
+def test_blocked_completion_keeps_completion_state_unadvanced(tmp_path, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
@@ -149,46 +131,36 @@ def test_blocked_completion_keeps_completion_state_unadvanced(monkeypatch, tmp_p
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: {
+    deps = {
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+        "evaluate_milestone_governance_gate": lambda _planning_root, _version: {
             "passed": False,
             "failure_groups": {
                 "invalid_status": [{"message": "status must be passed", "fix": "set status passed"}]
             },
             "retry_command": "python scripts/quick_bootstrap.py milestone complete v1.1",
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_traceability_drift_gate",
-        lambda _planning_root, **_kwargs: {
+        "evaluate_traceability_drift_gate": lambda _planning_root, **_kwargs: {
             "passed": True,
             "failure_groups": {},
             "retry_command": "unused",
             "scope": "all",
             "touched_requirement_ids": [],
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "parse_args",
-        lambda: quick_bootstrap.argparse.Namespace(
+        "parse_args": lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
             milestone_command="complete",
             version="v1.1",
             planning_root=str(planning_root),
             state_path=str(state_path),
         ),
-    )
+    }
 
-    exit_code = quick_bootstrap.main()
+    exit_code = quick_bootstrap.main(deps=deps)
     state_text = state_path.read_text(encoding="utf-8")
     _ = capsys.readouterr().out
 
@@ -197,22 +169,20 @@ def test_blocked_completion_keeps_completion_state_unadvanced(monkeypatch, tmp_p
     assert "| complete | v1.1 | blocked |" in state_text
 
 
-def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, capsys):
+def test_remediation_output_uses_context_retry_command(tmp_path, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: baseline\n", encoding="utf-8")
 
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: {
+    deps = {
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+        "evaluate_milestone_governance_gate": lambda _planning_root, _version: {
             "passed": False,
             "failure_groups": {
                 "missing_file": [
@@ -224,20 +194,16 @@ def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, ca
             },
             "retry_command": "python scripts/quick_bootstrap.py milestone precheck v1.1",
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "parse_args",
-        lambda: quick_bootstrap.argparse.Namespace(
+        "parse_args": lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
             milestone_command="complete",
             version="v1.1",
             planning_root=str(planning_root),
             state_path=str(state_path),
         ),
-    )
+    }
 
-    exit_code = quick_bootstrap.main()
+    exit_code = quick_bootstrap.main(deps=deps)
     output = capsys.readouterr().out
 
     assert exit_code == 1
@@ -245,46 +211,38 @@ def test_remediation_output_uses_context_retry_command(monkeypatch, tmp_path, ca
     assert "python scripts/quick_bootstrap.py milestone precheck v1.1" not in output
 
 
-def test_milestone_complete_aborts_when_requirements_contract_gate_blocked(
-    monkeypatch, tmp_path, capsys
-):
+def test_milestone_complete_aborts_when_requirements_contract_gate_blocked(tmp_path, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
     state_path = planning_root / "STATE.md"
     state_path.write_text("Last activity: baseline\nstatus: in_progress\n", encoding="utf-8")
 
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {
-            "passed": False,
-            "failure_groups": {
-                "missing_acceptance_criteria": [{"message": "missing acceptance", "fix": "add"}]
-            },
-            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
-        },
-    )
     called = {"milestone_gate": False}
 
     def fake_milestone_gate(_planning_root, _version):
         called["milestone_gate"] = True
         return {"passed": True, "failure_groups": {}, "retry_command": "unused"}
 
-    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone_gate)
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "parse_args",
-        lambda: quick_bootstrap.argparse.Namespace(
+    deps = {
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": False,
+            "failure_groups": {
+                "missing_acceptance_criteria": [{"message": "missing acceptance", "fix": "add"}]
+            },
+            "retry_command": "node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements precheck",
+        },
+        "evaluate_milestone_governance_gate": fake_milestone_gate,
+        "parse_args": lambda: quick_bootstrap.argparse.Namespace(
             command="milestone",
             milestone_command="complete",
             version="v1.1",
             planning_root=str(planning_root),
             state_path=str(state_path),
         ),
-    )
+    }
 
-    exit_code = quick_bootstrap.main()
+    exit_code = quick_bootstrap.main(deps=deps)
     output = capsys.readouterr().out
     after = state_path.read_text(encoding="utf-8")
 
@@ -295,9 +253,7 @@ def test_milestone_complete_aborts_when_requirements_contract_gate_blocked(
     assert "| complete | all | blocked |" in after
 
 
-def test_milestone_complete_blocks_on_traceability_drift_before_milestone_gate(
-    monkeypatch, tmp_path, capsys
-):
+def test_milestone_complete_blocks_on_traceability_drift_before_milestone_gate(tmp_path, capsys):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
     planning_root.mkdir(parents=True)
@@ -308,18 +264,6 @@ def test_milestone_complete_blocks_on_traceability_drift_before_milestone_gate(
     )
     order: list[str] = []
     called = {"milestone_gate": False}
-
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "parse_args",
-        lambda: quick_bootstrap.argparse.Namespace(
-            command="milestone",
-            milestone_command="complete",
-            version="v1.1",
-            planning_root=str(planning_root),
-            state_path=str(state_path),
-        ),
-    )
 
     def fake_requirements_gate(_planning_root):
         order.append("requirements")
@@ -347,13 +291,20 @@ def test_milestone_complete_blocks_on_traceability_drift_before_milestone_gate(
         order.append("milestone")
         return {"passed": True, "failure_groups": {}, "retry_command": "unused"}
 
-    monkeypatch.setattr(
-        quick_bootstrap, "evaluate_requirements_contract_gate", fake_requirements_gate
-    )
-    monkeypatch.setattr(quick_bootstrap, "evaluate_traceability_drift_gate", fake_traceability_gate)
-    monkeypatch.setattr(quick_bootstrap, "evaluate_milestone_governance_gate", fake_milestone_gate)
+    deps = {
+        "parse_args": lambda: quick_bootstrap.argparse.Namespace(
+            command="milestone",
+            milestone_command="complete",
+            version="v1.1",
+            planning_root=str(planning_root),
+            state_path=str(state_path),
+        ),
+        "evaluate_requirements_contract_gate": fake_requirements_gate,
+        "evaluate_traceability_drift_gate": fake_traceability_gate,
+        "evaluate_milestone_governance_gate": fake_milestone_gate,
+    }
 
-    exit_code = quick_bootstrap.main()
+    exit_code = quick_bootstrap.main(deps=deps)
     output = capsys.readouterr().out
     after = state_path.read_text(encoding="utf-8")
 
@@ -369,7 +320,7 @@ def test_milestone_complete_blocks_on_traceability_drift_before_milestone_gate(
 
 
 def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_behavior(
-    monkeypatch, tmp_path, capsys
+    tmp_path, capsys
 ):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
@@ -395,11 +346,11 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
             state_path=str(state_path),
         ),
     ]
-    monkeypatch.setattr(quick_bootstrap, "parse_args", lambda: args_queue.pop(0))
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_traceability_drift_gate",
-        lambda _planning_root, **_kwargs: {
+    called = {"milestone_gate": False}
+
+    deps = {
+        "parse_args": lambda: args_queue.pop(0),
+        "evaluate_traceability_drift_gate": lambda _planning_root, **_kwargs: {
             "passed": False,
             "failure_groups": {
                 "state_mapping_mismatch": [{"message": "mismatch", "fix": "align"}],
@@ -409,11 +360,7 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
             "scope": "all",
             "touched_requirement_ids": [],
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "build_requirement_coverage_matrix",
-        lambda _planning_root, **_kwargs: {
+        "build_requirement_coverage_matrix": lambda _planning_root, **_kwargs: {
             "schema_version": "coverage_matrix.v1",
             "coverage_matrix": {
                 "scope": "milestone",
@@ -436,17 +383,14 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
                 },
             },
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
-    )
-    called = {"milestone_gate": False}
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: called.__setitem__("milestone_gate", True)
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+        "evaluate_milestone_governance_gate": lambda _planning_root, _version: called.__setitem__(
+            "milestone_gate", True
+        )
         or {
             "passed": False,
             "failure_groups": {
@@ -454,11 +398,11 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
             },
             "retry_command": "unused",
         },
-    )
+    }
 
-    precheck_exit = quick_bootstrap.main()
+    precheck_exit = quick_bootstrap.main(deps=deps)
     precheck_payload = json.loads(capsys.readouterr().out)
-    completion_exit = quick_bootstrap.main()
+    completion_exit = quick_bootstrap.main(deps=deps)
     completion_output = capsys.readouterr().out
     after = state_path.read_text(encoding="utf-8")
 
@@ -474,7 +418,7 @@ def test_traceability_precheck_matrix_additions_do_not_change_completion_gate_be
 
 
 def test_ranked_remediation_hints_are_additive_to_traceability_precheck_contract(
-    monkeypatch, tmp_path, capsys
+    tmp_path, capsys
 ):
     quick_bootstrap = _load_quick_bootstrap()
     planning_root = tmp_path / ".planning"
@@ -500,11 +444,11 @@ def test_ranked_remediation_hints_are_additive_to_traceability_precheck_contract
             state_path=str(state_path),
         ),
     ]
-    monkeypatch.setattr(quick_bootstrap, "parse_args", lambda: args_queue.pop(0))
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_traceability_drift_gate",
-        lambda _planning_root, **_kwargs: {
+    called = {"milestone_gate": False}
+
+    deps = {
+        "parse_args": lambda: args_queue.pop(0),
+        "evaluate_traceability_drift_gate": lambda _planning_root, **_kwargs: {
             "passed": False,
             "failure_groups": {
                 "state_mapping_mismatch": [{"message": "mismatch", "fix": "align"}],
@@ -514,11 +458,7 @@ def test_ranked_remediation_hints_are_additive_to_traceability_precheck_contract
             "scope": "all",
             "touched_requirement_ids": [],
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "build_requirement_coverage_matrix",
-        lambda _planning_root, **_kwargs: {
+        "build_requirement_coverage_matrix": lambda _planning_root, **_kwargs: {
             "schema_version": "coverage_matrix.v1",
             "coverage_matrix": {
                 "scope": "milestone",
@@ -541,17 +481,14 @@ def test_ranked_remediation_hints_are_additive_to_traceability_precheck_contract
                 },
             },
         },
-    )
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_requirements_contract_gate",
-        lambda _planning_root: {"passed": True, "failure_groups": {}, "retry_command": "unused"},
-    )
-    called = {"milestone_gate": False}
-    monkeypatch.setattr(
-        quick_bootstrap,
-        "evaluate_milestone_governance_gate",
-        lambda _planning_root, _version: called.__setitem__("milestone_gate", True)
+        "evaluate_requirements_contract_gate": lambda _planning_root: {
+            "passed": True,
+            "failure_groups": {},
+            "retry_command": "unused",
+        },
+        "evaluate_milestone_governance_gate": lambda _planning_root, _version: called.__setitem__(
+            "milestone_gate", True
+        )
         or {
             "passed": False,
             "failure_groups": {
@@ -559,11 +496,11 @@ def test_ranked_remediation_hints_are_additive_to_traceability_precheck_contract
             },
             "retry_command": "unused",
         },
-    )
+    }
 
-    precheck_exit = quick_bootstrap.main()
+    precheck_exit = quick_bootstrap.main(deps=deps)
     precheck_payload = json.loads(capsys.readouterr().out)
-    completion_exit = quick_bootstrap.main()
+    completion_exit = quick_bootstrap.main(deps=deps)
     completion_output = capsys.readouterr().out
     after = state_path.read_text(encoding="utf-8")
 
