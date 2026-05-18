@@ -129,11 +129,13 @@ def run_cli(
     args: CLIArgs,
     *,
     dispatch_fn: Callable[[CommandContext, CLIArgs], None] | None = None,
+    list_yara_fn: Callable[[str | None, str | None], None] | None = None,
 ) -> None:
     """Primary CLI workflow separated for clarity and testability.
 
-    ``dispatch_fn`` defaults to the real ``_dispatch_command``; tests inject a
-    deterministic terminal dispatch instead of patching the module.
+    ``dispatch_fn`` defaults to the real ``_dispatch_command`` and
+    ``list_yara_fn`` to the real ``_execute_list_yara``; tests inject
+    deterministic terminal callables instead of patching the module.
     """
     if args.version:
         _execute_version()
@@ -152,7 +154,7 @@ def run_cli(
         sys.exit(1)
 
     if args.list_yara:
-        _execute_list_yara(args.config, args.yara)
+        (list_yara_fn or _execute_list_yara)(args.config, args.yara)
 
     validate_input_mode(args.filename, args.batch)
 

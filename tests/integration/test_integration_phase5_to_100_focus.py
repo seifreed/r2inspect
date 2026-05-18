@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from pathlib import Path
-from typing import Any
-from unittest.mock import Mock
+from typing import Any, cast
 
 import pytest
+
+from tests.helpers import env_vars
 
 from r2inspect.application.analysis_service import AnalysisService
 from r2inspect.cli import validators
@@ -75,16 +76,16 @@ class _DummyStageContext(dict[str, Any]):
 
 def test_inspector_missing_memory_monitor() -> None:
     with pytest.raises(ValueError, match="memory_monitor must be provided"):
-        R2Inspector(  # type: ignore[arg-type]
+        R2Inspector(
             filename="sample.bin",
             config=_DummyConfig(),
             adapter=_DummyAdapter(),
             file_validator_factory=_DummyValidator,
             result_aggregator_factory=lambda: {},
             registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: Mock(),
+            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
             config_factory=lambda: _DummyConfig(),
-            memory_monitor=None,
+            memory_monitor=cast(Any, None),
         )
 
 
@@ -99,7 +100,7 @@ def test_inspector_init_missing_config_factory() -> None:
             file_validator_factory=_DummyValidator,
             result_aggregator_factory=lambda: {},
             registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: Mock(),
+            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
             memory_monitor=_DummyMemoryMonitor(),
         )
 
@@ -113,7 +114,7 @@ def test_inspector_init_missing_adapter() -> None:
             file_validator_factory=_DummyValidator,
             result_aggregator_factory=lambda: {},
             registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: Mock(),
+            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
             config_factory=lambda: _DummyConfig(),
             memory_monitor=_DummyMemoryMonitor(),
         )
@@ -129,7 +130,7 @@ def test_inspector_init_fails_file_validation(tmp_path: Path) -> None:
             adapter=_DummyAdapter(),
             config_factory=lambda: _DummyConfig(),
             registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: Mock(),
+            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
             file_validator_factory=lambda _: _DummyValidator(valid=False),
             result_aggregator_factory=lambda: {},
             memory_monitor=_DummyMemoryMonitor(),
@@ -175,18 +176,27 @@ def test_inspector_analyze_catches_generic_errors() -> None:
 
 
 def test_detection_stage_error_paths() -> None:
-    class _FailingAnalyzer:
-        def detect(self) -> dict[str, Any]:
+    # 69353a1 unified every detector behind analyze(); stages_detection
+    # dispatches through analyze() (was detect()/detect_compiler()/scan()).
+    class _FailingPacker:
+        def analyze(self) -> dict[str, Any]:
             raise RuntimeError("detection failed")
 
-        def detect_compiler(self) -> dict[str, Any]:
+    class _FailingCompiler:
+        def analyze(self) -> dict[str, Any]:
             raise RuntimeError("compiler failed")
 
-        def scan(self, custom_rules: str | None = None) -> list[dict[str, Any]]:
+    class _FailingYara:
+        def analyze(self, custom_rules: str | None = None) -> list[dict[str, Any]]:
             raise RuntimeError("yara failed")
 
+    failing_by_name = {
+        "packer_detector": _FailingPacker,
+        "compiler_detector": _FailingCompiler,
+        "yara_analyzer": _FailingYara,
+    }
     registry = SimpleNamespace(
-        get_analyzer_class=lambda _: _FailingAnalyzer,
+        get_analyzer_class=lambda name: failing_by_name.get(name),
     )
     stage = DetectionStage(
         registry=registry,
@@ -214,7 +224,7 @@ def test_detection_stage_error_paths() -> None:
 
 def test_detection_stage_execute_collects_fallbacks() -> None:
     class _FailingAnalyzer:
-        def detect(self) -> dict[str, str]:
+        def analyze(self) -> dict[str, str]:
             raise RuntimeError("detection failed")
 
     registry = SimpleNamespace(
@@ -268,9 +278,7 @@ def test_security_stage_error_paths() -> None:
     assert mitigation_result is None
 
 
-def test_analysis_service_add_statistics_and_schema_validation(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_analysis_service_add_statistics_and_schema_validation() -> None:
     runtime = type(
         "_Runtime",
         (),
@@ -301,8 +309,8 @@ def test_analysis_service_add_statistics_and_schema_validation(
     assert "retry_statistics" in result
     assert "circuit_breaker_statistics" in result
 
-    monkeypatch.setenv("R2INSPECT_VALIDATE_SCHEMAS", "1")
-    service.validate_results({"pe": {"some": "value"}})
+    with env_vars(R2INSPECT_VALIDATE_SCHEMAS="1"):
+        service.validate_results({"pe": {"some": "value"}})
     assert conversions == [("pe", {"some": "value"}, False)]
 
 
@@ -312,7 +320,7 @@ def test_analysis_service_circuit_breaker_detection() -> None:
     assert AnalysisService.has_circuit_breaker_data({"nested": {"state": "open"}})
 
 
-def test_validators_exception_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_validators_exception_paths(tmp_path: Path) -> None:
     valid_file = tmp_path / "valid.bin"
     valid_file.write_bytes(b"test")
     valid_dir = tmp_path / "batch-dir"
@@ -330,72 +338,68 @@ def test_validators_exception_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: P
                 return valid_dir
             return Path(path)
 
+    raises_cls = cast(Any, _RaisesValueErrorValidator)
+    path_cls = cast(Any, _PathValidator)
+
     # filename check: security branch
-    monkeypatch.setattr("r2inspect.cli.validators.FileValidator", _RaisesValueErrorValidator)
-    assert validators.validate_file_input("bad.bin") == ["File path security validation failed: no"]
+    assert validators.validate_file_input("bad.bin", file_validator_cls=raises_cls) == [
+        "File path security validation failed: no"
+    ]
 
     # filename check: simulated runtime error branch
-    monkeypatch.setattr("r2inspect.cli.validators.FileValidator", _PathValidator)
-    monkeypatch.setenv("R2INSPECT_TEST_RAISE_FILE_ERROR", "1")
-    assert validators.validate_file_input("any.bin") == [
-        "File access error: Simulated file access error"
-    ]
-    monkeypatch.delenv("R2INSPECT_TEST_RAISE_FILE_ERROR", raising=False)
+    with env_vars(R2INSPECT_TEST_RAISE_FILE_ERROR="1"):
+        assert validators.validate_file_input("any.bin", file_validator_cls=path_cls) == [
+            "File access error: Simulated file access error"
+        ]
 
     # batch check: security / runtime branches
-    monkeypatch.setattr("r2inspect.cli.validators.FileValidator", _RaisesValueErrorValidator)
-    assert validators.validate_batch_input("bad-batch") == [
+    assert validators.validate_batch_input("bad-batch", file_validator_cls=raises_cls) == [
         "Batch directory security validation failed: no"
     ]
-    monkeypatch.setattr("r2inspect.cli.validators.FileValidator", _PathValidator)
-    monkeypatch.setenv("R2INSPECT_TEST_RAISE_BATCH_ERROR", "1")
-    assert validators.validate_batch_input("anydir") == [
-        "Batch directory access error: Simulated batch access error"
-    ]
+    with env_vars(R2INSPECT_TEST_RAISE_BATCH_ERROR="1"):
+        assert validators.validate_batch_input("anydir", file_validator_cls=path_cls) == [
+            "Batch directory access error: Simulated batch access error"
+        ]
 
 
-def test_validate_output_input_permission_error(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_validate_output_input_permission_error(tmp_path: Path) -> None:
     output_file = tmp_path / "locked.txt"
     output_file.write_text("x")
 
-    real_open = open
+    original_mode = output_file.stat().st_mode
+    # Real read-only file: open(path, "a") raises PermissionError for real,
+    # exercising the actual except branch without patching builtins.open.
+    output_file.chmod(0o000)
+    try:
+        assert validators.validate_output_input(str(output_file)) == [
+            f"Cannot write to output file: {output_file}"
+        ]
+    finally:
+        output_file.chmod(original_mode)
 
-    def fake_open(file_path: str, mode: str = "r") -> Any:
-        if "a" in mode:
-            raise PermissionError("no permission")
-        return real_open(file_path, mode)
-
-    monkeypatch.setattr("builtins.open", fake_open)
-    assert validators.validate_output_input(str(output_file)) == [
-        f"Cannot write to output file: {output_file}"
-    ]
     assert validators.validate_output_input(str(tmp_path / "dir_without_file")) == []
 
 
-def test_cli_main_list_yara_invokes_config_command(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_main_list_yara_invokes_config_command(tmp_path: Path) -> None:
     calls: list[tuple[str | None, str | None]] = []
-    exit_codes: list[int] = []
 
-    def fake_execute_list_yara(config: str | None, yara: str | None) -> None:
+    def fake_list_yara(config: str | None, yara: str | None) -> None:
         calls.append((config, yara))
-        fake_exit(0)
+        raise SystemExit(0)
 
-    def fake_exit(code: int) -> None:
-        exit_codes.append(code)
-        raise SystemExit(code)
+    # A real existing directory makes validate_inputs pass naturally, so the
+    # list-yara branch is reached without patching the validators; the
+    # list_yara_fn DI seam captures the terminal call.
+    yara_dir = tmp_path / "rules"
+    yara_dir.mkdir()
 
-    monkeypatch.setattr("r2inspect.cli_main._execute_list_yara", fake_execute_list_yara)
-    monkeypatch.setattr("r2inspect.cli_main.validate_inputs", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr("r2inspect.cli_main.validate_input_mode", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("r2inspect.cli_main.handle_xor_input", lambda value: value)
-    monkeypatch.setattr("r2inspect.cli_main.sys.exit", fake_exit)
-
-    with pytest.raises(SystemExit):
-        run_cli(CLIArgs(**_cli_kwargs(list_yara=True, yara="custom.yar")))
-    assert calls == [(None, "custom.yar")]
-    assert exit_codes == [0]
+    with pytest.raises(SystemExit) as exc:
+        run_cli(
+            CLIArgs(**_cli_kwargs(list_yara=True, yara=str(yara_dir))),
+            list_yara_fn=fake_list_yara,
+        )
+    assert exc.value.code == 0
+    assert calls == [(None, str(yara_dir))]
 
 
 def _cli_kwargs(**overrides: Any) -> dict[str, Any]:

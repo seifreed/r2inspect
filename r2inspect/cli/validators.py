@@ -73,12 +73,22 @@ def validate_inputs(
     return errors
 
 
-def validate_file_input(filename: str | None) -> list[str]:
-    return _validator_rules.validate_file_input(filename, file_validator_cls=FileValidator)
+def validate_file_input(
+    filename: str | None, *, file_validator_cls: type[FileValidator] | None = None
+) -> list[str]:
+    return _validator_rules.validate_file_input(
+        filename,
+        file_validator_cls=FileValidator if file_validator_cls is None else file_validator_cls,
+    )
 
 
-def validate_batch_input(batch: str | None) -> list[str]:
-    return _validator_rules.validate_batch_input(batch, file_validator_cls=FileValidator)
+def validate_batch_input(
+    batch: str | None, *, file_validator_cls: type[FileValidator] | None = None
+) -> list[str]:
+    return _validator_rules.validate_batch_input(
+        batch,
+        file_validator_cls=FileValidator if file_validator_cls is None else file_validator_cls,
+    )
 
 
 def validate_output_input(output: str | None) -> list[str]:
