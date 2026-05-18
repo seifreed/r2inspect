@@ -13,15 +13,29 @@ from .binbloom_mixin import BinbloomMixin
 
 logger = get_logger(__name__)
 
-# Try to import pybloom_live, fall back to error handling
-try:
-    from pybloom_live import BloomFilter
+# pybloom_live's BloomFilter is duck-typed internally; use an alias for the
+# (lazy, future-annotations) type positions so the runtime value can be None
+# when the optional dependency is absent without tripping mypy.
+BloomFilterType = Any
 
-    BLOOM_AVAILABLE = True
-except ImportError:
-    logger.warning("pybloom-live not available. Install with: pip install pybloom-live")
-    BLOOM_AVAILABLE = False
-    BloomFilter = None
+
+def _import_bloom_filter(importer: Any | None = None) -> tuple[Any, bool]:
+    """Resolve pybloom_live's BloomFilter, degrading to (None, False) when the
+    optional dependency is unavailable. ``importer`` defaults to the real
+    import; tests inject a failing importer to drive the fallback branch
+    instead of poisoning the module table."""
+    try:
+        if importer is not None:
+            return importer(), True
+        from pybloom_live import BloomFilter as _bloom_filter
+
+        return _bloom_filter, True
+    except ImportError:
+        logger.warning("pybloom-live not available. Install with: pip install pybloom-live")
+        return None, False
+
+
+BloomFilter, BLOOM_AVAILABLE = _import_bloom_filter()
 
 
 class BinbloomResult(TypedDict):
@@ -69,8 +83,8 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
     def _collect_function_blooms(
         self, functions: list[dict[str, Any]], capacity: int, error_rate: float
-    ) -> tuple[dict[str, BloomFilter], dict[str, dict[str, Any]], set[str], int]:
-        function_blooms: dict[str, BloomFilter] = {}
+    ) -> tuple[dict[str, BloomFilterType], dict[str, dict[str, Any]], set[str], int]:
+        function_blooms: dict[str, BloomFilterType] = {}
         function_signatures: dict[str, dict[str, Any]] = {}
         all_instructions: set[str] = set()
         analyzed_count = 0
@@ -138,10 +152,10 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
     def _create_function_bloom(
         self, func_addr: int, func_name: str, capacity: int, error_rate: float
-    ) -> tuple[BloomFilter, list[str], str] | None:
+    ) -> tuple[BloomFilterType, list[str], str] | None:
         """Create a Bloom filter for a specific function."""
 
-        def _build() -> tuple[BloomFilter, list[str], str] | None:
+        def _build() -> tuple[BloomFilterType, list[str], str] | None:
             instructions = self._extract_instruction_mnemonics(func_addr, func_name)
             if not instructions:
                 logger.debug("No instructions found for function %s", func_name)
@@ -173,7 +187,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
         return BLOOM_AVAILABLE
 
     @staticmethod
-    def deserialize_bloom(bloom_b64: str) -> BloomFilter | None:
+    def deserialize_bloom(bloom_b64: str) -> BloomFilterType | None:
         return BinbloomMixin.deserialize_bloom(bloom_b64)
 
     @staticmethod
