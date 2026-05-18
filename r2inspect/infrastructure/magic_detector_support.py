@@ -22,7 +22,10 @@ def validate_pe_format(header: bytes, file_handle: BinaryIO, logger: Any) -> flo
             return 0.0
         pe_offset = struct.unpack("<I", header[60:64])[0]
         pe_sig = read_at_offset(file_handle, pe_offset, 4)
-        return 0.95 if pe_sig == b"PE\0\0" else 0.0
+        # A valid DOS/MZ header without a PE signature is still a low-confidence
+        # PE candidate (0.3) — not a no-match (0.0). 8f3da63 dropped this
+        # fallback; restore it so a bare MZ is still detected as .exe.
+        return 0.95 if pe_sig == b"PE\0\0" else 0.3
     except Exception as exc:
         logger.debug("PE validation failed: %s", exc)
         return 0.3
