@@ -138,7 +138,9 @@ def test_decode_base64_binascii_error_returns_none():
 
 
 # ---------------------------------------------------------------------------
-# 7. modules/packer_detector.py lines 120-122 – except Exception sets error key
+# 7. modules/packer_detector.py – a raising sub-method propagates out of
+#    detect(); per-helper _safe_call is the real error boundary and
+#    InspectorDispatchMixin._execute_analyzer catches above (post-8f3da63).
 # ---------------------------------------------------------------------------
 
 
@@ -157,20 +159,23 @@ class _FakePackerConfig:
 class _RaisingPackerDetector(PackerDetector):
     """Subclass where _check_packer_signatures always raises."""
 
-    def _check_packer_signatures(self) -> None:  # type: ignore[override]
+    def _check_packer_signatures(self) -> dict[str, str] | None:
         raise RuntimeError("simulated packer signature failure")
 
 
-def test_packer_detector_analyze_catches_exception_and_sets_error():
-    """Lines 120-122: exception inside try block is caught; 'error' key is set."""
+def test_packer_detector_detect_propagates_subcall_exception():
+    """Post-8f3da63 contract: each sub-method catches its own error via
+    _safe_call, so detect() never raises in normal operation. When a sub-method
+    is replaced to raise, the exception propagates out of detect() and
+    InspectorDispatchMixin._execute_analyzer catches it above (mirrors
+    test_packer_detector_branch_paths::test_detect_captures_exceptions_in_main_loop)."""
 
     class _FakeAdapter:
         pass
 
     detector = _RaisingPackerDetector(_FakeAdapter(), _FakePackerConfig())
-    result = detector.detect()
-    assert "error" in result
-    assert "simulated packer signature failure" in result["error"]
+    with pytest.raises(RuntimeError, match="simulated packer signature failure"):
+        detector.detect()
 
 
 # ---------------------------------------------------------------------------
