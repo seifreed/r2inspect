@@ -2,6 +2,7 @@
 """Default analyzer registry configuration."""
 
 from collections.abc import Callable
+from typing import Any
 
 from ..infrastructure.logging import get_logger
 from .analyzer_registry import AnalyzerCategory, AnalyzerMetadata, AnalyzerRegistry
@@ -13,9 +14,11 @@ logger = get_logger(__name__)
 _ANALYZERS = ANALYZERS
 
 
-def create_default_registry() -> AnalyzerRegistry:
+def create_default_registry(
+    *, entry_points_fn: Callable[[], Any] | None = None
+) -> AnalyzerRegistry:
     """Create and configure the default analyzer registry."""
-    return create_default_registry_impl()
+    return create_default_registry_impl(entry_points_fn=entry_points_fn)
 
 
 def _filter_registry(predicate: Callable[[AnalyzerMetadata], bool]) -> AnalyzerRegistry:

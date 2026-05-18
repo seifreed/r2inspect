@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 from r2inspect.pipeline import stages_format as sf
 from r2inspect.registry import default_registry as default_registry_module
+from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.cli.output_csv import CsvOutputFormatter
 
 
@@ -76,10 +77,15 @@ def test_stages_format_remaining_paths(monkeypatch, tmp_path: Path) -> None:
     # 69-70 in FileInfoStage when no magic detectors
     monkeypatch.setattr(sf, "_magic_initialized", True)
     monkeypatch.setattr(sf, "_magic_detectors", None)
-    monkeypatch.setattr(sf, "calculate_hashes", lambda _p: {"md5": "x", "sha256": "y"})
     file_path = tmp_path / "a.bin"
     file_path.write_bytes(b"x")
-    stage = sf.FileInfoStage(adapter=_Adapter(), filename=str(file_path))
+    # FileInfoStage takes hashing via the hash_calculator DI seam (the
+    # module-global calculate_hashes was removed in the hashing refactor).
+    stage = sf.FileInfoStage(
+        adapter=_Adapter(),
+        filename=str(file_path),
+        hash_calculator=lambda _p: {"md5": "x", "sha256": "y"},
+    )
     context = {"results": {}}
     result = stage._execute(context)
     assert result["file_info"]["mime_type"] is None and result["file_info"]["file_type"] is None
@@ -93,28 +99,41 @@ def test_stages_format_remaining_paths(monkeypatch, tmp_path: Path) -> None:
     out = detect._execute(context)
     assert out["format_detection"]["file_format"] == "Unknown"
 
-    # 158-163, 178-183
+    # 158-163, 178-183 — file-type detection via the file_type_detector DI
+    # seam (the module-global detect_file_type was removed in the refactor).
+    def _fmt_stage(detector: object) -> sf.FormatDetectionStage:
+        return sf.FormatDetectionStage(
+            adapter=_Adapter(), filename=str(file_path), file_type_detector=detector
+        )
+
+    assert (
+        _fmt_stage(lambda _p: {"confidence": 0.2, "file_format": "PE32"})
+        ._detect_via_enhanced_magic()
+        == "PE"
+    )
+    assert (
+        _fmt_stage(
+            lambda _p: {"confidence": 0.2, "file_format": "NOPE"}
+        )._detect_via_enhanced_magic()
+        is None
+    )
+    assert (
+        _fmt_stage(lambda _p: {"confidence": 0.9, "file_format": "ZIP"})
+        ._detect_via_enhanced_magic()
+        == "Archive"
+    )
+    assert (
+        _fmt_stage(lambda _p: {"confidence": 0.9, "file_format": "PDF"})
+        ._detect_via_enhanced_magic()
+        == "Document"
+    )
+    assert (
+        _fmt_stage(
+            lambda _p: {"confidence": 0.9, "file_format": "RANDOMFMT"}
+        )._detect_via_enhanced_magic()
+        is None
+    )
     detect2 = sf.FormatDetectionStage(adapter=_Adapter(), filename=str(file_path))
-    monkeypatch.setattr(
-        sf, "detect_file_type", lambda _p: {"confidence": 0.2, "file_format": "PE32"}
-    )
-    assert detect2._detect_via_enhanced_magic() == "PE"
-    monkeypatch.setattr(
-        sf, "detect_file_type", lambda _p: {"confidence": 0.2, "file_format": "NOPE"}
-    )
-    assert detect2._detect_via_enhanced_magic() is None
-    monkeypatch.setattr(
-        sf, "detect_file_type", lambda _p: {"confidence": 0.9, "file_format": "ZIP"}
-    )
-    assert detect2._detect_via_enhanced_magic() == "Archive"
-    monkeypatch.setattr(
-        sf, "detect_file_type", lambda _p: {"confidence": 0.9, "file_format": "PDF"}
-    )
-    assert detect2._detect_via_enhanced_magic() == "Document"
-    monkeypatch.setattr(
-        sf, "detect_file_type", lambda _p: {"confidence": 0.9, "file_format": "RANDOMFMT"}
-    )
-    assert detect2._detect_via_enhanced_magic() is None
 
     # 187 and 193-198
     monkeypatch.setattr(sf, "_magic_initialized", True)
@@ -151,20 +170,19 @@ def test_stages_format_remaining_paths(monkeypatch, tmp_path: Path) -> None:
     assert pe_info == {}
 
 
-def test_default_registry_entry_points_exception(monkeypatch) -> None:
-    class _R:
-        def __init__(self):
-            self._items = []
+def test_default_registry_entry_points_exception() -> None:
+    # Entry-point loading problems must not break registry creation: the
+    # built-in analyzers are registered before load_entry_points and the
+    # registry is returned regardless. Drive the real entry_points_fn DI
+    # seam (no monkeypatch) with a provider that raises.
+    def _raising_entry_points() -> object:
+        raise RuntimeError("ep fail")
 
-        def register(self, **kwargs):
-            self._items.append(kwargs)
-
-        def load_entry_points(self):
-            raise RuntimeError("ep fail")
-
-    monkeypatch.setattr(default_registry_module, "AnalyzerRegistry", _R)
-    reg = default_registry_module.create_default_registry()
-    assert isinstance(reg, _R)
+    reg = default_registry_module.create_default_registry(
+        entry_points_fn=_raising_entry_points
+    )
+    assert isinstance(reg, AnalyzerRegistry)
+    assert len(reg.list_analyzers()) > 0
 
 
 def test_output_csv_clean_file_type_exception(monkeypatch) -> None:

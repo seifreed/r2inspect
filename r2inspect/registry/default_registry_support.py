@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from ..infrastructure.logging import get_logger
 from .analyzer_registry import AnalyzerMetadata, AnalyzerRegistry
@@ -11,13 +12,15 @@ from .default_registry_data import ANALYZERS
 logger = get_logger(__name__)
 
 
-def create_default_registry_impl() -> AnalyzerRegistry:
+def create_default_registry_impl(
+    *, entry_points_fn: Callable[[], Any] | None = None
+) -> AnalyzerRegistry:
     registry = AnalyzerRegistry()
     for analyzer in ANALYZERS:
         registry.register(**analyzer)
 
     try:
-        registry.load_entry_points()
+        registry.load_entry_points(entry_points_fn=entry_points_fn)
     except Exception as exc:
         logger.debug("Failed to load entry points: %s", exc)
 
