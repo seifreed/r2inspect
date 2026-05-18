@@ -41,7 +41,7 @@ def env_vars(**overrides: str | None) -> Iterator[None]:
 def chdir(target: str | os.PathLike[str]) -> Iterator[Path]:
     """Temporarily change the working directory, restoring it on exit.
 
-    Yields the resolved target path. Replaces ``monkeypatch.chdir``.
+    Yields the resolved target path. Use instead of the pytest chdir fixture.
     """
     previous = os.getcwd()
     resolved = Path(target).resolve()
