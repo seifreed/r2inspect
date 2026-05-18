@@ -4,6 +4,7 @@ import io
 
 from rich.console import Console
 
+from r2inspect.cli.display_base import _console_scope
 from r2inspect.cli import display
 
 
@@ -110,184 +111,173 @@ def test_create_info_table():
     assert table.columns[1].header == "Value"
 
 
-def test_display_validation_errors_empty(monkeypatch):
+def test_display_validation_errors_empty():
     """Test display_validation_errors with empty errors."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        display.display_validation_errors([])
+        text = _get_text(console)
 
-    display.display_validation_errors([])
-    text = _get_text(console)
-
-    assert "Validation" not in text
+        assert "Validation" not in text
 
 
-def test_display_validation_errors_with_errors(monkeypatch):
+def test_display_validation_errors_with_errors():
     """Test display_validation_errors with actual errors."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        errors = [
+            {"type": "error", "message": "Test error 1"},
+            {"type": "warning", "message": "Test warning"},
+        ]
 
-    errors = [
-        {"type": "error", "message": "Test error 1"},
-        {"type": "warning", "message": "Test warning"},
-    ]
+        display.display_validation_errors(errors)
+        text = _get_text(console)
 
-    display.display_validation_errors(errors)
-    text = _get_text(console)
-
-    assert "Validation" in text or "error" in text.lower()
+        assert "Validation" in text or "error" in text.lower()
 
 
-def test_display_error_statistics_basic(monkeypatch):
+def test_display_error_statistics_basic():
     """Test display_error_statistics with basic stats."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        stats = {
+            "total_errors": 5,
+            "recent_errors": 2,
+            "recovery_strategies_available": 3,
+            "errors_by_category": {"network": 2, "file_io": 3},
+            "errors_by_severity": {"high": 1, "medium": 2, "low": 2},
+        }
 
-    stats = {
-        "total_errors": 5,
-        "recent_errors": 2,
-        "recovery_strategies_available": 3,
-        "errors_by_category": {"network": 2, "file_io": 3},
-        "errors_by_severity": {"high": 1, "medium": 2, "low": 2},
-    }
+        display.display_error_statistics(stats)
+        text = _get_text(console)
 
-    display.display_error_statistics(stats)
-    text = _get_text(console)
-
-    assert "Error" in text or "Statistics" in text
+        assert "Error" in text or "Statistics" in text
 
 
-def test_display_error_statistics_empty(monkeypatch):
+def test_display_error_statistics_empty():
     """Test display_error_statistics with empty stats."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        stats = {
+            "total_errors": 0,
+            "recent_errors": 0,
+            "recovery_strategies_available": 0,
+            "errors_by_category": {},
+            "errors_by_severity": {},
+        }
 
-    stats = {
-        "total_errors": 0,
-        "recent_errors": 0,
-        "recovery_strategies_available": 0,
-        "errors_by_category": {},
-        "errors_by_severity": {},
-    }
+        display.display_error_statistics(stats)
+        text = _get_text(console)
 
-    display.display_error_statistics(stats)
-    text = _get_text(console)
-
-    assert "Error" in text or "Statistics" in text
+        assert "Error" in text or "Statistics" in text
 
 
-def test_display_performance_statistics_basic(monkeypatch):
+def test_display_performance_statistics_basic():
     """Test display_performance_statistics."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        retry_stats = {
+            "total_retries": 10,
+            "successful_retries": 8,
+            "failed_after_retries": 2,
+            "success_rate": 80.0,
+            "commands_retried": {"cmd1": 5, "cmd2": 3, "cmd3": 2},
+        }
 
-    retry_stats = {
-        "total_retries": 10,
-        "successful_retries": 8,
-        "failed_after_retries": 2,
-        "success_rate": 80.0,
-        "commands_retried": {"cmd1": 5, "cmd2": 3, "cmd3": 2},
-    }
+        circuit_stats = {
+            "open_count": 2,
+            "total_failures": 5,
+            "recovery_time": 1.5,
+        }
 
-    circuit_stats = {
-        "open_count": 2,
-        "total_failures": 5,
-        "recovery_time": 1.5,
-    }
+        display.display_performance_statistics(retry_stats, circuit_stats)
+        text = _get_text(console)
 
-    display.display_performance_statistics(retry_stats, circuit_stats)
-    text = _get_text(console)
-
-    assert "Performance" in text or "Retry" in text or "Circuit" in text
+        assert "Performance" in text or "Retry" in text or "Circuit" in text
 
 
-def test_display_performance_statistics_empty(monkeypatch):
+def test_display_performance_statistics_empty():
     """Test display_performance_statistics with empty data."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        retry_stats = {
+            "total_retries": 0,
+            "successful_retries": 0,
+            "failed_after_retries": 0,
+            "success_rate": 0.0,
+            "commands_retried": {},
+        }
 
-    retry_stats = {
-        "total_retries": 0,
-        "successful_retries": 0,
-        "failed_after_retries": 0,
-        "success_rate": 0.0,
-        "commands_retried": {},
-    }
+        circuit_stats = {
+            "open_count": 0,
+            "total_failures": 0,
+        }
 
-    circuit_stats = {
-        "open_count": 0,
-        "total_failures": 0,
-    }
+        display.display_performance_statistics(retry_stats, circuit_stats)
+        text = _get_text(console)
 
-    display.display_performance_statistics(retry_stats, circuit_stats)
-    text = _get_text(console)
-
-    assert "Performance" in text or "Retry" in text
+        assert "Performance" in text or "Retry" in text
 
 
-def test_print_banner(monkeypatch):
+def test_print_banner():
     """Test print_banner function."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        display.print_banner()
+        text = _get_text(console)
 
-    display.print_banner()
-    text = _get_text(console)
-
-    assert "r2inspect" in text.lower() or len(text) > 0
+        assert "r2inspect" in text.lower() or len(text) > 0
 
 
-def test_handle_list_yara_option_true(monkeypatch):
+def test_handle_list_yara_option_true():
     """Test handle_list_yara_option when yara path is provided."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        # Call with a non-existent path; the function should still attempt
+        # to list rules and handle any errors internally.
+        # The function creates a YaraAnalyzer and calls list_available_rules.
+        # With a non-existent path it will return an empty list or handle gracefully.
+        try:
+            display.handle_list_yara_option({}, "/nonexistent/yara/path")
+        except (FileNotFoundError, OSError, Exception):
+            # The function may raise if the path doesn't exist, which is fine
+            pass
 
-    # Call with a non-existent path; the function should still attempt
-    # to list rules and handle any errors internally.
-    # The function creates a YaraAnalyzer and calls list_available_rules.
-    # With a non-existent path it will return an empty list or handle gracefully.
-    try:
-        display.handle_list_yara_option({}, "/nonexistent/yara/path")
-    except (FileNotFoundError, OSError, Exception):
-        # The function may raise if the path doesn't exist, which is fine
-        pass
 
-
-def test_handle_list_yara_option_false(monkeypatch):
+def test_handle_list_yara_option_false():
     """Test handle_list_yara_option when no yara path provided."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        # With None path, the function should use defaults
+        try:
+            display.handle_list_yara_option({}, None)
+        except (FileNotFoundError, OSError, Exception):
+            pass
 
-    # With None path, the function should use defaults
-    try:
-        display.handle_list_yara_option({}, None)
-    except (FileNotFoundError, OSError, Exception):
-        pass
 
-
-def test_display_yara_rules_table_empty(monkeypatch):
+def test_display_yara_rules_table_empty():
     """Test display_yara_rules_table with no rules."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        display.display_yara_rules_table([], "/path/to/rules")
+        text = _get_text(console)
 
-    display.display_yara_rules_table([], "/path/to/rules")
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_yara_rules_table_with_rules(monkeypatch):
+def test_display_yara_rules_table_with_rules():
     """Test display_yara_rules_table with rules."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        rules = [
+            {"name": "rule1.yar", "size": 1024, "path": "/path/rule1.yar"},
+            {"name": "rule2.yar", "size": 2048, "path": "/path/rule2.yar"},
+        ]
 
-    rules = [
-        {"name": "rule1.yar", "size": 1024, "path": "/path/rule1.yar"},
-        {"name": "rule2.yar", "size": 2048, "path": "/path/rule2.yar"},
-    ]
+        display.display_yara_rules_table(rules, "/path/to/rules")
+        text = _get_text(console)
 
-    display.display_yara_rules_table(rules, "/path/to/rules")
-    text = _get_text(console)
-
-    assert "rule1" in text or "YARA" in text or len(text) >= 0
+        assert "rule1" in text or "YARA" in text or len(text) >= 0
 
 
 def test_constants_values():
@@ -303,56 +293,54 @@ def test_constants_values():
     assert isinstance(display.UNKNOWN_ERROR, str)
 
 
-def test_display_results_minimal(monkeypatch):
+def test_display_results_minimal():
     """Test display_results with minimal data."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
-
-    results = {
-        "file_info": {
-            "name": "test.bin",
-            "size": 1024,
-            "path": "/tmp/test.bin",
+    with _console_scope(console):
+        results = {
+            "file_info": {
+                "name": "test.bin",
+                "size": 1024,
+                "path": "/tmp/test.bin",
+            }
         }
-    }
 
-    display.display_results(results)
-    text = _get_text(console)
+        display.display_results(results)
+        text = _get_text(console)
 
-    assert len(text) > 0
+        assert len(text) > 0
 
 
-def test_display_results_with_all_sections(monkeypatch):
+def test_display_results_with_all_sections():
     """Test display_results with multiple sections."""
     console = _make_console()
-    monkeypatch.setattr(display, "console", console)
+    with _console_scope(console):
+        results = {
+            "file_info": {
+                "name": "test.exe",
+                "size": 102400,
+                "path": "/tmp/test.exe",
+                "mime_type": "application/x-dosexec",
+                "file_type": "PE32",
+                "md5": "abc123",
+                "sha1": "def456",
+                "sha256": "ghi789",
+                "sha512": "jkl012",
+            },
+            "ssdeep": {
+                "available": True,
+                "hash_value": "3:ABC:XYZ",
+            },
+            "tlsh": {
+                "available": True,
+                "binary_tlsh": "T1ABC",
+            },
+        }
 
-    results = {
-        "file_info": {
-            "name": "test.exe",
-            "size": 102400,
-            "path": "/tmp/test.exe",
-            "mime_type": "application/x-dosexec",
-            "file_type": "PE32",
-            "md5": "abc123",
-            "sha1": "def456",
-            "sha256": "ghi789",
-            "sha512": "jkl012",
-        },
-        "ssdeep": {
-            "available": True,
-            "hash_value": "3:ABC:XYZ",
-        },
-        "tlsh": {
-            "available": True,
-            "binary_tlsh": "T1ABC",
-        },
-    }
+        display.display_results(results)
+        text = _get_text(console)
 
-    display.display_results(results)
-    text = _get_text(console)
-
-    assert "test.exe" in text or "File" in text
+        assert "test.exe" in text or "File" in text
 
 
 def test_format_simhash_hex():
@@ -366,151 +354,121 @@ def test_format_simhash_hex():
     assert "\n" in result
 
 
-def test_display_binlex_from_facade(monkeypatch):
+def test_display_binlex_from_facade():
     """Test _display_binlex accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_similarity
+    with _console_scope(console):
+        results = {}
+        display._display_binlex(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {}
-    display._display_binlex(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_binbloom_from_facade(monkeypatch):
+def test_display_binbloom_from_facade():
     """Test _display_binbloom accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_similarity
+    with _console_scope(console):
+        results = {}
+        display._display_binbloom(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {}
-    display._display_binbloom(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_simhash_from_facade(monkeypatch):
+def test_display_simhash_from_facade():
     """Test _display_simhash accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_similarity
+    with _console_scope(console):
+        results = {}
+        display._display_simhash(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {}
-    display._display_simhash(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_bindiff_from_facade(monkeypatch):
+def test_display_bindiff_from_facade():
     """Test _display_bindiff accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_similarity
+    with _console_scope(console):
+        results = {}
+        display._display_bindiff(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {}
-    display._display_bindiff(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_machoc_from_facade(monkeypatch):
+def test_display_machoc_from_facade():
     """Test _display_machoc_functions accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_similarity
+    with _console_scope(console):
+        results = {}
+        display._display_machoc_functions(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_similarity, "_get_console", lambda: console)
-
-    results = {}
-    display._display_machoc_functions(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_ssdeep_from_facade(monkeypatch):
+def test_display_ssdeep_from_facade():
     """Test _display_ssdeep accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_hashing
+    with _console_scope(console):
+        results = {}
+        display._display_ssdeep(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {}
-    display._display_ssdeep(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_tlsh_from_facade(monkeypatch):
+def test_display_tlsh_from_facade():
     """Test _display_tlsh accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_hashing
+    with _console_scope(console):
+        results = {}
+        display._display_tlsh(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {}
-    display._display_tlsh(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_telfhash_from_facade(monkeypatch):
+def test_display_telfhash_from_facade():
     """Test _display_telfhash accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_hashing
+    with _console_scope(console):
+        results = {}
+        display._display_telfhash(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {}
-    display._display_telfhash(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_impfuzzy_from_facade(monkeypatch):
+def test_display_impfuzzy_from_facade():
     """Test _display_impfuzzy accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_hashing
+    with _console_scope(console):
+        results = {}
+        display._display_impfuzzy(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {}
-    display._display_impfuzzy(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
 
 
-def test_display_ccbhash_from_facade(monkeypatch):
+def test_display_ccbhash_from_facade():
     """Test _display_ccbhash accessible from facade."""
     console = _make_console()
 
-    from r2inspect.cli import display_sections_hashing
+    with _console_scope(console):
+        results = {}
+        display._display_ccbhash(results)
+        text = _get_text(console)
 
-    monkeypatch.setattr(display_sections_hashing, "_get_console", lambda: console)
-
-    results = {}
-    display._display_ccbhash(results)
-    text = _get_text(console)
-
-    assert len(text) >= 0
+        assert len(text) >= 0
