@@ -46,11 +46,14 @@ def test_calculate_hashes_permission_error(tmp_path: Path):
     os.chmod(test_file, 0o000)
 
     try:
+        # c2e7990 (Bug 2) / c446573 (Bug 3): on read failure calculate_hashes
+        # returns empty strings, not "Error: ..." strings that would corrupt
+        # downstream hash data. Matches test_utils_hashing_block58.py.
         hashes = calculate_hashes(str(test_file))
-        assert "Error:" in hashes["md5"]
-        assert "Error:" in hashes["sha1"]
-        assert "Error:" in hashes["sha256"]
-        assert "Error:" in hashes["sha512"]
+        assert hashes["md5"] == ""
+        assert hashes["sha1"] == ""
+        assert hashes["sha256"] == ""
+        assert hashes["sha512"] == ""
     finally:
         os.chmod(test_file, 0o644)
 
