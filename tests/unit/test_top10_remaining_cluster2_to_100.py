@@ -17,13 +17,15 @@ from r2inspect.modules.pe_analyzer import PEAnalyzer
 from r2inspect.pipeline.stages_metadata import MetadataStage
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.infrastructure.memory import MemoryMonitor, MemoryLimits
-from r2inspect.domain.formats import crypto as crypto_domain
+
+from tests.helpers import env_vars
 
 
 def test_crypto_analyzer_entropy_invalid_hex_and_method_fallbacks() -> None:
     adapter = SimpleNamespace(read_bytes=lambda _v, _s: b"\xff")
     analyzer = CryptoAnalyzer(adapter=adapter)
-    analyzer._read_bytes = lambda _v, _s: b"\xff"  # type: ignore[method-assign]
+    # The real _read_bytes resolves through adapter.read_bytes -> b"\xff";
+    # single-byte data has zero Shannon entropy.
     assert analyzer._calculate_section_entropy({"vaddr": 0x1000, "size": 1}) == 0.0
 
     analyzer_no_methods = CryptoAnalyzer(adapter=SimpleNamespace())
@@ -33,22 +35,41 @@ def test_crypto_analyzer_entropy_invalid_hex_and_method_fallbacks() -> None:
     assert analyzer_no_methods._read_bytes(0x1000, 16) == b""
 
 
-def test_bindiff_analyzer_remaining_branches(monkeypatch) -> None:
-    analyzer = BinDiffAnalyzer(adapter=SimpleNamespace(), filepath="dummy.bin")
+class _RaisingAnalyzeBinDiff(BinDiffAnalyzer):
+    """BinDiff double whose analyze() always raises, to drive the
+    compare_with() exception handler without patching a bound method."""
 
-    monkeypatch.setattr(analyzer, "analyze", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    def analyze(self) -> dict[str, Any]:
+        raise RuntimeError("boom")
+
+
+class _RecordingBinDiff(BinDiffAnalyzer):
+    """BinDiff double that records the r2-command/entropy hooks (the real
+    cmd_helper sinks) instead of patching the module global."""
+
+    def __init__(self, adapter: Any, filepath: str, entropy_value: str = "") -> None:
+        super().__init__(adapter, filepath)
+        self.calls: dict[str, bool] = {"analysis_command": False, "entropy": False}
+        self._entropy_value = entropy_value
+
+    def _run_analysis_command(self) -> Any:
+        self.calls["analysis_command"] = True
+        return ""
+
+    def _get_entropy_pattern(self) -> str:
+        self.calls["entropy"] = True
+        return self._entropy_value
+
+
+def test_bindiff_analyzer_remaining_branches() -> None:
+    analyzer = _RaisingAnalyzeBinDiff(adapter=SimpleNamespace(), filepath="dummy.bin")
     compare = analyzer.compare_with({"comparison_ready": True, "filename": "b"})
     assert compare["similarity_score"] == 0.0
 
-    called = {"aaa": False}
-    monkeypatch.setattr(
-        "r2inspect.modules.bindiff_analyzer.cmd_helper",
-        lambda *_args, **_kwargs: called.__setitem__("aaa", True) or "",
-    )
     adapter = SimpleNamespace(get_functions=lambda: [])
-    analyzer2 = BinDiffAnalyzer(adapter=adapter, filepath="dummy.bin")
+    analyzer2 = _RecordingBinDiff(adapter=adapter, filepath="dummy.bin")
     analyzer2._extract_function_features()
-    assert called["aaa"] is True
+    assert analyzer2.calls["analysis_command"] is True
 
     adapter3 = SimpleNamespace(
         analyze_all=lambda: None,
@@ -59,19 +80,16 @@ def test_bindiff_analyzer_remaining_branches(monkeypatch) -> None:
     features = analyzer3._extract_function_features()
     assert features["cfg_features"] == []
 
-    called_entropy = {"used": False}
-    monkeypatch.setattr(
-        "r2inspect.modules.bindiff_analyzer.cmd_helper",
-        lambda *_args, **_kwargs: called_entropy.__setitem__("used", True) or "0.1 0.2",
+    analyzer4 = _RecordingBinDiff(
+        adapter=SimpleNamespace(), filepath="dummy.bin", entropy_value="0.1 0.2"
     )
-    analyzer4 = BinDiffAnalyzer(adapter=SimpleNamespace(), filepath="dummy.bin")
     analyzer4._extract_byte_features()
-    assert called_entropy["used"] is True
+    assert analyzer4.calls["entropy"] is True
 
 
-def test_batch_workers_remaining_branches(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr("os.getenv", lambda _k, _d=None: "")
-    assert batch_workers._cap_threads_for_execution(4) == 4
+def test_batch_workers_remaining_branches(tmp_path) -> None:
+    with env_vars(R2INSPECT_MAX_THREADS=None):
+        assert batch_workers._cap_threads_for_execution(4) == 4
 
     class _Limiter:
         def acquire(self, timeout: float = 30.0) -> bool:
@@ -83,15 +101,9 @@ def test_batch_workers_remaining_branches(monkeypatch, tmp_path) -> None:
         def release_error(self, _e: str) -> None:
             return None
 
-    # Target the imported module object, not the "r2inspect.cli.batch_workers"
-    # string path: r2inspect.cli resolves submodules via a lazy __getattr__
-    # facade that another test's sys.modules manipulation can leave without a
-    # batch_workers attribute, making the string path fail to resolve.
-    monkeypatch.setattr(
-        batch_workers,
-        "create_inspector",
-        lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("forced")),
-    )
+    def _failing_inspector(**_kwargs: Any) -> Any:
+        raise RuntimeError("forced")
+
     _, _, error = batch_workers.process_single_file(
         file_path=tmp_path / "a.bin",
         batch_path=tmp_path,
@@ -100,14 +112,10 @@ def test_batch_workers_remaining_branches(monkeypatch, tmp_path) -> None:
         output_json=False,
         output_path=tmp_path,
         rate_limiter=_Limiter(),
+        inspector_factory=_failing_inspector,
     )
     assert error == "forced"
 
-    monkeypatch.setattr(
-        batch_workers,
-        "process_single_file",
-        lambda *args, **kwargs: (args[0], None, None),
-    )
     all_results: dict[str, dict[str, Any]] = {}
     failed: list[tuple[str, str]] = []
     batch_workers.process_files_parallel(
@@ -121,19 +129,23 @@ def test_batch_workers_remaining_branches(monkeypatch, tmp_path) -> None:
         output_json=False,
         threads=1,
         rate_limiter=_Limiter(),
+        process_fn=lambda *args, **kwargs: (args[0], None, None),
     )
     assert failed and failed[0][1] == "Empty results"
 
 
-def test_memory_monitor_and_metadata_remaining_branches(monkeypatch) -> None:
+def test_memory_monitor_and_metadata_remaining_branches() -> None:
     monitor = MemoryMonitor(MemoryLimits())
     monitor.check_interval = 0.0
     monitor.critical_callback = lambda _stats: (_ for _ in ()).throw(RuntimeError("critical"))
     monitor._handle_critical_memory({"process_memory_mb": 100.0, "process_usage_percent": 0.9})
 
     gc_calls = {"n": 0}
-    monkeypatch.setattr("gc.collect", lambda: gc_calls.__setitem__("n", gc_calls["n"] + 1) or 0)
-    monitor._trigger_gc(aggressive=True)
+
+    def _counting_collect() -> None:
+        gc_calls["n"] += 1
+
+    monitor._trigger_gc(aggressive=True, collect_fn=_counting_collect)
     assert gc_calls["n"] >= 3
     assert (
         monitor.validate_section_size(int((monitor.limits.section_size_limit_mb + 1) * 1024 * 1024))
@@ -154,12 +166,11 @@ def test_memory_monitor_and_metadata_remaining_branches(monkeypatch) -> None:
     assert stage._run_analyzer_method(ctx, "missing", "m", "x") is None
 
     class _BadRegistry:
-        @staticmethod
-        def get_analyzer_class(_name: str) -> Any:
+        def get_analyzer_class(self, name: str) -> type[Any] | None:
             return int
 
     stage2 = MetadataStage(
-        registry=_BadRegistry(),  # type: ignore[arg-type]
+        registry=_BadRegistry(),
         adapter=SimpleNamespace(),
         config=SimpleNamespace(),
         filename="dummy.bin",
@@ -169,18 +180,19 @@ def test_memory_monitor_and_metadata_remaining_branches(monkeypatch) -> None:
     assert out == {"x": []}
 
 
-def test_pe_analyzer_domain_helpers_crypto_domain_and_authenticode(monkeypatch) -> None:
+def test_pe_analyzer_domain_helpers_crypto_domain_and_authenticode() -> None:
     analyzer = PEAnalyzer(adapter=SimpleNamespace())
     assert analyzer.get_category() == "format"
     assert "PE" in analyzer.get_description()
     assert analyzer.supports_format("PE32+")
 
-    monkeypatch.setattr(
-        "r2inspect.modules.pe_analyzer._get_version_info", lambda _a, _l: {"v": "1"}
+    # Real delegation: adapter feeds "v=1" -> parse_version_info_text -> {"v": "1"};
+    # bits==32 -> determine_pe_format returns "PE32".
+    pe_with_version = PEAnalyzer(
+        adapter=SimpleNamespace(get_pe_version_info_text=lambda: "v=1")
     )
-    monkeypatch.setattr("r2inspect.modules.pe_analyzer._determine_pe_format", lambda _b, _h: "PE32")
-    assert analyzer.get_version_info() == {"v": "1"}
-    assert analyzer._determine_pe_format({}, None) == "PE32"
+    assert pe_with_version.get_version_info() == {"v": "1"}
+    assert analyzer._determine_pe_format({"bits": 32}, None) == "PE32"
 
     assert domain_helpers.shannon_entropy(b"") == 0.0
     assert domain_helpers.entropy_from_ints([]) == 0.0

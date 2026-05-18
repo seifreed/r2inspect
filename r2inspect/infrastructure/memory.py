@@ -71,9 +71,12 @@ class MemoryMonitor:
     def _handle_critical_memory(self, stats: dict[str, Any]) -> None:
         _handle_critical_memory_impl(self, stats, logger=logger)
 
-    def _trigger_gc(self, aggressive: bool = False) -> None:
+    def _trigger_gc(self, aggressive: bool = False, *, collect_fn: Any | None = None) -> None:
         self.gc_count = _trigger_gc_impl(
-            aggressive=aggressive, logger=logger, gc_count=self.gc_count
+            aggressive=aggressive,
+            logger=logger,
+            gc_count=self.gc_count,
+            collect_fn=collect_fn,
         )
 
     def _get_cached_stats(self) -> dict[str, Any]:

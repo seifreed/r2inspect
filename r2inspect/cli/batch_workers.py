@@ -46,13 +46,20 @@ def process_single_file(
     output_json: bool,
     output_path: Path,
     rate_limiter: Any,
+    *,
+    inspector_factory: Any | None = None,
 ) -> tuple[Path, dict | None, str | None]:
-    """Process a single file with rate limiting."""
+    """Process a single file with rate limiting.
+
+    ``inspector_factory`` defaults to ``create_inspector``; tests inject a
+    factory to drive the failure branch instead of patching the import.
+    """
     if not rate_limiter.acquire(timeout=30.0):
         return file_path, None, "Rate limit timeout - system overloaded"
 
+    make_inspector = create_inspector if inspector_factory is None else inspector_factory
     try:
-        with create_inspector(
+        with make_inspector(
             filename=str(file_path),
             config=config_obj,
             verbose=False,
@@ -102,8 +109,15 @@ def process_files_parallel(
     output_json: bool,
     threads: int,
     rate_limiter: Any,
+    *,
+    process_fn: Any | None = None,
 ) -> None:
-    """Process files in parallel with progress tracking."""
+    """Process files in parallel with progress tracking.
+
+    ``process_fn`` defaults to ``process_single_file``; tests inject a worker
+    to drive the result-aggregation branches instead of patching the module.
+    """
+    worker = process_single_file if process_fn is None else process_fn
     results_lock = threading.Lock()
     progress_lock = threading.Lock()
     effective_threads = _cap_threads_for_execution(threads)
@@ -121,7 +135,7 @@ def process_files_parallel(
         with ThreadPoolExecutor(max_workers=effective_threads) as executor:
             future_to_file = {
                 executor.submit(
-                    process_single_file,
+                    worker,
                     file_path,
                     batch_path,
                     config_obj,

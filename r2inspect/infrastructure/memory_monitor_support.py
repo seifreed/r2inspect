@@ -94,9 +94,12 @@ def handle_critical_memory(monitor: Any, stats: dict[str, Any], *, logger: Any) 
             logger.error("Error in critical callback: %s", exc)
 
 
-def trigger_gc(*, aggressive: bool, logger: Any, gc_count: int) -> int:
+def trigger_gc(
+    *, aggressive: bool, logger: Any, gc_count: int, collect_fn: Any | None = None
+) -> int:
+    collect = _collect_garbage if collect_fn is None else collect_fn
     for _ in range(3 if aggressive else 1):
-        _collect_garbage()
+        collect()
     gc_count += 1
     logger.debug("Garbage collection triggered (count: %s)", gc_count)
     return gc_count
