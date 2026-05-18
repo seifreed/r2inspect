@@ -115,8 +115,16 @@ def test_result_aggregator_indicators_and_summary() -> None:
     assert summary["file_overview"]["filename"] == "sample.bin"
     assert summary["security_assessment"]["packer_type"] == "UPX"
 
-    bad_summary = aggregator.generate_executive_summary({"crypto": None})
-    assert "error" in bad_summary
+    # normalize_results coerces a None bucket to its safe default (commit
+    # c446573), so a None-valued section yields a normal summary, not an error.
+    normalized_summary = aggregator.generate_executive_summary({"crypto": None})
+    assert "file_overview" in normalized_summary
+    assert "error" not in normalized_summary
+
+    # A non-normalizable bucket value (kept as-is, not None) still reaches the
+    # generate_executive_summary except-handler error branch.
+    error_summary = aggregator.generate_executive_summary({"file_info": 123})
+    assert "error" in error_summary
 
 
 def test_hashing_utils(tmp_path: Path) -> None:
