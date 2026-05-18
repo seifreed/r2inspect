@@ -145,7 +145,10 @@ def test_interactive_command_wrappers_and_error_rendering_real(tmp_path: Path) -
     assert "kernel32.dll" in text
     assert "ExportedFunc" in text
     assert "Unknown command" in text
-    assert "Analysis failed: boom" in text
+    # InteractiveCommand._handle_error labels its errors "Interactive mode
+    # failed" (pre-8f3da63 contract; matches the explicit _handle_error tests
+    # in test_interactive_command_branch_paths / _real_more_block327).
+    assert "Interactive mode failed: boom" in text
     assert observed == [
         {"file_info": {"name": "sample.bin", "size": 10}, "options": {"xor_search": "aa"}}
     ]
