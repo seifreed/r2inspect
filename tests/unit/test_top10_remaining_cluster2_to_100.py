@@ -83,8 +83,13 @@ def test_batch_workers_remaining_branches(monkeypatch, tmp_path) -> None:
         def release_error(self, _e: str) -> None:
             return None
 
+    # Target the imported module object, not the "r2inspect.cli.batch_workers"
+    # string path: r2inspect.cli resolves submodules via a lazy __getattr__
+    # facade that another test's sys.modules manipulation can leave without a
+    # batch_workers attribute, making the string path fail to resolve.
     monkeypatch.setattr(
-        "r2inspect.cli.batch_workers.create_inspector",
+        batch_workers,
+        "create_inspector",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("forced")),
     )
     _, _, error = batch_workers.process_single_file(
@@ -99,7 +104,8 @@ def test_batch_workers_remaining_branches(monkeypatch, tmp_path) -> None:
     assert error == "forced"
 
     monkeypatch.setattr(
-        "r2inspect.cli.batch_workers.process_single_file",
+        batch_workers,
+        "process_single_file",
         lambda *args, **kwargs: (args[0], None, None),
     )
     all_results: dict[str, dict[str, Any]] = {}
