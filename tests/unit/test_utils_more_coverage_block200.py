@@ -54,8 +54,10 @@ def test_get_ssdeep_success_and_failure(tmp_path: Path) -> None:
         assert module.hash_from_file("/dev/null") == "ok"
     finally:
         sys.path.remove(str(tmp_path))
+        # Drop the injected fake from sys.modules/loader so it cannot poison
+        # a later `import ssdeep` (e.g. test_get_ssdeep_double_check_inside_lock).
+        _reset_ssdeep_loader()
 
-    _reset_ssdeep_loader()
     _install_fake_module(tmp_path, "raise RuntimeError('boom')\n")
     sys.path.insert(0, str(tmp_path))
     try:
@@ -63,6 +65,7 @@ def test_get_ssdeep_success_and_failure(tmp_path: Path) -> None:
         assert module is None
     finally:
         sys.path.remove(str(tmp_path))
+        _reset_ssdeep_loader()
 
 
 def test_calculate_imphash_handles_bad_inputs() -> None:
@@ -81,6 +84,9 @@ def test_calculate_ssdeep_error_path(tmp_path: Path) -> None:
         assert hashing.calculate_ssdeep("/dev/null") is None
     finally:
         sys.path.remove(str(tmp_path))
+        # Drop the injected fake from sys.modules/loader so it cannot poison
+        # a later `import ssdeep` (e.g. test_get_ssdeep_double_check_inside_lock).
+        _reset_ssdeep_loader()
 
 
 def test_logger_setup_variants(tmp_path: Path) -> None:

@@ -257,6 +257,11 @@ def _reset_global_state():
         _ssdeep_loader = None
     _saved_ssdeep = _ssdeep_loader._ssdeep_module if _ssdeep_loader is not None else None
 
+    import sys as _sys
+
+    _ssdeep_in_modules = "ssdeep" in _sys.modules
+    _saved_ssdeep_mod = _sys.modules.get("ssdeep")
+
     try:
         from r2inspect.schemas.converter_runtime import ResultConverterImpl as _RC
     except ImportError:
@@ -269,6 +274,10 @@ def _reset_global_state():
         _logging.getLogger(_name).setLevel(_level)
     if _ssdeep_loader is not None:
         _ssdeep_loader._ssdeep_module = _saved_ssdeep
+    if _ssdeep_in_modules:
+        _sys.modules["ssdeep"] = _saved_ssdeep_mod
+    else:
+        _sys.modules.pop("ssdeep", None)
     if _RC is not None and _saved_schema is not None:
         _RC._schema_registry.clear()
         _RC._schema_registry.update(_saved_schema)
