@@ -46,8 +46,8 @@ class R2PipeCachedQueryMixin:
     def get_file_info(self) -> dict[str, Any]:
         from . import r2pipe_queries as facade
 
-        self._maybe_force_error("get_file_info")
         try:
+            self._maybe_force_error("get_file_info")
             if "ij" in self._cache:
                 return cast(dict[str, Any], self._cache["ij"])
             info = facade.safe_cmd_dict(self._r2_iface, "ij")
@@ -150,8 +150,8 @@ class R2PipeCachedQueryMixin:
         )
 
     def get_disasm(self, address: int | None = None, size: int | None = None) -> Any:
-        self._maybe_force_error("get_disasm")
         try:
+            self._maybe_force_error("get_disasm")
             if size is None:
                 cmd = "pdfj"
                 data_type = "dict"
@@ -170,8 +170,8 @@ class R2PipeCachedQueryMixin:
             return {} if size is None else []
 
     def get_cfg(self, address: int | None = None) -> Any:
-        self._maybe_force_error("get_cfg")
         try:
+            self._maybe_force_error("get_cfg")
             cmd = "agj"
             if address is not None:
                 cmd = f"{cmd} @ {address}"
@@ -205,8 +205,8 @@ class R2PipeCachedQueryMixin:
     def get_pe_header(self) -> dict[str, Any]:
         from . import r2pipe_queries as facade
 
-        self._maybe_force_error("get_pe_header")
         try:
+            self._maybe_force_error("get_pe_header")
             data = facade.safe_cmdj(self._r2_iface, "ihj", {})
             if isinstance(data, list) and data:
                 return {"headers": data}

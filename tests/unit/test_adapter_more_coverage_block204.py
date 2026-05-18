@@ -177,8 +177,9 @@ def test_adapter_forced_errors_with_fallback() -> None:
     assert adapter.get_symbols() == []
     assert adapter.get_strings() == []
     assert adapter.get_functions() == []
-    assert adapter.get_disasm() == []
-    assert adapter.get_cfg() == {}
+    # 1b281fe Bug 2/3: get_disasm() with size=None falls back to {}, get_cfg() to [].
+    assert adapter.get_disasm() == {}
+    assert adapter.get_cfg() == []
     assert adapter.analyze_all() == ""
     assert adapter.get_info_text() == ""
     assert adapter.get_dynamic_info_text() == ""
