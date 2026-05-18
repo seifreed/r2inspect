@@ -79,8 +79,11 @@ def select_r2_flags(
     return flags
 
 
-def terminate_radare2_processes(filename: str) -> None:
-    for proc in psutil.process_iter(["name", "cmdline"]):
+def terminate_radare2_processes(
+    filename: str, *, process_iter: Callable[..., Any] | None = None
+) -> None:
+    iterator = process_iter if process_iter is not None else psutil.process_iter
+    for proc in iterator(["name", "cmdline"]):
         try:
             info = proc.info
             if info.get("name") != "radare2":

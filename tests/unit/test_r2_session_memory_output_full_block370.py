@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import time
 from pathlib import Path
 
@@ -9,6 +8,8 @@ import pytest
 from r2inspect.infrastructure.r2_session import R2Session
 import r2inspect.infrastructure.memory as memory_manager
 from r2inspect.cli.output_formatters import OutputFormatter
+
+from tests.helpers import env_vars
 
 
 class FakeR2:
@@ -90,14 +91,13 @@ def _write_fat_macho(path: Path, arch_count: int = 2) -> None:
     path.write_bytes(data)
 
 
-def test_r2_session_flags_and_fat_arches(tmp_path: Path, monkeypatch) -> None:
+def test_r2_session_flags_and_fat_arches(tmp_path: Path) -> None:
     test_file = tmp_path / "fat.bin"
     _write_fat_macho(test_file)
 
     session = R2Session(str(test_file))
-    monkeypatch.setenv("R2INSPECT_DISABLE_PLUGINS", "1")
-    monkeypatch.setattr("platform.machine", lambda: "x86_64")
-    flags = session._select_r2_flags()
+    with env_vars(R2INSPECT_DISABLE_PLUGINS="1"):
+        flags = session._select_r2_flags(machine_fn=lambda: "x86_64")
     assert "-NN" in flags
     assert "-a" in flags and "-b" in flags
 
@@ -106,12 +106,11 @@ def test_r2_session_flags_and_fat_arches(tmp_path: Path, monkeypatch) -> None:
     assert "arm64" in arches
 
 
-def test_r2_session_flags_arm_host(tmp_path: Path, monkeypatch) -> None:
+def test_r2_session_flags_arm_host(tmp_path: Path) -> None:
     test_file = tmp_path / "fat_arm.bin"
     _write_fat_macho(test_file)
     session = R2Session(str(test_file))
-    monkeypatch.setattr("platform.machine", lambda: "arm64")
-    flags = session._select_r2_flags()
+    flags = session._select_r2_flags(machine_fn=lambda: "arm64")
     assert "-a" in flags and "-b" in flags
 
 
@@ -145,23 +144,23 @@ def test_r2_session_open_error_path(tmp_path: Path) -> None:
     assert session.is_open is False
 
 
-def test_r2_session_cmd_timeouts_and_basic_info(monkeypatch) -> None:
+def test_r2_session_cmd_timeouts_and_basic_info() -> None:
     session = R2Session("/tmp/sample")
     session.r2 = FakeR2(response="i\n")
     session._cleanup_required = True
 
-    monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "i")
-    assert session._run_cmd_with_timeout("i", 0.01) is False
+    with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="i"):
+        assert session._run_cmd_with_timeout("i", 0.01) is False
 
-    monkeypatch.delenv("R2INSPECT_FORCE_CMD_TIMEOUT", raising=False)
-    assert session._run_cmd_with_timeout("i", 0.5) is True
+    with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT=None):
+        assert session._run_cmd_with_timeout("i", 0.5) is True
 
-    # Basic info check should pass with minimal response
-    assert session._run_basic_info_check() is True
+        # Basic info check should pass with minimal response
+        assert session._run_basic_info_check() is True
 
-    # Error path when command raises
-    session.r2 = FakeR2Error()
-    assert session._run_cmd_with_timeout("i", 0.1) is False
+        # Error path when command raises
+        session.r2 = FakeR2Error()
+        assert session._run_cmd_with_timeout("i", 0.1) is False
 
 
 def test_r2_session_basic_info_errors() -> None:
@@ -177,7 +176,7 @@ def test_r2_session_basic_info_errors() -> None:
         session._run_basic_info_check()
 
 
-def test_r2_session_initial_analysis_paths(monkeypatch) -> None:
+def test_r2_session_initial_analysis_paths() -> None:
     session = R2Session("/tmp/sample")
     session.r2 = FakeR2()
 
@@ -188,18 +187,18 @@ def test_r2_session_initial_analysis_paths(monkeypatch) -> None:
     assert session._perform_initial_analysis(file_size_mb=1) is True
 
     # Force command timeouts to hit False path
-    monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "aa,aaa")
-    assert session._perform_initial_analysis(file_size_mb=1) is False
-    # Conftest sets R2INSPECT_TEST_MODE=1 for the whole session, so flipping
-    # session._test_mode alone is not enough — _is_test_mode reads the env var
-    # first. Override the env to "0" so the non-test-mode branch is exercised.
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "0")
-    session._test_mode = False
-    assert session._perform_initial_analysis(file_size_mb=10) is False
+    with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="aa,aaa"):
+        assert session._perform_initial_analysis(file_size_mb=1) is False
+        # Conftest sets R2INSPECT_TEST_MODE=1 for the whole session, so flipping
+        # session._test_mode alone is not enough — _is_test_mode reads the env var
+        # first. Override the env to "0" so the non-test-mode branch is exercised.
+        with env_vars(R2INSPECT_TEST_MODE="0"):
+            session._test_mode = False
+            assert session._perform_initial_analysis(file_size_mb=10) is False
 
-    # None r2 path
-    session.r2 = None
-    assert session._perform_initial_analysis(file_size_mb=1) is True
+            # None r2 path
+            session.r2 = None
+            assert session._perform_initial_analysis(file_size_mb=1) is True
 
 
 def test_r2_session_close_and_context_manager() -> None:
@@ -251,7 +250,7 @@ def test_r2_session_open_with_timeout_failure(tmp_path: Path) -> None:
     assert reopened is not None
 
 
-def test_r2_session_terminate_process_exceptions(monkeypatch) -> None:
+def test_r2_session_terminate_process_exceptions() -> None:
     class DummyProc:
         def __init__(self, name: str, cmdline: list[str]) -> None:
             self.info = {"name": name, "cmdline": cmdline}
@@ -264,12 +263,11 @@ def test_r2_session_terminate_process_exceptions(monkeypatch) -> None:
     def fake_iter(_fields):
         return [DummyProc("radare2", ["/tmp/sample"])]
 
-    monkeypatch.setattr("psutil.process_iter", fake_iter)
     session = R2Session("/tmp/sample")
-    session._terminate_radare2_processes()
+    session._terminate_radare2_processes(process_iter=fake_iter)
 
 
-def test_r2_session_detect_fat_macho_variants(tmp_path: Path, monkeypatch) -> None:
+def test_r2_session_detect_fat_macho_variants(tmp_path: Path) -> None:
     # Little-endian magic with truncated arch entry
     test_file = tmp_path / "fat_le.bin"
     data = bytearray()
@@ -290,21 +288,19 @@ def test_r2_session_detect_fat_macho_variants(tmp_path: Path, monkeypatch) -> No
     invalid = R2Session(str(invalid_magic))
     assert invalid._detect_fat_macho_arches() == set()
 
-    monkeypatch.setenv("R2INSPECT_DISABLE_PLUGINS", "true")
-    monkeypatch.setattr("platform.machine", lambda: "x86_64")
-    flags = session._select_r2_flags()
+    with env_vars(R2INSPECT_DISABLE_PLUGINS="true"):
+        flags = session._select_r2_flags(machine_fn=lambda: "x86_64")
     assert "-a" not in flags and "-b" not in flags
 
 
-def test_r2_session_basic_info_timeout(monkeypatch) -> None:
+def test_r2_session_basic_info_timeout() -> None:
     session = R2Session("/tmp/sample")
     session.r2 = FakeR2()
-    monkeypatch.setenv("R2INSPECT_FORCE_CMD_TIMEOUT", "i")
-    assert session._run_basic_info_check() is False
-    monkeypatch.delenv("R2INSPECT_FORCE_CMD_TIMEOUT", raising=False)
+    with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="i"):
+        assert session._run_basic_info_check() is False
 
 
-def test_memory_manager_thresholds_and_helpers(monkeypatch) -> None:
+def test_memory_manager_thresholds_and_helpers() -> None:
     limits = memory_manager.MemoryLimits(
         max_process_memory_mb=1,
         memory_warning_threshold=0.1,

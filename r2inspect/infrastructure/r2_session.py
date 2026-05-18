@@ -166,8 +166,10 @@ class R2Session:
     def _open_with_timeout(self, flags: list[str], timeout: float) -> Any:
         return _open_with_timeout_impl(self, flags, timeout, logger=logger)
 
-    def _terminate_radare2_processes(self) -> None:
-        _terminate_radare2_processes_impl(self.filename)
+    def _terminate_radare2_processes(
+        self, *, process_iter: Callable[..., Any] | None = None
+    ) -> None:
+        _terminate_radare2_processes_impl(self.filename, process_iter=process_iter)
 
     def _reopen_safe_mode(self) -> Any:
         return _reopen_safe_mode_impl(self)
