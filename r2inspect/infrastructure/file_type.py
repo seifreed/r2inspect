@@ -66,20 +66,26 @@ def is_elf_file(
     r2_instance: Any,
     *,
     logger: Any | None = None,
+    cmd: Any | None = None,
+    cmdj: Any | None = None,
+    file_system: Any | None = None,
 ) -> bool:
     """Return True if the file appears to be ELF based on magic and r2 info."""
     log = logger or _logger
+    run_cmd = cmd or cmd_helper
+    run_cmdj = cmdj or cmdj_helper
+    fs = file_system or default_file_system
 
     try:
         try:
-            info_text = cmd_helper(adapter, r2_instance, "i")
+            info_text = run_cmd(adapter, r2_instance, "i")
             if "elf" in info_text.lower():
                 return True
         except Exception as exc:
             log.debug(f"Error with 'i' command: {exc}")
 
         try:
-            info_cmd = cmdj_helper(adapter, r2_instance, "ij", {})
+            info_cmd = run_cmdj(adapter, r2_instance, "ij", {})
             if info_cmd and "bin" in info_cmd:
                 bin_info = info_cmd["bin"]
                 if _bin_info_has_elf(bin_info):
@@ -89,7 +95,7 @@ def is_elf_file(
 
         try:
             if filepath:
-                magic = default_file_system.read_bytes(filepath, size=4)
+                magic = fs.read_bytes(filepath, size=4)
                 if magic == b"\x7fELF":
                     return True
         except Exception as exc:

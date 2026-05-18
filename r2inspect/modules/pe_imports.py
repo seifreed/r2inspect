@@ -68,7 +68,7 @@ def compute_imphash(import_strings: list[str]) -> str:
     return hashlib.md5(imphash_string.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
-def calculate_imphash(adapter: Any, logger: Any) -> str:
+def calculate_imphash(adapter: Any, logger: Any, *, group_fn: Any | None = None) -> str:
     try:
         logger.debug("Calculating imphash using pefile-compatible algorithm...")
 
@@ -77,7 +77,8 @@ def calculate_imphash(adapter: Any, logger: Any) -> str:
             logger.debug("No imports found for imphash calculation")
             return ""
 
-        imports_by_lib = group_imports_by_library(imports)
+        group = group_fn or group_imports_by_library
+        imports_by_lib = group(imports)
         extensions = ["ocx", "sys", "dll"]
 
         impstrs: list[str] = []

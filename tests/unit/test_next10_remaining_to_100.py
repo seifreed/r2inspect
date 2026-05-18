@@ -37,7 +37,7 @@ def test_config_merge_scalar_override_and_from_dict(tmp_path) -> None:
     assert from_dict_cfg.typed_config.general.verbose is True
 
 
-def test_file_type_pe_and_elf_outer_error_paths(monkeypatch) -> None:
+def test_file_type_pe_and_elf_outer_error_paths() -> None:
     class _RaisingLogger:
         def debug(self, _msg: str) -> None:
             raise RuntimeError("debug failed")
@@ -46,13 +46,14 @@ def test_file_type_pe_and_elf_outer_error_paths(monkeypatch) -> None:
             return None
 
     # is_pe_file lines 53-57: error in `ij` path and outer catch path
-    monkeypatch.setattr(
-        file_type,
-        "cmdj_helper",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("ij")),
-    )
     assert (
-        file_type.is_pe_file(filepath=None, adapter=None, r2_instance=None, logger=_RaisingLogger())
+        file_type.is_pe_file(
+            filepath=None,
+            adapter=None,
+            r2_instance=None,
+            logger=_RaisingLogger(),
+            cmdj=lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("ij")),
+        )
         is False
     )
 
@@ -62,52 +63,70 @@ def test_file_type_pe_and_elf_outer_error_paths(monkeypatch) -> None:
         def read_bytes(_filepath: Any, size: int) -> bytes:
             raise RuntimeError(f"read {size} failed")
 
-    monkeypatch.setattr(file_type, "default_file_system", _FS())
-    monkeypatch.setattr(file_type, "cmd_helper", lambda *_args, **_kwargs: "")
-    monkeypatch.setattr(file_type, "cmdj_helper", lambda *_args, **_kwargs: {})
     assert (
         file_type.is_elf_file(
-            filepath="x.bin", adapter=None, r2_instance=None, logger=_RaisingLogger()
+            filepath="x.bin",
+            adapter=None,
+            r2_instance=None,
+            logger=_RaisingLogger(),
+            cmd=lambda *_args, **_kwargs: "",
+            cmdj=lambda *_args, **_kwargs: {},
+            file_system=_FS(),
         )
         is False
     )
 
 
-def test_pe_imports_no_valid_strings_branch(monkeypatch) -> None:
+def test_pe_imports_no_valid_strings_branch() -> None:
     logger = _Logger()
-    monkeypatch.setattr(
-        "r2inspect.modules.pe_imports.group_imports_by_library",
-        lambda _imports: {"kernel32.dll": [None]},
-    )
     value = calculate_imphash(
-        adapter=SimpleNamespace(get_imports=lambda: [{"name": "CreateFileA"}]), logger=logger
+        adapter=SimpleNamespace(get_imports=lambda: [{"name": "CreateFileA"}]),
+        logger=logger,
+        group_fn=lambda _imports: {"kernel32.dll": [None]},
     )
     assert value == ""
     assert any("No valid import strings found" in msg for msg in logger.debug_messages)
 
 
-def test_simhash_calculate_similarity_with_integer_hash(monkeypatch) -> None:
-    analyzer = SimHashAnalyzer(adapter=None, filepath="dummy.bin")
-    monkeypatch.setattr(
-        analyzer,
-        "analyze",
-        lambda: {"available": True, "hash_value": 0x1234},
-    )
+class _FixedSimHash(SimHashAnalyzer):
+    """SimHashAnalyzer whose analyze() yields a fixed integer hash."""
+
+    def analyze(self) -> dict[str, Any]:
+        return {"available": True, "hash_value": 0x1234}
+
+
+def test_simhash_calculate_similarity_with_integer_hash() -> None:
+    analyzer = _FixedSimHash(adapter=None, filepath="dummy.bin")
     result = analyzer.calculate_similarity(0x1234, hash_type="combined")
     assert result.get("distance") == 0
     assert result.get("current_hash") == hex(0x1234)
 
 
-def test_analyzer_registry_entry_point_loader_hooks(monkeypatch) -> None:
+def test_analyzer_registry_entry_point_loader_hooks() -> None:
     registry = AnalyzerRegistry()
-    monkeypatch.setattr(
-        "r2inspect.registry.entry_points.EntryPointLoader._register_entry_point_callable",
-        lambda self, ep, obj: 7,
-    )
-    monkeypatch.setattr(
-        "r2inspect.registry.entry_points.EntryPointLoader._derive_entry_point_name",
-        lambda self, ep, obj: "derived-name",
-    )
     loader = EntryPointLoader(registry)
-    assert loader._register_entry_point_callable(object(), object()) == 7
-    assert loader._derive_entry_point_name(object(), object()) == "derived-name"
+
+    # Callable entry point: success returns 1 and is invoked with the registry.
+    calls: list[Any] = []
+    assert (
+        loader._register_entry_point_callable(
+            SimpleNamespace(name="ok"), lambda reg: calls.append(reg)
+        )
+        == 1
+    )
+    assert calls == [registry]
+
+    # A raising callable is swallowed and returns 0.
+    def _boom(_reg: Any) -> None:
+        raise RuntimeError("callable failed")
+
+    assert loader._register_entry_point_callable(SimpleNamespace(name="bad"), _boom) == 0
+
+    # Non-BaseAnalyzer object derives the name from the entry point itself.
+    class _NotAnalyzer:
+        pass
+
+    assert (
+        loader._derive_entry_point_name(SimpleNamespace(name="plain-ep"), _NotAnalyzer)
+        == "plain-ep"
+    )
