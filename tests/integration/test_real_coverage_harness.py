@@ -13,6 +13,7 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.registry.default_registry import create_default_registry
+from tests.helpers import env_vars
 
 
 def _load_expected(path: Path) -> dict[str, Any]:
@@ -213,91 +214,92 @@ def _build_analyzer_instance(analyzer_class, adapter, config, filepath: str):
     raise TypeError(f"Could not construct analyzer {analyzer_class.__name__}")
 
 
-def test_best_effort_analyzer_method_walk(samples_dir: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "0")
-    monkeypatch.setenv("R2INSPECT_ANALYSIS_DEPTH", "2")
-    monkeypatch.setenv("R2INSPECT_CMD_TIMEOUT_SECONDS", "0.5")
-
-    expected_root = samples_dir / "expected"
-    expected_sets = [
-        _load_expected(expected_root / "hello_pe.json"),
-        _load_expected(expected_root / "hello_elf.json"),
-        _load_expected(expected_root / "hello_macho.json"),
-        _load_expected(expected_root / "edge_packed.json"),
-        _load_expected(expected_root / "edge_tiny.json"),
-        _load_expected(expected_root / "edge_bad_pe.json"),
-        _load_expected(expected_root / "edge_high_entropy.json"),
-    ]
-
-    adapters, sessions, files = _open_adapters(samples_dir)
-    try:
-        config = Config()
-        registry = create_default_registry()
-
-        pe_bytes = (samples_dir / "hello_pe.exe").read_bytes()
-        elf_bytes = (samples_dir / "hello_elf").read_bytes()
-        macho_bytes = (samples_dir / "hello_macho").read_bytes()
-        edge_packed = (samples_dir / "edge_packed.bin").read_bytes()
-        edge_tiny = (samples_dir / "edge_tiny.bin").read_bytes()
-        edge_bad_pe = (samples_dir / "edge_bad_pe.bin").read_bytes()
-        edge_high_entropy = (samples_dir / "edge_high_entropy.bin").read_bytes()
-        data_variants = [
-            pe_bytes,
-            elf_bytes,
-            macho_bytes,
-            edge_packed,
-            edge_tiny,
-            edge_bad_pe,
-            edge_high_entropy,
-            b"\x00" * 256,
-            bytes(range(256)),
+def test_best_effort_analyzer_method_walk(samples_dir: Path):
+    with env_vars(
+        R2INSPECT_TEST_MODE="0",
+        R2INSPECT_ANALYSIS_DEPTH="2",
+        R2INSPECT_CMD_TIMEOUT_SECONDS="0.5",
+    ):
+        expected_root = samples_dir / "expected"
+        expected_sets = [
+            _load_expected(expected_root / "hello_pe.json"),
+            _load_expected(expected_root / "hello_elf.json"),
+            _load_expected(expected_root / "hello_macho.json"),
+            _load_expected(expected_root / "edge_packed.json"),
+            _load_expected(expected_root / "edge_tiny.json"),
+            _load_expected(expected_root / "edge_bad_pe.json"),
+            _load_expected(expected_root / "edge_high_entropy.json"),
         ]
 
-        executed = 0
-        # Keep this harness bounded to avoid pathological method walks that can hang.
-        max_executed_calls = 120
-        stop_walk = False
-        for name in sorted(item["name"] for item in registry.list_analyzers()):
-            if stop_walk:
-                break
-            analyzer_class = registry.get_analyzer_class(name)
-            assert analyzer_class is not None
-            meta = registry.get_metadata(name)
-            assert meta is not None
-            target = _pick_target(meta.file_formats)
+        adapters, sessions, files = _open_adapters(samples_dir)
+        try:
+            config = Config()
+            registry = create_default_registry()
 
-            adapter = adapters[target]
-            file_path = Path(files[target])
-            analyzer = _build_analyzer_instance(
-                analyzer_class,
-                adapter,
-                config,
-                str(file_path),
-            )
+            pe_bytes = (samples_dir / "hello_pe.exe").read_bytes()
+            elf_bytes = (samples_dir / "hello_elf").read_bytes()
+            macho_bytes = (samples_dir / "hello_macho").read_bytes()
+            edge_packed = (samples_dir / "edge_packed.bin").read_bytes()
+            edge_tiny = (samples_dir / "edge_tiny.bin").read_bytes()
+            edge_bad_pe = (samples_dir / "edge_bad_pe.bin").read_bytes()
+            edge_high_entropy = (samples_dir / "edge_high_entropy.bin").read_bytes()
+            data_variants = [
+                pe_bytes,
+                elf_bytes,
+                macho_bytes,
+                edge_packed,
+                edge_tiny,
+                edge_bad_pe,
+                edge_high_entropy,
+                b"\x00" * 256,
+                bytes(range(256)),
+            ]
 
-            for expected_data in expected_sets:
+            executed = 0
+            # Keep this harness bounded to avoid pathological method walks that can hang.
+            max_executed_calls = 120
+            stop_walk = False
+            for name in sorted(item["name"] for item in registry.list_analyzers()):
                 if stop_walk:
                     break
-                for data_bytes in data_variants:
-                    arg_pool = _build_arg_pool(
-                        adapter,
-                        config,
-                        file_path,
-                        expected_data,
-                        data_bytes,
-                        extra={
-                            "rich_pos": 0,
-                            "dans_offset": 0,
-                            "rich_offset": 64,
-                            "sig_pos": 0,
-                        },
-                    )
-                    executed += _walk_instance_methods(analyzer, arg_pool)
-                    if executed >= max_executed_calls:
-                        stop_walk = True
-                        break
+                analyzer_class = registry.get_analyzer_class(name)
+                assert analyzer_class is not None
+                meta = registry.get_metadata(name)
+                assert meta is not None
+                target = _pick_target(meta.file_formats)
 
-        assert executed > 0
-    finally:
-        for session in sessions.values():
-            session.close()
+                adapter = adapters[target]
+                file_path = Path(files[target])
+                analyzer = _build_analyzer_instance(
+                    analyzer_class,
+                    adapter,
+                    config,
+                    str(file_path),
+                )
+
+                for expected_data in expected_sets:
+                    if stop_walk:
+                        break
+                    for data_bytes in data_variants:
+                        arg_pool = _build_arg_pool(
+                            adapter,
+                            config,
+                            file_path,
+                            expected_data,
+                            data_bytes,
+                            extra={
+                                "rich_pos": 0,
+                                "dans_offset": 0,
+                                "rich_offset": 64,
+                                "sig_pos": 0,
+                            },
+                        )
+                        executed += _walk_instance_methods(analyzer, arg_pool)
+                        if executed >= max_executed_calls:
+                            stop_walk = True
+                            break
+
+            assert executed > 0
+        finally:
+            for session in sessions.values():
+                session.close()
