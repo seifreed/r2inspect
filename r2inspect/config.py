@@ -18,7 +18,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import json
-import logging
 import os
 import threading
 from pathlib import Path
@@ -26,8 +25,6 @@ from typing import Any, cast
 
 from .config_schemas.schemas import R2InspectConfig
 from .config_store import ConfigStore
-
-logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -115,11 +112,7 @@ class Config:
         """Load configuration from file."""
         loaded = ConfigStore.load(self.config_path)
         if isinstance(loaded, dict):
-            try:
-                self._load_from_dict(loaded)
-            except ValueError as e:
-                logger.warning("Invalid configuration values: %s", e)
-                logger.warning("Using default configuration")
+            self._load_from_dict(loaded)
 
     @staticmethod
     def _merge_config(defaults: dict[str, Any], user_config: dict[str, Any]) -> dict[str, Any]:
@@ -139,24 +132,26 @@ class Config:
         """
         Load configuration from dictionary.
 
+        Invalid values do not raise: the full merged dictionary is always
+        retained for persistence, while the typed configuration falls back
+        to defaults and a warning is printed.
+
         Args:
             user_config: User configuration dictionary
-
-        Raises:
-            ValueError: If configuration values are invalid
         """
         # Merge user config with defaults (preserve unknown sections)
         merged_config = self._merge_config(self.DEFAULT_CONFIG, user_config)
 
-        # Try to create typed config first — if it fails, keep current state intact
-        try:
-            new_typed = R2InspectConfig.from_dict(merged_config)
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Invalid configuration values: {e}") from e
-
-        # Only update state if validation succeeded
+        # Store full merged configuration
         self._full_config_dict = merged_config
-        self._typed_config = new_typed
+
+        # Create typed config from merged dictionary (unknown sections ignored by schema)
+        try:
+            self._typed_config = R2InspectConfig.from_dict(merged_config)
+        except (ValueError, TypeError) as e:
+            print(f"Warning: Invalid configuration values: {e}")
+            print("Using default configuration")
+            self._typed_config = R2InspectConfig.from_dict(self.DEFAULT_CONFIG)
 
     def save_config(self) -> None:
         """Save configuration to file."""
@@ -186,9 +181,6 @@ class Config:
             section: Top-level config section name
             key: Config key within the section
             value: Value to set
-
-        Raises:
-            ValueError: If the value is invalid per schema validation
         """
         with self._lock:
             config_dict = self.to_dict()
