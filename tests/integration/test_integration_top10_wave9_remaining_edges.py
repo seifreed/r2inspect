@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 from r2inspect.pipeline import stages_format as sf
@@ -13,88 +14,143 @@ from r2inspect.cli.output_csv import CsvOutputFormatter
 
 
 class _Adapter:
-    def get_file_info(self):
+    def get_file_info(self) -> dict[str, Any]:
         return {}
 
-    def get_cfg(self, _offset):
+    def get_cfg(self, _offset: int) -> list[dict[str, Any]]:
         return [{"edges": [{"src": 1, "dst": 2}]}]
 
 
-def test_ccbhash_remaining_paths(monkeypatch) -> None:
-    analyzer = CCBHashAnalyzer(adapter=_Adapter(), filepath="/tmp/a.bin")
-    orig_calc_func = analyzer._calculate_function_ccbhash
-    orig_calc_binary = analyzer._calculate_binary_ccbhash
+class _CCBHashBinaryFails(CCBHashAnalyzer):
+    def _extract_functions(self) -> list[dict[str, Any]]:
+        return [{"name": "f0", "addr": None}, {"name": "f1", "addr": 1}]
 
-    # line 42
-    monkeypatch.setattr(CCBHashAnalyzer, "is_available", staticmethod(lambda: False))
-    assert analyzer._check_library_availability() == (False, "CCBHash analysis is not available")
+    def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str | None:
+        return "h1"
 
-    # line 64 and 81: skip None addr, binary hash fails
-    analyzer._extract_functions = lambda: [{"name": "f0", "addr": None}, {"name": "f1", "addr": 1}]  # type: ignore[method-assign]
-    analyzer._calculate_function_ccbhash = lambda _off, _name: "h1"  # type: ignore[method-assign]
-    analyzer._calculate_binary_ccbhash = lambda _fh: None  # type: ignore[method-assign]
-    assert analyzer._calculate_hash() == (None, None, "Failed to calculate binary CCBHash")
+    def _calculate_binary_ccbhash(
+        self, function_hashes: dict[str, dict[str, Any]]
+    ) -> str | None:
+        return None
 
-    # lines 84-85: exception in _calculate_hash
-    analyzer._extract_functions = lambda: (_ for _ in ()).throw(RuntimeError("boom"))  # type: ignore[method-assign]
-    _hash, _method, err = analyzer._calculate_hash()
+
+class _CCBHashExtractRaises(CCBHashAnalyzer):
+    def _extract_functions(self) -> list[dict[str, Any]]:
+        raise RuntimeError("boom")
+
+
+class _CCBHashSimilarRaises(CCBHashAnalyzer):
+    def _extract_functions(self) -> list[dict[str, Any]]:
+        return [{"name": "f0", "addr": None}, {"name": "f1", "addr": 1}]
+
+    def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str | None:
+        return "h1"
+
+    def _find_similar_functions(
+        self, function_hashes: dict[str, dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        raise RuntimeError("oops")
+
+
+class _CCBHashNoCanonical(CCBHashAnalyzer):
+    @staticmethod
+    def _build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str | None:
+        return None
+
+
+class _BadData(dict):
+    def __bool__(self) -> bool:
+        return True
+
+    def values(self) -> Any:
+        raise RuntimeError("bad values")
+
+
+class _Desc:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    def from_file(self, _path: str) -> str:
+        return self.text
+
+
+class _AllNoneDetect(sf.FormatDetectionStage):
+    def _detect_via_r2(self) -> str | None:
+        return None
+
+    def _detect_via_enhanced_magic(self) -> str | None:
+        return None
+
+    def _detect_via_basic_magic(self) -> str | None:
+        return None
+
+
+def test_ccbhash_remaining_paths() -> None:
+    # available_fn -> False drives the defensive unavailable branch
+    assert CCBHashAnalyzer(
+        adapter=_Adapter(), filepath="/tmp/a.bin"
+    )._check_library_availability(available_fn=lambda: False) == (
+        False,
+        "CCBHash analysis is not available",
+    )
+
+    # None addr skipped, binary hash fails -> explicit error tuple
+    assert _CCBHashBinaryFails(adapter=_Adapter(), filepath="/tmp/a.bin")._calculate_hash() == (
+        None,
+        None,
+        "Failed to calculate binary CCBHash",
+    )
+
+    # exception inside _calculate_hash
+    _hash, _method, err = _CCBHashExtractRaises(
+        adapter=_Adapter(), filepath="/tmp/a.bin"
+    )._calculate_hash()
     assert _hash is None and _method is None and err is not None and "failed" in err.lower()
 
-    # line 139 and 179-181 in analyze_functions
-    analyzer._extract_functions = lambda: [{"name": "f0", "addr": None}, {"name": "f1", "addr": 1}]  # type: ignore[method-assign]
-    analyzer._calculate_function_ccbhash = lambda _off, _name: "h1"  # type: ignore[method-assign]
-    analyzer._find_similar_functions = lambda _fh: (_ for _ in ()).throw(RuntimeError("oops"))  # type: ignore[method-assign]
-    out = analyzer.analyze_functions()
+    # _find_similar_functions raises -> analyze_functions surfaces the error
+    out = _CCBHashSimilarRaises(adapter=_Adapter(), filepath="/tmp/a.bin").analyze_functions()
     assert out["error"] == "oops"
 
-    # line 244
-    analyzer._calculate_function_ccbhash = orig_calc_func  # type: ignore[method-assign]
-    analyzer.adapter = _Adapter()
-    analyzer.adapter.get_cfg = lambda _off: [{"edges": [{"src": 1, "dst": 2}]}]  # type: ignore[method-assign]
-    monkeypatch.setattr(
-        CCBHashAnalyzer, "_build_canonical_representation", staticmethod(lambda _cfg, _off: None)
+    # canonical representation None -> real _calculate_function_ccbhash returns None
+    assert (
+        _CCBHashNoCanonical(adapter=_Adapter(), filepath="/tmp/a.bin")._calculate_function_ccbhash(
+            1, "f"
+        )
+        is None
     )
-    assert analyzer._calculate_function_ccbhash(1, "f") is None
 
-    # lines 346-348
-    analyzer._calculate_binary_ccbhash = orig_calc_binary  # type: ignore[method-assign]
-
-    class _BadData(dict):
-        def __bool__(self):
-            return True
-
-        def values(self):
-            raise RuntimeError("bad values")
-
+    # real _calculate_binary_ccbhash with data whose .values() raises -> None
     bad = _BadData({"x": {"ccbhash": "aa"}})
-    assert analyzer._calculate_binary_ccbhash(bad) is None
+    assert (
+        CCBHashAnalyzer(adapter=_Adapter(), filepath="/tmp/a.bin")._calculate_binary_ccbhash(bad)
+        is None
+    )
 
 
-def test_stages_format_remaining_paths(monkeypatch, tmp_path: Path) -> None:
-    # 39-40
-    assert sf._resolved_path(1) == 1  # type: ignore[arg-type]
+def _no_detectors() -> SimpleNamespace:
+    return SimpleNamespace(get_detectors=lambda: None)
 
-    # 69-70 in FileInfoStage when no magic detectors
-    monkeypatch.setattr(sf, "_magic_initialized", True)
-    monkeypatch.setattr(sf, "_magic_detectors", None)
+
+def test_stages_format_remaining_paths(tmp_path: Path) -> None:
+    # non-str path falls through the resolver's except and is returned as-is
+    assert sf._resolved_path(cast(str, 1)) == 1
+
     file_path = tmp_path / "a.bin"
     file_path.write_bytes(b"x")
-    # FileInfoStage takes hashing via the hash_calculator DI seam (the
-    # module-global calculate_hashes was removed in the hashing refactor).
+    # FileInfoStage: no magic detectors (provider yields None) -> mime/type None.
+    # hashing via the hash_calculator DI seam.
     stage = sf.FileInfoStage(
         adapter=_Adapter(),
         filename=str(file_path),
         hash_calculator=lambda _p: {"md5": "x", "sha256": "y"},
+        magic_detector_provider=_no_detectors(),
     )
-    context = {"results": {}}
+    context: dict[str, Any] = {"results": {}}
     result = stage._execute(context)
     assert result["file_info"]["mime_type"] is None and result["file_info"]["file_type"] is None
 
-    # 127 + 129
-    detect = sf.FormatDetectionStage(adapter=_Adapter(), filename=str(file_path))
-    monkeypatch.setattr(detect, "_detect_via_r2", lambda: None)
-    monkeypatch.setattr(detect, "_detect_via_enhanced_magic", lambda: None)
-    monkeypatch.setattr(detect, "_detect_via_basic_magic", lambda: None)
+    # all three detect_* return None -> "Unknown" (subclass double)
+    detect = _AllNoneDetect(adapter=_Adapter(), filename=str(file_path))
     context = {"results": {}, "metadata": {}}
     out = detect._execute(context)
     assert out["format_detection"]["file_format"] == "Unknown"
@@ -133,26 +189,19 @@ def test_stages_format_remaining_paths(monkeypatch, tmp_path: Path) -> None:
         )._detect_via_enhanced_magic()
         is None
     )
-    detect2 = sf.FormatDetectionStage(adapter=_Adapter(), filename=str(file_path))
+    # _detect_via_basic_magic driven by the magic_detector_provider DI seam
+    def _basic_stage(detectors: object) -> sf.FormatDetectionStage:
+        return sf.FormatDetectionStage(
+            adapter=_Adapter(),
+            filename=str(file_path),
+            magic_detector_provider=SimpleNamespace(get_detectors=lambda: detectors),
+        )
 
-    # 187 and 193-198
-    monkeypatch.setattr(sf, "_magic_initialized", True)
-    monkeypatch.setattr(sf, "_magic_detectors", None)
-    assert detect2._detect_via_basic_magic() is None
-
-    class _Desc:
-        def __init__(self, text):
-            self.text = text
-
-        def from_file(self, _path):
-            return self.text
-
-    monkeypatch.setattr(sf, "_magic_detectors", (None, _Desc("elf binary")))
-    assert detect2._detect_via_basic_magic() == "ELF"
-    monkeypatch.setattr(sf, "_magic_detectors", (None, _Desc("mach-o binary")))
-    assert detect2._detect_via_basic_magic() == "Mach-O"
-    monkeypatch.setattr(sf, "_magic_detectors", (None, _Desc("random type")))
-    assert detect2._detect_via_basic_magic() is None
+    # no detectors -> header-byte fallback on b"x" -> None
+    assert _basic_stage(None)._detect_via_basic_magic() is None
+    assert _basic_stage((None, _Desc("elf binary")))._detect_via_basic_magic() == "ELF"
+    assert _basic_stage((None, _Desc("mach-o binary")))._detect_via_basic_magic() == "Mach-O"
+    assert _basic_stage((None, _Desc("random type")))._detect_via_basic_magic() is None
 
     # 293 in _run_optional_pe_analyzers
     reg = SimpleNamespace(get_analyzer_class=lambda _name: None)
@@ -174,7 +223,7 @@ def test_default_registry_entry_points_exception() -> None:
     # Entry-point loading problems must not break registry creation: the
     # built-in analyzers are registered before load_entry_points and the
     # registry is returned regardless. Drive the real entry_points_fn DI
-    # seam (no monkeypatch) with a provider that raises.
+    # seam (no patching) with a provider that raises.
     def _raising_entry_points() -> object:
         raise RuntimeError("ep fail")
 
@@ -185,14 +234,11 @@ def test_default_registry_entry_points_exception() -> None:
     assert len(reg.list_analyzers()) > 0
 
 
-def test_output_csv_clean_file_type_exception(monkeypatch) -> None:
+def test_output_csv_clean_file_type_exception() -> None:
     reporter = CsvOutputFormatter(results={})
-    real_import = __import__
 
-    def fake_import(name, *args, **kwargs):
-        if name == "re":
-            raise RuntimeError("boom")
-        return real_import(name, *args, **kwargs)
+    def _raise_sub(*_args: Any, **_kwargs: Any) -> Any:
+        raise RuntimeError("boom")
 
-    monkeypatch.setattr("builtins.__import__", fake_import)
-    assert reporter._clean_file_type("PE32, 5 sections") == "PE32, 5 sections"
+    # The regex_sub seam raises -> defensive except returns the input unchanged.
+    assert reporter._clean_file_type("PE32, 5 sections", regex_sub=_raise_sub) == "PE32, 5 sections"

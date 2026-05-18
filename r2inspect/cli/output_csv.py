@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from typing import Any
 
 from . import output_csv_fields as _csv_fields
@@ -145,15 +146,17 @@ class CsvOutputFormatter:
             return str(size)
 
     @staticmethod
-    def _clean_file_type(file_type: Any) -> Any:
+    def _clean_file_type(file_type: Any, *, regex_sub: Any | None = None) -> Any:
+        """``regex_sub`` defaults to ``re.sub``; tests inject a failing
+        substitute to drive the defensive except branch instead of patching
+        the import machinery."""
+        sub = re.sub if regex_sub is None else regex_sub
         try:
             if not isinstance(file_type, str):
                 return file_type
-            import re
-
-            cleaned = re.sub(r",\s*\d+\s+sections?", "", str(file_type or ""))
-            cleaned = re.sub(r"\d+\s+sections?,?\s*", "", cleaned)
-            cleaned = re.sub(r",\s*$", "", cleaned.strip())
+            cleaned = sub(r",\s*\d+\s+sections?", "", str(file_type or ""))
+            cleaned = sub(r"\d+\s+sections?,?\s*", "", cleaned)
+            cleaned = sub(r",\s*$", "", cleaned.strip())
             return cleaned
         except Exception:
             return file_type

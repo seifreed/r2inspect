@@ -36,16 +36,22 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         """
         super().__init__(adapter=adapter, filepath=filepath)
 
-    def _check_library_availability(self) -> tuple[bool, str | None]:
+    def _check_library_availability(
+        self, *, available_fn: Any | None = None
+    ) -> tuple[bool, str | None]:
         """
         Check if CCBHash analysis is available.
 
         CCBHash only depends on hashlib and r2pipe, which are always available.
+        ``available_fn`` defaults to ``CCBHashAnalyzer.is_available``; tests
+        inject a False-returning probe to drive the defensive unavailable
+        branch instead of patching the class.
 
         Returns:
             Tuple of (is_available, error_message)
         """
-        if CCBHashAnalyzer.is_available():
+        is_available = CCBHashAnalyzer.is_available if available_fn is None else available_fn
+        if is_available():
             return True, None
         return False, "CCBHash analysis is not available"
 
