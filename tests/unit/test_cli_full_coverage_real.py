@@ -1027,12 +1027,13 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
             batch_processing._flush_coverage_data()
             os.environ.pop("R2INSPECT_TEST_COVERAGE_SAVE_ERROR", None)
             os.environ.pop("PYTEST_CURRENT_TEST", None)
-            saved_pytest = sys.modules.pop("pytest", None)
+            # The DUMMY coverage path does not consult the imported-pytest
+            # module table; _pytest_running() still resolves True via sys.argv
+            # and the live pytest import, so no global module-table mutation is
+            # needed here.
             os.environ["R2INSPECT_TEST_COVERAGE_DUMMY"] = "1"
             batch_processing._flush_coverage_data()
             os.environ.pop("R2INSPECT_TEST_COVERAGE_DUMMY", None)
-            if saved_pytest is not None:
-                sys.modules["pytest"] = saved_pytest
             assert batch_processing._pytest_running() is True
         finally:
             os.environ.pop("PYTEST_CURRENT_TEST", None)
