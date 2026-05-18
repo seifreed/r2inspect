@@ -1,7 +1,8 @@
-"""Environment-variable isolation helpers for tests.
+"""Environment / filesystem isolation helpers for tests.
 
-Replaces the forbidden pytest environment-patching fixtures with a
-hand-rolled context manager that snapshots and restores ``os.environ``.
+Replaces the forbidden pytest environment-patching fixtures with
+hand-rolled context managers that snapshot and restore ``os.environ``
+and the process working directory.
 """
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 
 @contextmanager
@@ -33,3 +35,18 @@ def env_vars(**overrides: str | None) -> Iterator[None]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = old
+
+
+@contextmanager
+def chdir(target: str | os.PathLike[str]) -> Iterator[Path]:
+    """Temporarily change the working directory, restoring it on exit.
+
+    Yields the resolved target path. Replaces ``monkeypatch.chdir``.
+    """
+    previous = os.getcwd()
+    resolved = Path(target).resolve()
+    os.chdir(resolved)
+    try:
+        yield resolved
+    finally:
+        os.chdir(previous)

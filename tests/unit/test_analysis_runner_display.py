@@ -35,6 +35,8 @@ from r2inspect.cli.commands.analysis_output import (
 )
 from r2inspect.cli.output_formatters import OutputFormatter
 
+from tests.helpers import chdir
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -97,16 +99,16 @@ class TestSetupAnalysisOptions:
 
 
 class TestSetupSingleFileOutput:
-    def test_json_output_generates_path(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        result = setup_single_file_output(True, False, None, "test.exe")
+    def test_json_output_generates_path(self, tmp_path):
+        with chdir(tmp_path):
+            result = setup_single_file_output(True, False, None, "test.exe")
         assert isinstance(result, Path)
         assert str(result).endswith("_analysis.json")
         assert "test" in str(result)
 
-    def test_csv_output_generates_path(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        result = setup_single_file_output(False, True, None, "test.exe")
+    def test_csv_output_generates_path(self, tmp_path):
+        with chdir(tmp_path):
+            result = setup_single_file_output(False, True, None, "test.exe")
         assert isinstance(result, Path)
         assert str(result).endswith("_analysis.csv")
         assert "test" in str(result)
@@ -119,27 +121,27 @@ class TestSetupSingleFileOutput:
         result = setup_single_file_output(False, False, None, "test.exe")
         assert result is None
 
-    def test_directory_is_created(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        result = setup_single_file_output(True, False, None, "test.exe")
+    def test_directory_is_created(self, tmp_path):
+        with chdir(tmp_path):
+            result = setup_single_file_output(True, False, None, "test.exe")
         assert result is not None
         assert result.parent.exists()
 
-    def test_path_object_returned(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        result = setup_single_file_output(True, False, None, "/full/path/to/test.exe")
+    def test_path_object_returned(self, tmp_path):
+        with chdir(tmp_path):
+            result = setup_single_file_output(True, False, None, "/full/path/to/test.exe")
         assert isinstance(result, Path)
 
-    def test_nested_path(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        nested = str(tmp_path / "nested" / "dir" / "file.exe")
-        result = setup_single_file_output(True, False, None, nested)
+    def test_nested_path(self, tmp_path):
+        with chdir(tmp_path):
+            nested = str(tmp_path / "nested" / "dir" / "file.exe")
+            result = setup_single_file_output(True, False, None, nested)
         assert isinstance(result, Path)
         assert result.name.endswith("_analysis.json")
 
-    def test_special_characters_in_filename(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        result = setup_single_file_output(True, False, None, "test-file.v2.exe")
+    def test_special_characters_in_filename(self, tmp_path):
+        with chdir(tmp_path):
+            result = setup_single_file_output(True, False, None, "test-file.v2.exe")
         assert "test-file.v2" in str(result)
 
 
@@ -445,26 +447,26 @@ class TestOutputConsoleResults:
 
 
 class TestEndToEndOutputRoundTrip:
-    def test_json_round_trip(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        path = setup_single_file_output(True, False, None, "sample.exe")
-        assert path is not None
-        results = _sample_results()
-        formatter = OutputFormatter(results)
-        console, buf = _make_console()
-        _output_json_results(formatter, str(path), console)
-        assert path.exists()
-        parsed = json.loads(path.read_text())
+    def test_json_round_trip(self, tmp_path):
+        with chdir(tmp_path):
+            path = setup_single_file_output(True, False, None, "sample.exe")
+            assert path is not None
+            results = _sample_results()
+            formatter = OutputFormatter(results)
+            console, buf = _make_console()
+            _output_json_results(formatter, str(path), console)
+            assert path.exists()
+            parsed = json.loads(path.read_text())
         assert parsed["file_info"]["name"] == "test.exe"
 
-    def test_csv_round_trip(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        path = setup_single_file_output(False, True, None, "sample.exe")
-        assert path is not None
-        results = _sample_results()
-        formatter = OutputFormatter(results)
-        console, buf = _make_console()
-        _output_csv_results(formatter, str(path), console)
-        assert path.exists()
-        content = path.read_text()
+    def test_csv_round_trip(self, tmp_path):
+        with chdir(tmp_path):
+            path = setup_single_file_output(False, True, None, "sample.exe")
+            assert path is not None
+            results = _sample_results()
+            formatter = OutputFormatter(results)
+            console, buf = _make_console()
+            _output_csv_results(formatter, str(path), console)
+            assert path.exists()
+            content = path.read_text()
         assert len(content) > 0
