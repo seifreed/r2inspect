@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import io
 import os
-import signal
 import sys
 import threading
 import time
@@ -82,22 +81,13 @@ def _sample_path() -> Path:
     return SAMPLE_ELF
 
 
-def _run_with_sigint(func: callable) -> int:
-    main_thread_id = threading.get_ident()
-
-    def _interrupt_main() -> None:
-        # ``signal.raise_signal`` from inside the Timer thread targets the
-        # Timer thread on POSIX, so the main thread never sees the SIGINT.
-        # ``pthread_kill`` routes it deterministically to the main thread.
-        signal.pthread_kill(main_thread_id, signal.SIGINT)
-
-    timer = threading.Timer(0.01, _interrupt_main)
-    timer.start()
-    try:
-        return func()
-    finally:
-        timer.cancel()
-        timer.join(timeout=1.0)
+# NOTE: earlier revisions of this file used a Timer thread to raise SIGINT
+# during ``command.execute``. That approach is racy (the analysis can finish
+# before the timer fires) and order-dependent (other tests can leave the
+# process in a state where the signal is no longer delivered to the main
+# thread). The keyboard-interrupt path is now exercised by subclassing the
+# command and forcing one of its hooks to raise KeyboardInterrupt directly —
+# deterministic, no signal plumbing, no monkeypatching.
 
 
 def test_cli_init_lazy_attrs_and_main() -> None:
@@ -539,7 +529,11 @@ def test_analyze_command_keyboard_interrupt() -> None:
     context = CommandContext.create(config=Config())
     context.console = console
 
-    command = AnalyzeCommand(context)
+    class _InterruptingAnalyzeCommand(AnalyzeCommand):
+        def _show_analysis_start(self, filename: str) -> None:
+            raise KeyboardInterrupt
+
+    command = _InterruptingAnalyzeCommand(context)
     ok_args = {
         "filename": str(_sample_path()),
         "config": None,
@@ -551,8 +545,8 @@ def test_analyze_command_keyboard_interrupt() -> None:
         "verbose": False,
         "threads": 1,
     }
-    result = _run_with_sigint(lambda: command.execute(ok_args))
-    assert result == 1
+    assert command.execute(ok_args) == 1
+    assert "Analysis interrupted by user" in _buffer.getvalue()
 
 
 def test_batch_command_and_processing_real(tmp_path: Path) -> None:
@@ -612,7 +606,17 @@ def test_batch_command_keyboard_interrupt(tmp_path: Path) -> None:
     context = CommandContext.create(config=Config())
     context.console = console
 
-    batch_cmd = BatchCommand(context)
+    class _InterruptingBatchCommand(BatchCommand):
+        def _setup_batch_mode(
+            self,
+            extensions: str | None,
+            output_json: bool,
+            output_csv: bool,
+            output: str | None,
+        ) -> tuple[bool, bool, str | None]:
+            raise KeyboardInterrupt
+
+    batch_cmd = _InterruptingBatchCommand(context)
     batch_dir = tmp_path / "batch"
     batch_dir.mkdir()
     sample = batch_dir / "hello_elf"
@@ -631,12 +635,8 @@ def test_batch_command_keyboard_interrupt(tmp_path: Path) -> None:
         "verbose": False,
         "quiet": True,
     }
-    os.environ["R2INSPECT_DISABLE_FORCED_EXIT"] = "1"
-    try:
-        result = _run_with_sigint(lambda: batch_cmd.execute(ok_args))
-    finally:
-        os.environ.pop("R2INSPECT_DISABLE_FORCED_EXIT", None)
-    assert result == 1
+    assert batch_cmd.execute(ok_args) == 1
+    assert "Batch analysis interrupted by user" in _buffer.getvalue()
 
 
 def test_batch_output_and_processing_helpers(tmp_path: Path) -> None:
