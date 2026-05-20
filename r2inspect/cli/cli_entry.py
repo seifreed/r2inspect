@@ -3,11 +3,20 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from .commands import AnalyzeCommand, BatchCommand, Command, CommandContext, InteractiveCommand
+from .commands import (
+    AnalyzeCommand,
+    BatchCommand,
+    Command,
+    CommandContext,
+    ConfigCommand,
+    InteractiveCommand,
+    VersionCommand,
+)
 
 
 @dataclass
@@ -75,3 +84,23 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
             "threads": args.threads,
         },
     )
+
+
+def execute_list_yara(config: str | None, yara: str | None) -> None:
+    """Run the ConfigCommand to list YARA rules and exit."""
+    config_cmd = ConfigCommand()
+    sys.exit(
+        config_cmd.execute(
+            {
+                "list_yara": True,
+                "config": config,
+                "yara": yara,
+            }
+        )
+    )
+
+
+def execute_version() -> None:
+    """Run the VersionCommand and exit."""
+    version_cmd = VersionCommand()
+    sys.exit(version_cmd.execute({}))

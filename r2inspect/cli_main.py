@@ -30,12 +30,13 @@ from typing import Any
 import click
 
 from .cli.analysis_runner import handle_main_error
-from .cli.cli_entry import build_context as _build_context_impl, build_dispatch
-from .cli.commands import (
-    CommandContext,
-    ConfigCommand,
-    VersionCommand,
+from .cli.cli_entry import (
+    build_context as _build_context_impl,
+    build_dispatch,
+    execute_list_yara,
+    execute_version,
 )
+from .cli.commands import CommandContext
 from .cli.display import console, print_banner
 from .cli.validators import (
     display_validation_errors,
@@ -144,7 +145,7 @@ def run_cli(
     deterministic terminal callables instead of patching the module.
     """
     if args.version:
-        _execute_version()
+        execute_version()
 
     validation_errors = validate_inputs(
         args.filename,
@@ -160,7 +161,7 @@ def run_cli(
         sys.exit(1)
 
     if args.list_yara:
-        (list_yara_fn or _execute_list_yara)(args.config, args.yara)
+        (list_yara_fn or execute_list_yara)(args.config, args.yara)
 
     validate_input_mode(args.filename, args.batch)
 
@@ -171,26 +172,6 @@ def run_cli(
     context = _build_context(args.verbose, args.quiet, args.batch)
     args_with_xor = CLIArgs(**{**args.__dict__, "xor": sanitized_xor})
     (dispatch_fn or _dispatch_command)(context, args_with_xor)
-
-
-def _execute_list_yara(config: str | None, yara: str | None) -> None:
-    """Run the ConfigCommand to list YARA rules and exit."""
-    config_cmd = ConfigCommand()
-    sys.exit(
-        config_cmd.execute(
-            {
-                "list_yara": True,
-                "config": config,
-                "yara": yara,
-            }
-        )
-    )
-
-
-def _execute_version() -> None:
-    """Run the VersionCommand and exit."""
-    version_cmd = VersionCommand()
-    sys.exit(version_cmd.execute({}))
 
 
 def _build_context(
@@ -220,6 +201,11 @@ def _dispatch_command(
     """
     dispatch = (build_dispatch_fn or build_dispatch)(context, args)
     sys.exit(dispatch.command.execute(dispatch.payload))
+
+
+# Backwards-compat aliases for tests that import the private names.
+_execute_list_yara = execute_list_yara
+_execute_version = execute_version
 
 
 if __name__ == "__main__":

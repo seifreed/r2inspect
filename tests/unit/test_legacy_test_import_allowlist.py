@@ -33,7 +33,7 @@ def test_legacy_test_imports_are_absent() -> None:
     for path in TESTS_ROOT.rglob("test_*.py"):
         relative = path.relative_to(ROOT).as_posix()
         if relative in {
-            "tests/unit/test_architecture_import_rules.py",
+            "tests/unit/guardrails/test_architecture_import_rules.py",
             "tests/unit/test_legacy_test_import_allowlist.py",
         }:
             continue

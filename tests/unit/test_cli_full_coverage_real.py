@@ -83,12 +83,21 @@ def _sample_path() -> Path:
 
 
 def _run_with_sigint(func: callable) -> int:
-    timer = threading.Timer(0.01, signal.raise_signal, args=(signal.SIGINT,))
+    main_thread_id = threading.get_ident()
+
+    def _interrupt_main() -> None:
+        # ``signal.raise_signal`` from inside the Timer thread targets the
+        # Timer thread on POSIX, so the main thread never sees the SIGINT.
+        # ``pthread_kill`` routes it deterministically to the main thread.
+        signal.pthread_kill(main_thread_id, signal.SIGINT)
+
+    timer = threading.Timer(0.01, _interrupt_main)
     timer.start()
     try:
         return func()
     finally:
         timer.cancel()
+        timer.join(timeout=1.0)
 
 
 def test_cli_init_lazy_attrs_and_main() -> None:
