@@ -192,6 +192,42 @@ def execute_stage_with_timeout(
         return error_result(stage.name, str(exc)), False
 
 
+def _retire_skipped_stages(
+    skipped_stages: list[Any],
+    remaining: list[Any],
+    completed: set[str],
+    remaining_lock: threading.Lock,
+    completed_lock: threading.Lock,
+) -> int:
+    with remaining_lock:
+        for stage in skipped_stages:
+            if stage in remaining:
+                remaining.remove(stage)
+    with completed_lock:
+        for stage in skipped_stages:
+            completed.add(stage.name)
+    for stage in skipped_stages:
+        logger.debug("Skipping stage '%s' (condition not met)", stage.name)
+    return len(skipped_stages)
+
+
+def _stalled_round_should_break(
+    ready_stages: list[Any],
+    remaining: list[Any],
+    remaining_lock: threading.Lock,
+    snapshot_remaining: list[Any],
+    snapshot_completed: set[str],
+    ts_context: ThreadSafeContext,
+) -> bool:
+    if ready_stages:
+        return False
+    with remaining_lock:
+        still_remaining = bool(remaining)
+    if still_remaining:
+        return handle_no_ready_stages(snapshot_remaining, snapshot_completed, ts_context)
+    return True
+
+
 def _run_parallel_rounds(
     pipeline: AnalysisPipeline, ts_context: ThreadSafeContext
 ) -> dict[str, int]:
@@ -223,26 +259,19 @@ def _run_parallel_rounds(
                 snapshot_remaining, snapshot_completed, context_snapshot, snapshot_failed
             )
 
-            with remaining_lock:
-                for stage in skipped_stages:
-                    if stage in remaining:
-                        remaining.remove(stage)
-            with completed_lock:
-                for stage in skipped_stages:
-                    completed.add(stage.name)
-            skipped_count += len(skipped_stages)
-            for stage in skipped_stages:
-                logger.debug("Skipping stage '%s' (condition not met)", stage.name)
+            skipped_count += _retire_skipped_stages(
+                skipped_stages, remaining, completed, remaining_lock, completed_lock
+            )
 
-            if not ready_stages:
-                with remaining_lock:
-                    still_remaining = bool(remaining)
-                if still_remaining and handle_no_ready_stages(
-                    snapshot_remaining, snapshot_completed, ts_context
-                ):
-                    break
-                if not still_remaining:
-                    break
+            if _stalled_round_should_break(
+                ready_stages,
+                remaining,
+                remaining_lock,
+                snapshot_remaining,
+                snapshot_completed,
+                ts_context,
+            ):
+                break
 
             future_to_stage = submit_ready_stages(
                 executor, ready_stages, ts_context, execute_stage_with_timeout
