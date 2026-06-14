@@ -52,38 +52,14 @@ class MagicByteDetector:
             "file_size": path.stat().st_size if path.exists() else 0,
             "extensions": [],
         }
-        if not path.exists() or not path.is_file():
-            self.cache[cache_key] = result
-            return result
-
-        # Reject special files (e.g. /dev/zero, pipes, device nodes) that could block on read
-        try:
-            if not path.stat().st_mode & 0o100000:  # S_IFREG — regular file check
-                self.cache[cache_key] = result
-                return result
-        except OSError:
+        if not self._is_readable_regular_file(path):
             self.cache[cache_key] = result
             return result
 
         try:
             with open(path, "rb") as file_handle:
                 header = file_handle.read(1024)
-                for format_name, format_info in self.MAGIC_PATTERNS.items():
-                    confidence = self._check_magic_pattern(header, format_info, file_handle)
-                    if confidence <= 0:
-                        continue
-                    result["magic_matches"].append(
-                        {
-                            "format": format_name,
-                            "confidence": confidence,
-                            "description": format_info["description"],
-                        }
-                    )
-                    if confidence > result["confidence"]:
-                        result.update(self._get_format_details(format_name, header, file_handle))
-                        result["confidence"] = confidence
-                        result["extensions"] = format_info.get("extensions", [])
-
+                self._scan_magic_patterns(header, file_handle, result)
                 if result["confidence"] == 0:
                     result.update(self._fallback_detection(header, path))
         except Exception as exc:
@@ -92,6 +68,35 @@ class MagicByteDetector:
 
         self.cache[cache_key] = result
         return result
+
+    @staticmethod
+    def _is_readable_regular_file(path: Path) -> bool:
+        # Reject special files (e.g. /dev/zero, pipes, device nodes) that could block on read.
+        if not path.exists() or not path.is_file():
+            return False
+        try:
+            return bool(path.stat().st_mode & 0o100000)  # S_IFREG — regular file check
+        except OSError:
+            return False
+
+    def _scan_magic_patterns(
+        self, header: bytes, file_handle: BinaryIO, result: dict[str, Any]
+    ) -> None:
+        for format_name, format_info in self.MAGIC_PATTERNS.items():
+            confidence = self._check_magic_pattern(header, format_info, file_handle)
+            if confidence <= 0:
+                continue
+            result["magic_matches"].append(
+                {
+                    "format": format_name,
+                    "confidence": confidence,
+                    "description": format_info["description"],
+                }
+            )
+            if confidence > result["confidence"]:
+                result.update(self._get_format_details(format_name, header, file_handle))
+                result["confidence"] = confidence
+                result["extensions"] = format_info.get("extensions", [])
 
     def _check_magic_pattern(
         self, header: bytes, format_info: dict[str, Any], file_handle: BinaryIO
