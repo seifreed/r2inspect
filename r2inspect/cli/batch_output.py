@@ -20,7 +20,6 @@ from ..application.batch_stats import (
 )
 from ..cli import batch_output_support as _support
 from ..cli import batch_output_summary as _summary
-from ..cli import batch_output_runtime as _runtime
 from ..cli import batch_processing_support as _processing_support
 
 console = Console()
@@ -124,40 +123,6 @@ def _init_batch_results() -> tuple[dict[str, dict[str, Any]], list[tuple[str, st
     return _support.init_batch_results()
 
 
-def run_batch_analysis(
-    batch_dir: str,
-    options: dict[str, Any],
-    output_json: bool,
-    output_csv: bool,
-    output_dir: str | None,
-    recursive: bool,
-    extensions: str | None,
-    verbose: bool,
-    config_obj: Any,
-    auto_detect: bool,
-    threads: int = 10,
-    quiet: bool = False,
-) -> None:
-    """Run batch analysis on multiple files in a directory."""
-    from .batch_processing import run_batch_analysis as _run_batch_analysis
-
-    _runtime.run_batch_analysis(
-        delegate=_run_batch_analysis,
-        batch_dir=batch_dir,
-        options=options,
-        output_json=output_json,
-        output_csv=output_csv,
-        output_dir=output_dir,
-        recursive=recursive,
-        extensions=extensions,
-        verbose=verbose,
-        config_obj=config_obj,
-        auto_detect=auto_detect,
-        threads=threads,
-        quiet=quiet,
-    )
-
-
 def create_batch_summary(
     all_results: dict[str, dict[str, Any]],
     failed_files: list[tuple[str, str]],
@@ -218,7 +183,6 @@ __all__ = [
     "find_files_by_extensions",
     "find_files_to_process",
     "get_csv_fieldnames",
-    "run_batch_analysis",
     "setup_batch_output_directory",
     "update_compiler_stats",
     "update_crypto_stats",

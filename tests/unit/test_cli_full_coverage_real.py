@@ -765,7 +765,7 @@ def test_batch_output_and_processing_helpers(tmp_path: Path) -> None:
         assert batch_output._build_small_row("f", _BadResult())[1] == "Error"
         assert batch_output._build_large_row("f", _BadResult())[1] == "Error"
 
-        batch_output.run_batch_analysis(
+        batch_processing.run_batch_analysis(
             batch_dir=str(tmp_path),
             options={},
             output_json=False,
@@ -781,7 +781,7 @@ def test_batch_output_and_processing_helpers(tmp_path: Path) -> None:
         )
         empty_dir = tmp_path / "empty_batch"
         empty_dir.mkdir()
-        batch_output.run_batch_analysis(
+        batch_processing.run_batch_analysis(
             batch_dir=str(empty_dir),
             options={},
             output_json=False,

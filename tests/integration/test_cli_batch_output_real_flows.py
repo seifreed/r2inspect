@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.cli import batch_output
+from r2inspect.cli import batch_processing
 from r2inspect.cli.batch_processing import setup_analysis_options
 from r2inspect.config import Config
 
@@ -27,7 +27,7 @@ def test_batch_output_json_real_flow(tmp_path: Path) -> None:
     output_dir = tmp_path / "batch_json_out"
     config = Config(str(tmp_path / "r2inspect_batch_output.json"))
 
-    batch_output.run_batch_analysis(
+    batch_processing.run_batch_analysis(
         batch_dir=str(batch_dir),
         options=setup_analysis_options(None, None),
         output_json=True,
@@ -54,7 +54,7 @@ def test_batch_output_csv_real_flow(tmp_path: Path) -> None:
     output_csv = tmp_path / "batch_results.csv"
     config = Config(str(tmp_path / "r2inspect_batch_output_csv.json"))
 
-    batch_output.run_batch_analysis(
+    batch_processing.run_batch_analysis(
         batch_dir=str(batch_dir),
         options=setup_analysis_options(None, None),
         output_json=False,

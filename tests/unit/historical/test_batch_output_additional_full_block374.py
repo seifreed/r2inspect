@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from r2inspect.cli import batch_output
+from r2inspect.cli import batch_output, batch_processing
 
 
 class RuleObj:
@@ -225,7 +225,7 @@ def test_prepare_and_run_batch_analysis(tmp_path: Path) -> None:
     from r2inspect.config import Config
 
     config_obj = Config(str(tmp_path / "config.json"))
-    batch_output.run_batch_analysis(
+    batch_processing.run_batch_analysis(
         batch_dir=str(tmp_path),
         options={},
         output_json=False,
@@ -243,7 +243,7 @@ def test_prepare_and_run_batch_analysis(tmp_path: Path) -> None:
     # run with empty dir to hit early return
     empty_dir = tmp_path / "empty"
     empty_dir.mkdir()
-    batch_output.run_batch_analysis(
+    batch_processing.run_batch_analysis(
         batch_dir=str(empty_dir),
         options={},
         output_json=False,

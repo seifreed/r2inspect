@@ -88,7 +88,3 @@ def prepare_batch_run(
 
 def init_batch_results() -> tuple[dict[str, dict[str, Any]], list[tuple[str, str]]]:
     return {}, []
-
-
-def run_batch_analysis(*, delegate: Any, **kwargs: Any) -> None:
-    delegate(**kwargs)

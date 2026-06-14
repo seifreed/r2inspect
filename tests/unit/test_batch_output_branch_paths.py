@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import pytest
 
 from r2inspect.cli.batch_output import (
     _build_large_row,
@@ -14,7 +13,6 @@ from r2inspect.cli.batch_output import (
     _prepare_batch_run,
     create_batch_summary,
     find_files_to_process,
-    run_batch_analysis,
 )
 
 
@@ -126,21 +124,3 @@ def test_build_large_row_none_file_info_returns_error_tuple() -> None:
     assert compiler == "Error"
     assert compile_time == "Error"
     assert yara == "Error"
-
-
-def test_run_batch_analysis_delegates_to_processing_module(tmp_path: Path) -> None:
-    """run_batch_analysis in batch_output delegates to batch_processing.run_batch_analysis."""
-    run_batch_analysis(
-        batch_dir=str(tmp_path),
-        options={},
-        output_json=False,
-        output_csv=False,
-        output_dir=None,
-        recursive=False,
-        extensions="exe",
-        verbose=False,
-        config_obj=None,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
-    )
