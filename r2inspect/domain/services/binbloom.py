@@ -130,6 +130,12 @@ def calculate_bloom_stats(
     }
 
 
+def _jaccard_similarity(bits1: set[int], bits2: set[int]) -> float:
+    if not bits1 and not bits2:
+        return 1.0
+    return len(bits1 & bits2) / len(bits1 | bits2)
+
+
 def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
     """Calculate Jaccard similarity between two bloom filters."""
     bit_array_1 = _get_bloom_bits(bloom1)
@@ -139,15 +145,7 @@ def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
 
     bits1 = {i for i, bit in enumerate(bit_array_1) if bit}
     bits2 = {i for i, bit in enumerate(bit_array_2) if bit}
-
-    if not bits1 and not bits2:
-        return 1.0
-    if not bits1 or not bits2:
-        return 0.0
-
-    intersection = len(bits1.intersection(bits2))
-    union = len(bits1.union(bits2))
-    return intersection / union if union > 0 else 0.0
+    return _jaccard_similarity(bits1, bits2)
 
 
 def _get_bloom_bits(bloom_filter: Any) -> Any | None:

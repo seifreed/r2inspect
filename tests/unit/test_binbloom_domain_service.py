@@ -86,3 +86,11 @@ def test_calculate_bloom_similarity() -> None:
     similarity = calculate_bloom_similarity(bloom1, bloom2)
 
     assert similarity == 2 / 3
+
+
+def test_calculate_bloom_similarity_both_empty_returns_one() -> None:
+    assert calculate_bloom_similarity(_FakeBloom([0, 0, 0]), _FakeBloom([0, 0])) == 1.0
+
+
+def test_calculate_bloom_similarity_returns_zero_without_bit_array() -> None:
+    assert calculate_bloom_similarity(object(), _FakeBloom([1, 0, 1])) == 0.0
