@@ -2,13 +2,34 @@
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+from typing import Any, Protocol
 
 from ..domain.services.section_analysis import build_section_characteristics
 
 
+class SectionHost(Protocol):
+    """Overridable collaboration contract the section-analysis helpers depend on."""
+
+    def _apply_permissions(self, section: dict[str, Any], analysis: dict[str, Any]) -> None: ...
+    def _apply_pe_characteristics(
+        self, section: dict[str, Any], analysis: dict[str, Any]
+    ) -> None: ...
+    def _calculate_size_ratio(self, analysis: dict[str, Any]) -> float: ...
+    def _calculate_entropy(self, section: dict[str, Any]) -> float: ...
+    def _check_suspicious_characteristics(
+        self, section: dict[str, Any], analysis: dict[str, Any]
+    ) -> list[str]: ...
+    def _get_section_characteristics(
+        self, section: dict[str, Any], analysis: dict[str, Any]
+    ) -> dict[str, Any]: ...
+    def _analyze_code_section(self, section: dict[str, Any]) -> dict[str, Any]: ...
+    def _get_functions_in_section(self, vaddr: int, size: int) -> list[dict[str, Any]]: ...
+    def _count_nops_in_section(self, vaddr: int, size: int) -> tuple[int, int]: ...
+
+
 def analyze_single_section(
-    analyzer: Any, section: dict[str, Any], *, logger: Any
+    analyzer: SectionHost, section: dict[str, Any], *, logger: logging.Logger
 ) -> dict[str, Any]:
     analysis = {
         "name": str(section.get("name", "unknown")),
@@ -41,7 +62,11 @@ def analyze_single_section(
 
 
 def get_section_characteristics(
-    analyzer: Any, section: dict[str, Any], analysis: dict[str, Any], *, logger: Any
+    analyzer: SectionHost,
+    section: dict[str, Any],
+    analysis: dict[str, Any],
+    *,
+    logger: logging.Logger,
 ) -> dict[str, Any]:
     try:
         name = str(section.get("name", ""))
@@ -54,7 +79,9 @@ def get_section_characteristics(
         return {}
 
 
-def analyze_code_section(analyzer: Any, section: dict[str, Any], *, logger: Any) -> dict[str, Any]:
+def analyze_code_section(
+    analyzer: SectionHost, section: dict[str, Any], *, logger: logging.Logger
+) -> dict[str, Any]:
     code_info: dict[str, Any] = {}
     try:
         vaddr = section.get("vaddr", 0)
