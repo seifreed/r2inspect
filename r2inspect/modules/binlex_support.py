@@ -3,13 +3,51 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from typing import Any
+from pathlib import Path
+from typing import Any, Protocol
 
 from ..domain.formats.similarity import jaccard_similarity
+from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+
+
+class BinlexHost(Protocol):
+    """Overridable collaboration contract the Binlex helpers depend on.
+
+    Shared by ``binlex_runtime`` and ``binlex_features``. Internal n-gram
+    aggregation results are typed ``Any`` (complex defaultdict/Counter tuples).
+    """
+
+    filepath: Path | None
+    adapter: BinaryAnalyzerInterface | None
+
+    def _cmd(self, command: str) -> str: ...
+    def _cmd_list(self, command: str) -> list[Any]: ...
+    def _cmdj(self, command: str, default: Any | None = None) -> Any: ...
+    def _init_result_structure(
+        self, additional_fields: dict[str, Any | None] | None = None
+    ) -> dict[str, Any]: ...
+    def _extract_functions(self) -> list[dict[str, Any]]: ...
+    def _analyze_function(self, func_addr: int, func_name: str, ngram_sizes: list[int]) -> Any: ...
+    def _extract_instruction_tokens(self, func_addr: int, func_name: str) -> list[str]: ...
+    def _extract_tokens_from_pdfj(self, func_addr: int, func_name: str) -> list[str]: ...
+    def _extract_tokens_from_pdj(self, func_addr: int, func_name: str) -> list[str]: ...
+    def _extract_tokens_from_text(self, func_addr: int, func_name: str) -> list[str]: ...
+    def _generate_ngrams(self, tokens: list[str], n: int) -> list[str]: ...
+    def _create_signature(self, ngrams: list[str]) -> str: ...
+    def _collect_function_signatures(
+        self, functions: list[dict[str, Any]], ngram_sizes: list[int]
+    ) -> Any: ...
+    def _accumulate_ngrams(
+        self, all_ngrams: Any, func_sigs: Any, ngram_sizes: list[int]
+    ) -> None: ...
+    def _build_signature_groups(self, function_signatures: Any, ngram_sizes: list[int]) -> Any: ...
+    def _collect_signatures_for_size(self, function_signatures: Any, n: int) -> Any: ...
+    def _build_similar_groups(self, signature_groups: Any) -> list[dict[str, Any]]: ...
+    def _collect_top_ngrams(self, all_ngrams: Any, ngram_sizes: list[int]) -> Any: ...
 
 
 def collect_function_signatures(
-    analyzer: Any, functions: list[dict[str, Any]], ngram_sizes: list[int]
+    analyzer: BinlexHost, functions: list[dict[str, Any]], ngram_sizes: list[int]
 ) -> tuple[dict[str, dict[int, dict[str, Any]]], defaultdict[int, Counter[str]], int]:
     function_signatures: dict[str, dict[int, dict[str, Any]]] = {}
     all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
@@ -44,7 +82,7 @@ def accumulate_ngrams(
 
 
 def build_signature_groups(
-    analyzer: Any,
+    analyzer: BinlexHost,
     function_signatures: dict[str, dict[int, dict[str, Any]]],
     ngram_sizes: list[int],
 ) -> tuple[dict[int, int], dict[int, list[dict[str, Any]]]]:

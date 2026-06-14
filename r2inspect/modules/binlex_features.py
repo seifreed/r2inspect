@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+import logging
+
+from typing import Any
+
+from .binlex_support import BinlexHost
 
 
-def extract_functions(analyzer: Any, *, logger: Any) -> list[dict[str, Any]]:
+def extract_functions(analyzer: BinlexHost, *, logger: logging.Logger) -> list[dict[str, Any]]:
     try:
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "analyze_all"):
             analyzer.adapter.analyze_all()
@@ -25,7 +29,12 @@ def extract_functions(analyzer: Any, *, logger: Any) -> list[dict[str, Any]]:
 
 
 def analyze_function(
-    analyzer: Any, func_addr: int, func_name: str, ngram_sizes: list[int], *, logger: Any
+    analyzer: BinlexHost,
+    func_addr: int,
+    func_name: str,
+    ngram_sizes: list[int],
+    *,
+    logger: logging.Logger,
 ) -> dict[int, dict[str, Any | None]] | None:
     try:
         tokens = analyzer._extract_instruction_tokens(func_addr, func_name)
@@ -60,18 +69,18 @@ def analyze_function(
 
 
 def extract_instruction_tokens(
-    analyzer: Any, func_addr: int, func_name: str, *, logger: Any
+    analyzer: BinlexHost, func_addr: int, func_name: str, *, logger: logging.Logger
 ) -> list[str]:
     try:
         tokens = analyzer._extract_tokens_from_pdfj(func_addr, func_name)
         if tokens:
-            return cast(list[str], tokens)
+            return tokens
         tokens = analyzer._extract_tokens_from_pdj(func_addr, func_name)
         if tokens:
-            return cast(list[str], tokens)
+            return tokens
         tokens = analyzer._extract_tokens_from_text(func_addr, func_name)
         if tokens:
-            return cast(list[str], tokens)
+            return tokens
     except Exception as exc:
         logger.debug("Error extracting tokens from %s: %s", func_name, exc)
     return []

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+
 from collections import Counter, defaultdict
-from typing import Any, cast
+from typing import Any
+
+from .binlex_support import BinlexHost
 
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..domain.services.binlex import (
@@ -14,30 +18,27 @@ from ..domain.services.binlex import (
 
 
 def run_binlex_analysis(
-    analyzer: Any,
+    analyzer: BinlexHost,
     *,
     ngram_sizes: list[int] | None,
-    logger: Any,
+    logger: logging.Logger,
 ) -> dict[str, Any]:
     if ngram_sizes is None:
         ngram_sizes = [2, 3, 4]
 
     logger.debug("Starting Binlex analysis for %s", analyzer.filepath)
-    results = cast(
-        dict[str, Any],
-        analyzer._init_result_structure(
-            {
-                "function_signatures": {},
-                "ngram_sizes": ngram_sizes,
-                "total_functions": 0,
-                "analyzed_functions": 0,
-                "unique_signatures": {},
-                "similar_functions": {},
-                "binary_signature": None,
-                "top_ngrams": {},
-                "error": None,
-            }
-        ),
+    results = analyzer._init_result_structure(
+        {
+            "function_signatures": {},
+            "ngram_sizes": ngram_sizes,
+            "total_functions": 0,
+            "analyzed_functions": 0,
+            "unique_signatures": {},
+            "similar_functions": {},
+            "binary_signature": None,
+            "top_ngrams": {},
+            "error": None,
+        }
     )
     try:
         functions = analyzer._extract_functions()
@@ -81,7 +82,7 @@ def run_binlex_analysis(
 
 
 def extract_tokens_from_pdfj(
-    analyzer: Any, func_addr: int, func_name: str, *, logger: Any
+    analyzer: BinlexHost, func_addr: int, func_name: str, *, logger: logging.Logger
 ) -> list[str]:
     disasm = (
         analyzer.adapter.get_disasm(address=func_addr)
@@ -97,7 +98,7 @@ def extract_tokens_from_pdfj(
 
 
 def extract_tokens_from_pdj(
-    analyzer: Any, func_addr: int, func_name: str, *, logger: Any
+    analyzer: BinlexHost, func_addr: int, func_name: str, *, logger: logging.Logger
 ) -> list[str]:
     disasm_list = (
         analyzer.adapter.get_disasm(address=func_addr, size=200)
@@ -113,11 +114,11 @@ def extract_tokens_from_pdj(
 
 
 def extract_tokens_from_text_channel(
-    analyzer: Any,
+    analyzer: BinlexHost,
     func_addr: int,
     func_name: str,
     *,
-    logger: Any,
+    logger: logging.Logger,
 ) -> list[str]:
     instructions_text = (
         analyzer.adapter.get_disasm_text(address=func_addr, size=100)
@@ -134,7 +135,7 @@ def calculate_binary_signature_safe(
     function_signatures: dict[str, dict[int, dict[str, Any]]],
     ngram_sizes: list[int],
     *,
-    logger: Any,
+    logger: logging.Logger,
 ) -> dict[int, str]:
     try:
         return calculate_binary_signature(function_signatures, ngram_sizes)
@@ -148,7 +149,7 @@ def get_function_similarity_score_safe(
     func2_ngrams: list[str],
     similarity_impl: Any,
     *,
-    logger: Any,
+    logger: logging.Logger,
 ) -> float:
     try:
         return float(similarity_impl(func1_ngrams, func2_ngrams))
@@ -162,7 +163,7 @@ def calculate_binlex_from_file(
     filepath: str,
     ngram_sizes: list[int] | None,
     *,
-    logger: Any,
+    logger: logging.Logger,
 ) -> dict[str, Any] | None:
     result = run_analyzer_on_file(analyzer_cls, filepath, ngram_sizes)
     if result is None:
