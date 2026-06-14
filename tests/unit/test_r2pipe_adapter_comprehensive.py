@@ -91,9 +91,7 @@ def test_cmd_returns_string():
 
 
 def test_cmd_converts_non_string_to_string():
-    r2 = FakeR2()
-    # Override cmd to return int
-    r2.cmd = lambda command: 123
+    r2 = FakeR2(cmd_map={"test": 123})
     adapter = R2PipeAdapter(r2)
     result = adapter.cmd("test")
 

@@ -1,7 +1,5 @@
 """Comprehensive tests for overlay analyzer - 0% coverage target"""
 
-import pytest
-
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 
 
@@ -608,10 +606,15 @@ def test_overlay_find_all_patterns():
     assert positions == [1, 3]
 
 
+class _CmdjRaisingAdapter(MockAdapter):
+    """Hand-rolled adapter whose cmdj always raises, to exercise the error path."""
+
+    def cmdj(self, cmd, default=None):
+        raise RuntimeError("Error")
+
+
 def test_overlay_error_handling():
-    adapter = MockAdapter()
-    adapter.cmdj = lambda cmd, default: (_ for _ in ()).throw(RuntimeError("Error"))
-    analyzer = OverlayAnalyzer(adapter)
+    analyzer = OverlayAnalyzer(_CmdjRaisingAdapter())
     result = analyzer.analyze()
 
     assert result["available"] is True
