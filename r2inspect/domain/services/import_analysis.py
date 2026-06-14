@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable
 from typing import Any
 
 COMMON_SYSTEM_DLLS = {
@@ -179,19 +180,24 @@ def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _count_imports(
+    imports: list[dict[str, Any]], predicate: Callable[[dict[str, Any]], bool]
+) -> int:
+    return sum(1 for imp in imports if predicate(imp))
+
+
 def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    indicators = []
-    for type_name, description, count, include_zero in (
+    candidates = (
         (
             "dynamic_loading",
             "GetProcAddress usage detected - possible dynamic API loading",
-            sum(1 for imp in imports if "GetProcAddress" in imp.get("name", "")),
+            _count_imports(imports, lambda imp: "GetProcAddress" in imp.get("name", "")),
             False,
         ),
         (
             "dynamic_library_loading",
             "LoadLibrary usage detected - possible dynamic library loading",
-            sum(1 for imp in imports if "LoadLibrary" in imp.get("name", "")),
+            _count_imports(imports, lambda imp: "LoadLibrary" in imp.get("name", "")),
             False,
         ),
         (
@@ -203,10 +209,12 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
         (
             "ordinal_imports",
             "Ordinal-only imports detected - possible obfuscation",
-            sum(1 for imp in imports if not imp.get("name") and imp.get("ordinal", 0) > 0),
+            _count_imports(imports, lambda imp: not imp.get("name") and imp.get("ordinal", 0) > 0),
             False,
         ),
-    ):
+    )
+    indicators = []
+    for type_name, description, count, include_zero in candidates:
         if count > 0 or include_zero:
             indicators.append({"type": type_name, "description": description, "count": count})
     return indicators
