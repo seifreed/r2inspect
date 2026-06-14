@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+import logging
+from typing import Any
+
+from .simhash_support import SimHashHost
 
 
-def extract_string_features(analyzer: Any, *, logger: Any) -> list[str]:
+def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> list[str]:
     string_features: list[str] = []
     try:
-        strings_data = analyzer._get_strings_data()
+        strings_data = host._get_strings_data()
         if isinstance(strings_data, list):
-            analyzer._collect_string_features(strings_data, string_features)
-        string_features.extend(analyzer._extract_data_section_strings())
+            host._collect_string_features(strings_data, string_features)
+        string_features.extend(host._extract_data_section_strings())
         logger.debug("Extracted %s string features", len(string_features))
         return string_features
     except Exception as exc:
@@ -19,13 +22,13 @@ def extract_string_features(analyzer: Any, *, logger: Any) -> list[str]:
         return []
 
 
-def extract_opcodes_features(analyzer: Any, *, logger: Any) -> list[str]:
+def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> list[str]:
     opcode_features: list[str] = []
     try:
-        functions = analyzer._get_functions()
+        functions = host._get_functions()
         if not functions:
             logger.debug("No functions found for opcode extraction, trying alternative methods")
-            functions = analyzer._cmd_list("afl")
+            functions = host._cmd_list("afl")
             if not functions:
                 return []
         for func in functions:
@@ -33,7 +36,7 @@ def extract_opcodes_features(analyzer: Any, *, logger: Any) -> list[str]:
             if func_addr is None:
                 continue
             func_name = func.get("name", f"func_{func_addr}")
-            func_opcodes = analyzer._extract_function_opcodes(func_addr, func_name)
+            func_opcodes = host._extract_function_opcodes(func_addr, func_name)
             if func_opcodes:
                 opcode_features.extend(func_opcodes)
                 logger.debug("Extracted %s opcodes from %s", len(func_opcodes), func_name)
@@ -52,11 +55,11 @@ def extract_opcodes_features(analyzer: Any, *, logger: Any) -> list[str]:
 
 
 def extract_function_features(
-    analyzer: Any, simhash_cls: Any, *, logger: Any
+    host: SimHashHost, simhash_cls: Any, *, logger: logging.Logger
 ) -> dict[str, dict[str, Any]]:
     function_features: dict[str, dict[str, Any]] = {}
     try:
-        functions = analyzer._get_functions()
+        functions = host._get_functions()
         if not functions:
             return {}
         for func in functions:
@@ -67,7 +70,7 @@ def extract_function_features(
                 continue
             func_name = func.get("name", f"func_{func_addr}")
             func_size = func.get("size", 0)
-            func_opcodes = analyzer._extract_function_opcodes(func_addr, func_name)
+            func_opcodes = host._extract_function_opcodes(func_addr, func_name)
             if not func_opcodes:
                 continue
             try:
@@ -91,21 +94,21 @@ def extract_function_features(
 
 
 def extract_function_opcodes(
-    analyzer: Any, func_addr: int, func_name: str, *, logger: Any
+    host: SimHashHost, func_addr: int, func_name: str, *, logger: logging.Logger
 ) -> list[str]:
     try:
-        if analyzer.adapter is None or not hasattr(analyzer.adapter, "get_disasm"):
+        if host.adapter is None or not hasattr(host.adapter, "get_disasm"):
             return []
-        disasm = analyzer.adapter.get_disasm(address=func_addr)
-        ops = analyzer._extract_ops_from_disasm(disasm)
+        disasm = host.adapter.get_disasm(address=func_addr)
+        ops = host._extract_ops_from_disasm(disasm)
         if ops:
-            return cast(list[str], analyzer._extract_opcodes_from_ops(ops))
-        disasm_range = analyzer.adapter.get_disasm(
-            address=func_addr, size=analyzer.max_instructions_per_function
+            return host._extract_opcodes_from_ops(ops)
+        disasm_range = host.adapter.get_disasm(
+            address=func_addr, size=host.max_instructions_per_function
         )
-        ops = analyzer._extract_ops_from_disasm(disasm_range)
+        ops = host._extract_ops_from_disasm(disasm_range)
         if ops:
-            return cast(list[str], analyzer._extract_opcodes_from_ops(ops))
+            return host._extract_opcodes_from_ops(ops)
     except Exception as exc:
         logger.debug("Error extracting opcodes from function %s: %s", func_name, exc)
     return []
