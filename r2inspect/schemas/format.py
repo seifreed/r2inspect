@@ -13,6 +13,7 @@ from .base import AnalysisResultBase
 
 from ..domain.format_types import SectionInfo as _SectionInfo
 from ..domain.format_types import SecurityFeatures as _SecurityFeatures
+from ..domain.format_types import enabled_security_features, security_feature_score
 
 
 class SectionInfo(BaseModel):
@@ -102,43 +103,11 @@ class SecurityFeatures(BaseModel):
 
     def get_enabled_features(self) -> list[str]:
         """Get list of enabled security features"""
-        enabled: list[str] = []
-        for field_name, value in self.model_dump().items():
-            if field_name == "relro":
-                if isinstance(value, str) and value in ("partial", "full"):
-                    enabled.append(f"relro_{value}")
-                elif value is True:
-                    enabled.append("relro")
-                continue
-            if value is True:
-                enabled.append(field_name)
-        return enabled
+        return enabled_security_features(self.model_dump())
 
     def security_score(self) -> int:
         """Calculate a basic security score (0-100)."""
-        score = 0
-        weights = {
-            "nx": 15,
-            "pie": 15,
-            "canary": 15,
-            "aslr": 15,
-            "guard_cf": 10,
-            "seh": 5,
-            "authenticode": 10,
-            "fortify": 5,
-            "high_entropy_va": 5,
-        }
-
-        for feature, weight in weights.items():
-            if getattr(self, feature, False):
-                score += weight
-
-        if self.relro == "full":
-            score += 5
-        elif self.relro == "partial" or self.relro is True:
-            score += 2
-
-        return min(score, 100)
+        return security_feature_score(self.model_dump())
 
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary representation."""
