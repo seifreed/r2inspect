@@ -13,6 +13,7 @@ from .classifier_recovery import (
     r2pipe_recovery as _r2pipe_recovery,
 )
 from .classifier_runtime import (
+    ErrorHandlerSpec,
     ErrorRecoveryManager,
     build_error_handler as _build_error_handler,
     register_default_recovery_strategies as _register_default_recovery_strategies,
@@ -53,12 +54,12 @@ def error_handler(
     return _build_error_handler(
         classifier=ErrorClassifier,
         global_error_manager=global_error_manager,
-        error_category_unknown=ErrorCategory.UNKNOWN,
-        error_severity_medium=ErrorSeverity.MEDIUM,
-        category=category,
-        severity=severity,
-        context=context,
-        fallback_result=fallback_result,
+        spec=ErrorHandlerSpec(
+            category=category,
+            severity=severity,
+            context=context,
+            fallback_result=fallback_result,
+        ),
     )
 
 
@@ -97,9 +98,6 @@ def register_recovery_strategies() -> None:
     """Register default recovery strategies"""
     _register_default_recovery_strategies(
         global_error_manager,
-        error_category_memory=ErrorCategory.MEMORY,
-        error_category_r2pipe=ErrorCategory.R2PIPE,
-        error_category_file_access=ErrorCategory.FILE_ACCESS,
         memory_recovery=_memory_recovery,
         r2pipe_recovery=_r2pipe_recovery,
         file_access_recovery=_file_access_recovery,

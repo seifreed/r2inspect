@@ -6,10 +6,22 @@ import functools
 import threading
 from collections import defaultdict, deque
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..infrastructure.logging import get_logger
 from .classifier_logic import error_stats as _default_error_stats
+from .classifier_models import ErrorCategory, ErrorSeverity
+
+
+@dataclass(frozen=True)
+class ErrorHandlerSpec:
+    """Per-decoration overrides applied by the error_handler decorator."""
+
+    category: ErrorCategory = ErrorCategory.UNKNOWN
+    severity: ErrorSeverity = ErrorSeverity.MEDIUM
+    fallback_result: Any = None
+    context: dict[str, Any] | None = field(default=None)
 
 
 class ErrorRecoveryManager:
@@ -77,12 +89,7 @@ def build_error_handler(
     *,
     classifier: Any,
     global_error_manager: ErrorRecoveryManager,
-    error_category_unknown: Any,
-    error_severity_medium: Any,
-    category: Any,
-    severity: Any,
-    context: dict[str, Any] | None,
-    fallback_result: Any,
+    spec: ErrorHandlerSpec,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
@@ -93,18 +100,18 @@ def build_error_handler(
                 func_context = {
                     "function_name": func.__name__,
                     "module": func.__module__,
-                    **(context or {}),
+                    **(spec.context or {}),
                 }
                 error_info = classifier.classify(exc, func_context)
-                if category != error_category_unknown:
-                    error_info.category = category
-                if severity != error_severity_medium:
-                    error_info.severity = severity
+                if spec.category != ErrorCategory.UNKNOWN:
+                    error_info.category = spec.category
+                if spec.severity != ErrorSeverity.MEDIUM:
+                    error_info.severity = spec.severity
                 recovered, result = global_error_manager.handle_error(error_info)
                 if recovered:
                     return result
                 if error_info.recoverable:
-                    return fallback_result
+                    return spec.fallback_result
                 raise
 
         return wrapper
@@ -141,21 +148,18 @@ def safe_execute_call(
 def register_default_recovery_strategies(
     manager: ErrorRecoveryManager,
     *,
-    error_category_memory: Any,
-    error_category_r2pipe: Any,
-    error_category_file_access: Any,
     memory_recovery: Callable[[Any], Any],
     r2pipe_recovery: Callable[[Any], Any],
     file_access_recovery: Callable[[Any, Any], Any],
     logger: Any,
 ) -> None:
     manager.register_recovery_strategy(
-        error_category_memory,
+        ErrorCategory.MEMORY,
         lambda _error_info: memory_recovery(logger),
     )
-    manager.register_recovery_strategy(error_category_r2pipe, r2pipe_recovery)
+    manager.register_recovery_strategy(ErrorCategory.R2PIPE, r2pipe_recovery)
     manager.register_recovery_strategy(
-        error_category_file_access,
+        ErrorCategory.FILE_ACCESS,
         lambda error_info: file_access_recovery(error_info, logger),
     )
 

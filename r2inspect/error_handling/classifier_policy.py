@@ -59,14 +59,7 @@ class ErrorClassifier:
 
     @classmethod
     def _classify_by_inheritance(cls, exception: Exception) -> tuple[ErrorCategory, ErrorSeverity]:
-        return _classify_by_inheritance(
-            exception,
-            cls.EXCEPTION_MAPPING,
-            error_category_unknown=ErrorCategory.UNKNOWN,
-            error_severity_low=ErrorSeverity.LOW,
-            error_category_r2pipe=ErrorCategory.R2PIPE,
-            error_severity_medium=ErrorSeverity.MEDIUM,
-        )
+        return _classify_by_inheritance(exception, cls.EXCEPTION_MAPPING)
 
     @classmethod
     def _adjust_classification(
@@ -76,27 +69,13 @@ class ErrorClassifier:
         severity: ErrorSeverity,
         context: dict[str, Any],
     ) -> tuple[ErrorCategory, ErrorSeverity]:
-        return _adjust_classification(
-            category,
-            severity,
-            context,
-            error_category_memory=ErrorCategory.MEMORY,
-            error_category_r2pipe=ErrorCategory.R2PIPE,
-            error_severity_medium=ErrorSeverity.MEDIUM,
-            error_severity_high=ErrorSeverity.HIGH,
-            error_severity_critical=ErrorSeverity.CRITICAL,
-        )
+        return _adjust_classification(category, severity, context)
 
     @classmethod
     def _is_recoverable(
         cls, exception: Exception, severity: ErrorSeverity, context: dict[str, Any]
     ) -> bool:
-        return _is_recoverable(
-            exception,
-            severity,
-            context,
-            error_severity_critical=ErrorSeverity.CRITICAL,
-        )
+        return _is_recoverable(exception, severity, context)
 
     @classmethod
     def _suggest_action(
@@ -106,17 +85,7 @@ class ErrorClassifier:
         severity: ErrorSeverity,
         _context: dict[str, Any],
     ) -> str:
-        return _suggest_action(
-            exception,
-            category,
-            severity,
-            error_category_memory=ErrorCategory.MEMORY,
-            error_category_file_access=ErrorCategory.FILE_ACCESS,
-            error_category_r2pipe=ErrorCategory.R2PIPE,
-            error_category_dependency=ErrorCategory.DEPENDENCY,
-            error_category_input_validation=ErrorCategory.INPUT_VALIDATION,
-            error_severity_critical=ErrorSeverity.CRITICAL,
-        )
+        return _suggest_action(exception, category, severity)
 
 
 __all__ = ["ErrorClassifier"]

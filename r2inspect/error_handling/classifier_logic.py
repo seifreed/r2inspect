@@ -6,57 +6,46 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from .classifier_models import ErrorCategory, ErrorSeverity
+
 
 def classify_by_inheritance(
     exception: Exception,
-    exception_mapping: dict[type[Exception], tuple[Any, Any]],
-    *,
-    error_category_unknown: Any,
-    error_severity_low: Any,
-    error_category_r2pipe: Any,
-    error_severity_medium: Any,
-) -> tuple[Any, Any]:
+    exception_mapping: dict[type[Exception], tuple[ErrorCategory, ErrorSeverity]],
+) -> tuple[ErrorCategory, ErrorSeverity]:
     for exc_type, (category, severity) in exception_mapping.items():
         if isinstance(exception, exc_type):
             return category, severity
     if "r2pipe" in str(type(exception)).lower() or "r2pipe" in str(exception).lower():
-        return error_category_r2pipe, error_severity_medium
-    return error_category_unknown, error_severity_low
+        return ErrorCategory.R2PIPE, ErrorSeverity.MEDIUM
+    return ErrorCategory.UNKNOWN, ErrorSeverity.LOW
 
 
 def adjust_classification(
-    category: Any,
-    severity: Any,
+    category: ErrorCategory,
+    severity: ErrorSeverity,
     context: dict[str, Any],
-    *,
-    error_category_memory: Any,
-    error_category_r2pipe: Any,
-    error_severity_medium: Any,
-    error_severity_high: Any,
-    error_severity_critical: Any,
-) -> tuple[Any, Any]:
+) -> tuple[ErrorCategory, ErrorSeverity]:
     if (
         context.get("analysis_type") in ["pe_analysis", "elf_analysis", "macho_analysis"]
-        and severity == error_severity_medium
+        and severity == ErrorSeverity.MEDIUM
     ):
-        severity = error_severity_high
+        severity = ErrorSeverity.HIGH
     # NOTE: batch_mode no longer downgrades severity — HIGH errors in batch
     # must remain HIGH to avoid silent data corruption.
-    if category == error_category_memory and context.get("file_size_mb", 0) > 100:
-        severity = error_severity_high
-    if category == error_category_r2pipe and context.get("phase") == "initialization":
-        severity = error_severity_critical
+    if category == ErrorCategory.MEMORY and context.get("file_size_mb", 0) > 100:
+        severity = ErrorSeverity.HIGH
+    if category == ErrorCategory.R2PIPE and context.get("phase") == "initialization":
+        severity = ErrorSeverity.CRITICAL
     return category, severity
 
 
 def is_recoverable(
     exception: Exception,
-    severity: Any,
+    severity: ErrorSeverity,
     context: dict[str, Any],
-    *,
-    error_severity_critical: Any,
 ) -> bool:
-    if severity == error_severity_critical:
+    if severity == ErrorSeverity.CRITICAL:
         return False
     if isinstance(exception, MemoryError):
         return bool(context.get("memory_cleanup_available", True))
@@ -67,30 +56,23 @@ def is_recoverable(
 
 def suggest_action(
     exception: Exception,
-    category: Any,
-    severity: Any,
-    *,
-    error_category_memory: Any,
-    error_category_file_access: Any,
-    error_category_r2pipe: Any,
-    error_category_dependency: Any,
-    error_category_input_validation: Any,
-    error_severity_critical: Any,
+    category: ErrorCategory,
+    severity: ErrorSeverity,
 ) -> str:
-    if category == error_category_memory:
-        if severity == error_severity_critical:
+    if category == ErrorCategory.MEMORY:
+        if severity == ErrorSeverity.CRITICAL:
             return "Restart analysis with smaller file or increase memory limits"
         return "Trigger garbage collection and continue with reduced analysis"
-    if category == error_category_file_access:
+    if category == ErrorCategory.FILE_ACCESS:
         if isinstance(exception, FileNotFoundError):
             return "Skip this component and continue analysis"
         if isinstance(exception, PermissionError):
             return "Check file permissions or run with appropriate privileges"
-    if category == error_category_r2pipe:
+    if category == ErrorCategory.R2PIPE:
         return "Retry command with fallback options or skip this analysis"
-    if category == error_category_dependency:
+    if category == ErrorCategory.DEPENDENCY:
         return "Install missing dependency or disable related functionality"
-    if category == error_category_input_validation:
+    if category == ErrorCategory.INPUT_VALIDATION:
         return "Validate input and retry with corrected parameters"
     return "Log error and continue with remaining analysis"
 

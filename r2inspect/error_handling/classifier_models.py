@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import threading
 import time
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -32,26 +33,18 @@ class ErrorCategory(Enum):
     UNKNOWN = "unknown"
 
 
+@dataclass(eq=False)
 class ErrorInfo:
     """Immutable-ish record describing one classified error."""
 
-    def __init__(
-        self,
-        exception: Exception,
-        severity: ErrorSeverity,
-        category: ErrorCategory,
-        context: dict[str, Any] | None = None,
-        recoverable: bool = True,
-        suggested_action: str | None = None,
-    ):
-        self.exception = exception
-        self.severity = severity
-        self.category = category
-        self.context = context or {}
-        self.recoverable = recoverable
-        self.suggested_action = suggested_action
-        self.timestamp = time.time()
-        self.thread_id = threading.get_ident()
+    exception: Exception
+    severity: ErrorSeverity
+    category: ErrorCategory
+    context: dict[str, Any] = field(default_factory=dict)
+    recoverable: bool = True
+    suggested_action: str | None = None
+    timestamp: float = field(default_factory=time.time)
+    thread_id: int = field(default_factory=threading.get_ident)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a serialization-friendly representation."""
