@@ -19,13 +19,11 @@ from __future__ import annotations
 import logging
 import os
 import platform
-import struct
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import psutil
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Utility
@@ -76,7 +74,7 @@ def test_setup_logger_reinit_on_closed_file_handler(tmp_path: Path) -> None:
         # _handler_is_closed(handler) returns True on the next setup_logger call.
         closed_stream = io.StringIO()
         closed_stream.close()  # closed_stream.closed == True
-        lg.handlers[0].stream = closed_stream  # type: ignore[attr-defined]
+        cast(logging.StreamHandler, lg.handlers[0]).stream = closed_stream
 
         # Re-calling setup_logger should detect the closed stream (lines 34-39).
         lg2 = setup_logger(name, level=logging.DEBUG, thread_safe=False)
@@ -381,7 +379,6 @@ def test_overlay_analyzer_pe_end_not_castable_to_int() -> None:
 def test_overlay_analyzer_hash_calculation_error() -> None:
     """Lines 186-188: exception in bytes() for hash sets overlay_hashes={}."""
     from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
-    from r2inspect.infrastructure.hashing import calculate_hashes_for_bytes
 
     class _BadHashOverlay(OverlayAnalyzer):
         def _get_file_size(self) -> int:
