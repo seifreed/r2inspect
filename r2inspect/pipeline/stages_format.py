@@ -74,54 +74,63 @@ class FileInfoStage(AnalysisStage):
         self.magic_detector_provider = magic_detector_provider
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
-        info: dict[str, Any] = {}
-
-        info["size"] = self.file_path.stat().st_size
-        info["path"] = str(self.file_path.absolute())
-        info["name"] = self.file_path.name
-
-        detectors = self._get_magic_detectors()
-        if detectors is not None:
-            mime_magic, desc_magic = detectors
-            resolved_path = _resolved_path(self.filename)
-            info["mime_type"] = mime_magic.from_file(resolved_path)
-            info["file_type"] = desc_magic.from_file(resolved_path)
-        else:
-            info["mime_type"] = None
-            info["file_type"] = None
+        info: dict[str, Any] = {
+            "size": self.file_path.stat().st_size,
+            "path": str(self.file_path.absolute()),
+            "name": self.file_path.name,
+        }
+        info.update(self._magic_info())
 
         enhanced_detection = self.file_type_detector(self.filename)
         info["enhanced_detection"] = enhanced_detection
+        info.update(self._enhanced_detection_info(enhanced_detection))
 
-        if enhanced_detection["confidence"] > 0.7:
-            info["precise_format"] = enhanced_detection["file_format"]
-            info["format_category"] = enhanced_detection["format_category"]
-            info["threat_level"] = "High" if enhanced_detection["potential_threat"] else "Low"
-            if enhanced_detection["architecture"] != "Unknown":
-                info["detected_architecture"] = enhanced_detection["architecture"]
-            if enhanced_detection["bits"] != "Unknown":
-                info["detected_bits"] = enhanced_detection["bits"]
-
-        hashes = self.hash_calculator(self.filename)
-        info.update(hashes)
-
-        info_cmd = self.adapter.get_file_info()
-        if info_cmd and "bin" in info_cmd:
-            bin_info = info_cmd["bin"]
-            arch = bin_info.get("arch", "Unknown")
-            bits = bin_info.get("bits", "Unknown")
-
-            if arch == "x86" and bits == 64:
-                arch = "x86-64"
-            elif arch == "x86" and bits == 32:
-                arch = "x86"
-
-            info["architecture"] = arch
-            info["bits"] = bits
-            info["endian"] = bin_info.get("endian", "Unknown")
+        info.update(self.hash_calculator(self.filename))
+        info.update(self._bin_arch_info(self.adapter.get_file_info()))
 
         context["results"]["file_info"] = info
         return {"file_info": info}
+
+    def _magic_info(self) -> dict[str, Any]:
+        detectors = self._get_magic_detectors()
+        if detectors is None:
+            return {"mime_type": None, "file_type": None}
+        mime_magic, desc_magic = detectors
+        resolved_path = _resolved_path(self.filename)
+        return {
+            "mime_type": mime_magic.from_file(resolved_path),
+            "file_type": desc_magic.from_file(resolved_path),
+        }
+
+    @staticmethod
+    def _enhanced_detection_info(enhanced_detection: dict[str, Any]) -> dict[str, Any]:
+        if enhanced_detection["confidence"] <= 0.7:
+            return {}
+        info: dict[str, Any] = {
+            "precise_format": enhanced_detection["file_format"],
+            "format_category": enhanced_detection["format_category"],
+            "threat_level": "High" if enhanced_detection["potential_threat"] else "Low",
+        }
+        if enhanced_detection["architecture"] != "Unknown":
+            info["detected_architecture"] = enhanced_detection["architecture"]
+        if enhanced_detection["bits"] != "Unknown":
+            info["detected_bits"] = enhanced_detection["bits"]
+        return info
+
+    @staticmethod
+    def _bin_arch_info(info_cmd: dict[str, Any] | None) -> dict[str, Any]:
+        if not (info_cmd and "bin" in info_cmd):
+            return {}
+        bin_info = info_cmd["bin"]
+        arch = bin_info.get("arch", "Unknown")
+        bits = bin_info.get("bits", "Unknown")
+        if arch == "x86" and bits == 64:
+            arch = "x86-64"
+        return {
+            "architecture": arch,
+            "bits": bits,
+            "endian": bin_info.get("endian", "Unknown"),
+        }
 
     def _get_magic_detectors(self) -> tuple[Any, Any] | None:
         global _magic_initialized, _magic_detectors
