@@ -11,10 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from r2inspect.modules.export_analyzer import ExportAnalyzer
-
 
 # ---------------------------------------------------------------------------
 # Stub adapter -- routes through real r2_command_dispatch logic
@@ -254,13 +251,12 @@ def test_analyze_export_with_size():
 
 def test_analyze_export_exception():
     """When _get_export_characteristics raises, _analyze_export catches and records error."""
-    analyzer = _make(raise_on_func_info=True)
 
-    # Force characteristics to raise by replacing the method
-    def _raise(exp: Any) -> dict[str, Any]:
-        raise RuntimeError("Analysis failed")
+    class _CharRaisingAnalyzer(ExportAnalyzer):
+        def _get_export_characteristics(self, exp: Any) -> dict[str, Any]:
+            raise RuntimeError("Analysis failed")
 
-    analyzer._get_export_characteristics = _raise  # type: ignore[method-assign]
+    analyzer = _CharRaisingAnalyzer(adapter=StubAdapter(raise_on_func_info=True), config=None)
     export = {"name": "TestFunc", "vaddr": 4096, "ordinal": 1}
     result = analyzer._analyze_export(export)
 

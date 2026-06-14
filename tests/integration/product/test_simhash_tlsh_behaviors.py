@@ -21,7 +21,12 @@ def test_simhash_uses_opcode_fallback_when_mnemonic_is_missing() -> None:
 
 
 def test_tlsh_returns_missing_section_hashes_as_none_on_read_errors() -> None:
-    analyzer = TLSHAnalyzer(adapter=Adapter(), filename="/tmp/f.bin")
-    analyzer._get_sections = lambda: [{"name": ".text", "vaddr": 4096, "size": 16}]  # type: ignore[method-assign]
-    analyzer._read_bytes_hex = lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("read"))  # type: ignore[method-assign]
+    class _ReadErrorTLSH(TLSHAnalyzer):
+        def _get_sections(self):
+            return [{"name": ".text", "vaddr": 4096, "size": 16}]
+
+        def _read_bytes_hex(self, *_a, **_k):
+            raise RuntimeError("read")
+
+    analyzer = _ReadErrorTLSH(adapter=Adapter(), filename="/tmp/f.bin")
     assert analyzer._calculate_section_tlsh()[".text"] is None

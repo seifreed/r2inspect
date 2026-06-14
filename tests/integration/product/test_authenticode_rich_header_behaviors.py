@@ -36,8 +36,15 @@ def test_authenticode_security_directory_detection_behaves_consistently() -> Non
 
 
 def test_rich_header_combines_rich_and_dans_offsets_when_direct_search_fails() -> None:
-    analyzer = RichHeaderAnalyzer(adapter=object(), filepath="/tmp/a.bin", r2_instance=object())
-    analyzer._direct_file_rich_search = lambda: None  # type: ignore[attr-defined]
-    analyzer._collect_rich_dans_offsets = lambda: ([{"offset": 1}], [{"offset": 2}])  # type: ignore[attr-defined]
-    analyzer._try_rich_dans_combinations = lambda r, d: {"entries": [], "xor_key": 1}  # type: ignore[attr-defined]
+    class _CombiningRichHeader(RichHeaderAnalyzer):
+        def _direct_file_rich_search(self):
+            return None
+
+        def _collect_rich_dans_offsets(self):
+            return ([{"offset": 1}], [{"offset": 2}])
+
+        def _try_rich_dans_combinations(self, r, d):
+            return {"entries": [], "xor_key": 1}
+
+    analyzer = _CombiningRichHeader(adapter=object(), filepath="/tmp/a.bin", r2_instance=object())
     assert analyzer._extract_rich_header() == {"entries": [], "xor_key": 1}
