@@ -15,6 +15,37 @@ def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
     return None
 
 
+def _validate_security_dir(
+    security_dir: dict[str, Any], result: dict[str, Any]
+) -> tuple[int, int] | None:
+    cert_offset = security_dir.get("paddr", 0)
+    cert_size = security_dir.get("size", 0)
+    if not isinstance(cert_offset, int) or not isinstance(cert_size, int):
+        result["errors"].append("Invalid security directory types")
+        return None
+    if cert_offset <= 0 or cert_size <= 0 or cert_offset > 0xFFFFFFFF or cert_size > 0xFFFFFFFF:
+        result["errors"].append("Invalid security directory")
+        return None
+    return cert_offset, cert_size
+
+
+def _augment_pkcs7(
+    cert_info: dict[str, Any],
+    *,
+    cert_type: int,
+    cert_length: int,
+    cert_offset: int,
+    parse_pkcs7_fn: Any,
+) -> None:
+    if cert_type != 0x0002:
+        return
+    cert_info["format"] = "PKCS#7"
+    if cert_length >= 8:
+        pkcs7_info = parse_pkcs7_fn(cert_offset + 8, cert_length - 8)
+        if pkcs7_info:
+            cert_info.update(pkcs7_info)
+
+
 def read_win_certificate(
     *,
     cmdj: Any,
@@ -24,14 +55,10 @@ def read_win_certificate(
     get_cert_type_name_fn: Any,
     parse_pkcs7_fn: Any,
 ) -> dict[str, Any] | None:
-    cert_offset = security_dir.get("paddr", 0)
-    cert_size = security_dir.get("size", 0)
-    if not isinstance(cert_offset, int) or not isinstance(cert_size, int):
-        result["errors"].append("Invalid security directory types")
+    validated = _validate_security_dir(security_dir, result)
+    if validated is None:
         return None
-    if cert_offset <= 0 or cert_size <= 0 or cert_offset > 0xFFFFFFFF or cert_size > 0xFFFFFFFF:
-        result["errors"].append("Invalid security directory")
-        return None
+    cert_offset, cert_size = validated
 
     result["signature_offset"] = cert_offset
     result["signature_size"] = cert_size
@@ -46,14 +73,13 @@ def read_win_certificate(
         "type": get_cert_type_name_fn(cert_type),
         "type_value": hex(cert_type),
     }
-
-    if cert_type == 0x0002:
-        cert_info["format"] = "PKCS#7"
-        if cert_length >= 8:
-            pkcs7_info = parse_pkcs7_fn(cert_offset + 8, cert_length - 8)
-            if pkcs7_info:
-                cert_info.update(pkcs7_info)
-
+    _augment_pkcs7(
+        cert_info,
+        cert_type=cert_type,
+        cert_length=cert_length,
+        cert_offset=cert_offset,
+        parse_pkcs7_fn=parse_pkcs7_fn,
+    )
     return cert_info
 
 
