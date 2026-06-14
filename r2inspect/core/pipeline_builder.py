@@ -26,7 +26,6 @@ from ..pipeline_composition import (
     default_pipeline_runtime_dependencies,
 )
 from . import pipeline_stage_specs as _stage_specs
-from .pipeline_builder_runtime import apply_runtime_dependencies as _apply_runtime_dependencies
 
 logger = get_logger(__name__)
 
@@ -50,7 +49,10 @@ class PipelineBuilder:
         self.filename = filename
         self.magic_detector_provider = magic_detector_provider
         deps = runtime_dependencies or default_pipeline_runtime_dependencies()
-        _apply_runtime_dependencies(self, deps)
+        self.analyzer_factory = deps.analyzer_factory
+        self.hash_calculator = deps.hash_calculator
+        self.file_type_detector = deps.file_type_detector
+        self.result_aggregator_factory = deps.result_aggregator_factory
 
     def _pipeline_max_workers(self) -> int:
         return int(self.config.typed_config.pipeline.max_workers)
