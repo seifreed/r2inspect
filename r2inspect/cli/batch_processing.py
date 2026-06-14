@@ -50,6 +50,8 @@ from .batch_output import (
 )
 from . import batch_discovery_runtime as _batch_discovery_runtime
 from . import batch_processing_support as _support
+from .batch_processing_runtime import BatchRunCollaborators as _BatchRunCollaborators
+from .batch_processing_runtime import BatchRunRequest as _BatchRunRequest
 from .batch_processing_runtime import run_batch_analysis as _run_batch_analysis_impl
 from .batch_service_runtime import (
     build_batch_dependencies as _build_batch_dependencies,
@@ -224,7 +226,7 @@ def run_batch_analysis(
         setup_rate_limiter=setup_rate_limiter,
         process_files_parallel=process_files_parallel,
     )
-    _run_batch_analysis_impl(
+    request = _BatchRunRequest(
         batch_dir=batch_dir,
         options=options,
         output_json=output_json,
@@ -237,6 +239,8 @@ def run_batch_analysis(
         auto_detect=auto_detect,
         threads=threads,
         quiet=quiet,
+    )
+    collaborators = _BatchRunCollaborators(
         console=console,
         configure_batch_logging=configure_batch_logging,
         setup_batch_output_directory=setup_batch_output_directory,
@@ -248,6 +252,7 @@ def run_batch_analysis(
         display_batch_results=display_batch_results,
         looks_like_batch_result=_looks_like_batch_result,
     )
+    _run_batch_analysis_impl(request, collaborators)
 
 
 __all__ = [

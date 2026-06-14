@@ -3,12 +3,47 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from typing import Any
 
 from ..application.batch_models import BatchDependencies
 from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class BatchRunRequest:
+    """User-facing parameters for a single batch analysis run."""
+
+    batch_dir: str
+    options: dict[str, Any]
+    output_json: bool
+    output_csv: bool
+    output_dir: str | None
+    recursive: bool
+    extensions: str | None
+    verbose: bool
+    config_obj: Any
+    auto_detect: bool
+    threads: int
+    quiet: bool
+
+
+@dataclass(frozen=True)
+class BatchRunCollaborators:
+    """Injected CLI collaborators a batch run delegates to."""
+
+    console: Any
+    configure_batch_logging: Any
+    setup_batch_output_directory: Any
+    find_files_to_process: Any
+    setup_rate_limiter: Any
+    batch_service: Any
+    create_batch_summary: Any
+    display_no_files_message: Any
+    display_batch_results: Any
+    looks_like_batch_result: Any
 
 
 def _configure_logging(verbose: bool, quiet: bool, configure_batch_logging: Any) -> None:
@@ -41,78 +76,58 @@ def _display_run_header(console: Any, files_count: int, threads: int, quiet: boo
         console.print(f"[blue]Using {threads} parallel threads[/blue]")
 
 
-def run_batch_analysis(
-    *,
-    batch_dir: str,
-    options: dict[str, Any],
-    output_json: bool,
-    output_csv: bool,
-    output_dir: str | None,
-    recursive: bool,
-    extensions: str | None,
-    verbose: bool,
-    config_obj: Any,
-    auto_detect: bool,
-    threads: int,
-    quiet: bool,
-    console: Any,
-    configure_batch_logging: Any,
-    setup_batch_output_directory: Any,
-    find_files_to_process: Any,
-    setup_rate_limiter: Any,
-    batch_service: Any,
-    create_batch_summary: Any,
-    display_no_files_message: Any,
-    display_batch_results: Any,
-    looks_like_batch_result: Any,
-) -> None:
+def run_batch_analysis(request: BatchRunRequest, collaborators: BatchRunCollaborators) -> None:
     """Orchestrate a single batch analysis run.
 
     Configures logging, invokes the batch service, and renders
     the summary output to the console.
     """
-    _configure_logging(verbose, quiet, configure_batch_logging)
+    _configure_logging(request.verbose, request.quiet, collaborators.configure_batch_logging)
 
-    output_path = setup_batch_output_directory(output_dir, output_json, output_csv)
-    deps = _build_deps(find_files_to_process, setup_rate_limiter)
+    output_path = collaborators.setup_batch_output_directory(
+        request.output_dir, request.output_json, request.output_csv
+    )
+    deps = _build_deps(collaborators.find_files_to_process, collaborators.setup_rate_limiter)
 
-    batch_result = batch_service.run_batch_analysis(
-        batch_dir=batch_dir,
-        options=options,
-        recursive=recursive,
-        extensions=extensions,
-        verbose=verbose,
-        config_obj=config_obj,
-        auto_detect=auto_detect,
-        threads=threads,
+    batch_result = collaborators.batch_service.run_batch_analysis(
+        batch_dir=request.batch_dir,
+        options=request.options,
+        recursive=request.recursive,
+        extensions=request.extensions,
+        verbose=request.verbose,
+        config_obj=request.config_obj,
+        auto_detect=request.auto_detect,
+        threads=request.threads,
         output_path=output_path,
         deps=deps,
     )
 
     if batch_result is None:
-        display_no_files_message(auto_detect, extensions)
+        collaborators.display_no_files_message(request.auto_detect, request.extensions)
         return
-    if not looks_like_batch_result(batch_result):
+    if not collaborators.looks_like_batch_result(batch_result):
         logger.warning("Batch analysis returned invalid result object")
         return
 
-    _display_run_header(console, len(batch_result.files_to_process), threads, quiet)
+    _display_run_header(
+        collaborators.console, len(batch_result.files_to_process), request.threads, request.quiet
+    )
 
-    rate_limiter = setup_rate_limiter(threads, verbose)
+    rate_limiter = collaborators.setup_rate_limiter(request.threads, request.verbose)
 
-    output_filename = create_batch_summary(
+    output_filename = collaborators.create_batch_summary(
         batch_result.all_results,
         batch_result.failed_files,
         batch_result.output_path,
-        output_json,
-        output_csv,
+        request.output_json,
+        request.output_csv,
     )
-    display_batch_results(
+    collaborators.display_batch_results(
         batch_result.all_results,
         batch_result.failed_files,
         batch_result.elapsed_time,
         batch_result.files_to_process,
         rate_limiter,
-        verbose,
+        request.verbose,
         output_filename,
     )
