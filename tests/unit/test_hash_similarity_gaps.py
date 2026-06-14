@@ -1,36 +1,20 @@
-"""Coverage gap tests for rich_header_analyzer and yara_analyzer.
+"""Coverage gap tests for rich_header_analyzer and yara_rules_support.
 
-No the stdlib mock library / mock objects / patch.  Module-level attribute monkey-patching is used
-where the real execution path cannot be triggered by input alone.  Every monkey-patch
-is restored in a finally block so tests remain isolated.
+No mocks, no monkeypatch: each path is driven by real input or a hand-rolled
+RichHeaderAnalyzer subclass that overrides the extraction hooks under test.
 
 Covers:
-  rich_header_analyzer.py – lines 145-151, 307, 350-355
-  yara_analyzer.py    – lines 415-416
+  rich_header_analyzer.py        – the pefile-absent and r2pipe extraction paths
+  yara_rules_support.py          – the outer except in list_available_rules
 """
 
 from __future__ import annotations
 
-import r2inspect.modules.yara_analyzer as yara_mod
+from pathlib import Path
+
+from r2inspect.infrastructure.logging import get_logger
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
-from r2inspect.modules.yara_analyzer import YaraAnalyzer
-
-# ---------------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------------
-
-
-class _FakeConfig:
-    def __init__(self, path: str) -> None:
-        self._path = path
-
-    def get_yara_rules_path(self) -> str:
-        return self._path
-
-
-class _FakeAdapter:
-    pass
-
+from r2inspect.modules.yara_rules_support import list_available_rules
 
 # ---------------------------------------------------------------------------
 # rich_header_analyzer.py – _extract_rich_header_pefile on a real PE
@@ -124,47 +108,18 @@ def test_extract_rich_header_returns_data_via_r2pipe_path() -> None:
 
 
 # ---------------------------------------------------------------------------
-# yara_analyzer.py – lines 415-416
+# yara_rules_support.list_available_rules – outer exception path
 #
-# Triggered when an unexpected exception escapes the try block inside
-# list_available_rules().  We replace yara_mod.os with a thin facade whose
-# path.isfile() raises, causing the outer except to fire.
+# list_available_rules() wraps its body in a defensive try/except that returns
+# the (empty) accumulator on any unexpected error.  A non-relative glob pattern
+# makes Path.rglob raise NotImplementedError, which the outer except swallows.
+# This exercises that path with a real input — no monkeypatch.
 # ---------------------------------------------------------------------------
 
-_real_os = __import__("os")  # reference to the real os module
 
-
-class _FakeOsPath:
-    @staticmethod
-    def exists(p: str) -> bool:
-        return True  # pass the early-return guard
-
-    @staticmethod
-    def isfile(p: str) -> bool:
-        raise RuntimeError("injected error to trigger lines 415-416")
-
-    @staticmethod
-    def isdir(p: str) -> bool:
-        return _real_os.path.isdir(p)
-
-
-class _FakeOs:
-    path = _FakeOsPath()
-    stat = staticmethod(_real_os.stat)
-
-
-def test_list_available_rules_outer_exception_path(tmp_path: object) -> None:
-    """Lines 415-416: outer except in list_available_rules catches RuntimeError."""
-    rules_dir = tmp_path / "rules"  # type: ignore[operator]
+def test_list_available_rules_outer_exception_returns_empty(tmp_path: Path) -> None:
+    """The outer except returns an empty list when rule discovery raises."""
+    rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
-    config = _FakeConfig(str(rules_dir))
-    analyzer = YaraAnalyzer(_FakeAdapter(), config=config)
-
-    orig_os = yara_mod.os
-    yara_mod.os = _FakeOs()  # type: ignore[assignment]
-    try:
-        result = analyzer.list_available_rules("/tmp")
-        # Exception was swallowed; result is an empty list
-        assert result == []
-    finally:
-        yara_mod.os = orig_os
+    result = list_available_rules(str(rules_dir), ["/abs"], get_logger(__name__))
+    assert result == []
