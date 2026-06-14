@@ -27,6 +27,19 @@ class TelfhashHost(Protocol):
     def _normalize_telfhash_value(self, value: Any) -> str | None: ...
 
 
+def _telfhash_from_result(telfhash_result: Any, analyzer: TelfhashHost) -> tuple[str | None, Any]:
+    """Return (telfhash_value, error_msg) from a telfhash() return value."""
+    if isinstance(telfhash_result, list) and telfhash_result:
+        payload = telfhash_result[0]
+    elif isinstance(telfhash_result, dict):
+        payload = telfhash_result
+    else:
+        return analyzer._normalize_telfhash_value(telfhash_result), None
+    value = analyzer._normalize_telfhash_value(payload.get("telfhash"))
+    error = payload.get("msg") if payload.get("msg") and not value else None
+    return value, error
+
+
 def analyze_symbols(
     analyzer: TelfhashHost, *, telfhash_available: bool, telfhash_fn: Any, logger: logging.Logger
 ) -> dict[str, Any]:
@@ -60,21 +73,10 @@ def analyze_symbols(
             logger.debug(
                 "Telfhash function returned: %s = %s", type(telfhash_result), telfhash_result
             )
-            if isinstance(telfhash_result, list) and telfhash_result:
-                result_dict = telfhash_result[0]
-                results["telfhash"] = analyzer._normalize_telfhash_value(
-                    result_dict.get("telfhash")
-                )
-                if result_dict.get("msg") and not results["telfhash"]:
-                    results["error"] = result_dict.get("msg")
-            elif isinstance(telfhash_result, dict):
-                results["telfhash"] = analyzer._normalize_telfhash_value(
-                    telfhash_result.get("telfhash")
-                )
-                if telfhash_result.get("msg") and not results["telfhash"]:
-                    results["error"] = telfhash_result.get("msg")
-            else:
-                results["telfhash"] = analyzer._normalize_telfhash_value(telfhash_result)
+            value, error = _telfhash_from_result(telfhash_result, analyzer)
+            results["telfhash"] = value
+            if error:
+                results["error"] = error
             logger.debug("Telfhash calculated: %s", results["telfhash"])
         except Exception as exc:
             logger.error("Error calling telfhash function: %s", exc)
@@ -85,35 +87,45 @@ def analyze_symbols(
     return results
 
 
+def _magic_rules_out_elf(file_path: Path) -> bool:
+    """True when the file exists but its first bytes are not (or cannot be read as) ELF magic."""
+    if not file_path.exists():
+        return False
+    try:
+        return file_path.read_bytes()[:4] != b"\x7fELF"
+    except OSError:
+        return True
+
+
+def _format_excludes_elf(info_cmd: Any) -> bool:
+    """True when bin format/class metadata is present and clearly not ELF."""
+    if not isinstance(info_cmd, dict):
+        return False
+    bin_info = info_cmd.get("bin", {})
+    if not isinstance(bin_info, dict):
+        return False
+    format_text = str(bin_info.get("format", "")).lower()
+    class_text = str(bin_info.get("class", "")).lower()
+    return bool(
+        (format_text or class_text) and "elf" not in format_text and "elf" not in class_text
+    )
+
+
 def is_elf_binary(
     analyzer: TelfhashHost, *, logger: logging.Logger, is_elf_file_fn: Any, is_pe_file_fn: Any
 ) -> bool:
     try:
         if analyzer.adapter is None:
             return False
-        file_path = Path(analyzer.filepath)
-        if file_path.exists():
-            try:
-                if file_path.read_bytes()[:4] != b"\x7fELF":
-                    return False
-            except OSError:
-                return False
+        if _magic_rules_out_elf(Path(analyzer.filepath)):
+            return False
         if is_elf_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
             return True
         if is_pe_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
             return False
         info_cmd = analyzer._cmdj("ij", {})
-        if isinstance(info_cmd, dict):
-            bin_info = info_cmd.get("bin", {})
-            if isinstance(bin_info, dict):
-                format_text = str(bin_info.get("format", "")).lower()
-                class_text = str(bin_info.get("class", "")).lower()
-                if (
-                    (format_text or class_text)
-                    and "elf" not in format_text
-                    and "elf" not in class_text
-                ):
-                    return False
+        if _format_excludes_elf(info_cmd):
+            return False
         return bool(analyzer._has_elf_symbols(info_cmd))
     except Exception as exc:
         logger.error("Error checking if file is ELF: %s", exc)
