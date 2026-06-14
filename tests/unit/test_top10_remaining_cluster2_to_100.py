@@ -10,6 +10,7 @@ from r2inspect.cli import batch_workers
 from r2inspect.config import Config
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
+from r2inspect.modules.bindiff_feature_extraction import BinDiffFeatureExtractor
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 from r2inspect.domain.formats import crypto as crypto_domain
 from r2inspect.domain.services import binary_helpers as domain_helpers
@@ -43,20 +44,20 @@ class _RaisingAnalyzeBinDiff(BinDiffAnalyzer):
         raise RuntimeError("boom")
 
 
-class _RecordingBinDiff(BinDiffAnalyzer):
-    """BinDiff double that records the r2-command/entropy hooks (the real
-    cmd_helper sinks) instead of patching the module global."""
+class _RecordingExtractor(BinDiffFeatureExtractor):
+    """Feature-extractor double that records the r2-command/entropy hooks (the
+    real cmd_helper sinks) instead of patching the module global."""
 
     def __init__(self, adapter: Any, filepath: str, entropy_value: str = "") -> None:
         super().__init__(adapter, filepath)
         self.calls: dict[str, bool] = {"analysis_command": False, "entropy": False}
         self._entropy_value = entropy_value
 
-    def _run_analysis_command(self) -> Any:
+    def _run_analysis(self) -> Any:
         self.calls["analysis_command"] = True
         return ""
 
-    def _get_entropy_pattern(self) -> str:
+    def _entropy_pattern(self) -> str:
         self.calls["entropy"] = True
         return self._entropy_value
 
@@ -67,9 +68,9 @@ def test_bindiff_analyzer_remaining_branches() -> None:
     assert compare["similarity_score"] == 0.0
 
     adapter = SimpleNamespace(get_functions=lambda: [])
-    analyzer2 = _RecordingBinDiff(adapter=adapter, filepath="dummy.bin")
-    analyzer2._extract_function_features()
-    assert analyzer2.calls["analysis_command"] is True
+    extractor = _RecordingExtractor(adapter=adapter, filepath="dummy.bin")
+    extractor.extract_functions()
+    assert extractor.calls["analysis_command"] is True
 
     adapter3 = SimpleNamespace(
         analyze_all=lambda: None,
@@ -80,11 +81,11 @@ def test_bindiff_analyzer_remaining_branches() -> None:
     features = analyzer3._extract_function_features()
     assert features["cfg_features"] == []
 
-    analyzer4 = _RecordingBinDiff(
+    byte_extractor = _RecordingExtractor(
         adapter=SimpleNamespace(), filepath="dummy.bin", entropy_value="0.1 0.2"
     )
-    analyzer4._extract_byte_features()
-    assert analyzer4.calls["entropy"] is True
+    byte_extractor.extract_bytes()
+    assert byte_extractor.calls["entropy"] is True
 
 
 def test_batch_workers_remaining_branches(tmp_path) -> None:

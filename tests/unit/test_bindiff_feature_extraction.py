@@ -76,7 +76,6 @@ def test_init():
     analyzer = _make_analyzer("/test/file.exe")
 
     assert analyzer.adapter is not None
-    assert analyzer.r2 is analyzer.adapter
     assert analyzer.filepath == "/test/file.exe"
     assert analyzer.filename == "file.exe"
 

@@ -700,35 +700,3 @@ class TestStringClassification:
 
     def test_is_registry_string(self):
         assert is_registry_string("HKEY_LOCAL_MACHINE\\SOFTWARE") is True
-
-
-class TestBinDiffStaticMethods:
-    """Verify static methods on BinDiffAnalyzer delegate correctly."""
-
-    def test_static_rolling_hash(self):
-        result = BinDiffAnalyzer._calculate_rolling_hash(b"X" * 200)
-        assert isinstance(result, list)
-        assert len(result) > 0
-
-    def test_static_cyclomatic_complexity(self):
-        assert (
-            BinDiffAnalyzer._calculate_cyclomatic_complexity({"blocks": [1, 2], "edges": [[0, 1]]})
-            == 1
-        )
-
-    def test_static_categorize_similarity(self):
-        assert BinDiffAnalyzer._categorize_similarity(0.9) == "Very High"
-
-    def test_static_indicator_methods(self):
-        assert BinDiffAnalyzer._has_crypto_indicators("AES") is True
-        assert BinDiffAnalyzer._has_network_indicators("http") is True
-        assert BinDiffAnalyzer._has_persistence_indicators("autorun") is True
-        assert BinDiffAnalyzer._is_suspicious_api("CreateRemoteThread") is True
-        assert BinDiffAnalyzer._is_crypto_api("CryptEncrypt") is True
-        assert BinDiffAnalyzer._is_network_api("WSAStartup") is True
-
-    def test_static_string_classification(self):
-        assert BinDiffAnalyzer._is_api_string("CreateFile") is True
-        assert BinDiffAnalyzer._is_path_string("C:\\test") is True
-        assert BinDiffAnalyzer._is_url_string("http://x") is True
-        assert BinDiffAnalyzer._is_registry_string("HKEY_LOCAL_MACHINE\\SOFTWARE") is True
