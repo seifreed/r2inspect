@@ -7,6 +7,7 @@ from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy
 from ..abstractions.result_builder import init_result, mark_unavailable
 from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..domain.hashing.simhash_compare import compare_hashes as _compare_hashes_impl
 from ..domain.services.simhash import (
     build_similarity_groups,
     classify_opcode_type,
@@ -16,7 +17,6 @@ from ..domain.services.simhash import (
     interpret_similarity_distance,
 )
 from ..infrastructure.logging import get_logger
-from .simhash_compare_support import compare_hashes as _compare_hashes_impl
 from .simhash_data_access_support import (
     extract_ops_from_disasm as _extract_ops_from_disasm_impl,
     get_functions as _get_functions_impl2,
