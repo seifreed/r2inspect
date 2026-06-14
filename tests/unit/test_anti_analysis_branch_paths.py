@@ -11,7 +11,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe-like backend driven by command maps
 # ---------------------------------------------------------------------------
@@ -163,6 +162,22 @@ class _ErrorStringsAdapter(R2PipeAdapter):
         raise RuntimeError("strings failed")
 
 
+class _SearchTextAdapter(R2PipeAdapter):
+    """Adapter with an injectable search_text for anti-debug branch tests."""
+
+    def __init__(self, base_r2: FakeR2, search_fn: Any) -> None:
+        super().__init__(base_r2)
+        self._search_fn = search_fn
+
+    def search_text(self, pattern: str) -> str:
+        return self._search_fn(pattern)
+
+
+def _search_text_adapter(search_fn: Any) -> R2PipeAdapter:
+    """Full-data adapter whose search_text is driven by *search_fn*."""
+    return _SearchTextAdapter(FakeR2(cmd_map=FULL_CMD_MAP, cmdj_map=FULL_CMDJ_MAP), search_fn)
+
+
 class _ErrorImportsAdapter(R2PipeAdapter):
     """Adapter whose get_imports raises."""
 
@@ -193,9 +208,7 @@ def test_detect_with_full_adapter_returns_complete_result() -> None:
 
 
 def test_detect_anti_debug_with_peb_access() -> None:
-    adapter = _full_adapter()
-    # Add search_text support for PEB access detection
-    adapter.search_text = lambda p: "0x401000\n0x401050" if "fs:[0x30]" in p else ""  # type: ignore[attr-defined]
+    adapter = _search_text_adapter(lambda p: "0x401000\n0x401050" if "fs:[0x30]" in p else "")
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_anti_debug_detailed()
     assert result["detected"] is True
@@ -204,15 +217,16 @@ def test_detect_anti_debug_with_peb_access() -> None:
 
 
 def test_detect_anti_debug_with_int3_count() -> None:
-    adapter = _full_adapter()
     # cc search yields >5 hits -> triggers breakpoint detection
-    adapter.search_text = lambda p: (  # type: ignore[attr-defined]
-        "\n".join([f"0x{i:x}" for i in range(10)])
-        if p == "cc"
-        else (
-            "0x401000\n0x401050"
-            if p == "fs:[0x30]"
-            else ("0x402000\n0x402100\n0x402200" if p == "rdtsc" else "")
+    adapter = _search_text_adapter(
+        lambda p: (
+            "\n".join([f"0x{i:x}" for i in range(10)])
+            if p == "cc"
+            else (
+                "0x401000\n0x401050"
+                if p == "fs:[0x30]"
+                else ("0x402000\n0x402100\n0x402200" if p == "rdtsc" else "")
+            )
         )
     )
     detector = AntiAnalysisDetector(adapter)
@@ -223,11 +237,8 @@ def test_detect_anti_debug_with_int3_count() -> None:
 
 
 def test_detect_anti_debug_int3_below_threshold_not_flagged() -> None:
-    adapter = _full_adapter()
     # cc search yields <=5 hits -> breakpoint detection is not flagged
-    adapter.search_text = lambda p: (  # type: ignore[attr-defined]
-        "0x401000\n0x401050\n0x401100" if p == "cc" else ""
-    )
+    adapter = _search_text_adapter(lambda p: "0x401000\n0x401050\n0x401100" if p == "cc" else "")
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_anti_debug_detailed()
     types = [e["type"] for e in result["evidence"]]
@@ -235,11 +246,12 @@ def test_detect_anti_debug_int3_below_threshold_not_flagged() -> None:
 
 
 def test_detect_anti_debug_with_rdtsc() -> None:
-    adapter = _full_adapter()
-    adapter.search_text = lambda p: (  # type: ignore[attr-defined]
-        "0x402000\n0x402100\n0x402200"
-        if p == "rdtsc"
-        else ("0x401000\n0x401050" if p == "fs:[0x30]" else ("" if p == "cc" else ""))
+    adapter = _search_text_adapter(
+        lambda p: (
+            "0x402000\n0x402100\n0x402200"
+            if p == "rdtsc"
+            else ("0x401000\n0x401050" if p == "fs:[0x30]" else ("" if p == "cc" else ""))
+        )
     )
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_anti_debug_detailed()
@@ -262,8 +274,7 @@ def test_detect_anti_sandbox_with_sandbox_strings() -> None:
 
 
 def test_detect_timing_checks_with_rdtsc() -> None:
-    adapter = _full_adapter()
-    adapter.search_text = lambda p: ("0x402000\n0x402100\n0x402200" if p == "rdtsc" else "")  # type: ignore[attr-defined]
+    adapter = _search_text_adapter(lambda p: "0x402000\n0x402100\n0x402200" if p == "rdtsc" else "")
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_timing_checks_detailed()
     assert result["detected"] is True
@@ -279,8 +290,7 @@ def test_detect_environment_checks_returns_list() -> None:
 
 
 def test_search_opcode_calls_adapter() -> None:
-    adapter = _full_adapter()
-    adapter.search_text = lambda p: "0x402000\n0x402100\n0x402200" if p == "rdtsc" else ""  # type: ignore[attr-defined]
+    adapter = _search_text_adapter(lambda p: "0x402000\n0x402100\n0x402200" if p == "rdtsc" else "")
     detector = AntiAnalysisDetector(adapter)
     result = detector._search_opcode("rdtsc")
     assert "0x402000" in result
