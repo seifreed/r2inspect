@@ -148,9 +148,7 @@ def _handle_search(adapter: Any, command: str) -> Any | None:
     return None
 
 
-def _handle_simple(adapter: Any, base: str, command: str, address: int | None) -> Any | None:
-    if base.startswith("iz~") and hasattr(adapter, "get_strings_filtered"):
-        return adapter.get_strings_filtered(command)
+def _handle_functions(adapter: Any, base: str, address: int | None) -> Any | None:
     if base == "aflj":
         if address is not None and hasattr(adapter, "get_functions_at"):
             return adapter.get_functions_at(address)
@@ -158,6 +156,15 @@ def _handle_simple(adapter: Any, base: str, command: str, address: int | None) -
             return adapter.get_functions()
     if base.startswith("afij") and address is not None and hasattr(adapter, "get_function_info"):
         return adapter.get_function_info(address)
+    return None
+
+
+def _handle_simple(adapter: Any, base: str, command: str, address: int | None) -> Any | None:
+    if base.startswith("iz~") and hasattr(adapter, "get_strings_filtered"):
+        return adapter.get_strings_filtered(command)
+    function_result = _handle_functions(adapter, base, address)
+    if function_result is not None:
+        return function_result
     method_name = _SIMPLE_BASE_CALLS.get(base)
     if method_name and hasattr(adapter, method_name):
         return getattr(adapter, method_name)()
@@ -179,7 +186,7 @@ def _handle_disasm(adapter: Any, base: str, address: int | None) -> Any | None:
 def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
     if address is None:
         return None
-    if base.startswith("p8j") and hasattr(adapter, "read_bytes_list"):
+    if base.startswith(("p8j", "pxj")) and hasattr(adapter, "read_bytes_list"):
         size = _parse_size(base)
         return adapter.read_bytes_list(address, size) if size is not None else None
     if base.startswith("p8") and hasattr(adapter, "read_bytes"):
@@ -188,9 +195,6 @@ def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
             return None
         data = adapter.read_bytes(address, size)
         return data.hex() if data else ""
-    if base.startswith("pxj") and hasattr(adapter, "read_bytes_list"):
-        size = _parse_size(base)
-        return adapter.read_bytes_list(address, size) if size is not None else None
     return None
 
 
