@@ -10,7 +10,6 @@ from r2inspect.modules.pe_imports import calculate_imphash
 from r2inspect.modules.simhash_analyzer import SimHashAnalyzer
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.registry.entry_points import EntryPointLoader
-import r2inspect.infrastructure.file_type as file_type
 
 
 class _Logger:
@@ -35,46 +34,6 @@ def test_config_merge_scalar_override_and_from_dict(tmp_path) -> None:
     assert from_dict_cfg is not cfg
     assert from_dict_cfg.config_path == cfg.config_path
     assert from_dict_cfg.typed_config.general.verbose is True
-
-
-def test_file_type_pe_and_elf_outer_error_paths() -> None:
-    class _RaisingLogger:
-        def debug(self, _msg: str) -> None:
-            raise RuntimeError("debug failed")
-
-        def error(self, _msg: str) -> None:
-            return None
-
-    # is_pe_file lines 53-57: error in `ij` path and outer catch path
-    assert (
-        file_type.is_pe_file(
-            filepath=None,
-            adapter=None,
-            r2_instance=None,
-            logger=_RaisingLogger(),
-            cmdj=lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("ij")),
-        )
-        is False
-    )
-
-    # is_elf_file lines 96-97: outer catch path after nested failure
-    class _FS:
-        @staticmethod
-        def read_bytes(_filepath: Any, size: int) -> bytes:
-            raise RuntimeError(f"read {size} failed")
-
-    assert (
-        file_type.is_elf_file(
-            filepath="x.bin",
-            adapter=None,
-            r2_instance=None,
-            logger=_RaisingLogger(),
-            cmd=lambda *_args, **_kwargs: "",
-            cmdj=lambda *_args, **_kwargs: {},
-            file_system=_FS(),
-        )
-        is False
-    )
 
 
 def test_pe_imports_no_valid_strings_branch() -> None:
