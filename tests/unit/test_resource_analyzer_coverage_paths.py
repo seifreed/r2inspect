@@ -996,14 +996,11 @@ def test_resource_analyzer_analyze_returns_result() -> None:
 
 
 def test_resource_analyzer_get_resource_directory_handles_exception() -> None:
-    # Force _cmdj to raise by giving the analyzer a broken adapter state.
-    # Create normally, then override _cmdj to always raise.
-    analyzer = _make_analyzer()
+    class _CmdjRaisingAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, *_args: object, **_kwargs: object) -> object:
+            raise RuntimeError("forced cmd error")
 
-    def _raise(*_args: object, **_kwargs: object) -> object:
-        raise RuntimeError("forced cmd error")
-
-    analyzer._cmdj = _raise  # type: ignore[method-assign]
+    analyzer = _CmdjRaisingAnalyzer(adapter=R2PipeAdapter(FakeR2()))
     assert analyzer._get_resource_directory() is None
 
 
@@ -1011,13 +1008,12 @@ def test_resource_analyzer_get_resource_directory_handles_exception() -> None:
 
 
 def test_extract_version_info_version_error_branch() -> None:
-    analyzer = _make_analyzer()
+    class _ParseRaisingAnalyzer(ResourceAnalyzer):
+        def _parse_version_info(self, _offset: int, _size: int) -> None:
+            raise RuntimeError("parse failure")
+
+    analyzer = _ParseRaisingAnalyzer(adapter=R2PipeAdapter(FakeR2()))
     result: dict[str, object] = {}
-
-    def _raise(_offset: int, _size: int) -> None:
-        raise RuntimeError("parse failure")
-
-    analyzer._parse_version_info = _raise  # type: ignore[method-assign]
     resources = [{"type_name": "RT_VERSION", "offset": 0x1000, "size": 128}]
     analyzer._extract_version_info(result, resources)
 
@@ -1025,13 +1021,12 @@ def test_extract_version_info_version_error_branch() -> None:
 
 
 def test_extract_version_info_assigns_version_info_and_breaks() -> None:
-    analyzer = _make_analyzer()
+    class _FakeParseAnalyzer(ResourceAnalyzer):
+        def _parse_version_info(self, _offset: int, _size: int) -> dict[str, object]:
+            return {"file_version": "1.2.3.4"}
+
+    analyzer = _FakeParseAnalyzer(adapter=R2PipeAdapter(FakeR2()))
     result: dict[str, object] = {}
-
-    def _fake_parse(_offset: int, _size: int) -> dict[str, object]:
-        return {"file_version": "1.2.3.4"}
-
-    analyzer._parse_version_info = _fake_parse  # type: ignore[method-assign]
     resources = [
         {"type_name": "RT_VERSION", "offset": 0x1000, "size": 128},
         {"type_name": "RT_VERSION", "offset": 0x2000, "size": 128},

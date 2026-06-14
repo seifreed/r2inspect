@@ -52,10 +52,19 @@ def test_string_analyzer_and_ccbhash_fail_safely_on_sparse_inputs(tmp_path) -> N
     assert isinstance(result, dict)
     assert result["available"] is True
 
-    ccbhash = CCBHashAnalyzer(adapter=SimpleNamespace(), filepath=str(sample))
-    ccbhash._extract_functions = lambda: [{"name": "bad", "addr": None}, {"name": "ok", "addr": 0x1000, "size": 8}]  # type: ignore[method-assign]
-    ccbhash._calculate_function_ccbhash = lambda *_args, **_kwargs: "h"  # type: ignore[method-assign]
-    ccbhash._calculate_binary_ccbhash = lambda *_args, **_kwargs: None  # type: ignore[method-assign]
+    class _SparseCCBHash(CCBHashAnalyzer):
+        """CCBHash double: one function lacks an addr and the binary hash is empty."""
+
+        def _extract_functions(self):
+            return [{"name": "bad", "addr": None}, {"name": "ok", "addr": 0x1000, "size": 8}]
+
+        def _calculate_function_ccbhash(self, *_args, **_kwargs):
+            return "h"
+
+        def _calculate_binary_ccbhash(self, *_args, **_kwargs):
+            return None
+
+    ccbhash = _SparseCCBHash(adapter=SimpleNamespace(), filepath=str(sample))
 
     value, method, error = ccbhash._calculate_hash()
     assert value is None
