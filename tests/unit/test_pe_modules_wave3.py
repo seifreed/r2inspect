@@ -10,7 +10,6 @@ from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.section_analyzer import SectionAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Shared adapter helpers
 # ---------------------------------------------------------------------------
@@ -501,16 +500,11 @@ def test_section_analyze_sections_exception() -> None:
 def test_section_analyze_single_section_exception() -> None:
     """_apply_permissions raising causes exception in the try block (lines 99-101)."""
 
-    class _RaisingPermAdapter(SimpleSectionAdapter):
-        pass
+    class _RaisingPermAnalyzer(SectionAnalyzer):
+        def _apply_permissions(self, section: object, analysis: object) -> None:
+            raise RuntimeError("forced permission error")
 
-    analyzer = SectionAnalyzer(adapter=_RaisingPermAdapter())
-
-    # Monkey-patch _apply_permissions to raise inside the try block
-    def _raise(section: object, analysis: object) -> None:
-        raise RuntimeError("forced permission error")
-
-    analyzer._apply_permissions = _raise  # type: ignore[method-assign]
+    analyzer = _RaisingPermAnalyzer(adapter=SimpleSectionAdapter())
     result = analyzer._analyze_single_section(
         {"name": ".text", "vaddr": 0, "vsize": 0, "size": 100, "flags": ""}
     )

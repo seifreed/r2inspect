@@ -72,13 +72,16 @@ def test_rich_header_and_simhash_fail_safely_on_sparse_inputs() -> None:
         assert rich._check_magic_bytes() is True
         assert rich._direct_file_rich_search() is None
 
-        simhash = SimHashAnalyzer(adapter=StubAdapter(strings=[]), filepath="/tmp/f.bin")
+        class _StubAnalyzeSimHash(SimHashAnalyzer):
+            def analyze(self):
+                return {"available": True, "hash_value": 12345}
+
+        simhash = _StubAnalyzeSimHash(adapter=StubAdapter(strings=[]), filepath="/tmp/f.bin")
         extracted = simhash._extract_opcodes_from_ops(
             [{"opcode": "mov eax, ebx"}, {"mnemonic": "ret"}]
         )
         assert "OP:mov" in extracted
 
-        simhash.analyze = lambda: {"available": True, "hash_value": 12345}  # type: ignore[method-assign]
         assert "distance" in simhash.calculate_similarity(54321, hash_type="combined")
     finally:
         os.unlink(path)
