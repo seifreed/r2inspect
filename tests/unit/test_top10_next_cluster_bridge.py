@@ -236,6 +236,8 @@ def test_impfuzzy_analyzer_paths(tmp_path: Path) -> None:
     analyzer2.cmdj_value = []
     analyzer2.adapter = None
     assert analyzer2._extract_imports() == []
+    analyzer2.cmdj_value = "not-a-list-or-dict"
+    assert analyzer2._extract_imports() == []
     analyzer2.cmdj_value = _UNSET
     analyzer2.cmdj_raises = True
     assert analyzer2._extract_imports() == []
