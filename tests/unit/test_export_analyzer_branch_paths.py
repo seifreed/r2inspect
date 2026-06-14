@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from r2inspect.modules.export_analyzer import ExportAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Minimal stub adapter – controls what _cmd_list returns
 # ---------------------------------------------------------------------------
@@ -299,25 +298,25 @@ def test_get_export_statistics_returns_defaults_on_exception():
 
 
 def test_analyze_export_adds_error_when_characteristics_raise():
-    analyzer = _make_analyzer(StubAdapter())
+    class _CharRaisingAnalyzer(ExportAnalyzer):
+        def _get_export_characteristics(self, export):
+            raise RuntimeError("characteristics fail")
 
-    def _raise(_exp):
-        raise RuntimeError("characteristics fail")
-
-    analyzer._get_export_characteristics = _raise  # type: ignore[method-assign]
+    analyzer = _CharRaisingAnalyzer(adapter=StubAdapter(), config=None)
     result = analyzer._analyze_export({"name": "X", "vaddr": 1})
     assert result["name"] == "X"
     assert result["error"] == "characteristics fail"
 
 
 def test_get_export_statistics_sets_total_then_handles_update_error():
-    analyzer = _make_analyzer(StubAdapter())
-    analyzer.get_exports = lambda: [{"name": "A"}]  # type: ignore[method-assign]
+    class _UpdateRaisingAnalyzer(ExportAnalyzer):
+        def get_exports(self):
+            return [{"name": "A"}]
 
-    def _raise(_stats, _exp):
-        raise RuntimeError("update fail")
+        def _update_export_stats(self, stats, export):
+            raise RuntimeError("update fail")
 
-    analyzer._update_export_stats = _raise  # type: ignore[method-assign]
+    analyzer = _UpdateRaisingAnalyzer(adapter=StubAdapter(), config=None)
     stats = analyzer.get_export_statistics()
     assert stats["total_exports"] == 1
     assert stats["export_names"] == []
