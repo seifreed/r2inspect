@@ -161,7 +161,6 @@ def test_file_type_and_stage_support_fall_back_safely(tmp_path: Path) -> None:
             SimpleNamespace(get_info_text=lambda: ""),
             None,
             logger=silent_logger,
-            cmdj=_raise_runtime,
         )
         is False
     )
