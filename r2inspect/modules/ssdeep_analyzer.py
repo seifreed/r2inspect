@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..abstractions.hashing_strategy import HashingStrategy
-from ..infrastructure.file_system import default_file_system
+from ..adapters.file_system import default_file_system
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
 from .ssdeep_runtime_support import (

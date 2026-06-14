@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 
 class FileSystemAdapter:
@@ -38,8 +37,3 @@ class FileSystemAdapter:
 
 
 default_file_system = FileSystemAdapter()
-
-
-__all__ = [
-    "Any",
-]
