@@ -7,7 +7,12 @@ import inspect
 from typing import Any
 
 from ..infrastructure.logging import get_logger
-from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, ResultAggregatorFactoryLike
+from ..interfaces import (
+    AnalyzerBackend,
+    AnalyzerFactoryLike,
+    ConfigLike,
+    ResultAggregatorFactoryLike,
+)
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
@@ -65,7 +70,7 @@ class AnalyzerStage(AnalysisStage):
         name: str,
         analyzer_class: type[Any],
         adapter: AnalyzerBackend,
-        config: Any,
+        config: ConfigLike,
         filename: str,
         analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
         result_key: str | None = None,

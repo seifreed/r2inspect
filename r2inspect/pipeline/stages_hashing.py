@@ -10,6 +10,7 @@ from ..interfaces import (
     AnalyzerBackend,
     AnalyzerFactoryLike,
     AnalyzerRegistryLike,
+    ConfigLike,
     HashingAnalyzerInterface,
 )
 from ..registry.analyzer_registry import AnalyzerCategory
@@ -26,7 +27,7 @@ class HashingStage(AnalysisStage):
         self,
         registry: AnalyzerRegistryLike,
         adapter: AnalyzerBackend,
-        config: Any,
+        config: ConfigLike,
         filename: str,
         analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
     ) -> None:

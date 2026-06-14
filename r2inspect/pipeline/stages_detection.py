@@ -6,7 +6,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, AnalyzerRegistryLike
+from ..interfaces import (
+    AnalyzerBackend,
+    AnalyzerFactoryLike,
+    AnalyzerRegistryLike,
+    ConfigLike,
+)
 from .analysis_pipeline import AnalysisStage
 from .stages_common import default_analyzer_factory
 
@@ -20,7 +25,7 @@ class DetectionStage(AnalysisStage):
         self,
         registry: AnalyzerRegistryLike,
         adapter: AnalyzerBackend,
-        config: Any,
+        config: ConfigLike,
         filename: str,
         options: dict[str, Any],
         analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
