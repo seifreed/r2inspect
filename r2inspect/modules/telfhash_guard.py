@@ -43,6 +43,43 @@ def _resolve_telfhash_timeout() -> float:
     return TELFHASH_TIMEOUT_SECONDS
 
 
+def _elf_header_layout(head: bytes) -> tuple[int, str] | None:
+    """Return (ei_class, struct-endianness) for a parseable ELF header, else None.
+
+    None means telfhash will error/return fast (non-ELF or pyelftools-rejected
+    header), so it is safe to call without looping.
+    """
+    if len(head) < 64 or head[:4] != b"\x7fELF":
+        return None  # not an ELF -> telfhash errors fast, no loop
+    ei_class, ei_data = head[4], head[5]
+    if ei_class not in (1, 2) or ei_data not in (1, 2):
+        return None  # pyelftools rejects -> fast error, no loop
+    return ei_class, "<" if ei_data == 1 else ">"
+
+
+def _program_header_location(head: bytes, ei_class: int, endian: str) -> tuple[int, int, int]:
+    """Return (e_phoff, e_phentsize, e_phnum) for a 32- or 64-bit ELF header."""
+    if ei_class == 2:
+        e_phoff = struct.unpack_from(endian + "Q", head, 0x20)[0]
+        e_phentsize = struct.unpack_from(endian + "H", head, 0x36)[0]
+        e_phnum = struct.unpack_from(endian + "H", head, 0x38)[0]
+    else:
+        e_phoff = struct.unpack_from(endian + "I", head, 0x1C)[0]
+        e_phentsize = struct.unpack_from(endian + "H", head, 0x2A)[0]
+        e_phnum = struct.unpack_from(endian + "H", head, 0x2C)[0]
+    return e_phoff, e_phentsize, e_phnum
+
+
+def _has_pt_load_segment(table: bytes, e_phnum: int, e_phentsize: int, endian: str) -> bool:
+    for i in range(e_phnum):
+        off = i * e_phentsize
+        if off + 4 > len(table):
+            break
+        if struct.unpack_from(endian + "I", table, off)[0] == 1:  # PT_LOAD
+            return True
+    return False
+
+
 def _telfhash_safe_to_call(filepath: str) -> bool:
     """Return False only for inputs that trigger telfhash 0.9.8's hang.
 
@@ -61,33 +98,19 @@ def _telfhash_safe_to_call(filepath: str) -> bool:
     try:
         with open(filepath, "rb") as fh:
             head = fh.read(64)
-            if len(head) < 64 or head[:4] != b"\x7fELF":
-                return True  # not an ELF -> telfhash errors fast, no loop
-            ei_class, ei_data = head[4], head[5]
-            if ei_class not in (1, 2) or ei_data not in (1, 2):
-                return True  # pyelftools rejects -> fast error, no loop
-            endian = "<" if ei_data == 1 else ">"
-            if ei_class == 2:
-                e_phoff = struct.unpack_from(endian + "Q", head, 0x20)[0]
-                e_phentsize = struct.unpack_from(endian + "H", head, 0x36)[0]
-                e_phnum = struct.unpack_from(endian + "H", head, 0x38)[0]
-            else:
-                e_phoff = struct.unpack_from(endian + "I", head, 0x1C)[0]
-                e_phentsize = struct.unpack_from(endian + "H", head, 0x2A)[0]
-                e_phnum = struct.unpack_from(endian + "H", head, 0x2C)[0]
+            layout = _elf_header_layout(head)
+            if layout is None:
+                return True
+            ei_class, endian = layout
+            e_phoff, e_phentsize, e_phnum = _program_header_location(head, ei_class, endian)
             # Valid ELF header with no usable program-header table: the loop
             # never finds PT_LOAD and never terminates.
             if e_phoff == 0 or e_phnum == 0 or e_phentsize < 4:
                 return False
             fh.seek(e_phoff)
             table = fh.read(e_phnum * e_phentsize)
-            for i in range(e_phnum):
-                off = i * e_phentsize
-                if off + 4 > len(table):
-                    break
-                if struct.unpack_from(endian + "I", table, off)[0] == 1:  # PT_LOAD
-                    return True
-            return False  # valid ELF, program headers, but no PT_LOAD -> loops
+            # valid ELF, program headers, but no PT_LOAD -> telfhash loops
+            return _has_pt_load_segment(table, e_phnum, e_phentsize, endian)
     except OSError:
         return True  # cannot read -> not the infinite-loop case
 
