@@ -1,8 +1,8 @@
 """Typed feature extraction for binary diffing.
 
 ``BinDiffFeatureExtractor`` owns the feature-extraction logic that used to
-live in ``bindiff_analysis_support`` as free functions taking
-``analyzer: Any``.  It depends on the segregated
+live in ``bindiff_analysis_support`` as untyped free functions.  It depends
+on the segregated
 :class:`~r2inspect.interfaces.binary_analyzer.BinaryAnalyzerInterface`
 protocol and on the pure domain helpers in
 :mod:`r2inspect.domain.formats.bindiff`, so it never reaches back into a

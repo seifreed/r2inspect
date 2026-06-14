@@ -3,8 +3,8 @@
 Both the import extraction and the detailed-analysis orchestration are
 Template-Methods over the host analyzer's overridable steps (subclasses
 script ``_cmdj`` / ``_extract_imports`` / ``_process_imports`` in tests), so
-they depend on the explicit :class:`ImpfuzzyHost` protocol rather than
-``analyzer: Any``.
+they depend on the explicit :class:`ImpfuzzyHost` protocol rather than an
+untyped host.
 """
 
 from __future__ import annotations
