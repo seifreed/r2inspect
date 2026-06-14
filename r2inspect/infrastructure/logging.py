@@ -19,6 +19,47 @@ def _handler_is_closed(handler: logging.Handler) -> bool:
     return bool(stream is not None and getattr(stream, "closed", False))
 
 
+def _reuse_existing_handlers(logger: logging.Logger, name: str) -> logging.Logger | None:
+    """Return the logger when its handlers are reusable, else clear closed ones and return None."""
+    if not logger.handlers:
+        return None
+    if any(_handler_is_closed(handler) for handler in logger.handlers):
+        for handler in list(logger.handlers):
+            try:
+                handler.close()
+            finally:
+                logger.removeHandler(handler)
+        _loggers_initialized.discard(name)
+        return None
+    _loggers_initialized.add(name)
+    return logger
+
+
+def _build_file_handler(
+    log_dir: Path,
+    *,
+    thread_safe: bool,
+    file_handler_factory: Callable[[], logging.Handler] | None,
+) -> logging.Handler:
+    if file_handler_factory is not None:
+        return file_handler_factory()
+    if thread_safe:
+        return logging.handlers.RotatingFileHandler(
+            log_dir / "r2inspect.log",
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+        )
+    return logging.FileHandler(log_dir / "r2inspect.log")
+
+
+def _standard_formatter(thread_safe: bool) -> logging.Formatter:
+    if thread_safe:
+        return logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - [%(thread)d] - %(message)s"
+        )
+    return logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+
 def setup_logger(
     name: str = "r2inspect",
     level: int = logging.INFO,
@@ -31,17 +72,9 @@ def setup_logger(
         logger = logging.getLogger(name)
         logger.setLevel(level)
 
-        if logger.handlers:
-            if any(_handler_is_closed(handler) for handler in logger.handlers):
-                for handler in list(logger.handlers):
-                    try:
-                        handler.close()
-                    finally:
-                        logger.removeHandler(handler)
-                _loggers_initialized.discard(name)
-            else:
-                _loggers_initialized.add(name)
-                return logger
+        reused = _reuse_existing_handlers(logger, name)
+        if reused is not None:
+            return reused
 
         console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setLevel(level)
@@ -53,28 +86,12 @@ def setup_logger(
             log_dir = Path.home() / ".r2inspect" / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
 
-            if file_handler_factory is not None:
-                file_handler: logging.Handler = file_handler_factory()
-            elif thread_safe:
-                file_handler = logging.handlers.RotatingFileHandler(
-                    log_dir / "r2inspect.log",
-                    maxBytes=10 * 1024 * 1024,
-                    backupCount=5,
-                )
-            else:
-                file_handler = logging.FileHandler(log_dir / "r2inspect.log")
-
+            file_handler = _build_file_handler(
+                log_dir, thread_safe=thread_safe, file_handler_factory=file_handler_factory
+            )
             file_handler.setLevel(logging.DEBUG)
 
-            if thread_safe:
-                formatter = logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - [%(thread)d] - %(message)s"
-                )
-            else:
-                formatter = logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                )
-
+            formatter = _standard_formatter(thread_safe)
             console_handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
             logger.addHandler(console_handler)

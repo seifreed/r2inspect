@@ -1,12 +1,25 @@
 from __future__ import annotations
 
 from r2inspect.modules.pe_imports import (
+    _build_import_strings,
     calculate_imphash,
     compute_imphash,
     fetch_imports,
     group_imports_by_library,
     normalize_library_name,
 )
+
+
+def test_build_import_strings_skips_unknown_libraries_and_decodes_bytes() -> None:
+    imports_by_lib = {
+        "": ["funcA"],  # not a known library name -> skipped
+        "unknown.dll": ["funcB"],  # normalizes to "unknown" -> skipped
+        "kernel32.dll": ["CreateFileW", b"ReadFile", ""],
+    }
+
+    result = _build_import_strings(imports_by_lib, ["ocx", "sys", "dll"])
+
+    assert result == ["kernel32.createfilew", "kernel32.readfile"]
 
 
 class _FakeLogger:

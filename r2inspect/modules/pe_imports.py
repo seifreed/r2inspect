@@ -68,6 +68,29 @@ def compute_imphash(import_strings: list[str]) -> str:
     return hashlib.md5(imphash_string.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
+def _library_import_strings(normalized_lib: str, functions: Any) -> list[str]:
+    strings: list[str] = []
+    for funcname in functions:
+        if not funcname:
+            continue
+        if isinstance(funcname, bytes):
+            funcname = funcname.decode(errors="ignore")
+        strings.append(f"{normalized_lib}.{funcname.lower()}")
+    return strings
+
+
+def _build_import_strings(imports_by_lib: dict[str, Any], extensions: list[str]) -> list[str]:
+    impstrs: list[str] = []
+    for libname, functions in imports_by_lib.items():
+        if not has_known_library_name(libname):
+            continue
+        normalized_lib = normalize_library_name(libname, extensions)
+        if normalized_lib == "unknown":
+            continue
+        impstrs.extend(_library_import_strings(normalized_lib, functions))
+    return impstrs
+
+
 def calculate_imphash(adapter: Any, logger: Any, *, group_fn: Any | None = None) -> str:
     try:
         logger.debug("Calculating imphash using pefile-compatible algorithm...")
@@ -79,25 +102,7 @@ def calculate_imphash(adapter: Any, logger: Any, *, group_fn: Any | None = None)
 
         group = group_fn or group_imports_by_library
         imports_by_lib = group(imports)
-        extensions = ["ocx", "sys", "dll"]
-
-        impstrs: list[str] = []
-        for libname, functions in imports_by_lib.items():
-            if not has_known_library_name(libname):
-                continue
-            normalized_lib = normalize_library_name(libname, extensions)
-            if normalized_lib == "unknown":
-                continue
-
-            for funcname in functions:
-                if not funcname:
-                    continue
-
-                if isinstance(funcname, bytes):
-                    funcname = funcname.decode(errors="ignore")
-
-                impstr = f"{normalized_lib}.{funcname.lower()}"
-                impstrs.append(impstr)
+        impstrs = _build_import_strings(imports_by_lib, ["ocx", "sys", "dll"])
 
         if not impstrs:
             logger.debug("No valid import strings found for imphash")
