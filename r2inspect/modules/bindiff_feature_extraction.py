@@ -43,6 +43,99 @@ from .string_classification import (
 logger = get_logger(__name__)
 
 
+def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "file_type": file_info.get("core", {}).get("format", ""),
+        "architecture": file_info.get("bin", {}).get("arch", ""),
+        "bits": file_info.get("bin", {}).get("bits", 0),
+        "endian": file_info.get("bin", {}).get("endian", ""),
+        "file_size": file_info.get("core", {}).get("size", 0),
+    }
+
+
+def _structural_sections(sections: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "section_count": len(sections),
+        "section_names": sorted([s.get("name", "") for s in sections if s.get("name")]),
+        "section_sizes": [s.get("size", 0) for s in sections],
+        "executable_sections": len([s for s in sections if "x" in s.get("perm", "")]),
+        "writable_sections": len([s for s in sections if "w" in s.get("perm", "")]),
+    }
+
+
+def _structural_imports(imports: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "import_count": len(imports),
+        "imported_dlls": list(
+            {
+                imp.get("libname") or imp.get("library", "")
+                for imp in imports
+                if imp.get("libname") or imp.get("library")
+            }
+        ),
+        "imported_functions": [imp.get("name", "") for imp in imports if imp.get("name")],
+    }
+
+
+def _structural_exports(exports: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "export_count": len(exports),
+        "exported_functions": [exp.get("name", "") for exp in exports if exp.get("name")],
+    }
+
+
+def _cfg_feature(cfg: Any) -> dict[str, Any] | None:
+    if cfg and isinstance(cfg, list) and cfg:
+        cfg_data = cfg[0]
+    elif isinstance(cfg, dict):
+        cfg_data = cfg
+    else:
+        cfg_data = {}
+    if not cfg_data:
+        return None
+    return {
+        "nodes": len(cfg_data.get("blocks", [])),
+        "edges": len(cfg_data.get("edges", [])),
+        "complexity": calculate_cyclomatic_complexity(cfg_data),
+    }
+
+
+_STRING_CLASSIFIERS = (
+    ("api_strings", "API", is_api_string),
+    ("path_strings", "Paths", is_path_string),
+    ("url_strings", "URLs", is_url_string),
+    ("registry_strings", "Registry", is_registry_string),
+)
+
+
+def _string_categories(string_values: list[str]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    categorized: dict[str, int] = {}
+    for field, label, predicate in _STRING_CLASSIFIERS:
+        matched = [s for s in string_values if predicate(s)]
+        result[field] = matched
+        if matched:
+            categorized[label] = len(matched)
+    result["categorized_strings"] = categorized
+    return result
+
+
+def _behavioral_string_indicators(string_values: list[str]) -> dict[str, Any]:
+    return {
+        "crypto_indicators": len([s for s in string_values if has_crypto_indicators(s)]),
+        "network_indicators": len([s for s in string_values if has_network_indicators(s)]),
+        "persistence_indicators": len([s for s in string_values if has_persistence_indicators(s)]),
+    }
+
+
+def _behavioral_import_indicators(import_names: list[str]) -> dict[str, Any]:
+    return {
+        "suspicious_apis": len([api for api in import_names if is_suspicious_api(api)]),
+        "crypto_apis": len([api for api in import_names if is_crypto_api(api)]),
+        "network_apis": len([api for api in import_names if is_network_api(api)]),
+    }
+
+
 class BinDiffFeatureExtractor:
     """Extracts comparison features from a single binary via a typed adapter."""
 
@@ -56,46 +149,30 @@ class BinDiffFeatureExtractor:
         try:
             file_info = self.adapter.get_file_info() if self.adapter else {}
             if file_info:
-                features["file_type"] = file_info.get("core", {}).get("format", "")
-                features["architecture"] = file_info.get("bin", {}).get("arch", "")
-                features["bits"] = file_info.get("bin", {}).get("bits", 0)
-                features["endian"] = file_info.get("bin", {}).get("endian", "")
-                features["file_size"] = file_info.get("core", {}).get("size", 0)
+                features.update(_structural_file_info(file_info))
             sections = self.adapter.get_sections() if self.adapter else []
             if sections:
-                features["section_count"] = len(sections)
-                features["section_names"] = sorted(
-                    [s.get("name", "") for s in sections if s.get("name")]
-                )
-                features["section_sizes"] = [s.get("size", 0) for s in sections]
-                features["executable_sections"] = len(
-                    [s for s in sections if "x" in s.get("perm", "")]
-                )
-                features["writable_sections"] = len(
-                    [s for s in sections if "w" in s.get("perm", "")]
-                )
+                features.update(_structural_sections(sections))
             imports = self.adapter.get_imports() if self.adapter else []
             if imports:
-                features["import_count"] = len(imports)
-                features["imported_dlls"] = list(
-                    {
-                        imp.get("libname") or imp.get("library", "")
-                        for imp in imports
-                        if imp.get("libname") or imp.get("library")
-                    }
-                )
-                features["imported_functions"] = [
-                    imp.get("name", "") for imp in imports if imp.get("name")
-                ]
+                features.update(_structural_imports(imports))
             exports = self.adapter.get_exports() if self.adapter else []
             if exports:
-                features["export_count"] = len(exports)
-                features["exported_functions"] = [
-                    exp.get("name", "") for exp in exports if exp.get("name")
-                ]
+                features.update(_structural_exports(exports))
         except Exception as exc:
             logger.debug("Error extracting structural features: %s", exc)
         return features
+
+    def _collect_cfg_features(self, functions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        cfg_features = []
+        for func in functions[:10]:
+            func_addr = func.get("offset", 0)
+            if func_addr:
+                cfg = self.adapter.get_cfg(func_addr) if self.adapter else {}
+                feature = _cfg_feature(cfg)
+                if feature is not None:
+                    cfg_features.append(feature)
+        return cfg_features
 
     def extract_functions(self) -> dict[str, Any]:
         features: dict[str, Any] = {}
@@ -109,26 +186,7 @@ class BinDiffFeatureExtractor:
                 features["function_count"] = len(functions)
                 features["function_sizes"] = [f.get("size", 0) for f in functions]
                 features["function_names"] = [f.get("name", "") for f in functions if f.get("name")]
-                cfg_features = []
-                for func in functions[:10]:
-                    func_addr = func.get("offset", 0)
-                    if func_addr:
-                        cfg = self.adapter.get_cfg(func_addr) if self.adapter else {}
-                        if cfg and isinstance(cfg, list) and cfg:
-                            cfg_data = cfg[0]
-                        elif isinstance(cfg, dict):
-                            cfg_data = cfg
-                        else:
-                            cfg_data = {}
-                        if cfg_data:
-                            cfg_features.append(
-                                {
-                                    "nodes": len(cfg_data.get("blocks", [])),
-                                    "edges": len(cfg_data.get("edges", [])),
-                                    "complexity": calculate_cyclomatic_complexity(cfg_data),
-                                }
-                            )
-                features["cfg_features"] = cfg_features
+                features["cfg_features"] = self._collect_cfg_features(functions)
         except Exception as exc:
             logger.debug("Error extracting function features: %s", exc)
         return features
@@ -142,23 +200,7 @@ class BinDiffFeatureExtractor:
                 features["total_strings"] = len(string_values)
                 features["unique_strings"] = len(set(string_values))
                 features["string_lengths"] = [len(s) for s in string_values]
-                api_strings = [s for s in string_values if is_api_string(s)]
-                path_strings = [s for s in string_values if is_path_string(s)]
-                url_strings = [s for s in string_values if is_url_string(s)]
-                registry_strings = [s for s in string_values if is_registry_string(s)]
-                features["api_strings"] = api_strings
-                features["path_strings"] = path_strings
-                features["url_strings"] = url_strings
-                features["registry_strings"] = registry_strings
-                features["categorized_strings"] = {}
-                if api_strings:
-                    features["categorized_strings"]["API"] = len(api_strings)
-                if path_strings:
-                    features["categorized_strings"]["Paths"] = len(path_strings)
-                if url_strings:
-                    features["categorized_strings"]["URLs"] = len(url_strings)
-                if registry_strings:
-                    features["categorized_strings"]["Registry"] = len(registry_strings)
+                features.update(_string_categories(string_values))
                 unique_sorted = sorted(set(string_values))
                 features["string_signature"] = hashlib.md5(
                     "|".join(unique_sorted).encode(), usedforsecurity=False
@@ -190,22 +232,10 @@ class BinDiffFeatureExtractor:
             imports = self.adapter.get_imports() if self.adapter else []
             if strings:
                 string_values = [s.get("string", "") for s in strings if s.get("string")]
-                features["crypto_indicators"] = len(
-                    [s for s in string_values if has_crypto_indicators(s)]
-                )
-                features["network_indicators"] = len(
-                    [s for s in string_values if has_network_indicators(s)]
-                )
-                features["persistence_indicators"] = len(
-                    [s for s in string_values if has_persistence_indicators(s)]
-                )
+                features.update(_behavioral_string_indicators(string_values))
             if imports:
                 import_names = [imp.get("name", "") for imp in imports if imp.get("name")]
-                features["suspicious_apis"] = len(
-                    [api for api in import_names if is_suspicious_api(api)]
-                )
-                features["crypto_apis"] = len([api for api in import_names if is_crypto_api(api)])
-                features["network_apis"] = len([api for api in import_names if is_network_api(api)])
+                features.update(_behavioral_import_indicators(import_names))
         except Exception as exc:
             logger.debug("Error extracting behavioral features: %s", exc)
         return features
