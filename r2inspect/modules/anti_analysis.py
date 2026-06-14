@@ -7,6 +7,7 @@ from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
 from .anti_analysis_support import (
     build_anti_analysis_report,
+    empty_anti_analysis_report,
     detect_anti_debug,
     detect_anti_sandbox,
     detect_anti_vm,
@@ -75,22 +76,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
         anti_analysis = _run_detail_detector(
             "anti-analysis detection",
             lambda: build_anti_analysis_report(self),
-            lambda exc: {
-                "anti_debug": False,
-                "anti_vm": False,
-                "anti_sandbox": False,
-                "evasion_techniques": [],
-                "suspicious_apis": [],
-                "timing_checks": False,
-                "environment_checks": [],
-                "detection_details": {
-                    "anti_debug_evidence": [],
-                    "anti_vm_evidence": [],
-                    "anti_sandbox_evidence": [],
-                    "timing_evidence": [],
-                },
-                "error": str(exc),
-            },
+            lambda exc: {**empty_anti_analysis_report(), "error": str(exc)},
         )
         return cast(dict[str, Any], anti_analysis)
 

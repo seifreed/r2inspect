@@ -22,8 +22,9 @@ from .anti_analysis_helpers import (
 )
 
 
-def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
-    anti_analysis: dict[str, Any] = {
+def empty_anti_analysis_report() -> dict[str, Any]:
+    """Return the default anti-analysis report skeleton with no detections."""
+    return {
         "anti_debug": False,
         "anti_vm": False,
         "anti_sandbox": False,
@@ -38,6 +39,10 @@ def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
             "timing_evidence": [],
         },
     }
+
+
+def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
+    anti_analysis = empty_anti_analysis_report()
     debug_result = detector._detect_anti_debug_detailed()
     anti_analysis["anti_debug"] = debug_result["detected"]
     anti_analysis["detection_details"]["anti_debug_evidence"] = debug_result["evidence"]
