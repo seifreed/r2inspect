@@ -13,32 +13,41 @@ from .analysis_pipeline import AnalysisStage
 logger = get_logger(__name__)
 
 
-def default_analyzer_factory(analyzer_class: type[Any], **kwargs: Any) -> Any:
-    """Instantiate analyzers directly for standalone stage callers."""
-    signature = inspect.signature(analyzer_class)
-    parameters = signature.parameters
-    accepts_kwargs = any(
-        param.kind is inspect.Parameter.VAR_KEYWORD for param in parameters.values()
-    )
-
+def _normalize_analyzer_kwargs(
+    parameters: Any, accepts_kwargs: bool, kwargs: dict[str, Any]
+) -> dict[str, Any]:
     if "filename" in kwargs and "filename" not in parameters and "filepath" in parameters:
         kwargs = {**kwargs, "filepath": kwargs["filename"]}
         kwargs.pop("filename", None)
-
     if not accepts_kwargs:
         kwargs = {key: value for key, value in kwargs.items() if key in parameters}
+    return kwargs
 
+
+def _construct_with_filename_fallback(
+    analyzer_class: type[Any], kwargs: dict[str, Any], exc: TypeError
+) -> Any:
+    if "filename" not in kwargs:
+        raise exc
+    fallback_kwargs = dict(kwargs)
+    fallback_kwargs["filepath"] = fallback_kwargs.pop("filename")
+    try:
+        return analyzer_class(**fallback_kwargs)
+    except TypeError:
+        raise exc from None
+
+
+def default_analyzer_factory(analyzer_class: type[Any], **kwargs: Any) -> Any:
+    """Instantiate analyzers directly for standalone stage callers."""
+    parameters = inspect.signature(analyzer_class).parameters
+    accepts_kwargs = any(
+        param.kind is inspect.Parameter.VAR_KEYWORD for param in parameters.values()
+    )
+    kwargs = _normalize_analyzer_kwargs(parameters, accepts_kwargs, kwargs)
     try:
         return analyzer_class(**kwargs)
     except TypeError as exc:
-        if "filename" not in kwargs:
-            raise
-        fallback_kwargs = dict(kwargs)
-        fallback_kwargs["filepath"] = fallback_kwargs.pop("filename")
-        try:
-            return analyzer_class(**fallback_kwargs)
-        except TypeError:
-            raise exc from None
+        return _construct_with_filename_fallback(analyzer_class, kwargs, exc)
 
 
 def default_result_aggregator_factory() -> Any:
