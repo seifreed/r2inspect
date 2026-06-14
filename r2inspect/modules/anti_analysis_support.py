@@ -56,57 +56,79 @@ def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
     return anti_analysis
 
 
-def detect_anti_debug(detector: Any) -> dict[str, Any]:
-    result: dict[str, Any] = {"detected": False, "evidence": []}
+def _anti_debug_import_evidence(detector: Any) -> list[dict[str, Any]]:
     imports = detector._get_imports()
-    if imports:
-        for imp in imports:
-            func_name = imp.get("name", "")
-            if func_name in detector.anti_debug_apis:
-                result["detected"] = True
-                result["evidence"].append(
-                    {
-                        "type": "API Call",
-                        "detail": f"Anti-debug API: {func_name}",
-                        "address": hex(imp.get("plt", 0)),
-                        "library": imp.get("libname") or imp.get("library", "unknown"),
-                    }
-                )
-    peb_checks = detector._search_opcode("fs:[0x30]")
-    if peb_checks and peb_checks.strip():
-        result["detected"] = True
-        addresses = peb_checks.strip().split("\n")
-        result["evidence"].append(
-            {
-                "type": "PEB Access",
-                "detail": f"PEB BeingDebugged flag access at {len(addresses)} locations",
-                "addresses": addresses[:3],
-            }
-        )
-    int3_checks = detector._search_opcode("cc")
-    if int3_checks and int3_checks.strip():
-        addresses = int3_checks.strip().split("\n")
-        if len(addresses) > 5:
-            result["detected"] = True
-            result["evidence"].append(
+    if not imports:
+        return []
+    evidence: list[dict[str, Any]] = []
+    for imp in imports:
+        func_name = imp.get("name", "")
+        if func_name in detector.anti_debug_apis:
+            evidence.append(
                 {
-                    "type": "Breakpoint Detection",
-                    "detail": f"{len(addresses)} INT3 instructions found (possible breakpoint detection)",
-                    "addresses": addresses[:5],
+                    "type": "API Call",
+                    "detail": f"Anti-debug API: {func_name}",
+                    "address": hex(imp.get("plt", 0)),
+                    "library": imp.get("libname") or imp.get("library", "unknown"),
                 }
             )
+    return evidence
+
+
+def _peb_access_evidence(detector: Any) -> list[dict[str, Any]]:
+    peb_checks = detector._search_opcode("fs:[0x30]")
+    if not (peb_checks and peb_checks.strip()):
+        return []
+    addresses = peb_checks.strip().split("\n")
+    return [
+        {
+            "type": "PEB Access",
+            "detail": f"PEB BeingDebugged flag access at {len(addresses)} locations",
+            "addresses": addresses[:3],
+        }
+    ]
+
+
+def _int3_breakpoint_evidence(detector: Any) -> list[dict[str, Any]]:
+    int3_checks = detector._search_opcode("cc")
+    if not (int3_checks and int3_checks.strip()):
+        return []
+    addresses = int3_checks.strip().split("\n")
+    if len(addresses) <= 5:
+        return []
+    return [
+        {
+            "type": "Breakpoint Detection",
+            "detail": f"{len(addresses)} INT3 instructions found (possible breakpoint detection)",
+            "addresses": addresses[:5],
+        }
+    ]
+
+
+def _rdtsc_timing_evidence(detector: Any) -> list[dict[str, Any]]:
     rdtsc_checks = detector._search_opcode("rdtsc")
-    if rdtsc_checks and rdtsc_checks.strip():
-        result["detected"] = True
-        addresses = rdtsc_checks.strip().split("\n")
-        result["evidence"].append(
-            {
-                "type": "Timing Check",
-                "detail": f"RDTSC instruction at {len(addresses)} locations",
-                "addresses": addresses[:3],
-            }
-        )
-    return result
+    if not (rdtsc_checks and rdtsc_checks.strip()):
+        return []
+    addresses = rdtsc_checks.strip().split("\n")
+    return [
+        {
+            "type": "Timing Check",
+            "detail": f"RDTSC instruction at {len(addresses)} locations",
+            "addresses": addresses[:3],
+        }
+    ]
+
+
+def detect_anti_debug(detector: Any) -> dict[str, Any]:
+    evidence: list[dict[str, Any]] = []
+    for evidence_fn in (
+        _anti_debug_import_evidence,
+        _peb_access_evidence,
+        _int3_breakpoint_evidence,
+        _rdtsc_timing_evidence,
+    ):
+        evidence.extend(evidence_fn(detector))
+    return {"detected": bool(evidence), "evidence": evidence}
 
 
 def detect_anti_vm(detector: Any) -> dict[str, Any]:

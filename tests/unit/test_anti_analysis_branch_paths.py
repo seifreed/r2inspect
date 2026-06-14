@@ -222,6 +222,18 @@ def test_detect_anti_debug_with_int3_count() -> None:
     assert "Breakpoint Detection" in types
 
 
+def test_detect_anti_debug_int3_below_threshold_not_flagged() -> None:
+    adapter = _full_adapter()
+    # cc search yields <=5 hits -> breakpoint detection is not flagged
+    adapter.search_text = lambda p: (  # type: ignore[attr-defined]
+        "0x401000\n0x401050\n0x401100" if p == "cc" else ""
+    )
+    detector = AntiAnalysisDetector(adapter)
+    result = detector._detect_anti_debug_detailed()
+    types = [e["type"] for e in result["evidence"]]
+    assert "Breakpoint Detection" not in types
+
+
 def test_detect_anti_debug_with_rdtsc() -> None:
     adapter = _full_adapter()
     adapter.search_text = lambda p: (  # type: ignore[attr-defined]
