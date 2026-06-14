@@ -1,6 +1,7 @@
 """PE resource analyzer."""
 
-from typing import Any
+import logging
+from typing import Any, Protocol
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
@@ -61,7 +62,36 @@ def _normalize_resources(resources: Any) -> list[dict[str, Any]]:
     return [resource for resource in resources if isinstance(resource, dict)]
 
 
-def run_resource_analysis(analyzer: Any, analysis_logger: Any) -> dict[str, Any]:
+class ResourceAnalysisHost(Protocol):
+    """Overridable collaboration contract the resource-analysis workflow depends on."""
+
+    def _init_result_structure(
+        self, additional_fields: dict[str, Any | None] | None = None
+    ) -> dict[str, Any]: ...
+    def _get_resource_directory(self) -> dict[str, Any] | None: ...
+    def _parse_resources(self) -> list[dict[str, Any]]: ...
+    def _analyze_resource_types(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None: ...
+    def _extract_version_info(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None: ...
+    def _extract_manifest(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None: ...
+    def _extract_icons(self, result: dict[str, Any], resources: list[dict[str, Any]]) -> None: ...
+    def _extract_strings(self, result: dict[str, Any], resources: list[dict[str, Any]]) -> None: ...
+    def _calculate_statistics(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None: ...
+    def _check_suspicious_resources(
+        self, result: dict[str, Any], resources: list[dict[str, Any]]
+    ) -> None: ...
+
+
+def run_resource_analysis(
+    analyzer: ResourceAnalysisHost, analysis_logger: logging.Logger
+) -> dict[str, Any]:
     """Run resource analysis through analyzer-owned entrypoints."""
     result: dict[str, Any] = dict(_BASE_RESOURCE_RESULT)
     try:

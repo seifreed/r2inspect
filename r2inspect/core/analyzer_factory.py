@@ -63,7 +63,7 @@ def create_analyzer(
     return analyzer_class()
 
 
-def run_analysis_method(analyzer: Any, method_names: Iterable[str]) -> Any:
+def run_analysis_method(analyzer: object, method_names: Iterable[str]) -> Any:
     """Run the first available analysis method from a list."""
     for method_name in method_names:
         method = getattr(analyzer, method_name, None)

@@ -93,7 +93,7 @@ class AnalyzerStage(AnalysisStage):
             return {self.result_key: {"error": str(e), "success": False}}
 
     @staticmethod
-    def _run_analysis_method(analyzer: Any, method_names: tuple[str, ...]) -> Any:
+    def _run_analysis_method(analyzer: object, method_names: tuple[str, ...]) -> Any:
         for method_name in method_names:
             method = getattr(analyzer, method_name, None)
             if callable(method):
