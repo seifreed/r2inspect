@@ -18,7 +18,7 @@ from .display_base import (
     UNKNOWN_ERROR,
     format_hash_display,
 )
-from .display_sections_common import Results, _get_console
+from .display_sections_common import Results, _get_console, add_group_functions_row
 from .presenter import get_section as _get_section
 
 
@@ -107,19 +107,7 @@ def _add_binbloom_group(table: Table, index: int, group: dict[str, Any]) -> None
     table.add_row(f"Group {index} Size", f"{group_size} functions")
     table.add_row(f"Group {index} Signature", group_sig)
 
-    if not group.get("functions"):
-        return
-
-    sample_funcs = group["functions"][:5]
-    func_display = []
-    for func in sample_funcs:
-        func_name = func if len(func) <= 30 else func[:27] + "..."
-        func_display.append(f"• {func_name}")
-
-    if len(group["functions"]) > 5:
-        func_display.append(f"• ... and {len(group['functions']) - 5} more")
-
-    table.add_row(f"Group {index} Functions", "\n".join(func_display))
+    add_group_functions_row(table, group, index)
 
 
 def _add_binbloom_binary_signature(table: Table, binbloom_info: dict[str, Any]) -> None:

@@ -8,6 +8,7 @@ from typing import Any
 from rich.table import Table
 
 from .display_base import ANALYZED_FUNCTIONS_LABEL, SIMILAR_GROUPS_LABEL, TOTAL_FUNCTIONS_LABEL
+from .display_sections_common import add_group_functions_row
 
 
 def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> None:
@@ -82,19 +83,7 @@ def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any
     table.add_row(f"Group {index} Size", f"{group_size} functions")
     table.add_row(f"Group {index} Hash", hash_display)
 
-    if not group.get("functions"):
-        return
-
-    sample_funcs = group["functions"][:5]
-    func_display = []
-    for func in sample_funcs:
-        func_name = func if len(func) <= 30 else func[:27] + "..."
-        func_display.append(f"• {func_name}")
-
-    if len(group["functions"]) > 5:
-        func_display.append(f"• ... and {len(group['functions']) - 5} more")
-
-    table.add_row(f"Group {index} Functions", "\n".join(func_display))
+    add_group_functions_row(table, group, index)
 
 
 def _add_simhash_top_features(table: Table, feature_stats: dict[str, Any]) -> None:
