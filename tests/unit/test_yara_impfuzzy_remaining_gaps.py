@@ -3,26 +3,18 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
-import stat
-import tempfile
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-import r2inspect.modules.impfuzzy_analyzer as _imp_mod
-import r2inspect.modules.yara_analyzer as _yar_mod
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
 from r2inspect.security.validators import FileValidator
 
-try:
-    import yara as _yara_lib
-
-    YARA_AVAILABLE = True
-except Exception:
-    YARA_AVAILABLE = False
+YARA_AVAILABLE = importlib.util.find_spec("yara") is not None
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -78,19 +70,13 @@ def test_compile_rules_returns_none_on_unexpected_exception(tmp_path: Path) -> N
     rule_file = tmp_path / "test.yar"
     rule_file.write_text(SIMPLE_YARA_RULE)
 
-    analyzer = _make_yara_analyzer(str(tmp_path))
+    class _RaisingCollectYara(YaraAnalyzer):
+        def _collect_rules_sources(self, validator: Any, validated_path: Any) -> Any:
+            raise RuntimeError("injected error for coverage")
 
-    orig = _yar_mod.YaraAnalyzer._collect_rules_sources
-
-    def _raising(self: Any, validator: Any, validated_path: Any) -> Any:
-        raise RuntimeError("injected error for coverage")
-
-    _yar_mod.YaraAnalyzer._collect_rules_sources = _raising  # type: ignore[method-assign]
-    try:
-        result = analyzer._compile_rules(str(rule_file))
-        assert result is None
-    finally:
-        _yar_mod.YaraAnalyzer._collect_rules_sources = orig  # type: ignore[method-assign]
+    analyzer = _RaisingCollectYara(_FakeAdapter(), config=_FakeConfig(str(tmp_path)), filepath=None)
+    result = analyzer._compile_rules(str(rule_file))
+    assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -151,20 +137,15 @@ def test_read_rule_content_returns_none_on_unreadable_file(tmp_path: Path) -> No
 @pytest.mark.skipif(not YARA_AVAILABLE, reason="python-yara not installed")
 def test_validate_rules_catches_exception_from_compile_rules(tmp_path: Path) -> None:
     """validate_rules sets valid=False when _compile_rules raises an exception."""
-    analyzer = _make_yara_analyzer(str(tmp_path))
 
-    orig = _yar_mod.YaraAnalyzer._compile_rules
+    class _RaisingCompileYara(YaraAnalyzer):
+        def _compile_rules(self, path: Any) -> Any:
+            raise RuntimeError("compile exploded")
 
-    def _raising_compile(self: Any, path: Any) -> Any:
-        raise RuntimeError("compile exploded")
-
-    _yar_mod.YaraAnalyzer._compile_rules = _raising_compile  # type: ignore[method-assign]
-    try:
-        result = analyzer.validate_rules(str(tmp_path))
-        assert result["valid"] is False
-        assert any("compile exploded" in e for e in result["errors"])
-    finally:
-        _yar_mod.YaraAnalyzer._compile_rules = orig  # type: ignore[method-assign]
+    analyzer = _RaisingCompileYara(_FakeAdapter(), config=_FakeConfig(str(tmp_path)), filepath=None)
+    result = analyzer.validate_rules(str(tmp_path))
+    assert result["valid"] is False
+    assert any("compile exploded" in e for e in result["errors"])
 
 
 # ---------------------------------------------------------------------------
@@ -181,16 +162,16 @@ def test_calculate_hash_returns_none_when_get_impfuzzy_returns_empty(tmp_path: P
 
     analyzer = _make_impfuzzy_analyzer(_PEAdapter(), str(pe_file))
 
-    orig = _imp_mod.pyimpfuzzy.get_impfuzzy  # type: ignore[attr-defined]
-    _imp_mod.pyimpfuzzy.get_impfuzzy = lambda path: None  # type: ignore[attr-defined]
-    try:
-        hash_val, method, error = analyzer._calculate_hash()
-        assert hash_val is None
-        assert method is None
-        assert error is not None
-        assert "impfuzzy" in error.lower() or "import" in error.lower()
-    finally:
-        _imp_mod.pyimpfuzzy.get_impfuzzy = orig  # type: ignore[attr-defined]
+    class _NoneImpfuzzy:
+        @staticmethod
+        def get_impfuzzy(_path: str) -> None:
+            return None
+
+    hash_val, method, error = analyzer._calculate_hash(pyimpfuzzy_mod=_NoneImpfuzzy())
+    assert hash_val is None
+    assert method is None
+    assert error is not None
+    assert "impfuzzy" in error.lower() or "import" in error.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -210,14 +191,14 @@ def test_analyze_imports_error_when_get_impfuzzy_returns_empty(tmp_path: Path) -
 
     analyzer = _make_impfuzzy_analyzer(_ImportsAdapter(), str(pe_file))
 
-    orig = _imp_mod.pyimpfuzzy.get_impfuzzy  # type: ignore[attr-defined]
-    _imp_mod.pyimpfuzzy.get_impfuzzy = lambda path: ""  # type: ignore[attr-defined]
-    try:
-        result = analyzer.analyze_imports()
-        assert result["available"] is False
-        assert result["error"] == "Failed to calculate impfuzzy hash"
-    finally:
-        _imp_mod.pyimpfuzzy.get_impfuzzy = orig  # type: ignore[attr-defined]
+    class _EmptyImpfuzzy:
+        @staticmethod
+        def get_impfuzzy(_path: str) -> str:
+            return ""
+
+    result = analyzer.analyze_imports(impfuzzy_available=True, pyimpfuzzy_mod=_EmptyImpfuzzy())
+    assert result["available"] is False
+    assert result["error"] == "Failed to calculate impfuzzy hash"
 
 
 # ---------------------------------------------------------------------------
