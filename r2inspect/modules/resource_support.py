@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+from typing import Any, Protocol
 
 from ..domain.services.resource_analysis import (
     build_icon_entries,
@@ -11,6 +12,19 @@ from ..domain.services.resource_analysis import (
     build_suspicious_resources,
     decode_resource_text,
 )
+
+
+class ResourceHost(Protocol):
+    """Overridable collaboration contract the resource helpers depend on."""
+
+    def _cmdj(self, command: str, default: Any | None = None) -> Any: ...
+    def _calculate_entropy(self, data: list[int]) -> float: ...
+    def _parse_version_info(self, offset: int, size: int) -> dict[str, Any] | None: ...
+    def _read_resource_as_string(self, offset: int, size: int) -> str | None: ...
+    def _read_version_info_data(self, offset: int, size: int) -> list[int] | None: ...
+    def _find_vs_signature(self, data: list[int]) -> int: ...
+    def _parse_fixed_file_info(self, data: list[int], sig_pos: int) -> str: ...
+    def _extract_version_strings(self, data: list[int]) -> dict[str, str]: ...
 
 
 def _coerce_resource_int(resource: dict[str, Any], field: str) -> int | None:
@@ -26,10 +40,10 @@ def _resource_debug_name(resource: dict[str, Any]) -> str:
 
 
 def analyze_resource_data(
-    analyzer: Any,
+    analyzer: ResourceHost,
     resource: dict[str, Any],
     *,
-    logger: Any,
+    logger: logging.Logger,
     calculate_hashes_for_bytes: Any,
 ) -> None:
     try:
@@ -60,7 +74,9 @@ def analyze_resource_data(
         )
 
 
-def read_resource_as_string(analyzer: Any, offset: int, size: int, *, logger: Any) -> str | None:
+def read_resource_as_string(
+    analyzer: ResourceHost, offset: int, size: int, *, logger: logging.Logger
+) -> str | None:
     try:
         if offset <= 0 or size <= 0:
             return None
@@ -75,7 +91,11 @@ def read_resource_as_string(analyzer: Any, offset: int, size: int, *, logger: An
 
 
 def extract_version_info(
-    analyzer: Any, result: dict[str, Any], resources: list[dict[str, Any]], *, logger: Any
+    analyzer: ResourceHost,
+    result: dict[str, Any],
+    resources: list[dict[str, Any]],
+    *,
+    logger: logging.Logger,
 ) -> None:
     for res in resources:
         if res.get("type_name") == "RT_VERSION":
@@ -101,7 +121,7 @@ def extract_version_info(
 
 
 def parse_version_info(
-    analyzer: Any, offset: int, size: int, *, logger: Any
+    analyzer: ResourceHost, offset: int, size: int, *, logger: logging.Logger
 ) -> dict[str, Any] | None:
     try:
         if offset == 0 or size < 64:
@@ -131,7 +151,11 @@ def parse_version_info(
 
 
 def extract_manifest(
-    analyzer: Any, result: dict[str, Any], resources: list[dict[str, Any]], *, logger: Any
+    analyzer: ResourceHost,
+    result: dict[str, Any],
+    resources: list[dict[str, Any]],
+    *,
+    logger: logging.Logger,
 ) -> None:
     for res in resources:
         if res.get("type_name") == "RT_MANIFEST":
@@ -159,11 +183,11 @@ def extract_icons(result: dict[str, Any], resources: list[dict[str, Any]]) -> No
 
 
 def extract_strings(
-    analyzer: Any,
+    analyzer: ResourceHost,
     result: dict[str, Any],
     resources: list[dict[str, Any]],
     *,
-    logger: Any,
+    logger: logging.Logger,
     split_null_terminated: Any,
 ) -> None:
     strings: list[str] = []
@@ -194,7 +218,7 @@ def calculate_statistics(result: dict[str, Any], resources: list[dict[str, Any]]
 
 
 def check_suspicious_resources(
-    analyzer: Any, result: dict[str, Any], resources: list[dict[str, Any]]
+    analyzer: ResourceHost, result: dict[str, Any], resources: list[dict[str, Any]]
 ) -> None:
     result["suspicious_resources"] = build_suspicious_resources(
         resources,
