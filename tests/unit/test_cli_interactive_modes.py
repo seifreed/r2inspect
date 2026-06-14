@@ -6,7 +6,7 @@ a FakeInspector stub to exercise interactive mode functions.
 
 from __future__ import annotations
 
-import builtins
+import contextlib
 from io import StringIO
 from typing import Any
 
@@ -18,7 +18,6 @@ from r2inspect.cli.interactive import (
     run_interactive_mode,
     show_strings_only,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -69,20 +68,16 @@ def _with_fake_console(fn):
 
 def _run_with_inputs(inspector: FakeInspector, options: dict[str, Any], inputs: list[str]) -> str:
     """Run interactive mode with canned inputs and return console output."""
-    original_console = interactive_mod.console
     fake_console = Console(file=StringIO(), force_terminal=True)
-    interactive_mod.console = fake_console
-
     cmds_iter = iter(inputs)
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": next(cmds_iter)
-        run_interactive_mode(inspector, options)
-    except StopIteration:
-        pass
-    finally:
-        builtins.input = _orig_input
-        interactive_mod.console = original_console
+
+    with contextlib.suppress(StopIteration):
+        run_interactive_mode(
+            inspector,
+            options,
+            console=fake_console,
+            input_fn=lambda _prompt="": next(cmds_iter),
+        )
 
     return fake_console.file.getvalue()
 
@@ -197,30 +192,24 @@ def test_run_interactive_mode_sections_command():
 def test_run_interactive_mode_eof_error():
     """Test interactive mode with EOF (Ctrl+D)."""
     inspector = FakeInspector()
-    original_console = interactive_mod.console
     fake_console = Console(file=StringIO(), force_terminal=True)
-    interactive_mod.console = fake_console
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": (_ for _ in ()).throw(EOFError())
-        run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
-        interactive_mod.console = original_console
+    run_interactive_mode(
+        inspector,
+        {},
+        console=fake_console,
+        input_fn=lambda _prompt="": (_ for _ in ()).throw(EOFError()),
+    )
 
 
 def test_run_interactive_mode_keyboard_interrupt():
     """Test interactive mode with Ctrl+C."""
     inspector = FakeInspector()
-    original_console = interactive_mod.console
     fake_console = Console(file=StringIO(), force_terminal=True)
-    interactive_mod.console = fake_console
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": (_ for _ in ()).throw(KeyboardInterrupt())
-        run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
-        interactive_mod.console = original_console
+    run_interactive_mode(
+        inspector,
+        {},
+        console=fake_console,
+        input_fn=lambda _prompt="": (_ for _ in ()).throw(KeyboardInterrupt()),
+    )

@@ -6,7 +6,6 @@ and a FakeInspector stub to exercise all code paths.
 
 from __future__ import annotations
 
-import builtins
 import logging
 from io import StringIO
 from typing import Any
@@ -15,7 +14,6 @@ from rich.console import Console
 
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.cli.commands.interactive_command import InteractiveCommand
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -104,12 +102,7 @@ def test_run_interactive_mode_quit():
     cmd = InteractiveCommand(ctx)
     inspector = FakeInspector()
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": "quit"
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(inspector, {}, input_fn=lambda _prompt="": "quit")
 
 
 def test_run_interactive_mode_empty_then_quit():
@@ -119,12 +112,7 @@ def test_run_interactive_mode_empty_then_quit():
     inspector = FakeInspector()
     cmds = iter(["", "quit"])
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": next(cmds)
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(inspector, {}, input_fn=lambda _prompt="": next(cmds))
 
 
 def test_run_interactive_mode_keyboard_interrupt():
@@ -136,12 +124,7 @@ def test_run_interactive_mode_keyboard_interrupt():
     def _raise(_prompt=""):
         raise KeyboardInterrupt()
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = _raise
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(inspector, {}, input_fn=_raise)
 
 
 def test_run_interactive_mode_eof_error():
@@ -153,12 +136,7 @@ def test_run_interactive_mode_eof_error():
     def _raise(_prompt=""):
         raise EOFError()
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = _raise
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(inspector, {}, input_fn=_raise)
 
 
 def test_run_interactive_mode_exception_in_command():
@@ -168,12 +146,7 @@ def test_run_interactive_mode_exception_in_command():
     inspector = FakeInspector()
     cmds = iter(["unknown_kaboom", "quit"])
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": next(cmds)
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(inspector, {}, input_fn=lambda _prompt="": next(cmds))
 
 
 # ---------------------------------------------------------------------------
