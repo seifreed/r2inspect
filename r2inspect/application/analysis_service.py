@@ -14,6 +14,22 @@ from .runtime_support import (
 )
 
 
+def _is_active_metric(value: Any) -> bool:
+    if isinstance(value, int | float):
+        return value > 0
+    if isinstance(value, str):
+        return value.lower() != "closed"
+    return False
+
+
+def _circuit_value_is_active(value: Any) -> bool:
+    if isinstance(value, int | float):
+        return value > 0
+    if isinstance(value, dict):
+        return any(_is_active_metric(nested) for nested in value.values())
+    return False
+
+
 class AnalysisService:
     """Encapsulates analysis execution and statistics enrichment."""
 
@@ -55,17 +71,7 @@ class AnalysisService:
     def has_circuit_breaker_data(circuit_stats: dict[str, Any]) -> bool:
         if not circuit_stats:
             return False
-
-        for _, value in circuit_stats.items():
-            if isinstance(value, int | float) and value > 0:
-                return True
-            if isinstance(value, dict):
-                for nested in value.values():
-                    if isinstance(nested, int | float) and nested > 0:
-                        return True
-                    if isinstance(nested, str) and nested.lower() != "closed":
-                        return True
-        return False
+        return any(_circuit_value_is_active(value) for value in circuit_stats.values())
 
     @staticmethod
     def _should_validate_schemas() -> bool:
