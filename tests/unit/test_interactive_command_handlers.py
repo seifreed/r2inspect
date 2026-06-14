@@ -6,7 +6,6 @@ and a FakeInspector stub.
 
 from __future__ import annotations
 
-import builtins
 import logging
 from io import StringIO
 from typing import Any
@@ -15,7 +14,6 @@ from rich.console import Console
 
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.cli.commands.interactive_command import InteractiveCommand
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -210,12 +208,9 @@ def test_interactive_command_eof_error():
     cmd = InteractiveCommand(ctx)
     inspector = FakeInspector()
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": (_ for _ in ()).throw(EOFError())
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(
+        inspector, {}, input_fn=lambda _prompt="": (_ for _ in ()).throw(EOFError())
+    )
 
 
 def test_interactive_command_keyboard_interrupt():
@@ -224,9 +219,6 @@ def test_interactive_command_keyboard_interrupt():
     cmd = InteractiveCommand(ctx)
     inspector = FakeInspector()
 
-    _orig_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": (_ for _ in ()).throw(KeyboardInterrupt())
-        cmd._run_interactive_mode(inspector, {})
-    finally:
-        builtins.input = _orig_input
+    cmd._run_interactive_mode(
+        inspector, {}, input_fn=lambda _prompt="": (_ for _ in ()).throw(KeyboardInterrupt())
+    )

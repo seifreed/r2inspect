@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Interactive CLI command."""
 
+from collections.abc import Callable
 from typing import Any
 
 from ...application.use_cases import AnalyzeBinaryUseCase
@@ -52,13 +53,20 @@ class InteractiveCommand(Command):
         self,
         inspector: Any,
         options: dict[str, Any],
+        *,
+        input_fn: Callable[[str], str] | None = None,
     ) -> None:
-        """Run the interactive REPL."""
+        """Run the interactive REPL.
+
+        ``input_fn`` defaults to the builtin ``input``; tests inject a reader
+        instead of patching the global.
+        """
         self._display_welcome()
+        read_input = input_fn if input_fn is not None else input
 
         while True:
             try:
-                cmd = input("\nr2inspect> ").strip().lower()
+                cmd = read_input("\nr2inspect> ").strip().lower()
 
                 if self._should_exit(cmd):
                     break

@@ -54,30 +54,15 @@ def test_interactive_mode_keyboard_interrupt() -> None:
     inspector = MockInspector()
     options = {}
 
-    # Create a mock stdin that raises KeyboardInterrupt
-    class InterruptingInput:
-        def readline(self) -> str:
+    call_count = [0]
+
+    def mock_input(_prompt: str) -> str:
+        call_count[0] += 1
+        if call_count[0] == 1:
             raise KeyboardInterrupt()
+        return "quit"
 
-    original_stdin = sys.stdin
-    original_input = __builtins__.get("input")  # type: ignore
-
-    try:
-        call_count = [0]
-
-        def mock_input(_prompt: str) -> str:
-            call_count[0] += 1
-            if call_count[0] == 1:
-                raise KeyboardInterrupt()
-            return "quit"
-
-        sys.stdin = InterruptingInput()  # type: ignore
-        __builtins__["input"] = mock_input  # type: ignore
-        interactive.run_interactive_mode(inspector, options)
-    finally:
-        sys.stdin = original_stdin
-        if original_input is not None:
-            __builtins__["input"] = original_input  # type: ignore
+    interactive.run_interactive_mode(inspector, options, input_fn=mock_input)
 
 
 def test_interactive_mode_eof_error() -> None:
@@ -93,13 +78,7 @@ def test_interactive_mode_eof_error() -> None:
             raise EOFError()
         return "quit"
 
-    original_input = __builtins__.get("input")  # type: ignore
-    try:
-        __builtins__["input"] = mock_input  # type: ignore
-        interactive.run_interactive_mode(inspector, options)
-    finally:
-        if original_input is not None:
-            __builtins__["input"] = original_input  # type: ignore
+    interactive.run_interactive_mode(inspector, options, input_fn=mock_input)
 
 
 def test_interactive_mode_empty_input() -> None:

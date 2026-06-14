@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import io
 import sys
 from pathlib import Path
@@ -260,12 +259,9 @@ def test_interactive_command_flow_and_errors(tmp_path: Path) -> None:
     finally:
         sys.stdin = original_stdin
 
-    original_input = builtins.input
-    try:
-        builtins.input = lambda _prompt="": (_ for _ in ()).throw(EOFError())
-        cmd._run_interactive_mode(_DummyInspector(), {})
-    finally:
-        builtins.input = original_input
+    cmd._run_interactive_mode(
+        _DummyInspector(), {}, input_fn=lambda _prompt="": (_ for _ in ()).throw(EOFError())
+    )
 
     cmd._handle_error(RuntimeError("boom"), verbose=False)
     cmd._handle_error(RuntimeError("boom"), verbose=True)
