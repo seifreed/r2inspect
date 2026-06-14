@@ -26,36 +26,38 @@ def calculate_compiler_score(
     return 0.0
 
 
-def detection_method(compiler: str, score: float) -> str:
-    methods = []
+_COMPILER_METHOD: dict[str, str] = {
+    "MSVC": "Runtime library analysis",
+    "GCC": "Symbol and section analysis",
+    "Clang": "Symbol and section analysis",
+    "DotNet": "CLR metadata analysis",
+    "AutoIt": "AU3 signature and string analysis",
+    "NSIS": "Installer signature analysis",
+    "InnoSetup": "Installer signature analysis",
+    "PyInstaller": "Python runtime detection",
+    "cx_Freeze": "Python runtime detection",
+    "Nim": "Nim runtime and symbol analysis",
+    "Zig": "Modern compiler signature analysis",
+    "Swift": "Modern compiler signature analysis",
+    "TinyCC": "Modern compiler signature analysis",
+    "NodeJS": "Node.js runtime detection",
+    "FASM": "Assembly tool signature",
+}
+
+
+def _confidence_label(score: float) -> str:
     if score > 0.8:
-        methods.append("High confidence - Multiple signatures matched")
-    elif score > 0.6:
-        methods.append("Medium confidence - Some signatures matched")
-    else:
-        methods.append("Low confidence - Few signatures matched")
+        return "High confidence - Multiple signatures matched"
+    if score > 0.6:
+        return "Medium confidence - Some signatures matched"
+    return "Low confidence - Few signatures matched"
 
-    if compiler == "MSVC":
-        methods.append("Runtime library analysis")
-    elif compiler in ["GCC", "Clang"]:
-        methods.append("Symbol and section analysis")
-    elif compiler == "DotNet":
-        methods.append("CLR metadata analysis")
-    elif compiler == "AutoIt":
-        methods.append("AU3 signature and string analysis")
-    elif compiler in ["NSIS", "InnoSetup"]:
-        methods.append("Installer signature analysis")
-    elif compiler in ["PyInstaller", "cx_Freeze"]:
-        methods.append("Python runtime detection")
-    elif compiler == "Nim":
-        methods.append("Nim runtime and symbol analysis")
-    elif compiler in ["Zig", "Swift", "TinyCC"]:
-        methods.append("Modern compiler signature analysis")
-    elif compiler == "NodeJS":
-        methods.append("Node.js runtime detection")
-    elif compiler == "FASM":
-        methods.append("Assembly tool signature")
 
+def detection_method(compiler: str, score: float) -> str:
+    methods = [_confidence_label(score)]
+    compiler_method = _COMPILER_METHOD.get(compiler)
+    if compiler_method is not None:
+        methods.append(compiler_method)
     return " | ".join(methods)
 
 
