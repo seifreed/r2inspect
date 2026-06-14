@@ -10,7 +10,7 @@ import pytest
 from r2inspect.config import Config
 from r2inspect.core import r2_session as r2_session_module
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.core.result_aggregator import ResultAggregator
@@ -345,14 +345,16 @@ def test_inspector_analyze_paths(tmp_path: Path) -> None:
         filename=str(sample),
         config=Config(),
         verbose=True,
-        cleanup_callback=None,
-        adapter=adapter,
-        registry_factory=registry_factory,
-        pipeline_builder_factory=pipeline_builder_factory,
-        config_factory=Config,
-        file_validator_factory=file_validator_factory,
-        result_aggregator_factory=result_aggregator_factory,
-        memory_monitor=memory_monitor,
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=registry_factory,
+            pipeline_builder_factory=pipeline_builder_factory,
+            config_factory=Config,
+            file_validator_factory=file_validator_factory,
+            result_aggregator_factory=result_aggregator_factory,
+            memory_monitor=memory_monitor,
+            cleanup_callback=None,
+        ),
     )
     results = inspector.analyze(progress_callback=lambda _stage: None)
     assert "memory_stats" in results
@@ -365,14 +367,16 @@ def test_inspector_analyze_paths(tmp_path: Path) -> None:
         filename=str(sample),
         config=Config(),
         verbose=True,
-        cleanup_callback=None,
-        adapter=adapter,
-        registry_factory=lambda: _VerboseRegistry(),
-        pipeline_builder_factory=pipeline_builder_factory,
-        config_factory=Config,
-        file_validator_factory=file_validator_factory,
-        result_aggregator_factory=result_aggregator_factory,
-        memory_monitor=memory_monitor,
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=lambda: _VerboseRegistry(),
+            pipeline_builder_factory=pipeline_builder_factory,
+            config_factory=Config,
+            file_validator_factory=file_validator_factory,
+            result_aggregator_factory=result_aggregator_factory,
+            memory_monitor=memory_monitor,
+            cleanup_callback=None,
+        ),
     )
     assert verbose_inspector.analyze()["memory_stats"]["gc_count"] >= 0
 
@@ -385,14 +389,16 @@ def test_inspector_analyze_paths(tmp_path: Path) -> None:
         filename=str(sample),
         config=Config(),
         verbose=False,
-        cleanup_callback=None,
-        adapter=adapter,
-        registry_factory=registry_factory,
-        pipeline_builder_factory=failing_builder,
-        config_factory=Config,
-        file_validator_factory=file_validator_factory,
-        result_aggregator_factory=result_aggregator_factory,
-        memory_monitor=memory_monitor,
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=registry_factory,
+            pipeline_builder_factory=failing_builder,
+            config_factory=Config,
+            file_validator_factory=file_validator_factory,
+            result_aggregator_factory=result_aggregator_factory,
+            memory_monitor=memory_monitor,
+            cleanup_callback=None,
+        ),
     )
     assert inspector_fail.analyze()["error"] == "Memory limit exceeded"
 
@@ -405,14 +411,16 @@ def test_inspector_analyze_paths(tmp_path: Path) -> None:
         filename=str(sample),
         config=Config(),
         verbose=False,
-        cleanup_callback=None,
-        adapter=adapter,
-        registry_factory=registry_factory,
-        pipeline_builder_factory=error_builder,
-        config_factory=Config,
-        file_validator_factory=file_validator_factory,
-        result_aggregator_factory=result_aggregator_factory,
-        memory_monitor=memory_monitor,
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=registry_factory,
+            pipeline_builder_factory=error_builder,
+            config_factory=Config,
+            file_validator_factory=file_validator_factory,
+            result_aggregator_factory=result_aggregator_factory,
+            memory_monitor=memory_monitor,
+            cleanup_callback=None,
+        ),
     )
     assert inspector_error.analyze()["error"] == "boom"
 
@@ -427,14 +435,16 @@ def test_inspector_init_errors(tmp_path: Path) -> None:
             filename=str(sample),
             config=Config(),
             verbose=False,
-            cleanup_callback=None,
-            adapter=object(),
-            registry_factory=lambda: _DummyRegistry(),
-            pipeline_builder_factory=lambda *_args: _DummyPipelineBuilder(_DummyPipeline({})),
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=None,
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=lambda: _DummyRegistry(),
+                pipeline_builder_factory=lambda *_args: _DummyPipelineBuilder(_DummyPipeline({})),
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=None,
+                cleanup_callback=None,
+            ),
         )
 
     with pytest.raises(ValueError):
@@ -442,14 +452,16 @@ def test_inspector_init_errors(tmp_path: Path) -> None:
             filename=str(sample),
             config=None,
             verbose=False,
-            cleanup_callback=None,
-            adapter=object(),
-            registry_factory=lambda: _DummyRegistry(),
-            pipeline_builder_factory=lambda *_args: _DummyPipelineBuilder(_DummyPipeline({})),
-            config_factory=None,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=memory_monitor,
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=lambda: _DummyRegistry(),
+                pipeline_builder_factory=lambda *_args: _DummyPipelineBuilder(_DummyPipeline({})),
+                config_factory=None,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=memory_monitor,
+                cleanup_callback=None,
+            ),
         )
 
     with pytest.raises(ValueError):
@@ -457,14 +469,16 @@ def test_inspector_init_errors(tmp_path: Path) -> None:
             filename=str(sample),
             config=Config(),
             verbose=False,
-            cleanup_callback=None,
-            adapter=None,
-            registry_factory=lambda: _DummyRegistry(),
-            pipeline_builder_factory=lambda *_args: _DummyPipelineBuilder(_DummyPipeline({})),
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=memory_monitor,
+            deps=InspectorDependencies(
+                adapter=None,  # type: ignore[arg-type]
+                registry_factory=lambda: _DummyRegistry(),
+                pipeline_builder_factory=lambda *_args: _DummyPipelineBuilder(_DummyPipeline({})),
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=memory_monitor,
+                cleanup_callback=None,
+            ),
         )
 
     with pytest.raises(ValueError):
@@ -472,14 +486,16 @@ def test_inspector_init_errors(tmp_path: Path) -> None:
             filename=str(sample),
             config=Config(),
             verbose=False,
-            cleanup_callback=None,
-            adapter=object(),
-            registry_factory=lambda: _DummyRegistry(),
-            pipeline_builder_factory=None,
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=memory_monitor,
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=lambda: _DummyRegistry(),
+                pipeline_builder_factory=None,  # type: ignore[arg-type]
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=memory_monitor,
+                cleanup_callback=None,
+            ),
         )
 
 

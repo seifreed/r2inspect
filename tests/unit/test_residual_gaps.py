@@ -16,7 +16,7 @@ import r2inspect.factory as _factory_mod
 import r2inspect.domain.formats.string as _sd_mod
 import r2inspect.core.analyzer_factory as _af_mod
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.pipeline_builder import PipelineBuilder
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.modules.packer_detector import PackerDetector
@@ -289,14 +289,16 @@ def test_inspector_analyze_uses_execute_with_progress_when_callback_provided() -
         filename=str(FIXTURE),
         config=_DummyProgressConfig(),
         verbose=False,
-        cleanup_callback=lambda: None,
-        adapter=_DummyProgressAdapter(),
-        registry_factory=_DummyProgressRegistry,
-        pipeline_builder_factory=lambda a, r, c, f: _DummyProgressPipelineBuilder(a, r, c, f),
-        config_factory=_DummyProgressConfig,
-        file_validator_factory=FileValidator,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=global_memory_monitor,
+        deps=InspectorDependencies(
+            adapter=_DummyProgressAdapter(),
+            registry_factory=_DummyProgressRegistry,
+            pipeline_builder_factory=lambda a, r, c, f: _DummyProgressPipelineBuilder(a, r, c, f),
+            config_factory=_DummyProgressConfig,
+            file_validator_factory=FileValidator,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=global_memory_monitor,
+            cleanup_callback=lambda: None,
+        ),
     )
 
     progress_calls: list[tuple[str, int, int]] = []

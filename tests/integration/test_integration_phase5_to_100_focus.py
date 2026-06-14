@@ -11,7 +11,7 @@ from tests.helpers import env_vars
 from r2inspect.application.analysis_service import AnalysisService
 from r2inspect.cli import validators
 from r2inspect.cli_main import CLIArgs, run_cli
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.domain.analysis_runtime import AnalysisRuntimeStats
 from r2inspect.pipeline.stages_detection import DetectionStage
 from r2inspect.pipeline.stages_security import SecurityStage
@@ -79,13 +79,15 @@ def test_inspector_missing_memory_monitor() -> None:
         R2Inspector(
             filename="sample.bin",
             config=_DummyConfig(),
-            adapter=_DummyAdapter(),
-            file_validator_factory=_DummyValidator,
-            result_aggregator_factory=lambda: {},
-            registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
-            config_factory=lambda: _DummyConfig(),
-            memory_monitor=cast(Any, None),
+            deps=InspectorDependencies(
+                adapter=_DummyAdapter(),
+                file_validator_factory=_DummyValidator,
+                result_aggregator_factory=lambda: {},
+                registry_factory=lambda: {},
+                pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
+                config_factory=lambda: _DummyConfig(),
+                memory_monitor=cast(Any, None),
+            ),
         )
 
 
@@ -95,13 +97,15 @@ def test_inspector_init_missing_config_factory() -> None:
             filename="sample.bin",
             config=None,
             verbose=False,
-            adapter=_DummyAdapter(),
-            config_factory=None,
-            file_validator_factory=_DummyValidator,
-            result_aggregator_factory=lambda: {},
-            registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
-            memory_monitor=_DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=_DummyAdapter(),
+                config_factory=None,
+                file_validator_factory=_DummyValidator,
+                result_aggregator_factory=lambda: {},
+                registry_factory=lambda: {},
+                pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
+                memory_monitor=_DummyMemoryMonitor(),
+            ),
         )
 
 
@@ -110,13 +114,15 @@ def test_inspector_init_missing_adapter() -> None:
         R2Inspector(
             filename="sample.bin",
             config=_DummyConfig(),
-            adapter=None,
-            file_validator_factory=_DummyValidator,
-            result_aggregator_factory=lambda: {},
-            registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
-            config_factory=lambda: _DummyConfig(),
-            memory_monitor=_DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=None,  # type: ignore[arg-type]
+                file_validator_factory=_DummyValidator,
+                result_aggregator_factory=lambda: {},
+                registry_factory=lambda: {},
+                pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
+                config_factory=lambda: _DummyConfig(),
+                memory_monitor=_DummyMemoryMonitor(),
+            ),
         )
 
 
@@ -127,13 +133,15 @@ def test_inspector_init_fails_file_validation(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(file_path),
             config=_DummyConfig(),
-            adapter=_DummyAdapter(),
-            config_factory=lambda: _DummyConfig(),
-            registry_factory=lambda: {},
-            pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
-            file_validator_factory=lambda _: _DummyValidator(valid=False),
-            result_aggregator_factory=lambda: {},
-            memory_monitor=_DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=_DummyAdapter(),
+                config_factory=lambda: _DummyConfig(),
+                registry_factory=lambda: {},
+                pipeline_builder_factory=lambda *args, **kwargs: SimpleNamespace(),
+                file_validator_factory=lambda _: _DummyValidator(valid=False),
+                result_aggregator_factory=lambda: {},
+                memory_monitor=_DummyMemoryMonitor(),
+            ),
         )
 
 
@@ -143,13 +151,15 @@ def test_inspector_analyze_catches_memory_errors() -> None:
     inspector = R2Inspector(
         filename="sample.bin",
         config=_DummyConfig(),
-        adapter=_DummyAdapter(),
-        config_factory=lambda: _DummyConfig(),
-        file_validator_factory=_DummyValidator,
-        result_aggregator_factory=lambda: {},
-        registry_factory=lambda: {},
-        pipeline_builder_factory=lambda *args, **kwargs: sample,
-        memory_monitor=_DummyMemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=_DummyAdapter(),
+            config_factory=lambda: _DummyConfig(),
+            file_validator_factory=_DummyValidator,
+            result_aggregator_factory=lambda: {},
+            registry_factory=lambda: {},
+            pipeline_builder_factory=lambda *args, **kwargs: sample,
+            memory_monitor=_DummyMemoryMonitor(),
+        ),
     )
     result = inspector.analyze()
     assert result["error"] == "Memory limit exceeded"
@@ -162,13 +172,15 @@ def test_inspector_analyze_catches_generic_errors() -> None:
     inspector = R2Inspector(
         filename="sample.bin",
         config=_DummyConfig(),
-        adapter=_DummyAdapter(),
-        config_factory=lambda: _DummyConfig(),
-        file_validator_factory=_DummyValidator,
-        result_aggregator_factory=lambda: {},
-        registry_factory=lambda: {},
-        pipeline_builder_factory=lambda *args, **kwargs: sample,
-        memory_monitor=_DummyMemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=_DummyAdapter(),
+            config_factory=lambda: _DummyConfig(),
+            file_validator_factory=_DummyValidator,
+            result_aggregator_factory=lambda: {},
+            registry_factory=lambda: {},
+            pipeline_builder_factory=lambda *args, **kwargs: sample,
+            memory_monitor=_DummyMemoryMonitor(),
+        ),
     )
     result = inspector.analyze()
     assert result["error"] == "boom"

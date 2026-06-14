@@ -11,7 +11,7 @@ from r2inspect.config import Config
 from r2inspect.core import file_validator as file_validator_module
 from r2inspect.core import r2_session as r2_session_module
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.core.pipeline_builder import PipelineBuilder
 from r2inspect.infrastructure.r2_session import R2Session
@@ -182,14 +182,16 @@ def test_inspector_init_and_analyze_paths(tmp_path: Path) -> None:
         filename=str(sample),
         config=None,
         verbose=True,
-        cleanup_callback=None,
-        adapter=adapter,
-        registry_factory=registry_factory,
-        pipeline_builder_factory=pipeline_builder_factory,
-        config_factory=lambda: _Config(False),
-        file_validator_factory=_validator_factory,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=memory_manager_module.MemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=registry_factory,
+            pipeline_builder_factory=pipeline_builder_factory,
+            config_factory=lambda: _Config(False),
+            file_validator_factory=_validator_factory,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=memory_manager_module.MemoryMonitor(),
+            cleanup_callback=None,
+        ),
     )
     assert inspector.analyze(progress_callback=lambda _stage: None)["ok"] is True
 
@@ -217,14 +219,16 @@ def test_inspector_init_and_analyze_paths(tmp_path: Path) -> None:
             filename=str(sample),
             config=Config(),
             verbose=False,
-            cleanup_callback=None,
-            adapter=adapter,
-            registry_factory=registry_factory,
-            pipeline_builder_factory=pipeline_builder_factory,
-            config_factory=Config,
-            file_validator_factory=lambda _path: _FailValidator(sample),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=memory_manager_module.MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=adapter,
+                registry_factory=registry_factory,
+                pipeline_builder_factory=pipeline_builder_factory,
+                config_factory=Config,
+                file_validator_factory=lambda _path: _FailValidator(sample),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=memory_manager_module.MemoryMonitor(),
+                cleanup_callback=None,
+            ),
         )
 
 
@@ -244,14 +248,16 @@ def test_inspector_missing_factories_and_cleanup(tmp_path: Path) -> None:
             filename=str(sample),
             config=Config(),
             verbose=False,
-            cleanup_callback=None,
-            adapter=adapter,
-            registry_factory=registry_factory,
-            pipeline_builder_factory=pipeline_builder_factory,
-            config_factory=Config,
-            file_validator_factory=None,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=memory_manager_module.MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=adapter,
+                registry_factory=registry_factory,
+                pipeline_builder_factory=pipeline_builder_factory,
+                config_factory=Config,
+                file_validator_factory=None,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=memory_manager_module.MemoryMonitor(),
+                cleanup_callback=None,
+            ),
         )
 
     with pytest.raises(ValueError):
@@ -259,14 +265,16 @@ def test_inspector_missing_factories_and_cleanup(tmp_path: Path) -> None:
             filename=str(sample),
             config=Config(),
             verbose=False,
-            cleanup_callback=None,
-            adapter=adapter,
-            registry_factory=registry_factory,
-            pipeline_builder_factory=pipeline_builder_factory,
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=None,
-            memory_monitor=memory_manager_module.MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=adapter,
+                registry_factory=registry_factory,
+                pipeline_builder_factory=pipeline_builder_factory,
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=None,
+                memory_monitor=memory_manager_module.MemoryMonitor(),
+                cleanup_callback=None,
+            ),
         )
 
     called = {"ok": False}
@@ -278,14 +286,16 @@ def test_inspector_missing_factories_and_cleanup(tmp_path: Path) -> None:
         filename=str(sample),
         config=Config(),
         verbose=False,
-        cleanup_callback=_cleanup,
-        adapter=adapter,
-        registry_factory=registry_factory,
-        pipeline_builder_factory=pipeline_builder_factory,
-        config_factory=Config,
-        file_validator_factory=FileValidator,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=memory_manager_module.MemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=registry_factory,
+            pipeline_builder_factory=pipeline_builder_factory,
+            config_factory=Config,
+            file_validator_factory=FileValidator,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=memory_manager_module.MemoryMonitor(),
+            cleanup_callback=_cleanup,
+        ),
     )
     inspector._cleanup()
     assert called["ok"] is True

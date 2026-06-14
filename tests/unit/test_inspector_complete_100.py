@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 
 
 class _DummyMemoryMonitor:
@@ -81,10 +81,12 @@ class _DummyAggregator:
 
 
 def _build_inspector(**overrides: Any) -> R2Inspector:
-    defaults: dict[str, Any] = {
+    top: dict[str, Any] = {
         "filename": "sample.bin",
         "config": _DummyConfig(),
         "verbose": False,
+    }
+    deps: dict[str, Any] = {
         "cleanup_callback": None,
         "adapter": _DummyAdapter(),
         "registry_factory": _DummyRegistry,
@@ -94,8 +96,9 @@ def _build_inspector(**overrides: Any) -> R2Inspector:
         "result_aggregator_factory": _DummyAggregator,
         "memory_monitor": _DummyMemoryMonitor(),
     }
-    defaults.update(overrides)
-    return R2Inspector(**defaults)
+    for key, value in overrides.items():
+        (top if key in top else deps)[key] = value
+    return R2Inspector(**top, deps=InspectorDependencies(**deps))
 
 
 def test_inspector_init():
@@ -120,7 +123,7 @@ def test_inspector_with_config():
 def test_inspector_requires_memory_monitor():
     """Test that inspector raises ValueError without memory_monitor."""
     with pytest.raises(ValueError, match="memory_monitor"):
-        R2Inspector(filename="sample.bin", memory_monitor=None)  # type: ignore[arg-type]
+        _build_inspector(memory_monitor=None)
 
 
 def test_inspector_multiple_instances():

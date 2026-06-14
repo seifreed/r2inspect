@@ -134,44 +134,16 @@ class R2Inspector(InspectorLifecycleMixin, InspectorExecutionMixin, MemoryAwareA
         config: ConfigLike | None = None,
         verbose: bool = False,
         *,
-        deps: InspectorDependencies | None = None,
-        # Legacy individual kwargs — kept for backward compatibility.
-        cleanup_callback: Callable[[], None] | None = None,
-        adapter: BinaryAnalyzerInterface | None = None,
-        registry_factory: Callable[[], AnalyzerRegistryLike] | None = None,
-        pipeline_builder_factory: Callable[[Any, Any, ConfigLike, str], Any] | None = None,
-        config_factory: Callable[[], ConfigLike] | None = None,
-        file_validator_factory: Callable[[str], FileValidatorLike] | None = None,
-        result_aggregator_factory: Callable[[], ResultAggregatorLike] | None = None,
-        memory_monitor: MemoryMonitorLike | None = None,
+        deps: InspectorDependencies,
     ):
-        """Initialize R2Inspector with file and configuration.
+        """Initialize R2Inspector with file, configuration and dependencies.
 
-        Prefer passing a pre-built ``deps`` (InspectorDependencies); the
-        individual factory kwargs are a backward-compatible fallback and
-        are ignored when ``deps`` is given. Raises ValueError if file
-        validation fails.
+        Dependencies are supplied as a single ``InspectorDependencies``
+        container, normally built by ``create_inspector``. Raises
+        ValueError if a required dependency is missing or file validation
+        fails.
         """
         logger.debug("R2Inspector.__init__ called with filename: %s", filename)
-
-        # Build deps from individual kwargs when not supplied directly.
-        if deps is None:
-            if memory_monitor is None:
-                raise ValueError("memory_monitor must be provided")
-            if adapter is None:
-                raise ValueError("adapter must be provided")
-            if registry_factory is None or pipeline_builder_factory is None:
-                raise ValueError("registry_factory and pipeline_builder_factory must be provided")
-            deps = InspectorDependencies(
-                adapter=adapter,
-                registry_factory=registry_factory,
-                pipeline_builder_factory=pipeline_builder_factory,
-                config_factory=config_factory,
-                file_validator_factory=file_validator_factory,
-                result_aggregator_factory=result_aggregator_factory,
-                memory_monitor=memory_monitor,
-                cleanup_callback=cleanup_callback,
-            )
 
         effective_monitor = deps.memory_monitor
         if effective_monitor is None:

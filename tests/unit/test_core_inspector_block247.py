@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
 from r2inspect.infrastructure.memory import global_memory_monitor
@@ -53,14 +53,16 @@ def test_inspector_analyze_and_cleanup():
         filename=str(FIXTURE),
         config=DummyConfig(),
         verbose=False,
-        cleanup_callback=lambda: None,
-        adapter=DummyAdapter(),
-        registry_factory=DummyRegistry,
-        pipeline_builder_factory=lambda a, r, c, f: DummyPipelineBuilder(a, r, c, f),
-        config_factory=DummyConfig,
-        file_validator_factory=FileValidator,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=global_memory_monitor,
+        deps=InspectorDependencies(
+            adapter=DummyAdapter(),
+            registry_factory=DummyRegistry,
+            pipeline_builder_factory=lambda a, r, c, f: DummyPipelineBuilder(a, r, c, f),
+            config_factory=DummyConfig,
+            file_validator_factory=FileValidator,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=global_memory_monitor,
+            cleanup_callback=lambda: None,
+        ),
     )
 
     results = inspector.analyze()

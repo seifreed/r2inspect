@@ -7,7 +7,7 @@ import pytest
 
 from r2inspect.config import Config
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.pipeline_builder import PipelineBuilder
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.factory import create_inspector
@@ -31,30 +31,34 @@ def test_r2_inspector_init_validation_errors(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=object(),
-            registry_factory=create_default_registry,
-            pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
-                adapter, registry, cfg, path
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=create_default_registry,
+                pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
+                    adapter, registry, cfg, path
+                ),
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=None,
             ),
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=None,
         )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=None,
-            adapter=object(),
-            registry_factory=create_default_registry,
-            pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
-                adapter, registry, cfg, path
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=create_default_registry,
+                pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
+                    adapter, registry, cfg, path
+                ),
+                config_factory=None,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
             ),
-            config_factory=None,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
         )
 
     # config_factory path exercised (config None)
@@ -63,15 +67,17 @@ def test_r2_inspector_init_validation_errors(tmp_path: Path) -> None:
     inspector = R2Inspector(
         filename=str(sample_valid),
         config=None,
-        adapter=object(),
-        registry_factory=create_default_registry,
-        pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
-            adapter, registry, cfg, path
+        deps=InspectorDependencies(
+            adapter=object(),
+            registry_factory=create_default_registry,
+            pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
+                adapter, registry, cfg, path
+            ),
+            config_factory=Config,
+            file_validator_factory=FileValidator,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=MemoryMonitor(),
         ),
-        config_factory=Config,
-        file_validator_factory=FileValidator,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=MemoryMonitor(),
     )
     inspector.close()
 
@@ -79,30 +85,34 @@ def test_r2_inspector_init_validation_errors(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=None,
-            registry_factory=create_default_registry,
-            pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
-                adapter, registry, cfg, path
+            deps=InspectorDependencies(
+                adapter=None,  # type: ignore[arg-type]
+                registry_factory=create_default_registry,
+                pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
+                    adapter, registry, cfg, path
+                ),
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
             ),
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
         )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=object(),
-            registry_factory=create_default_registry,
-            pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
-                adapter, registry, cfg, path
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=create_default_registry,
+                pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
+                    adapter, registry, cfg, path
+                ),
+                config_factory=Config,
+                file_validator_factory=None,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
             ),
-            config_factory=Config,
-            file_validator_factory=None,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
         )
 
     # File validation fails (too small)
@@ -110,15 +120,17 @@ def test_r2_inspector_init_validation_errors(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=object(),
-            registry_factory=create_default_registry,
-            pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
-                adapter, registry, cfg, path
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=create_default_registry,
+                pipeline_builder_factory=lambda adapter, registry, cfg, path: PipelineBuilder(
+                    adapter, registry, cfg, path
+                ),
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
             ),
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
         )
 
 
@@ -130,13 +142,15 @@ def test_r2_inspector_missing_factories(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=object(),
-            registry_factory=None,
-            pipeline_builder_factory=None,
-            config_factory=Config,
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=object(),
+                registry_factory=None,  # type: ignore[arg-type]
+                pipeline_builder_factory=None,  # type: ignore[arg-type]
+                config_factory=Config,
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
+            ),
         )
 
 
@@ -190,13 +204,15 @@ def test_r2_inspector_memory_error_path(tmp_path: Path) -> None:
     inspector = R2Inspector(
         filename=str(sample),
         config=Config(),
-        adapter=object(),
-        registry_factory=create_default_registry,
-        pipeline_builder_factory=lambda adapter, registry, cfg, path: _ExplodingBuilder(),
-        config_factory=Config,
-        file_validator_factory=FileValidator,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=MemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=object(),
+            registry_factory=create_default_registry,
+            pipeline_builder_factory=lambda adapter, registry, cfg, path: _ExplodingBuilder(),
+            config_factory=Config,
+            file_validator_factory=FileValidator,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=MemoryMonitor(),
+        ),
     )
 
     result = inspector.analyze()

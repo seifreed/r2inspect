@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.result_aggregator import ResultAggregator
 
 
@@ -172,16 +172,18 @@ def _make_inspector(
         filename=str(sample),
         config=DummyConfig(parallel=parallel),
         verbose=False,
-        cleanup_callback=cleanup_callback,
-        adapter=adapter or DummyAdapter(),
-        registry_factory=DummyRegistry,
-        pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: DummyPipelineBuilder(
-            pipeline or DummyPipeline()
+        deps=InspectorDependencies(
+            adapter=adapter or DummyAdapter(),
+            registry_factory=DummyRegistry,
+            pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: DummyPipelineBuilder(
+                pipeline or DummyPipeline()
+            ),
+            config_factory=lambda: DummyConfig(parallel=parallel),
+            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=file_valid),
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=monitor,
+            cleanup_callback=cleanup_callback,
         ),
-        config_factory=lambda: DummyConfig(parallel=parallel),
-        file_validator_factory=lambda _f: DummyFileValidator(_f, valid=file_valid),
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=monitor,
     )
 
 
@@ -219,16 +221,18 @@ def test_init_uses_config_factory_and_runs_verbose_path(tmp_path: Path) -> None:
     inspector = R2Inspector(
         filename=str(sample),
         config=None,
-        config_factory=lambda: DummyConfig(parallel=False),
         verbose=True,
-        adapter=DummyAdapter(),
-        registry_factory=lambda: _VerboseRegistry(),
-        pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
-            _HookPipeline()
+        deps=InspectorDependencies(
+            adapter=DummyAdapter(),
+            registry_factory=lambda: _VerboseRegistry(),
+            pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
+                _HookPipeline()
+            ),
+            config_factory=lambda: DummyConfig(parallel=False),
+            file_validator_factory=lambda _path: DummyFileValidator(_path),
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=DummyMemoryMonitor(),
         ),
-        file_validator_factory=lambda _path: DummyFileValidator(_path),
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=DummyMemoryMonitor(),
     )
 
     assert isinstance(inspector.config, DummyConfig)
@@ -266,15 +270,17 @@ def test_init_requires_memory_monitor(tmp_path: Path) -> None:
             filename=str(sample),
             config=DummyConfig(parallel=False),
             verbose=False,
-            adapter=DummyAdapter(),
-            registry_factory=DummyRegistry,
-            pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
-                _HookPipeline()
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=DummyRegistry,
+                pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
+                    _HookPipeline()
+                ),
+                config_factory=lambda: DummyConfig(parallel=False),
+                file_validator_factory=lambda _path: DummyFileValidator(_path),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=None,
             ),
-            config_factory=lambda: DummyConfig(parallel=False),
-            file_validator_factory=lambda _path: DummyFileValidator(_path),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=None,  # type: ignore[arg-type]
         )
 
 
@@ -287,14 +293,16 @@ def test_init_requires_config_factory_when_config_is_none(tmp_path: Path) -> Non
             filename=str(sample),
             config=None,
             verbose=False,
-            adapter=DummyAdapter(),
-            registry_factory=DummyRegistry,
-            pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
-                _HookPipeline()
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=DummyRegistry,
+                pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
+                    _HookPipeline()
+                ),
+                file_validator_factory=lambda _path: DummyFileValidator(_path),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
             ),
-            file_validator_factory=lambda _path: DummyFileValidator(_path),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
         )
 
 
@@ -307,14 +315,16 @@ def test_init_requires_adapter(tmp_path: Path) -> None:
             filename=str(sample),
             config=DummyConfig(parallel=False),
             verbose=False,
-            adapter=None,  # type: ignore[arg-type]
-            registry_factory=DummyRegistry,
-            pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
-                _HookPipeline()
+            deps=InspectorDependencies(
+                adapter=None,  # type: ignore[arg-type]
+                registry_factory=DummyRegistry,
+                pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
+                    _HookPipeline()
+                ),
+                file_validator_factory=lambda _path: DummyFileValidator(_path),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
             ),
-            file_validator_factory=lambda _path: DummyFileValidator(_path),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
         )
 
 
@@ -327,14 +337,16 @@ def test_init_requires_factories(tmp_path: Path) -> None:
             filename=str(sample),
             config=DummyConfig(parallel=False),
             verbose=False,
-            adapter=DummyAdapter(),
-            registry_factory=DummyRegistry,
-            pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
-                _HookPipeline()
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=DummyRegistry,
+                pipeline_builder_factory=lambda _adapter, _registry, _config, _filename: _HookPipelineBuilder(
+                    _HookPipeline()
+                ),
+                config_factory=lambda: DummyConfig(parallel=False),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
             ),
-            config_factory=lambda: DummyConfig(parallel=False),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
         )
 
 

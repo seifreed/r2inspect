@@ -12,13 +12,12 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.config_schemas.schemas import PipelineConfig, R2InspectConfig
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.infrastructure.memory import MemoryMonitor
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.testing.fake_r2 import FakeR2
-
 
 # ---------------------------------------------------------------------------
 # Lightweight fakes that satisfy the real interfaces without spawning r2pipe
@@ -151,17 +150,20 @@ def _make_inspector(
 
     fv = FakeFileValidator(result=file_validator_result)
 
+    deps = InspectorDependencies(
+        adapter=adapter,
+        registry_factory=lambda: registry,
+        pipeline_builder_factory=lambda _a, _r, _c, _f: pipeline_builder,
+        file_validator_factory=lambda _f: fv,
+        result_aggregator_factory=ResultAggregator,
+        memory_monitor=memory_monitor,
+        cleanup_callback=cleanup_callback,
+    )
     return R2Inspector(
         filename="/tmp/test.bin",
         config=config,
         verbose=verbose,
-        adapter=adapter,
-        memory_monitor=memory_monitor,
-        cleanup_callback=cleanup_callback,
-        file_validator_factory=lambda _f: fv,
-        result_aggregator_factory=ResultAggregator,
-        registry_factory=lambda: registry,
-        pipeline_builder_factory=lambda _a, _r, _c, _f: pipeline_builder,
+        deps=deps,
     )
 
 
@@ -188,12 +190,14 @@ class TestInspectorInitialization:
             filename="/tmp/test.bin",
             config=config,
             verbose=False,
-            adapter=adapter,
-            memory_monitor=memory,
-            file_validator_factory=lambda _: fv,
-            result_aggregator_factory=lambda: aggregator,
-            registry_factory=lambda: registry,
-            pipeline_builder_factory=lambda a, r, c, f: pb,
+            deps=InspectorDependencies(
+                adapter=adapter,
+                registry_factory=lambda: registry,
+                pipeline_builder_factory=lambda a, r, c, f: pb,
+                file_validator_factory=lambda _: fv,
+                result_aggregator_factory=lambda: aggregator,
+                memory_monitor=memory,
+            ),
         )
 
         assert inspector.filename == "/tmp/test.bin"
@@ -209,10 +213,12 @@ class TestInspectorInitialization:
         with pytest.raises(ValueError, match="memory_monitor must be provided"):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=adapter,
-                memory_monitor=None,
-                registry_factory=lambda: _make_registry(),
-                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                deps=InspectorDependencies(
+                    adapter=adapter,
+                    registry_factory=lambda: _make_registry(),
+                    pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                    memory_monitor=None,
+                ),
             )
 
     def test_init_without_adapter_raises(self) -> None:
@@ -222,9 +228,13 @@ class TestInspectorInitialization:
         with pytest.raises(ValueError, match="adapter must be provided"):
             R2Inspector(
                 filename="/tmp/test.bin",
-                memory_monitor=memory,
                 config=config,
-                adapter=None,
+                deps=InspectorDependencies(
+                    adapter=None,  # type: ignore[arg-type]
+                    registry_factory=_make_registry,
+                    pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                    memory_monitor=memory,
+                ),
             )
 
     def test_init_without_config_uses_factory(self) -> None:
@@ -240,14 +250,16 @@ class TestInspectorInitialization:
 
         inspector = R2Inspector(
             filename="/tmp/test.bin",
-            adapter=adapter,
-            memory_monitor=memory,
             config=None,
-            config_factory=lambda: config,
-            file_validator_factory=lambda _: fv,
-            result_aggregator_factory=lambda: aggregator,
-            registry_factory=lambda: registry,
-            pipeline_builder_factory=lambda a, r, c, f: pb,
+            deps=InspectorDependencies(
+                adapter=adapter,
+                registry_factory=lambda: registry,
+                pipeline_builder_factory=lambda a, r, c, f: pb,
+                config_factory=lambda: config,
+                file_validator_factory=lambda _: fv,
+                result_aggregator_factory=lambda: aggregator,
+                memory_monitor=memory,
+            ),
         )
 
         assert inspector.config is config
@@ -259,12 +271,14 @@ class TestInspectorInitialization:
         with pytest.raises(ValueError, match="config_factory must be provided when config is None"):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=adapter,
-                memory_monitor=memory,
                 config=None,
-                config_factory=None,
-                registry_factory=lambda: _make_registry(),
-                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                deps=InspectorDependencies(
+                    adapter=adapter,
+                    registry_factory=lambda: _make_registry(),
+                    pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                    config_factory=None,
+                    memory_monitor=memory,
+                ),
             )
 
     def test_init_without_factories_raises(self) -> None:
@@ -279,13 +293,15 @@ class TestInspectorInitialization:
         ):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=adapter,
-                memory_monitor=memory,
                 config=config,
-                registry_factory=lambda: _make_registry(),
-                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
-                file_validator_factory=None,
-                result_aggregator_factory=None,
+                deps=InspectorDependencies(
+                    adapter=adapter,
+                    registry_factory=lambda: _make_registry(),
+                    pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                    file_validator_factory=None,
+                    result_aggregator_factory=None,
+                    memory_monitor=memory,
+                ),
             )
 
     def test_init_file_validation_failure(self) -> None:
@@ -299,13 +315,15 @@ class TestInspectorInitialization:
         with pytest.raises(ValueError, match="File validation failed"):
             R2Inspector(
                 filename="/tmp/nonexistent.bin",
-                adapter=adapter,
-                memory_monitor=memory,
                 config=config,
-                file_validator_factory=lambda _: fv,
-                result_aggregator_factory=ResultAggregator,
-                registry_factory=_make_registry,
-                pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                deps=InspectorDependencies(
+                    adapter=adapter,
+                    registry_factory=_make_registry,
+                    pipeline_builder_factory=lambda a, r, c, f: FakePipelineBuilder(),
+                    file_validator_factory=lambda _: fv,
+                    result_aggregator_factory=ResultAggregator,
+                    memory_monitor=memory,
+                ),
             )
 
     def test_init_without_registry_factory_raises(self) -> None:
@@ -320,13 +338,15 @@ class TestInspectorInitialization:
         ):
             R2Inspector(
                 filename="/tmp/test.bin",
-                adapter=adapter,
-                memory_monitor=memory,
                 config=config,
-                file_validator_factory=lambda _: fv,
-                result_aggregator_factory=ResultAggregator,
-                registry_factory=None,
-                pipeline_builder_factory=None,
+                deps=InspectorDependencies(
+                    adapter=adapter,
+                    registry_factory=None,  # type: ignore[arg-type]
+                    pipeline_builder_factory=None,  # type: ignore[arg-type]
+                    file_validator_factory=lambda _: fv,
+                    result_aggregator_factory=ResultAggregator,
+                    memory_monitor=memory,
+                ),
             )
 
 

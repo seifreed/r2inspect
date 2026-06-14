@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.inspector import InspectorExecutionMixin
 from r2inspect.core.result_aggregator import ResultAggregator
 
@@ -247,14 +247,16 @@ def test_inspector_analyze_variants(tmp_path):
     inspector = R2Inspector(
         filename=str(sample),
         config=DummyConfig(parallel=False),
-        adapter=adapter,
-        registry_factory=registry_factory,
-        pipeline_builder_factory=pipeline_builder_factory,
-        config_factory=lambda: DummyConfig(parallel=False),
-        file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=memory,
         verbose=True,
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=registry_factory,
+            pipeline_builder_factory=pipeline_builder_factory,
+            config_factory=lambda: DummyConfig(parallel=False),
+            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=memory,
+        ),
     )
 
     result = inspector.analyze(progress_callback=lambda _s: None)
@@ -290,83 +292,103 @@ def test_inspector_init_errors(tmp_path):
     sample.write_bytes(b"abcd")
 
     with pytest.raises(ValueError):
-        R2Inspector(filename=str(sample), config=DummyConfig(False), adapter=DummyAdapter())
+        R2Inspector(
+            filename=str(sample),
+            config=DummyConfig(False),
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=lambda: DummyRegistry(),
+                pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
+            ),
+        )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=None,
-            adapter=DummyAdapter(),
-            registry_factory=lambda: DummyRegistry(),
-            pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
-            config_factory=None,
-            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=lambda: DummyRegistry(),
+                pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
+                config_factory=None,
+                file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
+            ),
         )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=DummyConfig(False),
-            adapter=None,
-            registry_factory=lambda: DummyRegistry(),
-            pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
-            config_factory=lambda: DummyConfig(False),
-            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=None,  # type: ignore[arg-type]
+                registry_factory=lambda: DummyRegistry(),
+                pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
+                config_factory=lambda: DummyConfig(False),
+                file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
+            ),
         )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=DummyConfig(False),
-            adapter=DummyAdapter(),
-            registry_factory=lambda: DummyRegistry(),
-            pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
-            config_factory=lambda: DummyConfig(False),
-            file_validator_factory=None,
-            result_aggregator_factory=None,
-            memory_monitor=DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=lambda: DummyRegistry(),
+                pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
+                config_factory=lambda: DummyConfig(False),
+                file_validator_factory=None,
+                result_aggregator_factory=None,
+                memory_monitor=DummyMemoryMonitor(),
+            ),
         )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=DummyConfig(False),
-            adapter=DummyAdapter(),
-            registry_factory=None,
-            pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
-            config_factory=lambda: DummyConfig(False),
-            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=False),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=None,  # type: ignore[arg-type]
+                pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
+                config_factory=lambda: DummyConfig(False),
+                file_validator_factory=lambda _f: DummyFileValidator(_f, valid=False),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
+            ),
         )
 
     with pytest.raises(ValueError):
         R2Inspector(
             filename=str(sample),
             config=DummyConfig(False),
-            adapter=DummyAdapter(),
-            registry_factory=None,
-            pipeline_builder_factory=None,
-            config_factory=lambda: DummyConfig(False),
-            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=DummyMemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=DummyAdapter(),
+                registry_factory=None,  # type: ignore[arg-type]
+                pipeline_builder_factory=None,  # type: ignore[arg-type]
+                config_factory=lambda: DummyConfig(False),
+                file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=DummyMemoryMonitor(),
+            ),
         )
 
     inspector = R2Inspector(
         filename=str(sample),
         config=None,
-        adapter=DummyAdapter(),
-        registry_factory=lambda: DummyRegistry(),
-        pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
-        config_factory=lambda: DummyConfig(False),
-        file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=DummyMemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=DummyAdapter(),
+            registry_factory=lambda: DummyRegistry(),
+            pipeline_builder_factory=lambda *args: DummyPipelineBuilder(DummyPipeline()),
+            config_factory=lambda: DummyConfig(False),
+            file_validator_factory=lambda _f: DummyFileValidator(_f, valid=True),
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=DummyMemoryMonitor(),
+        ),
     )
     inspector._registry_factory = None
     inspector._pipeline_builder_factory = None

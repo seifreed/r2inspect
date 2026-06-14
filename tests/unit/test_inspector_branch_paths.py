@@ -9,11 +9,10 @@ import pytest
 
 from r2inspect.config import Config
 from r2inspect.core.file_validator import FileValidator
-from r2inspect.core.inspector import R2Inspector
+from r2inspect.core.inspector import InspectorDependencies, R2Inspector
 from r2inspect.core.result_aggregator import ResultAggregator
 from r2inspect.pipeline.analysis_pipeline import AnalysisPipeline, AnalysisStage
 from r2inspect.infrastructure.memory import MemoryMonitor, global_memory_monitor
-
 
 # ---------------------------------------------------------------------------
 # Helpers: real stub classes (no mocking library)
@@ -129,14 +128,16 @@ def make_inspector(
         filename=str(sample),
         config=config,
         verbose=verbose,
-        cleanup_callback=cleanup_callback,
-        adapter=adapter,
-        registry_factory=lambda: registry,
-        pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(pipeline),
-        config_factory=Config,
-        file_validator_factory=file_validator_factory,
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=memory_monitor,
+        deps=InspectorDependencies(
+            adapter=adapter,
+            registry_factory=lambda: registry,
+            pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(pipeline),
+            config_factory=Config,
+            file_validator_factory=file_validator_factory,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=memory_monitor,
+            cleanup_callback=cleanup_callback,
+        ),
     )
 
 
@@ -164,13 +165,15 @@ def test_init_uses_config_factory_when_config_is_none(tmp_path: Path) -> None:
     inspector = R2Inspector(
         filename=str(sample),
         config=None,
-        config_factory=Config,
-        adapter=StubAdapter(),
-        registry_factory=StubRegistry,
-        pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
-        file_validator_factory=lambda path: FileValidator(sample),
-        result_aggregator_factory=ResultAggregator,
-        memory_monitor=MemoryMonitor(),
+        deps=InspectorDependencies(
+            adapter=StubAdapter(),
+            registry_factory=StubRegistry,
+            pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
+            config_factory=Config,
+            file_validator_factory=lambda path: FileValidator(sample),
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=MemoryMonitor(),
+        ),
     )
     assert inspector.config is not None
 
@@ -216,7 +219,12 @@ def test_init_raises_when_memory_monitor_is_none(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="memory_monitor must be provided"):
         R2Inspector(
             filename=str(sample),
-            memory_monitor=None,
+            deps=InspectorDependencies(
+                adapter=StubAdapter(),
+                registry_factory=StubRegistry,
+                pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
+                memory_monitor=None,
+            ),
         )
 
 
@@ -227,11 +235,13 @@ def test_init_raises_when_config_and_factory_both_none(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=None,
-            config_factory=None,
-            adapter=StubAdapter(),
-            registry_factory=StubRegistry,
-            pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
-            memory_monitor=MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=StubAdapter(),
+                registry_factory=StubRegistry,
+                pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
+                config_factory=None,
+                memory_monitor=MemoryMonitor(),
+            ),
         )
 
 
@@ -242,8 +252,12 @@ def test_init_raises_when_adapter_is_none(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=None,
-            memory_monitor=MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=None,  # type: ignore[arg-type]
+                registry_factory=StubRegistry,
+                pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
+                memory_monitor=MemoryMonitor(),
+            ),
         )
 
 
@@ -254,12 +268,14 @@ def test_init_raises_when_file_validator_factory_is_none(tmp_path: Path) -> None
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=StubAdapter(),
-            registry_factory=StubRegistry,
-            pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
-            file_validator_factory=None,
-            result_aggregator_factory=None,
-            memory_monitor=MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=StubAdapter(),
+                registry_factory=StubRegistry,
+                pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
+                file_validator_factory=None,
+                result_aggregator_factory=None,
+                memory_monitor=MemoryMonitor(),
+            ),
         )
 
 
@@ -268,12 +284,14 @@ def test_init_raises_when_file_validation_fails(tmp_path: Path) -> None:
         R2Inspector(
             filename="/definitely/nonexistent/file.bin",
             config=Config(),
-            adapter=StubAdapter(),
-            registry_factory=StubRegistry,
-            pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
-            file_validator_factory=FileValidator,
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=StubAdapter(),
+                registry_factory=StubRegistry,
+                pipeline_builder_factory=lambda a, r, c, f: StubPipelineBuilder(OkPipeline()),
+                file_validator_factory=FileValidator,
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
+            ),
         )
 
 
@@ -284,12 +302,14 @@ def test_init_raises_when_registry_factory_is_none(tmp_path: Path) -> None:
         R2Inspector(
             filename=str(sample),
             config=Config(),
-            adapter=StubAdapter(),
-            registry_factory=None,
-            pipeline_builder_factory=None,
-            file_validator_factory=lambda path: FileValidator(sample),
-            result_aggregator_factory=ResultAggregator,
-            memory_monitor=MemoryMonitor(),
+            deps=InspectorDependencies(
+                adapter=StubAdapter(),
+                registry_factory=None,  # type: ignore[arg-type]
+                pipeline_builder_factory=None,  # type: ignore[arg-type]
+                file_validator_factory=lambda path: FileValidator(sample),
+                result_aggregator_factory=ResultAggregator,
+                memory_monitor=MemoryMonitor(),
+            ),
         )
 
 
