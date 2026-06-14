@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+from typing import Any, Protocol
 
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
+class FunctionMachocHost(Protocol):
+    """Overridable collaboration contract the MACHOC helpers depend on."""
+
+    def _process_single_function_hash(
+        self, func: dict[str, Any], index: int, total: int
+    ) -> tuple[str, str] | None: ...
+    def _extract_function_mnemonics(
+        self, func_name: str, func_size: int, func_addr: int
+    ) -> list[str]: ...
+
+
 def generate_machoc_hashes(
-    analyzer: Any, functions: list[dict[str, Any]], logger: Any
+    analyzer: FunctionMachocHost, functions: list[dict[str, Any]], logger: logging.Logger
 ) -> dict[str, str]:
     machoc_hashes: dict[str, str] = {}
     failed_functions = 0
@@ -38,11 +50,11 @@ def generate_machoc_hashes(
 
 
 def process_single_function_hash(
-    analyzer: Any,
+    analyzer: FunctionMachocHost,
     func: dict[str, Any],
     index: int,
     total: int,
-    logger: Any,
+    logger: logging.Logger,
     *,
     machoc_hash_fn: Any,
 ) -> tuple[str, str] | None:
@@ -76,7 +88,9 @@ def process_single_function_hash(
     return func_name, machoc_hash
 
 
-def get_function_similarity(machoc_hashes: dict[str, str], logger: Any) -> dict[str, list[str]]:
+def get_function_similarity(
+    machoc_hashes: dict[str, str], logger: logging.Logger
+) -> dict[str, list[str]]:
     try:
         similarities = group_functions_by_machoc_hash(machoc_hashes)
         if similarities:
@@ -91,7 +105,7 @@ def get_function_similarity(machoc_hashes: dict[str, str], logger: Any) -> dict[
 
 
 def generate_machoc_summary(
-    analysis_results: dict[str, Any], logger: Any, *, similarity_fn: Any
+    analysis_results: dict[str, Any], logger: logging.Logger, *, similarity_fn: Any
 ) -> dict[str, Any]:
     try:
         if not analysis_results:
