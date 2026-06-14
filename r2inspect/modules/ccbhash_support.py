@@ -3,11 +3,36 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any, cast
+import logging
+from typing import Any, Protocol, cast
+
+from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+
+
+class CcbHashHost(Protocol):
+    """Overridable collaboration contract the CCBHash helpers depend on."""
+
+    adapter: BinaryAnalyzerInterface | None
+
+    def _cmd_list(self, command: str) -> list[Any]: ...
+    def _extract_functions(self) -> list[dict[str, Any]]: ...
+    def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str | None: ...
+    def _build_canonical_representation(
+        self, cfg: dict[str, Any], func_offset: int
+    ) -> str | None: ...
+    def _find_similar_functions(
+        self, function_hashes: dict[str, dict[str, Any]]
+    ) -> list[dict[str, Any]]: ...
+    def _calculate_binary_ccbhash(
+        self, function_hashes: dict[str, dict[str, Any]]
+    ) -> str | None: ...
 
 
 def analyze_functions(
-    analyzer: Any, logger: Any, no_functions_found: str, no_functions_analyzed: str
+    analyzer: CcbHashHost,
+    logger: logging.Logger,
+    no_functions_found: str,
+    no_functions_analyzed: str,
 ) -> dict[str, Any]:
     results = {
         "available": False,
@@ -58,7 +83,7 @@ def analyze_functions(
     return results
 
 
-def extract_functions(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
+def extract_functions(analyzer: CcbHashHost, logger: logging.Logger) -> list[dict[str, Any]]:
     try:
         functions = analyzer._cmd_list("aflj")
         if not functions:
@@ -99,7 +124,7 @@ def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str
 
 
 def calculate_function_ccbhash(
-    analyzer: Any, func_offset: int, func_name: str, logger: Any
+    analyzer: CcbHashHost, func_offset: int, func_name: str, logger: logging.Logger
 ) -> str | None:
     try:
         cfg_data = (
@@ -123,7 +148,7 @@ def calculate_function_ccbhash(
 
 
 def find_similar_functions(
-    function_hashes: dict[str, dict[str, Any]], logger: Any
+    function_hashes: dict[str, dict[str, Any]], logger: logging.Logger
 ) -> list[dict[str, Any]]:
     try:
         hash_groups: dict[str, list[str]] = {}
@@ -144,7 +169,9 @@ def find_similar_functions(
         return []
 
 
-def calculate_binary_ccbhash(function_hashes: dict[str, dict[str, Any]], logger: Any) -> str | None:
+def calculate_binary_ccbhash(
+    function_hashes: dict[str, dict[str, Any]], logger: logging.Logger
+) -> str | None:
     try:
         if not function_hashes:
             return None
