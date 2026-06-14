@@ -143,6 +143,27 @@ def _resolve_layout(source_root: Path) -> dict[str, Path] | None:
     return None
 
 
+def _materialize_fixture(target_path: Path, source_path: Path, copy_files: bool) -> None:
+    if copy_files:
+        target_path.write_bytes(source_path.read_bytes())
+        return
+    try:
+        target_path.symlink_to(source_path.resolve())
+    except OSError:
+        target_path.write_bytes(source_path.read_bytes())
+
+
+def _sync_one_fixture(target_path: Path, source_path: Path, copy_files: bool) -> bool:
+    """Return True if the fixture was (re)created, False if an existing one is kept."""
+    if target_path.is_symlink() or target_path.exists():
+        if target_path.is_symlink() and not target_path.exists():
+            target_path.unlink()  # broken symlink -> recreate
+        else:
+            return False
+    _materialize_fixture(target_path, source_path, copy_files)
+    return True
+
+
 def sync_sample_fixtures(
     target_dir: Path, source_root: Path, *, copy_files: bool = False
 ) -> list[Path]:
@@ -156,22 +177,9 @@ def sync_sample_fixtures(
     for target_name, source_path in mapping.items():
         if not source_path.exists():
             continue
-
         target_path = target_dir / target_name
-        if target_path.is_symlink() or target_path.exists():
-            if target_path.is_symlink() and not target_path.exists():
-                target_path.unlink()
-            else:
-                continue
-
-        if copy_files:
-            target_path.write_bytes(source_path.read_bytes())
-        else:
-            try:
-                target_path.symlink_to(source_path.resolve())
-            except OSError:
-                target_path.write_bytes(source_path.read_bytes())
-        created.append(target_path)
+        if _sync_one_fixture(target_path, source_path, copy_files):
+            created.append(target_path)
 
     expected_dir = target_dir / "expected"
     if expected_dir.is_symlink():
