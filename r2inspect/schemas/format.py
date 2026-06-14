@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Format types re-exports for backwards compatibility.
+"""Pydantic-validated format schemas for the analysis output boundary.
 
-DEPRECATED: Import from domain.format_types directly instead.
-This module provides Pydantic-validated versions for backward compatibility.
+These models (``SectionInfo``, ``SecurityFeatures``, ``FormatAnalysisResult``)
+wrap the plain ``domain.format_types`` entities with Pydantic validation for
+use at the serialization boundary. Use the domain dataclasses for internal
+logic; use these schemas when validating or emitting structured output.
 """
 
 from pydantic import BaseModel, Field, field_validator
