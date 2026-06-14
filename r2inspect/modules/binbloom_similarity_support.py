@@ -4,15 +4,24 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Any
+import logging
+from typing import Any, Protocol
+
+
+class BloomStatsHost(Protocol):
+    def _accumulate_bloom_bits(self, function_blooms: Any) -> tuple[int, int]: ...
+
+
+class BloomCompareHost(Protocol):
+    def _get_bloom_bits(self, bloom_filter: Any) -> Any | None: ...
 
 
 def calculate_bloom_stats(
-    analyzer: Any,
+    analyzer: BloomStatsHost,
     function_blooms: dict[str, Any],
     capacity: int,
     error_rate: float,
-    logger: Any,
+    logger: logging.Logger,
 ) -> dict[str, Any]:
     try:
         if not function_blooms:
@@ -30,30 +39,36 @@ def calculate_bloom_stats(
         return {}
 
 
-def compare_bloom_filters(analyzer: Any, bloom1: Any, bloom2: Any, logger: Any) -> float:
+def _bloom_bit_set(bits_raw: Any) -> set[int]:
+    return {i for i, bit in enumerate(bits_raw) if bit}
+
+
+def _jaccard_similarity(bits1: set[int], bits2: set[int]) -> float:
+    if not bits1 and not bits2:
+        return 1.0
+    if not bits1 or not bits2:
+        return 0.0
+    union = len(bits1.union(bits2))
+    return len(bits1.intersection(bits2)) / union if union > 0 else 0.0
+
+
+def compare_bloom_filters(
+    analyzer: BloomCompareHost, bloom1: Any, bloom2: Any, logger: logging.Logger
+) -> float:
     try:
         bits_1_raw = analyzer._get_bloom_bits(bloom1)
         bits_2_raw = analyzer._get_bloom_bits(bloom2)
         if bits_1_raw is None or bits_2_raw is None:
             return 0.0
-
-        bits1 = {i for i, bit in enumerate(bits_1_raw) if bit}
-        bits2 = {i for i, bit in enumerate(bits_2_raw) if bit}
-
-        if not bits1 and not bits2:
-            return 1.0
-        if not bits1 or not bits2:
-            return 0.0
-
-        intersection = len(bits1.intersection(bits2))
-        union = len(bits1.union(bits2))
-        return intersection / union if union > 0 else 0.0
+        return _jaccard_similarity(_bloom_bit_set(bits_1_raw), _bloom_bit_set(bits_2_raw))
     except Exception as exc:
         logger.error("Error comparing Bloom filters: %s", exc)
         return 0.0
 
 
-def deserialize_bloom(bloom_b64: str, bloom_filter_class: Any, logger: Any) -> Any | None:
+def deserialize_bloom(
+    bloom_b64: str, bloom_filter_class: Any, logger: logging.Logger
+) -> Any | None:
     try:
         json_bytes = base64.b64decode(bloom_b64.encode("utf-8"))
         data = json.loads(json_bytes.decode("utf-8"))
