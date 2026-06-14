@@ -10,7 +10,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from ..interfaces import AnalyzerRegistryLike, BinaryAnalyzerInterface, ConfigLike
+from ..interfaces import (
+    AnalyzerRegistryLike,
+    BinaryAnalyzerInterface,
+    ConfigLike,
+    ResultAggregatorLike,
+)
 from .analyzer_factory import create_analyzer, run_analysis_method
 from ..error_handling.classifier import ErrorCategory, ErrorSeverity, error_handler
 from ..infrastructure.hashing import calculate_hashes
@@ -33,7 +38,7 @@ class InspectorDispatchMixin:
     config: ConfigLike
     filename: str
     registry: AnalyzerRegistryLike
-    _result_aggregator: Any
+    _result_aggregator: ResultAggregatorLike
 
     # -- static normalization helpers ----------------------------------------
 
