@@ -112,34 +112,35 @@ class R2PipeAdapter(R2PipeQueryMixin):
         if cache:
             with self._cache_lock:
                 if cmd in self._cache:
-                    cached = self._cache[cmd]
-                    if data_type == "list":
-                        return cast(list[dict[str, Any]], cached)
-                    return cast(dict[str, Any], cached)
+                    return self._as_typed(self._cache[cmd], data_type)
 
-        result: Any
-        default_value: Any
-        if data_type == "list":
-            result = safe_cmd_list(self, cmd)
-            default_value = default if default is not None else []
-        else:
-            result = safe_cmd_dict(self, cmd)
-            default_value = default if default is not None else {}
+        result, default_value = self._fetch_and_default(cmd, data_type, default)
 
         validated = validate_r2_data(result, data_type)
         if not is_valid_r2_response(validated):
             if error_msg:
                 logger.debug(error_msg)
-            if data_type == "list":
-                return cast(list[dict[str, Any]], default_value)
-            return cast(dict[str, Any], default_value)
+            return self._as_typed(default_value, data_type)
 
         if cache:
             with self._cache_lock:
                 self._cache[cmd] = validated
+        return self._as_typed(validated, data_type)
+
+    @staticmethod
+    def _as_typed(
+        value: Any, data_type: Literal["list", "dict"]
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         if data_type == "list":
-            return cast(list[dict[str, Any]], validated)
-        return cast(dict[str, Any], validated)
+            return cast(list[dict[str, Any]], value)
+        return cast(dict[str, Any], value)
+
+    def _fetch_and_default(
+        self, cmd: str, data_type: Literal["list", "dict"], default: list | dict | None
+    ) -> tuple[Any, Any]:
+        if data_type == "list":
+            return safe_cmd_list(self, cmd), (default if default is not None else [])
+        return safe_cmd_dict(self, cmd), (default if default is not None else {})
 
     def __repr__(self) -> str:
         """Return string representation of the adapter."""
