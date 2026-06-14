@@ -2,10 +2,28 @@
 
 from __future__ import annotations
 
-from typing import Any
+import logging
+from typing import Any, Protocol
 
 
-def build_crypto_report(analyzer: Any) -> dict[str, Any]:
+class CryptoHost(Protocol):
+    """Overridable collaboration contract the crypto-detection helpers depend on."""
+
+    crypto_constants: dict[str, Any]
+
+    def _detect_crypto_constants(self) -> list[dict[str, Any]]: ...
+    def _detect_crypto_algorithms(self) -> list[dict[str, Any]]: ...
+    def _analyze_entropy(self) -> dict[str, Any]: ...
+    def _find_suspicious_patterns(self) -> list[dict[str, Any]]: ...
+    def _calculate_section_entropy(self, section: dict[str, Any]) -> float: ...
+    def _parse_search_results(self, result: str) -> list[str]: ...
+    def _get_imports(self) -> list[dict[str, Any]]: ...
+    def _get_sections(self) -> list[dict[str, Any]]: ...
+    def _search_text(self, pattern: str) -> str: ...
+    def _search_hex(self, hex_pattern: str) -> str: ...
+
+
+def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
     crypto_info: dict[str, Any] = {
         "algorithms": [],
         "constants": [],
@@ -19,7 +37,7 @@ def build_crypto_report(analyzer: Any) -> dict[str, Any]:
     return crypto_info
 
 
-def detect_crypto_constants(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
+def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     found_constants: list[dict[str, Any]] = []
     try:
         for const_name, const_values in analyzer.crypto_constants.items():
@@ -39,7 +57,7 @@ def detect_crypto_constants(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
     return found_constants
 
 
-def detect_crypto_apis(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
+def detect_crypto_apis(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     crypto_apis: list[dict[str, Any]] = []
     try:
         imports = analyzer._get_imports()
@@ -87,7 +105,7 @@ def detect_crypto_apis(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
     return crypto_apis
 
 
-def analyze_entropy(analyzer: Any, logger: Any) -> dict[str, Any]:
+def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, Any]:
     entropy_info: dict[str, Any] = {}
     try:
         sections = analyzer._get_sections()
@@ -107,7 +125,7 @@ def analyze_entropy(analyzer: Any, logger: Any) -> dict[str, Any]:
     return entropy_info
 
 
-def find_suspicious_patterns(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
+def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     patterns: list[dict[str, Any]] = []
     try:
         xor_patterns = analyzer._search_text("xor")
@@ -144,7 +162,7 @@ def find_suspicious_patterns(analyzer: Any, logger: Any) -> list[dict[str, Any]]
     return patterns
 
 
-def detect_crypto_libraries(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
+def detect_crypto_libraries(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     crypto_libs: list[dict[str, Any]] = []
     try:
         imports = analyzer._get_imports()
