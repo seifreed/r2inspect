@@ -222,34 +222,3 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
                         "severity": "medium",
                     }
                 )
-
-    def _check_suspicious_strings(
-        self, result: OverlayResult, suspicious: list[dict[str, Any]]
-    ) -> None:
-        suspicious_strings = [
-            "cmd.exe",
-            "powershell",
-            "WScript.Shell",
-            "HKEY_",
-            "\\System32\\",
-            "\\Windows\\",
-            "CreateProcess",
-            "VirtualAlloc",
-            "WriteProcessMemory",
-        ]
-
-        found_suspicious = []
-        for string in result.get("extracted_strings", []):
-            for sus_str in suspicious_strings:
-                if sus_str.lower() in string.lower():
-                    found_suspicious.append(string)
-                    break
-
-        if found_suspicious:
-            suspicious.append(
-                {
-                    "indicator": "Suspicious strings",
-                    "details": f"Found: {', '.join(found_suspicious[:5])}",
-                    "severity": "medium",
-                }
-            )

@@ -682,44 +682,6 @@ def test_check_autoit_none():
     assert len(suspicious) == 0
 
 
-# ── _check_suspicious_strings ───────────────────────────────────────
-
-
-def test_check_suspicious_strings():
-    analyzer = _make_analyzer()
-    result = {"extracted_strings": ["cmd.exe", "powershell.exe", "VirtualAlloc"]}
-    suspicious = []
-    analyzer._check_suspicious_strings(result, suspicious)
-    assert len(suspicious) == 1
-    assert suspicious[0]["indicator"] == "Suspicious strings"
-    assert suspicious[0]["severity"] == "medium"
-
-
-def test_check_suspicious_strings_case_insensitive():
-    analyzer = _make_analyzer()
-    result = {"extracted_strings": ["CMD.EXE", "POWERSHELL.EXE"]}
-    suspicious = []
-    analyzer._check_suspicious_strings(result, suspicious)
-    assert len(suspicious) == 1
-
-
-def test_check_suspicious_strings_none():
-    analyzer = _make_analyzer()
-    result = {"extracted_strings": ["normal string", "hello world"]}
-    suspicious = []
-    analyzer._check_suspicious_strings(result, suspicious)
-    assert len(suspicious) == 0
-
-
-def test_check_suspicious_strings_limit():
-    analyzer = _make_analyzer()
-    result = {"extracted_strings": ["cmd.exe"] * 10}
-    suspicious = []
-    analyzer._check_suspicious_strings(result, suspicious)
-    assert len(suspicious) == 1
-    assert len(suspicious[0]["details"]) < 500
-
-
 # ── _default_result ─────────────────────────────────────────────────
 
 

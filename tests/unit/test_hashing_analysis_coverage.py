@@ -345,25 +345,6 @@ def test_overlay_check_embedded_executables_non_exec() -> None:
     assert suspicious == []
 
 
-def test_overlay_check_suspicious_strings_cmd_exe() -> None:
-    analyzer = OverlayAnalyzer(StubAdapter())
-    result = analyzer._default_result()
-    result["extracted_strings"] = ["cmd.exe /c dir", "innocuous string"]
-    suspicious: list[dict[str, Any]] = []
-    analyzer._check_suspicious_strings(result, suspicious)
-    assert len(suspicious) == 1
-    assert "suspicious strings" in suspicious[0]["indicator"].lower()
-
-
-def test_overlay_check_suspicious_strings_none() -> None:
-    analyzer = OverlayAnalyzer(StubAdapter())
-    result = analyzer._default_result()
-    result["extracted_strings"] = ["hello world", "foo bar baz"]
-    suspicious: list[dict[str, Any]] = []
-    analyzer._check_suspicious_strings(result, suspicious)
-    assert suspicious == []
-
-
 def test_overlay_analyze_no_overlay_when_no_file_size() -> None:
     # StubAdapter returns empty get_file_info → _get_file_size() returns None → no overlay
     analyzer = OverlayAnalyzer(StubAdapter())
