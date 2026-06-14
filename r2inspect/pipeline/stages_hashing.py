@@ -6,7 +6,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..interfaces import AnalyzerBackend, AnalyzerFactoryLike, AnalyzerRegistryLike
+from ..interfaces import (
+    AnalyzerBackend,
+    AnalyzerFactoryLike,
+    AnalyzerRegistryLike,
+    HashingAnalyzerInterface,
+)
 from ..registry.analyzer_registry import AnalyzerCategory
 from .analysis_pipeline import AnalysisStage
 from .stages_common import default_analyzer_factory
@@ -68,13 +73,16 @@ class HashingStage(AnalysisStage):
             filename=self.filename,
         )
 
-    def _run_hashing_analyzer(self, name: str, analyzer: Any) -> Any:
-        if name == "tlsh" and hasattr(analyzer, "analyze_sections"):
-            return analyzer.analyze_sections()
-        if name == "ccbhash" and hasattr(analyzer, "analyze_functions"):
-            return analyzer.analyze_functions()
-        if name == "simhash" and hasattr(analyzer, "analyze_detailed"):
-            return analyzer.analyze_detailed()
+    def _run_hashing_analyzer(self, name: str, analyzer: HashingAnalyzerInterface) -> Any:
+        detailed_method = {
+            "tlsh": "analyze_sections",
+            "ccbhash": "analyze_functions",
+            "simhash": "analyze_detailed",
+        }.get(name)
+        if detailed_method is not None:
+            method = getattr(analyzer, detailed_method, None)
+            if callable(method):
+                return method()
         return analyzer.analyze()
 
     def _store_hashing_result(

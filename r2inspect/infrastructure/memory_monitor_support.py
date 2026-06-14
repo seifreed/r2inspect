@@ -3,9 +3,20 @@
 from __future__ import annotations
 
 import gc
+import logging
 import time
 import warnings
-from typing import Any, cast
+from typing import Any, Protocol, cast
+
+from ..interfaces.core import MemoryMonitorLike
+
+
+class LargeOpHost(Protocol):
+    """Host contract for memory-guarded large operations."""
+
+    memory_monitor: MemoryMonitorLike
+
+    def should_skip_analysis(self, estimated_memory_mb: float, operation_name: str) -> bool: ...
 
 
 def _collect_garbage() -> None:
@@ -132,12 +143,12 @@ def is_memory_available(monitor: Any, required_mb: float) -> bool:
 
 
 def safe_large_operation(
-    analyzer: Any,
+    analyzer: LargeOpHost,
     operation: Any,
     estimated_memory_mb: float,
     operation_name: str,
     *,
-    logger: Any,
+    logger: logging.Logger,
 ) -> Any | None:
     if analyzer.should_skip_analysis(estimated_memory_mb, operation_name):
         return None
