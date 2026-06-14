@@ -5,10 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.infrastructure.r2_session import R2Session
 import r2inspect.infrastructure.r2_helpers as h
-import r2inspect.infrastructure.r2_validation as v
+from r2inspect.adapters import validation as v
 
 
 @pytest.fixture
@@ -45,9 +44,8 @@ def test_validate_r2_data_non_list_and_non_dict() -> None:
 
 
 def test_validate_helpers_clean_entities() -> None:
-    # Private validation helpers live in infrastructure.r2_validation; r2_helpers
-    # re-exports only the public validate_r2_data (canonical home after the
-    # r2_validation split — see r2inspect.infrastructure.r2_validation).
+    # Private validation helpers live in adapters.validation; r2_helpers
+    # re-exports only the public validate_r2_data.
     assert v._validate_dict_data("nope") == {}
     assert v._validate_dict_data({"ok": True}) == {"ok": True}
     assert v._validate_list_data("nope") == []

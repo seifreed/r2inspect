@@ -2,7 +2,7 @@ import json
 import time
 
 import r2inspect.infrastructure.r2_helpers as r2_helpers
-from r2inspect.infrastructure.r2_validation import _clean_list_items
+from r2inspect.adapters.validation import _clean_list_items
 from r2inspect.infrastructure.r2_suppress import (
     R2PipeErrorSuppressor,
     _parse_raw_result,
