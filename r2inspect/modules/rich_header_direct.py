@@ -138,35 +138,38 @@ class RichHeaderDirectMixin:
     def _offsets_valid(dans_offset: int, rich_offset: int) -> bool:
         return dans_offset < rich_offset and (rich_offset - dans_offset) <= 1024
 
+    def _extract_rich_components(self, data: bytes) -> tuple[int, int, int, int, bytes] | None:
+        """Return (pe_offset, xor_key, dans_pos, rich_pos, encoded_data) or None."""
+        pe_offset = self._get_pe_offset(data)
+        if pe_offset is None:
+            return None
+        dos_stub = self._get_dos_stub(data, pe_offset)
+        if dos_stub is None:
+            return None
+        rich_pos = self._find_rich_pos(dos_stub)
+        if rich_pos is None:
+            return None
+        xor_key = self._extract_xor_key_from_stub(dos_stub, rich_pos)
+        if xor_key is None:
+            return None
+        dans_pos = self._find_or_estimate_dans(dos_stub, rich_pos)
+        if dans_pos is None:
+            return None
+        encoded_data = self._extract_encoded_from_stub(dos_stub, dans_pos, rich_pos)
+        if not encoded_data:
+            return None
+        return pe_offset, xor_key, dans_pos, rich_pos, encoded_data
+
     def _direct_file_rich_search(self) -> dict[str, Any] | None:
         try:
             data = self._read_file_bytes()
             if not data or not self._is_valid_pe_data(data):
                 return None
 
-            pe_offset = self._get_pe_offset(data)
-            if pe_offset is None:
+            components = self._extract_rich_components(data)
+            if components is None:
                 return None
-
-            dos_stub = self._get_dos_stub(data, pe_offset)
-            if dos_stub is None:
-                return None
-
-            rich_pos = self._find_rich_pos(dos_stub)
-            if rich_pos is None:
-                return None
-
-            xor_key = self._extract_xor_key_from_stub(dos_stub, rich_pos)
-            if xor_key is None:
-                return None
-
-            dans_pos = self._find_or_estimate_dans(dos_stub, rich_pos)
-            if dans_pos is None:
-                return None
-
-            encoded_data = self._extract_encoded_from_stub(dos_stub, dans_pos, rich_pos)
-            if not encoded_data:
-                return None
+            pe_offset, xor_key, dans_pos, rich_pos, encoded_data = components
 
             entries = decode_rich_header(encoded_data, xor_key)
             if not entries:
