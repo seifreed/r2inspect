@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+import logging
+from typing import Any, Protocol
 
 from ..domain.services.binary_helpers import shannon_entropy
+from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
-def analyze_sections(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
+class SectionRuntimeHost(Protocol):
+    """Overridable collaboration contract the section runtime helpers depend on."""
+
+    _arch: str | None
+    adapter: BinaryAnalyzerInterface | None
+
+    def _cmd_list(self, command: str) -> list[Any]: ...
+    def _analyze_single_section(self, section: dict[str, Any]) -> dict[str, Any]: ...
+    def _get_arch(self) -> str | None: ...
+    def analyze_sections(self) -> list[dict[str, Any]]: ...
+
+
+def analyze_sections(analyzer: SectionRuntimeHost, logger: logging.Logger) -> list[dict[str, Any]]:
     sections_info = []
 
     try:
@@ -26,12 +40,14 @@ def analyze_sections(analyzer: Any, logger: Any) -> list[dict[str, Any]]:
     return sections_info
 
 
-def calculate_entropy(analyzer: Any, section: dict[str, Any], logger: Any) -> float:
+def calculate_entropy(
+    analyzer: SectionRuntimeHost, section: dict[str, Any], logger: logging.Logger
+) -> float:
     try:
         vaddr = section.get("vaddr", 0)
         size = section.get("size", 0)
 
-        if size == 0 or size > 50000000:
+        if size == 0 or size > 50000000 or analyzer.adapter is None:
             return 0.0
 
         read_size = min(size, 1048576)
@@ -46,9 +62,9 @@ def calculate_entropy(analyzer: Any, section: dict[str, Any], logger: Any) -> fl
         return 0.0
 
 
-def count_nops_in_section(analyzer: Any, vaddr: int, size: int) -> tuple[int, int]:
+def count_nops_in_section(analyzer: SectionRuntimeHost, vaddr: int, size: int) -> tuple[int, int]:
     arch = analyzer._get_arch()
-    if not arch or size <= 0:
+    if not arch or size <= 0 or analyzer.adapter is None:
         return 0, 0
     if arch not in {"x86", "x86_64", "i386", "amd64"}:
         return 0, 0
@@ -60,9 +76,9 @@ def count_nops_in_section(analyzer: Any, vaddr: int, size: int) -> tuple[int, in
     return data.count(b"\x90"), len(data)
 
 
-def get_arch(analyzer: Any, logger: Any) -> str | None:
+def get_arch(analyzer: SectionRuntimeHost, logger: logging.Logger) -> str | None:
     if analyzer._arch is not None:
-        return cast(str | None, analyzer._arch)
+        return analyzer._arch
     try:
         info = analyzer.adapter.get_file_info() if analyzer.adapter is not None else {}
         arch = None
@@ -76,10 +92,12 @@ def get_arch(analyzer: Any, logger: Any) -> str | None:
     except (RuntimeError, TypeError, ValueError, AttributeError, OSError) as exc:
         logger.debug("Error reading architecture from file info: %s", exc)
         analyzer._arch = None
-    return cast(str | None, analyzer._arch)
+    return analyzer._arch
 
 
-def get_section_summary(analyzer: Any, logger: Any, update_summary_fn: Any) -> dict[str, Any]:
+def get_section_summary(
+    analyzer: SectionRuntimeHost, logger: logging.Logger, update_summary_fn: Any
+) -> dict[str, Any]:
     summary: dict[str, Any] = {
         "total_sections": 0,
         "executable_sections": 0,
