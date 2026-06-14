@@ -3,12 +3,32 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
+
+from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+
+
+class TelfhashHost(Protocol):
+    """Overridable collaboration contract the telfhash helpers depend on."""
+
+    filepath: Path
+    adapter: BinaryAnalyzerInterface | None
+
+    def _cmdj(self, command: str, default: Any | None = None) -> Any: ...
+    def _is_elf_file(self) -> bool: ...
+    def _has_elf_symbols(self, info_cmd: dict[str, Any] | None) -> bool: ...
+    def _get_elf_symbols(self) -> list[dict[str, Any]]: ...
+    def _filter_symbols_for_telfhash(
+        self, symbols: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]: ...
+    def _extract_symbol_names(self, symbols: list[dict[str, Any]]) -> list[str]: ...
+    def _normalize_telfhash_value(self, value: Any) -> str | None: ...
 
 
 def analyze_symbols(
-    analyzer: Any, *, telfhash_available: bool, telfhash_fn: Any, logger: Any
+    analyzer: TelfhashHost, *, telfhash_available: bool, telfhash_fn: Any, logger: logging.Logger
 ) -> dict[str, Any]:
     logger.debug("Starting detailed telfhash analysis for %s", analyzer.filepath)
     results: dict[str, Any] = {
@@ -65,7 +85,9 @@ def analyze_symbols(
     return results
 
 
-def is_elf_binary(analyzer: Any, *, logger: Any, is_elf_file_fn: Any, is_pe_file_fn: Any) -> bool:
+def is_elf_binary(
+    analyzer: TelfhashHost, *, logger: logging.Logger, is_elf_file_fn: Any, is_pe_file_fn: Any
+) -> bool:
     try:
         if analyzer.adapter is None:
             return False
