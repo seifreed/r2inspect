@@ -17,7 +17,14 @@ from typing import Any, Literal, Self
 from ..error_handling.classifier import ErrorCategory, ErrorSeverity, error_handler
 from ..infrastructure.logging import get_logger
 from ..infrastructure.memory import MemoryAwareAnalyzer
-from ..interfaces import ConfigLike, FileValidatorLike, MemoryMonitorLike, ResultAggregatorLike
+from ..interfaces import (
+    AnalyzerRegistryLike,
+    BinaryAnalyzerInterface,
+    ConfigLike,
+    FileValidatorLike,
+    MemoryMonitorLike,
+    ResultAggregatorLike,
+)
 from .analyzer_factory import run_analysis_method
 from .inspector_dispatch import InspectorDispatchMixin
 from .inspector_runtime import (
@@ -44,12 +51,12 @@ class InspectorDependencies:
     argument.
     """
 
-    adapter: Any
-    registry_factory: Callable[[], Any]
-    pipeline_builder_factory: Callable[[Any, Any, Any, str], Any]
-    config_factory: Callable[[], Any] | None = None
-    file_validator_factory: Callable[[str], Any] | None = None
-    result_aggregator_factory: Callable[[], Any] | None = None
+    adapter: BinaryAnalyzerInterface
+    registry_factory: Callable[[], AnalyzerRegistryLike]
+    pipeline_builder_factory: Callable[[Any, Any, ConfigLike, str], Any]
+    config_factory: Callable[[], ConfigLike] | None = None
+    file_validator_factory: Callable[[str], FileValidatorLike] | None = None
+    result_aggregator_factory: Callable[[], ResultAggregatorLike] | None = None
     memory_monitor: MemoryMonitorLike | None = None
     cleanup_callback: Callable[[], None] | None = None
 
@@ -130,8 +137,8 @@ class R2Inspector(InspectorLifecycleMixin, InspectorExecutionMixin, MemoryAwareA
         deps: InspectorDependencies | None = None,
         # Legacy individual kwargs — kept for backward compatibility.
         cleanup_callback: Callable[[], None] | None = None,
-        adapter: Any | None = None,
-        registry_factory: Callable[[], Any] | None = None,
+        adapter: BinaryAnalyzerInterface | None = None,
+        registry_factory: Callable[[], AnalyzerRegistryLike] | None = None,
         pipeline_builder_factory: Callable[[Any, Any, ConfigLike, str], Any] | None = None,
         config_factory: Callable[[], ConfigLike] | None = None,
         file_validator_factory: Callable[[str], FileValidatorLike] | None = None,
