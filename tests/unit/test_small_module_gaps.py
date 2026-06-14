@@ -19,8 +19,6 @@ from __future__ import annotations
 
 import logging
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -105,23 +103,16 @@ def test_r2_suppress_silent_cmdj_line_79() -> None:
 
 
 def test_pe_info_fetch_pe_header_exception_returns_none() -> None:
-    """
-    Patch get_pe_headers inside the pe_info module to raise, triggering
-    the except branch that logs and returns None (lines 54-56).
-    """
+    """_fetch_pe_header logs and returns None when the header resolver raises."""
     import r2inspect.modules.pe_info as _pe
 
-    orig = _pe.get_pe_headers  # type: ignore[attr-defined]
-
-    def _raising(*args: object) -> None:
+    def _raising(_adapter: object) -> None:
         raise RuntimeError("simulated PE header failure")
 
-    _pe.get_pe_headers = _raising  # type: ignore[attr-defined]
-    try:
-        result = _pe._fetch_pe_header(_NullAdapter(), logging.getLogger("test"))
-        assert result is None
-    finally:
-        _pe.get_pe_headers = orig  # type: ignore[attr-defined]
+    result = _pe._fetch_pe_header(
+        _NullAdapter(), logging.getLogger("test"), get_pe_headers_fn=_raising
+    )
+    assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -254,17 +245,14 @@ def test_pe_imports_empty_funcname_continue() -> None:
         def get_imports(self):
             return [{"libname": "kernel32.dll", "name": "GetProcAddress"}]
 
-    orig = _pe_imp.group_imports_by_library  # type: ignore[attr-defined]
-    _pe_imp.group_imports_by_library = lambda _imports: {  # type: ignore[attr-defined]
-        "kernel32": ["GetProcAddress", "", "ExitProcess"]
-    }
-    try:
-        result = _pe_imp.calculate_imphash(_AdapterWithImports(), logging.getLogger("test"))
-        # imphash is computed from the two non-empty names only
-        assert isinstance(result, str)
-        assert result != ""
-    finally:
-        _pe_imp.group_imports_by_library = orig  # type: ignore[attr-defined]
+    result = _pe_imp.calculate_imphash(
+        _AdapterWithImports(),
+        logging.getLogger("test"),
+        group_fn=lambda _imports: {"kernel32": ["GetProcAddress", "", "ExitProcess"]},
+    )
+    # imphash is computed from the two non-empty names only
+    assert isinstance(result, str)
+    assert result != ""
 
 
 # ---------------------------------------------------------------------------
@@ -366,19 +354,11 @@ def test_ccbhash_check_library_unavailable_line_42() -> None:
 
 
 def test_calculate_ssdeep_returns_none_when_get_ssdeep_is_none() -> None:
-    """
-    Patch get_ssdeep to return None so calculate_ssdeep short-circuits and
-    returns None at line 100.
-    """
-    import r2inspect.infrastructure.hashing as _hash_mod
+    """calculate_ssdeep short-circuits to None when the ssdeep resolver yields None."""
+    from r2inspect.infrastructure.hashing import calculate_ssdeep
 
-    orig = _hash_mod.get_ssdeep  # type: ignore[attr-defined]
-    _hash_mod.get_ssdeep = lambda: None  # type: ignore[attr-defined]
-    try:
-        result = _hash_mod.calculate_ssdeep("any_file.bin")
-        assert result is None
-    finally:
-        _hash_mod.get_ssdeep = orig  # type: ignore[attr-defined]
+    result = calculate_ssdeep("any_file.bin", get_ssdeep_fn=lambda: None)
+    assert result is None
 
 
 # ---------------------------------------------------------------------------
