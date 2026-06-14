@@ -32,5 +32,17 @@ CLAUDE.md
 # Local-only tooling (not part of the published repo)
 scripts/quality_gate.sh
 
+# Editor / code-intelligence tool artifacts
+.codegraph/
+.cursor/
+
+# Sample fixtures synced/symlinked from the test-binaries source at runtime
+# (sync_sample_fixtures); only the expected/*.json snapshots are tracked.
+/samples/fixtures/*.bin
+/samples/fixtures/hello_elf
+/samples/fixtures/hello_macho
+/samples/fixtures/hello_macho_stripped
+/samples/fixtures/hello_pe.exe
+
 # Accidental literal glob directories
 **/\*\*/
