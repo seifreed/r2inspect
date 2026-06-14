@@ -169,46 +169,23 @@ class R2InspectConfig:
         if not isinstance(config_dict, dict):
             raise TypeError("config_dict must be a dictionary")
 
-        kwargs: dict[str, Any] = {}
-
-        # Parse general config
-        if "general" in config_dict:
-            kwargs["general"] = GeneralConfig(**config_dict["general"])
-
-        # Parse yara config
-        if "yara" in config_dict:
-            kwargs["yara"] = YaraConfig(**config_dict["yara"])
-
-        # Parse packer config
-        if "packer" in config_dict:
-            kwargs["packer"] = PackerConfig(**config_dict["packer"])
-
-        # Parse crypto config
-        if "crypto" in config_dict:
-            kwargs["crypto"] = CryptoConfig(**config_dict["crypto"])
-
-        # Parse strings config
-        if "strings" in config_dict:
-            kwargs["strings"] = StringsConfig(**config_dict["strings"])
-
-        # Parse output config
-        if "output" in config_dict:
-            kwargs["output"] = OutputConfig(**config_dict["output"])
-
-        # Parse virustotal config
-        if "virustotal" in config_dict:
-            kwargs["virustotal"] = VirusTotalConfig(**config_dict["virustotal"])
-
-        # Parse analysis config
-        if "analysis" in config_dict:
-            kwargs["analysis"] = AnalysisConfig(**config_dict["analysis"])
-
-        # Parse pe_analysis config
-        if "pe_analysis" in config_dict:
-            kwargs["pe_analysis"] = PEAnalysisConfig(**config_dict["pe_analysis"])
-        if "pipeline" in config_dict:
-            kwargs["pipeline"] = PipelineConfig(**config_dict["pipeline"])
-
+        section_types: dict[str, type] = {
+            "general": GeneralConfig,
+            "yara": YaraConfig,
+            "packer": PackerConfig,
+            "crypto": CryptoConfig,
+            "strings": StringsConfig,
+            "output": OutputConfig,
+            "virustotal": VirusTotalConfig,
+            "analysis": AnalysisConfig,
+            "pe_analysis": PEAnalysisConfig,
+            "pipeline": PipelineConfig,
+        }
+        kwargs: dict[str, Any] = {
+            section: section_type(**config_dict[section])
+            for section, section_type in section_types.items()
+            if section in config_dict
+        }
         return cls(**kwargs)
 
     def merge(self, other: "R2InspectConfig") -> "R2InspectConfig":
