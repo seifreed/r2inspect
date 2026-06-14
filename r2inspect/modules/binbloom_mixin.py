@@ -6,7 +6,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..domain.services.binbloom import build_signature_components
 from ..infrastructure.logging import get_logger
@@ -34,6 +34,13 @@ class BinbloomMixin:
     """Instruction extraction, serialization, and comparison helpers."""
 
     adapter: Any
+
+    if TYPE_CHECKING:
+        # Provided at runtime by the composed CommandHelperMixin sibling; declared
+        # here so this mixin's helpers type-check against MnemonicHost.
+        def _cmd(self, command: str) -> str: ...
+        def _cmdj(self, command: str, default: Any | None = None) -> Any: ...
+        def _cmd_list(self, command: str) -> list[Any]: ...
 
     def _build_bloom_filter(
         self, instructions: list[str], capacity: int, error_rate: float

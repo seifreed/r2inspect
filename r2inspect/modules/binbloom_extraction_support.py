@@ -2,24 +2,42 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+import logging
+from typing import Any, Protocol
+
+from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+
+
+class MnemonicHost(Protocol):
+    """Overridable collaboration contract the Binbloom mnemonic helpers depend on."""
+
+    adapter: BinaryAnalyzerInterface | None
+
+    def _cmd(self, command: str) -> str: ...
+    def _cmdj(self, command: str, default: Any | None = None) -> Any: ...
+    def _cmd_list(self, command: str) -> list[Any]: ...
+    def _collect_mnemonics_from_ops(self, ops: list[Any]) -> list[str]: ...
+    def _normalize_mnemonic(self, mnemonic: str | None) -> str | None: ...
+    def _extract_mnemonics_from_pdfj(self, func_addr: int, func_name: str) -> list[str]: ...
+    def _extract_mnemonics_from_pdj(self, func_addr: int, func_name: str) -> list[str]: ...
+    def _extract_mnemonics_from_text(self, func_addr: int, func_name: str) -> list[str]: ...
 
 
 def extract_instruction_mnemonics(
-    analyzer: Any, func_addr: int, func_name: str, logger: Any
+    analyzer: MnemonicHost, func_addr: int, func_name: str, logger: logging.Logger
 ) -> list[str]:
     try:
         instructions = analyzer._extract_mnemonics_from_pdfj(func_addr, func_name)
         if instructions:
-            return cast(list[str], instructions)
+            return instructions
 
         instructions = analyzer._extract_mnemonics_from_pdj(func_addr, func_name)
         if instructions:
-            return cast(list[str], instructions)
+            return instructions
 
         instructions = analyzer._extract_mnemonics_from_text(func_addr, func_name)
         if instructions:
-            return cast(list[str], instructions)
+            return instructions
     except Exception as exc:
         logger.debug("Error extracting mnemonics from %s: %s", func_name, exc)
 
@@ -27,7 +45,7 @@ def extract_instruction_mnemonics(
 
 
 def extract_mnemonics_from_pdfj(
-    analyzer: Any, func_addr: int, func_name: str, logger: Any
+    analyzer: MnemonicHost, func_addr: int, func_name: str, logger: logging.Logger
 ) -> list[str]:
     disasm = (
         analyzer.adapter.get_disasm(address=func_addr)
@@ -39,11 +57,11 @@ def extract_mnemonics_from_pdfj(
     mnemonics = analyzer._collect_mnemonics_from_ops(disasm["ops"])
     if mnemonics:
         logger.debug("Extracted %s mnemonics from %s using pdfj", len(mnemonics), func_name)
-    return cast(list[str], mnemonics)
+    return mnemonics
 
 
 def extract_mnemonics_from_pdj(
-    analyzer: Any, func_addr: int, func_name: str, logger: Any
+    analyzer: MnemonicHost, func_addr: int, func_name: str, logger: logging.Logger
 ) -> list[str]:
     disasm_list = (
         analyzer.adapter.get_disasm(address=func_addr, size=200)
@@ -55,11 +73,11 @@ def extract_mnemonics_from_pdj(
     mnemonics = analyzer._collect_mnemonics_from_ops(disasm_list)
     if mnemonics:
         logger.debug("Extracted %s mnemonics from %s using pdj", len(mnemonics), func_name)
-    return cast(list[str], mnemonics)
+    return mnemonics
 
 
 def extract_mnemonics_from_text(
-    analyzer: Any, func_addr: int, func_name: str, logger: Any
+    analyzer: MnemonicHost, func_addr: int, func_name: str, logger: logging.Logger
 ) -> list[str]:
     instructions_text = (
         analyzer.adapter.get_disasm_text(address=func_addr, size=100)
