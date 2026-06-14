@@ -4,19 +4,53 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, cast
+from pathlib import Path
+from typing import Any, Protocol
 
 from ..domain.services.binbloom import build_binbloom_result, count_unique_signatures
+from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
-def _resolve_analyzer_name(analyzer: Any) -> str:
+class BinbloomAnalysisHost(Protocol):
+    """Overridable collaboration contract the Binbloom analysis workflow depends on.
+
+    Bloom-filter values are typed ``Any`` (external pybloom-live objects).
+    """
+
+    default_capacity: int
+    default_error_rate: float
+    filepath: Path | None
+    adapter: BinaryAnalyzerInterface | None
+
+    def _mark_unavailable(
+        self, result: dict[str, Any], error: str, *, library_available: bool | None = None
+    ) -> dict[str, Any]: ...
+    def _extract_functions(self) -> list[dict[str, Any]]: ...
+    def _collect_function_blooms(
+        self, functions: list[dict[str, Any]], capacity: int, error_rate: float
+    ) -> tuple[dict[str, Any], dict[str, dict[str, Any]], set[str], int]: ...
+    def _serialize_blooms(self, function_blooms: Any) -> dict[str, str]: ...
+    def _find_similar_functions(
+        self, function_signatures: dict[str, dict[str, Any]]
+    ) -> list[dict[str, Any]]: ...
+    def _add_binary_bloom(
+        self, results: Any, all_instructions: set[str], capacity: int, error_rate: float
+    ) -> None: ...
+    def _calculate_bloom_stats(
+        self, function_blooms: Any, capacity: int, error_rate: float
+    ) -> dict[str, Any]: ...
+
+
+def _resolve_analyzer_name(analyzer: BinbloomAnalysisHost) -> str:
     getter = getattr(analyzer, "get_name", None)
     if callable(getter):
         return str(getter())
     return str(analyzer.__class__.__name__).lower()
 
 
-def _resolve_unique_signatures(analyzer: Any, function_signatures: dict[str, Any]) -> int:
+def _resolve_unique_signatures(
+    analyzer: BinbloomAnalysisHost, function_signatures: dict[str, Any]
+) -> int:
     collector = getattr(analyzer, "_collect_unique_signatures", None)
     if callable(collector):
         return len(collector(function_signatures))
@@ -25,7 +59,7 @@ def _resolve_unique_signatures(analyzer: Any, function_signatures: dict[str, Any
 
 def run_binbloom_analysis(
     *,
-    analyzer: Any,
+    analyzer: BinbloomAnalysisHost,
     capacity: int | None,
     error_rate: float | None,
     bloom_available: bool,
@@ -40,13 +74,10 @@ def run_binbloom_analysis(
     )
 
     if not bloom_available:
-        return cast(
-            dict[str, Any],
-            analyzer._mark_unavailable(
-                result,
-                "pybloom-live library not installed",
-                library_available=False,
-            ),
+        return analyzer._mark_unavailable(
+            result,
+            "pybloom-live library not installed",
+            library_available=False,
         )
 
     if capacity is None:
