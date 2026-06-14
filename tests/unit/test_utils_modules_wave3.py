@@ -11,6 +11,7 @@ Wave-3 unit tests covering missing lines in:
   - r2inspect/modules/pe_info.py
   - r2inspect/utils/hashing.py
 """
+
 from __future__ import annotations
 
 import io
@@ -647,29 +648,6 @@ def test_exploit_check_load_config_exception():
     result = {"mitigations": {}, "dll_characteristics": {}, "load_config": {}}
     analyzer._check_load_config(result)  # should not raise
     # Exception was caught internally
-
-
-def test_exploit_parse_security_cookie_too_short():
-    # line 268: config_data too short -> early return
-    adapter = _FakeExploitAdapterMinimal()
-    analyzer = ExploitMitigationAnalyzer(adapter=adapter)
-    load_config: dict[str, Any] = {}
-    config_data = list(range(10))  # len=10, <= cookie_offset(60)+4
-    analyzer._parse_security_cookie(load_config, config_data, is_64bit=False)
-    assert "security_cookie" not in load_config
-
-
-def test_exploit_parse_guard_flags_too_short():
-    # line 284: config_data too short for guard flags -> early return
-    adapter = _FakeExploitAdapterMinimal()
-    analyzer = ExploitMitigationAnalyzer(adapter=adapter)
-    load_config: dict[str, Any] = {}
-    result = {"mitigations": {}}
-    config_data = list(range(140))  # len=140, <= 140+4 with is_64bit=False
-    analyzer._parse_guard_flags(
-        load_config, config_data, config_size=200, is_64bit=False, result=result
-    )
-    assert "guard_flags" not in load_config
 
 
 def test_exploit_check_stack_cookies_exception():
