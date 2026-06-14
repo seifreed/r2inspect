@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
 from typing import Any
 
 from ..infrastructure.logging import get_logger
@@ -16,6 +17,42 @@ from ..interfaces import (
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
+
+
+def run_registered_analyzer(
+    stage: Any,
+    context: dict[str, Any],
+    analyzer_name: str,
+    result_key: str,
+    *,
+    invoke: Callable[[Any], Any],
+    error_default: Callable[[Exception], Any],
+    log_label: str,
+) -> dict[str, Any] | None:
+    """Construct and run a registry analyzer, storing the result under result_key.
+
+    Returns None when the analyzer is not registered. On failure logs a warning
+    and stores ``error_default(exc)`` instead. ``invoke`` produces the result
+    from the constructed analyzer; ``log_label`` is the subject of the warning.
+    """
+    analyzer_class = stage.registry.get_analyzer_class(analyzer_name)
+    if not analyzer_class:
+        return None
+    try:
+        analyzer = stage.analyzer_factory(
+            analyzer_class,
+            adapter=stage.adapter,
+            config=stage.config,
+            filename=stage.filename,
+        )
+        data = invoke(analyzer)
+        context["results"][result_key] = data
+        return {result_key: data}
+    except Exception as e:
+        logger.warning("%s failed: %s", log_label, e)
+        fallback = error_default(e)
+        context["results"][result_key] = fallback
+        return {result_key: fallback}
 
 
 def _normalize_analyzer_kwargs(

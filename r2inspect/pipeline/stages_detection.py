@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from ..interfaces import (
@@ -13,9 +12,7 @@ from ..interfaces import (
     ConfigLike,
 )
 from .analysis_pipeline import AnalysisStage
-from .stages_common import default_analyzer_factory
-
-logger = logging.getLogger(__name__)
+from .stages_common import default_analyzer_factory, run_registered_analyzer
 
 
 class DetectionStage(AnalysisStage):
@@ -78,24 +75,17 @@ class DetectionStage(AnalysisStage):
         analyze_args: tuple[Any, ...] = (),
         error_default: Any = None,
     ) -> dict[str, Any] | None:
-        analyzer_class = self.registry.get_analyzer_class(analyzer_name)
-        if not analyzer_class:
-            return None
-        try:
-            analyzer = self.analyzer_factory(
-                analyzer_class,
-                adapter=self.adapter,
-                config=self.config,
-                filename=self.filename,
-            )
-            data = analyzer.analyze(*analyze_args)
-            context["results"][result_key] = data
-            return {result_key: data}
-        except Exception as e:
-            logger.warning("Analyzer '%s' failed: %s", analyzer_name, e)
-            fallback = error_default if error_default is not None else {"error": str(e)}
-            context["results"][result_key] = fallback
-            return {result_key: fallback}
+        return run_registered_analyzer(
+            self,
+            context,
+            analyzer_name,
+            result_key,
+            invoke=lambda analyzer: analyzer.analyze(*analyze_args),
+            error_default=lambda e: (
+                error_default if error_default is not None else {"error": str(e)}
+            ),
+            log_label=f"Analyzer '{analyzer_name}'",
+        )
 
     def _run_packer_detection(self, context: dict[str, Any]) -> dict[str, Any] | None:
         return self._run_analyzer(context, "packer_detector", "packer")

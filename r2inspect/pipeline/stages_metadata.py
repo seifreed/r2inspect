@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from ..interfaces import (
@@ -13,9 +12,7 @@ from ..interfaces import (
     ConfigLike,
 )
 from .analysis_pipeline import AnalysisStage
-from .stages_common import default_analyzer_factory
-
-logger = logging.getLogger(__name__)
+from .stages_common import default_analyzer_factory, run_registered_analyzer
 
 
 class MetadataStage(AnalysisStage):
@@ -80,25 +77,15 @@ class MetadataStage(AnalysisStage):
         if default_value is None:
             default_value = []
 
-        analyzer_class = self.registry.get_analyzer_class(analyzer_name)
-        if not analyzer_class:
-            return None
-
-        try:
-            analyzer = self.analyzer_factory(
-                analyzer_class,
-                adapter=self.adapter,
-                config=self.config,
-                filename=self.filename,
-            )
-            method = getattr(analyzer, method_name)
-            data = method()
-            context["results"][result_key] = data
-            return {result_key: data}
-        except Exception as e:
-            logger.warning("%s analysis failed: %s", result_key.replace("_", " ").title(), e)
-            context["results"][result_key] = default_value
-            return {result_key: default_value}
+        return run_registered_analyzer(
+            self,
+            context,
+            analyzer_name,
+            result_key,
+            invoke=lambda analyzer: getattr(analyzer, method_name)(),
+            error_default=lambda _e: default_value,
+            log_label=f"{result_key.replace('_', ' ').title()} analysis",
+        )
 
     def _extract_sections(self, context: dict[str, Any]) -> dict[str, Any] | None:
         return self._run_analyzer_method(
