@@ -10,6 +10,29 @@ from ..abstractions.result_builder import init_result, mark_unavailable
 from ..domain.services.simhash import build_feature_stats
 
 
+def _simhash_entry(features: list[str], simhash_cls: Any) -> dict[str, Any]:
+    value = simhash_cls(features).value
+    return {
+        "hash": value,
+        "hex": hex(value),
+        "binary": bin(value),
+        "feature_count": len(features),
+    }
+
+
+def _add_function_simhashes(
+    results: dict[str, Any],
+    function_features: dict[str, Any],
+    find_similar_functions: Callable[[dict[str, Any]], list[dict[str, Any]]],
+) -> None:
+    if not function_features:
+        return
+    results["function_simhashes"] = function_features
+    results["total_functions"] = len(function_features)
+    results["analyzed_functions"] = len([f for f in function_features.values() if f.get("simhash")])
+    results["similarity_groups"] = find_similar_functions(function_features)
+
+
 def run_detailed_simhash_analysis(
     *,
     filepath: Any,
@@ -64,55 +87,25 @@ def run_detailed_simhash_analysis(
         # Calculate different SimHash variants
         results["available"] = True
 
-        # Strings-only SimHash
         if strings_features:
-            strings_simhash = Simhash(strings_features)
-            results["strings_simhash"] = {
-                "hash": strings_simhash.value,
-                "hex": hex(strings_simhash.value),
-                "binary": bin(strings_simhash.value),
-                "feature_count": len(strings_features),
-            }
+            results["strings_simhash"] = _simhash_entry(strings_features, Simhash)
 
-        # Opcodes-only SimHash
         if opcodes_features:
-            opcodes_simhash = Simhash(opcodes_features)
-            results["opcodes_simhash"] = {
-                "hash": opcodes_simhash.value,
-                "hex": hex(opcodes_simhash.value),
-                "binary": bin(opcodes_simhash.value),
-                "feature_count": len(opcodes_features),
-            }
+            results["opcodes_simhash"] = _simhash_entry(opcodes_features, Simhash)
 
-        # Combined SimHash (strings + opcodes)
         combined_features = strings_features + opcodes_features
         if combined_features:
-            combined_simhash = Simhash(combined_features)
-            results["combined_simhash"] = {
-                "hash": combined_simhash.value,
-                "hex": hex(combined_simhash.value),
-                "binary": bin(combined_simhash.value),
-                "feature_count": len(combined_features),
-            }
+            results["combined_simhash"] = _simhash_entry(combined_features, Simhash)
             results["binary_simhash"] = results["combined_simhash"]  # Alias
 
-        # Function-level SimHashes
-        if function_features:
-            results["function_simhashes"] = function_features
-            results["total_functions"] = len(function_features)
-            results["analyzed_functions"] = len(
-                [f for f in function_features.values() if f.get("simhash")]
-            )
-
-            # Find similar functions
-            similar_groups = find_similar_functions(function_features)
-            results["similarity_groups"] = similar_groups
+        _add_function_simhashes(results, function_features, find_similar_functions)
 
         # Feature statistics
         results["feature_stats"] = build_feature_stats(strings_features, opcodes_features)
 
+        combined_hex = results["combined_simhash"]["hex"] if combined_features else "N/A"
         log_debug(f"SimHash analysis completed: {len(combined_features)} total features")
-        log_debug(f"Binary SimHash: {hex(combined_simhash.value) if combined_features else 'N/A'}")
+        log_debug(f"Binary SimHash: {combined_hex}")
 
     except Exception as e:
         log_error(f"SimHash analysis failed: {e}")
