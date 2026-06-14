@@ -17,32 +17,43 @@ import psutil
 _log = logging.getLogger(__name__)
 
 
+_FAT_MACHO_CPUTYPE_ARCH = {
+    7: "x86",
+    0x01000007: "x86_64",
+    12: "arm",
+    0x0100000C: "arm64",
+}
+
+
+def _fat_macho_header_layout(header: bytes) -> tuple[str, int] | None:
+    """Return (struct format, nfat_arch) for a fat Mach-O 8-byte header, else None."""
+    if len(header) < 8:
+        return None
+    magic_be = struct.unpack(">I", header[:4])[0]
+    if magic_be == 0xCAFEBABE:
+        return ">IIIII", struct.unpack(">I", header[4:8])[0]
+    if magic_be == 0xBEBAFECA:
+        return "<IIIII", struct.unpack("<I", header[4:8])[0]
+    return None
+
+
 def detect_fat_macho_arches(filename: str) -> set[str]:
     path = Path(filename)
     try:
         with open(path, "rb") as handle:
-            header = handle.read(8)
-            if len(header) < 8:
+            layout = _fat_macho_header_layout(handle.read(8))
+            if layout is None:
                 return set()
-            magic_be = struct.unpack(">I", header[:4])[0]
-            if magic_be == 0xCAFEBABE:
-                entry_unpack = ">IIIII"
-                nfat_arch = struct.unpack(">I", header[4:8])[0]
-            elif magic_be == 0xBEBAFECA:
-                entry_unpack = "<IIIII"
-                nfat_arch = struct.unpack("<I", header[4:8])[0]
-            else:
-                return set()
+            entry_unpack, nfat_arch = layout
             arches: set[str] = set()
             for _ in range(nfat_arch):
                 arch_data = handle.read(20)
                 if len(arch_data) < 20:
                     break
                 cputype = struct.unpack(entry_unpack, arch_data)[0]
-                if cputype in {7, 0x01000007}:
-                    arches.add("x86_64" if cputype == 0x01000007 else "x86")
-                elif cputype in {12, 0x0100000C}:
-                    arches.add("arm64" if cputype == 0x0100000C else "arm")
+                arch = _FAT_MACHO_CPUTYPE_ARCH.get(cputype)
+                if arch is not None:
+                    arches.add(arch)
             return arches
     except OSError:
         return set()
