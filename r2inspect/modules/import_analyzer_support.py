@@ -6,8 +6,9 @@ Infrastructure-dependent functions remain here.
 
 from __future__ import annotations
 
+import logging
 import re
-from typing import Any
+from typing import Any, Protocol
 
 from ..domain.analysis.import_risk import (
     count_suspicious_indicators,
@@ -16,6 +17,16 @@ from ..domain.analysis.import_risk import (
     is_candidate_api_string,
     matches_known_api,
 )
+
+
+class ImportHost(Protocol):
+    """Overridable collaboration contract the import-analysis helper depends on."""
+
+    api_categories: dict[str, Any]
+
+    def _calculate_risk_score(self, func_name: str) -> dict[str, Any]: ...
+    def _get_function_description(self, func_name: str) -> str: ...
+
 
 __all__ = [
     "get_risk_level",
@@ -28,7 +39,9 @@ __all__ = [
 ]
 
 
-def analyze_import(imp: dict[str, Any], analyzer: Any, *, logger: Any) -> dict[str, Any]:
+def analyze_import(
+    imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
+) -> dict[str, Any]:
     analysis = {
         "name": imp.get("name", "unknown"),
         "address": hex(imp.get("plt", 0)),
@@ -61,7 +74,7 @@ def analyze_import(imp: dict[str, Any], analyzer: Any, *, logger: Any) -> dict[s
     return analysis
 
 
-def check_import_forwarding(strings: list[Any], *, logger: Any) -> dict[str, Any]:
+def check_import_forwarding(strings: list[Any], *, logger: logging.Logger) -> dict[str, Any]:
     try:
         if not strings:
             return {"detected": False, "forwards": [], "count": 0}
