@@ -11,6 +11,20 @@ from r2inspect.infrastructure.circuit_breaker import (
 )
 
 
+class _FakeR2:
+    """Hand-rolled r2 double; cmd/cmdj delegate to callables supplied at construction."""
+
+    def __init__(self, *, cmdj=None, cmd=None):
+        self._cmdj = cmdj
+        self._cmd = cmd
+
+    def cmdj(self, command):
+        return self._cmdj(command)
+
+    def cmd(self, command):
+        return self._cmd(command)
+
+
 def test_circuit_state_enum():
     assert CircuitState.CLOSED.value == "closed"
     assert CircuitState.OPEN.value == "open"
@@ -197,10 +211,8 @@ def test_circuit_breaker_get_stats():
     cb.call(successful_func)
     cb.call(successful_func)
 
-    try:
+    with pytest.raises(ValueError):
         cb.call(failing_func)
-    except ValueError:
-        pass
 
     stats = cb.get_stats()
 
@@ -331,8 +343,7 @@ def test_r2_command_circuit_breaker_get_breaker_cached():
 
 def test_r2_command_circuit_breaker_execute_command_json():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: {"result": "success"}
+    r2_instance = _FakeR2(cmdj=lambda cmd: {"result": "success"})
 
     result = r2cb.execute_command(r2_instance, "ij", "generic")
 
@@ -343,8 +354,7 @@ def test_r2_command_circuit_breaker_execute_command_json():
 
 def test_r2_command_circuit_breaker_execute_command_text():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmd = lambda cmd: "success"
+    r2_instance = _FakeR2(cmd=lambda cmd: "success")
 
     result = r2cb.execute_command(r2_instance, "i", "generic")
 
@@ -354,8 +364,7 @@ def test_r2_command_circuit_breaker_execute_command_text():
 
 def test_r2_command_circuit_breaker_execute_command_failure():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: (_ for _ in ()).throw(ValueError("error"))
+    r2_instance = _FakeR2(cmdj=lambda cmd: (_ for _ in ()).throw(ValueError("error")))
 
     result = r2cb.execute_command(r2_instance, "ij", "generic")
 
@@ -365,8 +374,7 @@ def test_r2_command_circuit_breaker_execute_command_failure():
 
 def test_r2_command_circuit_breaker_execute_command_circuit_open():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: (_ for _ in ()).throw(ValueError("error"))
+    r2_instance = _FakeR2(cmdj=lambda cmd: (_ for _ in ()).throw(ValueError("error")))
 
     for _ in range(5):
         r2cb.execute_command(r2_instance, "ij", "test_cmd")
@@ -378,8 +386,7 @@ def test_r2_command_circuit_breaker_execute_command_circuit_open():
 
 def test_r2_command_circuit_breaker_get_stats():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: {"result": "success"}
+    r2_instance = _FakeR2(cmdj=lambda cmd: {"result": "success"})
 
     r2cb.execute_command(r2_instance, "ij", "test")
 
@@ -392,8 +399,7 @@ def test_r2_command_circuit_breaker_get_stats():
 
 def test_r2_command_circuit_breaker_reset_all():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: {"result": "success"}
+    r2_instance = _FakeR2(cmdj=lambda cmd: {"result": "success"})
 
     r2cb.execute_command(r2_instance, "ij", "test")
 
@@ -406,13 +412,12 @@ def test_r2_command_circuit_breaker_reset_all():
 
 def test_r2_command_circuit_breaker_avg_execution_time():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
 
     def slow_cmd(cmd):
         time.sleep(0.01)
         return {"result": "success"}
 
-    r2_instance.cmdj = slow_cmd
+    r2_instance = _FakeR2(cmdj=slow_cmd)
 
     r2cb.execute_command(r2_instance, "ij", "test")
     r2cb.execute_command(r2_instance, "ij", "test")
@@ -424,8 +429,7 @@ def test_r2_command_circuit_breaker_avg_execution_time():
 
 def test_r2_command_circuit_breaker_recent_failures():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: (_ for _ in ()).throw(ValueError("error"))
+    r2_instance = _FakeR2(cmdj=lambda cmd: (_ for _ in ()).throw(ValueError("error")))
 
     for _ in range(3):
         r2cb.execute_command(r2_instance, "ij", "test")
@@ -540,8 +544,7 @@ def test_r2_command_circuit_breaker_exponential_moving_average():
 
 def test_r2_command_circuit_breaker_thread_safety():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmdj = lambda cmd: {"result": "success"}
+    r2_instance = _FakeR2(cmdj=lambda cmd: {"result": "success"})
 
     def execute_commands():
         for _ in range(10):
@@ -584,8 +587,6 @@ def test_circuit_breaker_half_open_state_allows_one_call():
 
 def test_r2_command_circuit_breaker_success_rate():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-
     call_count = [0]
 
     def mixed_cmd(cmd):
@@ -594,7 +595,7 @@ def test_r2_command_circuit_breaker_success_rate():
             raise ValueError("error")
         return {"result": "success"}
 
-    r2_instance.cmdj = mixed_cmd
+    r2_instance = _FakeR2(cmdj=mixed_cmd)
 
     for _ in range(10):
         r2cb.execute_command(r2_instance, "ij", "mixed")
@@ -606,8 +607,7 @@ def test_r2_command_circuit_breaker_success_rate():
 
 def test_r2_command_circuit_breaker_text_command_failure():
     r2cb = R2CommandCircuitBreaker()
-    r2_instance = type("R2", (), {})()
-    r2_instance.cmd = lambda cmd: (_ for _ in ()).throw(ValueError("error"))
+    r2_instance = _FakeR2(cmd=lambda cmd: (_ for _ in ()).throw(ValueError("error")))
 
     result = r2cb.execute_command(r2_instance, "i", "generic")
 
