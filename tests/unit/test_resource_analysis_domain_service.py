@@ -36,6 +36,13 @@ def test_summarize_resource_types_tolerates_non_numeric_size() -> None:
     assert summary == [{"type": "RT_ICON", "count": 1, "total_size": 0}]
 
 
+def test_summarize_resource_types_skips_non_dict_entries() -> None:
+    summary, total_size = summarize_resource_types(["not-a-dict", {"type_name": "RT_ICON"}])
+
+    assert total_size == 0
+    assert summary == [{"type": "RT_ICON", "count": 1, "total_size": 0}]
+
+
 def test_build_icon_entries_marks_high_entropy_icons() -> None:
     icons = build_icon_entries(
         [
@@ -79,6 +86,10 @@ def test_build_resource_statistics_summarizes_inventory() -> None:
     assert result["average_size"] == 150
     assert result["max_entropy"] == 6.0
     assert result["unique_types"] == 2
+
+
+def test_build_resource_statistics_empty_inventory_returns_empty() -> None:
+    assert build_resource_statistics([]) == {}
 
 
 def test_build_resource_statistics_tolerates_partial_entries() -> None:

@@ -67,27 +67,29 @@ def build_icon_entries(resources: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return icons
 
 
+def _decode_printable(raw: bytes, encoding: str) -> str | None:
+    """Decode bytes with the given encoding, returning text only when printable."""
+    text = raw.decode(encoding, errors="ignore")
+    if text and any(char.isprintable() for char in text):
+        return text
+    return None
+
+
+def _looks_like_utf16(raw: bytes) -> bool:
+    """Heuristic for UTF-16LE text: enough interleaved NUL bytes."""
+    return len(raw) >= 4 and raw.count(0) >= max(2, len(raw) // 8)
+
+
 def decode_resource_text(raw: bytes) -> str | None:
     """Decode resource bytes as UTF-16LE, UTF-8, or ASCII when printable."""
     if not raw:
         return None
 
-    if len(raw) >= 4 and raw.count(0) >= max(2, len(raw) // 8):
-        try:
-            text = raw.decode("utf-16le", errors="ignore")
-            if text and any(char.isprintable() for char in text):
-                return text
-        except (UnicodeDecodeError, TypeError):
-            pass
-
-    for encoding in ["utf-8", "ascii"]:
-        try:
-            text = raw.decode(encoding, errors="ignore")
-            if text and any(char.isprintable() for char in text):
-                return text
-        except (UnicodeDecodeError, TypeError):
-            pass
-
+    encodings = ["utf-16le", "utf-8", "ascii"] if _looks_like_utf16(raw) else ["utf-8", "ascii"]
+    for encoding in encodings:
+        text = _decode_printable(raw, encoding)
+        if text is not None:
+            return text
     return None
 
 
@@ -102,31 +104,52 @@ def build_manifest_info(manifest_data: str, size: int) -> dict[str, Any]:
     }
 
 
+def _positive_entropy(resource: dict[str, Any]) -> float | None:
+    """Return a resource's entropy when it is a positive number, else None."""
+    value = resource.get("entropy", 0)
+    return float(value) if isinstance(value, int | float) and value > 0 else None
+
+
+def _size_statistics(sizes: list[int]) -> dict[str, Any]:
+    """Aggregate size statistics, collapsing to zeros for an empty inventory."""
+    if not sizes:
+        return {"total_size": 0, "average_size": 0, "max_size": 0, "min_size": 0}
+    return {
+        "total_size": sum(sizes),
+        "average_size": sum(sizes) // len(sizes),
+        "max_size": max(sizes),
+        "min_size": min(sizes),
+    }
+
+
+def _entropy_statistics(entropies: list[float]) -> dict[str, Any]:
+    """Aggregate entropy statistics, collapsing to zeros when none are present."""
+    if not entropies:
+        return {"average_entropy": 0, "max_entropy": 0}
+    return {
+        "average_entropy": sum(entropies) / len(entropies),
+        "max_entropy": max(entropies),
+    }
+
+
 def build_resource_statistics(resources: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute aggregate statistics for a resource inventory."""
     if not resources:
         return {}
 
     valid_resources = [resource for resource in resources if isinstance(resource, dict)]
-    sizes = [
-        _resource_size(resource) for resource in valid_resources if _resource_size(resource) > 0
-    ]
+    sizes = [size for resource in valid_resources if (size := _resource_size(resource)) > 0]
     entropies = [
-        resource.get("entropy", 0)
+        entropy
         for resource in valid_resources
-        if isinstance(resource.get("entropy", 0), int | float) and resource.get("entropy", 0) > 0
+        if (entropy := _positive_entropy(resource)) is not None
     ]
 
-    return {
-        "total_resources": len(valid_resources),
-        "total_size": sum(sizes),
-        "average_size": sum(sizes) // len(sizes) if sizes else 0,
-        "max_size": max(sizes) if sizes else 0,
-        "min_size": min(sizes) if sizes else 0,
-        "average_entropy": sum(entropies) / len(entropies) if entropies else 0,
-        "max_entropy": max(entropies) if entropies else 0,
-        "unique_types": len({_resource_type_name(resource) for resource in valid_resources}),
-    }
+    stats: dict[str, Any] = {"total_resources": len(valid_resources)}
+    stats.update(_size_statistics(sizes))
+    stats.update(_entropy_statistics(entropies))
+    stats["unique_types"] = len({_resource_type_name(resource) for resource in valid_resources})
+    return stats
 
 
 def check_resource_entropy(resource: dict[str, Any]) -> list[dict[str, Any]]:
