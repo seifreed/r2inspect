@@ -7,13 +7,18 @@ import inspect
 import logging
 from collections.abc import Callable
 from importlib.metadata import entry_points
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .analyzer_registry import AnalyzerRegistry
 
 
 class EntryPointLoader:
     """Load analyzers registered via Python entry points."""
 
-    def __init__(self, registry: Any, entry_points_fn: Callable[[], Any] | None = None) -> None:
+    def __init__(
+        self, registry: AnalyzerRegistry, entry_points_fn: Callable[[], Any] | None = None
+    ) -> None:
         self._registry = registry
         self._entry_points_fn = entry_points_fn or entry_points
 

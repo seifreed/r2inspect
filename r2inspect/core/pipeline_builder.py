@@ -5,6 +5,7 @@ from typing import Any
 
 from ..interfaces import (
     AnalyzerBackend,
+    AnalyzerRegistryLike,
     ConfigLike,
     MagicDetectorProviderLike,
 )
@@ -36,7 +37,7 @@ class PipelineBuilder:
     def __init__(
         self,
         adapter: AnalyzerBackend,
-        registry: Any,
+        registry: AnalyzerRegistryLike,
         config: ConfigLike,
         filename: str,
         magic_detector_provider: MagicDetectorProviderLike | None = None,
