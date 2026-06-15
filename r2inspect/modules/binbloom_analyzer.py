@@ -10,6 +10,7 @@ from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..infrastructure.logging import get_logger
 from .binbloom_mixin import BinbloomMixin
+from .function_extraction import collect_valid_functions
 
 logger = get_logger(__name__)
 
@@ -136,19 +137,11 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
     def _extract_functions(self) -> list[dict[str, Any]]:
         """Extract all functions from the binary."""
-
-        def _load() -> list[dict[str, Any]]:
-            if self.adapter is not None and hasattr(self.adapter, "analyze_all"):
-                self.adapter.analyze_all()
-            functions = self._cmd_list("aflj")
-            if not functions:
-                logger.debug("No functions found with 'aflj' command")
-                return []
-            valid = [f for f in functions if f.get("addr") is not None and f.get("size", 0) > 0]
-            logger.debug("Extracted %s valid functions", len(valid))
-            return valid
-
-        return self._safe_call(_load, default=[], error_msg="Error extracting functions")
+        return self._safe_call(
+            lambda: collect_valid_functions(self, logger, run_analyze_all=True),
+            default=[],
+            error_msg="Error extracting functions",
+        )
 
     def _create_function_bloom(
         self, func_addr: int, func_name: str, capacity: int, error_rate: float

@@ -7,22 +7,12 @@ import logging
 from typing import Any
 
 from .binlex_support import BinlexHost
+from .function_extraction import collect_valid_functions
 
 
 def extract_functions(analyzer: BinlexHost, *, logger: logging.Logger) -> list[dict[str, Any]]:
     try:
-        if analyzer.adapter is not None and hasattr(analyzer.adapter, "analyze_all"):
-            analyzer.adapter.analyze_all()
-        functions = analyzer._cmd_list("aflj")
-        if not functions:
-            logger.debug("No functions found with 'aflj' command")
-            return []
-        valid_functions = []
-        for func in functions:
-            if func.get("addr") is not None and func.get("size", 0) > 0:
-                valid_functions.append(func)
-        logger.debug("Extracted %s valid functions", len(valid_functions))
-        return valid_functions
+        return collect_valid_functions(analyzer, logger, run_analyze_all=True)
     except Exception as exc:
         logger.error("Error extracting functions: %s", exc)
         return []

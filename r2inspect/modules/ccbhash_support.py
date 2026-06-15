@@ -7,6 +7,7 @@ import logging
 from typing import Any, Protocol, cast
 
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+from .function_extraction import collect_valid_functions
 
 
 class CcbHashHost(Protocol):
@@ -85,18 +86,7 @@ def analyze_functions(
 
 def extract_functions(analyzer: CcbHashHost, logger: logging.Logger) -> list[dict[str, Any]]:
     try:
-        functions = analyzer._cmd_list("aflj")
-        if not functions:
-            logger.debug("No functions found with 'aflj' command")
-            return []
-        valid_functions = []
-        for func in functions:
-            if func.get("addr") is not None and func.get("size", 0) > 0:
-                if "name" in func and func["name"]:
-                    func["name"] = func["name"].replace("&nbsp;", " ").replace("&amp;", "&")
-                valid_functions.append(func)
-        logger.debug("Extracted %s valid functions", len(valid_functions))
-        return valid_functions
+        return collect_valid_functions(analyzer, logger, clean_names=True)
     except Exception as exc:
         logger.error("Error extracting functions: %s", exc)
         return []
