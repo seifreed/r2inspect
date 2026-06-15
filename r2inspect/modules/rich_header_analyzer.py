@@ -18,16 +18,6 @@ from .rich_header_search import RichHeaderSearchMixin
 
 logger = get_logger(__name__)
 
-# Try to import pefile for better Rich Header support
-try:
-    import pefile
-
-    PEFILE_AVAILABLE = True
-    logger.debug("pefile library available for Rich Header analysis")
-except ImportError:
-    PEFILE_AVAILABLE = False
-    logger.debug("pefile library not available, using r2pipe fallback")
-
 
 class RichHeaderAnalyzer(
     RichHeaderPefileMixin,
@@ -169,6 +159,6 @@ class RichHeaderAnalyzer(
 
 
 __all__ = [
+    "PEFILE_AVAILABLE",
     "default_file_system",
-    "pefile",
 ]

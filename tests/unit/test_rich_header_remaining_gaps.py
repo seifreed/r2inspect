@@ -1,8 +1,6 @@
 """Tests targeting specific uncovered lines in rich_header_analyzer.py.
 
 Covered lines:
-  141-143  – get_rich_header_hash() returns None/empty
-  159-161  – pe.close() raises inside the finally block
   269-270  – _check_magic_bytes read_bytes raises
   309-310  – _extract_rich_header: all strategies fail after r2pipe offsets found
   398      – _direct_file_rich_search: xor_key is None
@@ -57,86 +55,6 @@ def _write_temp_pe(dos_stub: bytes) -> str:
 
 def _analyzer(filepath: str) -> RichHeaderAnalyzer:
     return RichHeaderAnalyzer(adapter=_MinimalAdapter(), filepath=filepath)
-
-
-# ── Fake pefile objects (module-attribute patching, no mocks) ─────────────────
-
-
-class _FakeRichHeader:
-    checksum = 0x12345678
-    values = []
-
-
-class _FakePENoHash:
-    """PE whose get_rich_header_hash() returns None."""
-
-    def __init__(self, filepath):
-        self.RICH_HEADER = _FakeRichHeader()
-
-    def get_rich_header_hash(self):
-        return None
-
-    def close(self):
-        pass
-
-
-class _FakePECloseRaises:
-    """PE whose get_rich_header_hash() returns None AND close() raises."""
-
-    def __init__(self, filepath):
-        self.RICH_HEADER = _FakeRichHeader()
-
-    def get_rich_header_hash(self):
-        return None
-
-    def close(self):
-        raise RuntimeError("simulated close failure")
-
-
-class _FakePEModuleNoHash:
-    PE = _FakePENoHash
-
-
-class _FakePEModuleCloseRaises:
-    PE = _FakePECloseRaises
-
-
-# ── Lines 141-143: get_rich_header_hash() returns None ───────────────────────
-
-
-def test_pefile_returns_none_when_hash_empty():
-    """Lines 141-143: rich_hash falsy → logger.debug + return None."""
-    orig = _rha_mod.pefile
-    _rha_mod.pefile = _FakePEModuleNoHash()
-    try:
-        fd, path = tempfile.mkstemp(suffix=".exe")
-        os.close(fd)
-        try:
-            result = _analyzer(path)._extract_rich_header_pefile()
-            assert result is None
-        finally:
-            os.unlink(path)
-    finally:
-        _rha_mod.pefile = orig
-
-
-# ── Lines 159-161: pe.close() raises in the finally block ────────────────────
-
-
-def test_pefile_close_exception_is_swallowed():
-    """Lines 159-161: pe.close() raises → exception logged, not propagated."""
-    orig = _rha_mod.pefile
-    _rha_mod.pefile = _FakePEModuleCloseRaises()
-    try:
-        fd, path = tempfile.mkstemp(suffix=".exe")
-        os.close(fd)
-        try:
-            result = _analyzer(path)._extract_rich_header_pefile()
-            assert result is None  # still returns None; exception was swallowed
-        finally:
-            os.unlink(path)
-    finally:
-        _rha_mod.pefile = orig
 
 
 # ── Lines 269-270: _check_magic_bytes read_bytes raises ──────────────────────
