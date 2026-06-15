@@ -8,9 +8,9 @@ production adapter stack.
 from __future__ import annotations
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.section_analysis import _mark_entropy_anomaly
 from r2inspect.modules.section_analyzer import SectionAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
-
 
 # ---------------------------------------------------------------------------
 # FakeR2 -- deterministic stand-in for r2pipe
@@ -231,32 +231,29 @@ def test_check_size_indicators_no_indicators_for_normal_section():
 
 
 # ---------------------------------------------------------------------------
-# _check_entropy_anomaly exception (lines 340-341)
+# domain _mark_entropy_anomaly (the canonical entropy-range check)
 # ---------------------------------------------------------------------------
 
 
-def test_check_entropy_anomaly_does_not_raise_on_malformed_range():
-    analyzer = _build_analyzer(sections=[])
+def test_mark_entropy_anomaly_does_not_raise_on_malformed_range():
     characteristics = {"expected_entropy": "not-a-valid-range"}
     analysis = {"entropy": 5.0}
     # Should not raise; ValueError is caught internally
-    analyzer._check_entropy_anomaly(characteristics, analysis)
+    _mark_entropy_anomaly(characteristics, analysis)
     assert "entropy_anomaly" not in characteristics
 
 
-def test_check_entropy_anomaly_variable_returns_early():
-    analyzer = _build_analyzer(sections=[])
+def test_mark_entropy_anomaly_variable_returns_early():
     characteristics = {"expected_entropy": "Variable"}
     analysis = {"entropy": 9.9}
-    analyzer._check_entropy_anomaly(characteristics, analysis)
+    _mark_entropy_anomaly(characteristics, analysis)
     assert "entropy_anomaly" not in characteristics
 
 
-def test_check_entropy_anomaly_marks_anomaly():
-    analyzer = _build_analyzer(sections=[])
+def test_mark_entropy_anomaly_marks_anomaly():
     characteristics = {"expected_entropy": "1.0-3.0"}
     analysis = {"entropy": 7.5}
-    analyzer._check_entropy_anomaly(characteristics, analysis)
+    _mark_entropy_anomaly(characteristics, analysis)
     assert characteristics.get("entropy_anomaly") is True
 
 

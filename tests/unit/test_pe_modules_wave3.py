@@ -734,30 +734,6 @@ def test_section_get_section_summary_exception() -> None:
 
 
 # ---------------------------------------------------------------------------
-# section_analyzer.py – _check_entropy_anomaly sets entropy_anomaly (lines 418-419)
-# Note: these lines are _check_entropy_anomaly logic, NOT _get_arch
-# ---------------------------------------------------------------------------
-
-
-def test_section_check_entropy_anomaly_out_of_range() -> None:
-    """entropy outside expected_entropy range sets entropy_anomaly=True (line 339)."""
-    analyzer = SectionAnalyzer(adapter=SimpleSectionAdapter())
-    characteristics: dict = {"expected_entropy": "6.0-7.5"}
-    analysis = {"entropy": 2.0}
-    analyzer._check_entropy_anomaly(characteristics, analysis)
-    assert characteristics.get("entropy_anomaly") is True
-
-
-def test_section_check_entropy_anomaly_variable_skips() -> None:
-    """expected_entropy='Variable' skips the check (returns early, line 333)."""
-    analyzer = SectionAnalyzer(adapter=SimpleSectionAdapter())
-    characteristics: dict = {"expected_entropy": "Variable"}
-    analysis = {"entropy": 8.0}
-    analyzer._check_entropy_anomaly(characteristics, analysis)
-    assert "entropy_anomaly" not in characteristics
-
-
-# ---------------------------------------------------------------------------
 # section_analyzer.py – _get_section_characteristics with is_executable (line 323)
 # ---------------------------------------------------------------------------
 

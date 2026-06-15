@@ -171,19 +171,6 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Get detailed section characteristics"""
         return _get_section_characteristics_impl(self, section, analysis, logger=logger)
 
-    def _check_entropy_anomaly(self, characteristics: dict, analysis: dict) -> None:
-        """Check if entropy is within expected range"""
-        if characteristics["expected_entropy"] == "Variable":
-            return
-
-        try:
-            entropy = analysis.get("entropy", 0)
-            min_entropy, max_entropy = map(float, characteristics["expected_entropy"].split("-"))
-            if entropy < min_entropy or entropy > max_entropy:
-                characteristics["entropy_anomaly"] = True
-        except (ValueError, TypeError) as e:
-            logger.debug("Could not parse entropy range: %s", e)
-
     def _analyze_code_section(self, section: dict[str, Any]) -> dict[str, Any]:
         """Analyze executable code sections"""
         return _analyze_code_section_impl(self, section, logger=logger)

@@ -20,7 +20,6 @@ from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.modules.packer_detector import PackerDetector
 from r2inspect.modules.section_analyzer import SectionAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -885,7 +884,7 @@ class TestSectionAnalyzer:
         assert any("small" in ind.lower() for ind in result["suspicious_indicators"])
 
     def test_entropy_anomaly_detection(self) -> None:
-        """_check_entropy_anomaly flags when entropy is outside expected range."""
+        """Section analysis flags entropy outside the expected range as an anomaly."""
         section = {
             "name": ".text",  # expected 6.0-7.5
             "vaddr": 0x1000,
