@@ -12,13 +12,12 @@ from ..interfaces import (
     AnalyzerRegistryLike,
     ConfigLike,
 )
-from .analysis_pipeline import AnalysisStage
-from .stages_common import default_analyzer_factory
+from .stages_common import RegistryStage, default_analyzer_factory
 
 logger = logging.getLogger(__name__)
 
 
-class SecurityStage(AnalysisStage):
+class SecurityStage(RegistryStage):
     """Analyze security features and exploit mitigations."""
 
     def __init__(
@@ -32,14 +31,13 @@ class SecurityStage(AnalysisStage):
         super().__init__(
             name="security",
             description="Security feature and mitigation analysis",
-            optional=True,
             dependencies=["format_detection"],
+            registry=registry,
+            adapter=adapter,
+            config=config,
+            filename=filename,
+            analyzer_factory=analyzer_factory,
         )
-        self.registry = registry
-        self.adapter = adapter
-        self.config = config
-        self.filename = filename
-        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         file_format = context.get("metadata", {}).get("file_format", "Unknown")

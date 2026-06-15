@@ -11,6 +11,7 @@ from ..infrastructure.logging import get_logger
 from ..interfaces import (
     AnalyzerBackend,
     AnalyzerFactoryLike,
+    AnalyzerRegistryLike,
     ConfigLike,
     ResultAggregatorFactoryLike,
 )
@@ -97,6 +98,36 @@ def default_result_aggregator_factory() -> Any:
     from ..core.result_aggregator import ResultAggregator
 
     return ResultAggregator()
+
+
+class RegistryStage(AnalysisStage):
+    """Base for stages that run registry-backed analyzers with shared wiring."""
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        description: str,
+        dependencies: list[str],
+        registry: AnalyzerRegistryLike,
+        adapter: AnalyzerBackend,
+        config: ConfigLike,
+        filename: str,
+        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
+        condition: Callable[[dict[str, Any]], bool] | None = None,
+    ) -> None:
+        super().__init__(
+            name=name,
+            description=description,
+            optional=True,
+            dependencies=dependencies,
+            condition=condition,
+        )
+        self.registry = registry
+        self.adapter = adapter
+        self.config = config
+        self.filename = filename
+        self.analyzer_factory = analyzer_factory
 
 
 class AnalyzerStage(AnalysisStage):

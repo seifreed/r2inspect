@@ -11,11 +11,14 @@ from ..interfaces import (
     AnalyzerRegistryLike,
     ConfigLike,
 )
-from .analysis_pipeline import AnalysisStage
-from .stages_common import default_analyzer_factory, run_registered_analyzer
+from .stages_common import (
+    RegistryStage,
+    default_analyzer_factory,
+    run_registered_analyzer,
+)
 
 
-class MetadataStage(AnalysisStage):
+class MetadataStage(RegistryStage):
     """Extract structural metadata from binaries."""
 
     def __init__(
@@ -30,15 +33,14 @@ class MetadataStage(AnalysisStage):
         super().__init__(
             name="metadata",
             description="Structural metadata extraction",
-            optional=True,
             dependencies=["file_info", "format_detection"],
+            registry=registry,
+            adapter=adapter,
+            config=config,
+            filename=filename,
+            analyzer_factory=analyzer_factory,
         )
-        self.registry = registry
-        self.adapter = adapter
-        self.config = config
-        self.filename = filename
         self.options = options
-        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         results: dict[str, Any] = {}

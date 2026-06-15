@@ -17,8 +17,7 @@ from ..interfaces import (
     AnalyzerRegistryLike,
     ConfigLike,
 )
-from .analysis_pipeline import AnalysisStage
-from .stages_common import default_analyzer_factory
+from .stages_common import RegistryStage, default_analyzer_factory
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ FORMAT_HANDLERS = {
 }
 
 
-class FormatAnalysisStage(AnalysisStage):
+class FormatAnalysisStage(RegistryStage):
     """Perform format-specific deep analysis."""
 
     def __init__(
@@ -49,16 +48,15 @@ class FormatAnalysisStage(AnalysisStage):
         super().__init__(
             name="format_analysis",
             description="Format-specific deep analysis",
-            optional=True,
             dependencies=["format_detection"],
+            registry=registry,
+            adapter=adapter,
+            config=config,
+            filename=filename,
+            analyzer_factory=analyzer_factory,
             condition=lambda ctx: ctx.get("metadata", {}).get("file_format")
             in {"PE", "ELF", "Mach-O"},
         )
-        self.registry = registry
-        self.adapter = adapter
-        self.config = config
-        self.filename = filename
-        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         file_format = context.get("metadata", {}).get("file_format", "Unknown")

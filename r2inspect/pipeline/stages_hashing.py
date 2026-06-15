@@ -14,13 +14,12 @@ from ..interfaces import (
     HashingAnalyzerInterface,
 )
 from ..registry.analyzer_registry import AnalyzerCategory
-from .analysis_pipeline import AnalysisStage
-from .stages_common import default_analyzer_factory
+from .stages_common import RegistryStage, default_analyzer_factory
 
 logger = logging.getLogger(__name__)
 
 
-class HashingStage(AnalysisStage):
+class HashingStage(RegistryStage):
     """Execute hashing analyzers for similarity detection."""
 
     def __init__(
@@ -34,14 +33,13 @@ class HashingStage(AnalysisStage):
         super().__init__(
             name="hashing",
             description="Execute fuzzy and similarity hashing",
-            optional=True,
             dependencies=["file_info"],
+            registry=registry,
+            adapter=adapter,
+            config=config,
+            filename=filename,
+            analyzer_factory=analyzer_factory,
         )
-        self.registry = registry
-        self.adapter = adapter
-        self.config = config
-        self.filename = filename
-        self.analyzer_factory = analyzer_factory
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         file_format = context.get("metadata", {}).get("file_format", "Unknown")
