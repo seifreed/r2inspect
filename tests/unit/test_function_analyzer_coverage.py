@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 
 
 class MinimalAdapter:
@@ -619,7 +620,7 @@ def test_get_function_similarity_exception_returns_empty():
     # Test the exception path by subclassing
     class RaisingAnalyzer(FunctionAnalyzer):
         def _inner_similarity(self, hashes):
-            for k, v in hashes.items():
+            for _k, _v in hashes.items():
                 pass
             raise RuntimeError("similarity error")
 
@@ -802,28 +803,20 @@ def test_classify_function_type_exception():
 
 
 def test_calculate_std_dev_single_value():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._calculate_std_dev([5.0]) == 0.0
+    assert calculate_std_dev([5.0]) == 0.0
 
 
 def test_calculate_std_dev_two_equal_values():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._calculate_std_dev([3.0, 3.0]) == 0.0
+    assert calculate_std_dev([3.0, 3.0]) == 0.0
 
 
 def test_calculate_std_dev_multiple_values():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_std_dev([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
+    result = calculate_std_dev([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
     assert abs(result - 2.0) < 0.01
 
 
 def test_calculate_std_dev_empty():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._calculate_std_dev([]) == 0.0
+    assert calculate_std_dev([]) == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -832,9 +825,7 @@ def test_calculate_std_dev_empty():
 
 
 def test_analyze_function_coverage_empty():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._analyze_function_coverage([])
+    result = analyze_function_coverage([])
     assert result["total_functions"] == 0
     assert result["functions_with_size"] == 0
 
@@ -845,9 +836,7 @@ def test_analyze_function_coverage_with_data():
         {"name": "f2", "size": 50, "nbbs": 0},
         {"name": "f3", "size": 0, "nbbs": 3},
     ]
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._analyze_function_coverage(funcs)
+    result = analyze_function_coverage(funcs)
     assert result["total_functions"] == 3
     assert result["functions_with_size"] == 2
     assert result["functions_with_blocks"] == 2  # f1 and f3 have nbbs > 0
@@ -857,10 +846,8 @@ def test_analyze_function_coverage_with_data():
 
 
 def test_analyze_function_coverage_exception():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
     # Pass non-list to trigger exception
-    result = analyzer._analyze_function_coverage("not_a_list")  # type: ignore
+    result = analyze_function_coverage("not_a_list")  # type: ignore
     assert result == {}
 
 
@@ -927,8 +914,6 @@ def test_classify_function_type_exception_path():
 
 def test_calculate_std_dev_exception_path():
     """Cover lines 471-472: exception in _calculate_std_dev."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
     # Pass None to trigger TypeError on len(None)
-    result = analyzer._calculate_std_dev(None)  # type: ignore
+    result = calculate_std_dev(None)  # type: ignore
     assert result == 0.0

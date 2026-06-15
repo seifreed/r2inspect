@@ -10,6 +10,7 @@ from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 from tests.helpers import env_vars
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
@@ -101,11 +102,11 @@ def test_function_analyzer_real_and_helpers(samples_dir: Path) -> None:
         assert analyzer._classify_function_type("main", {"size": 50}) == "user"
         assert analyzer._classify_function_type("other", {"size": 50}) == "unknown"
 
-        assert analyzer._calculate_std_dev([]) == 0.0
-        assert analyzer._calculate_std_dev([1.0]) == 0.0
-        assert analyzer._calculate_std_dev([1.0, 3.0]) > 0.0
+        assert calculate_std_dev([]) == 0.0
+        assert calculate_std_dev([1.0]) == 0.0
+        assert calculate_std_dev([1.0, 3.0]) > 0.0
 
-        coverage = analyzer._analyze_function_coverage(
+        coverage = analyze_function_coverage(
             [{"size": 10, "nbbs": 1}, {"size": 0, "nbbs": 0}]
         )
         assert coverage["total_functions"] == 2

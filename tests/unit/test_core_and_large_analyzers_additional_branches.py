@@ -3,12 +3,12 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-import pytest
 
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnalyzer
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 
@@ -164,11 +164,11 @@ def test_function_analyzer_branches() -> None:
     stats = analyzer._generate_function_stats(functions)
     assert stats["total_functions"] == 2
 
-    coverage = analyzer._analyze_function_coverage(functions)
+    coverage = analyze_function_coverage(functions)
     assert coverage["functions_with_blocks"] == 1
 
     assert analyzer._classify_function_type("j_thunk", {"size": 1}) == "thunk"
-    assert analyzer._calculate_std_dev([1.0, 2.0, 3.0]) > 0.0
+    assert calculate_std_dev([1.0, 2.0, 3.0]) > 0.0
 
     hashes = analyzer._generate_machoc_hashes(functions)
     summary = analyzer.generate_machoc_summary({"machoc_hashes": hashes})

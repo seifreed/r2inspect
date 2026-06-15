@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
-from r2inspect.domain.services.function_analysis import machoc_hash_from_mnemonics
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 
 
 class MinimalAdapter:
@@ -451,45 +451,35 @@ def test_classify_function_type_error():
 
 def test_calculate_std_dev_empty():
     """Test _calculate_std_dev with empty list."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._calculate_std_dev([])
+    result = calculate_std_dev([])
     assert result == 0.0
 
 
 def test_calculate_std_dev_single_value():
     """Test _calculate_std_dev with single value."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._calculate_std_dev([5.0])
+    result = calculate_std_dev([5.0])
     assert result == 0.0
 
 
 def test_calculate_std_dev_multiple_values():
     """Test _calculate_std_dev with multiple values."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
     values = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
-    result = analyzer._calculate_std_dev(values)
+    result = calculate_std_dev(values)
     assert result > 0.0
 
 
 def test_calculate_std_dev_error():
     """Test _calculate_std_dev handles errors."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._calculate_std_dev([1, "invalid"])
+    result = calculate_std_dev([1, "invalid"])
     assert result == 0.0
 
 
 def test_analyze_function_coverage_basic():
     """Test _analyze_function_coverage with functions."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
     functions = [
         {"size": 100, "nbbs": 5},
@@ -497,7 +487,7 @@ def test_analyze_function_coverage_basic():
         {"size": 0},
     ]
 
-    result = analyzer._analyze_function_coverage(functions)
+    result = analyze_function_coverage(functions)
 
     assert result["total_functions"] == 3
     assert result["functions_with_size"] == 2
@@ -508,15 +498,13 @@ def test_analyze_function_coverage_basic():
 
 def test_analyze_function_coverage_percentages():
     """Test _analyze_function_coverage calculates percentages."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
     functions = [
         {"size": 100, "nbbs": 5},
         {"size": 0, "nbbs": 0},
     ]
 
-    result = analyzer._analyze_function_coverage(functions)
+    result = analyze_function_coverage(functions)
 
     assert "size_coverage_percent" in result
     assert "block_coverage_percent" in result
@@ -526,10 +514,8 @@ def test_analyze_function_coverage_percentages():
 
 def test_analyze_function_coverage_error():
     """Test _analyze_function_coverage handles errors."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._analyze_function_coverage(None)
+    result = analyze_function_coverage(None)
     assert result == {}
 
 

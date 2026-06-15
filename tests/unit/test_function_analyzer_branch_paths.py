@@ -7,13 +7,11 @@ Covers lines: 43-44, 66-68, 82-86, 91-93, 98-101, 107-109, 111, 139,
 
 from __future__ import annotations
 
-import tempfile
-import os
-from pathlib import Path
 
 import pytest
 
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 import r2inspect.modules.function_analyzer as fa_module
 
 
@@ -820,24 +818,20 @@ def test_classify_function_type_returns_unknown_for_unrecognized():
 
 
 def test_calculate_std_dev_empty_list_returns_zero():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._calculate_std_dev([]) == 0.0
+    assert calculate_std_dev([]) == 0.0
 
 
 def test_calculate_std_dev_single_element_returns_zero():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._calculate_std_dev([42.0]) == 0.0
+    assert calculate_std_dev([42.0]) == 0.0
 
 
 def test_calculate_std_dev_uniform_values_returns_zero():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._calculate_std_dev([7.0, 7.0, 7.0]) == 0.0
+    assert calculate_std_dev([7.0, 7.0, 7.0]) == 0.0
 
 
 def test_calculate_std_dev_known_values():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
     # Values [2,4,4,4,5,5,7,9] have std dev exactly 2.0
-    result = analyzer._calculate_std_dev([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
+    result = calculate_std_dev([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])
     assert abs(result - 2.0) < 0.001
 
 
@@ -847,8 +841,7 @@ def test_calculate_std_dev_known_values():
 
 
 def test_analyze_function_coverage_empty_list():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    result = analyzer._analyze_function_coverage([])
+    result = analyze_function_coverage([])
     assert result["total_functions"] == 0
     assert result["functions_with_size"] == 0
     assert result["functions_with_blocks"] == 0
@@ -860,8 +853,7 @@ def test_analyze_function_coverage_with_size_and_blocks():
         {"name": "f2", "size": 80, "nbbs": 0},
         {"name": "f3", "size": 0, "nbbs": 2},
     ]
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    result = analyzer._analyze_function_coverage(funcs)
+    result = analyze_function_coverage(funcs)
     assert result["total_functions"] == 3
     assert result["functions_with_size"] == 2  # f1, f2
     assert result["functions_with_blocks"] == 2  # f1, f3
@@ -877,8 +869,7 @@ def test_analyze_function_coverage_accepts_string_sizes_and_blocks():
         {"name": "f2", "size": "bad", "nbbs": "0"},
         {"name": "f3", "size": "80", "nbbs": "2"},
     ]
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    result = analyzer._analyze_function_coverage(funcs)
+    result = analyze_function_coverage(funcs)
     assert result["total_functions"] == 3
     assert result["functions_with_size"] == 2
     assert result["functions_with_blocks"] == 2
@@ -888,15 +879,13 @@ def test_analyze_function_coverage_accepts_string_sizes_and_blocks():
 
 def test_analyze_function_coverage_percentages_are_calculated():
     funcs = [{"name": "f1", "size": 100, "nbbs": 1}]
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    result = analyzer._analyze_function_coverage(funcs)
+    result = analyze_function_coverage(funcs)
     assert result["size_coverage_percent"] == pytest.approx(100.0)
     assert result["block_coverage_percent"] == pytest.approx(100.0)
 
 
 def test_analyze_function_coverage_returns_empty_on_exception():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    result = analyzer._analyze_function_coverage("not_a_list")  # type: ignore
+    result = analyze_function_coverage("not_a_list")  # type: ignore
     assert result == {}
 
 

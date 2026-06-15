@@ -15,8 +15,6 @@ from ..domain.services.function_analysis import (
     machoc_hash_from_mnemonics,
 )
 from .function_analyzer_support import (
-    analyze_function_coverage as _analyze_function_coverage_impl,
-    calculate_std_dev as _calculate_std_dev_impl,
     extract_function_mnemonics as _extract_function_mnemonics_impl,
     generate_function_stats as _generate_function_stats_impl,
     generate_machoc_hashes as _generate_machoc_hashes_impl,
@@ -241,14 +239,6 @@ class FunctionAnalyzer(CommandHelperMixin):
             default="unknown",
             error_msg=f"Error classifying function type for {func_name}",
         )
-
-    def _calculate_std_dev(self, values: list[float]) -> float:
-        """Calculate standard deviation"""
-        return _calculate_std_dev_impl(values)
-
-    def _analyze_function_coverage(self, functions: list[dict[str, Any]]) -> dict[str, Any]:
-        """Analyze function coverage and detection quality"""
-        return _analyze_function_coverage_impl(functions)
 
 
 __all__ = [

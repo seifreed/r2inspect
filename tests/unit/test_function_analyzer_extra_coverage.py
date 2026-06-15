@@ -4,11 +4,10 @@
 No the stdlib mock library, no mock objects, no patch. Real Config, real objects, plain adapters.
 """
 
-import pytest
-from pathlib import Path
 
 from r2inspect.config import Config
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 
 
 class FakeAdapter:
@@ -351,42 +350,34 @@ def test_classify_function_type_error():
 
 def test_calculate_std_dev_empty():
     """Test _calculate_std_dev with empty list"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._calculate_std_dev([])
+    result = calculate_std_dev([])
     assert result == 0.0
 
 
 def test_calculate_std_dev_single():
     """Test _calculate_std_dev with single value"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._calculate_std_dev([5.0])
+    result = calculate_std_dev([5.0])
     assert result == 0.0
 
 
 def test_calculate_std_dev_error():
     """Test _calculate_std_dev handles errors"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._calculate_std_dev([1, "not_a_number"])
+    result = calculate_std_dev([1, "not_a_number"])
     assert result == 0.0
 
 
 def test_analyze_function_coverage():
     """Test _analyze_function_coverage"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
     functions = [
         {"size": 100, "nbbs": 5},
         {"size": 200, "nbbs": 10},
     ]
 
-    result = analyzer._analyze_function_coverage(functions)
+    result = analyze_function_coverage(functions)
     assert result["total_functions"] == 2
     assert result["functions_with_size"] == 2
     assert result["functions_with_blocks"] == 2
@@ -394,8 +385,6 @@ def test_analyze_function_coverage():
 
 def test_analyze_function_coverage_error():
     """Test _analyze_function_coverage handles errors"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
 
-    result = analyzer._analyze_function_coverage(None)
+    result = analyze_function_coverage(None)
     assert result == {}

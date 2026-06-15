@@ -4,6 +4,7 @@ import r2pipe
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 
 PE_FIXTURE = "samples/fixtures/hello_pe.exe"
 
@@ -38,7 +39,7 @@ def test_function_analyzer_helpers() -> None:
             analyzer._calculate_cyclomatic_complexity(func)
             analyzer._classify_function_type(func_name, func)
         stats = analyzer._generate_function_stats(functions)
-        coverage = analyzer._analyze_function_coverage(functions)
+        coverage = analyze_function_coverage(functions)
     finally:
         r2.quit()
 
@@ -56,5 +57,5 @@ def test_function_similarity_and_stats_helpers() -> None:
     assert summary.get("duplicate_function_groups") == 1
     assert summary.get("total_duplicate_functions") == 2
 
-    assert analyzer._calculate_std_dev([1.0, 2.0, 3.0]) > 0
-    assert analyzer._calculate_std_dev([1.0]) == 0.0
+    assert calculate_std_dev([1.0, 2.0, 3.0]) > 0
+    assert calculate_std_dev([1.0]) == 0.0
