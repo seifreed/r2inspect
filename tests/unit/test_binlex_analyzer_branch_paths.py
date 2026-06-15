@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from r2inspect.domain.services.binlex import (
+    calculate_binary_signature,
+    extract_mnemonic_from_op,
+    extract_tokens_from_ops,
+)
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
+from r2inspect.modules.binlex_runtime import calculate_binary_signature_safe
 
 
 # ---------------------------------------------------------------------------
@@ -312,13 +319,12 @@ def test_accumulate_ngrams_skips_when_n_missing() -> None:
 
 
 def test_calculate_binary_signature_with_multiple_functions() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
         "func_a": {2: {"signature": "sig1", "ngrams": ["a b"]}},
         "func_b": {2: {"signature": "sig2", "ngrams": ["b c"]}},
         "func_c": {3: {"signature": "sig3", "ngrams": ["a b c"]}},
     }
-    result = analyzer._calculate_binary_signature(function_signatures, [2, 3])
+    result = calculate_binary_signature(function_signatures, [2, 3])
     assert 2 in result
     assert 3 in result
     assert len(result[2]) == 64  # SHA256 hex
@@ -326,23 +332,19 @@ def test_calculate_binary_signature_with_multiple_functions() -> None:
 
 
 def test_calculate_binary_signature_empty_function_signatures() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    result = analyzer._calculate_binary_signature({}, [2, 3])
+    result = calculate_binary_signature({}, [2, 3])
     assert result == {}
 
 
 def test_calculate_binary_signature_no_n_match() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
         "func_a": {3: {"signature": "sig1"}},
     }
-    result = analyzer._calculate_binary_signature(function_signatures, [2])
+    result = calculate_binary_signature(function_signatures, [2])
     assert 2 not in result
 
 
 def test_calculate_binary_signature_exception_returns_empty() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-
     # Non-sortable signatures trigger exception
     class NonSortable:
         def __gt__(self, other: object) -> bool:
@@ -355,7 +357,9 @@ def test_calculate_binary_signature_exception_returns_empty() -> None:
         "f1": {2: {"signature": NonSortable()}},
         "f2": {2: {"signature": NonSortable()}},
     }
-    result = analyzer._calculate_binary_signature(function_signatures, [2])
+    result = calculate_binary_signature_safe(
+        function_signatures, [2], logger=logging.getLogger(__name__)
+    )
     assert result == {}
 
 
@@ -631,9 +635,8 @@ def test_extract_tokens_from_text_whitespace_only_returns_empty() -> None:
 
 
 def test_extract_tokens_from_ops_skips_non_dict() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     ops = [None, "string", 42, {"mnemonic": "push"}, {"mnemonic": "ret"}]
-    tokens = analyzer._extract_tokens_from_ops(ops)
+    tokens = extract_tokens_from_ops(ops)
     assert "push" in tokens
     assert "ret" in tokens
     assert len(tokens) == 2
@@ -645,32 +648,27 @@ def test_extract_tokens_from_ops_skips_non_dict() -> None:
 
 
 def test_extract_mnemonic_string_mnemonic_field() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    result = analyzer._extract_mnemonic_from_op({"mnemonic": "call"})
+    result = extract_mnemonic_from_op({"mnemonic": "call"})
     assert result == "call"
 
 
 def test_extract_mnemonic_falls_back_to_opcode() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    result = analyzer._extract_mnemonic_from_op({"opcode": "jmp 0x1000"})
+    result = extract_mnemonic_from_op({"opcode": "jmp 0x1000"})
     assert result == "jmp"
 
 
 def test_extract_mnemonic_empty_opcode_returns_none() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    result = analyzer._extract_mnemonic_from_op({"opcode": "   "})
+    result = extract_mnemonic_from_op({"opcode": "   "})
     assert result is None
 
 
 def test_extract_mnemonic_no_fields_returns_none() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    result = analyzer._extract_mnemonic_from_op({})
+    result = extract_mnemonic_from_op({})
     assert result is None
 
 
 def test_extract_mnemonic_non_string_mnemonic_falls_back() -> None:
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    result = analyzer._extract_mnemonic_from_op({"mnemonic": 42})
+    result = extract_mnemonic_from_op({"mnemonic": 42})
     assert result is None
 
 

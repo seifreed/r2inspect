@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 from collections import Counter, defaultdict
-from pathlib import Path
 from typing import Any
 
+from r2inspect.domain.services.binlex import (
+    calculate_binary_signature,
+    extract_mnemonic_from_op,
+    extract_tokens_from_ops,
+)
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
+from r2inspect.modules.binlex_runtime import calculate_binary_signature_safe
 
 
 class AdapterWithFunctionsNoDisasm:
@@ -174,28 +180,26 @@ def test_analyze_function_without_addr_skipped():
 
 
 def test_extract_tokens_from_ops_skips_non_dicts():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     ops = [
         "string_not_dict",
         {"mnemonic": "mov"},
         None,
         {"mnemonic": "ret"},
     ]
-    tokens = analyzer._extract_tokens_from_ops(ops)
+    tokens = extract_tokens_from_ops(ops)
     assert "mov" in tokens
     assert "ret" in tokens
     assert len(tokens) == 2
 
 
 def test_extract_tokens_from_ops_opcode_fallback():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     ops = [
         {"opcode": "push rbp"},
         {"opcode": "call 0x1000"},
         {"opcode": "  "},  # whitespace only
         {},  # no mnemonic or opcode
     ]
-    tokens = analyzer._extract_tokens_from_ops(ops)
+    tokens = extract_tokens_from_ops(ops)
     assert "push" in tokens
     assert "call" in tokens
 
@@ -204,32 +208,27 @@ def test_extract_tokens_from_ops_opcode_fallback():
 
 
 def test_extract_mnemonic_from_op_mnemonic_field():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    mnemonic = analyzer._extract_mnemonic_from_op({"mnemonic": "mov"})
+    mnemonic = extract_mnemonic_from_op({"mnemonic": "mov"})
     assert mnemonic == "mov"
 
 
 def test_extract_mnemonic_from_op_opcode_field():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    mnemonic = analyzer._extract_mnemonic_from_op({"opcode": "push rbp"})
+    mnemonic = extract_mnemonic_from_op({"opcode": "push rbp"})
     assert mnemonic == "push"
 
 
 def test_extract_mnemonic_from_op_empty_opcode():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    mnemonic = analyzer._extract_mnemonic_from_op({"opcode": "  "})
+    mnemonic = extract_mnemonic_from_op({"opcode": "  "})
     assert mnemonic is None
 
 
 def test_extract_mnemonic_from_op_no_fields():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    mnemonic = analyzer._extract_mnemonic_from_op({})
+    mnemonic = extract_mnemonic_from_op({})
     assert mnemonic is None
 
 
 def test_extract_mnemonic_from_op_none_mnemonic():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    mnemonic = analyzer._extract_mnemonic_from_op({"mnemonic": None})
+    mnemonic = extract_mnemonic_from_op({"mnemonic": None})
     assert mnemonic is None
 
 
@@ -481,22 +480,20 @@ def test_similarity_score_partial_overlap():
 
 
 def test_calculate_binary_signature_with_data():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
         "func_a": {2: {"signature": "abc123", "ngrams": ["a b"]}},
         "func_b": {2: {"signature": "def456", "ngrams": ["c d"]}},
     }
-    result = analyzer._calculate_binary_signature(function_signatures, [2])
+    result = calculate_binary_signature(function_signatures, [2])
     assert 2 in result
     assert len(result[2]) == 64  # SHA256 hex
 
 
 def test_calculate_binary_signature_no_signatures_for_n():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
         "func_a": {3: {"signature": "abc123"}},  # only n=3
     }
-    result = analyzer._calculate_binary_signature(function_signatures, [2])
+    result = calculate_binary_signature(function_signatures, [2])
     # n=2 not in any function_signatures
     assert 2 not in result
 
@@ -555,9 +552,8 @@ def test_extract_tokens_from_text_no_adapter():
 
 
 def test_extract_tokens_from_ops_with_none_entry():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     ops = [None, {"mnemonic": "mov"}, 42, {"mnemonic": "ret"}]
-    tokens = analyzer._extract_tokens_from_ops(ops)
+    tokens = extract_tokens_from_ops(ops)
     assert "mov" in tokens
     assert "ret" in tokens
     assert len(tokens) == 2
@@ -839,12 +835,13 @@ def test_calculate_binary_signature_exception_with_non_sortable():
         def __lt__(self, other: object) -> bool:
             raise TypeError("cannot compare")
 
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
         "func_a": {2: {"signature": NonSortable()}},
         "func_b": {2: {"signature": NonSortable()}},
     }
-    result = analyzer._calculate_binary_signature(function_signatures, [2])
+    result = calculate_binary_signature_safe(
+        function_signatures, [2], logger=logging.getLogger(__name__)
+    )
     assert result == {}  # Empty due to exception
 
 

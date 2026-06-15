@@ -8,8 +8,6 @@ from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.services.binlex import (
     create_signature,
-    extract_mnemonic_from_op,
-    extract_tokens_from_ops,
     generate_ngrams,
     normalize_mnemonic,
 )
@@ -29,7 +27,6 @@ from .binlex_features import (
     extract_instruction_tokens as _extract_instruction_tokens_impl,
 )
 from .binlex_runtime import (
-    calculate_binary_signature_safe as _calculate_binary_signature_safe,
     calculate_binlex_from_file as _calculate_binlex_from_file,
     extract_tokens_from_pdfj as _extract_tokens_from_pdfj_impl,
     extract_tokens_from_pdj as _extract_tokens_from_pdj_impl,
@@ -150,12 +147,6 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _extract_tokens_from_text(self, func_addr: int, func_name: str) -> list[str]:
         return _extract_tokens_from_text_impl(self, func_addr, func_name, logger=logger)
 
-    def _extract_tokens_from_ops(self, ops: list[Any]) -> list[str]:
-        return extract_tokens_from_ops(ops)
-
-    def _extract_mnemonic_from_op(self, op: dict[str, Any]) -> str | None:
-        return extract_mnemonic_from_op(op)
-
     def _normalize_mnemonic(self, mnemonic: str | None) -> str | None:
         return normalize_mnemonic(mnemonic)
 
@@ -183,13 +174,6 @@ class BinlexAnalyzer(CommandHelperMixin, BaseAnalyzer):
             SHA256 signature hash
         """
         return create_signature(ngrams)
-
-    def _calculate_binary_signature(
-        self,
-        function_signatures: dict[str, dict[int, dict[str, Any]]],
-        ngram_sizes: list[int],
-    ) -> dict[int, str]:
-        return _calculate_binary_signature_safe(function_signatures, ngram_sizes, logger=logger)
 
     def compare_functions(self, func1_sig: str, func2_sig: str) -> bool:
         """Compare two function signatures for exact match."""

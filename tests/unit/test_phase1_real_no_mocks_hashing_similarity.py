@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.binlex import (
+    calculate_binary_signature,
+    extract_mnemonic_from_op,
+    extract_tokens_from_ops,
+)
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.modules.binbloom_analyzer import BLOOM_AVAILABLE, BinbloomAnalyzer
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
@@ -164,11 +168,11 @@ def test_phase1_binlex_signature_paths_real_no_mocks(tmp_path: Path) -> None:
 
     assert analyzer._normalize_mnemonic(" MOV ") == "mov"
     assert analyzer._normalize_mnemonic("&nbsp;") == " "
-    assert analyzer._extract_mnemonic_from_op({"mnemonic": "call"}) == "call"
-    assert analyzer._extract_mnemonic_from_op({"opcode": "jmp 0x401000"}) == "jmp"
-    assert analyzer._extract_mnemonic_from_op({"opcode": ""}) is None
+    assert extract_mnemonic_from_op({"mnemonic": "call"}) == "call"
+    assert extract_mnemonic_from_op({"opcode": "jmp 0x401000"}) == "jmp"
+    assert extract_mnemonic_from_op({"opcode": ""}) is None
 
-    tokens = analyzer._extract_tokens_from_ops(
+    tokens = extract_tokens_from_ops(
         [{"mnemonic": "mov"}, {"opcode": "jmp 0x10"}, {"mnemonic": "ret"}]
     )
     assert tokens == ["mov", "jmp", "ret"]
@@ -184,7 +188,7 @@ def test_phase1_binlex_signature_paths_real_no_mocks(tmp_path: Path) -> None:
     assert analyzer.get_function_similarity_score(["a", "b"], ["a", "c"]) > 0.0
     assert analyzer.get_function_similarity_score([], []) == 1.0
 
-    bin_sig = analyzer._calculate_binary_signature(
+    bin_sig = calculate_binary_signature(
         {
             "f1": {2: {"signature": sig1}},
             "f2": {2: {"signature": sig2}, 3: {"signature": "x" * 64}},

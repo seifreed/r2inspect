@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
+from r2inspect.domain.services.binlex import (
+    calculate_binary_signature,
+    extract_mnemonic_from_op,
+    extract_tokens_from_ops,
+)
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
+import contextlib
 
 
 class MockAdapter:
@@ -176,8 +181,6 @@ def test_binlex_signature_deterministic():
 
 
 def test_binlex_calculate_binary_signature():
-    adapter = MockAdapter()
-    analyzer = BinlexAnalyzer(adapter, "/path/to/binary")
 
     function_signatures = {
         "func1": {
@@ -190,7 +193,7 @@ def test_binlex_calculate_binary_signature():
         },
     }
 
-    binary_sig = analyzer._calculate_binary_signature(function_signatures, [2, 3])
+    binary_sig = calculate_binary_signature(function_signatures, [2, 3])
     assert isinstance(binary_sig, dict)
     assert 2 in binary_sig
     assert 3 in binary_sig
@@ -279,26 +282,20 @@ def test_binlex_html_entity_cleanup():
 
 
 def test_binlex_extract_mnemonic_from_op():
-    adapter = MockAdapter()
-    analyzer = BinlexAnalyzer(adapter, "/path/to/binary")
-
     op1 = {"mnemonic": "mov"}
-    assert analyzer._extract_mnemonic_from_op(op1) == "mov"
+    assert extract_mnemonic_from_op(op1) == "mov"
 
     op2 = {"opcode": "push rbp"}
-    assert analyzer._extract_mnemonic_from_op(op2) == "push"
+    assert extract_mnemonic_from_op(op2) == "push"
 
     op3 = {"mnemonic": "", "opcode": "call 0x1000"}
-    assert analyzer._extract_mnemonic_from_op(op3) == "call"
+    assert extract_mnemonic_from_op(op3) == "call"
 
     op4 = {}
-    assert analyzer._extract_mnemonic_from_op(op4) is None
+    assert extract_mnemonic_from_op(op4) is None
 
 
 def test_binlex_extract_tokens_from_ops():
-    adapter = MockAdapter()
-    analyzer = BinlexAnalyzer(adapter, "/path/to/binary")
-
     ops = [
         {"mnemonic": "mov"},
         {"mnemonic": "push"},
@@ -306,7 +303,7 @@ def test_binlex_extract_tokens_from_ops():
         {"mnemonic": ""},
     ]
 
-    tokens = analyzer._extract_tokens_from_ops(ops)
+    tokens = extract_tokens_from_ops(ops)
     assert len(tokens) == 3
 
 
@@ -370,10 +367,8 @@ def test_binlex_with_real_binary():
         pytest.skip("Could not open binary with r2pipe")
     finally:
         if r2 is not None:
-            try:
+            with contextlib.suppress(Exception):
                 r2.quit()
-            except Exception:
-                pass
 
 
 def test_binlex_analyze_function_edge_cases():
