@@ -201,14 +201,6 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Get summary of all sections"""
         return _get_section_summary_impl(self, logger, update_section_summary)
 
-    def _update_summary_for_section(
-        self,
-        summary: dict[str, Any],
-        section: dict[str, Any],
-        flag_counts: dict[str, int],
-    ) -> float:
-        return update_section_summary(summary, section, flag_counts)
-
 
 __all__ = [
     "build_section_characteristics",

@@ -8,7 +8,10 @@ production adapter stack.
 from __future__ import annotations
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.domain.services.section_analysis import _mark_entropy_anomaly
+from r2inspect.domain.services.section_analysis import (
+    _mark_entropy_anomaly,
+    update_section_summary,
+)
 from r2inspect.modules.section_analyzer import SectionAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -412,7 +415,6 @@ def test_analyze_code_section_handles_internal_errors():
 
 
 def test_update_summary_for_section_counts_high_entropy():
-    analyzer = _build_analyzer(sections=[])
     summary = {
         "total_sections": 0,
         "executable_sections": 0,
@@ -430,7 +432,7 @@ def test_update_summary_for_section_counts_high_entropy():
         "entropy": 7.5,
         "flags": "r-x",
     }
-    entropy = analyzer._update_summary_for_section(summary, section, flag_counts)
+    entropy = update_section_summary(summary, section, flag_counts)
     assert summary["executable_sections"] == 1
     assert summary["suspicious_sections"] == 1
     assert summary["high_entropy_sections"] == 1
@@ -439,7 +441,6 @@ def test_update_summary_for_section_counts_high_entropy():
 
 
 def test_update_summary_for_section_no_indicators():
-    analyzer = _build_analyzer(sections=[])
     summary = {
         "executable_sections": 0,
         "writable_sections": 0,
@@ -454,7 +455,7 @@ def test_update_summary_for_section_no_indicators():
         "entropy": 3.0,
         "flags": "rw-",
     }
-    entropy = analyzer._update_summary_for_section(summary, section, flag_counts)
+    entropy = update_section_summary(summary, section, flag_counts)
     assert summary["writable_sections"] == 1
     assert summary["suspicious_sections"] == 0
     assert summary["high_entropy_sections"] == 0
