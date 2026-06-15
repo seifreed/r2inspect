@@ -5,6 +5,7 @@ from pathlib import Path
 import r2pipe
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.simhash import classify_opcode_type
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
@@ -115,13 +116,13 @@ def test_simhash_helpers() -> None:
     assert analyzer._classify_string_type("LoadLibraryA") == "api"
     assert analyzer._classify_string_type("error occurred") == "error"
 
-    assert analyzer._classify_opcode_type("jmp") == "control"
-    assert analyzer._classify_opcode_type("mov") == "data"
-    assert analyzer._classify_opcode_type("add") == "arithmetic"
-    assert analyzer._classify_opcode_type("xor") == "logical"
-    assert analyzer._classify_opcode_type("cmp") == "compare"
-    assert analyzer._classify_opcode_type("rep") == "string"
-    assert analyzer._classify_opcode_type("noop") == "other"
+    assert classify_opcode_type("jmp") == "control"
+    assert classify_opcode_type("mov") == "data"
+    assert classify_opcode_type("add") == "arithmetic"
+    assert classify_opcode_type("xor") == "logical"
+    assert classify_opcode_type("cmp") == "compare"
+    assert classify_opcode_type("rep") == "string"
+    assert classify_opcode_type("noop") == "other"
 
     assert SimHashAnalyzer.compare_hashes("0x1", "0x1") == 0
     assert SimHashAnalyzer.compare_hashes("", "0x1") is None

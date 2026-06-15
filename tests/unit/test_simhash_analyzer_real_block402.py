@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.simhash import classify_opcode_type
 from r2inspect.modules.simhash_analyzer import SimHashAnalyzer, SIMHASH_AVAILABLE
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -132,13 +133,12 @@ def test_simhash_length_category():
 
 
 def test_simhash_opcode_classification():
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("jmp") == "control"
-    assert analyzer._classify_opcode_type("mov") == "data"
-    assert analyzer._classify_opcode_type("add") == "arithmetic"
-    assert analyzer._classify_opcode_type("xor") == "logical"
-    assert analyzer._classify_opcode_type("cmp") == "compare"
-    assert analyzer._classify_opcode_type("unknown") == "other"
+    assert classify_opcode_type("jmp") == "control"
+    assert classify_opcode_type("mov") == "data"
+    assert classify_opcode_type("add") == "arithmetic"
+    assert classify_opcode_type("xor") == "logical"
+    assert classify_opcode_type("cmp") == "compare"
+    assert classify_opcode_type("unknown") == "other"
 
 
 # ---------------------------------------------------------------------------

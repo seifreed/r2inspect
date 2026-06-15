@@ -11,7 +11,6 @@ from ..domain.hashing.simhash_compare import compare_hashes as _compare_hashes_i
 from ..domain.services.binary_helpers import extract_printable_strings
 from ..domain.services.simhash import (
     build_similarity_groups,
-    classify_opcode_type,
     extract_opcodes_from_ops,
     get_length_category,
     interpret_similarity_distance,
@@ -182,10 +181,6 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
     def _classify_string_type(self, string_value: str) -> str | None:
         """Classify string type for feature extraction."""
         return classify_string_type(string_value)
-
-    def _classify_opcode_type(self, mnemonic: str) -> str | None:
-        """Classify opcode type for feature extraction."""
-        return classify_opcode_type(mnemonic)
 
     def _find_similar_functions(
         self, function_features: dict[str, dict[str, Any]], max_distance: int = 10

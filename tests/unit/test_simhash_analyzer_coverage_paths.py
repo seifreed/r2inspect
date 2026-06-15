@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.domain.services.simhash import previous_mnemonic
+from r2inspect.domain.services.simhash import classify_opcode_type, previous_mnemonic
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -652,45 +652,38 @@ def test_simhash_analyzer_classify_string_type() -> None:
 
 
 def test_simhash_analyzer_classify_opcode_type_control() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("jmp") == "control"
-    assert analyzer._classify_opcode_type("call") == "control"
-    assert analyzer._classify_opcode_type("ret") == "control"
+    assert classify_opcode_type("jmp") == "control"
+    assert classify_opcode_type("call") == "control"
+    assert classify_opcode_type("ret") == "control"
 
 
 def test_simhash_analyzer_classify_opcode_type_data() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("mov") == "data"
-    assert analyzer._classify_opcode_type("push") == "data"
+    assert classify_opcode_type("mov") == "data"
+    assert classify_opcode_type("push") == "data"
 
 
 def test_simhash_analyzer_classify_opcode_type_arithmetic() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("add") == "arithmetic"
-    assert analyzer._classify_opcode_type("sub") == "arithmetic"
+    assert classify_opcode_type("add") == "arithmetic"
+    assert classify_opcode_type("sub") == "arithmetic"
 
 
 def test_simhash_analyzer_classify_opcode_type_logical() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("and") == "logical"
-    assert analyzer._classify_opcode_type("xor") == "logical"
+    assert classify_opcode_type("and") == "logical"
+    assert classify_opcode_type("xor") == "logical"
 
 
 def test_simhash_analyzer_classify_opcode_type_compare() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("cmp") == "compare"
-    assert analyzer._classify_opcode_type("test") == "compare"
+    assert classify_opcode_type("cmp") == "compare"
+    assert classify_opcode_type("test") == "compare"
 
 
 def test_simhash_analyzer_classify_opcode_type_string() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("strcpy") == "string"
-    assert analyzer._classify_opcode_type("rep") == "string"
+    assert classify_opcode_type("strcpy") == "string"
+    assert classify_opcode_type("rep") == "string"
 
 
 def test_simhash_analyzer_classify_opcode_type_other() -> None:
-    analyzer = _make_analyzer()
-    assert analyzer._classify_opcode_type("nop") == "other"
+    assert classify_opcode_type("nop") == "other"
 
 
 # ---------------------------------------------------------------------------
