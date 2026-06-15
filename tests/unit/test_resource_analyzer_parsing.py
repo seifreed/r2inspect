@@ -4,12 +4,9 @@ All tests use FakeR2 + R2PipeAdapter -> real ResourceAnalyzer. No mocks,
 no monkeypatch, no patch decorators.
 """
 
-import pytest
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
-
 
 # ---------------------------------------------------------------------------
 # FakeR2 helper
@@ -447,108 +444,6 @@ class TestResourceExtraction:
 
 class TestSuspiciousResourceChecks:
     """Test suspicious resource detection."""
-
-    def test_check_resource_entropy_high_non_icon(self):
-        """Flagging high entropy non-icon resource."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "data_blob",
-            "type_name": "RT_RCDATA",
-            "entropy": 7.8,
-            "size": 5000,
-        }
-        result = analyzer._check_resource_entropy(res)
-        assert len(result) == 1
-        assert "encrypted" in result[0]["reason"].lower()
-
-    def test_check_resource_entropy_high_icon_allowed(self):
-        """High entropy icons are not flagged."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "icon",
-            "type_name": "RT_ICON",
-            "entropy": 7.9,
-            "size": 1000,
-        }
-        result = analyzer._check_resource_entropy(res)
-        assert len(result) == 0
-
-    def test_check_resource_size_large(self):
-        """Flagging unusually large resource."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "huge_resource",
-            "type_name": "RT_RCDATA",
-            "size": 2 * 1024 * 1024,
-        }
-        result = analyzer._check_resource_size(res)
-        assert len(result) == 1
-        assert "large" in result[0]["reason"].lower()
-
-    def test_check_resource_rcdata_large(self):
-        """Flagging large RCDATA resource."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "data",
-            "type_name": "RT_RCDATA",
-            "size": 50000,
-            "entropy": 6.5,
-        }
-        result = analyzer._check_resource_rcdata(res)
-        assert len(result) == 1
-
-    def test_check_resource_rcdata_small_not_flagged(self):
-        """Small RCDATA is not flagged."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "data",
-            "type_name": "RT_RCDATA",
-            "size": 5000,
-            "entropy": 6.5,
-        }
-        result = analyzer._check_resource_rcdata(res)
-        assert len(result) == 0
-
-    def test_check_resource_embedded_pe_detected(self):
-        """Detecting embedded PE file via MZ header."""
-        mz_bytes = [0x4D, 0x5A]
-        cmd_map = {
-            "p8 2 @ 2000": _hex_for(mz_bytes),
-        }
-        analyzer = _make_analyzer(cmd_map=cmd_map)
-        res = {
-            "name": "payload",
-            "type_name": "RT_RCDATA",
-            "offset": 2000,
-            "size": 50000,
-        }
-        result = analyzer._check_resource_embedded_pe(res)
-        assert len(result) == 1
-        assert "embedded PE" in result[0]["reason"]
-
-    def test_check_resource_embedded_pe_not_rcdata(self):
-        """Non-RCDATA resources are not checked for embedded PE."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "icon",
-            "type_name": "RT_ICON",
-            "offset": 2000,
-            "size": 50000,
-        }
-        result = analyzer._check_resource_embedded_pe(res)
-        assert len(result) == 0
-
-    def test_check_resource_embedded_pe_too_small(self):
-        """Small resources are not checked for embedded PE."""
-        analyzer = _make_analyzer()
-        res = {
-            "name": "data",
-            "type_name": "RT_RCDATA",
-            "offset": 2000,
-            "size": 500,
-        }
-        result = analyzer._check_resource_embedded_pe(res)
-        assert len(result) == 0
 
     def test_find_pattern_found(self):
         """Finding pattern in data."""

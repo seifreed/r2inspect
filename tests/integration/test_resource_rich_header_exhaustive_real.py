@@ -122,16 +122,6 @@ def test_resource_analyzer_real_paths(real_pe_adapter) -> None:
     )
     assert isinstance(suspicious_result["suspicious_resources"], list)
 
-    assert analyzer._check_resource_entropy({"type_name": "RT_ICON", "entropy": 9.0}) == []
-    assert analyzer._check_resource_size({"name": "big", "type_name": "RT_RCDATA", "size": 0}) == []
-    assert analyzer._check_resource_rcdata({"type_name": "RT_RCDATA", "size": 1}) == []
-    assert (
-        analyzer._check_resource_embedded_pe(
-            {"type_name": "RT_ICON", "size": 0, "offset": 0, "name": ""}
-        )
-        == []
-    )
-
     assert analyzer._find_pattern([1, 2, 3, 4], [2, 3]) == 1
     assert analyzer._find_pattern([1, 2, 3, 4], [9]) == -1
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.modules.resource_analyzer import ResourceAnalyzer, run_resource_analysis
+from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -593,24 +593,6 @@ def test_extract_icons_mixed_icons():
 
 
 # ---------------------------------------------------------------------------
-# _check_resource_embedded_pe
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_embedded_pe_unknown_type():
-    """Test _check_resource_embedded_pe checks UNKNOWN type."""
-    cmd_map = {
-        f"p8 2 @ {0x1000}": _bytes_to_hex([0x4D, 0x5A]),
-    }
-
-    analyzer = _make_analyzer(cmd_map=cmd_map)
-
-    res = {"name": "test", "type_name": "UNKNOWN", "size": 2000, "offset": 0x1000}
-    result = analyzer._check_resource_embedded_pe(res)
-    assert len(result) >= 1 or len(result) == 0
-
-
-# ---------------------------------------------------------------------------
 # _parse_version_info edge cases
 # ---------------------------------------------------------------------------
 
@@ -645,19 +627,6 @@ def test_read_resource_as_string_size_limit():
     # size=10000 should be capped to 8192
     result = analyzer._read_resource_as_string(0x1000, 10000)
     assert result is not None or result is None
-
-
-# ---------------------------------------------------------------------------
-# _check_resource_entropy
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_entropy_bitmap_high_entropy():
-    """Test _check_resource_entropy allows high entropy for bitmaps."""
-    analyzer = _make_analyzer()
-    res = {"name": "test", "type_name": "RT_BITMAP", "entropy": 8.0, "size": 100}
-    result = analyzer._check_resource_entropy(res)
-    assert result == []
 
 
 # ---------------------------------------------------------------------------

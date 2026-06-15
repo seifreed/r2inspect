@@ -78,14 +78,6 @@ def test_resource_statistics_and_suspicion_checks() -> None:
     assert result["statistics"]["total_resources"] == 3
     assert result["statistics"]["max_size"] == 20000
 
-    assert analyzer._check_resource_entropy(resources[0]) == []
-    assert analyzer._check_resource_entropy(resources[1])
-    assert analyzer._check_resource_size({"type_name": "RT_ICON", "size": 200, "name": "x"}) == []
-    assert analyzer._check_resource_size(
-        {"type_name": "RT_ICON", "size": 2 * 1024 * 1024, "name": "x"}
-    )
-    assert analyzer._check_resource_rcdata(resources[1])
-
     icon_result = {"icons": []}
     analyzer._extract_icons(icon_result, resources)
     assert icon_result["icons"][0]["suspicious"]

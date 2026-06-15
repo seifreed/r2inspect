@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Stub adapter using correct method names from _SIMPLE_BASE_CALLS / _handle_bytes
 # ---------------------------------------------------------------------------
@@ -594,57 +593,3 @@ def test_read_resource_as_string_returns_none_when_data_empty() -> None:
     adapter = _ResponseRegistry(bytes_map={})
     result = ResourceAnalyzer(adapter=adapter)._read_resource_as_string(0x1000, 100)
     assert result is None
-
-
-# ---------------------------------------------------------------------------
-# _check_resource_embedded_pe – non-MZ header (line 559)
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_embedded_pe_returns_empty_for_non_mz_header() -> None:
-    """Line 559: return [] when header bytes are NOT 0x4D 0x5A (MZ)."""
-    # Header is 'PE' (0x50, 0x45) – not MZ
-    offset = 0x20000
-
-    adapter = _ResponseRegistry(bytes_map={offset: [0x50, 0x45]})
-    analyzer = ResourceAnalyzer(adapter=adapter)
-
-    res = {
-        "type_name": "RT_RCDATA",
-        "name": "data",
-        "size": 2048,
-        "offset": offset,
-        "entropy": 0.0,
-    }
-    result = analyzer._check_resource_embedded_pe(res)
-    assert result == []
-
-
-def test_check_resource_embedded_pe_returns_entry_for_mz_header() -> None:
-    """Lines 551-558: returns suspicious entry when header starts with MZ."""
-    offset = 0x21000
-
-    adapter = _ResponseRegistry(bytes_map={offset: [0x4D, 0x5A]})
-    analyzer = ResourceAnalyzer(adapter=adapter)
-
-    res = {
-        "type_name": "RT_RCDATA",
-        "name": "embedded",
-        "size": 2048,
-        "offset": offset,
-        "entropy": 0.0,
-    }
-    result = analyzer._check_resource_embedded_pe(res)
-    assert len(result) == 1
-    assert "embedded PE" in result[0]["reason"]
-
-
-def test_check_resource_embedded_pe_returns_empty_for_short_header_data() -> None:
-    """Line 550: empty result when header_data has fewer than 2 bytes."""
-    offset = 0x22000
-    adapter = _ResponseRegistry(bytes_map={offset: [0x4D]})  # only 1 byte
-    analyzer = ResourceAnalyzer(adapter=adapter)
-
-    res = {"type_name": "UNKNOWN", "name": "x", "size": 2048, "offset": offset, "entropy": 0.0}
-    result = analyzer._check_resource_embedded_pe(res)
-    assert result == []

@@ -163,13 +163,6 @@ def test_resource_analyzer_helpers(adapter):
     assert analyzer._find_pattern([1, 2, 3, 4], [2, 3]) == 1
     assert analyzer._find_pattern([1, 2, 3], [9]) == -1
 
-    # Suspicious resource checks
-    res = {"name": "X", "type_name": "RT_RCDATA", "entropy": 8.0, "size": 2_000_000, "offset": 800}
-    assert analyzer._check_resource_entropy(res)
-    assert analyzer._check_resource_size(res)
-    assert analyzer._check_resource_rcdata(res)
-    assert analyzer._check_resource_embedded_pe(res)
-
 
 def test_resource_analyzer_parse_version_info(adapter):
     analyzer = ResourceAnalyzer(adapter)

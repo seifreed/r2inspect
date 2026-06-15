@@ -250,11 +250,6 @@ def test_resource_analyzer_branches() -> None:
     string_val = analyzer._read_resource_as_string(64, 6)
     assert string_val
 
-    entropy_hits = analyzer._check_resource_entropy(
-        {"entropy": 8.0, "type_name": "RT_RCDATA", "name": "r", "size": 10}
-    )
-    assert entropy_hits
-
 
 class AuthAdapter:
     def __init__(self, command_map: dict[str, object]) -> None:

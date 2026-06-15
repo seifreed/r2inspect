@@ -129,26 +129,6 @@ def test_resource_analyzer_real_flow_and_embedded_pe_invalid_offset() -> None:
     assert result["manifest"]["requires_admin"] is True
     assert any("Hello" in value for value in result["strings"])
     assert result["suspicious_resources"]
-    assert (
-        analyzer._check_resource_embedded_pe({"type_name": "RT_ICON", "size": 2048, "offset": 300})
-        == []
-    )
-    assert (
-        analyzer._check_resource_embedded_pe(
-            {"type_name": "RT_RCDATA", "size": "bad", "offset": 300}
-        )
-        == []
-    )
-    assert (
-        analyzer._check_resource_embedded_pe(
-            {"type_name": "RT_RCDATA", "size": 2048, "offset": "abc"}
-        )
-        == []
-    )
-    assert (
-        analyzer._check_resource_embedded_pe({"type_name": "RT_RCDATA", "size": 12, "offset": 300})
-        == []
-    )
 
 
 def test_function_analyzer_real_normalization_and_exception_branches() -> None:

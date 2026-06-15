@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Tests targeting missing coverage branches in resource_analyzer.py."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
-
 
 # ---------------------------------------------------------------------------
 # Fake adapter helpers
@@ -772,129 +772,3 @@ def test_check_suspicious_resources_empty_for_normal_small_icon():
     resources = [{"name": "RES1", "type_name": "RT_ICON", "size": 100, "entropy": 3.0, "offset": 0}]
     analyzer._check_suspicious_resources(result, resources)
     assert result["suspicious_resources"] == []
-
-
-# ---------------------------------------------------------------------------
-# _check_resource_entropy
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_entropy_flags_high_entropy_non_icon():
-    res = {"name": "DATA", "type_name": "RT_RCDATA", "size": 100, "entropy": 7.8}
-    flags = make_analyzer()._check_resource_entropy(res)
-    assert len(flags) == 1
-    assert "entropy" in flags[0]["reason"].lower()
-
-
-def test_check_resource_entropy_skips_rt_icon_even_with_high_entropy():
-    res = {"name": "ICO", "type_name": "RT_ICON", "size": 100, "entropy": 7.9}
-    assert make_analyzer()._check_resource_entropy(res) == []
-
-
-def test_check_resource_entropy_skips_rt_bitmap_even_with_high_entropy():
-    res = {"name": "BMP", "type_name": "RT_BITMAP", "size": 100, "entropy": 7.9}
-    assert make_analyzer()._check_resource_entropy(res) == []
-
-
-def test_check_resource_entropy_returns_empty_for_normal_entropy():
-    res = {"name": "RES", "type_name": "RT_STRING", "size": 100, "entropy": 3.0}
-    assert make_analyzer()._check_resource_entropy(res) == []
-
-
-# ---------------------------------------------------------------------------
-# _check_resource_size
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_size_flags_resource_over_1mb():
-    res = {"name": "BIG", "type_name": "RT_RCDATA", "size": 2 * 1024 * 1024, "entropy": 3.0}
-    flags = make_analyzer()._check_resource_size(res)
-    assert len(flags) == 1
-    assert "large" in flags[0]["reason"].lower()
-
-
-def test_check_resource_size_returns_empty_for_normal_size():
-    res = {"name": "SMALL", "type_name": "RT_STRING", "size": 100, "entropy": 3.0}
-    assert make_analyzer()._check_resource_size(res) == []
-
-
-# ---------------------------------------------------------------------------
-# _check_resource_rcdata
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_rcdata_flags_large_rcdata():
-    res = {"name": "DATA", "type_name": "RT_RCDATA", "size": 20480, "entropy": 3.0}
-    flags = make_analyzer()._check_resource_rcdata(res)
-    assert len(flags) == 1
-    assert "RCDATA" in flags[0]["reason"]
-
-
-def test_check_resource_rcdata_returns_empty_for_small_rcdata():
-    res = {"name": "DATA", "type_name": "RT_RCDATA", "size": 100, "entropy": 3.0}
-    assert make_analyzer()._check_resource_rcdata(res) == []
-
-
-def test_check_resource_rcdata_returns_empty_for_non_rcdata_type():
-    res = {"name": "ICO", "type_name": "RT_ICON", "size": 20480, "entropy": 3.0}
-    assert make_analyzer()._check_resource_rcdata(res) == []
-
-
-# ---------------------------------------------------------------------------
-# _check_resource_embedded_pe
-# ---------------------------------------------------------------------------
-
-
-def test_check_resource_embedded_pe_flags_mz_header():
-    analyzer = make_analyzer(bytes_data=[0x4D, 0x5A])
-    res = {"name": "EMBED", "type_name": "RT_RCDATA", "size": 2048, "offset": 0x1000}
-    flags = analyzer._check_resource_embedded_pe(res)
-    assert len(flags) == 1
-    assert "PE" in flags[0]["reason"]
-
-
-def test_check_resource_embedded_pe_returns_empty_for_non_mz_header():
-    analyzer = make_analyzer(bytes_data=[0x7F, 0x45])
-    res = {"name": "EMBED", "type_name": "RT_RCDATA", "size": 2048, "offset": 0x1000}
-    assert analyzer._check_resource_embedded_pe(res) == []
-
-
-def test_check_resource_embedded_pe_returns_empty_for_non_rcdata_type():
-    class TrackingAdapter:
-        called = False
-
-        def read_bytes_list(self, *args: Any) -> list:
-            TrackingAdapter.called = True
-            return []
-
-    analyzer = ResourceAnalyzer(adapter=TrackingAdapter())
-    res = {"name": "ICO", "type_name": "RT_ICON", "size": 2048, "offset": 0x1000}
-    assert analyzer._check_resource_embedded_pe(res) == []
-    assert TrackingAdapter.called is False
-
-
-def test_check_resource_embedded_pe_returns_empty_when_header_data_too_short():
-    analyzer = make_analyzer(bytes_data=[0x4D])
-    res = {"name": "EMBED", "type_name": "RT_RCDATA", "size": 2048, "offset": 0x1000}
-    assert analyzer._check_resource_embedded_pe(res) == []
-
-
-def test_check_resource_embedded_pe_returns_empty_for_small_resource():
-    class TrackingAdapter:
-        called = False
-
-        def read_bytes_list(self, *args: Any) -> list:
-            TrackingAdapter.called = True
-            return []
-
-    analyzer = ResourceAnalyzer(adapter=TrackingAdapter())
-    res = {"name": "EMBED", "type_name": "RT_RCDATA", "size": 100, "offset": 0x1000}
-    assert analyzer._check_resource_embedded_pe(res) == []
-    assert TrackingAdapter.called is False
-
-
-def test_check_resource_embedded_pe_handles_unknown_type():
-    analyzer = make_analyzer(bytes_data=[0x4D, 0x5A])
-    res = {"name": "X", "type_name": "UNKNOWN", "size": 2048, "offset": 0x1000}
-    flags = analyzer._check_resource_embedded_pe(res)
-    assert len(flags) == 1

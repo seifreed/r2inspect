@@ -11,10 +11,6 @@ from ..domain.services.resource_analysis import (
     build_manifest_info,
     build_resource_statistics,
     build_suspicious_resources,
-    check_resource_embedded_pe,
-    check_resource_entropy,
-    check_resource_rcdata,
-    check_resource_size,
     decode_resource_text,
     summarize_resource_types,
 )
@@ -211,35 +207,6 @@ class ResourceAnalyzer(
     ) -> None:
         """Check for suspicious resources."""
         _check_suspicious_resources_impl(self, result, resources)
-
-    def _check_resource_entropy(self, res: dict[str, Any]) -> list[dict[str, Any]]:
-        """Flag high-entropy non-icon resources."""
-        return check_resource_entropy(res)
-
-    def _check_resource_size(self, res: dict[str, Any]) -> list[dict[str, Any]]:
-        """Flag unusually large resources."""
-        return check_resource_size(res)
-
-    def _check_resource_rcdata(self, res: dict[str, Any]) -> list[dict[str, Any]]:
-        """Flag large RCDATA resources."""
-        return check_resource_rcdata(res)
-
-    def _check_resource_embedded_pe(self, res: dict[str, Any]) -> list[dict[str, Any]]:
-        """Detect possible embedded PE files in resource data."""
-        if res.get("type_name") not in {"RT_RCDATA", "UNKNOWN"}:
-            return []
-        try:
-            size = int(res.get("size", 0) or 0)
-        except (TypeError, ValueError):
-            return []
-        try:
-            offset = int(res.get("offset", 0) or 0)
-        except (TypeError, ValueError):
-            return []
-        if size < 1024:
-            return []
-        header_data = self._cmdj(f"pxj 2 @ {offset}", [])
-        return check_resource_embedded_pe(res, header_data)
 
 
 __all__ = [
