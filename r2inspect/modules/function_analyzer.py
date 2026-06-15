@@ -8,7 +8,6 @@ from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import (
     build_function_stats,
-    calculate_cyclomatic_complexity_from_blocks,
     extract_mnemonics_from_ops,
     extract_mnemonics_from_text,
     machoc_hash_from_mnemonics,
@@ -201,34 +200,6 @@ class FunctionAnalyzer(CommandHelperMixin):
             analysis_results,
             logger,
             similarity_fn=self.get_function_similarity,
-        )
-
-    def _calculate_cyclomatic_complexity(self, func: dict[str, Any]) -> int:
-        """Calculate cyclomatic complexity for a function."""
-
-        def _compute() -> int:
-            func_addr = func.get("addr")
-            if not func_addr:
-                return 0
-            cfg_info = (
-                self.adapter.get_cfg(func_addr)
-                if self.adapter is not None and hasattr(self.adapter, "get_cfg")
-                else self._cmdj(f"agj @ {func_addr}", {})
-            )
-            if not cfg_info:
-                return 0
-            if isinstance(cfg_info, list):
-                blocks = cfg_info
-            elif isinstance(cfg_info, dict) and "blocks" in cfg_info:
-                blocks = cfg_info.get("blocks", [])
-            else:
-                return 0
-            return calculate_cyclomatic_complexity_from_blocks(blocks)
-
-        return self._safe_call(
-            _compute,
-            default=0,
-            error_msg="Error calculating cyclomatic complexity",
         )
 
 

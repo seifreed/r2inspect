@@ -89,29 +89,6 @@ class _RaisingTextAdapter:
         raise RuntimeError("text disasm unavailable")
 
 
-class _CfgAdapter:
-    """Provides get_cfg returning a fixed CFG structure."""
-
-    def __init__(self, cfg) -> None:
-        self._cfg = cfg
-
-    def get_functions(self) -> list:
-        return []
-
-    def get_cfg(self, address=None):
-        return self._cfg
-
-
-class _RaisingCfgAdapter:
-    """get_cfg raises an exception."""
-
-    def get_functions(self) -> list:
-        return []
-
-    def get_cfg(self, address=None):
-        raise RuntimeError("cfg unavailable")
-
-
 class _DeepAnalysisConfig:
     class typed_config:
         class analysis:
@@ -716,66 +693,6 @@ def test_generate_machoc_summary_exception_returns_error():
     analyzer = _BrokenSummaryAnalyzer(_NoFunctionsAdapter())
     result = analyzer.generate_machoc_summary({"machoc_hashes": {"fn": "h"}})
     assert "error" in result
-
-
-# ---------------------------------------------------------------------------
-# _calculate_cyclomatic_complexity (lines 400-437)
-# ---------------------------------------------------------------------------
-
-
-def test_calculate_cyclomatic_complexity_returns_zero_for_no_addr():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._calculate_cyclomatic_complexity({"name": "fn"}) == 0
-
-
-def test_calculate_cyclomatic_complexity_returns_zero_for_empty_cfg():
-    analyzer = FunctionAnalyzer(_CfgAdapter(cfg=None))
-    assert analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000}) == 0
-
-
-def test_calculate_cyclomatic_complexity_with_list_cfg():
-    blocks = [
-        {"jump": 0x2000, "fail": 0x3000},
-        {"jump": 0x4000},
-        {"addr": 0x5000},
-    ]
-    analyzer = FunctionAnalyzer(_CfgAdapter(cfg=blocks))
-    # edges=3, nodes=3, complexity=max(3-3+2, 1)=2
-    result = analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000})
-    assert result == 2
-
-
-def test_calculate_cyclomatic_complexity_with_dict_cfg():
-    cfg = {"blocks": [{"jump": 0x2000}, {"addr": 0x2000}]}
-    analyzer = FunctionAnalyzer(_CfgAdapter(cfg=cfg))
-    result = analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000})
-    assert result >= 1
-
-
-def test_calculate_cyclomatic_complexity_returns_zero_for_non_dict_cfg():
-    analyzer = FunctionAnalyzer(_CfgAdapter(cfg="garbage"))
-    result = analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_exception_returns_zero():
-    analyzer = FunctionAnalyzer(_RaisingCfgAdapter())
-    result = analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_minimum_is_one():
-    # Single block with no edges: edges=0, nodes=1, max(0-1+2, 1)=max(1,1)=1
-    analyzer = FunctionAnalyzer(_CfgAdapter(cfg=[{"addr": 0x1000}]))
-    result = analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000})
-    assert result == 1
-
-
-def test_calculate_cyclomatic_complexity_with_jump_and_fail():
-    blocks = [{"jump": 0x2000, "fail": 0x3000}, {"addr": 0x2000}, {"addr": 0x3000}]
-    analyzer = FunctionAnalyzer(_CfgAdapter(cfg=blocks))
-    result = analyzer._calculate_cyclomatic_complexity({"name": "fn", "addr": 0x1000})
-    assert result == 1  # max(2-3+2, 1) = max(1, 1) = 1
 
 
 # ---------------------------------------------------------------------------

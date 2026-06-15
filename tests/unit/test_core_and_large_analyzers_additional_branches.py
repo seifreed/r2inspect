@@ -159,9 +159,6 @@ def test_function_analyzer_branches() -> None:
     pi_mnemonics = analyzer._try_pi_extraction("main", 0x1000)
     assert "mov" in pi_mnemonics
 
-    complexity = analyzer._calculate_cyclomatic_complexity({"addr": 0x1000})
-    assert complexity >= 1
-
     stats = analyzer._generate_function_stats(functions)
     assert stats["total_functions"] == 2
 

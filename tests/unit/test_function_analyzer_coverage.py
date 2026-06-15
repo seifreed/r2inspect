@@ -84,19 +84,6 @@ class RaisingDisasmTextAdapter:
         raise RuntimeError("disasm_text error")
 
 
-class CfgAdapter:
-    """Adapter that provides CFG data."""
-
-    def __init__(self, cfg):
-        self._cfg = cfg
-
-    def get_functions(self):
-        return []
-
-    def get_cfg(self, address=None):
-        return self._cfg
-
-
 class DeepAnalysisConfig:
     """Config that enables deep analysis."""
 
@@ -678,69 +665,6 @@ def test_generate_machoc_summary_exception():
     analyzer = BrokenSummaryAnalyzer(adapter)
     result = analyzer.generate_machoc_summary({"machoc_hashes": {"f": "h"}})
     assert "error" in result
-
-
-# ---------------------------------------------------------------------------
-# _calculate_cyclomatic_complexity
-# ---------------------------------------------------------------------------
-
-
-def test_calculate_cyclomatic_complexity_no_addr():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_cyclomatic_complexity({"name": "func"})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_empty_cfg():
-    adapter = CfgAdapter(cfg=None)
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_cyclomatic_complexity({"name": "func", "addr": 0x1000})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_list_cfg():
-    blocks = [
-        {"jump": 0x2000, "fail": 0x3000},
-        {"jump": 0x4000},
-        {"addr": 0x5000},
-    ]
-    adapter = CfgAdapter(cfg=blocks)
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_cyclomatic_complexity({"name": "func", "addr": 0x1000})
-    # edges=3, nodes=3, complexity=max(3-3+2, 1)=2
-    assert result == 2
-
-
-def test_calculate_cyclomatic_complexity_dict_cfg():
-    cfg = {
-        "blocks": [
-            {"jump": 0x2000},
-            {"addr": 0x2000},
-        ]
-    }
-    adapter = CfgAdapter(cfg=cfg)
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_cyclomatic_complexity({"name": "func", "addr": 0x1000})
-    assert result >= 1
-
-
-def test_calculate_cyclomatic_complexity_non_dict_cfg():
-    adapter = CfgAdapter(cfg="not_a_cfg")
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_cyclomatic_complexity({"name": "func", "addr": 0x1000})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_exception():
-    class CrashingCfgAdapter:
-        def get_cfg(self, address=None):
-            raise RuntimeError("cfg error")
-
-    adapter = CrashingCfgAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    result = analyzer._calculate_cyclomatic_complexity({"name": "func", "addr": 0x1000})
-    assert result == 0
 
 
 # ---------------------------------------------------------------------------

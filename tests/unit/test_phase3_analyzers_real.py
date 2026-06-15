@@ -159,7 +159,6 @@ def test_function_analyzer_real_normalization_and_exception_branches() -> None:
     assert functions == []
     assert analyzer.functions_cache == []
     assert classify_function_type(None, {}) == "unknown"
-    assert analyzer._calculate_cyclomatic_complexity({"addr": 0x1000}) >= 0
     assert analyzer._extract_function_mnemonics("entry", 10, 4096) == ["mov", "ret"]
 
 

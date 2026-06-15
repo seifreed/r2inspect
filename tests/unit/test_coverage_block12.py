@@ -37,7 +37,6 @@ def test_function_analyzer_helpers() -> None:
         if functions:
             func = functions[0]
             func_name = func.get("name", "f")
-            analyzer._calculate_cyclomatic_complexity(func)
             classify_function_type(func_name, func)
         stats = analyzer._generate_function_stats(functions)
         coverage = analyze_function_coverage(functions)

@@ -321,24 +321,6 @@ def test_generate_machoc_summary_error():
     assert "error" in result
 
 
-def test_calculate_cyclomatic_complexity_no_addr():
-    """Test _calculate_cyclomatic_complexity with no address"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._calculate_cyclomatic_complexity({})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_error():
-    """Test _calculate_cyclomatic_complexity handles errors"""
-    adapter = ErrorAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._calculate_cyclomatic_complexity({"addr": 0x1000})
-    assert result == 0
-
-
 def test_calculate_std_dev_empty():
     """Test _calculate_std_dev with empty list"""
 

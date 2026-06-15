@@ -93,11 +93,6 @@ def test_function_analyzer_real_and_helpers(samples_dir: Path) -> None:
         result = analyzer.analyze_functions()
         assert "total_functions" in result
 
-        functions = analyzer._get_functions()
-        if functions:
-            complexity = analyzer._calculate_cyclomatic_complexity(functions[0])
-            assert isinstance(complexity, int)
-
         assert classify_function_type("kernel32!printf", {"size": 20}) == "library"
         assert classify_function_type("j_thunk", {"size": 5}) == "thunk"
         assert classify_function_type("main", {"size": 50}) == "user"
@@ -119,7 +114,6 @@ def test_function_analyzer_real_and_helpers(samples_dir: Path) -> None:
         summary = analyzer.generate_machoc_summary({"machoc_hashes": {"a": "h1", "b": "h1"}})
         assert summary["duplicate_function_groups"] == 1
         assert analyzer.generate_machoc_summary({"machoc_hashes": {}})["error"]
-        assert analyzer._calculate_cyclomatic_complexity({"addr": None}) == 0
     finally:
         session.close()
 

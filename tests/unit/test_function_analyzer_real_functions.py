@@ -366,44 +366,6 @@ def test_generate_machoc_summary_error_handling():
     assert "error" in result
 
 
-def test_calculate_cyclomatic_complexity_no_addr():
-    """Test _calculate_cyclomatic_complexity with no address."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._calculate_cyclomatic_complexity({})
-    assert result == 0
-
-
-def test_calculate_cyclomatic_complexity_with_blocks():
-    """Test _calculate_cyclomatic_complexity with CFG blocks."""
-    adapter = MinimalAdapter()
-    blocks = [
-        {"jump": 0x2000, "fail": 0x2010},
-        {"jump": 0x2020},
-        {},
-    ]
-    adapter.json_commands["agj @ 4096"] = blocks
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._calculate_cyclomatic_complexity({"addr": 0x1000})
-    assert result >= 1
-
-
-def test_calculate_cyclomatic_complexity_error():
-    """Test _calculate_cyclomatic_complexity handles errors."""
-    adapter = MinimalAdapter()
-
-    def raise_error(cmd, default=None):
-        raise Exception("Test error")
-
-    adapter.cmdj = raise_error
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._calculate_cyclomatic_complexity({"addr": 0x1000})
-    assert result == 0
-
-
 def test_calculate_std_dev_empty():
     """Test _calculate_std_dev with empty list."""
 
