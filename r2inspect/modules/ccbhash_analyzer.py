@@ -11,6 +11,7 @@ from ..infrastructure.logging import get_logger
 from .ccbhash_support import (
     analyze_functions as build_function_analysis,
     build_canonical_representation as build_cfg_canonical_representation,
+    build_function_ccbhashes,
     calculate_binary_ccbhash as build_binary_ccbhash,
     calculate_function_ccbhash as build_function_ccbhash,
     extract_functions as collect_functions,
@@ -69,21 +70,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 return None, None, NO_FUNCTIONS_FOUND
 
             # Calculate CCBHash for each function
-            function_hashes = {}
-            for func in functions:
-                func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-                func_offset = func.get("addr")
-
-                if func_offset is None:
-                    continue
-
-                ccbhash = self._calculate_function_ccbhash(func_offset, func_name)
-                if ccbhash:
-                    function_hashes[func_name] = {
-                        "ccbhash": ccbhash,
-                        "addr": func_offset,
-                        "size": func.get("size", 0),
-                    }
+            function_hashes, _ = build_function_ccbhashes(self, functions)
 
             if not function_hashes:
                 return None, None, NO_FUNCTIONS_ANALYZED

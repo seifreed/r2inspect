@@ -30,6 +30,28 @@ class CcbHashHost(Protocol):
     ) -> str | None: ...
 
 
+def build_function_ccbhashes(
+    analyzer: CcbHashHost, functions: list[dict[str, Any]]
+) -> tuple[dict[str, dict[str, Any]], int]:
+    """Hash each function's CFG, returning the hash map and the count hashed."""
+    function_hashes: dict[str, dict[str, Any]] = {}
+    analyzed_count = 0
+    for func in functions:
+        func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
+        func_offset = func.get("addr")
+        if func_offset is None:
+            continue
+        ccbhash = analyzer._calculate_function_ccbhash(func_offset, func_name)
+        if ccbhash:
+            function_hashes[func_name] = {
+                "ccbhash": ccbhash,
+                "addr": func_offset,
+                "size": func.get("size", 0),
+            }
+            analyzed_count += 1
+    return function_hashes, analyzed_count
+
+
 def analyze_functions(
     analyzer: CcbHashHost,
     logger: logging.Logger,
@@ -53,21 +75,7 @@ def analyze_functions(
             logger.debug(no_functions_found)
             return results
         results["total_functions"] = len(functions)
-        function_hashes: dict[str, dict[str, Any]] = {}
-        analyzed_count = 0
-        for func in functions:
-            func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-            func_offset = func.get("addr")
-            if func_offset is None:
-                continue
-            ccbhash = analyzer._calculate_function_ccbhash(func_offset, func_name)
-            if ccbhash:
-                function_hashes[func_name] = {
-                    "ccbhash": ccbhash,
-                    "addr": func_offset,
-                    "size": func.get("size", 0),
-                }
-                analyzed_count += 1
+        function_hashes, analyzed_count = build_function_ccbhashes(analyzer, functions)
         if not function_hashes:
             results["error"] = no_functions_analyzed
             logger.debug(no_functions_analyzed)
