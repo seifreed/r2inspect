@@ -744,60 +744,6 @@ def test_calculate_cyclomatic_complexity_exception():
 
 
 # ---------------------------------------------------------------------------
-# _classify_function_type
-# ---------------------------------------------------------------------------
-
-
-def test_classify_function_type_library():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._classify_function_type("kernel32_GetProcAddress", {}) == "library"
-    assert analyzer._classify_function_type("msvcrt_malloc", {}) == "library"
-    assert analyzer._classify_function_type("ntdll_NtAllocate", {}) == "library"
-    assert analyzer._classify_function_type("user32_MessageBox", {}) == "library"
-    assert analyzer._classify_function_type("lib_helper", {}) == "library"
-
-
-def test_classify_function_type_thunk():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._classify_function_type("thunk_func", {}) == "thunk"
-    assert analyzer._classify_function_type("j_some_func", {}) == "thunk"
-    assert analyzer._classify_function_type("tiny_func", {"size": 5}) == "thunk"
-
-
-def test_classify_function_type_user():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._classify_function_type("main", {"size": 100}) == "user"
-    assert analyzer._classify_function_type("sub_401000", {"size": 50}) == "user"
-    assert analyzer._classify_function_type("fcn.00401000", {"size": 50}) == "user"
-    assert analyzer._classify_function_type("func_helper", {"size": 50}) == "user"
-
-
-def test_classify_function_type_unknown():
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    assert analyzer._classify_function_type("some_random_name", {"size": 100}) == "unknown"
-
-
-def test_classify_function_type_exception():
-    class CrashingAnalyzer(FunctionAnalyzer):
-        def _classify_function_type(self, func_name, func):
-            try:
-                if None.lower():  # type: ignore
-                    pass
-            except Exception:
-                return "unknown"
-            return "unknown"
-
-    adapter = MinimalAdapter()
-    analyzer = CrashingAnalyzer(adapter)
-    result = analyzer._classify_function_type("test", {})
-    assert result == "unknown"
-
-
-# ---------------------------------------------------------------------------
 # _calculate_std_dev
 # ---------------------------------------------------------------------------
 
@@ -901,15 +847,6 @@ def test_get_function_similarity_exception_path():
     # Pass non-dict to trigger AttributeError on .items()
     result = analyzer.get_function_similarity("not_a_dict")  # type: ignore
     assert result == {}
-
-
-def test_classify_function_type_exception_path():
-    """Cover lines 458-459: exception in _classify_function_type."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-    # Pass None as func_name to trigger AttributeError on .lower()
-    result = analyzer._classify_function_type(None, {})  # type: ignore
-    assert result == "unknown"
 
 
 def test_calculate_std_dev_exception_path():

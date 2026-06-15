@@ -779,40 +779,6 @@ def test_calculate_cyclomatic_complexity_with_jump_and_fail():
 
 
 # ---------------------------------------------------------------------------
-# _classify_function_type (lines 441-459)
-# ---------------------------------------------------------------------------
-
-
-def test_classify_function_type_detects_library_prefixes():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._classify_function_type("lib_helper", {}) == "library"
-    assert analyzer._classify_function_type("msvcrt_malloc", {}) == "library"
-    assert analyzer._classify_function_type("kernel32_WinExec", {}) == "library"
-    assert analyzer._classify_function_type("ntdll_syscall", {}) == "library"
-    assert analyzer._classify_function_type("user32_CreateWindow", {}) == "library"
-
-
-def test_classify_function_type_detects_thunk():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._classify_function_type("thunk_CreateFile", {}) == "thunk"
-    assert analyzer._classify_function_type("j_ExitProcess", {}) == "thunk"
-    assert analyzer._classify_function_type("tiny", {"size": 4}) == "thunk"
-
-
-def test_classify_function_type_detects_user():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._classify_function_type("main", {"size": 200}) == "user"
-    assert analyzer._classify_function_type("sub_401000", {"size": 100}) == "user"
-    assert analyzer._classify_function_type("fcn.00401000", {"size": 50}) == "user"
-    assert analyzer._classify_function_type("func_helper", {"size": 80}) == "user"
-
-
-def test_classify_function_type_returns_unknown_for_unrecognized():
-    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    assert analyzer._classify_function_type("some_random_name", {"size": 100}) == "unknown"
-
-
-# ---------------------------------------------------------------------------
 # _calculate_std_dev (lines 463-472)
 # ---------------------------------------------------------------------------
 

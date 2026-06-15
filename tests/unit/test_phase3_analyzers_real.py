@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from r2inspect.domain.services.function_analysis import classify_function_type
 from r2inspect.modules.function_analyzer import FunctionAnalyzer, _normalize_function_list
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer, run_resource_analysis
 from tests.helpers import FakeR2Adapter
@@ -157,8 +158,7 @@ def test_function_analyzer_real_normalization_and_exception_branches() -> None:
     functions = analyzer._get_functions()
     assert functions == []
     assert analyzer.functions_cache == []
-    assert analyzer._classify_function_type(None, {}) == "unknown"  # type: ignore[arg-type]
-    assert analyzer._classify_function_type("entry", None) == "unknown"  # type: ignore[arg-type]
+    assert classify_function_type(None, {}) == "unknown"
     assert analyzer._calculate_cyclomatic_complexity({"addr": 0x1000}) >= 0
     assert analyzer._extract_function_mnemonics("entry", 10, 4096) == ["mov", "ret"]
 

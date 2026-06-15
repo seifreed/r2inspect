@@ -7,6 +7,7 @@ from pathlib import Path
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnalyzer
+from r2inspect.domain.services.function_analysis import classify_function_type
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
@@ -167,7 +168,7 @@ def test_function_analyzer_branches() -> None:
     coverage = analyze_function_coverage(functions)
     assert coverage["functions_with_blocks"] == 1
 
-    assert analyzer._classify_function_type("j_thunk", {"size": 1}) == "thunk"
+    assert classify_function_type("j_thunk", {"size": 1}) == "thunk"
     assert calculate_std_dev([1.0, 2.0, 3.0]) > 0.0
 
     hashes = analyzer._generate_machoc_hashes(functions)

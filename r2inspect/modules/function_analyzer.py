@@ -9,7 +9,6 @@ from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import (
     build_function_stats,
     calculate_cyclomatic_complexity_from_blocks,
-    classify_function_type,
     extract_mnemonics_from_ops,
     extract_mnemonics_from_text,
     machoc_hash_from_mnemonics,
@@ -230,14 +229,6 @@ class FunctionAnalyzer(CommandHelperMixin):
             _compute,
             default=0,
             error_msg="Error calculating cyclomatic complexity",
-        )
-
-    def _classify_function_type(self, func_name: str, func: dict[str, Any]) -> str:
-        """Classify function type based on name and characteristics."""
-        return self._safe_call(
-            lambda: classify_function_type(func_name, func),
-            default="unknown",
-            error_msg=f"Error classifying function type for {func_name}",
         )
 
 

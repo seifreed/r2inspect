@@ -9,6 +9,7 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 from tests.helpers import env_vars
+from r2inspect.domain.services.function_analysis import classify_function_type
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
@@ -97,10 +98,10 @@ def test_function_analyzer_real_and_helpers(samples_dir: Path) -> None:
             complexity = analyzer._calculate_cyclomatic_complexity(functions[0])
             assert isinstance(complexity, int)
 
-        assert analyzer._classify_function_type("kernel32!printf", {"size": 20}) == "library"
-        assert analyzer._classify_function_type("j_thunk", {"size": 5}) == "thunk"
-        assert analyzer._classify_function_type("main", {"size": 50}) == "user"
-        assert analyzer._classify_function_type("other", {"size": 50}) == "unknown"
+        assert classify_function_type("kernel32!printf", {"size": 20}) == "library"
+        assert classify_function_type("j_thunk", {"size": 5}) == "thunk"
+        assert classify_function_type("main", {"size": 50}) == "user"
+        assert classify_function_type("other", {"size": 50}) == "unknown"
 
         assert calculate_std_dev([]) == 0.0
         assert calculate_std_dev([1.0]) == 0.0

@@ -404,51 +404,6 @@ def test_calculate_cyclomatic_complexity_error():
     assert result == 0
 
 
-def test_classify_function_type_library():
-    """Test _classify_function_type for library functions."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    assert analyzer._classify_function_type("lib.printf", {}) == "library"
-    assert analyzer._classify_function_type("kernel32.CreateFile", {}) == "library"
-
-
-def test_classify_function_type_thunk():
-    """Test _classify_function_type for thunk functions."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    assert analyzer._classify_function_type("j_printf", {}) == "thunk"
-    assert analyzer._classify_function_type("some_thunk", {}) == "thunk"
-    assert analyzer._classify_function_type("small_func", {"size": 5}) == "thunk"
-
-
-def test_classify_function_type_user():
-    """Test _classify_function_type for user functions."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    assert analyzer._classify_function_type("main", {"size": 100}) == "user"
-    assert analyzer._classify_function_type("sub_401000", {"size": 100}) == "user"
-
-
-def test_classify_function_type_unknown():
-    """Test _classify_function_type for unknown functions."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    assert analyzer._classify_function_type("weird_name", {"size": 100}) == "unknown"
-
-
-def test_classify_function_type_error():
-    """Test _classify_function_type handles errors."""
-    adapter = MinimalAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._classify_function_type(None, {})
-    assert result == "unknown"
-
-
 def test_calculate_std_dev_empty():
     """Test _calculate_std_dev with empty list."""
 

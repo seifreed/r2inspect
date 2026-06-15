@@ -339,15 +339,6 @@ def test_calculate_cyclomatic_complexity_error():
     assert result == 0
 
 
-def test_classify_function_type_error():
-    """Test _classify_function_type handles errors"""
-    adapter = FakeAdapter()
-    analyzer = FunctionAnalyzer(adapter)
-
-    result = analyzer._classify_function_type(None, {})
-    assert result == "unknown"
-
-
 def test_calculate_std_dev_empty():
     """Test _calculate_std_dev with empty list"""
 
