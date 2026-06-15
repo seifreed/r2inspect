@@ -90,8 +90,6 @@ def test_phase1_telfhash_symbol_filters_real_no_mocks(tmp_path: Path) -> None:
     assert {"main", "data_var"}.issubset(set(names))
     assert "local_only" not in names
     assert "__hidden" not in names
-    assert analyzer._should_skip_symbol("_start") is True
-    assert analyzer._should_skip_symbol("my_exported_func") is False
 
     assert TelfhashAnalyzer.compare_hashes("", "x") is None
     telfhash_from_file = TelfhashAnalyzer.calculate_telfhash_from_file(str(sample))

@@ -181,11 +181,6 @@ def test_get_elf_symbols_exception() -> None:
     assert analyzer._get_elf_symbols() == []
 
 
-def test_filter_skips_short_symbol_name() -> None:
-    analyzer = TelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
-    assert analyzer._should_skip_symbol("x") is True
-
-
 def test_filter_skips_empty_symbol_name() -> None:
     analyzer = TelfhashAnalyzer(SimpleAdapter(), filepath="/tmp/test")
     filtered = analyzer._filter_symbols_for_telfhash(

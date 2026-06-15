@@ -60,54 +60,6 @@ def test_get_hash_type():
     assert analyzer._get_hash_type() == "telfhash"
 
 
-# --- _should_skip_symbol ---
-
-
-def test_should_skip_symbol_short_name():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("a") is True
-
-
-def test_should_skip_symbol_double_underscore():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("__init_array") is True
-
-
-def test_should_skip_symbol_global_offset():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("_GLOBAL_OFFSET_TABLE_") is True
-
-
-def test_should_skip_symbol_dynamic():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("_DYNAMIC") is True
-
-
-def test_should_skip_symbol_local_label():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol(".L123") is True
-
-
-def test_should_skip_symbol_edata():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("_edata") is True
-
-
-def test_should_skip_symbol_end():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("_end") is True
-
-
-def test_should_skip_symbol_start():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("_start") is True
-
-
-def test_should_skip_symbol_normal():
-    analyzer = TelfhashAnalyzer(make_adapter(), filepath="/tmp/test.elf")
-    assert analyzer._should_skip_symbol("printf") is False
-    assert analyzer._should_skip_symbol("main") is False
-    assert analyzer._should_skip_symbol("open") is False
 
 
 # --- _filter_symbols_for_telfhash ---

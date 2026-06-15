@@ -42,7 +42,6 @@ def test_phase4_telfhash_real_error_recovery_paths(samples_dir: Path) -> None:
     assert analyzer._has_elf_symbols(None) is False
     assert analyzer._has_elf_symbols({}) is False
     assert analyzer._has_elf_symbols({"bin": None}) is False
-    assert analyzer._should_skip_symbol("a") is True
 
     # After closing the real r2 session, analyzer should fail safely.
     session.close()

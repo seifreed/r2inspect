@@ -17,7 +17,6 @@ from ..domain.formats.telfhash import (
     filter_symbols_for_telfhash as _filter_symbols_for_telfhash_impl,
     normalize_telfhash_value as _normalize_telfhash_value_impl,
     parse_telfhash_result as _parse_telfhash_result_impl,
-    should_skip_symbol as _should_skip_symbol_impl,
 )
 from .telfhash_guard import TELFHASH_AVAILABLE, _safe_telfhash
 
@@ -143,9 +142,6 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         filtered = _filter_symbols_for_telfhash_impl(symbols)
         logger.debug("Filtered %s symbols from %s total", len(filtered), len(symbols))
         return filtered
-
-    def _should_skip_symbol(self, symbol_name: str) -> bool:
-        return _should_skip_symbol_impl(symbol_name)
 
     def _extract_symbol_names(self, symbols: list[dict[str, Any]]) -> list[str]:
         """Return sorted symbol names for telfhash calculation."""

@@ -249,28 +249,6 @@ def test_filter_symbols_for_telfhash() -> None:
     assert result[1]["name"] == "helper"
 
 
-# --- _should_skip_symbol tests ---
-
-
-def test_should_skip_symbol_short_names() -> None:
-    analyzer = TelfhashAnalyzer(FakeR2(), "/test/file")
-    assert analyzer._should_skip_symbol("a") is True
-    assert analyzer._should_skip_symbol("") is True
-    assert analyzer._should_skip_symbol("ab") is False
-
-
-def test_should_skip_symbol_patterns() -> None:
-    analyzer = TelfhashAnalyzer(FakeR2(), "/test/file")
-    assert analyzer._should_skip_symbol("__internal") is True
-    assert analyzer._should_skip_symbol("_GLOBAL_OFFSET_TABLE_") is True
-    assert analyzer._should_skip_symbol("_DYNAMIC") is True
-    assert analyzer._should_skip_symbol(".Lstart") is True
-    assert analyzer._should_skip_symbol("_edata") is True
-    assert analyzer._should_skip_symbol("_end") is True
-    assert analyzer._should_skip_symbol("_start") is True
-    assert analyzer._should_skip_symbol("normal_function") is False
-
-
 # --- _extract_symbol_names tests ---
 
 

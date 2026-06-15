@@ -265,47 +265,6 @@ def test_telfhash_analyzer_filter_symbols_mixed(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _should_skip_symbol
-# ---------------------------------------------------------------------------
-
-
-def test_telfhash_analyzer_should_skip_symbol(tmp_path):
-    filepath = _make_elf_file(tmp_path)
-    analyzer = TelfhashAnalyzer(_elf_adapter(filepath), filepath)
-
-    assert analyzer._should_skip_symbol("") is True
-    assert analyzer._should_skip_symbol("a") is True
-    assert analyzer._should_skip_symbol("__internal") is True
-    assert analyzer._should_skip_symbol("_GLOBAL_OFFSET_TABLE_") is True
-    assert analyzer._should_skip_symbol("_DYNAMIC") is True
-    assert analyzer._should_skip_symbol(".Llocal") is True
-    assert analyzer._should_skip_symbol("_edata") is True
-    assert analyzer._should_skip_symbol("_end") is True
-    assert analyzer._should_skip_symbol("_start") is True
-
-    assert analyzer._should_skip_symbol("main") is False
-    assert analyzer._should_skip_symbol("printf") is False
-
-
-def test_telfhash_analyzer_should_skip_multiple_patterns(tmp_path):
-    filepath = _make_elf_file(tmp_path)
-    analyzer = TelfhashAnalyzer(_elf_adapter(filepath), filepath)
-
-    skip_symbols = [
-        "__init_array",
-        "_GLOBAL_test",
-        "_DYNAMIC_section",
-        ".Ltext",
-        "_edata_marker",
-        "_end_marker",
-        "_start_main",
-    ]
-
-    for symbol in skip_symbols:
-        assert analyzer._should_skip_symbol(symbol) is True
-
-
-# ---------------------------------------------------------------------------
 # _extract_symbol_names
 # ---------------------------------------------------------------------------
 

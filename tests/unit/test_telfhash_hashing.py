@@ -801,19 +801,6 @@ class TestAnalyzeSymbols:
 
 
 # ---------------------------------------------------------------------------
-# Tests: _should_skip_symbol via analyzer instance
-# ---------------------------------------------------------------------------
-
-
-class TestShouldSkipSymbolInstance:
-    def test_skip_via_instance(self):
-        adapter = _make_adapter_empty()
-        analyzer = TelfhashAnalyzer(adapter, "/tmp/fake")
-        assert analyzer._should_skip_symbol("__libc_start") is True
-        assert analyzer._should_skip_symbol("printf") is False
-
-
-# ---------------------------------------------------------------------------
 # Tests: string representation
 # ---------------------------------------------------------------------------
 
