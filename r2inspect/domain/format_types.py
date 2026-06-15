@@ -48,6 +48,14 @@ def security_feature_score(data: dict[str, Any]) -> int:
     return min(score, 100)
 
 
+def section_has_permission(
+    permission: str, *, is_readable: bool, is_writable: bool, is_executable: bool
+) -> bool:
+    """Resolve an r/w/x permission flag against a section's access bits."""
+    perm_map = {"r": is_readable, "w": is_writable, "x": is_executable}
+    return perm_map.get(permission.lower(), False)
+
+
 @dataclass
 class SectionInfo:
     """Information about a binary section."""
@@ -73,12 +81,12 @@ class SectionInfo:
 
     def has_permission(self, permission: str) -> bool:
         """Check if section has a specific permission."""
-        perm_map = {
-            "r": self.is_readable,
-            "w": self.is_writable,
-            "x": self.is_executable,
-        }
-        return perm_map.get(permission.lower(), False)
+        return section_has_permission(
+            permission,
+            is_readable=self.is_readable,
+            is_writable=self.is_writable,
+            is_executable=self.is_executable,
+        )
 
 
 @dataclass

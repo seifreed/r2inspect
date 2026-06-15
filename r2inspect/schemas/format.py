@@ -13,7 +13,11 @@ from .base import AnalysisResultBase
 
 from ..domain.format_types import SectionInfo as _SectionInfo
 from ..domain.format_types import SecurityFeatures as _SecurityFeatures
-from ..domain.format_types import enabled_security_features, security_feature_score
+from ..domain.format_types import (
+    enabled_security_features,
+    section_has_permission,
+    security_feature_score,
+)
 
 
 class SectionInfo(BaseModel):
@@ -55,12 +59,12 @@ class SectionInfo(BaseModel):
 
     def has_permission(self, permission: str) -> bool:
         """Check if section has a specific permission."""
-        perm_map = {
-            "r": self.is_readable,
-            "w": self.is_writable,
-            "x": self.is_executable,
-        }
-        return perm_map.get(permission.lower(), False)
+        return section_has_permission(
+            permission,
+            is_readable=self.is_readable,
+            is_writable=self.is_writable,
+            is_executable=self.is_executable,
+        )
 
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary representation."""
