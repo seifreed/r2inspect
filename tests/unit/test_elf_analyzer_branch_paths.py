@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 
 
@@ -435,21 +433,6 @@ def test_parse_dwarf_info_delegates():
     lines = ["DW_AT_producer : GNU C17 11.3.0"]
     result = analyzer._parse_dwarf_info(lines)
     assert isinstance(result, dict)
-
-
-def test_parse_dwarf_producer_delegates():
-    adapter = MinimalELFAdapter()
-    analyzer = ELFAnalyzer(adapter)
-    result = analyzer._parse_dwarf_producer("DW_AT_producer : GNU C17 11.3.0")
-    assert result is not None
-    assert "dwarf_producer" in result
-
-
-def test_parse_dwarf_compile_time_delegates():
-    adapter = MinimalELFAdapter()
-    analyzer = ELFAnalyzer(adapter)
-    result = analyzer._parse_dwarf_compile_time("compilation date: 2024-01-15")
-    assert result == "2024-01-15"
 
 
 def test_parse_build_id_data_delegates_with_none():

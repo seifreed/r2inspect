@@ -12,9 +12,7 @@ from ..domain.formats.elf import (
     find_section_by_name,
     parse_build_id_data,
     parse_comment_compiler_info,
-    parse_dwarf_compile_time,
     parse_dwarf_info,
-    parse_dwarf_producer,
 )
 from .elf_security import get_security_features as _get_security_features
 
@@ -266,12 +264,6 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _parse_dwarf_info(self, dwarf_lines: list[str]) -> dict[str, Any]:
         return parse_dwarf_info(dwarf_lines)
-
-    def _parse_dwarf_producer(self, line: str) -> dict[str, Any] | None:
-        return parse_dwarf_producer(line)
-
-    def _parse_dwarf_compile_time(self, line: str) -> str | None:
-        return parse_dwarf_compile_time(line)
 
     def _parse_build_id_data(self, build_id_data: str | None) -> str | None:
         return parse_build_id_data(build_id_data)

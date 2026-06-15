@@ -4,8 +4,6 @@
 All mocks replaced with FakeR2 + R2PipeAdapter driving real ELFAnalyzer code.
 """
 
-import json
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
@@ -429,33 +427,6 @@ def test_parse_dwarf_info():
     assert "GNU C17" in result["dwarf_producer"]
 
 
-def test_parse_dwarf_producer():
-    """Test _parse_dwarf_producer delegates to real parser."""
-    adapter = _make_adapter()
-    analyzer = ELFAnalyzer(adapter)
-    line = "DW_AT_producer: GNU C17 9.3.0"
-    result = analyzer._parse_dwarf_producer(line)
-    assert result is not None
-    assert "dwarf_producer" in result
-
-
-def test_parse_dwarf_compile_time():
-    """Test _parse_dwarf_compile_time with a line containing a date."""
-    adapter = _make_adapter()
-    analyzer = ELFAnalyzer(adapter)
-    # parse_dwarf_compile_time looks for DW_AT_comp_dir or "compilation"
-    line = "DW_AT_comp_dir: /build 2020-01-15"
-    result = analyzer._parse_dwarf_compile_time(line)
-    assert result == "2020-01-15"
-
-
-def test_parse_dwarf_compile_time_no_match():
-    """Test _parse_dwarf_compile_time returns None when not matching."""
-    adapter = _make_adapter()
-    analyzer = ELFAnalyzer(adapter)
-    line = "some random line without dates"
-    result = analyzer._parse_dwarf_compile_time(line)
-    assert result is None
 
 
 def test_parse_build_id_data():
