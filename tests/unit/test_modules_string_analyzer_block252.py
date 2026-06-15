@@ -68,8 +68,5 @@ def test_string_analyzer_flow():
     stats = analyzer.get_string_statistics()
     assert stats["total_strings"] == len(strings)
 
-    assert analyzer._decode_base64("QUJDRA==")
-    assert analyzer._decode_hex("4142")
-
     xor_matches = analyzer.search_xor("A")
     assert xor_matches

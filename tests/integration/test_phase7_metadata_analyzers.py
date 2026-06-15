@@ -133,7 +133,7 @@ def test_function_analyzer_basic_and_empty() -> None:
     assert empty_result["error"] == "No functions detected"
 
 
-def test_string_analyzer_min_length_and_decode_errors(tmp_path: Path) -> None:
+def test_string_analyzer_min_length(tmp_path: Path) -> None:
     config = _config(tmp_path)
     config.set("strings", "min_length", 8)
     config.set("strings", "max_length", 64)
@@ -148,14 +148,6 @@ def test_string_analyzer_min_length_and_decode_errors(tmp_path: Path) -> None:
     assert result["available"] is True
     for string_value in result["strings"]:
         assert 8 <= len(string_value) <= 64
-
-    r2, adapter = _open_adapter(PE_FIXTURE)
-    try:
-        analyzer = StringAnalyzer(adapter, config)
-        assert analyzer._decode_base64("!!not-base64!!") is None
-        assert analyzer._decode_hex("zzzz") is None
-    finally:
-        r2.quit()
 
 
 def test_resource_analyzer_malformed_and_binary_extraction() -> None:

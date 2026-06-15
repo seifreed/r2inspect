@@ -141,14 +141,6 @@ class StringAnalyzer(BaseAnalyzer):
 
         return decoded
 
-    def _decode_base64(self, value: str) -> dict[str, Any] | None:
-        """Decode a base64-encoded string if possible."""
-        return decode_base64(value)
-
-    def _decode_hex(self, value: str) -> dict[str, Any] | None:
-        """Decode a hex-encoded string if possible."""
-        return decode_hex(value)
-
     def get_string_statistics(self) -> dict[str, Any]:
         """Get statistics about extracted strings"""
         strings = self.extract_strings()

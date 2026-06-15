@@ -4,8 +4,6 @@
 Rewritten to use real objects (FakeR2 + R2PipeAdapter + real Config) instead of mocks.
 """
 
-import pytest
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.string_analyzer import StringAnalyzer
@@ -356,15 +354,7 @@ class TestDecodeStrings:
 
 
 class TestDecodeBase64Method:
-    """Tests for _decode_base64 wrapper and domain function."""
-
-    def test_decode_base64_method(self, tmp_path):
-        """Test _decode_base64 wrapper method with valid input."""
-        analyzer = _make_analyzer(tmp_path)
-        result = analyzer._decode_base64("aGVsbG8gd29ybGQ=")
-        assert result is not None
-        assert result["decoded"] == "hello world"
-        assert result["encoding"] == "base64"
+    """Tests for the decode_base64 domain function."""
 
     def test_decode_base64_invalid(self):
         """Test decode_base64 domain function with non-base64 input."""
@@ -386,15 +376,7 @@ class TestDecodeBase64Method:
 
 
 class TestDecodeHexMethod:
-    """Tests for _decode_hex wrapper and domain function."""
-
-    def test_decode_hex_method(self, tmp_path):
-        """Test _decode_hex wrapper method with valid input."""
-        analyzer = _make_analyzer(tmp_path)
-        result = analyzer._decode_hex("68656c6c6f")
-        assert result is not None
-        assert result["decoded"] == "hello"
-        assert result["encoding"] == "hex"
+    """Tests for the decode_hex domain function."""
 
     def test_decode_hex_invalid(self):
         """Test decode_hex domain function with non-hex input."""

@@ -2,8 +2,6 @@
 
 from dataclasses import replace
 
-import pytest
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.config_schemas.schemas import GeneralConfig, StringsConfig
@@ -699,30 +697,6 @@ class TestStringDecoding:
 
         # Should have at least one base64 and one hex decoded entry
         assert len(result) >= 2
-
-    def test_decode_base64_method(self, tmp_path):
-        """Test _decode_base64 method with a real base64 string."""
-        adapter = _make_adapter()
-        config = _make_config(tmp_path)
-        analyzer = StringAnalyzer(adapter, config)
-
-        # "dGVzdA==" is base64 for "test" -- but it's only 8 chars, passes is_base64
-        result = analyzer._decode_base64("dGVzdA==")
-
-        assert result is not None
-        assert result["decoded"] == "test"
-
-    def test_decode_hex_method(self, tmp_path):
-        """Test _decode_hex method with a real hex string."""
-        adapter = _make_adapter()
-        config = _make_config(tmp_path)
-        analyzer = StringAnalyzer(adapter, config)
-
-        # "74657374" is hex for "test"
-        result = analyzer._decode_hex("74657374")
-
-        assert result is not None
-        assert result["decoded"] == "test"
 
 
 class TestStringStatistics:
