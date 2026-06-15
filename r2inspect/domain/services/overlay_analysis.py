@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import math
 from typing import Any
+
+from .binary_helpers import entropy_from_ints
 
 INSTALLER_SIGNATURES: tuple[dict[str, Any], ...] = (
     {
@@ -49,14 +50,7 @@ SUSPICIOUS_OVERLAY_STRINGS: tuple[str, ...] = (
 
 
 def calculate_overlay_entropy(data: list[int]) -> float:
-    if not data:
-        return 0.0
-    data_length = len(data)
-    entropy = 0.0
-    for byte_value in set(data):
-        probability = data.count(byte_value) / data_length
-        entropy -= probability * math.log2(probability)
-    return round(entropy, 4)
+    return round(entropy_from_ints(data), 4)
 
 
 def has_pattern(data: list[int], pattern: list[int]) -> bool:
