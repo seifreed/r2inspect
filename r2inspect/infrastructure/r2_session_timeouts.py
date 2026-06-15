@@ -8,6 +8,8 @@ import threading
 import time
 from typing import Any
 
+from .timeout_runner import run_with_timeout
+
 
 def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger: Any) -> Any:
     result_holder: dict[str, Any] = {"r2": None, "error": None}
@@ -55,25 +57,14 @@ def run_cmd_with_timeout(session: Any, command: str, timeout: float, *, logger: 
         logger.warning("Forcing r2 command timeout: %s", command)
         return False
 
-    result_holder: dict[str, Any] = {"ok": False, "error": None}
-
-    def _runner() -> None:
-        try:
-            result = session.r2.cmd(command)
-            result_holder["ok"] = bool(result or result == "")
-        except Exception as exc:
-            result_holder["error"] = exc
-
     try:
-        worker = threading.Thread(target=_runner, daemon=True)
-        worker.start()
-        worker.join(timeout)
-        if worker.is_alive():
+        completed, result, error = run_with_timeout(lambda: session.r2.cmd(command), timeout)
+        if not completed:
             logger.warning("r2 command timed out after %.1fs: %s", timeout, command)
             return False
-        if result_holder["error"] is not None:
-            raise result_holder["error"]
-        return bool(result_holder["ok"])
+        if error is not None:
+            raise error
+        return bool(result or result == "")
     except Exception as exc:
         logger.warning("r2 command failed (%s): %s", command, exc)
         return False

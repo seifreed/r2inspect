@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 import struct
-import threading
 from typing import Any
 
 # Try to import telfhash library
@@ -24,6 +23,7 @@ except ImportError:
     TELFHASH_AVAILABLE = False
 
 from ..infrastructure.logging import get_logger
+from ..infrastructure.timeout_runner import run_with_timeout
 
 logger = get_logger(__name__)
 
@@ -124,25 +124,15 @@ def _telfhash_with_timeout(filepath: str, timeout: float | None = None) -> Any:
     """
     if timeout is None:
         timeout = _resolve_telfhash_timeout()
-    result_holder: dict[str, Any] = {"value": None, "error": None}
-
-    def _runner() -> None:
-        try:
-            result_holder["value"] = telfhash(filepath)
-        except Exception as exc:
-            result_holder["error"] = exc
-
-    worker = threading.Thread(target=_runner, daemon=True)
-    worker.start()
-    worker.join(timeout)
-    if worker.is_alive():
+    completed, value, error = run_with_timeout(lambda: telfhash(filepath), timeout)
+    if not completed:
         raise TimeoutError(
             f"telfhash timed out after {timeout:.1f}s for {filepath} "
             "(likely the telfhash 0.9.8 iter_segments infinite loop)"
         )
-    if result_holder["error"] is not None:
-        raise result_holder["error"]
-    return result_holder["value"]
+    if error is not None:
+        raise error
+    return value
 
 
 def _safe_telfhash(filepath: str) -> Any:
