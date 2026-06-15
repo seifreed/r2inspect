@@ -3,10 +3,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from r2inspect.domain.formats.elf import (
-    build_section_read_commands,
     find_section_by_name,
     parse_build_id_data,
     parse_comment_compiler_info,
@@ -295,50 +292,3 @@ def test_find_section_by_name_no_name_key():
     sections = [{"size": 100}]
     result = find_section_by_name(sections, ".text")
     assert result is None
-
-
-# ---------------------------------------------------------------------------
-# build_section_read_commands
-# ---------------------------------------------------------------------------
-
-
-def test_build_section_read_commands_valid_section():
-    section = {"vaddr": 0x1000, "size": 256}
-    result = build_section_read_commands(section, "px")
-    assert result is not None
-    seek_cmd, read_cmd = result
-    assert seek_cmd == "s 4096"
-    assert read_cmd == "px 256"
-
-
-def test_build_section_read_commands_zero_vaddr_returns_none():
-    section = {"vaddr": 0, "size": 256}
-    result = build_section_read_commands(section, "px")
-    assert result is None
-
-
-def test_build_section_read_commands_zero_size_returns_none():
-    section = {"vaddr": 0x1000, "size": 0}
-    result = build_section_read_commands(section, "px")
-    assert result is None
-
-
-def test_build_section_read_commands_missing_vaddr_returns_none():
-    section = {"size": 100}
-    result = build_section_read_commands(section, "px")
-    assert result is None
-
-
-def test_build_section_read_commands_missing_size_returns_none():
-    section = {"vaddr": 0x2000}
-    result = build_section_read_commands(section, "pxr")
-    assert result is None
-
-
-def test_build_section_read_commands_different_cmd():
-    section = {"vaddr": 0x4000, "size": 64}
-    result = build_section_read_commands(section, "pxr")
-    assert result is not None
-    seek_cmd, read_cmd = result
-    assert "pxr" in read_cmd
-    assert "64" in read_cmd

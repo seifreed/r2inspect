@@ -232,11 +232,6 @@ def test_elf_domain_helpers() -> None:
 
     section = elf_domain.find_section_by_name([{"name": ".text"}], "text")
     assert section and section["name"] == ".text"
-    assert elf_domain.build_section_read_commands({"vaddr": 4096, "size": 10}, "px") == (
-        "s 4096",
-        "px 10",
-    )
-    assert elf_domain.build_section_read_commands({"vaddr": 0, "size": 10}, "px") is None
 
 
 def test_pe_info_domain_helpers() -> None:

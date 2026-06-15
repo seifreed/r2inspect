@@ -85,11 +85,3 @@ def find_section_by_name(sections: list[dict[str, Any]], name_substr: str) -> di
         if target in str(name).lower():
             return section
     return None
-
-
-def build_section_read_commands(section: dict[str, Any], cmd: str) -> tuple[str, str] | None:
-    vaddr = section.get("vaddr", 0)
-    size = section.get("size", 0)
-    if not vaddr or not size:
-        return None
-    return f"s {vaddr}", f"{cmd} {size}"

@@ -10,7 +10,6 @@ from r2inspect.domain.formats.compiler import (
     map_msvc_version_from_rich,
 )
 from r2inspect.domain.formats.elf import (
-    build_section_read_commands,
     find_section_by_name,
     parse_build_id_data,
     parse_comment_compiler_info,
@@ -72,7 +71,6 @@ def test_elf_domain_helpers() -> None:
     assert parse_build_id_data("Build ID: aa bb cc dd ee ff") == "eeff"
     sections = [{"name": ".text", "vaddr": 1, "size": 2}]
     assert find_section_by_name(sections, "text") == sections[0]
-    assert build_section_read_commands(sections[0], "px") == ("s 1", "px 2")
 
 
 def test_macho_domain_helpers() -> None:
