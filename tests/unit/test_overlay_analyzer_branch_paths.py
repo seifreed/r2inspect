@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from r2inspect.domain.services.overlay_analysis import looks_encrypted
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 
 
@@ -466,15 +467,13 @@ def test_check_file_signatures_appends_multiple_positions():
 
 def test_looks_encrypted_returns_false_for_short_data():
     """Fewer than 256 bytes → returns False immediately (line 363)."""
-    analyzer = OverlayAnalyzer(None)
-    assert analyzer._looks_encrypted([0x00] * 100) is False
+    assert looks_encrypted([0x00] * 100) is False
 
 
 def test_looks_encrypted_returns_true_for_high_entropy():
     """All 256 distinct byte values → entropy > 7.5 → True (line 370)."""
     data = list(range(256)) * 2
-    analyzer = OverlayAnalyzer(None)
-    assert analyzer._looks_encrypted(data) is True
+    assert looks_encrypted(data) is True
 
 
 # ---------------------------------------------------------------------------

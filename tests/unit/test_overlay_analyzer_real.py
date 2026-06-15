@@ -1,5 +1,6 @@
 """Comprehensive tests for overlay analyzer - 0% coverage target"""
 
+from r2inspect.domain.services.overlay_analysis import looks_encrypted
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 
 
@@ -546,36 +547,18 @@ def test_overlay_string_extraction():
 def test_overlay_looks_encrypted_high_entropy():
     # All unique bytes
     overlay_data = list(range(256))
-    adapter = MockAdapter(
-        {
-            "ij": {"core": {"size": 1000}},
-            "iSj": [{"paddr": 0, "size": 500}],
-            "iDj": [],
-            "pxj 500 @ 500": overlay_data,
-        }
-    )
-    analyzer = OverlayAnalyzer(adapter)
-    result = overlay_data
-
-    encrypted = analyzer._looks_encrypted(result)
-    assert encrypted is True
+    assert looks_encrypted(overlay_data) is True
 
 
 def test_overlay_looks_encrypted_low_entropy():
     # Repeated pattern
     overlay_data = [0x41, 0x42] * 128
-    analyzer = OverlayAnalyzer(None)
-
-    encrypted = analyzer._looks_encrypted(overlay_data)
-    assert encrypted is False
+    assert looks_encrypted(overlay_data) is False
 
 
 def test_overlay_looks_encrypted_small_data():
     overlay_data = [0x41] * 100
-    analyzer = OverlayAnalyzer(None)
-
-    encrypted = analyzer._looks_encrypted(overlay_data)
-    assert encrypted is False
+    assert looks_encrypted(overlay_data) is False
 
 
 def test_overlay_find_pattern_found():

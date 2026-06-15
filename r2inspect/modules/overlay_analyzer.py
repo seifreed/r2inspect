@@ -13,7 +13,6 @@ from ..domain.services.overlay_analysis import (
     determine_overlay_type,
     find_all_patterns,
     has_pattern,
-    looks_encrypted,
 )
 from ..infrastructure.logging import get_logger
 from .overlay_content_support import analyze_overlay_content as _analyze_overlay_content_impl
@@ -156,10 +155,6 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
         """Check for embedded file signatures."""
         return detect_embedded_files(data)
-
-    def _looks_encrypted(self, data: list[int]) -> bool:
-        """Check if data looks encrypted based on entropy and patterns."""
-        return looks_encrypted(data)
 
     def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
         """Extract readable strings from data."""

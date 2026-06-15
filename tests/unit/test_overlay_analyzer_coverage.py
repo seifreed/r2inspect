@@ -4,6 +4,7 @@ All mocks replaced with real objects using FakeR2 + R2PipeAdapter.
 """
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.overlay_analysis import looks_encrypted
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -491,31 +492,27 @@ def test_check_file_signatures_png():
 
 
 def test_looks_encrypted_high_entropy():
-    analyzer = _make_analyzer()
     data = list(range(256)) * 2
-    assert analyzer._looks_encrypted(data) is True
+    assert looks_encrypted(data) is True
 
 
 def test_looks_encrypted_unique_bytes():
-    analyzer = _make_analyzer()
     import random
 
     data = [random.randint(0, 255) for _ in range(256)]
     # Just ensure it returns a boolean without error
-    result = analyzer._looks_encrypted(data)
+    result = looks_encrypted(data)
     assert isinstance(result, bool)
 
 
 def test_looks_encrypted_false():
-    analyzer = _make_analyzer()
     data = [0x41] * 256
-    assert analyzer._looks_encrypted(data) is False
+    assert looks_encrypted(data) is False
 
 
 def test_looks_encrypted_too_short():
-    analyzer = _make_analyzer()
     data = [0] * 100
-    assert analyzer._looks_encrypted(data) is False
+    assert looks_encrypted(data) is False
 
 
 # ── _extract_strings ────────────────────────────────────────────────
