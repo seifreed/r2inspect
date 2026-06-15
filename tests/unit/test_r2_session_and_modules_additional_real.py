@@ -218,7 +218,6 @@ def test_rich_header_helpers(tmp_path: Path) -> None:
 
     key_data = bytearray(b"Rich\x01\x02\x03\x04")
     assert rich_analyzer._is_valid_rich_key(key_data, 0) is True
-    assert rich_analyzer._find_dans_before_rich(b"DanSRich", 4) == 0
 
     dos_stub = b"\x00" * 8 + b"RICH"
     assert rich_analyzer._estimate_dans_start(dos_stub, 8) is not None

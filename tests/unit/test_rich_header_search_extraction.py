@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 import struct
 
-import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_search import RichHeaderSearchMixin
@@ -378,35 +377,6 @@ def test_is_valid_rich_key_out_of_bounds():
     data = b"Rich"
     search = _RichHeaderSearchHost(adapter)
     assert search._is_valid_rich_key(data, 0) is False
-
-
-# ---------------------------------------------------------------------------
-# _find_dans_before_rich
-# ---------------------------------------------------------------------------
-
-
-def test_find_dans_before_rich_found():
-    adapter = _make_adapter_empty()
-    data = b"\x00" * 50 + b"DanS" + b"\x00" * 100
-    search = _RichHeaderSearchHost(adapter)
-    result = search._find_dans_before_rich(data, 150)
-    assert result == 50
-
-
-def test_find_dans_before_rich_not_found():
-    adapter = _make_adapter_empty()
-    data = b"\x00" * 200
-    search = _RichHeaderSearchHost(adapter)
-    result = search._find_dans_before_rich(data, 150)
-    assert result is None
-
-
-def test_find_dans_before_rich_too_far():
-    adapter = _make_adapter_empty()
-    data = b"DanS" + b"\x00" * 600
-    search = _RichHeaderSearchHost(adapter)
-    result = search._find_dans_before_rich(data, 600)
-    assert result is None
 
 
 # ---------------------------------------------------------------------------

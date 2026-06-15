@@ -444,4 +444,3 @@ def test_rich_header_helper_branches(tmp_path: Path) -> None:
     assert analyzer2._find_all_occurrences(b"RichRich", b"Rich") == [0, 4]
     assert analyzer2._find_rich_positions(b"xxRichxxxxxx") == [2]
     assert analyzer2._is_valid_rich_key(b"Rich\x01\x00\x00\x00", 0) is True
-    assert analyzer2._find_dans_before_rich(b"DanSRich", 4) == 0

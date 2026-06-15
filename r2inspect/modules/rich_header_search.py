@@ -151,11 +151,6 @@ class RichHeaderSearchMixin:
         potential_key = struct.unpack("<I", data[rich_pos + 4 : rich_pos + 8])[0]
         return potential_key not in (0, 0xFFFFFFFF)
 
-    def _find_dans_before_rich(self, data: bytes, rich_pos: int) -> int | None:
-        """Find DanS signature before Rich within a window."""
-        candidates = self._find_dans_candidates_before_rich(data, rich_pos)
-        return candidates[0] if candidates else None
-
     def _find_dans_candidates_before_rich(self, data: bytes, rich_pos: int) -> list[int]:
         """Find all DanS signatures before Rich within a window."""
         candidates: list[int] = []

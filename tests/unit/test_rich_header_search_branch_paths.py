@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import struct
 
-import pytest
 
 from r2inspect.modules.rich_header_search import RichHeaderSearchMixin
 
@@ -336,26 +335,6 @@ def test_is_valid_rich_key_returns_false_when_too_short() -> None:
     data = b"Rich\x01"  # only 1 byte after Rich, need 4
     searcher = ConcreteSearcher()
     assert searcher._is_valid_rich_key(data, 0) is False
-
-
-# ---------------------------------------------------------------------------
-# _find_dans_before_rich
-# ---------------------------------------------------------------------------
-
-
-def test_find_dans_before_rich_finds_dans_marker() -> None:
-    buf = bytearray(200)
-    buf[50:54] = b"DanS"
-    buf[120:124] = b"Rich"
-    searcher = ConcreteSearcher()
-    result = searcher._find_dans_before_rich(bytes(buf), 120)
-    assert result == 50
-
-
-def test_find_dans_before_rich_returns_none_when_absent() -> None:
-    buf = b"\x00" * 200
-    searcher = ConcreteSearcher()
-    assert searcher._find_dans_before_rich(buf, 120) is None
 
 
 # ---------------------------------------------------------------------------

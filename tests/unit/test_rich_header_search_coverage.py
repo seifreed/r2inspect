@@ -180,15 +180,7 @@ def test_is_valid_rich_key_out_of_bounds():
     assert searcher._is_valid_rich_key(data, 0) is False
 
 
-# --- _find_dans_before_rich ---
-
-
-def test_find_dans_before_rich_found():
-    searcher = _RichHeaderSearchableHost()
-    data = bytearray(200)
-    data[10:14] = b"DanS"
-    result = searcher._find_dans_before_rich(bytes(data), 100)
-    assert result == 10
+# --- _find_dans_candidates_before_rich ---
 
 
 def test_find_dans_candidates_before_rich_returns_all_matches():
@@ -197,23 +189,6 @@ def test_find_dans_candidates_before_rich_returns_all_matches():
     data[10:14] = b"DanS"
     data[40:44] = b"DanS"
     assert searcher._find_dans_candidates_before_rich(bytes(data), 100) == [10, 40]
-
-
-def test_find_dans_before_rich_not_found():
-    searcher = _RichHeaderSearchableHost()
-    data = bytearray(200)
-    result = searcher._find_dans_before_rich(bytes(data), 100)
-    assert result is None
-
-
-def test_find_dans_before_rich_outside_window():
-    searcher = _RichHeaderSearchableHost()
-    data = bytearray(200)
-    data[0:4] = b"DanS"  # at offset 0
-    # rich_pos = 600 -> window is max(0, 600-512)=88 to 600
-    # DanS at 0 is outside the window
-    result = searcher._find_dans_before_rich(bytes(data), 600)
-    assert result is None
 
 
 def test_pattern_based_search_tries_later_dans_after_earlier_false_positive():

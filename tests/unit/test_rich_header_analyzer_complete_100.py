@@ -991,22 +991,6 @@ def test_find_dans_candidates_before_rich():
     assert 50 in candidates
 
 
-def test_find_dans_before_rich():
-    """Test _find_dans_before_rich returns first candidate."""
-    analyzer = _make_analyzer()
-    data = b"\x00" * 50 + b"DanS" + b"\x00" * 50 + b"Rich"
-    result = analyzer._find_dans_before_rich(data, 104)
-    assert result == 50
-
-
-def test_find_dans_before_rich_not_found():
-    """Test _find_dans_before_rich when no DanS found."""
-    analyzer = _make_analyzer()
-    data = b"\x00" * 200
-    result = analyzer._find_dans_before_rich(data, 150)
-    assert result is None
-
-
 # ---------------------------------------------------------------------------
 # Full direct file extraction end-to-end
 # ---------------------------------------------------------------------------
