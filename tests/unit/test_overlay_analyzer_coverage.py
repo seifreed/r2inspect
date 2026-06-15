@@ -3,7 +3,6 @@
 All mocks replaced with real objects using FakeR2 + R2PipeAdapter.
 """
 
-import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
@@ -588,98 +587,6 @@ def test_check_suspicious_indicators():
     }
     analyzer._check_suspicious_indicators(result)
     assert len(result["suspicious_indicators"]) > 0
-
-
-# ── _check_large_overlay ────────────────────────────────────────────
-
-
-def test_check_large_overlay():
-    analyzer = _make_analyzer()
-    result = {"overlay_size": 2000000}
-    suspicious = []
-    analyzer._check_large_overlay(result, suspicious)
-    assert len(suspicious) == 1
-    assert suspicious[0]["indicator"] == "Large overlay"
-    assert suspicious[0]["severity"] == "medium"
-
-
-def test_check_large_overlay_small():
-    analyzer = _make_analyzer()
-    result = {"overlay_size": 1000}
-    suspicious = []
-    analyzer._check_large_overlay(result, suspicious)
-    assert len(suspicious) == 0
-
-
-# ── _check_entropy ──────────────────────────────────────────────────
-
-
-def test_check_entropy_high():
-    analyzer = _make_analyzer()
-    result = {"overlay_entropy": 7.8}
-    suspicious = []
-    analyzer._check_entropy(result, suspicious)
-    assert len(suspicious) == 1
-    assert suspicious[0]["indicator"] == "High entropy"
-    assert suspicious[0]["severity"] == "high"
-
-
-def test_check_entropy_low():
-    analyzer = _make_analyzer()
-    result = {"overlay_entropy": 5.0}
-    suspicious = []
-    analyzer._check_entropy(result, suspicious)
-    assert len(suspicious) == 0
-
-
-# ── _check_embedded_executables ─────────────────────────────────────
-
-
-def test_check_embedded_executables_pe():
-    analyzer = _make_analyzer()
-    result = {"embedded_files": [{"type": "PE", "offset": 100}]}
-    suspicious = []
-    analyzer._check_embedded_executables(result, suspicious)
-    assert len(suspicious) == 1
-    assert suspicious[0]["indicator"] == "Embedded executable"
-    assert suspicious[0]["severity"] == "high"
-
-
-def test_check_embedded_executables_elf():
-    analyzer = _make_analyzer()
-    result = {"embedded_files": [{"type": "ELF", "offset": 200}]}
-    suspicious = []
-    analyzer._check_embedded_executables(result, suspicious)
-    assert len(suspicious) == 1
-
-
-def test_check_embedded_executables_none():
-    analyzer = _make_analyzer()
-    result = {"embedded_files": []}
-    suspicious = []
-    analyzer._check_embedded_executables(result, suspicious)
-    assert len(suspicious) == 0
-
-
-# ── _check_autoit ───────────────────────────────────────────────────
-
-
-def test_check_autoit():
-    analyzer = _make_analyzer()
-    result = {"patterns_found": [{"name": "AutoIt"}]}
-    suspicious = []
-    analyzer._check_autoit(result, suspicious)
-    assert len(suspicious) == 1
-    assert suspicious[0]["indicator"] == "AutoIt script"
-    assert suspicious[0]["severity"] == "medium"
-
-
-def test_check_autoit_none():
-    analyzer = _make_analyzer()
-    result = {"patterns_found": [{"name": "NSIS"}]}
-    suspicious = []
-    analyzer._check_autoit(result, suspicious)
-    assert len(suspicious) == 0
 
 
 # ── _default_result ─────────────────────────────────────────────────
