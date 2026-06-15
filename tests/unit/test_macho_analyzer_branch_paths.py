@@ -5,8 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 
 
@@ -417,30 +415,6 @@ class EmptyUuidAdapter(MinimalAdapter):
 def test_extract_uuid_empty_string_returns_none():
     analyzer = MachOAnalyzer(EmptyUuidAdapter())
     result = analyzer._extract_uuid()
-    assert result is None
-
-
-# ---------------------------------------------------------------------------
-# _estimate_from_sdk_version (lines 240-246)
-# ---------------------------------------------------------------------------
-
-
-def test_estimate_from_sdk_version_known_version():
-    analyzer = MachOAnalyzer(MinimalAdapter())
-    result = analyzer._estimate_from_sdk_version("14.0")
-    assert result is not None
-    assert "2023" in result
-
-
-def test_estimate_from_sdk_version_unknown_version_returns_none():
-    analyzer = MachOAnalyzer(MinimalAdapter())
-    result = analyzer._estimate_from_sdk_version("99.0")
-    assert result is None
-
-
-def test_estimate_from_sdk_version_empty_string_returns_none():
-    analyzer = MachOAnalyzer(MinimalAdapter())
-    result = analyzer._estimate_from_sdk_version("")
     assert result is None
 
 

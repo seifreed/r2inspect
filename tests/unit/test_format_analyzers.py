@@ -118,8 +118,3 @@ def test_macho_security_features():
     assert features["encrypted"] is True
     assert features["signed"] is True
     assert features["nx"] is True
-
-
-def test_macho_estimate_from_sdk_version():
-    macho = MachOAnalyzer(R2PipeAdapter(FakeR2()), DummyConfig())
-    assert macho._estimate_from_sdk_version("13.0") == "~2022 (SDK 13.0)"

@@ -213,14 +213,6 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         return self._safe_call(_load, default=None, error_msg="Error extracting UUID")
 
-    def _estimate_from_sdk_version(self, sdk_version: str) -> str | None:
-        """Estimate compilation timeframe from SDK version."""
-        return self._safe_call(
-            lambda: estimate_from_sdk_version(sdk_version),
-            default=None,
-            error_msg="Error estimating from SDK version",
-        )
-
     def _estimate_compile_time(self) -> str:
         """Estimate compile time as fallback"""
         # For Mach-O files without specific timestamp info

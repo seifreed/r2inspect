@@ -4,8 +4,6 @@
 Rewritten to use real objects (FakeR2 + R2PipeAdapter) instead of mocks.
 """
 
-import json
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
@@ -567,23 +565,3 @@ def test_get_security_features():
     # Should have the standard keys
     for key in ("pie", "nx", "stack_canary", "arc", "encrypted", "signed"):
         assert key in result
-
-
-# ---------------------------------------------------------------------------
-# _estimate_from_sdk_version
-# ---------------------------------------------------------------------------
-
-
-def test_estimate_from_sdk_version_known():
-    """_estimate_from_sdk_version returns estimate for known SDK."""
-    analyzer = _make_analyzer()
-    result = analyzer._estimate_from_sdk_version("14.0")
-    assert result is not None
-    assert "2023" in result
-
-
-def test_estimate_from_sdk_version_unknown():
-    """_estimate_from_sdk_version returns None for unknown SDK."""
-    analyzer = _make_analyzer()
-    result = analyzer._estimate_from_sdk_version("99.0")
-    assert result is None
