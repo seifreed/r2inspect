@@ -107,7 +107,7 @@ def accumulate_bloom_bits(function_blooms: dict[str, Any]) -> tuple[int, int]:
     total_bits_set = 0
     total_capacity = 0
     for bloom_filter in function_blooms.values():
-        bit_sequence = _get_bloom_bits(bloom_filter)
+        bit_sequence = get_bloom_bits(bloom_filter)
         if bit_sequence is None:
             continue
         bits_set = sum(bit_sequence)
@@ -143,8 +143,8 @@ def _jaccard_similarity(bits1: set[int], bits2: set[int]) -> float:
 
 def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
     """Calculate Jaccard similarity between two bloom filters."""
-    bit_array_1 = _get_bloom_bits(bloom1)
-    bit_array_2 = _get_bloom_bits(bloom2)
+    bit_array_1 = get_bloom_bits(bloom1)
+    bit_array_2 = get_bloom_bits(bloom2)
     if bit_array_1 is None or bit_array_2 is None:
         return 0.0
 
@@ -153,7 +153,7 @@ def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
     return _jaccard_similarity(bits1, bits2)
 
 
-def _get_bloom_bits(bloom_filter: Any) -> Any | None:
+def get_bloom_bits(bloom_filter: Any) -> Any | None:
     bit_sequence = getattr(bloom_filter, "bit_array", None)
     if bit_sequence is None:
         bit_sequence = getattr(bloom_filter, "bitarray", None)

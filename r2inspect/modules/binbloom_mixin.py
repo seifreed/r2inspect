@@ -8,7 +8,12 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any, cast
 
-from ..domain.services.binbloom import build_signature_components, build_similar_groups
+from ..domain.services.binbloom import (
+    accumulate_bloom_bits,
+    build_signature_components,
+    build_similar_groups,
+    get_bloom_bits,
+)
 from ..infrastructure.logging import get_logger
 from .binbloom_extraction_support import (
     extract_instruction_mnemonics as _extract_instruction_mnemonics_impl,
@@ -186,26 +191,14 @@ class BinbloomMixin:
         return _calculate_bloom_stats_impl(self, function_blooms, capacity, error_rate, logger)
 
     def _accumulate_bloom_bits(self, function_blooms: dict[str, BloomFilter]) -> tuple[int, int]:
-        total_bits_set = 0
-        total_capacity = 0
-        for bloom_filter in function_blooms.values():
-            bit_sequence = self._get_bloom_bits(bloom_filter)
-            if bit_sequence is None:
-                continue
-            bits_set = sum(bit_sequence)
-            total_bits_set += bits_set
-            total_capacity += len(bit_sequence)
-        return total_bits_set, total_capacity
+        return accumulate_bloom_bits(function_blooms)
 
     def compare_bloom_filters(self, bloom1: BloomFilter, bloom2: BloomFilter) -> float:
         return _compare_bloom_filters_impl(self, bloom1, bloom2, logger)
 
     @staticmethod
     def _get_bloom_bits(bloom_filter: BloomFilter) -> Any | None:
-        bit_sequence = getattr(bloom_filter, "bit_array", None)
-        if bit_sequence is None:
-            bit_sequence = getattr(bloom_filter, "bitarray", None)
-        return bit_sequence
+        return get_bloom_bits(bloom_filter)
 
     @staticmethod
     def deserialize_bloom(bloom_b64: str) -> BloomFilter | None:
