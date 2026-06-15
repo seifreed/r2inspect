@@ -72,16 +72,8 @@ def count_unique_signatures(function_signatures: dict[str, dict[str, Any]]) -> i
     return len({sig["signature"] for sig in function_signatures.values()})
 
 
-def build_similar_function_groups(
-    function_signatures: dict[str, dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Group functions that share the same signature."""
-    signature_groups: dict[str, list[str]] = defaultdict(list)
-    for func_name, func_data in function_signatures.items():
-        signature = func_data["signature"]
-        clean_func_name = func_name.replace("&nbsp;", " ").replace("&amp;", "&")
-        signature_groups[signature].append(clean_func_name)
-
+def build_similar_groups(signature_groups: dict[str, list[str]]) -> list[dict[str, Any]]:
+    """Build similarity-group records for signatures shared by more than one function."""
     similar_groups: list[dict[str, Any]] = []
     for signature, func_names in signature_groups.items():
         if len(func_names) > 1:
@@ -92,7 +84,20 @@ def build_similar_function_groups(
                     "count": len(func_names),
                 }
             )
+    return similar_groups
 
+
+def build_similar_function_groups(
+    function_signatures: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Group functions that share the same signature."""
+    signature_groups: dict[str, list[str]] = defaultdict(list)
+    for func_name, func_data in function_signatures.items():
+        signature = func_data["signature"]
+        clean_func_name = func_name.replace("&nbsp;", " ").replace("&amp;", "&")
+        signature_groups[signature].append(clean_func_name)
+
+    similar_groups = build_similar_groups(signature_groups)
     similar_groups.sort(key=lambda item: item["count"], reverse=True)
     return similar_groups
 

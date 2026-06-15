@@ -8,7 +8,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any, cast
 
-from ..domain.services.binbloom import build_signature_components
+from ..domain.services.binbloom import build_signature_components, build_similar_groups
 from ..infrastructure.logging import get_logger
 from .binbloom_extraction_support import (
     extract_instruction_mnemonics as _extract_instruction_mnemonics_impl,
@@ -178,17 +178,7 @@ class BinbloomMixin:
 
     @staticmethod
     def _build_similar_groups(signature_groups: dict[str, list[str]]) -> list[dict[str, Any]]:
-        similar_groups: list[dict[str, Any]] = []
-        for signature, func_names in signature_groups.items():
-            if len(func_names) > 1:
-                similar_groups.append(
-                    {
-                        "signature": signature[:16] + "..." if len(signature) > 16 else signature,
-                        "functions": func_names,
-                        "count": len(func_names),
-                    }
-                )
-        return similar_groups
+        return build_similar_groups(signature_groups)
 
     def _calculate_bloom_stats(
         self, function_blooms: dict[str, BloomFilter], capacity: int, error_rate: float

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from ..domain.formats.similarity import jaccard_similarity
+from ..domain.services.binbloom import build_similar_groups as _build_similar_groups
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
@@ -113,17 +114,7 @@ def collect_signatures_for_size(
 
 
 def build_similar_groups(signature_groups: defaultdict[str, list[str]]) -> list[dict[str, Any]]:
-    similar_groups: list[dict[str, Any]] = []
-    for sig, funcs in signature_groups.items():
-        if len(funcs) > 1:
-            similar_groups.append(
-                {
-                    "signature": sig[:16] + "..." if len(sig) > 16 else sig,
-                    "functions": funcs,
-                    "count": len(funcs),
-                }
-            )
-    return similar_groups
+    return _build_similar_groups(signature_groups)
 
 
 def collect_top_ngrams(
