@@ -104,21 +104,6 @@ def classify_opcode_type(mnemonic: str) -> str:
     return "other"
 
 
-def extract_printable_strings(data: bytes, *, min_length: int) -> list[str]:
-    strings: list[str] = []
-    current: list[str] = []
-    for byte in data:
-        if 32 <= byte <= 126:
-            current.append(chr(byte))
-            continue
-        if len(current) >= min_length:
-            strings.append("".join(current))
-        current = []
-    if len(current) >= min_length:
-        strings.append("".join(current))
-    return strings
-
-
 def extract_opcodes_from_ops(ops: list[Any], *, max_instructions: int) -> list[str]:
     opcodes: list[str] = []
     for i, op in enumerate(ops):

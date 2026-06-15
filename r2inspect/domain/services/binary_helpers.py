@@ -47,6 +47,28 @@ def clean_function_name(name: str) -> str:
     return name.replace("&nbsp;", " ").replace("&amp;", "&")
 
 
+def extract_printable_strings(
+    data: bytes | list[int], *, min_length: int, limit: int | None = None
+) -> list[str]:
+    """Collect runs of printable ASCII at least ``min_length`` long from bytes."""
+    strings: list[str] = []
+    current: list[str] = []
+    for byte in data:
+        try:
+            byte_val = int(byte) if not isinstance(byte, int) else byte
+        except (ValueError, TypeError):
+            continue
+        if 32 <= byte_val <= 126:
+            current.append(chr(byte_val))
+            continue
+        if len(current) >= min_length:
+            strings.append("".join(current))
+        current = []
+    if len(current) >= min_length:
+        strings.append("".join(current))
+    return strings if limit is None else strings[:limit]
+
+
 STANDARD_PE_SECTIONS = [
     ".text",
     ".data",

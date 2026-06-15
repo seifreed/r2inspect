@@ -8,11 +8,11 @@ from ..abstractions.hashing_strategy import HashingStrategy
 from ..abstractions.result_builder import init_result, mark_unavailable
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..domain.hashing.simhash_compare import compare_hashes as _compare_hashes_impl
+from ..domain.services.binary_helpers import extract_printable_strings
 from ..domain.services.simhash import (
     build_similarity_groups,
     classify_opcode_type,
     extract_opcodes_from_ops,
-    extract_printable_strings,
     get_length_category,
     interpret_similarity_distance,
 )
