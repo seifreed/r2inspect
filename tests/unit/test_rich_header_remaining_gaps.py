@@ -1,7 +1,6 @@
 """Tests targeting specific uncovered lines in rich_header_analyzer.py.
 
 Covered lines:
-  269-270  – _check_magic_bytes read_bytes raises
   309-310  – _extract_rich_header: all strategies fail after r2pipe offsets found
   398      – _direct_file_rich_search: xor_key is None
   402      – _direct_file_rich_search: dans_pos is None
@@ -56,28 +55,6 @@ def _write_temp_pe(dos_stub: bytes) -> str:
 def _analyzer(filepath: str) -> RichHeaderAnalyzer:
     return RichHeaderAnalyzer(adapter=_MinimalAdapter(), filepath=filepath)
 
-
-# ── Lines 269-270: _check_magic_bytes read_bytes raises ──────────────────────
-
-
-def test_check_magic_bytes_read_raises_returns_false():
-    """Lines 269-270: read_bytes raises → except catches, returns False."""
-    orig_read = _rha_mod.default_file_system.read_bytes
-
-    def _raise(path, size=None):
-        raise OSError("simulated read error")
-
-    _rha_mod.default_file_system.read_bytes = _raise
-    try:
-        fd, path = tempfile.mkstemp()
-        os.close(fd)
-        try:
-            result = _analyzer(path)._check_magic_bytes()
-            assert result is False
-        finally:
-            os.unlink(path)
-    finally:
-        _rha_mod.default_file_system.read_bytes = orig_read
 
 
 # ── Lines 309-310: _extract_rich_header – all strategies fail ────────────────

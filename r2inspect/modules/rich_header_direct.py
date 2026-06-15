@@ -31,21 +31,6 @@ class RichHeaderDirectMixin:
             return False
         return is_pe_file(self.filepath, self.adapter, self.adapter, logger=logger)
 
-    def _check_magic_bytes(self) -> bool:
-        try:
-            if not self.filepath:
-                return False
-            from . import rich_header_analyzer as analyzer_module
-
-            file_system = getattr(analyzer_module, "default_file_system", default_file_system)
-            magic = file_system.read_bytes(self.filepath, size=2)
-            if magic == b"MZ":
-                logger.debug("Found MZ header - likely PE file")
-                return True
-        except Exception as exc:
-            logger.debug("Could not read file magic bytes: %s", exc)
-        return False
-
     @staticmethod
     def _bin_info_has_pe(bin_info: dict[str, Any]) -> bool:
         bin_format = bin_info.get("format", "").lower()

@@ -7,7 +7,6 @@ import struct
 import tempfile
 import os
 
-import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
@@ -374,44 +373,6 @@ def test_pefile_parse_entry_valid():
     assert result["build_number"] == 0x7809
     assert result["count"] == 3
     assert result["prodid"] == (0x1E | (0x7809 << 16))
-
-
-# ---------------------------------------------------------------------------
-# _check_magic_bytes
-# ---------------------------------------------------------------------------
-
-
-def test_check_magic_bytes_success():
-    """Test _check_magic_bytes with a real MZ file."""
-    pe_data = b"MZ" + b"\x00" * 100
-    path = _write_pe_tempfile(pe_data)
-    try:
-        analyzer = _make_analyzer(filepath=path)
-        assert analyzer._check_magic_bytes() is True
-    finally:
-        os.unlink(path)
-
-
-def test_check_magic_bytes_not_pe():
-    """Test _check_magic_bytes with non-PE data."""
-    path = _write_pe_tempfile(b"ELF" + b"\x00" * 100)
-    try:
-        analyzer = _make_analyzer(filepath=path)
-        assert analyzer._check_magic_bytes() is False
-    finally:
-        os.unlink(path)
-
-
-def test_check_magic_bytes_no_filepath():
-    """Test _check_magic_bytes with no filepath."""
-    analyzer = _make_analyzer(filepath=None)
-    assert analyzer._check_magic_bytes() is False
-
-
-def test_check_magic_bytes_nonexistent_file():
-    """Test _check_magic_bytes with nonexistent file path."""
-    analyzer = _make_analyzer(filepath="/nonexistent/path/file.exe")
-    assert analyzer._check_magic_bytes() is False
 
 
 # ---------------------------------------------------------------------------

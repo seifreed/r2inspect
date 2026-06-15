@@ -476,47 +476,6 @@ def test_extract_encoded_from_stub_valid() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _check_magic_bytes tests
-# ---------------------------------------------------------------------------
-
-
-def test_check_magic_bytes_no_filepath() -> None:
-    """_check_magic_bytes returns False when filepath is None."""
-    analyzer = _make_analyzer(filepath=None)
-    result = analyzer._check_magic_bytes()
-    assert result is False
-
-
-def test_check_magic_bytes_nonexistent_file() -> None:
-    """_check_magic_bytes returns False when file doesn't exist."""
-    analyzer = _make_analyzer(filepath="/tmp/nonexistent_magic_bytes_test_xyz.bin")
-    result = analyzer._check_magic_bytes()
-    assert result is False
-
-
-def test_check_magic_bytes_not_mz() -> None:
-    """_check_magic_bytes returns False when magic bytes are not MZ."""
-    path = _write_temp_file(b"EL" + b"\x00" * 100)
-    try:
-        analyzer = _make_analyzer(filepath=path)
-        result = analyzer._check_magic_bytes()
-        assert result is False
-    finally:
-        os.unlink(path)
-
-
-def test_check_magic_bytes_valid_mz() -> None:
-    """_check_magic_bytes returns True for a valid MZ file."""
-    path = _write_temp_file(b"MZ" + b"\x00" * 100)
-    try:
-        analyzer = _make_analyzer(filepath=path)
-        result = analyzer._check_magic_bytes()
-        assert result is True
-    finally:
-        os.unlink(path)
-
-
-# ---------------------------------------------------------------------------
 # _bin_info_has_pe tests
 # ---------------------------------------------------------------------------
 

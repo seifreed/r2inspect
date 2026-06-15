@@ -7,7 +7,6 @@ from __future__ import annotations
 import struct
 import tempfile
 import os
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -338,7 +337,7 @@ def test_extract_rich_header_r2pipe_returns_none_for_pe_without_rich() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _is_pe_file (lines 248-258) and _check_magic_bytes (260-271)
+# _is_pe_file (lines 248-258)
 # ---------------------------------------------------------------------------
 
 
@@ -360,26 +359,6 @@ def test_is_pe_file_returns_true_for_mz_file() -> None:
         assert analyzer._is_pe_file() is True
     finally:
         os.unlink(path)
-
-
-def test_check_magic_bytes_true_for_mz() -> None:
-    """Lines 260-271: returns True when file starts with MZ."""
-    data = _build_pe_with_rich_header()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".exe", mode="wb") as f:
-        f.write(data)
-        path = f.name
-
-    try:
-        analyzer = RichHeaderAnalyzer(adapter=None, filepath=path)
-        assert analyzer._check_magic_bytes() is True
-    finally:
-        os.unlink(path)
-
-
-def test_check_magic_bytes_false_without_filepath() -> None:
-    """Lines 262-264: returns False when no filepath is set."""
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    assert analyzer._check_magic_bytes() is False
 
 
 # ---------------------------------------------------------------------------
@@ -1003,18 +982,6 @@ def test_extract_rich_header_tries_combinations_when_patterns_found() -> None:
         assert result is None
     finally:
         os.unlink(path)
-
-
-# ---------------------------------------------------------------------------
-# _check_magic_bytes exception (lines 269-271)
-# ---------------------------------------------------------------------------
-
-
-def test_check_magic_bytes_returns_false_on_read_exception() -> None:
-    """Lines 269-271: exception during file read returns False."""
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath="/dev/null/nonexistent")
-    result = analyzer._check_magic_bytes()
-    assert result is False
 
 
 # ---------------------------------------------------------------------------

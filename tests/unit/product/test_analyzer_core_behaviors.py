@@ -69,7 +69,6 @@ def test_rich_header_and_simhash_fail_safely_on_sparse_inputs() -> None:
     path = _write_tmp(_build_pe_no_rich())
     try:
         rich = RichHeaderAnalyzer(adapter=object(), filepath=path)
-        assert rich._check_magic_bytes() is True
         assert rich._direct_file_rich_search() is None
 
         class _StubAnalyzeSimHash(SimHashAnalyzer):

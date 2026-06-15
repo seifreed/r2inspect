@@ -161,8 +161,6 @@ def test_rich_header_analyzer_real_paths(
     assert non_pe_result["is_pe"] is False
     assert non_pe_result["available"] is False
 
-    assert analyzer._check_magic_bytes() is True
-
     assert analyzer._bin_info_has_pe({"format": "pe", "class": ""}) is True
     assert analyzer._bin_info_has_pe({"format": "", "class": "pe32"}) is True
     assert analyzer._bin_info_has_pe({"format": "elf", "class": "elf64"}) is False

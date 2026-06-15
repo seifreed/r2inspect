@@ -41,11 +41,7 @@ def test_parse_compiler_entries_and_description():
     assert "Microsoft Linker" in compilers[0]["description"]
 
 
-def test_bin_info_has_pe_and_magic_bytes(tmp_path):
-    sample = tmp_path / "sample.bin"
-    sample.write_bytes(b"MZ" + b"\x00" * 10)
-
-    analyzer = RichHeaderAnalyzer(FakeR2(cmd_map={"i": "pe"}), filepath=str(sample))
-    assert analyzer._check_magic_bytes() is True
+def test_bin_info_has_pe(tmp_path):
+    analyzer = RichHeaderAnalyzer(FakeR2(cmd_map={"i": "pe"}), filepath=None)
     assert analyzer._bin_info_has_pe({"format": "pe32"}) is True
     assert analyzer._bin_info_has_pe({"class": "PE32"}) is True

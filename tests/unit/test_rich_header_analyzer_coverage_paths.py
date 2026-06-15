@@ -137,37 +137,6 @@ def test_rich_header_analyze_with_rich_header(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _check_magic_bytes tests
-# ---------------------------------------------------------------------------
-
-
-def test_rich_header_check_magic_bytes_mz(tmp_path: Path) -> None:
-    test_file = tmp_path / "test.exe"
-    test_file.write_bytes(b"MZ" + b"\x00" * 100)
-
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=str(test_file))
-    assert analyzer._check_magic_bytes() is True
-
-
-def test_rich_header_check_magic_bytes_no_mz(tmp_path: Path) -> None:
-    test_file = tmp_path / "test.bin"
-    test_file.write_bytes(b"ELF" + b"\x00" * 100)
-
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=str(test_file))
-    assert analyzer._check_magic_bytes() is False
-
-
-def test_rich_header_check_magic_bytes_no_filepath() -> None:
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    assert analyzer._check_magic_bytes() is False
-
-
-def test_rich_header_check_magic_bytes_file_error(tmp_path: Path) -> None:
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath="/nonexistent/file.exe")
-    assert analyzer._check_magic_bytes() is False
-
-
-# ---------------------------------------------------------------------------
 # _bin_info_has_pe tests
 # ---------------------------------------------------------------------------
 

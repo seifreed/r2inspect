@@ -11,7 +11,6 @@ from __future__ import annotations
 import os
 import struct
 import tempfile
-from typing import Any
 
 import pytest
 
@@ -388,38 +387,6 @@ def test_is_pe_file_returns_true_for_mz_file() -> None:
     try:
         analyzer = RichHeaderAnalyzer(adapter=_MinimalAdapter(), filepath=path)
         assert analyzer._is_pe_file() is True
-    finally:
-        os.unlink(path)
-
-
-# ---------------------------------------------------------------------------
-# _check_magic_bytes (lines 264, 269-271)
-# ---------------------------------------------------------------------------
-
-
-def test_check_magic_bytes_returns_false_for_no_filepath() -> None:
-    """Line 264: returns False when filepath is not set."""
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    assert analyzer._check_magic_bytes() is False
-
-
-def test_check_magic_bytes_returns_true_for_mz_file() -> None:
-    """Lines 269-271: returns True when file starts with MZ."""
-    data = _build_pe_with_rich_header()
-    path = _write_tmp(data)
-    try:
-        analyzer = RichHeaderAnalyzer(adapter=None, filepath=path)
-        assert analyzer._check_magic_bytes() is True
-    finally:
-        os.unlink(path)
-
-
-def test_check_magic_bytes_returns_false_for_non_mz_file() -> None:
-    """Lines 264-271: returns False when file does not start with MZ."""
-    path = _write_tmp(b"\x7fELF" + b"\x00" * 64)
-    try:
-        analyzer = RichHeaderAnalyzer(adapter=None, filepath=path)
-        assert analyzer._check_magic_bytes() is False
     finally:
         os.unlink(path)
 

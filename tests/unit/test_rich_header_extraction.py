@@ -6,7 +6,6 @@ Tests domain functions directly where applicable.
 
 import struct
 
-import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.rich_header import (
@@ -185,15 +184,6 @@ class TestPEFileDetection:
         analyzer.r2 = None
 
         result = analyzer._is_pe_file()
-        assert result is False
-
-    def test_check_magic_bytes_no_filepath(self):
-        """Test magic byte check without filepath."""
-        fake_r2 = FakeR2()
-        adapter = R2PipeAdapter(fake_r2)
-        analyzer = RichHeaderAnalyzer(adapter=adapter, filepath=None)
-
-        result = analyzer._check_magic_bytes()
         assert result is False
 
     def test_bin_info_has_pe_format(self):
