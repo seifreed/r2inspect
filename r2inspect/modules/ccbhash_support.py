@@ -6,6 +6,7 @@ import hashlib
 import logging
 from typing import Any, Protocol, cast
 
+from ..domain.services.binary_helpers import clean_function_name
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 from .function_extraction import collect_valid_functions
 
@@ -144,9 +145,7 @@ def find_similar_functions(
         hash_groups: dict[str, list[str]] = {}
         for func_name, func_data in function_hashes.items():
             ccbhash = func_data["ccbhash"]
-            hash_groups.setdefault(ccbhash, []).append(
-                func_name.replace("&nbsp;", " ").replace("&amp;", "&")
-            )
+            hash_groups.setdefault(ccbhash, []).append(clean_function_name(func_name))
         similar_groups = [
             {"ccbhash": ccbhash, "functions": func_names, "count": len(func_names)}
             for ccbhash, func_names in hash_groups.items()

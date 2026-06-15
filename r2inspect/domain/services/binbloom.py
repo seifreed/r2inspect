@@ -6,6 +6,8 @@ import hashlib
 from collections import Counter, defaultdict
 from typing import Any
 
+from .binary_helpers import clean_function_name
+
 
 def build_binbloom_result(
     analyzer_name: str,
@@ -94,8 +96,7 @@ def build_similar_function_groups(
     signature_groups: dict[str, list[str]] = defaultdict(list)
     for func_name, func_data in function_signatures.items():
         signature = func_data["signature"]
-        clean_func_name = func_name.replace("&nbsp;", " ").replace("&amp;", "&")
-        signature_groups[signature].append(clean_func_name)
+        signature_groups[signature].append(clean_function_name(func_name))
 
     similar_groups = build_similar_groups(signature_groups)
     similar_groups.sort(key=lambda item: item["count"], reverse=True)

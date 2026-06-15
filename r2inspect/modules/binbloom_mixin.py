@@ -8,6 +8,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any, cast
 
+from ..domain.services.binary_helpers import clean_function_name
 from ..domain.services.binbloom import (
     accumulate_bloom_bits,
     build_signature_components,
@@ -177,8 +178,7 @@ class BinbloomMixin:
         signature_groups: dict[str, list[str]] = defaultdict(list)
         for func_name, func_data in function_signatures.items():
             signature = func_data["signature"]
-            clean_func_name = func_name.replace("&nbsp;", " ").replace("&amp;", "&")
-            signature_groups[signature].append(clean_func_name)
+            signature_groups[signature].append(clean_function_name(func_name))
         return signature_groups
 
     @staticmethod

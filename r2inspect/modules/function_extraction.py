@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from ..domain.services.binary_helpers import clean_function_name
+
 
 class FunctionExtractionHost(Protocol):
     """Capabilities a host must expose to collect functions via radare2."""
@@ -36,7 +38,7 @@ def collect_valid_functions(
     for func in functions:
         if func.get("addr") is not None and func.get("size", 0) > 0:
             if clean_names and func.get("name"):
-                func["name"] = func["name"].replace("&nbsp;", " ").replace("&amp;", "&")
+                func["name"] = clean_function_name(func["name"])
             valid_functions.append(func)
     logger.debug("Extracted %s valid functions", len(valid_functions))
     return valid_functions

@@ -42,6 +42,11 @@ def normalize_section_name(name: str | None) -> str:
     return name.lower() if isinstance(name, str) else ""
 
 
+def clean_function_name(name: str) -> str:
+    """Unescape the HTML entities radare2 emits in function names."""
+    return name.replace("&nbsp;", " ").replace("&amp;", "&")
+
+
 STANDARD_PE_SECTIONS = [
     ".text",
     ".data",

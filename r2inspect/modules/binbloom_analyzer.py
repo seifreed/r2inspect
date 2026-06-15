@@ -8,6 +8,7 @@ from typing import Any, TypedDict
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..domain.services.binary_helpers import clean_function_name
 from ..infrastructure.logging import get_logger
 from .binbloom_mixin import BinbloomMixin
 from .function_extraction import collect_valid_functions
@@ -92,7 +93,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
         for func in functions:
             func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-            func_name = func_name.replace("&nbsp;", " ").replace("&amp;", "&")
+            func_name = clean_function_name(func_name)
             func_addr = func.get("addr")
 
             if func_addr is None:
