@@ -147,8 +147,6 @@ def test_phase1_simhash_helpers_real_no_mocks(tmp_path: Path) -> None:
     assert analyzer._is_useful_string("1234567890") is False
     assert analyzer._is_useful_string("deadbeefcafebabe") is False
 
-    assert analyzer._get_prev_mnemonic([{"mnemonic": "mov"}, {"mnemonic": "jmp"}], 1) == "mov"
-    assert analyzer._get_prev_mnemonic([], 0) is None
     assert analyzer._extract_ops_from_disasm({"ops": [{"mnemonic": "ret"}]}) == [
         {"mnemonic": "ret"}
     ]

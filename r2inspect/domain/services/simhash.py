@@ -131,7 +131,7 @@ def extract_opcodes_from_ops(ops: list[Any], *, max_instructions: int) -> list[s
             continue
         opcodes.append(f"OP:{mnemonic}")
         opcodes.append(f"OPTYPE:{classify_opcode_type(mnemonic)}")
-        previous = _previous_mnemonic(ops, i)
+        previous = previous_mnemonic(ops, i)
         if previous:
             opcodes.append(f"BIGRAM:{previous}→{mnemonic}")
     return opcodes
@@ -149,7 +149,7 @@ def _resolve_mnemonic(op: dict[str, Any]) -> str | None:
     return mnemonic or None
 
 
-def _previous_mnemonic(ops: list[Any], index: int) -> str | None:
+def previous_mnemonic(ops: list[Any], index: int) -> str | None:
     if index <= 0 or index >= len(ops):
         return None
     prev_op = ops[index - 1]

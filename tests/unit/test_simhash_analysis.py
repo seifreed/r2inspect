@@ -10,7 +10,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 SAMPLE = "samples/fixtures/hello_pe.exe"
 
 
@@ -244,23 +243,3 @@ def test_simhash_extract_opcodes_no_functions():
     features = analyzer._extract_opcodes_features()
     assert isinstance(features, list)
     assert features == []
-
-
-# ---------------------------------------------------------------------------
-# _get_prev_mnemonic helper
-# ---------------------------------------------------------------------------
-
-
-def test_get_prev_mnemonic_valid():
-    analyzer = _make_analyzer()
-    ops = [{"mnemonic": "mov"}, {"mnemonic": "add"}, {"mnemonic": "call"}]
-    assert analyzer._get_prev_mnemonic(ops, 1) == "mov"
-    assert analyzer._get_prev_mnemonic(ops, 2) == "add"
-
-
-def test_get_prev_mnemonic_boundary():
-    analyzer = _make_analyzer()
-    ops = [{"mnemonic": "mov"}, {"mnemonic": "add"}]
-    assert analyzer._get_prev_mnemonic(ops, 0) is None
-    assert analyzer._get_prev_mnemonic(ops, -1) is None
-    assert analyzer._get_prev_mnemonic(ops, 5) is None

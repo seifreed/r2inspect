@@ -139,14 +139,6 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
     def _extract_opcodes_from_ops(self, ops: list[Any]) -> list[str]:
         return extract_opcodes_from_ops(ops, max_instructions=self.max_instructions_per_function)
 
-    def _get_prev_mnemonic(self, ops: list[Any], index: int) -> str | None:
-        if index <= 0 or index >= len(ops):
-            return None
-        prev_op = ops[index - 1]
-        if isinstance(prev_op, dict) and "mnemonic" in prev_op:
-            return str(prev_op["mnemonic"]).strip().lower()
-        return None
-
     def _extract_data_section_strings(self) -> list[str]:
         """Extract strings from data sections."""
         data_strings: list[str] = []

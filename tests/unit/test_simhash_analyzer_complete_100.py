@@ -149,22 +149,6 @@ def test_simhash_analyzer_error_handling(_sample_file: Path) -> None:
     assert isinstance(features, list)
 
 
-def test_simhash_analyzer_get_prev_mnemonic(_sample_file: Path) -> None:
-    """Test _get_prev_mnemonic helper."""
-    adapter = _FakeSimhashAdapter()
-    analyzer = SimHashAnalyzer(adapter=adapter, filepath=str(_sample_file))
-
-    ops = [
-        {"mnemonic": "push"},
-        {"mnemonic": "mov"},
-        {"mnemonic": "call"},
-    ]
-    assert analyzer._get_prev_mnemonic(ops, 1) == "push"
-    assert analyzer._get_prev_mnemonic(ops, 0) is None
-    assert analyzer._get_prev_mnemonic(ops, -1) is None
-    assert analyzer._get_prev_mnemonic(ops, 10) is None
-
-
 def test_simhash_analyzer_extract_opcodes_from_ops(_sample_file: Path) -> None:
     """Test _extract_opcodes_from_ops with sample ops."""
     adapter = _FakeSimhashAdapter()

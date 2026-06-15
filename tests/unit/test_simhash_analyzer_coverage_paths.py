@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.simhash import previous_mnemonic
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -409,36 +410,24 @@ def test_simhash_analyzer_extract_opcodes_from_ops_limit() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _get_prev_mnemonic
+# previous_mnemonic (domain helper)
 # ---------------------------------------------------------------------------
 
 
-def test_simhash_analyzer_get_prev_mnemonic_first() -> None:
-    analyzer = _make_analyzer()
-    ops = [{"mnemonic": "mov"}]
-    result = analyzer._get_prev_mnemonic(ops, 0)
-    assert result is None
+def test_previous_mnemonic_first() -> None:
+    assert previous_mnemonic([{"mnemonic": "mov"}], 0) is None
 
 
-def test_simhash_analyzer_get_prev_mnemonic_out_of_range() -> None:
-    analyzer = _make_analyzer()
-    ops = [{"mnemonic": "mov"}]
-    result = analyzer._get_prev_mnemonic(ops, 10)
-    assert result is None
+def test_previous_mnemonic_out_of_range() -> None:
+    assert previous_mnemonic([{"mnemonic": "mov"}], 10) is None
 
 
-def test_simhash_analyzer_get_prev_mnemonic_valid() -> None:
-    analyzer = _make_analyzer()
-    ops = [{"mnemonic": "mov"}, {"mnemonic": "add"}]
-    result = analyzer._get_prev_mnemonic(ops, 1)
-    assert result == "mov"
+def test_previous_mnemonic_valid() -> None:
+    assert previous_mnemonic([{"mnemonic": "mov"}, {"mnemonic": "add"}], 1) == "mov"
 
 
-def test_simhash_analyzer_get_prev_mnemonic_not_dict() -> None:
-    analyzer = _make_analyzer()
-    ops = ["not a dict", {"mnemonic": "add"}]
-    result = analyzer._get_prev_mnemonic(ops, 1)
-    assert result is None
+def test_previous_mnemonic_not_dict() -> None:
+    assert previous_mnemonic(["not a dict", {"mnemonic": "add"}], 1) is None
 
 
 # ---------------------------------------------------------------------------
