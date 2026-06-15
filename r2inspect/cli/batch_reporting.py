@@ -56,22 +56,13 @@ def display_batch_results(
     output_filename: str | None,
 ) -> None:
     """Display final batch analysis results."""
-    rate_stats = rate_limiter.get_stats()
-    success_count = len(all_results)
-    total_count = len(files_to_process)
-
-    console.print("\n[bold green]Analysis Complete![/bold green]")
-    console.print(f"[green]Processed: {success_count}/{total_count} files[/green]")
-    console.print(f"[blue]Time: {elapsed_time:.1f}s[/blue]")
-    rate = success_count / elapsed_time if elapsed_time > 0 else 0.0
-    console.print(f"[cyan]Rate: {rate:.1f} files/sec[/cyan]")
-
-    if verbose and rate_stats:
-        display_rate_limiter_stats(console, rate_stats)
-        display_memory_stats(console)
-
-    if output_filename:
-        console.print(f"[cyan]Output: {output_filename}[/cyan]")
-
-    if failed_files:
-        display_failed_files(console, failed_files, verbose)
+    _batch_presentation.display_batch_results(
+        console,
+        all_results=all_results,
+        failed_files=failed_files,
+        elapsed_time=elapsed_time,
+        files_to_process=files_to_process,
+        rate_limiter=rate_limiter,
+        verbose=verbose,
+        output_filename=output_filename,
+    )
