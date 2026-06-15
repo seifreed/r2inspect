@@ -326,30 +326,6 @@ def test_get_overlay_info_returns_empty_dict_on_exception():
 
 
 # ---------------------------------------------------------------------------
-# _calculate_heuristic_score branches (lines 203-204 exception)
-# ---------------------------------------------------------------------------
-
-
-def test_calculate_heuristic_score_with_valid_data():
-    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
-    entropy_results = {"summary": {"high_entropy_ratio": 0.5}}
-    section_results = {
-        "suspicious_sections": [{"name": "packed"}],
-        "section_count": 2,
-        "writable_executable": 1,
-    }
-    score = detector._calculate_heuristic_score(entropy_results, section_results)
-    assert 0.0 <= score <= 1.0
-
-
-def test_calculate_heuristic_score_with_empty_data():
-    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
-    score = detector._calculate_heuristic_score({}, {})
-    # section_count defaults to 0 (<=3) so 0.2 is added for few sections
-    assert 0.0 <= score <= 1.0
-
-
-# ---------------------------------------------------------------------------
 # detect - full flow with empty-bytes adapter
 # ---------------------------------------------------------------------------
 
@@ -394,14 +370,6 @@ def test_check_packer_signatures_prefers_direct_signature():
     finally:
         packer_mod.find_packer_signature = original_signature
         packer_mod.find_packer_string = original_string
-
-
-def test_calculate_heuristic_score_handles_non_mapping_summary():
-    detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
-    score = detector._calculate_heuristic_score(
-        {"summary": object()}, {"section_count": 0, "suspicious_sections": []}
-    )
-    assert score == 0.0
 
 
 def test_search_hex_routes_through_search_helper():

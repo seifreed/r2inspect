@@ -172,33 +172,6 @@ class PackerDetector(CommandHelperMixin):
             error_msg="Error analyzing sections",
         )
 
-    def _calculate_heuristic_score(self, entropy_results: dict, section_results: dict) -> float:
-        """Calculate heuristic score for packer detection."""
-        score = 0.0
-
-        try:
-            if "summary" in entropy_results:
-                ratio = entropy_results["summary"].get("high_entropy_ratio", 0)
-                score += ratio * 0.4
-
-            suspicious_count = len(section_results.get("suspicious_sections", []))
-            total_sections = section_results.get("section_count", 1)
-            if suspicious_count > 0:
-                score += min(suspicious_count / total_sections, 1.0) * 0.3
-
-            wx_sections = section_results.get("writable_executable", 0)
-            if wx_sections > 0:
-                score += 0.3
-
-            section_count = section_results.get("section_count", 0)
-            if section_count <= 3:
-                score += 0.2
-
-        except Exception as e:
-            logger.error("Error calculating heuristic score: %s", e)
-
-        return min(score, 1.0)
-
     def get_overlay_info(self) -> dict[str, Any]:
         """Check for overlay data (common in packed files)."""
         return self._safe_call(

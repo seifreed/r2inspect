@@ -801,15 +801,6 @@ def test_packer_check_signatures_exception():
     assert result is None  # exception caught, returns None
 
 
-def test_packer_calculate_heuristic_score_exception():
-    # lines 203-204: passing None args triggers AttributeError inside
-    config = Config()
-    adapter = _FakePackerAdapterGetStrings()
-    detector = PackerDetector(adapter=adapter, config=config)
-    score = detector._calculate_heuristic_score(None, None)  # type: ignore[arg-type]
-    assert 0.0 <= score <= 1.0
-
-
 def test_packer_get_strings_via_adapter():
     # line 231: adapter.get_strings() is called when adapter has get_strings
     config = Config()

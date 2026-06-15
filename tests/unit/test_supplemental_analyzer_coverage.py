@@ -1072,19 +1072,6 @@ class TestPackerDetector:
         result = pd.detect()
         assert any("import" in ind.lower() for ind in result["indicators"])
 
-    def test_calculate_heuristic_score_high(self) -> None:
-        """_calculate_heuristic_score returns float in [0,1]."""
-        pd = self._make(PackerAdapter())
-        entropy_results = {"summary": {"high_entropy_ratio": 0.8, "high_entropy_sections": 2}}
-        section_results = {
-            "suspicious_sections": ["s1"],
-            "section_count": 2,
-            "executable_sections": 2,
-            "writable_executable": 1,
-        }
-        score = pd._calculate_heuristic_score(entropy_results, section_results)
-        assert 0.0 <= score <= 1.0
-
     def test_get_overlay_info(self) -> None:
         """get_overlay_info() does not raise and returns a dict."""
         pd = self._make(PackerAdapter())
