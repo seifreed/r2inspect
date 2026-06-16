@@ -60,6 +60,7 @@ dev = [
     "mypy>=1.0.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-timeout>=2.0.0",
     "pre-commit>=3.0.0",
     "bandit>=1.7.0",
     "pip-audit>=2.7.0",
@@ -197,6 +198,13 @@ strict_optional = true
 exclude = "^(venv|env|\\.venv|build|dist|\\.qlty|bench_samples|benchmarks|samples|templates|tests)/"
 
 [tool.pytest.ini_options]
+# Wall-clock safety net: RLIMIT_CPU (see tests/conftest.py) only bounds CPU
+# time, so a test blocked on a wedged r2 pipe / subprocess read burns zero CPU
+# and would hang forever. pytest-timeout fails such a test (signal method
+# interrupts the blocking syscall on the main thread) instead of leaving a
+# zombie. 60s is far above any legitimate single test (the slowest real-r2
+# tests are a few seconds).
+addopts = "--timeout=60"
 markers = [
     "unit: fast unit-level coverage tests",
     "integration: broader workflow and integration coverage",

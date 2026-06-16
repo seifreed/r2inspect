@@ -196,22 +196,34 @@ def ensure_sample_fixture_tree(_session_samples_dir: Path) -> None:
             pass
 
 
-@pytest.fixture(autouse=True, scope="function")
+@pytest.fixture(autouse=True, scope="module")
 def cleanup_r2_processes():
-    """Cleanup any orphaned radare2 processes after each test."""
+    """Reap orphaned radare2 child processes once per test module.
+
+    The R2 session closes radare2 via ``r2.quit()`` on ``close()`` (see
+    ``infrastructure/r2_session.py``), so well-behaved tests leak nothing; this
+    is a belt-and-suspenders sweep for a test that spawns r2 and dies before
+    closing. Module scope (not per-function) keeps the sweep regular while
+    avoiding ~9 minutes of redundant full-suite overhead: a whole-system
+    ``psutil.process_iter`` scan costs ~40ms and per-test it ran 13k+ times.
+
+    Only our own descendant radare2 processes are terminated. Scanning the
+    current process subtree is cheaper than a whole-system scan and avoids
+    killing an unrelated radare2 the developer may be running elsewhere.
+    """
     yield
-    # radare2 does not run on Windows; skip the expensive process scan there
     if sys.platform == "win32":
         return
-    # Post-test cleanup
     try:
         import psutil
 
-        current_pid = os.getpid()
-        for proc in psutil.process_iter(["name", "pid"]):
+        try:
+            children = psutil.Process().children(recursive=True)
+        except psutil.NoSuchProcess:
+            return
+        for proc in children:
             try:
-                name = proc.info.get("name") or ""
-                if "radare2" in name.lower() and proc.info.get("pid") != current_pid:
+                if "radare2" in (proc.name() or "").lower():
                     proc.terminate()
                     proc.wait(timeout=2)
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
