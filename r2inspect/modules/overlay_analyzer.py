@@ -173,4 +173,3 @@ class OverlayAnalyzer(CommandHelperMixin, BaseAnalyzer):
         result["suspicious_indicators"] = build_overlay_suspicious_indicators(
             cast(dict[str, Any], result)
         )
-
