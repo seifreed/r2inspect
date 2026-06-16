@@ -1,4 +1,5 @@
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 from pathlib import Path
 
@@ -78,18 +79,20 @@ def test_batch_processing_reports_when_directory_has_no_supported_files(
     output_dir = setup_batch_output_directory(str(tmp_path / "out"), False, False)
 
     run_batch_analysis(
-        batch_dir=str(tmp_path),
-        options={},
-        output_json=False,
-        output_csv=False,
-        output_dir=str(output_dir),
-        recursive=False,
-        extensions=None,
-        verbose=False,
-        config_obj=None,
-        auto_detect=True,
-        threads=1,
-        quiet=False,
+        BatchRunRequest(
+            batch_dir=str(tmp_path),
+            options={},
+            output_json=False,
+            output_csv=False,
+            output_dir=str(output_dir),
+            recursive=False,
+            extensions=None,
+            verbose=False,
+            config_obj=None,
+            auto_detect=True,
+            threads=1,
+            quiet=False,
+        )
     )
 
     captured = capsys.readouterr().out

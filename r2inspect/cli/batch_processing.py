@@ -51,7 +51,7 @@ from .batch_output import (
 from . import batch_discovery_runtime as _batch_discovery_runtime
 from . import batch_processing_support as _support
 from .batch_processing_runtime import BatchRunCollaborators as _BatchRunCollaborators
-from .batch_processing_runtime import BatchRunRequest as _BatchRunRequest
+from .batch_processing_runtime import BatchRunRequest
 from .batch_processing_runtime import run_batch_analysis as _run_batch_analysis_impl
 from .batch_service_runtime import (
     build_batch_dependencies as _build_batch_dependencies,
@@ -202,20 +202,7 @@ def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool)
     return _support.find_files_by_extensions(batch_path, extensions, recursive)
 
 
-def run_batch_analysis(
-    batch_dir: str,
-    options: dict[str, Any],
-    output_json: bool,
-    output_csv: bool,
-    output_dir: str | None,
-    recursive: bool,
-    extensions: str | None,
-    verbose: bool,
-    config_obj: Any,
-    auto_detect: bool,
-    threads: int = 10,
-    quiet: bool = False,
-) -> None:
+def run_batch_analysis(request: BatchRunRequest) -> None:
     """Run batch analysis on multiple files in a directory."""
     from .batch_output import create_batch_summary
 
@@ -225,20 +212,6 @@ def run_batch_analysis(
         find_files_to_process=find_files_wrapper,
         setup_rate_limiter=setup_rate_limiter,
         process_files_parallel=process_files_parallel,
-    )
-    request = _BatchRunRequest(
-        batch_dir=batch_dir,
-        options=options,
-        output_json=output_json,
-        output_csv=output_csv,
-        output_dir=output_dir,
-        recursive=recursive,
-        extensions=extensions,
-        verbose=verbose,
-        config_obj=config_obj,
-        auto_detect=auto_detect,
-        threads=threads,
-        quiet=quiet,
     )
     collaborators = _BatchRunCollaborators(
         console=console,

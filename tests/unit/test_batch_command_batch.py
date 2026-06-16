@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 from r2inspect.cli.commands.batch_command import BatchCommand
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.config import Config
@@ -74,11 +75,11 @@ class _NoOpBatchCommand(BatchCommand):
         super().__init__()
         self._raise_on_run = raise_on_run
         self.run_batch_called = False
-        self.run_batch_kwargs: dict[str, Any] = {}
+        self.run_batch_request: BatchRunRequest | None = None
 
-    def _run_batch_analysis(self, **kwargs: Any) -> None:
+    def _run_batch_analysis(self, request: BatchRunRequest) -> None:
         self.run_batch_called = True
-        self.run_batch_kwargs = kwargs
+        self.run_batch_request = request
         if self._raise_on_run is not None:
             raise self._raise_on_run
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 import io
 import os
@@ -766,34 +767,38 @@ def test_batch_output_and_processing_helpers(tmp_path: Path) -> None:
         assert batch_output._build_large_row("f", _BadResult())[1] == "Error"
 
         batch_processing.run_batch_analysis(
-            batch_dir=str(tmp_path),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=str(tmp_path / "outdir"),
-            recursive=False,
-            extensions="exe",
-            verbose=False,
-            config_obj=Config(),
-            auto_detect=False,
-            threads=1,
-            quiet=True,
+            BatchRunRequest(
+                batch_dir=str(tmp_path),
+                options={},
+                output_json=False,
+                output_csv=False,
+                output_dir=str(tmp_path / "outdir"),
+                recursive=False,
+                extensions="exe",
+                verbose=False,
+                config_obj=Config(),
+                auto_detect=False,
+                threads=1,
+                quiet=True,
+            )
         )
         empty_dir = tmp_path / "empty_batch"
         empty_dir.mkdir()
         batch_processing.run_batch_analysis(
-            batch_dir=str(empty_dir),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=None,
-            recursive=False,
-            extensions="exe",
-            verbose=False,
-            config_obj=Config(),
-            auto_detect=False,
-            threads=1,
-            quiet=True,
+            BatchRunRequest(
+                batch_dir=str(empty_dir),
+                options={},
+                output_json=False,
+                output_csv=False,
+                output_dir=None,
+                recursive=False,
+                extensions="exe",
+                verbose=False,
+                config_obj=Config(),
+                auto_detect=False,
+                threads=1,
+                quiet=True,
+            )
         )
     finally:
         batch_output.console = original_console
@@ -982,32 +987,36 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
         batch_processing.run_batch_analysis(
-            batch_dir=str(empty_dir),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=str(tmp_path / "outdir2"),
-            recursive=False,
-            extensions="none",
-            verbose=False,
-            config_obj=Config(),
-            auto_detect=False,
-            threads=1,
-            quiet=False,
+            BatchRunRequest(
+                batch_dir=str(empty_dir),
+                options={},
+                output_json=False,
+                output_csv=False,
+                output_dir=str(tmp_path / "outdir2"),
+                recursive=False,
+                extensions="none",
+                verbose=False,
+                config_obj=Config(),
+                auto_detect=False,
+                threads=1,
+                quiet=False,
+            )
         )
         batch_processing.run_batch_analysis(
-            batch_dir=str(tmp_path),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=str(tmp_path / "outdir3"),
-            recursive=False,
-            extensions="bin",
-            verbose=False,
-            config_obj=Config(),
-            auto_detect=False,
-            threads=1,
-            quiet=False,
+            BatchRunRequest(
+                batch_dir=str(tmp_path),
+                options={},
+                output_json=False,
+                output_csv=False,
+                output_dir=str(tmp_path / "outdir3"),
+                recursive=False,
+                extensions="bin",
+                verbose=False,
+                config_obj=Config(),
+                auto_detect=False,
+                threads=1,
+                quiet=False,
+            )
         )
 
         os.environ["R2INSPECT_TEST_SAFE_EXIT"] = "1"
@@ -1124,18 +1133,20 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         ext_file.write_bytes(_sample_path().read_bytes())
 
         batch_processing.run_batch_analysis(
-            batch_dir=str(tmp_path),
-            options={},
-            output_json=False,
-            output_csv=False,
-            output_dir=str(tmp_path / "outdir"),
-            recursive=False,
-            extensions="bin",
-            verbose=False,
-            config_obj=Config(),
-            auto_detect=False,
-            threads=1,
-            quiet=True,
+            BatchRunRequest(
+                batch_dir=str(tmp_path),
+                options={},
+                output_json=False,
+                output_csv=False,
+                output_dir=str(tmp_path / "outdir"),
+                recursive=False,
+                extensions="bin",
+                verbose=False,
+                config_obj=Config(),
+                auto_detect=False,
+                threads=1,
+                quiet=True,
+            )
         )
     finally:
         batch_processing.console = original_console

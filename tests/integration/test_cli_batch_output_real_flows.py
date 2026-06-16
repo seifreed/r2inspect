@@ -1,4 +1,5 @@
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 import shutil
 from pathlib import Path
@@ -28,18 +29,20 @@ def test_batch_output_json_real_flow(tmp_path: Path) -> None:
     config = Config(str(tmp_path / "r2inspect_batch_output.json"))
 
     batch_processing.run_batch_analysis(
-        batch_dir=str(batch_dir),
-        options=setup_analysis_options(None, None),
-        output_json=True,
-        output_csv=False,
-        output_dir=str(output_dir),
-        recursive=True,
-        extensions="exe,elf",
-        verbose=False,
-        config_obj=config,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(batch_dir),
+            options=setup_analysis_options(None, None),
+            output_json=True,
+            output_csv=False,
+            output_dir=str(output_dir),
+            recursive=True,
+            extensions="exe,elf",
+            verbose=False,
+            config_obj=config,
+            auto_detect=False,
+            threads=1,
+            quiet=True,
+        )
     )
 
     summary_files = list(output_dir.glob("r2inspect_batch_*.json"))
@@ -55,18 +58,20 @@ def test_batch_output_csv_real_flow(tmp_path: Path) -> None:
     config = Config(str(tmp_path / "r2inspect_batch_output_csv.json"))
 
     batch_processing.run_batch_analysis(
-        batch_dir=str(batch_dir),
-        options=setup_analysis_options(None, None),
-        output_json=False,
-        output_csv=True,
-        output_dir=str(output_csv),
-        recursive=True,
-        extensions="exe,elf",
-        verbose=False,
-        config_obj=config,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(batch_dir),
+            options=setup_analysis_options(None, None),
+            output_json=False,
+            output_csv=True,
+            output_dir=str(output_csv),
+            recursive=True,
+            extensions="exe,elf",
+            verbose=False,
+            config_obj=config,
+            auto_detect=False,
+            threads=1,
+            quiet=True,
+        )
     )
 
     assert output_csv.exists()

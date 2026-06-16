@@ -1,4 +1,5 @@
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 import io
 import shutil
@@ -91,18 +92,20 @@ def test_batch_processing_parallel_progress_and_outputs(tmp_path: Path) -> None:
     config = Config(str(tmp_path / "r2inspect_phase1_batch.json"))
 
     run_batch_analysis(
-        batch_dir=str(batch_dir),
-        options={"analyze_functions": False},
-        output_json=True,
-        output_csv=True,
-        output_dir=str(output_dir),
-        recursive=True,
-        extensions="exe,elf,bin",
-        verbose=False,
-        config_obj=config,
-        auto_detect=False,
-        threads=2,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(batch_dir),
+            options={"analyze_functions": False},
+            output_json=True,
+            output_csv=True,
+            output_dir=str(output_dir),
+            recursive=True,
+            extensions="exe,elf,bin",
+            verbose=False,
+            config_obj=config,
+            auto_detect=False,
+            threads=2,
+            quiet=True,
+        )
     )
 
     csv_files = list(output_dir.glob("*.csv"))

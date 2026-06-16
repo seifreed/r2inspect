@@ -6,6 +6,7 @@ from typing import Any
 
 from ...application.options import build_analysis_options
 from ...infrastructure.logging import configure_batch_logging
+from ..batch_processing_runtime import BatchRunRequest
 from .base import Command, apply_thread_settings
 
 
@@ -35,7 +36,7 @@ class BatchCommand(Command):
                 yara=args.get("yara"),
                 xor=args.get("xor"),
             )
-            self._run_batch_analysis(
+            request = BatchRunRequest(
                 batch_dir=batch_dir,
                 options=analysis_options,
                 output_json=args.get("output_json", False),
@@ -49,6 +50,7 @@ class BatchCommand(Command):
                 threads=threads,
                 quiet=quiet,
             )
+            self._run_batch_analysis(request)
 
             return 0
 
@@ -73,21 +75,7 @@ class BatchCommand(Command):
             output = "output"
         return recursive, auto_detect, output
 
-    def _run_batch_analysis(
-        self,
-        batch_dir: str,
-        options: dict[str, Any],
-        output_json: bool,
-        output_csv: bool,
-        output_dir: str | None,
-        recursive: bool,
-        extensions: str | None,
-        verbose: bool,
-        config_obj: Any,
-        auto_detect: bool,
-        threads: int = 10,
-        quiet: bool = False,
-    ) -> None:
+    def _run_batch_analysis(self, request: BatchRunRequest) -> None:
         """Run batch analysis on multiple files in a directory."""
         from ..batch_processing import (
             ensure_batch_shutdown,
@@ -95,22 +83,8 @@ class BatchCommand(Command):
             schedule_forced_exit,
         )
 
-        self._configure_batch_logging(verbose, quiet)
-
-        run_batch_analysis(
-            batch_dir=batch_dir,
-            options=options,
-            output_json=output_json,
-            output_csv=output_csv,
-            output_dir=output_dir,
-            recursive=recursive,
-            extensions=extensions,
-            verbose=verbose,
-            config_obj=config_obj,
-            auto_detect=auto_detect,
-            threads=threads,
-            quiet=quiet,
-        )
+        self._configure_batch_logging(request.verbose, request.quiet)
+        run_batch_analysis(request)
         ensure_batch_shutdown()
         schedule_forced_exit()
 

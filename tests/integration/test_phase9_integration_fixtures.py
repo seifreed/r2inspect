@@ -1,4 +1,5 @@
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 import json
 import shutil
@@ -82,18 +83,20 @@ def test_batch_mode_mixed_files_and_csv_output(tmp_path: Path) -> None:
     options = {"analyze_functions": False}
 
     run_batch_analysis(
-        batch_dir=str(batch_dir),
-        options=options,
-        output_json=True,
-        output_csv=True,
-        output_dir=str(output_dir),
-        recursive=True,
-        extensions="exe,elf,bin",
-        verbose=False,
-        config_obj=config,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(batch_dir),
+            options=options,
+            output_json=True,
+            output_csv=True,
+            output_dir=str(output_dir),
+            recursive=True,
+            extensions="exe,elf,bin",
+            verbose=False,
+            config_obj=config,
+            auto_detect=False,
+            threads=1,
+            quiet=True,
+        )
     )
 
     csv_files = list(output_dir.glob("*.csv"))

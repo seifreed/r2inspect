@@ -1,6 +1,7 @@
 """Tests covering branch paths in r2inspect/cli/batch_processing.py."""
 
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 import os
 import threading
@@ -325,16 +326,18 @@ def test_schedule_forced_exit_inner_exit_function_executes() -> None:
 def test_run_batch_analysis_inner_functions_defined_on_call(tmp_path: Path) -> None:
     """run_batch_analysis defines its inner functions and builds deps on every call."""
     run_batch_analysis(
-        batch_dir=str(tmp_path),
-        options={},
-        output_json=False,
-        output_csv=False,
-        output_dir=None,
-        recursive=False,
-        extensions="exe",
-        verbose=False,
-        config_obj=None,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(tmp_path),
+            options={},
+            output_json=False,
+            output_csv=False,
+            output_dir=None,
+            recursive=False,
+            extensions="exe",
+            verbose=False,
+            config_obj=None,
+            auto_detect=False,
+            threads=1,
+            quiet=True,
+        )
     )

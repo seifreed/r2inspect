@@ -1,4 +1,5 @@
 from __future__ import annotations
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 from pathlib import Path
 
@@ -226,34 +227,38 @@ def test_prepare_and_run_batch_analysis(tmp_path: Path) -> None:
 
     config_obj = Config(str(tmp_path / "config.json"))
     batch_processing.run_batch_analysis(
-        batch_dir=str(tmp_path),
-        options={},
-        output_json=False,
-        output_csv=False,
-        output_dir=str(tmp_path / "out"),
-        recursive=False,
-        extensions="exe",
-        verbose=False,
-        config_obj=config_obj,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(tmp_path),
+            options={},
+            output_json=False,
+            output_csv=False,
+            output_dir=str(tmp_path / "out"),
+            recursive=False,
+            extensions="exe",
+            verbose=False,
+            config_obj=config_obj,
+            auto_detect=False,
+            threads=1,
+            quiet=True,
+        )
     )
 
     # run with empty dir to hit early return
     empty_dir = tmp_path / "empty"
     empty_dir.mkdir()
     batch_processing.run_batch_analysis(
-        batch_dir=str(empty_dir),
-        options={},
-        output_json=False,
-        output_csv=False,
-        output_dir=str(tmp_path / "out2"),
-        recursive=False,
-        extensions="exe",
-        verbose=False,
-        config_obj=config_obj,
-        auto_detect=False,
-        threads=1,
-        quiet=True,
+        BatchRunRequest(
+            batch_dir=str(empty_dir),
+            options={},
+            output_json=False,
+            output_csv=False,
+            output_dir=str(tmp_path / "out2"),
+            recursive=False,
+            extensions="exe",
+            verbose=False,
+            config_obj=config_obj,
+            auto_detect=False,
+            threads=1,
+            quiet=True,
+        )
     )
