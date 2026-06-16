@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 from typing import Any, cast
 
+from .batch_presentation import display_no_files_message as _display_no_files_message
+
 
 def default_output_path(output_json: bool, output_csv: bool) -> Path:
     output_path = Path("output" if output_json or output_csv else "r2inspect_batch_results")
@@ -14,12 +16,7 @@ def default_output_path(output_json: bool, output_csv: bool) -> Path:
 
 
 def display_no_files_message(console: Any, auto_detect: bool, extensions: str | None) -> None:
-    if auto_detect:
-        console.print("[yellow]No executable files detected in the directory[/yellow]")
-        console.print("[dim]Tip: Files might not be executable format or may be corrupted[/dim]")
-        return
-    console.print(f"[yellow]No files found with extensions: {extensions}[/yellow]")
-    console.print("[dim]Tip: Use without --extensions for auto-detection[/dim]")
+    _display_no_files_message(console, auto_detect, extensions)
 
 
 def setup_batch_output_directory(
