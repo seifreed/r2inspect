@@ -8,6 +8,7 @@ from typing import Any, BinaryIO
 
 from ..infrastructure.logging import get_logger
 from .magic_detector_support import (
+    THREAT_FORMATS as _THREAT_FORMATS,
     analyze_elf_details as _analyze_elf_details_impl,
     analyze_macho_details as _analyze_macho_details_impl,
     analyze_pe_details as _analyze_pe_details_impl,
@@ -173,23 +174,7 @@ class MagicByteDetector:
         return format_name in ["PDF", "DOC", "DOCX", "RTF"]
 
     def _is_potential_threat(self, format_name: str) -> bool:
-        return format_name in [
-            "PE32",
-            "ELF32",
-            "ELF64",
-            "MACHO32",
-            "MACHO64",
-            "MACHO_UNIVERSAL",
-            "PDF",
-            "DOC",
-            "DOCX",
-            "RTF",
-            "SWF",
-            "JAVA_CLASS",
-            "DEX",
-            "UPX",
-            "NSIS",
-        ]
+        return format_name in _THREAT_FORMATS
 
     def clear_cache(self) -> None:
         self.cache.clear()

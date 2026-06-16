@@ -7,6 +7,26 @@ import struct
 from pathlib import Path
 from typing import Any, BinaryIO
 
+THREAT_FORMATS: frozenset[str] = frozenset(
+    {
+        "PE32",
+        "ELF32",
+        "ELF64",
+        "MACHO32",
+        "MACHO64",
+        "MACHO_UNIVERSAL",
+        "PDF",
+        "DOC",
+        "DOCX",
+        "RTF",
+        "SWF",
+        "JAVA_CLASS",
+        "DEX",
+        "UPX",
+        "NSIS",
+    }
+)
+
 
 def read_at_offset(file_handle: BinaryIO, offset: int, size: int) -> bytes:
     position = file_handle.tell()
