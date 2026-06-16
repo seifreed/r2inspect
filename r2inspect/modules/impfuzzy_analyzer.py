@@ -4,7 +4,7 @@
 from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import R2HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
 from ..infrastructure.file_type import is_pe_file
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
@@ -55,10 +55,8 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         explicit ``ImpfuzzyAnalyzer.is_available`` (not ``self.`` — a
         BaseAnalyzer-MRO classmethod would mis-bind the 0-arg staticmethod)."""
         is_available = ImpfuzzyAnalyzer.is_available if available_fn is None else available_fn
-        if is_available():
-            return True, None
-        return (
-            False,
+        return availability_result(
+            is_available(),
             "pyimpfuzzy library not available. Install with: pip install pyimpfuzzy",
         )
 

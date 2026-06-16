@@ -4,7 +4,7 @@
 from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import HashingStrategy
+from ..abstractions.hashing_strategy import HashingStrategy, availability_result
 from ..abstractions.result_builder import init_result, mark_unavailable
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..domain.hashing.simhash_compare import compare_hashes as _compare_hashes_impl
@@ -65,9 +65,10 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """Check if the simhash library is available."""
-        if SimHashAnalyzer.is_available():
-            return True, None
-        return False, "simhash library not available. Install with: pip install simhash"
+        return availability_result(
+            SimHashAnalyzer.is_available(),
+            "simhash library not available. Install with: pip install simhash",
+        )
 
     def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
         """Calculate combined SimHash from strings and opcodes."""

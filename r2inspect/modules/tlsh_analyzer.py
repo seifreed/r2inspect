@@ -11,7 +11,7 @@ except ImportError:
     TLSH_AVAILABLE = False
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import R2HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
 from ..adapters.file_system import default_file_system
 from ..infrastructure.logging import get_logger
 from .tlsh_support import (
@@ -39,16 +39,9 @@ class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
         super().__init__(adapter=adapter, filepath=filename)
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
-        """
-        Check if TLSH library is available.
-
-        Returns:
-            Tuple of (is_available, error_message)
-        """
-        if TLSHAnalyzer.is_available():
-            return True, None
-        return (
-            False,
+        """Check if the TLSH library is available."""
+        return availability_result(
+            TLSHAnalyzer.is_available(),
             "TLSH library not available. Install with: pip install python-tlsh",
         )
 

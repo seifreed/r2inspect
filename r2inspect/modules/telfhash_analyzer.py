@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import R2HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
 from ..infrastructure.file_type import is_elf_file, is_pe_file
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
@@ -49,10 +49,8 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
         """Return ``(is_available, error_message)`` for the telfhash library."""
-        if self._telfhash_available:
-            return True, None
-        return (
-            False,
+        return availability_result(
+            self._telfhash_available,
             "telfhash library not available. Install with: pip install telfhash",
         )
 

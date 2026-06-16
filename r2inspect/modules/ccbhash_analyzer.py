@@ -5,7 +5,7 @@ import hashlib
 from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.hashing_strategy import R2HashingStrategy
+from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..infrastructure.logging import get_logger
 from .ccbhash_support import (
@@ -52,9 +52,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             Tuple of (is_available, error_message)
         """
         is_available = CCBHashAnalyzer.is_available if available_fn is None else available_fn
-        if is_available():
-            return True, None
-        return False, "CCBHash analysis is not available"
+        return availability_result(is_available(), "CCBHash analysis is not available")
 
     def _calculate_hash(self) -> tuple[str | None, str | None, str | None]:
         """

@@ -12,6 +12,18 @@ from .hashing_strategy_support import (
 )
 
 
+def availability_result(available: bool, unavailable_message: str) -> tuple[bool, str | None]:
+    """Map a library-available flag to the ``(is_available, error_message)`` contract.
+
+    Shared by every :meth:`HashingStrategy._check_library_availability` override:
+    a present library reports ``(True, None)``; a missing one reports
+    ``(False, <install hint>)``.
+    """
+    if available:
+        return True, None
+    return False, unavailable_message
+
+
 class HashingStrategy(ABC):
     """Abstract base class for hashing strategies."""
 

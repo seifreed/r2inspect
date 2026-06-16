@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from ..abstractions.hashing_strategy import HashingStrategy
+from ..abstractions.hashing_strategy import HashingStrategy, availability_result
 from ..adapters.file_system import default_file_system
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
@@ -34,17 +34,9 @@ class SSDeepAnalyzer(HashingStrategy):
         )
 
     def _check_library_availability(self) -> tuple[bool, str | None]:
-        """
-        Check if the SSDeep Python library is available.
-
-        Returns:
-            Tuple of (is_available, error_message)
-        """
-        if SSDeepAnalyzer.is_available():
-            return True, None
-
-        return (
-            False,
+        """Check if the SSDeep Python library is available."""
+        return availability_result(
+            SSDeepAnalyzer.is_available(),
             "SSDeep not available. Install with: pip install ssdeep",
         )
 
