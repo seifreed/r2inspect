@@ -48,7 +48,6 @@ def test_function_analyzer_init():
     analyzer = FunctionAnalyzer(adapter, config=config)
 
     assert analyzer.adapter is adapter
-    assert analyzer.r2 is adapter
     assert analyzer.config is config
     assert analyzer.functions_cache is None
 

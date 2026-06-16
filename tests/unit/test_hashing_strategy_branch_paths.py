@@ -221,6 +221,5 @@ def test_r2_hashing_strategy_init(tmp_path: Path) -> None:
     adapter = _FakeAdapter()
     strategy = _ConcreteR2Hash(adapter=adapter, filepath=str(path))
     assert strategy.adapter is adapter
-    assert strategy.r2 is adapter
     result = strategy.analyze()
     assert result["hash_value"] == "abc"

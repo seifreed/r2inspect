@@ -56,7 +56,6 @@ class CompilerDetector(CommandHelperMixin):
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         self.adapter = adapter
-        self.r2 = adapter
         self.config = config
 
         # Compiler signatures and patterns

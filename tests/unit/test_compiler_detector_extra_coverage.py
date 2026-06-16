@@ -45,7 +45,6 @@ def test_compiler_detector_init():
     detector = CompilerDetector(adapter, config=None)
 
     assert detector.adapter is adapter
-    assert detector.r2 is adapter
     assert detector.config is None
     assert "MSVC" in detector.compiler_signatures
     assert "MSVCR140.dll" in detector.msvc_versions

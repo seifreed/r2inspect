@@ -9,7 +9,6 @@ def test_compiler_detector_init():
     detector = CompilerDetector(adapter=None)
     assert detector is not None
     assert detector.adapter is None
-    assert detector.r2 is None
     assert detector.config is None
 
 

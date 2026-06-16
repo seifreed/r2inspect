@@ -52,7 +52,6 @@ def test_function_analyzer_initialization_basic():
     analyzer = FunctionAnalyzer(adapter)
 
     assert analyzer.adapter is adapter
-    assert analyzer.r2 is adapter
     assert analyzer.config is None
     assert analyzer.functions_cache is None
 
