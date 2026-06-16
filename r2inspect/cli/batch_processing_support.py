@@ -13,7 +13,7 @@ from typing import Any, cast
 
 from . import batch_discovery_runtime as _batch_discovery_runtime
 from .batch_lifecycle import setup_rate_limiter as _setup_rate_limiter
-from .batch_reporting import (
+from .batch_presentation import (
     display_batch_results as _display_batch_results,
     display_failed_files as _display_failed_files,
     display_memory_stats as _display_memory_stats,
