@@ -14,8 +14,6 @@ from r2inspect.domain.formats.import_analysis import (
     build_api_categories,
     categorize_apis,
     assess_api_risk,
-    find_suspicious_patterns,
-    count_import_categories,
     find_max_risk_score,
     risk_level_from_score,
 )
@@ -280,122 +278,6 @@ def test_assess_api_risk_combined():
     assert risk >= 60
 
 
-def test_find_suspicious_patterns_empty():
-    """Test finding suspicious patterns in empty list."""
-    result = find_suspicious_patterns([])
-    assert isinstance(result, list)
-    assert len(result) == 0
-
-
-def test_find_suspicious_patterns_dll_injection():
-    """Test finding DLL injection pattern."""
-    imports = [
-        {"name": "VirtualAllocEx", "category": "Memory"},
-        {"name": "WriteProcessMemory", "category": "Memory"},
-        {"name": "CreateRemoteThread", "category": "Process"},
-    ]
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-    assert "DLL Injection" in patterns
-    dll_pattern = next(p for p in result if p["pattern"] == "DLL Injection")
-    assert dll_pattern["severity"] == "High"
-    assert dll_pattern["count"] >= 2
-
-
-def test_find_suspicious_patterns_process_hollowing():
-    """Test finding process hollowing pattern."""
-    imports = [
-        {"name": "CreateProcess", "category": "Process"},
-        {"name": "VirtualAllocEx", "category": "Memory"},
-        {"name": "WriteProcessMemory", "category": "Memory"},
-        {"name": "SetThreadContext", "category": "Process"},
-    ]
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-    assert "Process Hollowing" in patterns
-
-
-def test_find_suspicious_patterns_keylogging():
-    """Test finding keylogging pattern."""
-    imports = [
-        {"name": "SetWindowsHookEx", "category": "Hooks"},
-    ]
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-    assert "Keylogging" in patterns
-
-
-def test_find_suspicious_patterns_network():
-    """Test finding heavy network usage pattern."""
-    imports = [{"name": f"NetworkAPI{i}", "category": NETWORK_CATEGORY} for i in range(6)]
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-    assert "Heavy Network Usage" in patterns
-
-
-def test_find_suspicious_patterns_anti_analysis():
-    """Test finding anti-analysis pattern."""
-    imports = [
-        {"name": "IsDebuggerPresent", "category": "Anti-Analysis"},
-    ]
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-    assert "Anti-Analysis" in patterns
-
-
-def test_find_suspicious_patterns_crypto():
-    """Test finding heavy cryptography pattern."""
-    imports = [{"name": f"CryptAPI{i}", "category": "Cryptography"} for i in range(4)]
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-    assert "Heavy Cryptography" in patterns
-
-
-def test_count_import_categories_empty():
-    """Test counting categories in empty list."""
-    result = count_import_categories([])
-    assert isinstance(result, dict)
-    assert len(result) == 0
-
-
-def test_count_import_categories_basic():
-    """Test counting categories."""
-    imports = [
-        {"category": "Process"},
-        {"category": "Memory"},
-        {"category": "Process"},
-        {"category": "Network"},
-    ]
-    result = count_import_categories(imports)
-    assert result["Process"] == 2
-    assert result["Memory"] == 1
-    assert result["Network"] == 1
-
-
-def test_count_import_categories_missing_category():
-    """Test counting with missing category field."""
-    imports = [
-        {"category": "Process"},
-        {"name": "NoCategory"},
-        {"category": "Memory"},
-    ]
-    result = count_import_categories(imports)
-    assert result["Process"] == 1
-    assert result["Memory"] == 1
-
-
-def test_count_import_categories_none_category():
-    """Test counting with None category."""
-    imports = [
-        {"category": "Process"},
-        {"category": None},
-        {"category": "Process"},
-    ]
-    result = count_import_categories(imports)
-    assert result["Process"] == 2
-    assert None not in result
-
-
 def test_find_max_risk_score_empty():
     """Test finding max risk score with no match."""
     categories = build_api_categories()
@@ -505,28 +387,6 @@ def test_categorize_apis_with_apis_list():
     assert len(result["Process"]["apis"]) == 2
     assert "CreateProcess" in result["Process"]["apis"]
 
-
-def test_find_suspicious_patterns_all_patterns():
-    """Test finding all patterns at once."""
-    imports = [
-        {"name": "VirtualAllocEx", "category": "Memory"},
-        {"name": "WriteProcessMemory", "category": "Memory"},
-        {"name": "CreateRemoteThread", "category": "Process"},
-        {"name": "SetThreadContext", "category": "Process"},
-        {"name": "SetWindowsHookEx", "category": "Hooks"},
-        {"name": "IsDebuggerPresent", "category": "Anti-Analysis"},
-    ]
-    imports.extend([{"name": f"NetAPI{i}", "category": NETWORK_CATEGORY} for i in range(6)])
-    imports.extend([{"name": f"CryptAPI{i}", "category": "Cryptography"} for i in range(4)])
-
-    result = find_suspicious_patterns(imports)
-    patterns = [p["pattern"] for p in result]
-
-    assert len(patterns) >= 4
-    assert "DLL Injection" in patterns or "Process Hollowing" in patterns
-
-
-def test_api_categories_complete():
     """Test that build_api_categories returns all expected categories."""
     categories = build_api_categories()
     expected_keys = [

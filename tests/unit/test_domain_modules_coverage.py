@@ -85,7 +85,6 @@ from r2inspect.domain.formats.import_analysis import (
     build_api_categories,
     categorize_apis,
     find_max_risk_score,
-    find_suspicious_patterns,
     risk_level_from_score,
 )
 
@@ -979,43 +978,6 @@ def test_find_max_risk_score_not_found() -> None:
     score, tags = find_max_risk_score("SomeUnknownAPI", cats)
     assert score == 0
     assert tags == []
-
-
-def test_find_suspicious_patterns_injection() -> None:
-    imports = [
-        {"name": "VirtualAllocEx", "category": "Injection"},
-        {"name": "WriteProcessMemory", "category": "Injection"},
-    ]
-    result = find_suspicious_patterns(imports)
-    assert any(p["pattern"] == "DLL Injection" for p in result)
-
-
-def test_find_suspicious_patterns_hollowing() -> None:
-    imports = [
-        {"name": "CreateProcess", "category": ""},
-        {"name": "VirtualAllocEx", "category": ""},
-        {"name": "WriteProcessMemory", "category": ""},
-        {"name": "SetThreadContext", "category": ""},
-        {"name": "ResumeThread", "category": ""},
-    ]
-    result = find_suspicious_patterns(imports)
-    assert any(p["pattern"] == "Process Hollowing" for p in result)
-
-
-def test_find_suspicious_patterns_keylog() -> None:
-    imports = [{"name": "SetWindowsHookEx", "category": ""}]
-    result = find_suspicious_patterns(imports)
-    assert any(p["pattern"] == "Keylogging" for p in result)
-
-
-def test_find_suspicious_patterns_anti_analysis() -> None:
-    imports = [{"name": "SomeFunc", "category": "Anti-Analysis"}]
-    result = find_suspicious_patterns(imports)
-    assert any(p["pattern"] == "Anti-Analysis" for p in result)
-
-
-def test_find_suspicious_patterns_empty() -> None:
-    assert find_suspicious_patterns([]) == []
 
 
 def test_risk_level_from_score_critical() -> None:

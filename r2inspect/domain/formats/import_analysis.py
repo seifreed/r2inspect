@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 NETWORK_CATEGORY = "Network/Internet"
@@ -134,96 +133,6 @@ def assess_api_risk(categories: dict[str, Any]) -> tuple[list[str], int]:
         suspicious_apis.append("Network communication capabilities")
         risk_score += 10
     return suspicious_apis, risk_score
-
-
-def _count_matching(names: list[str], apis: list[str]) -> int:
-    """Count import names that match any of the given API patterns."""
-    return sum(1 for name in names if any(api in name for api in apis))
-
-
-def _detect_injection_patterns(patterns: list[dict[str, Any]], names: list[str]) -> None:
-    """Detect DLL injection, process hollowing, and keylogging patterns."""
-    injection = _count_matching(
-        names, ["VirtualAllocEx", "WriteProcessMemory", "CreateRemoteThread"]
-    )
-    if injection >= 2:
-        patterns.append(
-            {
-                "pattern": "DLL Injection",
-                "description": "APIs commonly used for DLL injection detected",
-                "severity": "High",
-                "count": injection,
-            }
-        )
-
-    hollowing = _count_matching(
-        names,
-        [
-            "CreateProcess",
-            "VirtualAllocEx",
-            "WriteProcessMemory",
-            "SetThreadContext",
-            "ResumeThread",
-        ],
-    )
-    if hollowing >= 3:
-        patterns.append(
-            {
-                "pattern": "Process Hollowing",
-                "description": "APIs commonly used for process hollowing detected",
-                "severity": "High",
-                "count": hollowing,
-            }
-        )
-
-    keylog = _count_matching(names, ["SetWindowsHookEx", "GetAsyncKeyState", "GetKeyState"])
-    if keylog >= 1:
-        patterns.append(
-            {
-                "pattern": "Keylogging",
-                "description": "Potential keylogging capabilities detected",
-                "severity": "Medium",
-                "count": keylog,
-            }
-        )
-
-
-def _detect_category_patterns(patterns: list[dict[str, Any]], categories: list[str]) -> None:
-    """Detect suspicious patterns based on import category counts."""
-    for category, threshold, label, severity in (
-        (NETWORK_CATEGORY, 5, "Heavy Network Usage", "Medium"),
-        ("Anti-Analysis", 0, "Anti-Analysis", "High"),
-        ("Cryptography", 3, "Heavy Cryptography", "Medium"),
-    ):
-        count = categories.count(category)
-        if count > threshold:
-            patterns.append(
-                {
-                    "pattern": label,
-                    "description": f"{label} APIs detected ({count})",
-                    "severity": severity,
-                    "count": count,
-                }
-            )
-
-
-def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Detect suspicious API usage patterns in the import table."""
-    patterns: list[dict[str, Any]] = []
-    names = [imp.get("name", "") for imp in imports]
-    categories = [imp.get("category", "") for imp in imports]
-    _detect_injection_patterns(patterns, names)
-    _detect_category_patterns(patterns, categories)
-    return patterns
-
-
-def count_import_categories(imports: list[dict[str, Any]]) -> dict[str, int]:
-    category_counts: Counter[str] = Counter()
-    for imp in imports:
-        category = imp.get("category")
-        if category:
-            category_counts[category] += 1
-    return dict(category_counts)
 
 
 def find_max_risk_score(

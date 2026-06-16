@@ -4,7 +4,6 @@ from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnalyzer
 from r2inspect.modules.export_analyzer import ExportAnalyzer
 from r2inspect.modules.import_analyzer import ImportAnalyzer
-from r2inspect.domain.formats.import_analysis import find_suspicious_patterns
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.modules.resource_analyzer import ResourceAnalyzer
 from r2inspect.modules.section_analyzer import SectionAnalyzer
@@ -80,19 +79,11 @@ def test_section_entropy_and_name_indicators():
     assert "Non-standard section name" in indicators
 
 
-def test_import_risk_and_patterns():
+def test_import_risk_score():
     analyzer = ImportAnalyzer(FakeR2(), DummyConfig())
     risk = analyzer._calculate_risk_score("CreateRemoteThread")
     assert risk["risk_level"] == "Critical"
     assert "Remote Thread Injection" in risk["risk_tags"]
-
-    imports = [
-        {"name": "VirtualAllocEx", "category": "Memory Management"},
-        {"name": "WriteProcessMemory", "category": "Memory Management"},
-        {"name": "CreateRemoteThread", "category": "Process/Thread Management"},
-    ]
-    patterns = find_suspicious_patterns(imports)
-    assert any(p["pattern"] == "DLL Injection" for p in patterns)
 
 
 def test_export_characteristics_with_function():
