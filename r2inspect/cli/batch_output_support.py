@@ -14,7 +14,6 @@ from typing import Any
 from ..application.batch_stats import collect_batch_statistics
 from . import batch_output_runtime as _runtime
 from . import batch_output_summary as _summary
-from . import batch_summary_views as _views
 from .batch_output_csv import (
     FIELDNAMES as _BATCH_CSV_FIELDNAMES,
     write_csv_results as _write_csv_results_logic,
@@ -137,17 +136,17 @@ def init_batch_results() -> tuple[dict[str, dict[str, Any]], list[tuple[str, str
 
 def show_summary_table(all_results: dict[str, dict[str, Any]], *, console: Any) -> None:
     """Render the summary table for batch results."""
-    _views.show_summary_table(all_results, console=console)
+    _summary._show_summary_table_default(all_results, console=console)
 
 
-simplify_file_type = _views.simplify_file_type
-extract_compile_time = _views.extract_compile_time
-compiler_name = _views.compiler_name
-collect_yara_matches = _views.collect_yara_matches
-build_small_row = _views.build_small_row
-build_large_row = _views.build_large_row
-build_summary_table_small = _views.build_summary_table_small
-build_summary_table_large = _views.build_summary_table_large
+simplify_file_type = _summary.simplify_file_type
+extract_compile_time = _summary.extract_compile_time
+compiler_name = _summary.compiler_name
+collect_yara_matches = _summary.collect_yara_matches
+build_small_row = _summary.build_small_row
+build_large_row = _summary.build_large_row
+build_summary_table_small = _summary.build_summary_table_small
+build_summary_table_large = _summary.build_summary_table_large
 
 __all__ = [
     "build_batch_summary_payload",
