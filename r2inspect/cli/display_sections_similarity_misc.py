@@ -12,8 +12,8 @@ from .display_base import (
     UNKNOWN_ERROR,
 )
 from .display_sections_common import Results, _get_console
-from .display_sections_helpers import (
-    _add_bindiff_entries,
+from .display_sections_bindiff_support import _add_bindiff_entries
+from .display_sections_simhash_support import (
     _add_simhash_feature_stats,
     _add_simhash_function_analysis,
     _add_simhash_hashes,

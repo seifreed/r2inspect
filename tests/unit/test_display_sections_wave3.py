@@ -9,8 +9,6 @@ from r2inspect.cli.display_base import _console_scope
 from r2inspect.cli.display_sections_similarity import (
     _display_binbloom,
     _display_simhash,
-    _add_binlex_basic_stats,
-    _add_binlex_unique_signatures,
     _add_binlex_similarity_groups,
     _add_binlex_binary_signatures,
     _add_binlex_top_ngrams,
@@ -18,14 +16,19 @@ from r2inspect.cli.display_sections_similarity import (
     _add_binbloom_stats,
     _add_binbloom_similar_groups,
     _add_binbloom_group,
-    _add_binbloom_binary_signature,
-    _add_binbloom_bloom_stats,
     _display_binbloom_signature_details,
     _display_binlex,
     _display_bindiff,
     _display_machoc_functions,
 )
-from r2inspect.cli.display_sections_helpers import (
+from r2inspect.cli.display_sections_bindiff_support import (
+    _add_bindiff_entries,
+    _add_bindiff_structural,
+    _add_bindiff_functions,
+    _add_bindiff_strings,
+    _add_bindiff_signatures,
+)
+from r2inspect.cli.display_sections_simhash_support import (
     _add_simhash_feature_stats,
     _format_simhash_hex,
     _add_simhash_hashes,
@@ -33,11 +36,6 @@ from r2inspect.cli.display_sections_helpers import (
     _add_simhash_similarity_groups,
     _add_simhash_similarity_group,
     _add_simhash_top_features,
-    _add_bindiff_entries,
-    _add_bindiff_structural,
-    _add_bindiff_functions,
-    _add_bindiff_strings,
-    _add_bindiff_signatures,
 )
 
 

@@ -5,17 +5,16 @@ Tests helper functions for display section rendering.
 Coverage target: 100% (currently 14%)
 """
 
-from typing import Any
-
-import pytest
 from rich.table import Table
 
-from r2inspect.cli.display_sections_helpers import (
+from r2inspect.cli.display_sections_bindiff_support import (
     _add_bindiff_entries,
     _add_bindiff_functions,
     _add_bindiff_signatures,
     _add_bindiff_strings,
     _add_bindiff_structural,
+)
+from r2inspect.cli.display_sections_simhash_support import (
     _add_simhash_feature_stats,
     _add_simhash_function_analysis,
     _add_simhash_hashes,

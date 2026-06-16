@@ -16,12 +16,14 @@ from .display_sections_hashing import (
     _display_telfhash,
     _display_tlsh,
 )
-from .display_sections_helpers import (
+from .display_sections_bindiff_support import (
     _add_bindiff_entries,
     _add_bindiff_functions,
     _add_bindiff_signatures,
     _add_bindiff_strings,
     _add_bindiff_structural,
+)
+from .display_sections_simhash_support import (
     _add_simhash_feature_stats,
     _add_simhash_function_analysis,
     _add_simhash_hashes,
