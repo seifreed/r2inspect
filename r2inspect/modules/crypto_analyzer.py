@@ -126,7 +126,11 @@ class CryptoAnalyzer(CommandHelperMixin):
         size = section.get("size", 0)
         if size == 0:
             return 0.0
-        hex_data = self._read_bytes(vaddr, size).hex() if size else ""
+        # The section size is attacker-controlled; cap the read so a crafted
+        # oversized section cannot drive a huge read + hex decode. A 1 MiB sample
+        # is representative for entropy, matching the section analyzer's cap.
+        read_size = min(size, 1024 * 1024)
+        hex_data = self._read_bytes(vaddr, read_size).hex() if read_size else ""
         if not hex_data:
             return 0.0
         try:

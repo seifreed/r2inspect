@@ -9,7 +9,6 @@ import pytest
 
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Stub adapters - no mocks
 # ---------------------------------------------------------------------------
@@ -444,3 +443,22 @@ def test_detect_via_strings_with_string_data():
     detected: dict[str, list] = {}
     analyzer._detect_via_strings(detected)
     assert isinstance(detected, dict)
+
+
+def test_section_entropy_caps_attacker_controlled_size() -> None:
+    """Regression: a crafted section size must not drive an unbounded read.
+
+    ``section.get("size")`` is attacker-controlled; ``_do_calculate_section_entropy``
+    must cap the read so an oversized section cannot force a huge read + hex decode.
+    """
+    recorded: list[int] = []
+
+    class _RecordingAdapter(EmptyAdapter):
+        def read_bytes(self, vaddr: int, size: int) -> bytes:
+            recorded.append(size)
+            return b"\x00" * min(size, 16)
+
+    analyzer = CryptoAnalyzer(_RecordingAdapter())
+    analyzer._do_calculate_section_entropy({"vaddr": 0x1000, "size": 0xFFFFFFFF})
+
+    assert recorded == [1024 * 1024]
