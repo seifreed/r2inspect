@@ -9,6 +9,8 @@ import threading
 import time
 from typing import Any
 
+import psutil
+
 from ..infrastructure.logging import get_logger
 from .batch_workers import _cap_threads_for_execution
 
@@ -44,6 +46,45 @@ def setup_rate_limiter(
     return rate_limiter
 
 
+def _terminate_child_processes(
+    *,
+    current_process: Any | None = None,
+    wait_procs: Any | None = None,
+) -> None:
+    """Terminate child processes (e.g. radare2) before a hard ``os._exit``.
+
+    ``os._exit`` skips all cleanup, so any radare2 still held by a lingering
+    daemon worker (a timed-out r2 command/open) would be orphaned and keep
+    running, reparented to init. Reap our children first: terminate, then kill
+    any survivors.
+    """
+    try:
+        proc = current_process if current_process is not None else psutil.Process()
+        children = proc.children(recursive=True)
+    except Exception as exc:
+        logger.debug("Could not enumerate child processes for shutdown: %s", exc)
+        return
+
+    for child in children:
+        try:
+            child.terminate()
+        except Exception as exc:
+            logger.debug("Failed to terminate child process: %s", exc)
+
+    waiter = wait_procs if wait_procs is not None else psutil.wait_procs
+    try:
+        _, alive = waiter(children, timeout=0.5)
+    except Exception as exc:
+        logger.debug("Failed to wait on child processes: %s", exc)
+        return
+
+    for child in alive:
+        try:
+            child.kill()
+        except Exception as exc:
+            logger.debug("Failed to kill child process: %s", exc)
+
+
 def _safe_exit(code: int = 0) -> None:
     # os._exit() bypasses cleanup and would terminate an embedding process
     # (notably the pytest runner) with no chance to handle it. Only take the
@@ -51,6 +92,7 @@ def _safe_exit(code: int = 0) -> None:
     # like ensure_batch_shutdown stay testable and never kill the suite.
     if os.getenv("R2INSPECT_TEST_SAFE_EXIT") or _pytest_running():
         raise SystemExit(code)
+    _terminate_child_processes()
     os._exit(code)
 
 
