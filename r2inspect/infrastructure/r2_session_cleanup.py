@@ -119,7 +119,12 @@ def terminate_radare2_processes(
             if info.get("name") != "radare2":
                 continue
             cmdline = info.get("cmdline") or []
-            if any(filename in part for part in cmdline):
+            # Match the filename as a whole argv element, not a substring:
+            # r2pipe passes session.filename verbatim as its own argv entry, so
+            # a substring test would also kill unrelated radare2 sessions whose
+            # path merely contains this one (e.g. "a.bin" inside "a.bin.packed"
+            # or "lib.so" inside "mylib.so").
+            if any(filename == part for part in cmdline):
                 proc.terminate()
                 terminated.append(proc)
         except Exception as exc:
