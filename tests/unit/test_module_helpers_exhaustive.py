@@ -73,6 +73,11 @@ def test_string_classification_and_extraction() -> None:
     assert classify_string_type("C:\\Windows") == "path"
     assert classify_string_type("HKEY_LOCAL_MACHINE") == "registry"
     assert classify_string_type("CreateFileA") == "api"
+    # CamelCase API names that are NOT in the literal API_PATTERNS list must
+    # still classify as "api" via the regex (the regex previously used [\\w],
+    # which matched only a literal backslash/'w', so these fell through).
+    assert classify_string_type("GetModuleHandle") == "api"
+    assert classify_string_type("NtQuerySystemInformation") == "api"
     assert classify_string_type("error: failed") == "error"
     assert classify_string_type("plain") is None
 

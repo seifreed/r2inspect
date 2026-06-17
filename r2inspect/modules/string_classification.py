@@ -46,7 +46,7 @@ def classify_string_type(value: str) -> str | None:
         return "path"
     if is_registry_string(value):
         return "registry"
-    if re.match(r"^[A-Z][\\w]*[A-Z]", value) or is_api_string(value):
+    if re.match(r"^[A-Z]\w*[A-Z]", value) or is_api_string(value):
         return "api"
     if any(word in value.lower() for word in ["error", "failed", "exception", "invalid"]):
         return "error"
