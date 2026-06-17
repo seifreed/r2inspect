@@ -33,13 +33,13 @@ def compare_structural_features(a_struct: dict[str, Any], b_struct: dict[str, An
     b_sections = set(b_struct.get("section_names", []))
     if a_sections or b_sections:
         score += jaccard_similarity(a_sections, b_sections) * 0.3
-    total_weight += 0.3
+        total_weight += 0.3
 
     a_imports = set(a_struct.get("imported_dlls", []))
     b_imports = set(b_struct.get("imported_dlls", []))
     if a_imports or b_imports:
         score += jaccard_similarity(a_imports, b_imports) * 0.3
-    total_weight += 0.3
+        total_weight += 0.3
 
     return score / total_weight if total_weight > 0 else 0.0
 
@@ -59,7 +59,7 @@ def compare_function_features(a_func: dict[str, Any], b_func: dict[str, Any]) ->
     b_names = set(b_func.get("function_names", []))
     if a_names or b_names:
         score += jaccard_similarity(a_names, b_names) * 0.6
-    total_weight += 0.6
+        total_weight += 0.6
 
     return score / total_weight if total_weight > 0 else 0.0
 
@@ -75,19 +75,19 @@ def compare_string_features(a_str: dict[str, Any], b_str: dict[str, Any]) -> flo
     b_apis = set(b_str.get("api_strings", []))
     if a_apis or b_apis:
         score += jaccard_similarity(a_apis, b_apis) * 0.4
-    total_weight += 0.4
+        total_weight += 0.4
 
     a_paths = set(a_str.get("path_strings", []))
     b_paths = set(b_str.get("path_strings", []))
     if a_paths or b_paths:
         score += jaccard_similarity(a_paths, b_paths) * 0.3
-    total_weight += 0.3
+        total_weight += 0.3
 
     a_reg = set(a_str.get("registry_strings", []))
     b_reg = set(b_str.get("registry_strings", []))
     if a_reg or b_reg:
         score += jaccard_similarity(a_reg, b_reg) * 0.3
-    total_weight += 0.3
+        total_weight += 0.3
 
     return score / total_weight if total_weight > 0 else 0.0
 
