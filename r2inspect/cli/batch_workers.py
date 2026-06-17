@@ -111,11 +111,18 @@ def process_files_parallel(
     rate_limiter: Any,
     *,
     process_fn: Any | None = None,
+    on_result: Any | None = None,
 ) -> None:
     """Process files in parallel with progress tracking.
 
     ``process_fn`` defaults to ``process_single_file``; tests inject a worker
     to drive the result-aggregation branches instead of patching the module.
+
+    ``on_result`` is an optional streaming sink ``(file_key, results) -> Any``.
+    When provided, each successful result is handed to it and only the sink's
+    return value (a lightweight record) is stored in ``all_results`` — the full
+    per-file result dict is dropped, so a large batch's memory stays bounded by
+    the lightweight records instead of every full analysis.
     """
     worker = process_single_file if process_fn is None else process_fn
     results_lock = threading.Lock()
@@ -168,5 +175,8 @@ def process_files_parallel(
                             # Use full path as key to avoid collisions
                             # between files with the same basename in different dirs
                             file_key = str(file_path)
-                            all_results[file_key] = results
+                            if on_result is not None:
+                                all_results[file_key] = on_result(file_key, results)
+                            else:
+                                all_results[file_key] = results
         progress.stop()

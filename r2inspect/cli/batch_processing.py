@@ -58,6 +58,13 @@ from .batch_service_runtime import (
     build_batch_service_facade as _build_batch_service_facade,
 )
 from .batch_workers import _cap_threads_for_execution, process_files_parallel, process_single_file
+from .batch_streaming import (
+    StreamingBatchAggregator,
+    low_memory_enabled,
+    make_streaming_create_batch_summary,
+)
+from .output_formatters import OutputFormatter
+from .batch_summary_tables import show_summary_table as _show_summary_table_impl
 
 console = Console()
 logger = get_logger(__name__)
@@ -202,16 +209,50 @@ def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool)
     return _support.find_files_by_extensions(batch_path, extensions, recursive)
 
 
-def run_batch_analysis(request: BatchRunRequest) -> None:
-    """Run batch analysis on multiple files in a directory."""
+def _show_summary_table(all_results: dict[str, dict[str, Any]]) -> None:
+    _show_summary_table_impl(all_results, console=console)
+
+
+def _resolve_batch_collaborator_fns(
+    request: BatchRunRequest,
+) -> tuple[Any, Any]:
+    """Pick the (process_files_parallel, create_batch_summary) pair for the run.
+
+    Returns the streaming pair when ``R2INSPECT_BATCH_LOW_MEMORY`` is set so a
+    large batch keeps only lightweight per-file records in memory; otherwise the
+    default accumulating pair.
+    """
     from .batch_output import create_batch_summary
 
+    if not low_memory_enabled():
+        return process_files_parallel, create_batch_summary
+
+    aggregator = StreamingBatchAggregator(
+        output_csv=request.output_csv,
+        output_formatter_cls=OutputFormatter,
+        fieldnames=get_csv_fieldnames(),
+    )
+
+    def _streaming_process(*args: Any, **kwargs: Any) -> None:
+        process_files_parallel(*args, on_result=aggregator.on_result, **kwargs)
+
+    streaming_summary = make_streaming_create_batch_summary(
+        aggregator,
+        determine_csv_file_path=determine_csv_file_path,
+        show_summary_table=_show_summary_table,
+    )
+    return _streaming_process, streaming_summary
+
+
+def run_batch_analysis(request: BatchRunRequest) -> None:
+    """Run batch analysis on multiple files in a directory."""
     find_files_wrapper = _support.build_find_files_wrapper(find_files_to_process)
+    process_fn, create_batch_summary = _resolve_batch_collaborator_fns(request)
 
     deps = _build_batch_dependencies(
         find_files_to_process=find_files_wrapper,
         setup_rate_limiter=setup_rate_limiter,
-        process_files_parallel=process_files_parallel,
+        process_files_parallel=process_fn,
     )
     collaborators = _BatchRunCollaborators(
         console=console,
