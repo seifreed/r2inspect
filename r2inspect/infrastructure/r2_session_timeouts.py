@@ -8,7 +8,22 @@ import threading
 import time
 from typing import Any
 
+from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
+
+
+def _close_orphan_r2(r2: Any, logger: Any) -> None:
+    """Fully tear down an r2 spawned after we already gave up on the open.
+
+    ``quit()`` alone leaves the stdio pipes open and the process unreaped — a
+    leaked FD plus a zombie radare2 per timed-out open. Mirror the normal
+    close path: quit, then close the pipes and reap the process.
+    """
+    try:
+        r2.quit()
+    except Exception as exc:
+        logger.debug("Failed to quit orphaned r2 instance: %s", exc)
+    force_close_process(r2)
 
 
 def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger: Any) -> Any:
@@ -20,10 +35,7 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
             r2 = session._opener(session.filename, flags=flags)
             # If we timed out while opening, close the orphan immediately
             if timed_out.is_set():
-                try:
-                    r2.quit()
-                except Exception as exc:
-                    logger.debug("Failed to quit orphaned r2 instance: %s", exc)
+                _close_orphan_r2(r2, logger)
             else:
                 result_holder["r2"] = r2
         except Exception as exc:
