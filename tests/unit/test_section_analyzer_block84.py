@@ -23,7 +23,7 @@ def test_section_analyzer_basic(tmp_path: Path):
         assert result["available"] in {True, False}
 
         # Exercise helpers
-        flags = analyzer._decode_pe_characteristics(0x01000000 | 0x02000000)
+        flags = analyzer._decode_pe_characteristics(0x20000000 | 0x40000000)
         assert "IMAGE_SCN_MEM_EXECUTE" in flags
         assert "IMAGE_SCN_MEM_READ" in flags
 

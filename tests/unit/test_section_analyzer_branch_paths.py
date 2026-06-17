@@ -168,7 +168,7 @@ def test_analyze_single_section_records_errors():
 
 def test_apply_pe_characteristics_sets_memory_flags():
     analyzer = _build_analyzer(sections=[])
-    section = {"characteristics": 0x01000000 | 0x04000000 | 0x02000000}
+    section = {"characteristics": 0x20000000 | 0x80000000 | 0x40000000}
     analysis = {"is_executable": False, "is_writable": False, "is_readable": False}
 
     analyzer._apply_pe_characteristics(section, analysis)

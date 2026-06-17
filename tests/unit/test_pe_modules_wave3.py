@@ -516,7 +516,7 @@ def test_section_analyze_single_section_exception() -> None:
 # and _decode_pe_characteristics body (lines 262, 265, 286-290)
 # ---------------------------------------------------------------------------
 
-_PE_EXEC_WRITE_READ = 0x01000000 | 0x04000000 | 0x02000000  # EXECUTE | WRITE | READ
+_PE_EXEC_WRITE_READ = 0x20000000 | 0x80000000 | 0x40000000  # EXECUTE | WRITE | READ
 
 
 def test_section_apply_pe_characteristics_all_rwx() -> None:
@@ -546,10 +546,31 @@ def test_section_apply_pe_characteristics_all_rwx() -> None:
     assert "IMAGE_SCN_MEM_READ" in analysis["pe_characteristics"]
 
 
+def test_section_apply_pe_characteristics_real_text_section() -> None:
+    """A standard PE .text characteristics DWORD (CODE|EXECUTE|READ = 0x60000020)
+    must decode to EXECUTE/READ and set the permission flags. Guards against the
+    off-by-a-nibble IMAGE_SCN_MEM_* constants that previously mislabeled them."""
+    analyzer = SectionAnalyzer(adapter=SimpleSectionAdapter())
+    section: dict = {"name": ".text", "characteristics": 0x60000020}
+    analysis: dict = {
+        "pe_characteristics": [],
+        "is_executable": False,
+        "is_writable": False,
+        "is_readable": False,
+    }
+    analyzer._apply_pe_characteristics(section, analysis)
+    assert "IMAGE_SCN_MEM_EXECUTE" in analysis["pe_characteristics"]
+    assert "IMAGE_SCN_MEM_READ" in analysis["pe_characteristics"]
+    assert "IMAGE_SCN_CNT_CODE" in analysis["pe_characteristics"]
+    assert analysis["is_executable"] is True
+    assert analysis["is_readable"] is True
+    assert analysis["is_writable"] is False
+
+
 def test_section_decode_pe_characteristics_known_flags() -> None:
     """_decode_pe_characteristics returns list of flag names (exercises lines 286-290)."""
     analyzer = SectionAnalyzer(adapter=SimpleSectionAdapter())
-    flags = analyzer._decode_pe_characteristics(0x00000020 | 0x01000000)
+    flags = analyzer._decode_pe_characteristics(0x00000020 | 0x20000000)
     assert "IMAGE_SCN_CNT_CODE" in flags
     assert "IMAGE_SCN_MEM_EXECUTE" in flags
 
