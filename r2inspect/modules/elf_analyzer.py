@@ -252,7 +252,12 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         size = section.get("size", 0)
         if not vaddr or not size:
             return None
-        data = cast(bytes, self.adapter.read_bytes(vaddr, size))
+        # An ELF section-header size is attacker-controlled, and these callers
+        # only need small metadata (a compiler string, a build-id). Cap the read
+        # so a crafted oversized section can't force a huge read + decode,
+        # matching the section-analyzer read cap.
+        read_size = min(size, 1024 * 1024)
+        data = cast(bytes, self.adapter.read_bytes(vaddr, read_size))
         if cmd == "psz":
             return data.split(b"\x00", 1)[0].decode(errors="ignore")
         if cmd == "px":

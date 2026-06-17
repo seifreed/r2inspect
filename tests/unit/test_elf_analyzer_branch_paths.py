@@ -13,7 +13,6 @@ from typing import Any
 
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Stub adapters
 # ---------------------------------------------------------------------------
@@ -448,3 +447,42 @@ def test_parse_build_id_data_delegates_with_hex_string():
     hex_str = "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13"
     result = analyzer._parse_build_id_data(hex_str)
     assert result is None or isinstance(result, str)
+
+
+def test_read_section_caps_attacker_controlled_size() -> None:
+    """Regression: a crafted ELF section size must not force an unbounded read.
+
+    ``section.get("size")`` comes straight from the (attacker-controlled) ELF
+    section header. ``_read_section`` must cap the read so an oversized section
+    cannot drive a huge read + decode.
+    """
+    recorded: list[int] = []
+
+    class _RecordingAdapter(MinimalELFAdapter):
+        def read_bytes(self, addr: int, size: int) -> bytes:
+            recorded.append(size)
+            return b"\x00" * min(size, 16)
+
+    analyzer = ELFAnalyzer(_RecordingAdapter())
+    huge_section = {"vaddr": 0x401000, "size": 0xFFFFFFFF}
+
+    analyzer._read_section(huge_section, "px")
+
+    assert recorded == [1024 * 1024]
+
+
+def test_read_section_passes_small_size_through() -> None:
+    """A section smaller than the cap is read at its declared size."""
+    recorded: list[int] = []
+
+    class _RecordingAdapter(MinimalELFAdapter):
+        def read_bytes(self, addr: int, size: int) -> bytes:
+            recorded.append(size)
+            return b"\x00" * size
+
+    analyzer = ELFAnalyzer(_RecordingAdapter())
+    small_section = {"vaddr": 0x401000, "size": 64}
+
+    analyzer._read_section(small_section, "px")
+
+    assert recorded == [64]
