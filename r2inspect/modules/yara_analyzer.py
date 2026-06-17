@@ -223,9 +223,15 @@ class YaraAnalyzer(CommandHelperMixin):
         logger.info("No valid YARA rules found in: %s. Using defaults.", rules_path)
         self.create_default_rules()
         try:
-            return yara.compile(
-                sources={"default": (Path(rules_path) / "packer_detection.yar").read_text()}
-            )
+            # Compile every bundled default rule set, not just packer detection:
+            # previously the suspicious-API and crypto rules were silently dropped
+            # on this fallback path, so those matches never fired. Compile from the
+            # in-memory definitions so a pre-existing empty rule file (the very
+            # condition that triggers this fallback) cannot break compilation.
+            sources = {
+                Path(filename).stem: content for filename, content in DEFAULT_YARA_RULES.items()
+            }
+            return yara.compile(sources=sources)
         except Exception as exc:
             logger.error("Failed to compile default YARA rules: %s", exc)
             return None

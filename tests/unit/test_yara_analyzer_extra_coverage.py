@@ -683,7 +683,8 @@ def test_compile_default_rules(tmp_path):
 
 
 def test_compile_default_rules_unwritable(tmp_path):
-    """_compile_default_rules returns None when defaults cannot be created."""
+    """Defaults still compile from the in-memory definitions even when they
+    cannot be persisted to disk, so YARA scanning is not lost."""
     # Point rules_path at a location that cannot be created (nested under a file)
     blocker = tmp_path / "blocker"
     blocker.write_text("not a dir")
@@ -691,7 +692,7 @@ def test_compile_default_rules_unwritable(tmp_path):
     analyzer = _make_analyzer(tmp_path, rules_path=impossible_path)
 
     result = analyzer._compile_default_rules(impossible_path)
-    assert result is None
+    assert result is not None
 
 
 # ---------------------------------------------------------------------------

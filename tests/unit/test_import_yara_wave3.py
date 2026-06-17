@@ -519,8 +519,9 @@ def test_discover_rule_files_includes_nested_subdirectory(tmp_path):
 
 
 @YARA_MARK
-def test_compile_default_rules_returns_none_when_self_rules_path_is_file(tmp_path):
-    """Lines 241-252: when self.rules_path is a file, mkdir fails and read_text fails -> None."""
+def test_compile_default_rules_compiles_from_memory_when_rules_path_is_file(tmp_path):
+    """When self.rules_path is a file, persisting defaults fails, but the bundled
+    rules still compile from their in-memory definitions so scanning continues."""
     existing_file = tmp_path / "not_a_directory.txt"
     existing_file.write_text("placeholder")
 
@@ -531,7 +532,7 @@ def test_compile_default_rules_returns_none_when_self_rules_path_is_file(tmp_pat
     config = FakeConfig(str(existing_file))
     analyzer = YaraAnalyzer(FakeAdapter(), config=config, filepath=None)
     result = analyzer._compile_default_rules(str(empty_dir))
-    assert result is None
+    assert result is not None
 
 
 # ---------------------------------------------------------------------------
