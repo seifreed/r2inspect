@@ -90,10 +90,29 @@ def select_r2_flags(
     return flags
 
 
+def _escalate_kill(proc: Any, timeout: float) -> None:
+    """Wait for a terminated proc; SIGKILL it if SIGTERM did not land.
+
+    A radare2 wedged in a CPU-bound, uninterruptible loop ignores SIGTERM and
+    would keep burning a core after a safe-mode reopen. Escalate to kill(),
+    matching ``force_close_process``.
+    """
+    try:
+        proc.wait(timeout=timeout)
+    except psutil.TimeoutExpired:
+        try:
+            proc.kill()
+        except Exception as exc:
+            _log.debug("Failed to kill radare2 process: %s", exc)
+    except Exception as exc:
+        _log.debug("Failed to wait on radare2 process: %s", exc)
+
+
 def terminate_radare2_processes(
-    filename: str, *, process_iter: Callable[..., Any] | None = None
+    filename: str, *, process_iter: Callable[..., Any] | None = None, kill_timeout: float = 1.0
 ) -> None:
     iterator = process_iter if process_iter is not None else psutil.process_iter
+    terminated: list[Any] = []
     for proc in iterator(["name", "cmdline"]):
         try:
             info = proc.info
@@ -102,9 +121,12 @@ def terminate_radare2_processes(
             cmdline = info.get("cmdline") or []
             if any(filename in part for part in cmdline):
                 proc.terminate()
+                terminated.append(proc)
         except Exception as exc:
             _log.debug("Failed to inspect/terminate radare2 process: %s", exc)
             continue
+    for proc in terminated:
+        _escalate_kill(proc, kill_timeout)
 
 
 def reopen_safe_mode(session: Any, *, reopen_timeout: float = 30.0) -> Any:
