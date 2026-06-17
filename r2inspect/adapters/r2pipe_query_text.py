@@ -125,7 +125,11 @@ class R2PipeTextQueryMixin:
 
         def _execute() -> str:
             self._maybe_force_error("search_text")
-            return facade.safe_cmd(self._r2_iface, f"/c {pattern}")
+            # /aa = linear case-insensitive assembly search. r2's /c means
+            # "search for crypto materials" and returns its help text for an
+            # arbitrary argument, which every opcode detector then mistook for a
+            # positive match.
+            return facade.safe_cmd(self._r2_iface, f"/aa {pattern}")
 
         return cast(str, self._safe_query(_execute, "", "Error searching text pattern"))
 

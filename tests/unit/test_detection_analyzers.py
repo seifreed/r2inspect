@@ -53,9 +53,9 @@ def test_packer_detector_evidence_triggers_detection():
 def test_anti_analysis_detects_multiple_indicators():
     r2 = FakeR2(
         cmd_map={
-            "/c fs:[0x30]": "0x401000",
-            "/c rdtsc": "0x401010",
-            "/c cpuid": "0x401020",
+            "/aa fs:[0x30]": "0x401000",
+            "/aa rdtsc": "0x401010",
+            "/aa cpuid": "0x401020",
             "ii~Sleep|ii~Delay": "Sleep",
             "ii~FindFirst|ii~Process32|ii~Module32": "Process32First",
         },
@@ -106,7 +106,7 @@ def test_crypto_analyzer_detects_api_and_constants():
     r2 = FakeR2(
         cmd_map={
             "/x 67452301": "0x1000",
-            "/c xor": "0x2000",
+            "/aa xor": "0x2000",
             "p8 4 @ 4096": "00010203",
         },
         cmdj_map={

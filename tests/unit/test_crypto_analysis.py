@@ -129,11 +129,11 @@ def _crypto_cmd_map(*, has_crypto: bool = True) -> dict[str, str]:
     """Build a cmd map that returns search results for crypto patterns."""
     m: dict[str, str] = {}
     if has_crypto:
-        m["/c xor"] = "0x1000\n0x1005\n0x100a\n"
-        m["/c rol,ror"] = "0x2000\n"
+        m["/aa xor"] = "0x1000\n0x1005\n0x100a\n"
+        m["/aa rol,ror"] = "0x2000\n"
         # mov table lookup pattern -- produce >10 hits to trigger Table Lookups
         mov_hits = "\n".join([f"0x{i:04x}" for i in range(3000, 3020)])
-        m["/c mov.*\\[.*\\\\+.*\\]"] = mov_hits
+        m["/aa mov.*\\[.*\\\\+.*\\]"] = mov_hits
         # AES S-box constant search
         m["/x 00000063"] = "0x5000\n"
         m["/x 67e6096a"] = "0x5000\n"
@@ -549,7 +549,7 @@ class TestAccessorMethods:
         assert len(strings) == 4
 
     def test_search_text(self):
-        cmd_map = {"/c xor": "0x1000\n0x1005\n"}
+        cmd_map = {"/aa xor": "0x1000\n0x1005\n"}
         adapter = _make_adapter(cmd_map=cmd_map)
         analyzer = CryptoAnalyzer(adapter)
         result = analyzer._search_text("xor")

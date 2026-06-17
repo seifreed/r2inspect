@@ -551,9 +551,17 @@ def test_search_hex_json_error():
 
 
 def test_search_text_success():
-    adapter = _make_adapter(cmd_map={"/c password": "results"})
+    adapter = _make_adapter(cmd_map={"/aa password": "results"})
     result = adapter.search_text("password")
     assert result == "results"
+
+
+def test_search_text_uses_assembly_search_not_crypto():
+    """search_text must emit /aa (assembly search), not /c (crypto materials).
+    r2's /c returns help text for an arbitrary argument, which opcode detectors
+    misread as a positive match. A /c-keyed map must therefore NOT be hit."""
+    adapter = _make_adapter(cmd_map={"/c rdtsc": "0xdead", "/aa rdtsc": "0x1000"})
+    assert adapter.search_text("rdtsc") == "0x1000"
 
 
 def test_search_text_error():

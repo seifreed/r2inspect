@@ -222,7 +222,7 @@ def test_adapter_with_fake_r2_invalid_responses() -> None:
             "ij": "not json",
             "iSj": "[]",
             "p8 4 @ 0": "ZZ",
-            "/c test": "",
+            "/aa test": "",
             "/x 90": "",
         }
     )

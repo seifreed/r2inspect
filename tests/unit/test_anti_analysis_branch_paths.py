@@ -75,7 +75,7 @@ FULL_CMD_MAP: dict[str, str] = {
     "iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX": "",
     "ii~Sleep|ii~Delay": "Sleep",
     "ii~FindFirst|ii~Process32|ii~Module32": "FindFirstFileA",
-    "/c mov.*cs:|/c mov.*ds:": "",
+    "/aa mov.*cs:|/c mov.*ds:": "",
     "iz~hash|iz~crc32|iz~fnv": "",
     # Environment check commands from domain
     "iz~GetUserName|iz~USER": "",

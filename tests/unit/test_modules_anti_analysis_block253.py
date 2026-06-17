@@ -48,7 +48,7 @@ class DummyAdapter:
             return "Sleep"
         if command.startswith("ii~FindFirst"):
             return "FindFirst"
-        if command.startswith("/c mov"):
+        if command.startswith("/aa mov"):
             return "mov cs"
         if command.startswith("iz~hash"):
             return "hash"
