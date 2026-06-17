@@ -189,7 +189,7 @@ def test_batch_processing_support_helpers_cover_output_and_stats(tmp_path: Path,
         "20260131_000000",
     )
     assert summary_name.endswith("individual JSONs")
-    assert (output_dir / "sample_analysis.json").exists()
+    assert (output_dir / "sample.exe_analysis.json").exists()
     assert (output_dir / "r2inspect_batch_20260131_000000.json").exists()
 
     stats = {"packers_detected": [], "crypto_patterns": []}

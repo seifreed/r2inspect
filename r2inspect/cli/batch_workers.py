@@ -17,6 +17,7 @@ from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, T
 from ..application.use_cases import AnalyzeBinaryUseCase
 from ..factory import create_inspector
 from ..infrastructure.logging import get_logger
+from ..cli.batch_output_json import per_file_json_name
 from ..cli.output_formatters import OutputFormatter
 
 console = Console()
@@ -73,7 +74,7 @@ def process_single_file(
             if output_json:
                 formatter = OutputFormatter(results)
                 json_output = formatter.to_json()
-                json_file = output_path / f"{file_path.stem}_analysis.json"
+                json_file = output_path / per_file_json_name(str(results["relative_path"]))
                 # Write atomically: write to temp file then rename to prevent partial files
                 tmp_file = json_file.with_suffix(".json.tmp")
                 try:

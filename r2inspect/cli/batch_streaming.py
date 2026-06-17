@@ -110,7 +110,7 @@ def build_streaming_json_payload(
             "failed_analyses": len(failed_files),
             "timestamp": datetime.now().isoformat(),
             "processed_files": processed_keys,
-            "results_location": "per-file <stem>_analysis.json (not embedded in low-memory mode)",
+            "results_location": "per-file <relative-path>_analysis.json (not embedded in low-memory mode)",
         },
         "failed_files": [{"file": item[0], "error": item[1]} for item in failed_files],
         "statistics": aggregator.stats,

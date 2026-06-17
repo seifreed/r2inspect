@@ -183,7 +183,7 @@ def test_process_single_file_json_output_written(tmp_path: Path):
     )
 
     assert error is None
-    json_file = output_path / f"{local.stem}_analysis.json"
+    json_file = output_path / f"{local.name}_analysis.json"
     assert json_file.exists()
 
 

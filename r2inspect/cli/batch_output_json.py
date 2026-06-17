@@ -9,14 +9,23 @@ from pathlib import Path
 from typing import Any
 
 
+def per_file_json_name(relative_path: str) -> str:
+    """Per-file artifact name derived from the batch-relative path.
+
+    Using the relative path (unique within a batch) instead of just the file
+    stem prevents same-stem files in different directories — or same-stem files
+    with differing extensions — from silently overwriting each other's report.
+    """
+    safe = relative_path.replace("\\", "/").strip("/").replace("/", "_")
+    return f"{safe}_analysis.json"
+
+
 def write_individual_json_results(
     all_results: dict[str, dict[str, Any]], output_path: Path
 ) -> None:
     for file_key, result in all_results.items():
-        file_info = result.get("file_info", {})
-        file_name = str(file_info.get("name", file_key) or file_key)
-        per_file_name = f"{Path(file_name).stem}_analysis.json"
-        per_file_path = output_path / per_file_name
+        relative_path = str(result.get("relative_path") or Path(file_key).name)
+        per_file_path = output_path / per_file_json_name(relative_path)
         with open(per_file_path, "w", encoding="utf-8") as per_file_handle:
             json.dump(result, per_file_handle, indent=2, default=str)
 
