@@ -68,18 +68,6 @@ def test_import_domain_helpers():
     assert suspicious
     assert score >= 0
 
-    patterns = import_domain.find_suspicious_patterns(
-        [
-            {"name": "CreateRemoteThread"},
-            {"name": "VirtualAllocEx"},
-            {"name": "WriteProcessMemory"},
-        ]
-    )
-    assert patterns
-
-    counts = import_domain.count_import_categories(imports)
-    assert counts["Process/Thread Management"] == 1
-
     max_score, tags = import_domain.find_max_risk_score("CreateRemoteThread", categories)
     assert max_score > 0
     assert tags

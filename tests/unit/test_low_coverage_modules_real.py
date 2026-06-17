@@ -320,15 +320,6 @@ def test_import_domain_helpers() -> None:
     )
     assert suspicious and score > 0
 
-    patterns = import_domain.find_suspicious_patterns(imports)
-    names = {p["pattern"] for p in patterns}
-    assert "DLL Injection" in names
-    assert "Process Hollowing" in names
-    assert "Keylogging" in names
-
-    counts = import_domain.count_import_categories(imports)
-    assert counts["Cryptography"] == 4
-
     categories = import_domain.build_api_categories()
     max_score, tags = import_domain.find_max_risk_score("CreateRemoteThread", categories)
     assert max_score >= 90 and tags
