@@ -12,7 +12,6 @@ import tempfile
 import os
 import io
 
-import pytest
 
 from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
@@ -81,8 +80,8 @@ def test_detect_zip_file_plain():
 
 
 def test_detect_macho32_little_endian():
-    # 0xCEFAEDFE = Mach-O 32-bit little-endian
-    magic = struct.pack("<I", 0xCEFAEDFE)
+    # On-disk CE FA ED FE (MH_MAGIC read LE) = little-endian 32-bit Mach-O
+    magic = struct.pack("<I", 0xFEEDFACE)
     cpu_type = struct.pack("<I", 7)  # x86
     data = magic + cpu_type + b"\x00" * 200
     path = _write_tmp(data)
@@ -96,7 +95,7 @@ def test_detect_macho32_little_endian():
 
 
 def test_detect_macho64_little_endian():
-    magic = struct.pack("<I", 0xCFFAEDFE)
+    magic = struct.pack("<I", 0xFEEDFACF)
     cpu_type = struct.pack("<I", 0x01000007)  # x86-64
     data = magic + cpu_type + b"\x00" * 200
     path = _write_tmp(data)
@@ -109,8 +108,8 @@ def test_detect_macho64_little_endian():
 
 
 def test_detect_macho64_big_endian():
-    # LE-read of bytes gives 0xFEEDFACF → Big-endian 64-bit Mach-O
-    magic = struct.pack("<I", 0xFEEDFACF)
+    # On-disk FE ED FA CF (CIGAM_64) -> big-endian 64-bit Mach-O
+    magic = struct.pack("<I", 0xCFFAEDFE)
     # cpu_type read as big-endian: AArch64 = 0x0100000C
     cpu_type = struct.pack(">I", 0x0100000C)
     data = magic + cpu_type + b"\x00" * 200
@@ -124,8 +123,8 @@ def test_detect_macho64_big_endian():
 
 
 def test_detect_macho_universal_big_endian():
-    # LE-read of bytes gives 0xCAFEBABE → Universal big-endian
-    magic = struct.pack("<I", 0xCAFEBABE)
+    # Standard fat/universal header on disk is CA FE BA BE (always big-endian)
+    magic = struct.pack("<I", 0xBEBAFECA)
     # cpu_type read as big-endian: PowerPC = 18
     cpu_type = struct.pack(">I", 18)
     data = magic + cpu_type + b"\x00" * 200
@@ -139,7 +138,7 @@ def test_detect_macho_universal_big_endian():
 
 
 def test_detect_macho_universal_little_endian():
-    magic = struct.pack("<I", 0xBEBAFECA)
+    magic = struct.pack("<I", 0xCAFEBABE)
     cpu_type = struct.pack("<I", 0x01000012)  # PowerPC64
     data = magic + cpu_type + b"\x00" * 200
     path = _write_tmp(data)
@@ -152,8 +151,8 @@ def test_detect_macho_universal_little_endian():
 
 
 def test_detect_macho32_big_endian():
-    # LE-read of bytes gives 0xFEEDFACE → Big-endian 32-bit Mach-O
-    magic = struct.pack("<I", 0xFEEDFACE)
+    # On-disk FE ED FA CE (CIGAM) -> big-endian 32-bit Mach-O
+    magic = struct.pack("<I", 0xCEFAEDFE)
     # cpu_type read as big-endian: ARM = 12
     cpu_type = struct.pack(">I", 12)
     data = magic + cpu_type + b"\x00" * 200

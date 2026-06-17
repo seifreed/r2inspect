@@ -8,7 +8,7 @@ from .analyzer_registry import AnalyzerCategory
 
 PE_FORMATS = {"PE", "PE32", "PE32+"}
 ELF_FORMATS = {"ELF", "ELF32", "ELF64"}
-MACHO_FORMATS = {"MACH0", "MACH064", "MACH032"}
+MACHO_FORMATS = {"MACHO", "MACH-O", "MACHO32", "MACHO64"}
 
 ANALYZERS: list[dict[str, Any]] = [
     {

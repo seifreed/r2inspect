@@ -8,7 +8,6 @@ import os
 import struct
 import tempfile
 
-import pytest
 
 from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
@@ -16,7 +15,6 @@ from r2inspect.infrastructure.magic_detector import (
     get_file_threat_level,
     is_executable_file,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -397,9 +395,8 @@ def test_pe_details_pe_offset_beyond_header():
 
 
 def test_macho32_little_endian_x86():
-    # File bytes \xce\xfa\xed\xfe → struct.unpack("<I") = 0xFEEDFACE → Big endian
-    # File bytes \xfe\xed\xfa\xce → struct.unpack("<I") = 0xCEFAEDFE → Little endian
-    path = _write_tmp(b"\xfe\xed\xfa\xce" + struct.pack("<I", 7) + b"\x00" * 50)
+    # On-disk CE FA ED FE is MH_MAGIC read little-endian -> little-endian file.
+    path = _write_tmp(b"\xce\xfa\xed\xfe" + struct.pack("<I", 7) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == 32
@@ -410,8 +407,8 @@ def test_macho32_little_endian_x86():
 
 
 def test_macho32_big_endian_arm():
-    # File bytes \xce\xfa\xed\xfe → magic = 0xFEEDFACE → Big endian
-    path = _write_tmp(b"\xce\xfa\xed\xfe" + struct.pack(">I", 12) + b"\x00" * 50)
+    # On-disk FE ED FA CE is the byte-swapped CIGAM form -> big-endian file.
+    path = _write_tmp(b"\xfe\xed\xfa\xce" + struct.pack(">I", 12) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == 32
@@ -422,9 +419,8 @@ def test_macho32_big_endian_arm():
 
 
 def test_macho64_little_endian_x86_64():
-    # \xcf\xfa\xed\xfe → magic = 0xFEEDFACF → Big endian 64-bit
-    # \xfe\xed\xfa\xcf → magic = 0xCFFAEDFE → Little endian 64-bit
-    path = _write_tmp(b"\xfe\xed\xfa\xcf" + struct.pack("<I", 0x01000007) + b"\x00" * 50)
+    # On-disk CF FA ED FE is MH_MAGIC_64 read little-endian -> little-endian file.
+    path = _write_tmp(b"\xcf\xfa\xed\xfe" + struct.pack("<I", 0x01000007) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == 64
@@ -435,8 +431,8 @@ def test_macho64_little_endian_x86_64():
 
 
 def test_macho64_big_endian_aarch64():
-    # \xcf\xfa\xed\xfe → magic = 0xFEEDFACF → Big endian 64-bit
-    path = _write_tmp(b"\xcf\xfa\xed\xfe" + struct.pack(">I", 0x0100000C) + b"\x00" * 50)
+    # On-disk FE ED FA CF is the byte-swapped CIGAM_64 form -> big-endian file.
+    path = _write_tmp(b"\xfe\xed\xfa\xcf" + struct.pack(">I", 0x0100000C) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == 64
@@ -447,9 +443,8 @@ def test_macho64_big_endian_aarch64():
 
 
 def test_macho_universal_big_endian():
-    # \xca\xfe\xba\xbe → magic = 0xBEBAFECA → Little endian universal
-    # \xbe\xba\xfe\xca → magic = 0xCAFEBABE → Big endian universal
-    path = _write_tmp(b"\xbe\xba\xfe\xca" + struct.pack(">I", 18) + b"\x00" * 50)
+    # Standard fat/universal header on disk is CA FE BA BE (always big-endian).
+    path = _write_tmp(b"\xca\xfe\xba\xbe" + struct.pack(">I", 18) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == "Universal"
@@ -459,7 +454,8 @@ def test_macho_universal_big_endian():
 
 
 def test_macho_universal_little_endian():
-    path = _write_tmp(b"\xca\xfe\xba\xbe" + struct.pack("<I", 0x01000012) + b"\x00" * 50)
+    # Rare little-endian fat (FAT_CIGAM) header on disk: BE BA FE CA.
+    path = _write_tmp(b"\xbe\xba\xfe\xca" + struct.pack("<I", 0x01000012) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == "Universal"

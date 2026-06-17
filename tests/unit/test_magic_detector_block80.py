@@ -43,7 +43,8 @@ def test_detect_elf_and_macho(tmp_path: Path):
     assert elf["bits"] in {64, "Unknown"}
 
     macho_path = tmp_path / "sample.macho"
-    macho = b"\xfe\xed\xfa\xce" + struct.pack("<I", 7) + b"\x00" * 64
+    # Little-endian 32-bit Mach-O on disk: CE FA ED FE, cputype x86 (LE).
+    macho = b"\xce\xfa\xed\xfe" + struct.pack("<I", 7) + b"\x00" * 64
     _write_bytes(macho_path, macho)
     macho_res = detector.detect_file_type(str(macho_path))
     assert "MACHO" in macho_res["file_format"]

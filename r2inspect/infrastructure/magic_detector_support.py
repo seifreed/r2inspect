@@ -115,15 +115,20 @@ def analyze_macho_details(header: bytes) -> dict[str, Any]:
 
     raw = header[:4]
     magic_le = struct.unpack("<I", raw)[0]
+    # Keyed by the value of the first 4 on-disk bytes read little-endian. The
+    # canonical magics (0xFEEDFACE/F) read LE mean the file itself is
+    # little-endian; the byte-swapped CIGAM forms (0xCEFAEDFE / 0xCFFAEDFE) mean
+    # big-endian. Fat headers are always big-endian, so a standard universal
+    # binary ("CA FE BA BE" on disk) reads LE as 0xBEBAFECA.
     little_map = {
-        0xCEFAEDFE: (32, "Little"),
-        0xCFFAEDFE: (64, "Little"),
-        0xBEBAFECA: ("Universal", "Little"),
+        0xFEEDFACE: (32, "Little"),
+        0xFEEDFACF: (64, "Little"),
+        0xCAFEBABE: ("Universal", "Little"),
     }
     big_map = {
-        0xFEEDFACE: (32, "Big"),
-        0xFEEDFACF: (64, "Big"),
-        0xCAFEBABE: ("Universal", "Big"),
+        0xCEFAEDFE: (32, "Big"),
+        0xCFFAEDFE: (64, "Big"),
+        0xBEBAFECA: ("Universal", "Big"),
     }
     if magic_le in little_map:
         bits, endianness = little_map[magic_le]
