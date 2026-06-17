@@ -36,6 +36,18 @@ API_CATEGORIES: dict[str, list[str]] = {
         "WriteProcessMemory",
         "ReadProcessMemory",
     ],
+    "DLL Injection": [
+        "OpenProcess",
+        "VirtualAllocEx",
+        "WriteProcessMemory",
+        "CreateRemoteThread",
+        "SetThreadContext",
+        "QueueUserAPC",
+        "NtUnmapViewOfSection",
+        "NtMapViewOfSection",
+        "RtlCreateUserThread",
+        "NtCreateThreadEx",
+    ],
     "File System": [
         "CreateFile",
         "CreateFileA",
