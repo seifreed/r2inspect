@@ -134,7 +134,10 @@ def get_cached_stats(
 
 
 def is_memory_available(monitor: Any, required_mb: float) -> bool:
-    stats = monitor.check_memory()
+    # Force a fresh probe: the cached stats omit system_memory_available_mb
+    # (the cache only refreshes the cheap process RSS), so a warm cache would
+    # make the system-availability check read 0 and reject every request.
+    stats = monitor.check_memory(force=True)
     current_mb = float(stats.get("process_memory_mb", 0))
     if current_mb + required_mb > monitor.limits.max_process_memory_mb:
         return False

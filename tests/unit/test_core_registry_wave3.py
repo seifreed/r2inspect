@@ -522,6 +522,15 @@ def test_is_memory_available_false_when_exceeds_process_limit():
     assert monitor.is_memory_available(9999.0) is False
 
 
+def test_is_memory_available_forces_fresh_probe_after_warm_cache():
+    # With a warm cache, the cached stats omit system_memory_available_mb;
+    # is_memory_available must force a fresh probe so a small request is not
+    # wrongly rejected (it read system_available as 0 before the fix).
+    monitor = MemoryMonitor()
+    monitor.check_memory()  # warm the cache (sets last_check to now)
+    assert monitor.is_memory_available(1.0) is True
+
+
 # -- lines 356-363: configure_memory_limits ---------------------------------
 
 
