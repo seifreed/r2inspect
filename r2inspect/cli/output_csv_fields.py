@@ -5,6 +5,22 @@ from __future__ import annotations
 
 from typing import Any
 
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def escape_csv_formula(value: Any) -> Any:
+    """Neutralize spreadsheet formula injection (CWE-1236).
+
+    Filenames, section/import names and YARA rule names are attacker-controlled
+    and flow verbatim into CSV cells; a leading ``= + - @`` would be evaluated as
+    a formula when the report is opened in a spreadsheet. Prefix such cells with
+    a single quote so they are treated as literal text.
+    """
+    if isinstance(value, str) and value.startswith(_CSV_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
 FIELDNAMES = [
     "name",
     "size",

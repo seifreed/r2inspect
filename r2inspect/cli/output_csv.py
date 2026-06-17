@@ -28,7 +28,9 @@ class CsvOutputFormatter:
             if csv_data:
                 dict_writer = csv.DictWriter(output, fieldnames=FIELDNAMES)
                 dict_writer.writeheader()
-                dict_writer.writerow(csv_data)
+                dict_writer.writerow(
+                    {key: _csv_fields.escape_csv_formula(value) for key, value in csv_data.items()}
+                )
             return output.getvalue()
         except Exception as exc:
             self._write_error_csv(output, exc)

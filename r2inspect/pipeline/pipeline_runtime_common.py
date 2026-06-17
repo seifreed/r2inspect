@@ -47,7 +47,8 @@ def merge_into_plain_context(context: dict[str, Any], stage_result: dict[str, An
 
 def detect_via_header_bytes(filename: str) -> str | None:
     try:
-        header = Path(filename).read_bytes()[:8]
+        with open(filename, "rb") as handle:
+            header = handle.read(8)
     except Exception:
         return None
 

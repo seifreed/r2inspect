@@ -42,6 +42,8 @@ def decode_rich_header(encoded_data: bytes, xor_key: int) -> list[dict[str, Any]
                 entries.append(
                     {
                         "prodid": prodid,
+                        "product_id": prodid & 0xFFFF,
+                        "build_number": (prodid >> 16) & 0xFFFF,
                         "count": count,
                         "prodid_encoded": prodid_encoded,
                         "count_encoded": count_encoded,

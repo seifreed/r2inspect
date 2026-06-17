@@ -7,6 +7,8 @@ import csv
 from pathlib import Path
 from typing import Any
 
+from .output_csv_fields import escape_csv_formula
+
 FIELDNAMES = [
     "name",
     "size",
@@ -60,4 +62,6 @@ def write_csv_results(
         for _, result in all_results.items():
             formatter = output_formatter_cls(result)
             csv_data = formatter._extract_csv_data(result)
-            writer.writerow({field: csv_data.get(field, "") for field in fieldnames})
+            writer.writerow(
+                {field: escape_csv_formula(csv_data.get(field, "")) for field in fieldnames}
+            )
