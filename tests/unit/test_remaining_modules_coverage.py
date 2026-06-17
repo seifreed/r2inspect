@@ -295,6 +295,14 @@ def test_macho_is_pie_not():
     assert macho_is_pie(info) is False
 
 
+def test_macho_is_pie_via_pic_flag():
+    # r2 reports a position-independent Mach-O executable via bin.pic (MH_PIE),
+    # not filetype; a PIE executable has pic=True and no PIE marker in filetype.
+    assert macho_is_pie({"bin": {"pic": True}}) is True
+    assert macho_is_pie({"bin": {"pic": True, "filetype": "EXECUTE"}}) is True
+    assert macho_is_pie({"bin": {"pic": False, "filetype": "EXEC"}}) is False
+
+
 def test_macho_is_pie_missing_bin():
     assert macho_is_pie(None) is False
     assert macho_is_pie({}) is False

@@ -9,7 +9,13 @@ from typing import Any
 def is_pie(macho_info: dict[str, Any] | None) -> bool:
     if not macho_info or "bin" not in macho_info:
         return False
-    file_type = macho_info["bin"].get("filetype", "")
+    bin_info = macho_info["bin"]
+    # r2 surfaces the MH_PIE header flag as bin.pic; this is the real signal for
+    # a position-independent Mach-O executable. filetype does not carry it, so a
+    # filetype-only check reported pie=False for every PIE executable.
+    if bin_info.get("pic"):
+        return True
+    file_type = bin_info.get("filetype") or ""
     file_upper = file_type.upper()
     return "DYLIB" in file_upper or "PIE" in file_upper
 

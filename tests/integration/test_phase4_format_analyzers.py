@@ -80,6 +80,8 @@ def test_macho_analyzer_basic(tmp_path: Path) -> None:
     assert result["load_commands"]
     assert result["sections"]
     assert isinstance(result["security_features"], dict)
+    # hello_macho is built MH_PIE; r2 exposes it via bin.pic, so pie must be True.
+    assert result["security_features"]["pie"] is True
 
 
 def test_rich_header_analyzer_pe_and_non_pe(tmp_path: Path) -> None:
