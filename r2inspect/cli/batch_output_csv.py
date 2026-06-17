@@ -9,45 +9,6 @@ from typing import Any
 
 from .output_csv_fields import escape_csv_formula
 
-FIELDNAMES = [
-    "name",
-    "size",
-    "compile_time",
-    "file_type",
-    "md5",
-    "sha1",
-    "sha256",
-    "sha512",
-    "imphash",
-    "ssdeep_hash",
-    "tlsh_binary",
-    "tlsh_text_section",
-    "tlsh_functions_with_hash",
-    "telfhash",
-    "telfhash_symbols_used",
-    "rich_header_xor_key",
-    "rich_header_checksum",
-    "richpe_hash",
-    "rich_header_compilers",
-    "rich_header_entries",
-    "compiler",
-    "compiler_version",
-    "compiler_confidence",
-    "imports",
-    "exports",
-    "sections",
-    "anti_debug",
-    "anti_vm",
-    "anti_sandbox",
-    "yara_matches",
-    "num_functions",
-    "num_unique_machoc",
-    "num_duplicate_functions",
-    "num_imports",
-    "num_exports",
-    "num_sections",
-]
-
 
 def write_csv_results(
     csv_file: Path,

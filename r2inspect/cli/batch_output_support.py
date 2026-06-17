@@ -14,10 +14,11 @@ from typing import Any
 from ..application.batch_stats import collect_batch_statistics
 from . import batch_output_runtime as _runtime
 from . import batch_output_summary as _summary
-from .batch_output_csv import (
-    FIELDNAMES as _BATCH_CSV_FIELDNAMES,
-    write_csv_results as _write_csv_results_logic,
-)
+from .batch_output_csv import write_csv_results as _write_csv_results_logic
+
+# Batch CSV shares the single-file CSV schema so both paths emit identical
+# columns for the same binary.
+from .output_csv_fields import FIELDNAMES as _BATCH_CSV_FIELDNAMES
 from .batch_output_json import (
     build_batch_summary_payload as _build_batch_summary_payload_impl,
     create_json_batch_summary as _create_json_batch_summary_impl,
