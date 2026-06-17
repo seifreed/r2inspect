@@ -173,17 +173,24 @@ def execute_stage_with_timeout(
 ) -> tuple[dict[str, Any], bool]:
     context = ts_context.get_all()
     if stage.timeout:
-        with ThreadPoolExecutor(max_workers=1) as timeout_executor:
+        timeout_executor = ThreadPoolExecutor(max_workers=1)
+        try:
             future = timeout_executor.submit(stage.execute, context)
-            try:
-                result = future.result(timeout=stage.timeout)
-                return result, stage_success(result, stage.name)
-            except FuturesTimeoutError:
-                logger.error("Stage '%s' timed out after %ss", stage.name, stage.timeout)
-                return error_result(stage.name, f"Timeout after {stage.timeout}s"), False
-            except Exception as exc:
-                logger.error("Stage '%s' raised exception: %s", stage.name, exc)
-                return error_result(stage.name, str(exc)), False
+            result = future.result(timeout=stage.timeout)
+            return result, stage_success(result, stage.name)
+        except FuturesTimeoutError:
+            logger.error("Stage '%s' timed out after %ss", stage.name, stage.timeout)
+            return error_result(stage.name, f"Timeout after {stage.timeout}s"), False
+        except Exception as exc:
+            logger.error("Stage '%s' raised exception: %s", stage.name, exc)
+            return error_result(stage.name, str(exc)), False
+        finally:
+            # A `with ThreadPoolExecutor` block would call shutdown(wait=True)
+            # here, blocking until the (possibly hung) stage finishes — which
+            # defeats the timeout entirely. Shut down without waiting so a
+            # runaway stage cannot stall the pipeline; the orphaned worker ends
+            # when its r2 session is closed.
+            timeout_executor.shutdown(wait=False, cancel_futures=True)
     try:
         result = stage.execute(context)
         return result, stage_success(result, stage.name)
