@@ -245,18 +245,21 @@ def test_r2_command_circuit_breaker_real() -> None:
     session = R2Session(str(fixture))
     r2 = session.open(fixture.stat().st_size / (1024 * 1024))
 
-    breaker = R2CommandCircuitBreaker()
-    assert breaker.execute_command(r2, "ij", "analysis") is not None
-    assert breaker.execute_command(r2, "i", "generic") != ""
+    try:
+        breaker = R2CommandCircuitBreaker()
+        assert breaker.execute_command(r2, "ij", "analysis") is not None
+        assert breaker.execute_command(r2, "i", "generic") != ""
 
-    r2.quit()
-    # After quit, command should fail and return safe default
-    result = breaker.execute_command(r2, "ij", "analysis")
-    assert result is None or result == {}
+        r2.quit()
+        # After quit, command should fail and return safe default
+        result = breaker.execute_command(r2, "ij", "analysis")
+        assert result is None or result == {}
 
-    stats = breaker.get_stats()
-    assert any(key.startswith("command_") for key in stats)
-    breaker.reset_all()
+        stats = breaker.get_stats()
+        assert any(key.startswith("command_") for key in stats)
+        breaker.reset_all()
+    finally:
+        session.close()
 
 
 def test_r2_command_circuit_breaker_error_paths() -> None:

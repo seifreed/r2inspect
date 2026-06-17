@@ -18,22 +18,23 @@ def test_r2_session_real_open_and_analysis(tmp_path: Path) -> None:
         file_size_mb = fixture.stat().st_size / (1024 * 1024)
 
         r2 = session.open(file_size_mb=file_size_mb)
-        assert r2 is not None
-        assert session.is_open is True
+        try:
+            assert r2 is not None
+            assert session.is_open is True
 
-        assert session._get_open_timeout() > 0
-        assert session._get_cmd_timeout() > 0
-        assert session._get_analysis_timeout(full_analysis=True) > 0
-        assert session._get_large_file_threshold() > 0
-        assert session._get_huge_file_threshold() > 0
+            assert session._get_open_timeout() > 0
+            assert session._get_cmd_timeout() > 0
+            assert session._get_analysis_timeout(full_analysis=True) > 0
+            assert session._get_large_file_threshold() > 0
+            assert session._get_huge_file_threshold() > 0
 
-        assert session._run_basic_info_check() is True
-        assert session._perform_initial_analysis(file_size_mb) is True
+            assert session._run_basic_info_check() is True
+            assert session._perform_initial_analysis(file_size_mb) is True
 
-        with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="i"):
-            assert session._run_cmd_with_timeout("i", 0.001) is False
-
-        session.close()
+            with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="i"):
+                assert session._run_cmd_with_timeout("i", 0.001) is False
+        finally:
+            session.close()
         assert session.is_open is False
 
 

@@ -11,8 +11,9 @@ def test_r2_session_open_and_close():
 
     session = R2Session(str(sample))
     r2 = session.open(file_size_mb=0.01)
-    assert r2 is not None
-    assert session.is_open is True
-
-    session.close()
+    try:
+        assert r2 is not None
+        assert session.is_open is True
+    finally:
+        session.close()
     assert session.is_open is False

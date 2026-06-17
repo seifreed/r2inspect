@@ -43,18 +43,22 @@ def test_r2_session_basic_and_safe_mode(pe_fixture_path: Path):
     with env_vars(R2INSPECT_TEST_MODE="1"):
         session = R2Session(str(pe_fixture_path))
         r2 = session.open(pe_fixture_path.stat().st_size / (1024 * 1024))
-        assert r2 is not None
-        assert session.is_open is True
-        assert session._run_basic_info_check() is True
-        session.close()
+        try:
+            assert r2 is not None
+            assert session.is_open is True
+            assert session._run_basic_info_check() is True
+        finally:
+            session.close()
         assert session.is_open is False
 
         with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="i"):
             session = R2Session(str(pe_fixture_path))
             r2 = session.open(pe_fixture_path.stat().st_size / (1024 * 1024))
-            assert r2 is not None
-            assert session.is_open is True
-            session.close()
+            try:
+                assert r2 is not None
+                assert session.is_open is True
+            finally:
+                session.close()
 
 
 def test_r2_session_flags_and_fat_macho_detection(tmp_path: Path) -> None:
@@ -79,30 +83,34 @@ def test_r2_session_analysis_depth_and_timeouts(pe_fixture_path: Path) -> None:
         session = R2Session(str(pe_fixture_path))
         session.open(pe_fixture_path.stat().st_size / (1024 * 1024))
 
-        with env_vars(R2INSPECT_ANALYSIS_DEPTH="0"):
-            assert session._perform_initial_analysis(0.1) is True
+        try:
+            with env_vars(R2INSPECT_ANALYSIS_DEPTH="0"):
+                assert session._perform_initial_analysis(0.1) is True
 
-            with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="aa"):
-                assert session._run_cmd_with_timeout("aa", 0.01) is False
-        session.close()
+                with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="aa"):
+                    assert session._run_cmd_with_timeout("aa", 0.01) is False
+        finally:
+            session.close()
 
 
 def test_pipeline_builder_builds_stages(tmp_path: Path, elf_fixture_path: Path) -> None:
     with env_vars(R2INSPECT_TEST_MODE="1"):
         session = R2Session(str(elf_fixture_path))
         r2 = session.open(elf_fixture_path.stat().st_size / (1024 * 1024))
-        adapter = R2PipeAdapter(r2)
+        try:
+            adapter = R2PipeAdapter(r2)
 
-        config_path = tmp_path / "config.json"
-        config = Config(config_path=str(config_path))
-        config.apply_overrides({"pipeline": {"stage_timeout": 1.5}})
-        registry = AnalyzerRegistry(lazy_loading=False)
-        builder = PipelineBuilder(adapter, registry, config, str(elf_fixture_path))
-        pipeline = builder.build({})
+            config_path = tmp_path / "config.json"
+            config = Config(config_path=str(config_path))
+            config.apply_overrides({"pipeline": {"stage_timeout": 1.5}})
+            registry = AnalyzerRegistry(lazy_loading=False)
+            builder = PipelineBuilder(adapter, registry, config, str(elf_fixture_path))
+            pipeline = builder.build({})
 
-        assert len(pipeline) == 8
-        assert all(stage.timeout == 1.5 for stage in pipeline.stages)
-        session.close()
+            assert len(pipeline) == 8
+            assert all(stage.timeout == 1.5 for stage in pipeline.stages)
+        finally:
+            session.close()
 
 
 def test_large_analyzers_on_pe(pe_adapter: R2PipeAdapter) -> None:
