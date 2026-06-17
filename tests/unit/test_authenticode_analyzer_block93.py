@@ -28,11 +28,12 @@ def test_authenticode_analyzer_basic():
     except OSError:
         adapter = MinimalAdapter()
 
-    analyzer = AuthenticodeAnalyzer(adapter)
-    result = analyzer.analyze()
-    assert "has_signature" in result
-    assert "signature_valid" in result
-    assert "available" in result
-
-    if r2 is not None:
-        r2.quit()
+    try:
+        analyzer = AuthenticodeAnalyzer(adapter)
+        result = analyzer.analyze()
+        assert "has_signature" in result
+        assert "signature_valid" in result
+        assert "available" in result
+    finally:
+        if r2 is not None:
+            r2.quit()

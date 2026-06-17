@@ -51,14 +51,15 @@ def test_anti_analysis_detector_real_fixture():
     except OSError:
         adapter = MinimalAdapter()
 
-    detector = AntiAnalysisDetector(adapter, config=None)
-    result = detector.detect()
-    assert "anti_debug" in result
-    assert "anti_vm" in result
-    assert "anti_sandbox" in result
-    assert "detection_details" in result
-    assert isinstance(result.get("suspicious_apis"), list)
-    assert isinstance(result.get("evasion_techniques"), list)
-
-    if r2 is not None:
-        r2.quit()
+    try:
+        detector = AntiAnalysisDetector(adapter, config=None)
+        result = detector.detect()
+        assert "anti_debug" in result
+        assert "anti_vm" in result
+        assert "anti_sandbox" in result
+        assert "detection_details" in result
+        assert isinstance(result.get("suspicious_apis"), list)
+        assert isinstance(result.get("evasion_techniques"), list)
+    finally:
+        if r2 is not None:
+            r2.quit()
