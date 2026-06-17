@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -27,15 +28,19 @@ class MagicByteDetector:
 
     MAGIC_PATTERNS: dict[str, dict[str, Any]] = _MAGIC_PATTERNS
     _EXEC_EXTRA = ("SWF", "JAVA_CLASS", "DEX")
+    # Bound the cache: ``global_detector`` is process-global and gets one entry
+    # per analyzed file, so an unbounded dict leaks memory over a long batch.
+    CACHE_MAX_ENTRIES = 1024
 
     def __init__(self) -> None:
-        self.cache: dict[str, dict[str, Any]] = {}
+        self.cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
     def detect_file_type(self, file_path: str) -> dict[str, Any]:
         path = Path(file_path)
         mtime = path.stat().st_mtime if path.exists() else 0
         cache_key = f"{path}:{mtime}"
         if cache_key in self.cache:
+            self.cache.move_to_end(cache_key)
             return self.cache[cache_key]
 
         result: dict[str, Any] = {
@@ -54,7 +59,7 @@ class MagicByteDetector:
             "extensions": [],
         }
         if not self._is_readable_regular_file(path):
-            self.cache[cache_key] = result
+            self._store(cache_key, result)
             return result
 
         try:
@@ -67,8 +72,13 @@ class MagicByteDetector:
             logger.error("Error detecting file type for %s: %s", path, exc)
             result["error"] = str(exc)
 
-        self.cache[cache_key] = result
+        self._store(cache_key, result)
         return result
+
+    def _store(self, cache_key: str, result: dict[str, Any]) -> None:
+        self.cache[cache_key] = result
+        while len(self.cache) > self.CACHE_MAX_ENTRIES:
+            self.cache.popitem(last=False)
 
     @staticmethod
     def _is_readable_regular_file(path: Path) -> bool:
