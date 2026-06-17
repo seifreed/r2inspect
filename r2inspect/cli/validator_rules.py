@@ -93,8 +93,11 @@ def validate_config_input(config: str | None) -> list[str]:
             errors.append(f"Config file does not exist: {config}")
         elif not config_path.is_file():
             errors.append(f"Config path is not a file: {config}")
-        elif config_path.suffix.lower() not in [".json", ".yaml", ".yml", ".toml"]:
-            errors.append(f"Config file must be JSON, YAML, or TOML: {config}")
+        elif config_path.suffix.lower() != ".json":
+            # Only JSON is actually parsed (ConfigStore.load uses json.load); the
+            # validator previously also accepted YAML/TOML, which then silently
+            # failed to load and fell back to defaults.
+            errors.append(f"Config file must be JSON: {config}")
     return errors
 
 

@@ -318,23 +318,23 @@ def test_validate_config_input_valid_json_file(tmp_path):
     assert validate_config_input(str(f)) == []
 
 
-def test_validate_config_input_valid_yaml_file(tmp_path):
-    """Lines 209-218: valid .yaml file returns no errors."""
+def test_validate_config_input_rejects_yaml_file(tmp_path):
+    """Non-JSON config extensions are rejected (loader only parses JSON)."""
     f = tmp_path / "cfg.yaml"
     f.write_text("key: val")
-    assert validate_config_input(str(f)) == []
+    assert validate_config_input(str(f)) != []
 
 
-def test_validate_config_input_valid_yml_file(tmp_path):
+def test_validate_config_input_rejects_yml_file(tmp_path):
     f = tmp_path / "cfg.yml"
     f.write_text("key: val")
-    assert validate_config_input(str(f)) == []
+    assert validate_config_input(str(f)) != []
 
 
-def test_validate_config_input_valid_toml_file(tmp_path):
+def test_validate_config_input_rejects_toml_file(tmp_path):
     f = tmp_path / "cfg.toml"
     f.write_text("[s]\nk=1")
-    assert validate_config_input(str(f)) == []
+    assert validate_config_input(str(f)) != []
 
 
 def test_validate_config_input_missing_file(tmp_path):

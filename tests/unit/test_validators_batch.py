@@ -219,28 +219,32 @@ def test_validate_config_input_valid_json(tmp_path):
     assert errors == []
 
 
-def test_validate_config_input_valid_yaml(tmp_path):
-    """Test validation of valid YAML config file"""
+def test_validate_config_input_rejects_yaml(tmp_path):
+    """YAML is rejected: the loader only parses JSON, so accepting YAML would
+    silently fall back to defaults."""
     config = tmp_path / "config.yaml"
     config.write_text("key: value")
     errors = validate_config_input(str(config))
-    assert errors == []
+    assert len(errors) == 1
+    assert "JSON" in errors[0]
 
 
-def test_validate_config_input_valid_yml(tmp_path):
-    """Test validation of valid YML config file"""
+def test_validate_config_input_rejects_yml(tmp_path):
+    """YML is rejected (loader is JSON-only)."""
     config = tmp_path / "config.yml"
     config.write_text("key: value")
     errors = validate_config_input(str(config))
-    assert errors == []
+    assert len(errors) == 1
+    assert "JSON" in errors[0]
 
 
-def test_validate_config_input_valid_toml(tmp_path):
-    """Test validation of valid TOML config file"""
+def test_validate_config_input_rejects_toml(tmp_path):
+    """TOML is rejected (loader is JSON-only)."""
     config = tmp_path / "config.toml"
     config.write_text('[section]\nkey = "value"')
     errors = validate_config_input(str(config))
-    assert errors == []
+    assert len(errors) == 1
+    assert "JSON" in errors[0]
 
 
 def test_validate_config_input_missing_file(tmp_path):

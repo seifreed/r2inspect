@@ -62,8 +62,8 @@ def test_validate_yara_config_extensions_and_threads_behave_consistently(tmp_pat
 def test_xor_and_validation_aggregation_behaviors(tmp_path: Path, capsys) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"x" * 200)
-    config = tmp_path / "config.toml"
-    config.write_text('[section]\nkey = "value"')
+    config = tmp_path / "config.json"
+    config.write_text('{"section": {"key": "value"}}')
 
     assert sanitize_xor_string("abc_XY-12.Z ") == "abc_XY-12.Z "
     assert sanitize_xor_string("@#$%^&*()") is None
