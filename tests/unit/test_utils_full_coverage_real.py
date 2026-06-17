@@ -329,7 +329,11 @@ def test_logger_setup_and_levels(tmp_path: Path) -> None:
             handler.close()
         finally:
             log2.removeHandler(handler)
-    logging.shutdown()
+    # Intentionally do NOT call logging.shutdown() here: it is a process-global
+    # interpreter-exit hook that flushes every handler in the suite, and it
+    # deadlocks when an abandoned r2-timeout daemon thread still holds a log
+    # handler lock (see project_batch_logging_shutdown_deadlock). The explicit
+    # per-handler close above is the correct, isolated teardown.
 
 
 def test_output_formatter_paths() -> None:
