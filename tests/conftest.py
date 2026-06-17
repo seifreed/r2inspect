@@ -366,6 +366,17 @@ def _reset_global_state():
         reset_global_error_manager()
     except ImportError:
         pass
+    # The circuit-breaker registry is a process-global dict keyed by func id.
+    # Tests that exercise circuit breaking leave entries behind; one with a
+    # None policy poisons every later get_circuit_breaker_stats() call. Clear it
+    # between tests so the registry never leaks across the suite.
+    try:
+        from r2inspect.error_handling import unified_handler_circuit_support as _cb
+
+        with _cb._circuit_lock:
+            _cb._circuit_breakers.clear()
+    except ImportError:
+        pass
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
