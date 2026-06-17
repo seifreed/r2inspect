@@ -66,11 +66,14 @@ class R2PipeAdapter(R2PipeQueryMixin):
         if not cmd_text:
             return None
 
-        # Prefer JSON path for commands that conventionally return JSON.
-        if cmd_text.endswith("j"):
+        # JSON-ness is decided by the base command token, before any
+        # "@ <address>" suffix: "aflj @ 0x401000" is still a JSON command even
+        # though the full string ends in a digit.
+        base = cmd_text.split("@", 1)[0].strip()
+        if base.endswith("j"):
             result = self.cmdj(cmd_text)
             list_commands = {"iSj", "iij", "iEj", "isj", "aflj", "izj", "izzj", "iDj", "agj"}
-            if cmd_text in list_commands:
+            if base in list_commands:
                 return result if isinstance(result, list) else []
             return result if isinstance(result, dict | list) else {}
 

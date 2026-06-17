@@ -104,7 +104,9 @@ def validate_config_input(config: str | None) -> list[str]:
 def validate_extensions_input(extensions: str | None) -> list[str]:
     errors: list[str] = []
     if extensions:
-        for ext in (part.strip() for part in extensions.split(",")):
+        # Skip empty segments so a trailing/duplicate comma ("exe," / "exe,,dll")
+        # is tolerated rather than reported as an invalid empty extension.
+        for ext in (part.strip() for part in extensions.split(",") if part.strip()):
             if not ext.replace(".", "").replace("_", "").replace("-", "").isalnum():
                 errors.append(f"Invalid file extension: {ext}")
             if len(ext) > 10:
