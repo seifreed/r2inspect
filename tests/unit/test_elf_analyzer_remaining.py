@@ -433,9 +433,9 @@ def test_parse_build_id_data():
     """Test _parse_build_id_data delegates to real parser."""
     adapter = _make_adapter()
     analyzer = ELFAnalyzer(adapter)
-    build_id_data = "04 00 00 00 ab cd ef 12"
+    # 16-byte note header (Nhdr + "GNU\0") then the build-id bytes.
+    build_id_data = "04 00 00 00 14 00 00 00 03 00 00 00 47 4e 55 00 ab cd ef 12"
     result = analyzer._parse_build_id_data(build_id_data)
-    # parse_build_id_data skips first 4 hex pairs => "abcdef12"
     assert result == "abcdef12"
 
 

@@ -223,26 +223,31 @@ def test_parse_build_id_data_whitespace_only_returns_none():
     assert result is None
 
 
+# Raw .note.gnu.build-id bytes as _read_section("px") emits them: a 12-byte
+# Nhdr (namesz=4, descsz=20, type=3) + the 4-byte name "GNU\0" + the 20-byte id.
+_BUILD_ID_NOTE = (
+    "04 00 00 00 14 00 00 00 03 00 00 00 47 4e 55 00 "
+    "ab cd ef 01 23 45 67 89 ab cd ef 01 23 45 67 89 ab cd ef 01"
+)
+_BUILD_ID = "abcdef0123456789abcdef0123456789abcdef01"
+
+
 def test_parse_build_id_data_valid_hex_line():
-    # Typical r2 build id output: 4 header bytes then the id
-    line = "0x000 00 00 00 00 ab cd ef 01 23 45 67 89"
-    result = parse_build_id_data(line)
-    # hex_match has > 4 bytes, so returns from index 4 onward
-    assert result is not None
-    assert isinstance(result, str)
+    # The 16-byte note header must be stripped, leaving exactly the build-id.
+    assert parse_build_id_data(_BUILD_ID_NOTE) == _BUILD_ID
 
 
 def test_parse_build_id_data_short_hex_line():
-    # fewer than 4 hex pairs - should not produce a result from this line
+    # fewer than the 16 note-header bytes - no build-id on this line
     line = "ab cd"
     result = parse_build_id_data(line)
     assert result is None
 
 
 def test_parse_build_id_data_multiline_skips_empty():
-    data = "\n  \n00 00 00 00 aa bb cc dd ee ff 11 22 33\n"
+    data = f"\n  \n{_BUILD_ID_NOTE}\n"
     result = parse_build_id_data(data)
-    assert result is not None
+    assert result == _BUILD_ID
 
 
 # ---------------------------------------------------------------------------

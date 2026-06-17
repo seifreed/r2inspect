@@ -228,7 +228,12 @@ def test_elf_domain_helpers() -> None:
     assert elf_domain.parse_dwarf_producer("nope") is None
     assert elf_domain.parse_dwarf_compile_time("nothing") is None
     assert elf_domain.parse_build_id_data(None) is None
-    assert elf_domain.parse_build_id_data("xx 11 22 33 44 55") == "55"
+    assert (
+        elf_domain.parse_build_id_data(
+            "04 00 00 00 14 00 00 00 03 00 00 00 47 4e 55 00 11 22 33 44 55"
+        )
+        == "1122334455"
+    )
 
     section = elf_domain.find_section_by_name([{"name": ".text"}], "text")
     assert section and section["name"] == ".text"

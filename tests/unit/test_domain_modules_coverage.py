@@ -457,11 +457,13 @@ def test_parse_dwarf_compile_time_unrelated_line() -> None:
 
 
 def test_parse_build_id_data_normal() -> None:
-    line = "00000000: 01 02 03 04 05 ab cd ef\n"
+    # 16-byte note header (Nhdr + "GNU\0") then the build-id bytes.
+    line = (
+        "04 00 00 00 14 00 00 00 03 00 00 00 47 4e 55 00 "
+        "01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14"
+    )
     result = parse_build_id_data(line)
-    # first 4 bytes (8 hex chars) are skipped, rest returned
-    assert result is not None
-    assert "abcdef" in result.lower() or len(result) > 0
+    assert result == "0102030405060708090a0b0c0d0e0f1011121314"
 
 
 def test_parse_build_id_data_none() -> None:

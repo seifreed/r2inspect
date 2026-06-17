@@ -68,7 +68,11 @@ def test_elf_domain_helpers() -> None:
     assert dwarf["compiler"].startswith("GCC")
     assert parse_dwarf_producer("DW_AT_producer : clang 13.0.0")
     assert parse_dwarf_compile_time("compilation 2025-01-02")
-    assert parse_build_id_data("Build ID: aa bb cc dd ee ff") == "eeff"
+    build_id_note = (
+        "04 00 00 00 14 00 00 00 03 00 00 00 47 4e 55 00 "
+        "ab cd ef 01 23 45 67 89 ab cd ef 01 23 45 67 89 ab cd ef 01"
+    )
+    assert parse_build_id_data(build_id_note) == "abcdef0123456789abcdef0123456789abcdef01"
     sections = [{"name": ".text", "vaddr": 1, "size": 2}]
     assert find_section_by_name(sections, "text") == sections[0]
 

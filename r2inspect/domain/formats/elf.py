@@ -69,12 +69,17 @@ def parse_dwarf_compile_time(line: str) -> str | None:
 def parse_build_id_data(build_id_data: str | None) -> str | None:
     if not build_id_data:
         return None
+    # _read_section emits the raw section bytes as space-separated hex. A
+    # .note.gnu.build-id section is an ELF note: a 12-byte Nhdr (namesz, descsz,
+    # type) followed by the 4-byte name "GNU\0", so the build-id itself starts
+    # at byte 16. Dropping only 4 leaked 12 bytes of header into the result.
+    _NOTE_HEADER_BYTES = 16
     for line in build_id_data.split("\n"):
         if not line.strip():
             continue
         hex_match = re.findall(r"([0-9a-fA-F]{2})", line)
-        if len(hex_match) > 4:
-            return "".join(hex_match[4:])
+        if len(hex_match) > _NOTE_HEADER_BYTES:
+            return "".join(hex_match[_NOTE_HEADER_BYTES:])
     return None
 
 
