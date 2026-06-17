@@ -55,7 +55,7 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
             "severity": "Medium",
         }
         for imp in results["imports"]
-        if imp.get("name") in suspicious_apis
+        if any(api in (imp.get("name") or "") for api in suspicious_apis)
     )
     indicators.extend(
         {

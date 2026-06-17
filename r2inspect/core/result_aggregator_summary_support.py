@@ -26,8 +26,17 @@ SUMMARY_BUILDERS = {
 
 
 def _count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
-    """Count imported APIs commonly associated with suspicious execution flows."""
-    return sum(1 for imp in imports if imp.get("name") in SUSPICIOUS_IMPORT_APIS)
+    """Count imported APIs commonly associated with suspicious execution flows.
+
+    Matches as a substring so decorated/extended variants (e.g. ``VirtualAllocEx``)
+    are counted, consistent with ``categorize_apis``; exact equality silently
+    missed the cross-process ``*Ex`` forms, which are the more suspicious ones.
+    """
+    return sum(
+        1
+        for imp in imports
+        if any(api in (imp.get("name") or "") for api in SUSPICIOUS_IMPORT_APIS)
+    )
 
 
 def _count_high_entropy_sections(sections: list[dict[str, Any]]) -> int:
