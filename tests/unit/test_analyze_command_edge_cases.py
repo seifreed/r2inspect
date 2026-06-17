@@ -165,7 +165,7 @@ def test_show_analysis_start():
     ctx = _make_context()
     cmd = AnalyzeCommand(ctx)
 
-    cmd._show_analysis_start("malware.exe")
+    cmd._show_analysis_start("malware.exe", output_json=False, output_csv=False, output_file=None)
 
     output = _console_text(ctx)
     assert "malware.exe" in output

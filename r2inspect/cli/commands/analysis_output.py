@@ -11,6 +11,21 @@ from ...error_handling.stats import get_circuit_breaker_stats, get_error_stats, 
 from ...cli.output_formatters import OutputFormatter
 
 
+def should_emit_console_status(
+    output_json: bool,
+    output_csv: bool,
+    output_file: str | Path | None,
+) -> bool:
+    """Whether human-readable status belongs on the console for this run.
+
+    JSON/CSV written to stdout must stay machine-parseable, so status lines are
+    suppressed there; they are restored when those formats are written to a file.
+    """
+    writing_to_console = not output_json and not output_csv
+    emitting_with_output_file = (output_json or output_csv) and bool(output_file)
+    return writing_to_console or emitting_with_output_file
+
+
 def print_status_if_needed(
     console: Any,
     output_json: bool,
@@ -18,11 +33,7 @@ def print_status_if_needed(
     output_file: str | Path | None,
 ) -> None:
     """Print status message if appropriate based on output options."""
-    writing_to_file = bool(output_file)
-    writing_to_console = not output_json and not output_csv
-    emitting_with_output_file = (output_json or output_csv) and writing_to_file
-
-    if writing_to_console or emitting_with_output_file:
+    if should_emit_console_status(output_json, output_csv, output_file):
         console.print("[bold green]Starting analysis...[/bold green]")
 
 

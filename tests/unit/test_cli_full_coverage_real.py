@@ -531,7 +531,7 @@ def test_analyze_command_keyboard_interrupt() -> None:
     context.console = console
 
     class _InterruptingAnalyzeCommand(AnalyzeCommand):
-        def _show_analysis_start(self, filename: str) -> None:
+        def _show_analysis_start(self, filename: str, *_args: object, **_kwargs: object) -> None:
             raise KeyboardInterrupt
 
     command = _InterruptingAnalyzeCommand(context)

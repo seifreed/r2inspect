@@ -16,7 +16,6 @@ from r2inspect.cli.commands.analyze_command import AnalyzeCommand
 from r2inspect.cli.commands.base import CommandContext
 from r2inspect.config import Config
 
-
 # ---------------------------------------------------------------------------
 # Concrete fakes
 # ---------------------------------------------------------------------------
@@ -83,7 +82,7 @@ def test_analyze_command_execute_keyboard_interrupt(tmp_path):
     """
 
     class _InterruptingCommand(AnalyzeCommand):
-        def _show_analysis_start(self, filename: str) -> None:
+        def _show_analysis_start(self, filename: str, *_args: object, **_kwargs: object) -> None:
             raise KeyboardInterrupt()
 
     ctx = _make_context()
@@ -96,7 +95,7 @@ def test_analyze_command_execute_error_handling():
     """execute handles general exceptions by returning 1."""
 
     class _ErrorCommand(AnalyzeCommand):
-        def _show_analysis_start(self, filename: str) -> None:
+        def _show_analysis_start(self, filename: str, *_args: object, **_kwargs: object) -> None:
             raise RuntimeError("Test error")
 
     ctx = _make_context()
@@ -109,7 +108,7 @@ def test_analyze_command_execute_error_verbose():
     """execute shows traceback in verbose mode."""
 
     class _ErrorCommand(AnalyzeCommand):
-        def _show_analysis_start(self, filename: str) -> None:
+        def _show_analysis_start(self, filename: str, *_args: object, **_kwargs: object) -> None:
             raise RuntimeError("Test error")
 
     ctx = _make_context()
@@ -300,7 +299,7 @@ def test_analyze_command_threads_setting():
     """execute applies thread settings before analysis."""
 
     class _ThreadCapture(AnalyzeCommand):
-        def _show_analysis_start(self, filename: str) -> None:
+        def _show_analysis_start(self, filename: str, *_args: object, **_kwargs: object) -> None:
             # Stop execution after thread settings have been applied
             raise StopIteration("done")
 

@@ -12,8 +12,9 @@ from pathlib import Path
 from rich.console import Console
 
 from r2inspect.cli.commands import analysis_output
+from r2inspect.cli.commands.analyze_command import AnalyzeCommand
+from r2inspect.cli.commands.base import CommandContext
 from r2inspect.cli.output_formatters import OutputFormatter
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -112,6 +113,55 @@ class TestPrintStatusIfNeeded:
         )
         text = _console_text(console)
         assert text.strip() == ""
+
+
+class TestShouldEmitConsoleStatus:
+    """The predicate governing whether status lines belong on the console."""
+
+    def test_console_mode_emits(self):
+        assert analysis_output.should_emit_console_status(False, False, None) is True
+
+    def test_json_to_stdout_suppressed(self):
+        assert analysis_output.should_emit_console_status(True, False, None) is False
+
+    def test_csv_to_stdout_suppressed(self):
+        assert analysis_output.should_emit_console_status(False, True, None) is False
+
+    def test_json_to_file_emits(self):
+        assert analysis_output.should_emit_console_status(True, False, "out.json") is True
+
+    def test_csv_to_file_emits(self):
+        assert analysis_output.should_emit_console_status(False, True, "out.csv") is True
+
+
+class TestShowAnalysisStartBanner:
+    """Regression: the 'Initializing analysis for' banner must not corrupt
+    machine output. `r2inspect -j file | jq` broke when this line preceded the
+    JSON on stdout."""
+
+    def test_console_mode_shows_banner(self, capsys):
+        cmd = AnalyzeCommand(CommandContext.create())
+        cmd._show_analysis_start(
+            "sample.exe", output_json=False, output_csv=False, output_file=None
+        )
+        assert "Initializing analysis for" in capsys.readouterr().out
+
+    def test_json_to_stdout_suppresses_banner(self, capsys):
+        cmd = AnalyzeCommand(CommandContext.create())
+        cmd._show_analysis_start("sample.exe", output_json=True, output_csv=False, output_file=None)
+        assert capsys.readouterr().out.strip() == ""
+
+    def test_csv_to_stdout_suppresses_banner(self, capsys):
+        cmd = AnalyzeCommand(CommandContext.create())
+        cmd._show_analysis_start("sample.exe", output_json=False, output_csv=True, output_file=None)
+        assert capsys.readouterr().out.strip() == ""
+
+    def test_json_to_file_shows_banner(self, capsys):
+        cmd = AnalyzeCommand(CommandContext.create())
+        cmd._show_analysis_start(
+            "sample.exe", output_json=True, output_csv=False, output_file="out.json"
+        )
+        assert "Initializing analysis for" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

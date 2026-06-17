@@ -24,7 +24,12 @@ class AnalyzeCommand(Command):
         apply_thread_settings(config, threads)
 
         try:
-            self._show_analysis_start(filename)
+            self._show_analysis_start(
+                filename,
+                output_json=args.get("output_json", False),
+                output_csv=args.get("output_csv", False),
+                output_file=args.get("output"),
+            )
             analysis_options = self._setup_analysis_options(
                 yara=args.get("yara"),
                 xor=args.get("xor"),
@@ -68,9 +73,20 @@ class AnalyzeCommand(Command):
         results = result.to_dict()
         self._output_results(results, output_json, output_csv, output_file, verbose)
 
-    def _show_analysis_start(self, filename: str) -> None:
-        """Render the start banner for a single-file analysis run."""
-        self.context.console.print(f"[blue]Initializing analysis for: {filename}[/blue]")
+    def _show_analysis_start(
+        self,
+        filename: str,
+        output_json: bool,
+        output_csv: bool,
+        output_file: str | Path | None,
+    ) -> None:
+        """Render the start banner unless JSON/CSV is going to stdout.
+
+        A status line printed before machine output corrupts ``r2inspect -j``
+        piped to a JSON parser, so suppress it in that mode.
+        """
+        if analysis_output.should_emit_console_status(output_json, output_csv, output_file):
+            self.context.console.print(f"[blue]Initializing analysis for: {filename}[/blue]")
 
     def _print_status_if_needed(
         self,
