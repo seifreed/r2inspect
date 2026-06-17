@@ -18,6 +18,7 @@ from r2inspect.testing.fixtures import (
     resolve_fixture_source_root,
     sync_sample_fixtures,
 )
+from tests.helpers.process_reaper import reap_process
 
 # =============================================================================
 # Test Resource Limits Configuration
@@ -235,9 +236,8 @@ def cleanup_r2_processes():
         for proc in children:
             try:
                 if "radare2" in (proc.name() or "").lower():
-                    proc.terminate()
-                    proc.wait(timeout=2)
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+                    reap_process(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
     except ImportError:
         pass
