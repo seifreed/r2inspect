@@ -7,20 +7,24 @@ from typing import Any
 
 def update_packer_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update packer statistics."""
-    if "packer_info" in result and result["packer_info"].get("detected"):
+    packer = result.get("packer")
+    if packer and packer.get("is_packed"):
         stats["packers_detected"].append(
             {
                 "file": file_key,
-                "packer": result["packer_info"].get("name", "Unknown"),
+                "packer": packer.get("packer_type") or "Unknown",
             }
         )
 
 
 def update_crypto_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update crypto pattern statistics."""
-    if "crypto_info" in result and result["crypto_info"]:
-        for crypto in result["crypto_info"]:
-            stats["crypto_patterns"].append({"file": file_key, "pattern": crypto})
+    crypto = result.get("crypto")
+    if crypto:
+        for algorithm in crypto.get("algorithms", []):
+            stats["crypto_patterns"].append(
+                {"file": file_key, "pattern": algorithm.get("algorithm", "Unknown")}
+            )
 
 
 def update_indicator_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:

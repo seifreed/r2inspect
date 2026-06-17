@@ -120,7 +120,7 @@ def test_batch_output_summary_and_stats(tmp_path):
     all_results = {
         "a.bin": {
             "file_info": {"file_type": "PE"},
-            "packer_info": {"detected": True, "name": "UPX"},
+            "packer": {"is_packed": True, "packer_type": "UPX"},
         },
         "b.bin": {
             "file_info": {"file_type": "ELF"},

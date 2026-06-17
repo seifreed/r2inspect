@@ -58,8 +58,8 @@ class _AcceptingLimiter:
 def _result(file_type: str = "PE32+") -> dict[str, Any]:
     return {
         "file_info": {"name": "x", "md5": "abc", "file_type": file_type, "architecture": "x64"},
-        "packer_info": {"detected": True, "name": "UPX"},
-        "crypto_info": ["aes"],
+        "packer": {"is_packed": True, "packer_type": "UPX"},
+        "crypto": {"algorithms": [{"algorithm": "aes"}]},
         "indicators": [{"type": "t", "description": "d"}],
         "compiler": {"detected": True, "compiler": "MSVC"},
         "yara_matches": [{"rule": "evil"}],

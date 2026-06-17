@@ -162,8 +162,8 @@ def test_collect_batch_statistics_and_updates() -> None:
         "compilers": {},
     }
     result = {
-        "packer_info": {"detected": True, "name": "UPX"},
-        "crypto_info": ["AES"],
+        "packer": {"is_packed": True, "packer_type": "UPX"},
+        "crypto": {"algorithms": [{"algorithm": "AES"}]},
         "indicators": [{"type": "Anti", "description": "x"}],
         "file_info": {"file_type": "PE", "architecture": "x86"},
         "compiler": {"detected": True, "compiler": "MSVC"},

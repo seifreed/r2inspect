@@ -12,8 +12,8 @@ class _YaraObj:
 def test_batch_output_helpers_and_summary(tmp_path: Path) -> None:
     all_results = {
         "a.bin": {
-            "packer_info": {"detected": True, "name": "UPX"},
-            "crypto_info": ["AES"],
+            "packer": {"is_packed": True, "packer_type": "UPX"},
+            "crypto": {"algorithms": [{"algorithm": "AES"}]},
             "indicators": [{"type": "x"}],
             "file_info": {
                 "file_type": "PE32+ executable, 3 sections",

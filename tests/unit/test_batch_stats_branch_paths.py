@@ -30,7 +30,7 @@ def _empty_stats() -> dict:
 
 def test_update_packer_stats_detected_packer_appended():
     stats = _empty_stats()
-    result = {"packer_info": {"detected": True, "name": "UPX"}}
+    result = {"packer": {"is_packed": True, "packer_type": "UPX"}}
     update_packer_stats(stats, "file.exe", result)
     assert len(stats["packers_detected"]) == 1
     assert stats["packers_detected"][0]["file"] == "file.exe"
@@ -39,14 +39,14 @@ def test_update_packer_stats_detected_packer_appended():
 
 def test_update_packer_stats_detected_packer_unknown_name():
     stats = _empty_stats()
-    result = {"packer_info": {"detected": True}}
+    result = {"packer": {"is_packed": True}}
     update_packer_stats(stats, "file.exe", result)
     assert stats["packers_detected"][0]["packer"] == "Unknown"
 
 
 def test_update_packer_stats_not_detected_skipped():
     stats = _empty_stats()
-    update_packer_stats(stats, "file.exe", {"packer_info": {"detected": False}})
+    update_packer_stats(stats, "file.exe", {"packer": {"is_packed": False}})
     assert stats["packers_detected"] == []
 
 
@@ -63,7 +63,7 @@ def test_update_packer_stats_no_packer_info_key_skipped():
 
 def test_update_crypto_stats_patterns_appended():
     stats = _empty_stats()
-    result = {"crypto_info": ["AES", "RC4"]}
+    result = {"crypto": {"algorithms": [{"algorithm": "AES"}, {"algorithm": "RC4"}]}}
     update_crypto_stats(stats, "malware.dll", result)
     assert len(stats["crypto_patterns"]) == 2
     assert stats["crypto_patterns"][0] == {"file": "malware.dll", "pattern": "AES"}
@@ -72,7 +72,7 @@ def test_update_crypto_stats_patterns_appended():
 
 def test_update_crypto_stats_empty_list_skipped():
     stats = _empty_stats()
-    update_crypto_stats(stats, "file.exe", {"crypto_info": []})
+    update_crypto_stats(stats, "file.exe", {"crypto": {"algorithms": []}})
     assert stats["crypto_patterns"] == []
 
 
@@ -186,15 +186,15 @@ def test_update_compiler_stats_no_compiler_key_skipped():
 def test_collect_batch_statistics_aggregates_all_fields():
     all_results = {
         "file_a.exe": {
-            "packer_info": {"detected": True, "name": "Themida"},
-            "crypto_info": ["AES"],
+            "packer": {"is_packed": True, "packer_type": "Themida"},
+            "crypto": {"algorithms": [{"algorithm": "AES"}]},
             "indicators": [{"type": "url", "value": "http://evil.com"}],
             "file_info": {"file_type": "PE32+", "architecture": "x86_64"},
             "compiler": {"compiler": "MSVC", "detected": True},
         },
         "file_b.dll": {
-            "packer_info": {"detected": False},
-            "crypto_info": [],
+            "packer": {"is_packed": False},
+            "crypto": {"algorithms": []},
             "indicators": [],
             "file_info": {"file_type": "DLL", "architecture": "x86"},
             "compiler": {"compiler": "GCC", "detected": True},

@@ -663,8 +663,8 @@ def test_batch_output_and_processing_helpers(tmp_path: Path) -> None:
         stats = batch_output.collect_batch_statistics(
             {
                 "f": {
-                    "packer_info": {"detected": True, "name": "UPX"},
-                    "crypto_info": ["aes"],
+                    "packer": {"is_packed": True, "packer_type": "UPX"},
+                    "crypto": {"algorithms": [{"algorithm": "aes"}]},
                     "indicators": [{"type": "anti_vm"}],
                     "file_info": {"file_type": "ELF", "architecture": "x64"},
                     "compiler": {"detected": True, "compiler": "GCC"},
@@ -1083,8 +1083,8 @@ def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
         stats = batch_processing.collect_batch_statistics(
             {
                 "f": {
-                    "packer_info": {"detected": True, "name": "UPX"},
-                    "crypto_info": ["aes"],
+                    "packer": {"is_packed": True, "packer_type": "UPX"},
+                    "crypto": {"algorithms": [{"algorithm": "aes"}]},
                     "indicators": [{"type": "anti_vm"}],
                     "file_info": {"file_type": "ELF", "architecture": "x64"},
                     "compiler": {"detected": True, "compiler": "GCC"},

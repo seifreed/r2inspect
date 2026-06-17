@@ -193,8 +193,8 @@ def test_batch_processing_support_helpers_cover_output_and_stats(tmp_path: Path,
     assert (output_dir / "r2inspect_batch_20260131_000000.json").exists()
 
     stats = {"packers_detected": [], "crypto_patterns": []}
-    update_packer_stats(stats, "sample.exe", {"packer_info": {"detected": True, "name": "UPX"}})
-    update_crypto_stats(stats, "sample.exe", {"crypto_info": ["AES"]})
+    update_packer_stats(stats, "sample.exe", {"packer": {"is_packed": True, "packer_type": "UPX"}})
+    update_crypto_stats(stats, "sample.exe", {"crypto": {"algorithms": [{"algorithm": "AES"}]}})
     assert stats["packers_detected"][0]["packer"] == "UPX"
     assert stats["crypto_patterns"][0]["pattern"] == "AES"
 
