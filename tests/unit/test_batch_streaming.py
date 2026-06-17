@@ -112,6 +112,19 @@ def test_aggregator_collects_csv_rows_when_enabled():
     assert set(agg.csv_rows[0]) == set(get_csv_fieldnames())
 
 
+def test_aggregator_escapes_csv_formula_in_streaming_rows():
+    """A formula-leading filename must be neutralized in the streaming CSV path,
+    matching the non-streaming path (regression for CWE-1236 divergence)."""
+    agg = StreamingBatchAggregator(
+        output_csv=True, output_formatter_cls=OutputFormatter, fieldnames=get_csv_fieldnames()
+    )
+    result = _result()
+    result["file_info"]["name"] = "=cmd|'/c calc'!A1.exe"
+    agg.on_result("f1", result)
+
+    assert agg.csv_rows[0]["name"] == "'=cmd|'/c calc'!A1.exe"
+
+
 # --- write_streaming_csv ----------------------------------------------------
 
 

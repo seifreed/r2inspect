@@ -30,6 +30,7 @@ from ..application.batch_stats import (
     update_indicator_stats,
     update_packer_stats,
 )
+from .output_csv_fields import escape_csv_formula
 
 LOW_MEMORY_ENV = "R2INSPECT_BATCH_LOW_MEMORY"
 
@@ -84,7 +85,9 @@ class StreamingBatchAggregator:
         update_compiler_stats(self.stats, result)
         if self._output_csv:
             row = self._output_formatter_cls(result)._extract_csv_data(result)
-            self.csv_rows.append({field: row.get(field, "") for field in self._fieldnames})
+            self.csv_rows.append(
+                {field: escape_csv_formula(row.get(field, "")) for field in self._fieldnames}
+            )
         return _table_projection(result)
 
 
