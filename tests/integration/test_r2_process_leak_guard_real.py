@@ -11,6 +11,7 @@ open orphan, forced-exit child reaping).
 
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 
 import psutil
@@ -65,3 +66,32 @@ def test_repeated_analysis_leaks_no_processes_or_fds() -> None:
     ), f"orphaned radare2 processes after {_CYCLES} cycles: +{leaked_children}"
     # Small tolerance: an incidentally re-opened fd is not a per-cycle leak.
     assert leaked_fds <= 2, f"file descriptors leaked across {_CYCLES} cycles: +{leaked_fds}"
+
+
+def test_repeated_analysis_on_one_inspector_does_not_grow_objects() -> None:
+    """Long-lived inspector (interactive session) must not accumulate objects.
+
+    Re-analyzing through a single inspector exercises the adapter command cache
+    and result aggregation repeatedly. A per-run container that never clears
+    would show up as monotonic live-object growth here.
+    """
+    if not _FIXTURE.exists():
+        pytest.skip("hello_pe.exe fixture missing")
+
+    with (
+        env_vars(R2INSPECT_TEST_MODE="1", R2INSPECT_ANALYSIS_DEPTH="0"),
+        create_inspector(filename=str(_FIXTURE)) as inspector,
+    ):
+        for _ in range(3):  # warmup: fill caches to steady state
+            inspector.analyze(batch_mode=True)
+        gc.collect()
+        base_objects = len(gc.get_objects())
+
+        for _ in range(_CYCLES):
+            inspector.analyze(batch_mode=True)
+        gc.collect()
+        grown = len(gc.get_objects()) - base_objects
+
+    # Empirically ~0; a generous bound still catches a real per-run leak
+    # (which would add hundreds of live objects per analyze call).
+    assert grown <= 50, f"live objects grew by {grown} over {_CYCLES} analyze() calls"
