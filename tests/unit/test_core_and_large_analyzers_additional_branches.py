@@ -81,7 +81,10 @@ def test_r2_session_cmd_and_analysis_branches() -> None:
     session.r2 = DummyR2(response="short")
     session._cleanup_required = True
 
-    assert session._run_cmd_with_timeout("i", 0.5) is True
+    # Generous timeout: DummyR2.cmd returns instantly, so this still exercises
+    # the success branch, but a tight sub-second value flakes under heavy load
+    # (e.g. parallel `-n auto` runs) when the worker thread is slow to schedule.
+    assert session._run_cmd_with_timeout("i", 30.0) is True
     assert session._run_basic_info_check() is True
 
     session.r2 = DummyR2(delay=0.05)
