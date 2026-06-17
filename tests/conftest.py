@@ -58,6 +58,17 @@ def samples_dir(_session_samples_dir: Path) -> Path:
     return _session_samples_dir
 
 
+_CANONICAL_TEST_ENV_KEYS = (
+    "R2INSPECT_TEST_MODE",
+    "R2INSPECT_ANALYSIS_DEPTH",
+    "R2INSPECT_DISABLE_FORCED_EXIT",
+    "R2INSPECT_DISABLE_PLUGINS",
+    "R2INSPECT_MAX_WORKERS",
+    "R2INSPECT_MAX_THREADS",
+)
+_CANONICAL_TEST_ENV: dict[str, str | None] = {}
+
+
 @pytest.fixture(autouse=True, scope="session")
 def cap_test_resources(tmp_path_factory: pytest.TempPathFactory) -> None:
     """
@@ -114,6 +125,13 @@ def cap_test_resources(tmp_path_factory: pytest.TempPathFactory) -> None:
 
     # Use shallow analysis depth (aa instead of aaa)
     os.environ.setdefault("R2INSPECT_ANALYSIS_DEPTH", "1")
+
+    # Snapshot the canonical test-env now that every default is set. Several
+    # tests set/del these vars directly (e.g. R2INSPECT_TEST_MODE) without
+    # restoring them; because the defaults are applied only once at session
+    # scope, a leaked deletion poisons later tests that snapshot _test_mode at
+    # construction. _reset_global_state restores this snapshot after each test.
+    _CANONICAL_TEST_ENV.update({key: os.environ.get(key) for key in _CANONICAL_TEST_ENV_KEYS})
 
     # Apply default memory limit unless overridden
     cpu_limit = os.getenv("R2INSPECT_TEST_MAX_CPU_SECONDS", "").strip()
@@ -377,6 +395,14 @@ def _reset_global_state():
             _cb._circuit_breakers.clear()
     except ImportError:
         pass
+    # Restore the canonical test-env. Tests that toggle R2INSPECT_TEST_MODE (and
+    # friends) directly and delete rather than restore them would otherwise
+    # leak a non-test-mode environment into every later test.
+    for _key, _value in _CANONICAL_TEST_ENV.items():
+        if _value is None:
+            os.environ.pop(_key, None)
+        else:
+            os.environ[_key] = _value
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
