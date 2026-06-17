@@ -29,6 +29,12 @@ logger = get_logger(__name__)
 
 TELFHASH_TIMEOUT_SECONDS = 30.0
 
+# e_phnum and e_phentsize are attacker-controlled 16-bit ELF header fields, so
+# their product can claim ~4 GiB. A real program-header table is a few KiB (a
+# handful of entries), and the PT_LOAD scan only needs the leading entries, so
+# cap the read to avoid loading a large slice of a crafted ELF into memory.
+MAX_PROGRAM_HEADER_TABLE_BYTES = 1024 * 1024
+
 
 def _resolve_telfhash_timeout() -> float:
     """Resolve the telfhash timeout, allowing an env override for fast tests."""
@@ -108,7 +114,7 @@ def _telfhash_safe_to_call(filepath: str) -> bool:
             if e_phoff == 0 or e_phnum == 0 or e_phentsize < 4:
                 return False
             fh.seek(e_phoff)
-            table = fh.read(e_phnum * e_phentsize)
+            table = fh.read(min(e_phnum * e_phentsize, MAX_PROGRAM_HEADER_TABLE_BYTES))
             # valid ELF, program headers, but no PT_LOAD -> telfhash loops
             return _has_pt_load_segment(table, e_phnum, e_phentsize, endian)
     except OSError:

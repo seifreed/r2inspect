@@ -6,7 +6,10 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 
-from r2inspect.modules.telfhash_guard import _telfhash_safe_to_call
+from r2inspect.modules.telfhash_guard import (
+    MAX_PROGRAM_HEADER_TABLE_BYTES,
+    _telfhash_safe_to_call,
+)
 
 
 def _elf64(*, e_phoff: int, e_phentsize: int, e_phnum: int, ei_data: int = 1) -> bytes:
@@ -85,3 +88,28 @@ def test_truncated_program_header_table_is_unsafe(tmp_path: Path) -> None:
 
 def test_unreadable_path_is_safe(tmp_path: Path) -> None:
     assert _telfhash_safe_to_call(str(tmp_path / "does-not-exist.elf")) is True
+
+
+def test_program_header_table_read_is_capped(tmp_path: Path) -> None:
+    """A crafted ELF whose e_phnum*e_phentsize claims more than the cap must not
+    read the whole oversized table: a PT_LOAD entry placed beyond the cap is not
+    scanned, so the guard reports the input as unsafe (telfhash skipped). Before
+    the read was capped, the full ~1 MiB table was loaded and the entry found."""
+    entsize = 56
+    entries_in_cap = MAX_PROGRAM_HEADER_TABLE_BYTES // entsize
+    e_phnum = entries_in_cap + 5  # claims more entries than fit in the cap
+    table = bytearray(e_phnum * entsize)  # all PT_NULL (0) ...
+    struct.pack_into("<I", table, (e_phnum - 1) * entsize, 1)  # ... except a PT_LOAD past the cap
+    data = _elf64(e_phoff=64, e_phentsize=entsize, e_phnum=e_phnum) + bytes(table)
+    assert _telfhash_safe_to_call(_write(tmp_path, data)) is False
+
+
+def test_pt_load_within_cap_still_detected(tmp_path: Path) -> None:
+    """The cap must not regress the normal case: a PT_LOAD in the first entry is
+    still found even when e_phnum claims a huge table."""
+    entsize = 56
+    e_phnum = (MAX_PROGRAM_HEADER_TABLE_BYTES // entsize) + 5
+    table = bytearray(e_phnum * entsize)
+    struct.pack_into("<I", table, 0, 1)  # PT_LOAD at entry 0 (within the cap)
+    data = _elf64(e_phoff=64, e_phentsize=entsize, e_phnum=e_phnum) + bytes(table)
+    assert _telfhash_safe_to_call(_write(tmp_path, data)) is True
