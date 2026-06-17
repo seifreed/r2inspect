@@ -7,8 +7,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-import pytest
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.infrastructure.r2_session import R2Session
@@ -164,12 +162,19 @@ def _open_adapters(samples_dir: Path):
     }
     sessions: dict[str, R2Session] = {}
     adapters: dict[str, R2PipeAdapter] = {}
-    for key, path in files.items():
-        session = R2Session(str(path))
-        file_size_mb = path.stat().st_size / (1024 * 1024)
-        r2 = session.open(file_size_mb)
-        sessions[key] = session
-        adapters[key] = R2PipeAdapter(r2)
+    try:
+        for key, path in files.items():
+            session = R2Session(str(path))
+            file_size_mb = path.stat().st_size / (1024 * 1024)
+            r2 = session.open(file_size_mb)
+            sessions[key] = session
+            adapters[key] = R2PipeAdapter(r2)
+    except Exception:
+        # A failure partway through would never return `sessions` to the
+        # caller, so close the already-opened ones here before re-raising.
+        for session in sessions.values():
+            session.close()
+        raise
     return adapters, sessions, files
 
 

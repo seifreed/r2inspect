@@ -36,13 +36,15 @@ def adapters(samples_dir: Path):
     }
     sessions: dict[str, R2Session] = {}
     adapters: dict[str, R2PipeAdapter] = {}
-    for key, path in paths.items():
-        session = R2Session(str(path))
-        file_size_mb = path.stat().st_size / (1024 * 1024)
-        r2 = session.open(file_size_mb)
-        sessions[key] = session
-        adapters[key] = R2PipeAdapter(r2)
+    # Open inside the try so a failure partway through still closes the
+    # sessions already opened (otherwise they leak before teardown runs).
     try:
+        for key, path in paths.items():
+            session = R2Session(str(path))
+            file_size_mb = path.stat().st_size / (1024 * 1024)
+            r2 = session.open(file_size_mb)
+            sessions[key] = session
+            adapters[key] = R2PipeAdapter(r2)
         yield adapters, paths
     finally:
         for session in sessions.values():
