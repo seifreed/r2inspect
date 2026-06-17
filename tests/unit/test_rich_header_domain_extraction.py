@@ -372,7 +372,7 @@ def test_calculate_richpe_hash_from_entries():
 
     result = calculate_richpe_hash(rich_data)
 
-    clear_bytes = bytearray()
+    clear_bytes = bytearray(struct.pack("<I", 0x536E6144)) + b"\x00" * 12
     for entry in entries:
         clear_bytes.extend(struct.pack("<I", entry["prodid"]))
         clear_bytes.extend(struct.pack("<I", entry["count"]))

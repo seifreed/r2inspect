@@ -20,7 +20,6 @@ from r2inspect.domain.services.rich_header import (
     validate_decoded_entries,
 )
 
-
 # ---------------------------------------------------------------------------
 # parse_clear_data_entries - line 225: break when partial chunk at end
 # ---------------------------------------------------------------------------
@@ -284,7 +283,7 @@ def test_calculate_richpe_hash_returns_none_for_empty_entries():
 def test_calculate_richpe_hash_computes_hash_from_entries():
     entries = [{"prodid": 0x00930001, "count": 3}]
     result = calculate_richpe_hash({"entries": entries})
-    clear_bytes = bytearray()
+    clear_bytes = bytearray(struct.pack("<I", 0x536E6144)) + b"\x00" * 12
     clear_bytes.extend(struct.pack("<I", 0x00930001))
     clear_bytes.extend(struct.pack("<I", 3))
     expected = hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
@@ -304,7 +303,7 @@ def test_calculate_richpe_hash_entries_multiple():
         {"prodid": 0x00A00002, "count": 2},
     ]
     result = calculate_richpe_hash({"entries": entries})
-    clear_bytes = bytearray()
+    clear_bytes = bytearray(struct.pack("<I", 0x536E6144)) + b"\x00" * 12
     for entry in entries:
         clear_bytes.extend(struct.pack("<I", entry["prodid"]))
         clear_bytes.extend(struct.pack("<I", entry["count"]))

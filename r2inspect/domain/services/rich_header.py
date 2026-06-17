@@ -262,7 +262,12 @@ def calculate_richpe_hash(rich_data: dict[str, Any]) -> str | None:
     entries = rich_data.get("entries", [])
     if not entries:
         return None
-    clear_bytes = bytearray()
+    # The canonical RichPE hash is md5 of pefile's decoded clear_data, which
+    # begins with the "DanS" signature followed by three zeroed padding dwords
+    # before the comp-id/count pairs. Omitting that 16-byte prefix yields a hash
+    # that matches neither pefile nor any other tool's RichPE IOC.
+    clear_bytes = bytearray(struct.pack("<I", 0x536E6144))
+    clear_bytes.extend(b"\x00" * 12)
     for entry in entries:
         prodid = entry.get("prodid", 0)
         count = entry.get("count", 0)
