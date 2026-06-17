@@ -53,7 +53,10 @@ def test_central_facade_modules_stay_small() -> None:
     failures: list[str] = []
 
     for path, limit in FILE_LIMITS.items():
-        line_count = path.read_text(encoding="utf-8").count("\n") + 1
+        # Count lines the way the limits were set (wc -l). The previous
+        # ``count("\n") + 1`` over-reported every newline-terminated file by one,
+        # so a file sitting exactly at its limit failed spuriously.
+        line_count = len(path.read_text(encoding="utf-8").splitlines())
         if line_count > limit:
             failures.append(
                 f"{path.relative_to(PROJECT_ROOT)} has {line_count} lines (limit {limit})"
