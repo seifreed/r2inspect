@@ -9,14 +9,21 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+_OCTET = r"(?:25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])"
+
 SUSPICIOUS_PATTERNS = {
     "urls": r"https?://[^\s]+",
-    "ips": r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b",
+    # Bound each octet to 0-255 so dotted-decimal version strings (e.g.
+    # 4.0.30319.1) are not mistaken for IP addresses.
+    "ips": rf"\b(?:{_OCTET}\.){{3}}{_OCTET}\b",
     "emails": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
     "registry": r"(?:HKEY_[A-Z_]+|HKLM|HKCU|HKCR|HKU|HKCC|SOFTWARE|SYSTEM)\\[\\A-Za-z0-9_\-]+",
     "files": r"[A-Za-z]:\\[\\A-Za-z0-9_\-\.]+\.[A-Za-z]{2,4}",
     "api_calls": r"(VirtualAlloc|WriteProcessMemory|CreateRemoteThread|LoadLibrary)",
-    "crypto": r"(AES|DES|RSA|MD5|SHA1|SHA256|RC4)",
+    # Anchor crypto algorithm names on word boundaries: matched case-insensitively
+    # without boundaries, "DES" hit ordinary words like "modes"/"nodes" and "RSA"
+    # hit "rehearsal", flagging benign strings as crypto.
+    "crypto": r"\b(AES|DES|RSA|MD5|SHA1|SHA256|RC4)\b",
     "mutex": r"(?:Global\\|Local\\)[A-Za-z0-9_\-]+",
     "base64": r"[A-Za-z0-9+/]{20,}={0,2}",
 }
