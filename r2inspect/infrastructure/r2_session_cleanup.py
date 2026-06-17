@@ -133,7 +133,28 @@ def force_close_process(r2_instance: Any) -> None:
     process = getattr(r2_instance, "process", None)
     if process is None:
         return
+
+    # Close the stdio pipes explicitly: relying on GC leaks file descriptors
+    # across a batch run, eventually exhausting the process FD limit.
+    for stream_name in ("stdin", "stdout", "stderr"):
+        stream = getattr(process, stream_name, None)
+        if stream is None:
+            continue
+        try:
+            stream.close()
+        except Exception as exc:
+            _log.debug("Failed to close r2 %s: %s", stream_name, exc)
+
+    # Reap the process so it does not linger as a zombie; wait() after
+    # terminate() releases the OS process table entry.
     try:
-        process.terminate()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=1.0)
     except Exception as exc:
         _log.debug("Failed to terminate r2 process: %s", exc)
+        try:
+            if process.poll() is None:
+                process.kill()
+        except Exception as kill_error:
+            _log.debug("Failed to kill r2 process: %s", kill_error)
