@@ -135,6 +135,18 @@ def test_determine_csv_file_path_with_directory(tmp_path):
     assert filename == f"r2inspect_{timestamp}.csv"
 
 
+def test_determine_csv_file_path_with_json_output_target(tmp_path):
+    """A .json -o target is a file (e.g. combined -j -c), not a directory; the
+    CSV companion must be a sibling file, never written *under* the .json path
+    (which would raise NotADirectoryError)."""
+    output_path = tmp_path / "report.json"
+    csv_file, filename = determine_csv_file_path(output_path, "20240101_120000")
+
+    assert csv_file == tmp_path / "report.csv"
+    assert filename == "report.csv"
+    assert csv_file.parent == tmp_path  # sibling, not a child of report.json
+
+
 def test_create_json_batch_summary_creates_file(tmp_path):
     """Test JSON batch summary file creation"""
     results = {"file1.exe": {"file_info": {"name": "file1.exe", "size": 1024}}}
