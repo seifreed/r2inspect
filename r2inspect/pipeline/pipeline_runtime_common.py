@@ -45,6 +45,25 @@ def merge_into_plain_context(context: dict[str, Any], stage_result: dict[str, An
     context["results"] = context_results
 
 
+def detected_file_format(context: dict[str, Any], default: str = "Unknown") -> str:
+    """Resolve the detected file format from the pipeline context.
+
+    FormatDetectionStage records the format by mutating ``context["metadata"]``,
+    which later stages see directly in sequential mode. In parallel mode each
+    stage runs on a private deepcopy and only its returned results dict is merged
+    back, so that metadata mutation is invisible downstream; fall back to the
+    value the stage also returns under ``results["format_detection"]``.
+    """
+    metadata = context.get("metadata") or {}
+    fmt = metadata.get("file_format")
+    if fmt:
+        return str(fmt)
+    results = context.get("results") or {}
+    format_detection = results.get("format_detection") or {}
+    fmt = format_detection.get("file_format")
+    return str(fmt) if fmt else default
+
+
 def detect_via_header_bytes(filename: str) -> str | None:
     try:
         with open(filename, "rb") as handle:

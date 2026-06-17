@@ -17,6 +17,7 @@ from ..interfaces import (
     AnalyzerRegistryLike,
     ConfigLike,
 )
+from .pipeline_runtime_common import detected_file_format
 from .stages_common import RegistryStage, default_analyzer_factory
 
 logger = logging.getLogger(__name__)
@@ -54,12 +55,11 @@ class FormatAnalysisStage(RegistryStage):
             config=config,
             filename=filename,
             analyzer_factory=analyzer_factory,
-            condition=lambda ctx: ctx.get("metadata", {}).get("file_format")
-            in {"PE", "ELF", "Mach-O"},
+            condition=lambda ctx: detected_file_format(ctx) in {"PE", "ELF", "Mach-O"},
         )
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
-        file_format = context.get("metadata", {}).get("file_format", "Unknown")
+        file_format = detected_file_format(context)
         results = self._analyze_known_format(file_format, context)
         if results:
             return results

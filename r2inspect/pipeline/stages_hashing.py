@@ -14,6 +14,7 @@ from ..interfaces import (
     HashingAnalyzerInterface,
 )
 from ..registry.analyzer_registry import AnalyzerCategory
+from .pipeline_runtime_common import detected_file_format
 from .stages_common import RegistryStage, default_analyzer_factory
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class HashingStage(RegistryStage):
         )
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
-        file_format = context.get("metadata", {}).get("file_format", "Unknown")
+        file_format = detected_file_format(context)
         hashing_analyzers = self.registry.get_by_category(AnalyzerCategory.HASHING)
 
         results: dict[str, Any] = {}
