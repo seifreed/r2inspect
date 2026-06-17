@@ -71,3 +71,31 @@ def test_circuit_half_open_allows_only_single_probe():
     t2.join()
 
     assert sorted(results) == ["blocked", "ok"]
+
+
+def test_circuit_breaker_clears_probe_on_base_exception():
+    # A BaseException (e.g. KeyboardInterrupt) from a half-open probe escapes
+    # the expected-exception handler. The in-flight probe flag must still be
+    # cleared, otherwise the breaker is wedged into raising CircuitBreakerError
+    # on every later call and can never recover.
+    breaker = CircuitBreaker(failure_threshold=1, recovery_timeout=0.0)
+
+    with pytest.raises(RuntimeError):
+        breaker.call(_raise_runtime)
+    assert breaker.state == CircuitState.OPEN
+
+    with pytest.raises(KeyboardInterrupt):
+        breaker.call(_raise_keyboard_interrupt)
+    assert breaker.half_open_probe_in_flight is False
+
+    # The breaker must recover on the next successful call, not stay wedged.
+    assert breaker.call(lambda: "ok") == "ok"
+    assert breaker.state == CircuitState.CLOSED
+
+
+def _raise_runtime():
+    raise RuntimeError("boom")
+
+
+def _raise_keyboard_interrupt():
+    raise KeyboardInterrupt

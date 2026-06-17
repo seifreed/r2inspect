@@ -77,6 +77,14 @@ class CircuitBreaker:
         except self.expected_exception:
             self._on_failure()
             raise
+        except BaseException:
+            # An unexpected exception (e.g. KeyboardInterrupt) escaped without
+            # running the success/failure callbacks. Clear the in-flight probe
+            # so a half-open breaker is not wedged into permanently raising
+            # CircuitBreakerError on every later call.
+            with self.lock:
+                self.half_open_probe_in_flight = False
+            raise
 
     def _on_success(self) -> None:
         with self.lock:
