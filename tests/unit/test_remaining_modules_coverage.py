@@ -16,8 +16,8 @@ def _full_disabled_result():
             "ASLR": {"enabled": False, "high_entropy": False},
             "DEP": {"enabled": False},
             "CFG": {"enabled": False},
-            "Integrity": {"enabled": False},
-            "StackCookies": {"enabled": False},
+            "Force_Integrity": {"enabled": False},
+            "Stack_Cookies": {"enabled": False},
             "SafeSEH": {"enabled": False},
             "Authenticode": {"enabled": False},
         },
@@ -33,6 +33,21 @@ def test_generate_recommendations_all_disabled():
     assert "DEP/NX" in types
     assert "Control Flow Guard" in types
     assert "Stack Cookies" in types
+
+
+def test_generate_recommendations_suppressed_when_integrity_and_cookies_enabled():
+    # Force_Integrity and Stack_Cookies are the canonical mitigation keys. When
+    # enabled, their recommendations must NOT be emitted. The rules previously
+    # looked up "Integrity"/"StackCookies", which never matched, so these two
+    # recommendations fired unconditionally even on hardened binaries.
+    result = _full_disabled_result()
+    result["mitigations"]["Force_Integrity"] = {"enabled": True}
+    result["mitigations"]["Stack_Cookies"] = {"enabled": True}
+    recs = generate_recommendations(result)
+    types = [r["mitigation"] for r in recs]
+    assert "Stack Cookies" not in types
+    recommendations = [r["recommendation"] for r in recs]
+    assert "Sign the binary with a digital certificate" not in recommendations
 
 
 def test_generate_recommendations_aslr_no_high_entropy():
