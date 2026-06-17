@@ -1,5 +1,7 @@
+import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -10,6 +12,14 @@ import pytest
 pytestmark = pytest.mark.requires_r2
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _signal_group(proc: subprocess.Popen, sig: int) -> None:
+    """Signal the whole process group so the CLI's radare2 children die with it."""
+    try:
+        os.killpg(os.getpgid(proc.pid), sig)
+    except (ProcessLookupError, PermissionError):
+        proc.send_signal(sig)
 
 
 def _run_cli(args, input_data=None, timeout=60):
@@ -87,18 +97,29 @@ def test_cli_batch_json_output(tmp_path):
         "1",
         "--quiet",
     ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    # start_new_session puts the CLI in its own process group so we can signal
+    # the whole tree. Terminating only the CLI would orphan the radare2 children
+    # it spawned (SIGKILL gives it no chance to reap them).
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        start_new_session=True,
+    )
     deadline = time.time() + 30
     while time.time() < deadline:
         if output_dir.exists() and any(p.suffix == ".json" for p in output_dir.iterdir()):
-            proc.terminate()
+            _signal_group(proc, signal.SIGTERM)
             break
         if proc.poll() is not None:
             break
         time.sleep(0.5)
 
     if proc.poll() is None:
-        proc.kill()
+        _signal_group(proc, signal.SIGKILL)
+    with contextlib.suppress(subprocess.TimeoutExpired):
         proc.wait(timeout=5)
 
     assert output_dir.exists()
