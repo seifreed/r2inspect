@@ -173,14 +173,25 @@ def ensure_sample_fixture_tree(_session_samples_dir: Path) -> None:
         # is present but its destination is gone — e.g. a stale pytest tmpdir from
         # a previous run). Remove it so `symlink_to` below doesn't FileExistsError.
         if target.is_symlink():
-            target.unlink()
+            target.unlink(missing_ok=True)
         try:
             target.symlink_to(source)
+        except FileExistsError:
+            # A parallel pytest-xdist worker created it first; nothing to do.
+            continue
         except OSError:
-            target.write_bytes(source.read_bytes())
+            if not target.exists():
+                target.write_bytes(source.read_bytes())
         created_files.append(target)
 
     yield
+
+    # Under pytest-xdist the per-worker sessions overlap: a worker that finishes
+    # first must NOT tear down the shared tree while slower workers are still
+    # running, or their tests lose the fixtures mid-run. The binaries are
+    # gitignored and regenerated on the next run, so leaving them is harmless.
+    if os.environ.get("PYTEST_XDIST_WORKER") is not None:
+        return
 
     for target in created_files:
         try:

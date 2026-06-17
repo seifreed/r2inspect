@@ -61,6 +61,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-timeout>=2.0.0",
+    "pytest-xdist>=3.0.0",
     "pre-commit>=3.0.0",
     "bandit>=1.7.0",
     "pip-audit>=2.7.0",
@@ -204,6 +205,11 @@ exclude = "^(venv|env|\\.venv|build|dist|\\.qlty|bench_samples|benchmarks|sample
 # interrupts the blocking syscall on the main thread) instead of leaving a
 # zombie. 60s is far above any legitimate single test (the slowest real-r2
 # tests are a few seconds).
+# pytest-xdist is available for parallel runs (`pytest -n auto`, ~16x on this
+# box) but is NOT enabled by default yet: the suite still has a few timing-
+# and order-sensitive tests that flake under heavy concurrency, and the 100%
+# coverage gate must stay deterministic. Once those are hardened, add
+# `-n auto` here.
 addopts = "--timeout=60"
 markers = [
     "unit: fast unit-level coverage tests",
