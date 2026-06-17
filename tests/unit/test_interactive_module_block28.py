@@ -51,8 +51,10 @@ from r2inspect.cli.interactive import run_interactive_mode
 from r2inspect.factory import create_inspector
 
 inspector = create_inspector("samples/fixtures/hello_pe.exe")
-run_interactive_mode(inspector, {})
-inspector.close()
+try:
+    run_interactive_mode(inspector, {})
+finally:
+    inspector.close()
 """
     proc = subprocess.run(
         [sys.executable, "-c", script],

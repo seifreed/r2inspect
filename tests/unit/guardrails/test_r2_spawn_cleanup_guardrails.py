@@ -108,3 +108,60 @@ def test_real_r2session_tests_guarantee_cleanup() -> None:
         "These tests open a real R2Session and close it outside try/finally; "
         "a failing assertion leaks the radare2 process:\n  " + "\n  ".join(sorted(violations))
     )
+
+
+def _is_real_create_inspector(node: ast.AST) -> bool:
+    # A real spawn passes no session_factory=/inspector_factory= (fakes inject
+    # those), so it relies on the default factory that opens a radare2 process.
+    _INJECTED = {"session_factory", "inspector_factory"}
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "create_inspector"
+        and not any(kw.arg in _INJECTED for kw in node.keywords)
+    )
+
+
+def _context_managed_inspectors(func: ast.AST) -> set[int]:
+    # `with create_inspector(...) as x:` is leak-safe — __exit__ closes the
+    # session on any exit path, so those spawns must not be flagged.
+    managed: set[int] = set()
+    for node in ast.walk(func):
+        if isinstance(node, ast.With | ast.AsyncWith):
+            for item in node.items:
+                if _is_real_create_inspector(item.context_expr):
+                    managed.add(id(item.context_expr))
+    return managed
+
+
+def _opens_real_inspector(func: ast.AST) -> bool:
+    # create_inspector() spawns the same radare2 process as a direct R2Session
+    # open. Flag only plain-assignment spawns; context-managed ones are safe.
+    managed = _context_managed_inspectors(func)
+    for node in ast.walk(func):
+        if _is_real_create_inspector(node) and id(node) not in managed:
+            return True
+    return False
+
+
+def test_real_inspector_tests_guarantee_cleanup() -> None:
+    violations: list[str] = []
+    for path in TESTS_ROOT.rglob("test_*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            if _is_fixture_or_generator(node) or _uses_fake_r2(node):
+                continue
+            if (
+                _opens_real_inspector(node)
+                and (_calls_method(node, "close") or _calls_method(node, "quit"))
+                and not _has_finally(node)
+            ):
+                violations.append(f"{path.relative_to(TESTS_ROOT)}::{node.name}")
+
+    assert not violations, (
+        "These tests create_inspector() a real radare2 session and close it "
+        "outside try/finally (or a `with`); a failing assertion leaks the "
+        "radare2 process:\n  " + "\n  ".join(sorted(violations))
+    )
