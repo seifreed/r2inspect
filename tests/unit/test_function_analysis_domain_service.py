@@ -49,6 +49,16 @@ def test_build_function_stats_accepts_string_sizes() -> None:
     assert result["largest_functions"][0] == ("func2", 25)
 
 
+def test_build_function_stats_skips_malformed_entries() -> None:
+    functions = ["bad", {"name": "main", "size": 12, "type": "fcn"}]
+
+    result = build_function_stats(functions)
+
+    assert result["total_functions"] == 1
+    assert result["function_types"] == {"fcn": 1}
+    assert result["largest_functions"] == [("main", 12)]
+
+
 def test_group_functions_by_machoc_hash_keeps_only_duplicates() -> None:
     hashes = {"a": "h1", "b": "h1", "c": "h2", "d": "h3", "e": "h3"}
 

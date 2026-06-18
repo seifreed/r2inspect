@@ -62,6 +62,10 @@ def build_function_stats(functions: list[dict[str, Any]] | None) -> dict[str, An
     if not functions:
         return {}
 
+    functions = [func for func in functions if isinstance(func, dict)]
+    if not functions:
+        return {}
+
     total_functions = len(functions)
     sizes = [
         _coerce_function_size(func.get("size"))
