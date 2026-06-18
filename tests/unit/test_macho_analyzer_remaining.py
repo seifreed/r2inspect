@@ -542,9 +542,9 @@ def test_supports_format_all_variants():
 def test_get_security_features():
     """get_security_features delegates to the security module."""
     # Provide data that the security module reads:
-    # - ij for file info (is_pie checks info)
+    # - ij for file info (is_pie via bin.pic, encrypted via bin.crypto)
     # - isj for symbols (stack_canary, arc checks)
-    # - ihj for headers (encrypted, signed checks)
+    # - iH load-command dump (signed check) is fetched via adapter.cmd
     file_info = {
         "bin": {
             "arch": "arm64",
@@ -557,7 +557,6 @@ def test_get_security_features():
         cmdj_map={
             "ij": file_info,
             "isj": [],
-            "ihj": [],
         }
     )
     result = analyzer.get_security_features()

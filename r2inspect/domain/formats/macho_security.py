@@ -36,12 +36,15 @@ def has_arc(symbols: list[dict[str, Any]] | None) -> bool:
     return False
 
 
-def is_encrypted(headers: list[dict[str, Any]] | None) -> bool:
-    for header in headers or []:
-        if header.get("type") in {"LC_ENCRYPTION_INFO", "LC_ENCRYPTION_INFO_64"}:
-            return int(header.get("cryptid", 0)) > 0
-    return False
+def is_encrypted(bin_info: dict[str, Any] | None) -> bool:
+    # r2 reports Mach-O encryption (LC_ENCRYPTION_INFO with cryptid > 0) as the
+    # ij.bin/iIj "crypto" boolean. The previous code scanned ihj, which carries
+    # the mach header fields (no load-command "type"), so it was always False.
+    return bool(bin_info and bin_info.get("crypto"))
 
 
-def is_signed(headers: list[dict[str, Any]] | None) -> bool:
-    return any(header.get("type") == "LC_CODE_SIGNATURE" for header in headers or [])
+def is_signed(load_commands_text: str | None) -> bool:
+    # The code-signature load command is not in ihj (mach header fields); it is
+    # listed in the load-command dump (iH) as "LC_CODE_SIGNATURE". The previous
+    # code matched header["type"] in the ihj list, which never had it.
+    return "LC_CODE_SIGNATURE" in str(load_commands_text or "")

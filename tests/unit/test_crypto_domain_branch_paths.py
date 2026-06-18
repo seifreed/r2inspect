@@ -137,26 +137,23 @@ def test_has_arc_returns_false_for_empty() -> None:
 
 
 def test_is_encrypted_returns_true() -> None:
-    """is_encrypted returns True when LC_ENCRYPTION_INFO header with cryptid > 0."""
-    headers = [{"type": "LC_ENCRYPTION_INFO", "cryptid": 1}]
-    assert msd.is_encrypted(headers) is True
+    """is_encrypted returns True when r2 reports ij.bin.crypto."""
+    assert msd.is_encrypted({"crypto": True}) is True
 
 
 def test_is_encrypted_returns_false_for_no_match() -> None:
-    """is_encrypted returns False when no encryption header matches."""
-    headers = [{"type": "LC_LOAD_DYLIB"}]
-    assert msd.is_encrypted(headers) is False
+    """is_encrypted returns False when crypto is unset/false."""
+    assert msd.is_encrypted({"crypto": False}) is False
 
 
 def test_is_signed_returns_true() -> None:
-    """is_signed returns True when LC_CODE_SIGNATURE header is present."""
-    headers = [{"type": "LC_CODE_SIGNATURE"}]
-    assert msd.is_signed(headers) is True
+    """is_signed returns True when LC_CODE_SIGNATURE is in the load-command dump."""
+    assert msd.is_signed("0x100000430  cmd  0x1d LC_CODE_SIGNATURE") is True
 
 
 def test_is_signed_returns_false_for_empty() -> None:
-    """is_signed returns False when header list is empty."""
-    assert msd.is_signed([]) is False
+    """is_signed returns False when the load-command text is empty."""
+    assert msd.is_signed("") is False
 
 
 # ---------------------------------------------------------------------------

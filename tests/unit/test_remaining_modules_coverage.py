@@ -358,18 +358,15 @@ def test_macho_has_arc_false():
 
 
 def test_macho_is_encrypted_true():
-    headers = [{"type": "LC_ENCRYPTION_INFO", "cryptid": 1}]
-    assert is_encrypted(headers) is True
+    assert is_encrypted({"crypto": True}) is True
 
 
 def test_macho_is_encrypted_zero_cryptid():
-    headers = [{"type": "LC_ENCRYPTION_INFO", "cryptid": 0}]
-    assert is_encrypted(headers) is False
+    assert is_encrypted({"crypto": False}) is False
 
 
 def test_macho_is_encrypted_wrong_type():
-    headers = [{"type": "LC_LOAD_DYLIB"}]
-    assert is_encrypted(headers) is False
+    assert is_encrypted({}) is False
 
 
 def test_macho_is_encrypted_none():
@@ -377,13 +374,11 @@ def test_macho_is_encrypted_none():
 
 
 def test_macho_is_signed_true():
-    headers = [{"type": "LC_CODE_SIGNATURE"}]
-    assert is_signed(headers) is True
+    assert is_signed("0x100000430  cmd  0x1d LC_CODE_SIGNATURE") is True
 
 
 def test_macho_is_signed_false():
-    headers = [{"type": "LC_LOAD_DYLIB"}]
-    assert is_signed(headers) is False
+    assert is_signed("0x100000400  cmd  0x0c LC_LOAD_DYLIB") is False
 
 
 def test_macho_is_signed_none():
@@ -694,7 +689,7 @@ def test_pe_analyzer_analyze_returns_dict():
 # ---------------------------------------------------------------------------
 # 18. macho_security – test pure domain helpers via stub adapter
 # ---------------------------------------------------------------------------
-from r2inspect.modules.macho_security import _get_headers, _get_info, get_security_features
+from r2inspect.modules.macho_security import _get_info, get_security_features
 
 
 class _MachoStubAdapter:
@@ -711,28 +706,6 @@ class _MachoStubAdapter:
 class _MachoLogger:
     def error(self, msg):
         pass
-
-
-def test_macho_get_headers_none_adapter():
-    assert _get_headers(None) == []
-
-
-def test_macho_get_headers_list():
-    class Stub:
-        def get_headers_json(self):
-            return [{"type": "LC_CODE_SIGNATURE"}]
-
-    result = _get_headers(Stub())
-    assert result == [{"type": "LC_CODE_SIGNATURE"}]
-
-
-def test_macho_get_headers_dict_wrapped():
-    class Stub:
-        def get_headers_json(self):
-            return {"type": "LC_CODE_SIGNATURE"}
-
-    result = _get_headers(Stub())
-    assert result == [{"type": "LC_CODE_SIGNATURE"}]
 
 
 def test_macho_get_info_none_adapter():

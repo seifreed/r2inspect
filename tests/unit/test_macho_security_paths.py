@@ -24,24 +24,24 @@ class _Adapter:
         return self._headers
 
 
-def test_get_headers_returns_empty_for_none_adapter() -> None:
-    assert macho_security._get_headers(None) == []
+def test_get_load_commands_text_returns_empty_for_none_adapter() -> None:
+    assert macho_security._get_load_commands_text(None) == ""
 
 
-def test_get_headers_handles_dict_adapter_returns_list() -> None:
-    adapter = _Adapter(headers={"type": "mach-o"})
-    assert macho_security._get_headers(adapter) == [{"type": "mach-o"}]
+def test_get_load_commands_text_returns_command_output() -> None:
+    class _CmdAdapter:
+        def cmd(self, command: str) -> str:
+            return "0x100 cmd LC_CODE_SIGNATURE" if command == "iH" else ""
+
+    assert "LC_CODE_SIGNATURE" in macho_security._get_load_commands_text(_CmdAdapter())
 
 
-def test_get_headers_with_list_adapter() -> None:
-    headers = [{"type": "x"}, {"type": "y"}]
-    adapter = _Adapter(headers=headers)
-    assert macho_security._get_headers(adapter) == headers
+def test_get_load_commands_text_non_str_returns_empty() -> None:
+    class _BadCmd:
+        def cmd(self, command: str) -> int:
+            return 123
 
-
-def test_get_headers_with_invalid_payload() -> None:
-    adapter = _Adapter(headers="invalid")
-    assert macho_security._get_headers(adapter) == []
+    assert macho_security._get_load_commands_text(_BadCmd()) == ""
 
 
 def test_get_info_returns_none_for_empty_payload() -> None:

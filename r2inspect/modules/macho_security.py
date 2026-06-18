@@ -25,13 +25,14 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
     }
 
     try:
-        features["pie"] = is_pie(_get_info(adapter))
+        info = _get_info(adapter)
+        features["pie"] = is_pie(info)
         symbols = adapter.get_symbols()
         features["stack_canary"] = has_stack_canary(symbols)
         features["arc"] = has_arc(symbols)
-        headers = _get_headers(adapter)
-        features["encrypted"] = is_encrypted(headers)
-        features["signed"] = is_signed(headers)
+        bin_info = info.get("bin", {}) if isinstance(info, dict) else {}
+        features["encrypted"] = is_encrypted(bin_info)
+        features["signed"] = is_signed(_get_load_commands_text(adapter))
         features["nx"] = True
     except Exception as exc:
         logger.error("Error checking security features: %s", exc)
@@ -39,16 +40,14 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
     return features
 
 
-def _get_headers(adapter: Any) -> list[dict[str, Any]]:
-    if adapter is None:
-        return []
-    if hasattr(adapter, "get_headers_json"):
-        headers = adapter.get_headers_json()
-        if isinstance(headers, dict):
-            return [headers]
-        if isinstance(headers, list):
-            return headers
-    return []
+def _get_load_commands_text(adapter: Any) -> str:
+    # Mach-O load commands (LC_CODE_SIGNATURE etc.) are not in ihj; they are in
+    # the iH load-command dump.
+    getter = getattr(adapter, "cmd", None)
+    if not callable(getter):
+        return ""
+    text = getter("iH")
+    return text if isinstance(text, str) else ""
 
 
 def _get_info(adapter: Any) -> dict[str, Any] | None:

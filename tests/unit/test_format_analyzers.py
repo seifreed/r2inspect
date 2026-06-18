@@ -94,20 +94,17 @@ def test_elf_parse_comment_compiler_info():
 
 
 def test_macho_security_features():
-    headers = [
-        {"type": "LC_ENCRYPTION_INFO", "cryptid": 1},
-        {"type": "LC_CODE_SIGNATURE"},
-    ]
+    # encrypted comes from ij.bin.crypto; signed from the iH load-command dump.
     adapter = R2PipeAdapter(
         FakeR2(
+            cmd_map={"iH": "0x100000430  cmd  0x1d LC_CODE_SIGNATURE\n"},
             cmdj_map={
-                "ij": {"bin": {"filetype": "PIE"}},
+                "ij": {"bin": {"pic": True, "crypto": True}},
                 "isj": [
                     {"name": "___stack_chk_fail"},
                     {"name": "_objc_retain"},
                 ],
-                "ihj": headers,
-            }
+            },
         )
     )
     macho = MachOAnalyzer(adapter, DummyConfig())
