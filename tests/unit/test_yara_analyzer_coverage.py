@@ -531,6 +531,23 @@ def test_process_matches_skips_malformed_items():
     assert result[0]["rule"] == "TestRule"
 
 
+def test_process_matches_handles_malformed_fields():
+    config = FakeConfig("/tmp/rules")
+    analyzer = YaraAnalyzer(FakeAdapter(), config=config)
+
+    class BadFieldsMatch:
+        rule = "BadRule"
+        namespace = "default"
+        tags = "not-a-list"
+        meta = ["not", "a", "dict"]
+        strings = [FakeStringMatch("$a", [FakeMatchInstance(0x10, b"ok")])]
+
+    result = analyzer._process_matches([BadFieldsMatch()])
+    assert len(result) == 1
+    assert result[0]["tags"] == []
+    assert result[0]["meta"] == {}
+
+
 # ---------------------------------------------------------------------------
 # create_default_rules
 # ---------------------------------------------------------------------------

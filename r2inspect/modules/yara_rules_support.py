@@ -53,22 +53,36 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
         for match in yara_matches:
             if not hasattr(match, "rule") or not hasattr(match, "strings"):
                 continue
+            tags = getattr(match, "tags", [])
+            meta = getattr(match, "meta", {})
+            strings = getattr(match, "strings", [])
+            if not isinstance(strings, (list, tuple)):
+                continue
             match_info = {
-                "rule": match.rule,
-                "namespace": match.namespace,
-                "tags": list(match.tags),
-                "meta": dict(match.meta),
+                "rule": str(getattr(match, "rule", "")),
+                "namespace": str(getattr(match, "namespace", "")),
+                "tags": list(tags) if isinstance(tags, (list, tuple, set)) else [],
+                "meta": dict(meta) if isinstance(meta, dict) else {},
                 "strings": [],
             }
-            for string_match in match.strings:
+            for string_match in strings:
                 if not hasattr(string_match, "identifier") or not hasattr(string_match, "instances"):
                     continue
+                instances = getattr(string_match, "instances", [])
+                if not isinstance(instances, (list, tuple)):
+                    continue
                 string_info = {"identifier": string_match.identifier, "instances": []}
-                for instance in string_match.instances:
+                for instance in instances:
                     if not hasattr(instance, "offset") or not hasattr(instance, "matched_data"):
                         continue
-                    matched_data = instance.matched_data.decode("utf-8", errors="ignore")
-                    length = getattr(instance, "length", len(instance.matched_data))
+                    matched_data_raw = instance.matched_data
+                    if isinstance(matched_data_raw, (bytes, bytearray)):
+                        matched_data = matched_data_raw.decode("utf-8", errors="ignore")
+                        default_length = len(matched_data_raw)
+                    else:
+                        matched_data = str(matched_data_raw)
+                        default_length = len(matched_data)
+                    length = getattr(instance, "length", default_length)
                     string_info["instances"].append(
                         {"offset": instance.offset, "matched_data": matched_data, "length": length}
                     )
