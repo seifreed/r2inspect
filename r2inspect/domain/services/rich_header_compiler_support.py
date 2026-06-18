@@ -28,6 +28,8 @@ def parse_compiler_entries(
     entries: list[dict[str, Any]], compiler_products: dict[int, str]
 ) -> list[dict[str, Any]]:
     compilers: list[dict[str, Any]] = []
+    if not isinstance(entries, list):
+        return compilers
     for entry in entries:
         if not isinstance(entry, dict):
             continue

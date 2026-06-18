@@ -197,6 +197,12 @@ def test_parse_compiler_entries_empty():
     assert result == []
 
 
+def test_parse_compiler_entries_non_list():
+    result = parse_compiler_entries(None)  # type: ignore[arg-type]
+
+    assert result == []
+
+
 def test_parse_compiler_entries_skips_malformed_entries():
     entries = ["bad", {"prodid": 0x00930001, "count": 10}]
 
