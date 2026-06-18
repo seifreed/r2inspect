@@ -21,7 +21,7 @@ def check_executable_signature(file_path: Path) -> bool:
                 or is_script_executable(header)
             )
 
-    except Exception:
+    except FileNotFoundError:
         return False
 
 

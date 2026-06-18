@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+import r2inspect.application.batch_signatures as batch_signatures
 from r2inspect.cli import batch_processing
 from r2inspect.cli.batch_processing import (
     _flush_coverage_data,
@@ -52,6 +53,23 @@ def test_check_executable_signature_pe_file(tmp_path: Path) -> None:
     """check_executable_signature wrapper returns True for a PE file."""
     pe = _write_pe_file(tmp_path / "sample.exe")
     assert check_executable_signature(pe) is True
+
+
+def test_check_executable_signature_propagates_read_errors(tmp_path: Path) -> None:
+    """Permission/read failures are discovery errors, not non-executable files."""
+    target = tmp_path / "sample.bin"
+    target.write_bytes(b"MZ" + b"\x00" * 62)
+
+    def _raising_open(*_args: object, **_kwargs: object) -> object:
+        raise PermissionError("denied")
+
+    original_open = getattr(batch_signatures, "open", open)
+    batch_signatures.open = _raising_open  # type: ignore[attr-defined]
+    try:
+        with pytest.raises(PermissionError, match="denied"):
+            check_executable_signature(target)
+    finally:
+        batch_signatures.open = original_open  # type: ignore[attr-defined]
 
 
 def test_is_executable_signature_pe_mime() -> None:
