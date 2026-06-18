@@ -47,7 +47,13 @@ def _coerce_resource_int(resource: dict[str, Any], field: str) -> int | None:
 
 
 def _resource_debug_name(resource: dict[str, Any]) -> str:
-    return str(resource.get("name") or resource.get("type_name", "UNKNOWN"))
+    name = resource.get("name")
+    if isinstance(name, str) and name:
+        return name
+    type_name = resource.get("type_name")
+    if isinstance(type_name, str) and type_name:
+        return type_name
+    return "UNKNOWN"
 
 
 def analyze_resource_data(
