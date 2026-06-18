@@ -462,8 +462,8 @@ def test_build_import_statistics_coerces_malformed_fields():
     )
 
     assert stats["total_imports"] == 2
-    assert stats["category_distribution"] == {"Unknown": 2}
-    assert stats["risk_distribution"] == {"Unknown": 2}
+    assert stats["category_distribution"] == {"unknown": 2}
+    assert stats["risk_distribution"] == {"unknown": 2}
     assert stats["library_distribution"] == {"unknown": 2}
     assert stats["suspicious_patterns"] == []
 

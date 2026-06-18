@@ -179,8 +179,8 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     if not valid_imports:
         return stats
-    categories = [_text_value(imp.get("category"), "Unknown") for imp in valid_imports]
-    risks = [_text_value(imp.get("risk_level"), "Unknown") for imp in valid_imports]
+    categories = [_text_value(imp.get("category"), "unknown") for imp in valid_imports]
+    risks = [_text_value(imp.get("risk_level"), "unknown") for imp in valid_imports]
     libraries = [_library_value(imp) for imp in valid_imports]
     stats["total_imports"] = len(valid_imports)
     stats["category_distribution"] = dict(Counter(categories))
