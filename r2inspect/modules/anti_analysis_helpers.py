@@ -9,6 +9,8 @@ from typing import Any
 
 def _to_int(value: Any) -> int:
     try:
+        if isinstance(value, str):
+            return int(value, 0)
         return int(value)
     except (TypeError, ValueError):
         return 0

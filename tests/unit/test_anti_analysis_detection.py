@@ -34,6 +34,16 @@ def test_anti_debug_with_is_debugger_present_api():
     )
 
 
+def test_anti_debug_accepts_hex_plt_address():
+    detector = _make_detector(
+        imports=[{"name": "IsDebuggerPresent", "plt": "0x1000", "libname": "kernel32.dll"}],
+    )
+    result = detector.detect()
+
+    assert result["anti_debug"] is True
+    assert result["detection_details"]["anti_debug_evidence"][0]["address"] == "0x1000"
+
+
 def test_anti_debug_with_check_remote_debugger_api():
     detector = _make_detector(
         imports=[{"name": "CheckRemoteDebuggerPresent", "plt": 0x2000, "libname": "kernel32.dll"}],
