@@ -7,12 +7,19 @@ import sys
 from typing import Any
 
 
+def _coerce_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def display_rate_limiter_stats(console: Any, rate_stats: dict[str, Any]) -> None:
     """Display rate limiter statistics."""
     console.print("[dim]Rate limiter stats:[/dim]")
-    console.print(f"[dim]  Success rate: {rate_stats.get('success_rate', 0):.1%}[/dim]")
-    console.print(f"[dim]  Avg wait time: {rate_stats.get('avg_wait_time', 0):.2f}s[/dim]")
-    console.print(f"[dim]  Final rate: {rate_stats.get('current_rate', 0):.1f} files/sec[/dim]")
+    console.print(f"[dim]  Success rate: {_coerce_float(rate_stats.get('success_rate')):.1%}[/dim]")
+    console.print(f"[dim]  Avg wait time: {_coerce_float(rate_stats.get('avg_wait_time')):.2f}s[/dim]")
+    console.print(f"[dim]  Final rate: {_coerce_float(rate_stats.get('current_rate')):.1f} files/sec[/dim]")
 
 
 def display_memory_stats(console: Any) -> None:

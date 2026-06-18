@@ -271,6 +271,14 @@ def test_display_rate_limiter_stats(capsys):
     assert "Final rate: 15.5 files/sec" in captured.out
 
 
+def test_display_rate_limiter_stats_accepts_string_values(capsys):
+    """Test rate limiter statistics display with string values."""
+    rate_stats = {"success_rate": "0.95", "avg_wait_time": "0.2", "current_rate": "15.5"}
+    display_rate_limiter_stats(rate_stats)
+    captured = capsys.readouterr()
+    assert "Success rate: 95.0%" in captured.out
+
+
 def test_display_rate_limiter_stats_empty(capsys):
     """Test rate limiter statistics with empty stats."""
     rate_stats = {}
