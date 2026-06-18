@@ -122,6 +122,16 @@ class ELFClassOnlyAdapter(_StubBase):
         return {"bin": {"format": "unknown", "type": "unknown", "class": "elf"}}
 
 
+class NonStringInfoAdapter(_StubBase):
+    """Adapter that returns non-string text output."""
+
+    def get_info_text(self):
+        return 123
+
+    def cmd(self, command: str):
+        return 123
+
+
 # ---------------------------------------------------------------------------
 # is_pe_file – MZ magic detection (line 30-32)
 # ---------------------------------------------------------------------------
@@ -191,6 +201,12 @@ def test_is_pe_file_no_pe_indicators(tmp_path: Path):
     f.write_bytes(b"\x00" * 8)
     result = is_pe_file(str(f), UnknownFormatAdapter(), None)
     assert result is False
+
+
+def test_is_pe_file_non_string_info_text_returns_false(tmp_path: Path):
+    f = tmp_path / "data.bin"
+    f.write_bytes(b"\x00" * 8)
+    assert is_pe_file(str(f), NonStringInfoAdapter(), None) is False
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +318,12 @@ def test_is_elf_file_no_elf_indicators(tmp_path: Path):
     f.write_bytes(b"MZ" + b"\x00" * 8)
     result = is_elf_file(str(f), UnknownFormatAdapter(), None)
     assert result is False
+
+
+def test_is_elf_file_non_string_cmd_output_returns_false(tmp_path: Path):
+    f = tmp_path / "pe.bin"
+    f.write_bytes(b"MZ" + b"\x00" * 8)
+    assert is_elf_file(str(f), NonStringInfoAdapter(), None) is False
 
 
 def test_is_elf_file_none_filepath(tmp_path: Path):

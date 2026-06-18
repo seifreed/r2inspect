@@ -32,7 +32,7 @@ def _pe_via_info_text(adapter: Any, log: Any) -> bool:
     except Exception as exc:
         log.debug(f"Error retrieving info text: {exc}")
         return False
-    if info_text and "pe" in info_text.lower():
+    if isinstance(info_text, str) and info_text and "pe" in info_text.lower():
         log.debug("PE detected via 'i' command")
         return True
     return False
@@ -71,7 +71,7 @@ def is_pe_file(
 def _elf_via_cmd(adapter: Any, r2_instance: Any, log: Any) -> bool:
     try:
         info_text = cmd_helper(adapter, r2_instance, "i")
-        if "elf" in info_text.lower():
+        if isinstance(info_text, str) and "elf" in info_text.lower():
             return True
     except Exception as exc:
         log.debug(f"Error with 'i' command: {exc}")
