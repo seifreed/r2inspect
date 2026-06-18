@@ -351,6 +351,19 @@ def test_get_functions_in_section_filters_by_address_range():
     assert not any(f.get("offset") == 0x2000 for f in result)
 
 
+def test_get_functions_in_section_coerces_string_addresses():
+    analyzer = _build_analyzer(
+        sections=[],
+        functions=[
+            {"offset": "4096"},
+            {"addr": "5376"},
+        ],
+    )
+    result = analyzer._get_functions_in_section(0x1000, 0x1000)
+    assert any(f.get("offset") == "4096" for f in result)
+    assert any(f.get("addr") == "5376" for f in result)
+
+
 # ---------------------------------------------------------------------------
 # _count_nops_in_section - non-x86 arch returns (0, 0) (line 408)
 # ---------------------------------------------------------------------------
@@ -465,6 +478,26 @@ def test_analyze_code_section_skips_malformed_function_sizes():
     result = analyzer._analyze_code_section({"name": ".text", "vaddr": 0x1000, "size": 0x200})
 
     assert result["function_count"] == 3
+    assert result["avg_function_size"] == 15.0
+    assert result["min_function_size"] == 10
+    assert result["max_function_size"] == 20
+
+
+def test_analyze_code_section_coerces_string_function_sizes():
+    functions = [
+        {"size": "10", "offset": 0x1000},
+        {"size": "20", "offset": 0x1010},
+    ]
+    analyzer = _build_analyzer(
+        sections=[],
+        arch="x86",
+        functions=functions,
+        cmd_map_extra={f"p8 512 @ {0x1000}": _hex_bytes(0xCC, 512)},
+    )
+
+    result = analyzer._analyze_code_section({"name": ".text", "vaddr": 0x1000, "size": 0x200})
+
+    assert result["function_count"] == 2
     assert result["avg_function_size"] == 15.0
     assert result["min_function_size"] == 10
     assert result["max_function_size"] == 20

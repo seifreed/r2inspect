@@ -313,6 +313,28 @@ def test_extract_function_features_skips_malformed_entries():
     assert len(result["cfg_features"]) == 2
 
 
+def test_extract_function_features_coerces_string_sizes():
+    """String sizes are normalized before being returned."""
+    cmdj_map = {
+        "aflj": [
+            {"name": "main", "size": "200", "addr": "4096"},
+            {"name": "helper", "size": "100", "addr": 0x2000},
+        ],
+        "agj @ 4096": [
+            {"blocks": [{"addr": 0x1000}], "edges": []},
+        ],
+        "agj @ 0x2000": [
+            {"blocks": [{"addr": 0x2000}], "edges": []},
+        ],
+    }
+    cmd_map = {"aaa": ""}
+    analyzer = _make_analyzer(cmdj_map=cmdj_map, cmd_map=cmd_map)
+
+    result = analyzer._extract_function_features()
+
+    assert result["function_sizes"] == [200, 100]
+
+
 def test_extract_function_features_with_analyze_all():
     """Test _extract_function_features calls analyze_all on adapter."""
     cmdj_map = {"aflj": []}

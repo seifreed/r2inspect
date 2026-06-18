@@ -8,6 +8,13 @@ from typing import Any, Protocol
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class FunctionMachocHost(Protocol):
     """Overridable collaboration contract the MACHOC helpers depend on."""
 
@@ -58,10 +65,10 @@ def process_single_function_hash(
     *,
     machoc_hash_fn: Any,
 ) -> tuple[str, str] | None:
-    func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-    func_offset = func.get("addr")
-    func_size = func.get("size", 0)
-    if func_offset is None:
+    func_offset = _to_int(func.get("addr"))
+    func_size = _to_int(func.get("size", 0))
+    func_name = func.get("name", f"func_{func_offset or 'unknown'}")
+    if func_offset <= 0:
         logger.warning("No address found for function %s", func_name)
         return None
     logger.debug(

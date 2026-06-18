@@ -99,10 +99,10 @@ def analyze_code_section(
         code_info["function_count"] = len(functions)
         if functions:
             sizes = [
-                size
+                _to_int(size)
                 for f in functions
                 if isinstance(f, dict)
-                and isinstance(size := f.get("size", 0), int)
+                and (size := _to_int(f.get("size", 0)))
                 and size > 0
             ]
             if sizes:

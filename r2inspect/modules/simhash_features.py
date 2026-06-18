@@ -8,6 +8,13 @@ from typing import Any
 from .simhash_support import SimHashHost
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> list[str]:
     string_features: list[str] = []
     try:
@@ -34,8 +41,8 @@ def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> li
         for func in functions:
             if not isinstance(func, dict):
                 continue
-            func_addr = func.get("offset") or func.get("addr")
-            if func_addr is None:
+            func_addr = _to_int(func.get("offset") or func.get("addr"))
+            if func_addr <= 0:
                 continue
             func_name = func.get("name", f"func_{func_addr}")
             func_opcodes = host._extract_function_opcodes(func_addr, func_name)
@@ -67,11 +74,11 @@ def extract_function_features(
         for func in functions:
             if not isinstance(func, dict):
                 continue
-            func_addr = func.get("offset") or func.get("addr")
-            if func_addr is None:
+            func_addr = _to_int(func.get("offset") or func.get("addr"))
+            if func_addr <= 0:
                 continue
             func_name = func.get("name", f"func_{func_addr}")
-            func_size = func.get("size", 0)
+            func_size = _to_int(func.get("size", 0))
             func_opcodes = host._extract_function_opcodes(func_addr, func_name)
             if not func_opcodes:
                 continue

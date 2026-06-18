@@ -1,6 +1,5 @@
 """Coverage tests for binbloom_analyzer.py."""
 
-import hashlib
 import json
 import base64
 
@@ -779,6 +778,19 @@ def test_collect_function_blooms_with_html_entities():
     functions = [{"name": "func&amp;1", "addr": 0x1000, "size": 50}]
     blooms, sigs, instructions, count = analyzer._collect_function_blooms(functions, 256, 0.001)
     assert "func&1" in blooms
+
+
+def test_collect_function_blooms_coerces_string_size():
+    if not BLOOM_AVAILABLE:
+        pytest.skip("pybloom-live not available")
+    disasm_data = {"ops": [{"mnemonic": "mov"}, {"mnemonic": "push"}]}
+    adapter = FakeDisasmAdapter(disasm_data=disasm_data)
+    analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
+    functions = [{"name": "func1", "addr": "4096", "size": "50"}]
+    blooms, sigs, instructions, count = analyzer._collect_function_blooms(functions, 256, 0.001)
+    assert count == 1
+    assert sigs["func1"]["addr"] == 4096
+    assert sigs["func1"]["size"] == 50
 
 
 # --- _add_binary_bloom ---

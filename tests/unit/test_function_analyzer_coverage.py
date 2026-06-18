@@ -360,6 +360,42 @@ def test_process_single_function_hash_success():
     assert len(hash_val) == 64  # sha256 hex
 
 
+def test_process_single_function_hash_coerces_string_addr_and_size():
+    class RecorderAnalyzer(FunctionAnalyzer):
+        def __init__(self, adapter):
+            super().__init__(adapter)
+            self.recorded = None
+
+        def _extract_function_mnemonics(self, name, size, addr):
+            self.recorded = (name, size, addr)
+            return ["push", "ret"]
+
+    adapter = MinimalAdapter()
+    analyzer = RecorderAnalyzer(adapter)
+    func = {"name": "string_func", "addr": "4096", "size": "50"}
+    result = analyzer._process_single_function_hash(func, 0, 1)
+    assert result is not None
+    assert analyzer.recorded == ("string_func", 50, 4096)
+
+
+def test_process_single_function_hash_coerces_string_addr_and_size():
+    class RecorderAnalyzer(FunctionAnalyzer):
+        def __init__(self, adapter):
+            super().__init__(adapter)
+            self.recorded = None
+
+        def _extract_function_mnemonics(self, name, size, addr):
+            self.recorded = (name, size, addr)
+            return ["push", "ret"]
+
+    adapter = MinimalAdapter()
+    analyzer = RecorderAnalyzer(adapter)
+    func = {"name": "string_func", "addr": "4096", "size": "50"}
+    result = analyzer._process_single_function_hash(func, 0, 1)
+    assert result is not None
+    assert analyzer.recorded == ("string_func", 50, 4096)
+
+
 # ---------------------------------------------------------------------------
 # _extract_function_mnemonics – fallback paths
 # ---------------------------------------------------------------------------

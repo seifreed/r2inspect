@@ -94,9 +94,8 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
         for func in functions:
             if not isinstance(func, dict):
                 continue
-            func_addr = func.get("addr")
-
-            if func_addr is None:
+            func_addr = self._coerce_function_size(func.get("addr"))
+            if func_addr <= 0:
                 continue
             func_name_value = func.get("name")
             func_name = clean_function_name(
@@ -116,7 +115,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
                 "instruction_count": len(instructions),
                 "unique_instructions": len(set(instructions)),
                 "addr": func_addr,
-                "size": func.get("size", 0),
+                "size": self._coerce_function_size(func.get("size", 0)),
             }
             all_instructions.update(instructions)
             analyzed_count += 1
@@ -125,6 +124,14 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
     def _collect_unique_signatures(self, function_signatures: dict[str, dict[str, Any]]) -> set:
         return {sig["signature"] for sig in function_signatures.values()}
+
+    @staticmethod
+    def _coerce_function_size(value: Any) -> int:
+        try:
+            size = int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+        return size if size > 0 else 0
 
     def _add_binary_bloom(
         self,

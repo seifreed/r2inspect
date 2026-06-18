@@ -187,7 +187,11 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
             if not isinstance(func, dict):
                 continue
             addr = func.get("offset", func.get("addr"))
-            if isinstance(addr, int) and vaddr <= addr < end:
+            try:
+                addr_int = int(addr)
+            except (TypeError, ValueError):
+                continue
+            if vaddr <= addr_int < end:
                 filtered.append(func)
         return filtered
 

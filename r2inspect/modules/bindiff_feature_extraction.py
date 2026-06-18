@@ -198,7 +198,7 @@ class BinDiffFeatureExtractor:
                 continue
             # r2's aflj emits the function address as "addr" (not "offset"), so
             # this was always 0 and the CFG features were never collected.
-            func_addr = func.get("addr") or func.get("offset", 0)
+            func_addr = _to_int(func.get("addr") or func.get("offset", 0))
             if func_addr:
                 cfg = self.adapter.get_cfg(func_addr) if self.adapter else {}
                 feature = _cfg_feature(cfg)
@@ -217,7 +217,7 @@ class BinDiffFeatureExtractor:
             valid_functions = [func for func in functions if isinstance(func, dict)]
             if valid_functions:
                 features["function_count"] = len(valid_functions)
-                features["function_sizes"] = [f.get("size", 0) for f in valid_functions]
+                features["function_sizes"] = [_to_int(f.get("size", 0)) for f in valid_functions]
                 features["function_names"] = [
                     name for f in valid_functions if isinstance(name := f.get("name"), str) and name
                 ]

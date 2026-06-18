@@ -11,6 +11,13 @@ from ..domain.services.binbloom import build_similar_groups as _build_similar_gr
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class BinlexHost(Protocol):
     """Overridable collaboration contract the Binlex helpers depend on.
 
@@ -56,14 +63,14 @@ def collect_function_signatures(
     for func in functions:
         if not isinstance(func, dict):
             continue
-        func_addr = func.get("addr")
+        func_addr = _to_int(func.get("addr"))
         func_name_value = func.get("name")
         func_name = (
             func_name_value
             if isinstance(func_name_value, str) and func_name_value
             else f"func_{func_addr or 'unknown'}"
         )
-        if func_addr is None:
+        if func_addr <= 0:
             continue
         func_sigs = analyzer._analyze_function(func_addr, func_name, ngram_sizes)
         if not func_sigs:

@@ -313,6 +313,16 @@ def test_extract_opcodes_features_uses_addr_field_when_no_offset() -> None:
     assert len(result) > 0
 
 
+def test_extract_opcodes_features_coerces_string_addr() -> None:
+    adapter = StubAdapter(
+        functions=[{"addr": "8192", "name": "string_addr"}],
+        disasm_map={8192: {"ops": [{"mnemonic": "push"}, {"mnemonic": "ret"}]}},
+    )
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    result = analyzer._extract_opcodes_features()
+    assert len(result) > 0
+
+
 def test_extract_opcodes_features_truncates_at_10000_limit() -> None:
     many_funcs = [{"offset": i * 0x100, "name": f"func_{i}"} for i in range(200)]
     ops_per_func = [{"mnemonic": "nop"}] * 100
@@ -376,6 +386,18 @@ def test_extract_function_features_records_simhash_for_valid_function() -> None:
     assert "simhash" in result["real_func"]
     assert "addr" in result["real_func"]
     assert result["real_func"]["addr"] == 0x1000
+
+
+@pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
+def test_extract_function_features_coerces_string_offset_and_size() -> None:
+    adapter = StubAdapter(
+        functions=[{"offset": "4096", "name": "string_func", "size": "50"}],
+        disasm_map={4096: {"ops": [{"mnemonic": "mov"}, {"mnemonic": "ret"}]}},
+    )
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    result = analyzer._extract_function_features()
+    assert result["string_func"]["addr"] == 4096
+    assert result["string_func"]["size"] == 50
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
