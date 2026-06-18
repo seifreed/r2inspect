@@ -92,12 +92,18 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
         analyzed_count = 0
 
         for func in functions:
-            func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
-            func_name = clean_function_name(func_name)
+            if not isinstance(func, dict):
+                continue
             func_addr = func.get("addr")
 
             if func_addr is None:
                 continue
+            func_name_value = func.get("name")
+            func_name = clean_function_name(
+                func_name_value
+                if isinstance(func_name_value, str) and func_name_value
+                else f"func_{func_addr}"
+            )
 
             bloom_result = self._create_function_bloom(func_addr, func_name, capacity, error_rate)
             if not bloom_result:

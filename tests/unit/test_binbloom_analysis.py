@@ -248,6 +248,23 @@ def test_binbloom_unique_signatures():
     assert len(unique) == 3
 
 
+def test_binbloom_collect_function_blooms_skips_malformed_functions():
+    class Analyzer(BinbloomAnalyzer):
+        def _create_function_bloom(self, func_addr, func_name, capacity, error_rate):
+            return object(), ["ret"], f"sig-{func_name}-{func_addr}"
+
+    analyzer = Analyzer(MockAdapter(), "/path/to/binary")
+    _, signatures, instructions, analyzed = analyzer._collect_function_blooms(
+        ["bad", {"addr": 0x1000, "name": ["bad"], "size": 4}],
+        256,
+        0.001,
+    )
+
+    assert analyzed == 1
+    assert set(signatures) == {"func_4096"}
+    assert instructions == {"ret"}
+
+
 def test_binbloom_empty_instructions():
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
