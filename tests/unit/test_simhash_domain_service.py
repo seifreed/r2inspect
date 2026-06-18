@@ -35,6 +35,24 @@ def test_build_similarity_groups() -> None:
     assert "b" in groups[0]["functions"]
 
 
+def test_build_similarity_groups_skips_malformed_hashes() -> None:
+    function_features = {
+        "a": {"simhash": 10},
+        "b": {"simhash": 12},
+        "missing": {},
+        "bad": {"simhash": "10"},
+    }
+
+    groups = build_similarity_groups(
+        function_features,
+        max_distance=5,
+        distance_fn=lambda left, right: abs(left - right),
+    )
+
+    assert len(groups) == 1
+    assert groups[0]["functions"] == ["a", "b"]
+
+
 def test_interpret_similarity_distance() -> None:
     assert interpret_similarity_distance(0) == "identical"
     assert interpret_similarity_distance(3) == "very_similar"

@@ -166,7 +166,7 @@ def test_phase1_binlex_signature_paths_real_no_mocks(tmp_path: Path) -> None:
     analyzer = BinlexAnalyzer(adapter=None, filepath=str(sample))
 
     assert analyzer._normalize_mnemonic(" MOV ") == "mov"
-    assert analyzer._normalize_mnemonic("&nbsp;") == " "
+    assert analyzer._normalize_mnemonic("&nbsp;") is None
     assert extract_mnemonic_from_op({"mnemonic": "call"}) == "call"
     assert extract_mnemonic_from_op({"opcode": "jmp 0x401000"}) == "jmp"
     assert extract_mnemonic_from_op({"opcode": ""}) is None
