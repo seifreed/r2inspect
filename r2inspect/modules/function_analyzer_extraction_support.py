@@ -86,7 +86,7 @@ def try_pdfj_extraction(
             if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
             else analyzer._cmdj(f"pdfj @ {func_addr}", {})
         )
-        if isinstance(disasm, dict) and "ops" in disasm:
+        if isinstance(disasm, dict) and isinstance(disasm.get("ops"), list):
             logger.debug(
                 "pdfj succeeded for %s, got %s instructions", func_name, len(disasm["ops"])
             )

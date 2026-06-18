@@ -453,6 +453,18 @@ def test_try_pdfj_extraction_returns_empty_when_disasm_not_dict():
     assert result == []
 
 
+def test_try_pdfj_extraction_returns_empty_when_ops_not_list():
+    class _BadOpsAdapter:
+        def get_disasm(self, address=None, size=None):
+            if size is None:
+                return {"ops": {"mnemonic": "nop"}}
+            return None
+
+    analyzer = FunctionAnalyzer(_BadOpsAdapter())
+    result = analyzer._try_pdfj_extraction("fn", 0x1000)
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # _try_pdj_extraction (lines 238-248)
 # ---------------------------------------------------------------------------

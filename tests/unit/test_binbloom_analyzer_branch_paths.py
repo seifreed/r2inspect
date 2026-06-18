@@ -444,6 +444,14 @@ def test_extract_mnemonics_from_pdfj_returns_empty_when_disasm_none():
     assert result == []
 
 
+def test_extract_mnemonics_from_pdfj_returns_empty_when_ops_not_list():
+    """Non-list ops values are ignored."""
+    adapter = DisasmAdapter(disasm_data={"ops": {"mnemonic": "nop"}})
+    analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
+    result = analyzer._extract_mnemonics_from_pdfj(0x1000, "func_bad_ops")
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # _extract_mnemonics_from_pdj
 # ---------------------------------------------------------------------------
