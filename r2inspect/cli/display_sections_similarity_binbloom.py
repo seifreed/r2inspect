@@ -89,11 +89,15 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
         return
 
     total_instructions = sum(
-        _coerce_float(sig.get("instruction_count", 0)) for sig in function_signatures.values()
+        _coerce_float(sig.get("instruction_count", 0))
+        for sig in function_signatures.values()
+        if isinstance(sig, dict)
     )
     avg_instructions = total_instructions / len(function_signatures) if function_signatures else 0
     unique_instructions = sum(
-        _coerce_float(sig.get("unique_instructions", 0)) for sig in function_signatures.values()
+        _coerce_float(sig.get("unique_instructions", 0))
+        for sig in function_signatures.values()
+        if isinstance(sig, dict)
     )
     avg_unique = unique_instructions / len(function_signatures) if function_signatures else 0
 
