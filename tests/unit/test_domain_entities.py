@@ -63,6 +63,12 @@ def test_hashing_result_has_hash_false_whitespace() -> None:
     assert result.has_hash("ssdeep") is False
 
 
+def test_hashing_result_has_hash_false_non_string() -> None:
+    result = HashingResult(ssdeep="abc")
+    result.ssdeep = 123  # type: ignore[assignment]
+    assert result.has_hash("ssdeep") is False
+
+
 def test_import_info_to_dict() -> None:
     info = ImportInfo(
         name="CreateFile",

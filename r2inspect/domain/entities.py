@@ -52,7 +52,7 @@ class HashingResult:
 
     def has_hash(self, hash_type: str) -> bool:
         value = getattr(self, hash_type, "")
-        return bool(value and value.strip())
+        return bool(isinstance(value, str) and value.strip())
 
 
 @dataclass
