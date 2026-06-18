@@ -227,6 +227,12 @@ def test_count_duplicate_machoc_all_same_hash():
     assert formatter._count_duplicate_machoc(hashes) == 2
 
 
+def test_count_duplicate_machoc_stringifies_unhashable_values():
+    formatter = CsvOutputFormatter({})
+    hashes = {"f1": ["same"], "f2": ["same"], "f3": {"value": "other"}}
+    assert formatter._count_duplicate_machoc(hashes) == 1
+
+
 # ---------------------------------------------------------------------------
 # _format_file_size – KB/MB conversion and error path (lines 254-255, 259, 261-262)
 # ---------------------------------------------------------------------------

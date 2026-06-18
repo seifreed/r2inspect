@@ -125,6 +125,7 @@ class CsvOutputFormatter:
             return 0
         hash_counts: dict[str, int] = {}
         for _, machoc_hash in machoc_hashes.items():
+            machoc_hash = str(machoc_hash)
             hash_counts[machoc_hash] = hash_counts.get(machoc_hash, 0) + 1
         return sum(count - 1 for count in hash_counts.values() if count > 1)
 
