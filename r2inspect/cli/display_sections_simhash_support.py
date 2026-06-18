@@ -18,6 +18,10 @@ def _coerce_float(value: Any) -> float:
         return 0.0
 
 
+def _coerce_text(value: Any) -> str:
+    return value if isinstance(value, str) else str(value if value is not None else "")
+
+
 def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> None:
     total_features = feature_stats.get("total_features", 0)
     total_strings = feature_stats.get("total_strings", 0)
@@ -84,7 +88,7 @@ def _add_simhash_similarity_groups(table: Table, similarity_groups: list[dict[st
 
 def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any]) -> None:
     group_size = group.get("count", 0)
-    group_hash = group.get("representative_hash", "")
+    group_hash = _coerce_text(group.get("representative_hash", ""))
     hash_display = f"{group_hash[:24]}...{group_hash[-8:]}" if len(group_hash) > 24 else group_hash
 
     table.add_row(f"Group {index} Size", f"{group_size} functions")

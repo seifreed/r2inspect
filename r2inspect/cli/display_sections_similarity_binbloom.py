@@ -29,6 +29,10 @@ def _coerce_float(value: Any) -> float:
         return 0.0
 
 
+def _coerce_text(value: Any) -> str:
+    return value if isinstance(value, str) else str(value if value is not None else "")
+
+
 def _display_binbloom(results: Results) -> None:
     binbloom_info, present = _get_section(results, "binbloom", {})
     if not present:
@@ -112,7 +116,7 @@ def _add_binbloom_similar_groups(table: Table, binbloom_info: dict[str, Any]) ->
 
 def _add_binbloom_group(table: Table, index: int, group: dict[str, Any]) -> None:
     group_size = group.get("count", 0)
-    group_signature = group.get("signature", "")
+    group_signature = _coerce_text(group.get("signature", ""))
     group_sig = group_signature[:32] + "..." if len(group_signature) > 32 else group_signature
 
     table.add_row(f"Group {index} Size", f"{group_size} functions")
@@ -150,7 +154,7 @@ def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     function_signatures = binbloom_info.get("function_signatures", {})
     signatures_by_hash: dict[str, list[str]] = {}
     for func_name, sig_data in function_signatures.items():
-        sig_hash = sig_data.get("signature", "")
+        sig_hash = _coerce_text(sig_data.get("signature", ""))
         signatures_by_hash.setdefault(sig_hash, []).append(func_name)
 
     sig_table = Table(

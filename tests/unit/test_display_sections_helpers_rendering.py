@@ -285,6 +285,22 @@ def test_add_simhash_similarity_group_long_hash():
     assert len(table.rows) == 2
 
 
+def test_add_simhash_similarity_group_none_hash():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    group = {
+        "count": 10,
+        "representative_hash": None,
+        "functions": [],
+    }
+
+    _add_simhash_similarity_group(table, 1, group)
+
+    assert len(table.rows) >= 2
+
+
 def test_add_simhash_similarity_group_many_functions():
     table = Table()
     table.add_column("Property")
