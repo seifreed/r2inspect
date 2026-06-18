@@ -77,6 +77,14 @@ def test_apply_security_flags_from_header_no_optional_header_key():
     assert features["aslr"] is False
 
 
+def test_apply_security_flags_from_header_non_dict_optional_header_returns_early():
+    features = {"aslr": False, "dep": False, "seh": False, "guard_cf": False, "authenticode": False}
+    _apply_security_flags_from_header(
+        features, {"optional_header": []}, SilentLogger()
+    )
+    assert features["aslr"] is False
+
+
 def test_apply_security_flags_from_header_non_int_dll_characteristics_returns_early():
     features = {"aslr": False, "dep": False, "seh": False, "guard_cf": False, "authenticode": False}
     pe_header = {"optional_header": {"DllCharacteristics": "0x0040"}}
@@ -228,6 +236,13 @@ def test_apply_authenticode_feature_none_pe_header_returns_early():
 def test_apply_authenticode_feature_non_dict_security_dir_skipped():
     features = {"authenticode": False}
     pe_header = {"data_directories": {"security": "not-a-dict"}}
+    _apply_authenticode_feature(features, pe_header)
+    assert features["authenticode"] is False
+
+
+def test_apply_authenticode_feature_non_dict_data_directories_skipped():
+    features = {"authenticode": False}
+    pe_header = {"data_directories": []}
     _apply_authenticode_feature(features, pe_header)
     assert features["authenticode"] is False
 

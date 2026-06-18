@@ -39,6 +39,8 @@ def _apply_security_flags_from_header(
     if not pe_header:
         return
     opt_header = pe_header.get("optional_header", {})
+    if not isinstance(opt_header, dict):
+        return
     dll_characteristics = opt_header.get("DllCharacteristics", 0)
     if not isinstance(dll_characteristics, int):
         return
@@ -87,6 +89,8 @@ def _apply_authenticode_feature(
     if not pe_header:
         return
     data_dir = pe_header.get("data_directories", {})
+    if not isinstance(data_dir, dict):
+        return
     security_dir = data_dir.get("security", {})
     if not isinstance(security_dir, dict):
         return

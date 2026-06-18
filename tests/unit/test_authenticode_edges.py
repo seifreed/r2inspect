@@ -279,6 +279,18 @@ def test_compute_authenticode_hash_zero_size():
     assert result is None
 
 
+def test_compute_authenticode_hash_non_dict_core():
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "ij": {"core": []},
+        }
+    )
+
+    result = analyzer._compute_authenticode_hash()
+
+    assert result is None
+
+
 def test_compute_authenticode_hash_no_pe():
     analyzer = _make_analyzer(
         cmdj_map={

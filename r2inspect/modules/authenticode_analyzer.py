@@ -219,7 +219,10 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             file_info = self._cmdj("ij", {})
             if not file_info:
                 return None
-            file_size = _to_int(file_info.get("core", {}).get("size", 0))
+            core = file_info.get("core", {})
+            if not isinstance(core, dict):
+                return None
+            file_size = _to_int(core.get("size", 0))
             if file_size == 0:
                 return None
             pe_header = self._cmdj("ihj", {})

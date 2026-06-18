@@ -48,7 +48,13 @@ class RichHeaderDebugMixin:
             logger.debug("Debug analysis failed: %s", e)
 
     def _debug_get_file_size(self) -> int:
-        return _to_int(self._get_file_info().get("core", {}).get("size", 0))
+        file_info = self._get_file_info()
+        if not isinstance(file_info, dict):
+            return 0
+        core = file_info.get("core", {})
+        if not isinstance(core, dict):
+            return 0
+        return _to_int(core.get("size", 0))
 
     def _debug_read_bytes(self, size: int) -> bytes | None:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
