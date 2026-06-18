@@ -228,3 +228,13 @@ def test_display_sections_unavailable_branches(capsys) -> None:
 
     out = capsys.readouterr().out
     assert "Not Available" in out or "not installed" in out
+
+
+def test_display_indicators_accepts_non_dict_entries(capsys) -> None:
+    results = {
+        "indicators": [None, {"type": "Suspicious", "description": "bad", "severity": "High"}],
+    }
+    ds._display_indicators(results)
+
+    out = capsys.readouterr().out
+    assert "Invalid indicator entry" in out

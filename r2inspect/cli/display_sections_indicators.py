@@ -20,11 +20,14 @@ def _display_indicators(results: Results) -> None:
     table.add_column("Severity", style="magenta")
 
     for indicator in indicators:
-        table.add_row(
-            indicator.get("type", "Unknown"),
-            indicator.get("description", "N/A"),
-            indicator.get("severity", "Unknown"),
-        )
+        if isinstance(indicator, dict):
+            table.add_row(
+                str(indicator.get("type", "Unknown")),
+                str(indicator.get("description", "N/A")),
+                str(indicator.get("severity", "Unknown")),
+            )
+        else:
+            table.add_row("Invalid indicator entry", str(indicator), "Unknown")
 
     _get_console().print(table)
     _get_console().print()
