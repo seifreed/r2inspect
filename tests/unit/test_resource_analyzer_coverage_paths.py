@@ -98,12 +98,16 @@ def test_resource_analyzer_parse_resources_coerces_hex_fields() -> None:
     assert result[0]["virtual_address"] == 0x1000
 
 
-def test_resource_analyzer_get_resource_directory_exception() -> None:
-    # When cmdj raises, the adapter layers catch the error and return default/None.
-    # _get_resource_directory then returns None.
-    analyzer = _make_analyzer(cmdj_map={"iDj": Exception("Test error")})
-    result = analyzer._get_resource_directory()
+def test_resource_analyzer_get_resource_directory_exception(caplog) -> None:
+    class RaisingAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            raise RuntimeError("Test error")
+
+    analyzer = RaisingAnalyzer(adapter=None)
+    with caplog.at_level("ERROR"):
+        result = analyzer._get_resource_directory()
     assert result is None
+    assert "Error getting resource directory: Test error" in caplog.text
 
 
 # ── _parse_resources ─────────────────────────────────────────────────────

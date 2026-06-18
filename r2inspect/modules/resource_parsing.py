@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def _to_int(value: Any) -> int:
@@ -39,7 +42,8 @@ class ResourceParsingMixin:
                         "virtual_address": _to_int(dd.get("vaddr", 0)),
                     }
             return None
-        except Exception:
+        except Exception as exc:
+            logger.error("Error getting resource directory: %s", exc)
             return None
 
     def _parse_resources(self) -> list[dict[str, Any]]:
@@ -74,7 +78,8 @@ class ResourceParsingMixin:
                 parsed_resources.append(resource_info)
 
             return parsed_resources
-        except Exception:
+        except Exception as exc:
+            logger.error("Error parsing resources: %s", exc)
             return self._parse_resources_manual()
 
     def _parse_resources_manual(self) -> list[dict[str, Any]]:
@@ -93,7 +98,8 @@ class ResourceParsingMixin:
 
             total_entries = self._get_dir_total_entries(dir_data)
             return self._parse_dir_entries(rsrc_offset, total_entries)
-        except Exception:
+        except Exception as exc:
+            logger.error("Error parsing resources manually: %s", exc)
             return []
 
     def _get_rsrc_section(self) -> dict[str, Any] | None:
