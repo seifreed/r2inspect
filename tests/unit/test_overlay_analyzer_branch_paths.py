@@ -189,6 +189,17 @@ def test_get_valid_pe_end_handles_non_int_value():
     assert analyzer._get_valid_pe_end(10000) is None
 
 
+def test_get_valid_pe_end_accepts_hex_string_value():
+    """Hex string pe_end values should still be accepted."""
+
+    class _HexPeEndOverlayAnalyzer(OverlayAnalyzer):
+        def _calculate_pe_end(self):
+            return "0x1000"
+
+    analyzer = _HexPeEndOverlayAnalyzer(OverlayAdapter())
+    assert analyzer._get_valid_pe_end(10000) == 4096
+
+
 # ---------------------------------------------------------------------------
 # _extend_end_with_certificate  (lines 159, 161-166)
 # ---------------------------------------------------------------------------

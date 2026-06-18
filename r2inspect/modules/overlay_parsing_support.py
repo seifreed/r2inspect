@@ -8,6 +8,8 @@ from typing import Any
 
 def _to_int(value: Any) -> int | None:
     try:
+        if isinstance(value, str):
+            return int(value, 0)
         return int(value)
     except (TypeError, ValueError):
         return None
@@ -31,7 +33,7 @@ def get_valid_pe_end(calculate_pe_end: Callable[[], int], file_size: int) -> int
     if not pe_end:
         return None
     try:
-        pe_end_int = int(pe_end)
+        pe_end_int = int(pe_end, 0) if isinstance(pe_end, str) else int(pe_end)
     except (ValueError, TypeError):
         return None
     if pe_end_int == 0 or pe_end_int >= file_size:
