@@ -267,30 +267,17 @@ def analyze_dll_dependencies(dlls: list[str]) -> dict[str, Any]:
     }
 
 
-def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    anomalies: list[dict[str, Any]] = []
-    if not imports:
-        anomalies.append(
-            {
-                "type": "no_imports",
-                "description": "No imports found - possible packing or static linking",
-                "severity": "HIGH",
-            }
-        )
-        return {"anomalies": anomalies, "count": len(anomalies)}
+def _anomaly_result(anomalies: list[dict[str, Any]]) -> dict[str, Any]:
+    return {"anomalies": anomalies, "count": len(anomalies)}
 
-    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
-    if not valid_imports:
-        anomalies.append(
-            {
-                "type": "no_imports",
-                "description": "No imports found - possible packing or static linking",
-                "severity": "HIGH",
-            }
-        )
-        return {"anomalies": anomalies, "count": len(anomalies)}
 
-    duplicates = _duplicate_imports(valid_imports)
+def _no_imports_anomaly() -> dict[str, str]:
+    description = "No imports found - possible packing or static linking"
+    return {"type": "no_imports", "description": description, "severity": "HIGH"}
+
+
+def _append_duplicate_imports(anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]) -> None:
+    duplicates = _duplicate_imports(imports)
     if duplicates:
         anomalies.append(
             {
@@ -300,7 +287,10 @@ def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
                 "count": len(duplicates),
             }
         )
-    unusual_dlls = _unusual_dlls(valid_imports)
+
+
+def _append_unusual_dlls(anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]) -> None:
+    unusual_dlls = _unusual_dlls(imports)
     if len(unusual_dlls) > 5:
         anomalies.append(
             {
@@ -310,15 +300,32 @@ def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
                 "dlls": unusual_dlls[:10],
             }
         )
-    if len(valid_imports) > 500:
+
+
+def _append_excessive_imports(anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]) -> None:
+    if len(imports) > 500:
         anomalies.append(
             {
                 "type": "excessive_imports",
-                "description": f"Excessive number of imports: {len(valid_imports)}",
+                "description": f"Excessive number of imports: {len(imports)}",
                 "severity": "MEDIUM",
             }
         )
-    return {"anomalies": anomalies, "count": len(anomalies)}
+
+
+def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
+    if not imports:
+        return _anomaly_result([_no_imports_anomaly()])
+
+    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    if not valid_imports:
+        return _anomaly_result([_no_imports_anomaly()])
+
+    anomalies: list[dict[str, Any]] = []
+    _append_duplicate_imports(anomalies, valid_imports)
+    _append_unusual_dlls(anomalies, valid_imports)
+    _append_excessive_imports(anomalies, valid_imports)
+    return _anomaly_result(anomalies)
 
 
 def _duplicate_imports(imports: list[Any]) -> list[str]:

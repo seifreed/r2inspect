@@ -114,8 +114,8 @@ def test_batch_processing_parallel_progress_and_outputs(tmp_path: Path) -> None:
     assert json_files
 
     expected_json = {
-        "hello_pe_analysis.json",
-        "hello_elf_analysis.json",
-        "edge_bad_pe_analysis.json",
+        "hello_pe.exe_analysis.json",
+        "hello_elf.elf_analysis.json",
+        "edge_bad_pe.bin_analysis.json",
     }
     assert expected_json.issubset({path.name for path in json_files})

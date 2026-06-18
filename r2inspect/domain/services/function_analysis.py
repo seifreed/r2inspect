@@ -61,6 +61,27 @@ def machoc_hash_from_mnemonics(mnemonics: list[str]) -> str | None:
     return hashlib.sha256(signature.encode("utf-8")).hexdigest()
 
 
+def _function_type_counts(functions: list[dict[str, Any]]) -> dict[str, int]:
+    function_types: dict[str, int] = {}
+    for func in functions:
+        func_type = _coerce_function_type(func.get("type"))
+        function_types[func_type] = function_types.get(func_type, 0) + 1
+    return function_types
+
+
+def _largest_functions(functions: list[dict[str, Any]]) -> list[tuple[str, int]]:
+    functions_with_sizes: list[tuple[str, int]] = [
+        (
+            str(f.get("name", f"func_{f.get('offset', '?')}")),
+            _coerce_function_size(f.get("size")),
+        )
+        for f in functions
+        if _coerce_function_size(f.get("size")) > 0
+    ]
+    functions_with_sizes.sort(key=lambda item: item[1], reverse=True)
+    return functions_with_sizes[:10]
+
+
 def build_function_stats(functions: list[dict[str, Any]] | None) -> dict[str, Any]:
     """Summarize function inventory and sizing information."""
     if not functions:
@@ -91,23 +112,10 @@ def build_function_stats(functions: list[dict[str, Any]] | None) -> dict[str, An
             }
         )
 
-    function_types: dict[str, int] = {}
-    for func in functions:
-        func_type = _coerce_function_type(func.get("type"))
-        function_types[func_type] = function_types.get(func_type, 0) + 1
-    stats["function_types"] = function_types
+    stats["function_types"] = _function_type_counts(functions)
 
     if sizes:
-        functions_with_sizes: list[tuple[str, int]] = [
-            (
-                str(f.get("name", f"func_{f.get('offset', '?')}")),
-                _coerce_function_size(f.get("size")),
-            )
-            for f in functions
-            if _coerce_function_size(f.get("size")) > 0
-        ]
-        functions_with_sizes.sort(key=lambda item: item[1], reverse=True)
-        stats["largest_functions"] = functions_with_sizes[:10]
+        stats["largest_functions"] = _largest_functions(functions)
 
     return stats
 

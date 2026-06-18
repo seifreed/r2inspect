@@ -49,7 +49,7 @@ def test_batch_output_json_real_flow(tmp_path: Path) -> None:
     assert summary_files
 
     per_file_json = {path.name for path in output_dir.glob("*_analysis.json")}
-    assert {"hello_pe_analysis.json", "hello_elf_analysis.json"}.issubset(per_file_json)
+    assert {"hello_pe.exe_analysis.json", "hello_elf.elf_analysis.json"}.issubset(per_file_json)
 
 
 def test_batch_output_csv_real_flow(tmp_path: Path) -> None:

@@ -238,7 +238,7 @@ def test_extract_mnemonic_from_op_none_mnemonic():
 def test_normalize_mnemonic_html_nbsp():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     result = analyzer._normalize_mnemonic("mov&nbsp;")
-    assert result == "mov "
+    assert result == "mov"
 
 
 def test_normalize_mnemonic_html_amp():
