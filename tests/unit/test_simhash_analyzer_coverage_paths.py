@@ -526,6 +526,16 @@ def test_simhash_analyzer_append_data_section_string_valid() -> None:
     assert len(data_strings) > 0
 
 
+def test_simhash_analyzer_append_data_section_string_coerces_string_sizes() -> None:
+    hex_data = b"test_string_here\x00".hex()
+    analyzer = _make_analyzer(cmd_map={"p8": hex_data})
+    data_strings: list[str] = []
+    analyzer._append_data_section_string(
+        {"name": ".data", "vaddr": "4096", "size": "100"}, data_strings
+    )
+    assert len(data_strings) > 0
+
+
 # ---------------------------------------------------------------------------
 # _is_useful_string
 # ---------------------------------------------------------------------------

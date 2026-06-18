@@ -14,6 +14,13 @@ from typing import Any, Protocol, cast
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 class SimHashHost(Protocol):
     """Overridable collaboration contract the SimHash helpers depend on."""
 
@@ -72,9 +79,9 @@ def append_data_section_string(host: SimHashHost, section: Any, data_strings: li
     section_name = section.get("name", "")
     if not isinstance(section_name, str) or not section_name.startswith(".data"):
         return
-    section_addr = section.get("vaddr", 0)
-    section_size = section.get("size", 0)
-    if not isinstance(section_addr, int) or not isinstance(section_size, int):
+    section_addr = _to_int(section.get("vaddr", 0))
+    section_size = _to_int(section.get("size", 0))
+    if section_addr is None or section_size is None:
         return
     if not (section_addr and section_size):
         return

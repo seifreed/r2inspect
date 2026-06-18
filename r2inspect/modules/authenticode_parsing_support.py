@@ -5,6 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
     data_dirs = cmdj("iDj", [])
     if not isinstance(data_dirs, list):
@@ -18,9 +25,9 @@ def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
 def _validate_security_dir(
     security_dir: dict[str, Any], result: dict[str, Any]
 ) -> tuple[int, int] | None:
-    cert_offset = security_dir.get("paddr", 0)
-    cert_size = security_dir.get("size", 0)
-    if not isinstance(cert_offset, int) or not isinstance(cert_size, int):
+    cert_offset = _to_int(security_dir.get("paddr", 0))
+    cert_size = _to_int(security_dir.get("size", 0))
+    if cert_offset is None or cert_size is None:
         result["errors"].append("Invalid security directory types")
         return None
     if cert_offset <= 0 or cert_size <= 0 or cert_offset > 0xFFFFFFFF or cert_size > 0xFFFFFFFF:
@@ -102,15 +109,17 @@ def parse_pkcs7(
             "encryption_algorithm": None,
             "has_timestamp": False,
         }
-        if not isinstance(offset, int) or not isinstance(size, int) or size <= 0 or offset < 0:
+        offset_int = _to_int(offset)
+        size_int = _to_int(size)
+        if offset_int is None or size_int is None or size_int <= 0 or offset_int < 0:
             return None
-        read_size = min(size, 1024)
-        pkcs7_data = cmdj(f"pxj {read_size} @ {offset}", [])
+        read_size = min(size_int, 1024)
+        pkcs7_data = cmdj(f"pxj {read_size} @ {offset_int}", [])
         if not pkcs7_data:
             return None
         result["digest_algorithm"] = detect_digest_algorithm_fn(pkcs7_data)
         result["encryption_algorithm"] = detect_encryption_algorithm_fn(pkcs7_data)
-        result["signer_info"] = extract_common_names_fn(pkcs7_data, offset)
+        result["signer_info"] = extract_common_names_fn(pkcs7_data, offset_int)
         if has_timestamp_fn(pkcs7_data):
             result["has_timestamp"] = True
         return result

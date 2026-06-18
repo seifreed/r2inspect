@@ -5,8 +5,6 @@ All tests use real objects (FakeR2 + R2PipeAdapter) instead of mocks.
 
 import logging
 
-import pytest
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.modules.authenticode_parsing_support import (
@@ -960,6 +958,17 @@ class TestSupportFunctionsDirect:
         assert result["security_directory"]["size"] == 0x200
         assert result["security_directory"]["virtual_address"] == 0x1000
 
+    def test_apply_security_directory_direct_string_values(self):
+        """Test apply_security_directory coerces numeric string values."""
+        result = {"has_signature": False, "security_directory": None}
+        security_dir = {"paddr": "0x800", "size": "512", "vaddr": "4096"}
+
+        apply_security_directory(result, security_dir)
+
+        assert result["security_directory"]["offset"] == 0
+        assert result["security_directory"]["size"] == 512
+        assert result["security_directory"]["virtual_address"] == 4096
+
     def test_read_win_certificate_direct_invalid_types(self):
         """Test read_win_certificate with non-integer types."""
 
@@ -981,6 +990,30 @@ class TestSupportFunctionsDirect:
         assert cert_info is None
         assert len(result_dict["errors"]) >= 1
 
+    def test_read_win_certificate_direct_string_types(self):
+        """Test read_win_certificate coerces numeric string types."""
+
+        def fake_cmdj(command, default=None):
+            if command == "pxj 8 @ 2048":
+                return [0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x02, 0x00]
+            return None
+
+        security_dir = {"paddr": "2048", "size": "512"}
+        result_dict = {"errors": []}
+
+        cert_info = read_win_certificate(
+            cmdj=fake_cmdj,
+            security_dir=security_dir,
+            result=result_dict,
+            parse_header_fn=lambda d: (512, 0x0200, 0x0002),
+            get_cert_type_name_fn=lambda t: "PKCS#7",
+            parse_pkcs7_fn=lambda o, s: {"digest_algorithm": "sha256"},
+        )
+
+        assert cert_info is not None
+        assert result_dict["signature_offset"] == 2048
+        assert result_dict["signature_size"] == 512
+
     def test_parse_pkcs7_direct_invalid_offset(self):
         """Test parse_pkcs7 with negative offset."""
         result = parse_pkcs7(
@@ -995,6 +1028,28 @@ class TestSupportFunctionsDirect:
         )
 
         assert result is None
+
+    def test_parse_pkcs7_direct_string_args(self):
+        """Test parse_pkcs7 accepts numeric string arguments."""
+
+        def fake_cmdj(command, default=None):
+            if command == "pxj 8 @ 4096":
+                return [1] * 8
+            return None
+
+        result = parse_pkcs7(
+            cmdj=fake_cmdj,
+            offset="4096",
+            size="8",
+            logger=logging.getLogger("test"),
+            detect_digest_algorithm_fn=lambda d: None,
+            detect_encryption_algorithm_fn=lambda d: None,
+            extract_common_names_fn=lambda d, o: [],
+            has_timestamp_fn=lambda d: False,
+        )
+
+        assert result is not None
+        assert result["signer_info"] == []
 
     def test_parse_pkcs7_direct_zero_size(self):
         """Test parse_pkcs7 with zero size."""
