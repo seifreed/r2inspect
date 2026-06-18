@@ -89,8 +89,7 @@ def test_apply_security_flags_from_header_non_int_dll_characteristics_returns_ea
     features = {"aslr": False, "dep": False, "seh": False, "guard_cf": False, "authenticode": False}
     pe_header = {"optional_header": {"DllCharacteristics": "0x0040"}}
     _apply_security_flags_from_header(features, pe_header, SilentLogger())
-    # non-int -> early return, nothing set
-    assert features["aslr"] is False
+    assert features["aslr"] is True
 
 
 def test_apply_security_flags_from_header_none_pe_header_returns_early():

@@ -8,6 +8,15 @@ from typing import Any
 from ..infrastructure.r2_helpers import get_pe_headers
 
 
+def _to_int(value: Any) -> int:
+    try:
+        if isinstance(value, str):
+            return int(value, 0)
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
     features = {
         "aslr": False,
@@ -41,9 +50,7 @@ def _apply_security_flags_from_header(
     opt_header = pe_header.get("optional_header", {})
     if not isinstance(opt_header, dict):
         return
-    dll_characteristics = opt_header.get("DllCharacteristics", 0)
-    if not isinstance(dll_characteristics, int):
-        return
+    dll_characteristics = _to_int(opt_header.get("DllCharacteristics", 0))
 
     features["aslr"] = bool(dll_characteristics & 0x0040)
     features["dep"] = bool(dll_characteristics & 0x0100)
@@ -94,9 +101,6 @@ def _apply_authenticode_feature(
     security_dir = data_dir.get("security", {})
     if not isinstance(security_dir, dict):
         return
-    try:
-        security_size = int(security_dir.get("size", 0))
-    except (TypeError, ValueError):
-        return
+    security_size = _to_int(security_dir.get("size", 0))
     if security_size > 0:
         features["authenticode"] = True
