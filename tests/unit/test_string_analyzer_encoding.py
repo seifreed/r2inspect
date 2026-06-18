@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.formats.string import parse_search_results
 from r2inspect.config import Config
 from r2inspect.config_schemas.schemas import GeneralConfig, StringsConfig
 from r2inspect.modules.string_analyzer import StringAnalyzer
@@ -987,3 +988,7 @@ class TestEdgeCases:
         result = analyzer.extract_strings()
 
         assert result == []
+
+
+def test_parse_search_results_rejects_non_string_input():
+    assert parse_search_results(None) == []  # type: ignore[arg-type]

@@ -103,6 +103,13 @@ def test_build_xor_matches_address_parsing():
     assert "0x00402000" in matches[0]["addresses"]
 
 
+def test_build_xor_matches_ignores_non_string_search_results():
+    def search_hex(pattern: str) -> str:
+        return None  # type: ignore[return-value]
+
+    assert build_xor_matches("A", search_hex) == []
+
+
 # ---------------------------------------------------------------------------
 # find_suspicious() - lines 75, 80-89
 # ---------------------------------------------------------------------------

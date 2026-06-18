@@ -41,6 +41,8 @@ def filter_strings(strings: list[str], min_length: int, max_length: int) -> list
 
 
 def parse_search_results(result: str) -> list[str]:
+    if not isinstance(result, str) or not result.strip():
+        return []
     addresses = []
     lines = result.strip().split("\n")
     for line in lines:
@@ -62,7 +64,7 @@ def build_xor_matches(
         xor_result = xor_string(search_string, key)
         hex_pattern = bytes(ord(char) ^ key for char in search_string).hex()
         result = search_hex_fn(hex_pattern)
-        if result and result.strip():
+        if isinstance(result, str) and result.strip():
             matches.append(
                 {
                     "original_string": search_string,

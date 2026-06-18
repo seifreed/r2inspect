@@ -52,6 +52,8 @@ def section_has_permission(
     permission: str, *, is_readable: bool, is_writable: bool, is_executable: bool
 ) -> bool:
     """Resolve an r/w/x permission flag against a section's access bits."""
+    if not isinstance(permission, str):
+        return False
     perm_map = {"r": is_readable, "w": is_writable, "x": is_executable}
     return perm_map.get(permission.lower(), False)
 
