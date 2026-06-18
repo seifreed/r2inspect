@@ -160,7 +160,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             # Check if debug info is available
             debug_info = self._cmd("id")
 
-            if debug_info and "No debug info" not in debug_info:
+            if isinstance(debug_info, str) and debug_info and "No debug info" not in debug_info:
                 info.update(self._parse_dwarf_info(debug_info.split("\n")))
 
         except Exception as e:

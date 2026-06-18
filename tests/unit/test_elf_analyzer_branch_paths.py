@@ -302,6 +302,17 @@ def test_extract_dwarf_info_no_debug_info():
     assert info == {}
 
 
+def test_extract_dwarf_info_non_string_output_returns_empty():
+    class BadDebugAdapter(MinimalELFAdapter):
+        def cmd(self, command: str):
+            if command == "id":
+                return 123
+            return super().cmd(command)
+
+    analyzer = ELFAnalyzer(BadDebugAdapter())
+    assert analyzer._extract_dwarf_info() == {}
+
+
 # ---------------------------------------------------------------------------
 # _extract_build_id – when section found (lines 173-174, 179)
 # ---------------------------------------------------------------------------
