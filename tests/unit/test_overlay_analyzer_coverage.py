@@ -4,7 +4,7 @@ All mocks replaced with real objects using FakeR2 + R2PipeAdapter.
 """
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.domain.services.overlay_analysis import looks_encrypted
+from r2inspect.domain.services.overlay_analysis import build_overlay_suspicious_indicators, looks_encrypted
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -613,6 +613,20 @@ def test_check_suspicious_indicators():
     }
     analyzer._check_suspicious_indicators(result)
     assert len(result["suspicious_indicators"]) > 0
+
+
+def test_build_overlay_suspicious_indicators_skips_malformed_items():
+    result = {
+        "overlay_size": 0,
+        "overlay_entropy": 0.0,
+        "embedded_files": [{"type": "PE", "offset": 100}, "bad"],
+        "patterns_found": [{"name": "AutoIt"}, 123],
+        "extracted_strings": ["cmd.exe", None],
+    }
+    indicators = build_overlay_suspicious_indicators(result)
+    assert any(item["indicator"] == "Embedded executable" for item in indicators)
+    assert any(item["indicator"] == "AutoIt script" for item in indicators)
+    assert any(item["indicator"] == "Suspicious strings" for item in indicators)
 
 
 # ── _default_result ─────────────────────────────────────────────────
