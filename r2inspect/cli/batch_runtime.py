@@ -189,7 +189,7 @@ def ensure_batch_shutdown(timeout: float = 2.0) -> None:
 
 def schedule_forced_exit(delay: float = 2.0) -> None:
     """Schedule a forced process exit to prevent batch hangs."""
-    if os.getenv("R2INSPECT_DISABLE_FORCED_EXIT"):
+    if os.getenv("R2INSPECT_DISABLE_FORCED_EXIT") or _pytest_running():
         return
 
     def _exit() -> None:

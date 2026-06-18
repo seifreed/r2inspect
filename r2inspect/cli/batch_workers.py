@@ -156,7 +156,12 @@ def process_files_parallel(
             }
 
             for future in as_completed(future_to_file):
-                file_path, results, error = future.result()
+                file_path = future_to_file[future]
+                try:
+                    file_path, results, error = future.result()
+                except Exception as exc:
+                    logger.error("Unexpected error processing %s: %s", file_path, exc)
+                    file_path, results, error = file_path, None, str(exc)
 
                 with progress_lock:
                     completed_count += 1

@@ -298,6 +298,41 @@ def test_process_files_parallel_multiple_files(tmp_path: Path):
     assert failed_files == []
 
 
+def test_process_files_parallel_records_worker_exception_and_continues(tmp_path: Path):
+    good = tmp_path / "good.bin"
+    bad = tmp_path / "bad.bin"
+    good.write_bytes(b"A" * 16)
+    bad.write_bytes(b"B" * 16)
+
+    all_results: dict = {}
+    failed_files: list = []
+    output_path = tmp_path / "out"
+    output_path.mkdir()
+
+    def worker(file_path, batch_path, config_obj, options, output_json, output_path, rate_limiter):
+        if file_path.name == "bad.bin":
+            raise RuntimeError("worker boom")
+        return file_path, {"ok": True}, None
+
+    rate_limiter = BatchRateLimiter(max_concurrent=2, rate_per_second=100.0, enable_adaptive=False)
+    process_files_parallel(
+        [good, bad],
+        all_results,
+        failed_files,
+        output_path,
+        tmp_path,
+        Config(),
+        {"full_analysis": False},
+        False,
+        2,
+        rate_limiter,
+        process_fn=worker,
+    )
+
+    assert str(good) in all_results
+    assert any(path.endswith("bad.bin") for path, _ in failed_files)
+
+
 def test_process_files_parallel_thread_cap_applied(tmp_path: Path):
     sample = _sample_pe()
     local = tmp_path / sample.name

@@ -625,20 +625,27 @@ def test_ensure_batch_shutdown_with_threads():
 
     thread = threading.Thread(target=worker, daemon=False)
     thread.start()
-    ensure_batch_shutdown(timeout=0.2)
+    try:
+        ensure_batch_shutdown(timeout=0.2)
+    finally:
+        thread.join(timeout=2.0)
 
 
 def test_ensure_batch_shutdown_timeout():
+    done = threading.Event()
+
     def long_worker():
-        time.sleep(5.0)
+        done.wait(timeout=5.0)
 
     os.environ["R2INSPECT_TEST_SAFE_EXIT"] = "1"
+    thread = threading.Thread(target=long_worker, daemon=False)
+    thread.start()
     try:
-        thread = threading.Thread(target=long_worker, daemon=False)
-        thread.start()
         with pytest.raises(SystemExit):
             ensure_batch_shutdown(timeout=0.05)
     finally:
+        done.set()
+        thread.join(timeout=2.0)
         del os.environ["R2INSPECT_TEST_SAFE_EXIT"]
 
 
