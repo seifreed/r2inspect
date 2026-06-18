@@ -176,6 +176,8 @@ class BinbloomMixin:
         from collections import defaultdict
 
         signature_groups: dict[str, list[str]] = defaultdict(list)
+        if not isinstance(function_signatures, dict):
+            return signature_groups
         for func_name, func_data in function_signatures.items():
             if not isinstance(func_data, dict):
                 continue
