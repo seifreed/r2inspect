@@ -15,6 +15,7 @@ from r2inspect.core.result_aggregator import (
     _count_crypto_indicators,
 )
 from r2inspect.core.result_aggregator_indicator_support import generate_indicators
+from r2inspect.core.result_aggregator_recommendation_support import generate_recommendations
 
 
 def test_normalize_results_with_full_data():
@@ -540,6 +541,12 @@ def test_generate_recommendations_skips_non_dict_buckets():
         {"packer": None, "security": None, "crypto": None, "anti_analysis": None}
     )
     assert isinstance(recommendations, list)
+
+
+def test_generate_recommendations_non_dict_input_returns_default():
+    assert generate_recommendations(None) == [
+        "No immediate concerns detected; proceed with standard analysis."
+    ]
 
 
 def test_result_aggregator_generate_indicators_packer():

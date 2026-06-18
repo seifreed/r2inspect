@@ -36,6 +36,8 @@ RECOMMENDATION_RULES: list[tuple[RecommendationPredicate, str]] = [
 
 def generate_recommendations(analysis_results: dict[str, Any]) -> list[str]:
     """Build the recommendation list for the executive summary."""
+    if not isinstance(analysis_results, dict):
+        return ["No immediate concerns detected; proceed with standard analysis."]
     recommendations = [
         message for predicate, message in RECOMMENDATION_RULES if predicate(analysis_results)
     ]
