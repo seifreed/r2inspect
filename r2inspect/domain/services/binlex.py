@@ -58,7 +58,7 @@ def extract_tokens_from_text(instructions_text: str) -> list[str]:
 
 
 def generate_ngrams(tokens: list[str], n: int) -> list[str]:
-    if len(tokens) < n:
+    if n <= 0 or len(tokens) < n:
         return []
     return [" ".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
 

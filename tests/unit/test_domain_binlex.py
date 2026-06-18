@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-
 from r2inspect.domain.services.binlex import (
     calculate_binary_signature,
     create_signature,
@@ -99,6 +97,11 @@ def test_generate_ngrams_basic() -> None:
 
 def test_generate_ngrams_too_few_tokens() -> None:
     assert generate_ngrams(["a"], 2) == []
+
+
+def test_generate_ngrams_rejects_non_positive_size() -> None:
+    assert generate_ngrams(["a", "b"], 0) == []
+    assert generate_ngrams(["a", "b"], -1) == []
 
 
 def test_generate_ngrams_trigrams() -> None:
