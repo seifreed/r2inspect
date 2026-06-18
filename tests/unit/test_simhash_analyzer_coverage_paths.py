@@ -301,6 +301,19 @@ def test_simhash_analyzer_extract_function_features_valid() -> None:
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
+def test_simhash_analyzer_extract_function_features_hex_offset() -> None:
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "aflj": [{"offset": "0x1000", "name": "test_func", "size": 100}],
+            "pdfj @ 4096": {"ops": [{"mnemonic": "mov"}, {"mnemonic": "add"}]},
+        },
+    )
+    result = analyzer._extract_function_features()
+    assert "test_func" in result
+    assert result["test_func"]["addr"] == 0x1000
+
+
+@pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
 def test_simhash_analyzer_extract_function_features_exception() -> None:
     # get_functions succeeds but get_disasm raises -> empty result
     fake_r2 = FakeR2(
