@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
-
-import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
@@ -16,14 +13,6 @@ from r2inspect.domain.formats.crypto import (
     _is_candidate_string,
     _matches_any_pattern,
     CRYPTO_PATTERNS,
-)
-from r2inspect.modules.crypto_detection_support import (
-    build_crypto_report,
-    detect_crypto_apis,
-    detect_crypto_constants,
-    analyze_entropy,
-    find_suspicious_patterns,
-    detect_crypto_libraries,
 )
 from r2inspect.domain.services.binary_helpers import shannon_entropy
 from r2inspect.domain.formats.string import parse_search_results

@@ -524,3 +524,17 @@ def test_section_entropy_coerces_string_size() -> None:
     analyzer._do_calculate_section_entropy({"vaddr": "4096", "size": "16"})
 
     assert recorded == [16]
+
+
+def test_section_entropy_coerces_hex_string_size() -> None:
+    recorded: list[int] = []
+
+    class _RecordingAdapter(EmptyAdapter):
+        def read_bytes(self, vaddr: int, size: int) -> bytes:
+            recorded.append(size)
+            return b"\x00" * min(size, 16)
+
+    analyzer = CryptoAnalyzer(_RecordingAdapter())
+    analyzer._do_calculate_section_entropy({"vaddr": "0x1000", "size": "0x20"})
+
+    assert recorded == [32]
