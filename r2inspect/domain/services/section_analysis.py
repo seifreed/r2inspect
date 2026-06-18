@@ -111,6 +111,8 @@ def build_size_indicators(vsize: int, raw_size: int) -> list[str]:
 
 
 def decode_pe_characteristics(characteristics: int) -> list[str]:
+    if not isinstance(characteristics, int):
+        return []
     return [
         flag_name
         for flag_value, flag_name in PE_CHARACTERISTIC_FLAGS.items()

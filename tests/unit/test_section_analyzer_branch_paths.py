@@ -10,6 +10,7 @@ from __future__ import annotations
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.section_analysis import (
     _mark_entropy_anomaly,
+    decode_pe_characteristics,
     build_permission_indicators,
     update_section_summary,
 )
@@ -671,6 +672,10 @@ def test_update_summary_for_section_replaces_missing_flags_with_empty_key():
     assert entropy == 0.0
     assert flag_counts.get("") == 1
     assert "None" not in flag_counts
+
+
+def test_decode_pe_characteristics_skips_non_int_input():
+    assert decode_pe_characteristics("bad") == []  # type: ignore[arg-type]
 
 
 def test_apply_permissions_treats_missing_flags_as_empty():
