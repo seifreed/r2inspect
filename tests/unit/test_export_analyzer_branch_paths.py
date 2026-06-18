@@ -77,8 +77,8 @@ def test_get_exports_skips_non_dict_entries():
 def test_get_exports_coerces_malformed_fields_and_preserves_valid_entries():
     adapter = StubAdapter(
         exports=[
-            {"name": ["bad"], "vaddr": "bad"},
-            {"name": "good", "vaddr": "4096"},
+            {"name": ["bad"], "vaddr": "bad", "size": "7"},
+            {"name": "good", "vaddr": "4096", "size": "12"},
         ],
         func_info=[{"size": 10, "cc": 1}],
     )
@@ -88,8 +88,10 @@ def test_get_exports_coerces_malformed_fields_and_preserves_valid_entries():
     assert len(exports) == 2
     assert exports[0]["name"] == "unknown"
     assert exports[0]["address"] == "0x0"
+    assert exports[0]["size"] == 7
     assert exports[1]["name"] == "good"
     assert exports[1]["address"] == "0x1000"
+    assert exports[1]["size"] == 12
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +124,7 @@ def test_analyze_export_returns_result_with_empty_characteristics_when_inner_exc
     assert len(exports) == 1
     assert exports[0]["name"] == "export_fn"
     assert isinstance(exports[0]["characteristics"], dict)
+    assert exports[0]["size"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +171,14 @@ def test_get_export_characteristics_dict_func_info_sets_function_fields():
     assert result.get("is_function") is True
     assert result.get("function_size") == 33
     assert result.get("complexity") == 4
+
+
+def test_get_export_characteristics_coerces_string_function_size():
+    adapter = StubAdapter(func_info=[{"size": "33", "cc": 4}])
+    analyzer = _make_analyzer(adapter)
+    result = analyzer._get_export_characteristics({"name": "fn", "vaddr": 0x2200})
+    assert result.get("is_function") is True
+    assert result.get("function_size") == 33
 
 
 # ---------------------------------------------------------------------------

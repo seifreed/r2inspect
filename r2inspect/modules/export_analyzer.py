@@ -83,7 +83,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             "address": hex(vaddr),
             "ordinal": exp.get("ordinal", 0),
             "type": exp.get("type", "unknown"),
-            "size": exp.get("size", 0),
+            "size": _to_int(exp.get("size", 0)),
             "is_forwarded": exp.get("forwarded", False),
             "forwarder": exp.get("forwarder", ""),
             "characteristics": {},
@@ -140,7 +140,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                     func = func_info[0]
                     # Validate that func is a dictionary before using .get()
                     if isinstance(func, dict):
-                        characteristics["function_size"] = func.get("size", 0)
+                        characteristics["function_size"] = _to_int(func.get("size", 0))
                         characteristics["complexity"] = func.get("cc", 0)  # Cyclomatic complexity
                         characteristics["is_function"] = True
                     else:
