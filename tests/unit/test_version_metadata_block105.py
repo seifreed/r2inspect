@@ -25,3 +25,12 @@ def test_runtime_version_matches_package_metadata():
     metadata = tomllib.loads(pyproject.read_text())
 
     assert version_module.__version__ == metadata["project"]["version"]
+
+
+def test_legacy_setup_does_not_duplicate_package_metadata():
+    root = pathlib.Path(__file__).parents[2]
+    metadata = tomllib.loads((root / "pyproject.toml").read_text())
+    setup_py = (root / "setup.py").read_text()
+
+    assert metadata["project"]["license"] == "GPL-3.0-or-later"
+    assert "install_requires" not in setup_py
