@@ -83,9 +83,13 @@ class ResourceVersionMixin:
             return ""
         value_bytes: list[int] = []
         for i in range(value_start, min(value_start + 256, len(data) - 1), 2):
-            if data[i] == 0 and data[i + 1] == 0:
+            first = data[i]
+            second = data[i + 1]
+            if not isinstance(first, int) or not isinstance(second, int):
+                return ""
+            if first == 0 and second == 0:
                 break
-            value_bytes.extend([data[i], data[i + 1]])
+            value_bytes.extend([first, second])
         if not value_bytes:
             return ""
         try:
