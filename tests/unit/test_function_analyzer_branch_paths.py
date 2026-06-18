@@ -311,6 +311,17 @@ def test_process_single_function_hash_returns_none_without_addr():
     assert result is None
 
 
+def test_process_single_function_hash_accepts_hex_string_addr():
+    good_ops = [{"opcode": "push ebp"}, {"opcode": "mov ebp, esp"}, {"opcode": "ret"}]
+    adapter = _StaticFunctionsAdapter([], ops=good_ops)
+    analyzer = FunctionAnalyzer(adapter)
+    result = analyzer._process_single_function_hash(
+        {"name": "hex_func", "addr": "0x1000", "size": 10}, 0, 1
+    )
+    assert result is not None
+    assert result[0] == "hex_func"
+
+
 # ---------------------------------------------------------------------------
 # _process_single_function_hash - no mnemonics (lines 175-176)
 # ---------------------------------------------------------------------------
