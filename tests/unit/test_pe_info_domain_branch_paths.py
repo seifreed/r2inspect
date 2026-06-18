@@ -346,6 +346,11 @@ def test_parse_version_info_text_empty_string():
     assert result == {}
 
 
+def test_parse_version_info_text_rejects_non_string_input():
+    result = parse_version_info_text(None)  # type: ignore[arg-type]
+    assert result == {}
+
+
 # ---------------------------------------------------------------------------
 # characteristics_from_bin() - lines 127-142
 # ---------------------------------------------------------------------------

@@ -135,6 +135,8 @@ def normalize_resource_entries(resources: list[dict[str, Any]]) -> list[dict[str
 
 def parse_version_info_text(version_result: str) -> dict[str, str]:
     version_info: dict[str, str] = {}
+    if not isinstance(version_result, str):
+        return version_info
     for line in version_result.strip().split("\n"):
         if "=" in line:
             key, value = line.split("=", 1)
