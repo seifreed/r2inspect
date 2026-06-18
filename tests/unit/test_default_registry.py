@@ -20,6 +20,17 @@ def test_get_format_specific_analyzers_filters():
     assert "elf_analyzer" not in pe_registry
 
 
+def test_filtered_registry_resolves_real_analyzer_class():
+    # A filtered registry must still resolve to the real analyzer class. The
+    # filter previously copied metadata.analyzer_class, which under lazy loading
+    # is a LazyPlaceholder, so get_analyzer_class returned the placeholder.
+    pe_registry = get_format_specific_analyzers("PE")
+    cls = pe_registry.get_analyzer_class("pe_analyzer")
+    assert cls is not None
+    assert cls.__name__ == "PEAnalyzer"
+    assert "Placeholder" not in cls.__name__
+
+
 def test_get_minimal_registry_only_required():
     minimal = get_minimal_registry()
     assert all(info["required"] for info in minimal.list_analyzers())

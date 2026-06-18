@@ -31,20 +31,16 @@ def filter_registry_impl(
     predicate: Callable[[AnalyzerMetadata], bool],
     create_registry: Callable[[], AnalyzerRegistry],
 ) -> AnalyzerRegistry:
-    default_registry = create_registry()
-    filtered = AnalyzerRegistry()
+    # Drop non-matching analyzers from a fresh full registry rather than copying
+    # metadata into a blank one. Under lazy loading the metadata.analyzer_class
+    # is a LazyPlaceholder and the real module_path/class_name live only in the
+    # registry's lazy loader; re-registering by analyzer_class would lose them
+    # and make get_analyzer_class return the placeholder. Mutating the original
+    # registry preserves its lazy loader so kept analyzers still resolve.
+    registry = create_registry()
+    for name in list(registry):
+        metadata = registry.get_metadata(name)
+        if not metadata or not predicate(metadata):
+            registry.unregister(name)
 
-    for name in default_registry:
-        metadata = default_registry.get_metadata(name)
-        if metadata and predicate(metadata):
-            filtered.register(
-                name=metadata.name,
-                analyzer_class=metadata.analyzer_class,
-                category=metadata.category,
-                file_formats=metadata.file_formats,
-                required=metadata.required,
-                dependencies=metadata.dependencies,
-                description=metadata.description,
-            )
-
-    return filtered
+    return registry
