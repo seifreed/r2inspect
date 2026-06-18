@@ -74,7 +74,9 @@ def _function_type_counts(functions: list[dict[str, Any]]) -> dict[str, int]:
 def _largest_functions(functions: list[dict[str, Any]]) -> list[tuple[str, int]]:
     functions_with_sizes: list[tuple[str, int]] = [
         (
-            str(f.get("name", f"func_{f.get('offset', '?')}")),
+            f.get("name")
+            if isinstance(f.get("name"), str) and f.get("name")
+            else f"func_{f.get('offset', '?')}",
             _coerce_function_size(f.get("size")),
         )
         for f in functions

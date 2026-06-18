@@ -171,6 +171,20 @@ def test_classify_function_type_accepts_string_size() -> None:
     assert classify_function_type("normal", {"size": "50"}) == "unknown"
 
 
+def test_largest_functions_falls_back_to_offset_when_name_missing() -> None:
+    from r2inspect.domain.services.function_analysis import build_function_stats
+
+    result = build_function_stats(
+        [
+            {"name": None, "offset": 0x401000, "size": 20},  # type: ignore[arg-type]
+            {"name": "named", "offset": 0x402000, "size": 10},
+        ]
+    )
+
+    assert result["largest_functions"][0][0] == "func_4198400"
+    assert "None" not in {name for name, _size in result["largest_functions"]}
+
+
 def test_mnemonic_helpers_and_hash_remain_stable() -> None:
     ops = [{"opcode": "mov eax, ebx"}, {"opcode": "push ecx"}]
     text = "mov eax, ebx\npush ecx"
