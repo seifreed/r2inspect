@@ -46,7 +46,7 @@ def _display_file_info(results: Results) -> None:
     }
 
     enhanced = file_info.get("enhanced_detection", {})
-    if enhanced:
+    if isinstance(enhanced, dict) and enhanced:
         table.add_row("Format", enhanced.get("file_format", "Unknown"))
         table.add_row("Category", enhanced.get("format_category", "Unknown"))
         table.add_row(

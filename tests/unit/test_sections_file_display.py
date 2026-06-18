@@ -152,6 +152,13 @@ def test_display_file_info_missing_enhanced_fields():
     assert "Unknown" in output
 
 
+def test_display_file_info_accepts_non_dict_enhanced_detection():
+    results = {"file_info": {"name": "test.exe", "enhanced_detection": "bad"}}
+    output = _capture(_display_file_info, results)
+    assert "File Information" in output
+    assert "test.exe" in output
+
+
 def test_display_file_info_all_fields():
     results = {
         "file_info": {
