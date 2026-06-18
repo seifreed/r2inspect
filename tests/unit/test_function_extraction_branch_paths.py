@@ -47,3 +47,10 @@ def test_collect_valid_functions_runs_analyze_all_and_cleans_names() -> None:
     assert result[0]["addr"] == 4096
     assert result[0]["size"] == 8
     assert result[0]["name"] == "A&B"
+
+
+def test_collect_valid_functions_coerces_hex_strings() -> None:
+    host = _Host([{"addr": "0x1000", "size": "0x20", "name": "hex"}])
+    result = collect_valid_functions(host, logging.getLogger("test"))
+    assert result[0]["addr"] == 4096
+    assert result[0]["size"] == 32

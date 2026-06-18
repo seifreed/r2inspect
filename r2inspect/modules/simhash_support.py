@@ -16,6 +16,8 @@ from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 def _to_int(value: Any) -> int | None:
     try:
+        if isinstance(value, str):
+            return int(value, 0)
         return int(value or 0)
     except (TypeError, ValueError):
         return None
