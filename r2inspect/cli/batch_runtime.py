@@ -127,7 +127,8 @@ def _flush_coverage_data() -> None:
         if os.getenv("R2INSPECT_TEST_COVERAGE_IMPORT_ERROR"):
             raise ImportError("Simulated coverage import error")
         import coverage
-    except Exception:
+    except Exception as exc:
+        logger.warning("Coverage import unavailable: %s", exc)
         return
     try:
         if os.getenv("R2INSPECT_TEST_COVERAGE_CURRENT_ERROR"):
@@ -144,7 +145,8 @@ def _flush_coverage_data() -> None:
             cov = _DummyCoverage()
         else:
             cov = coverage.Coverage.current()
-    except Exception:
+    except Exception as exc:
+        logger.warning("Coverage current lookup failed: %s", exc)
         return
     if os.getenv("R2INSPECT_TEST_COVERAGE_NONE"):
         cov = None

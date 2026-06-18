@@ -285,13 +285,15 @@ def test_setup_batch_output_directory_creates_nonexistent_parent_for_csv(
 # ---------------------------------------------------------------------------
 
 
-def test_flush_coverage_data_coverage_current_raises(tmp_path: Path) -> None:
+def test_flush_coverage_data_coverage_current_raises(tmp_path: Path, caplog) -> None:
     """_flush_coverage_data silently handles Coverage.current() raising an exception."""
     os.environ["R2INSPECT_TEST_COVERAGE_CURRENT_ERROR"] = "1"
     try:
-        _flush_coverage_data()
+        with caplog.at_level("WARNING"):
+            _flush_coverage_data()
     finally:
         del os.environ["R2INSPECT_TEST_COVERAGE_CURRENT_ERROR"]
+    assert "Coverage current lookup failed: Simulated coverage current error" in caplog.text
 
 
 # ---------------------------------------------------------------------------
