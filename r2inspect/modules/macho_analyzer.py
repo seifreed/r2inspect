@@ -86,7 +86,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         def _load() -> dict[str, Any]:
             macho_info = self._cmdj("ij", {})
-            if not (macho_info and isinstance(macho_info.get("bin"), dict)):
+            if not (isinstance(macho_info, dict) and isinstance(macho_info.get("bin"), dict)):
                 return {}
             bin_info = macho_info["bin"]
             return {

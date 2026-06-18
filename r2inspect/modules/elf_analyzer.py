@@ -85,7 +85,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             # Get ELF information from radare2
             elf_info = self.adapter.get_file_info()
 
-            if elf_info and isinstance(elf_info.get("bin"), dict):
+            if isinstance(elf_info, dict) and isinstance(elf_info.get("bin"), dict):
                 bin_info = elf_info["bin"]
 
                 info["architecture"] = bin_info.get("arch", "Unknown")

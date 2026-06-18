@@ -222,6 +222,15 @@ def test_format_detection_stage_ignores_non_dict_core_info() -> None:
     assert result["format_detection"]["file_format"] in {"PE", "ELF", "Mach-O", "Unknown"}
 
 
+def test_format_detection_stage_ignores_list_file_info() -> None:
+    stage = FormatDetectionStage(adapter=FakeAdapter([]), filename="sample.elf")
+    context = make_stage_context()
+
+    result = stage._execute(context)
+
+    assert result["format_detection"]["file_format"] in {"PE", "ELF", "Mach-O", "Unknown"}
+
+
 def test_hashing_stage_runs_format_supported_hashers() -> None:
     registry = AnalyzerRegistry(lazy_loading=False)
     registry.register("tlsh", TLSHAnalyzer, AnalyzerCategory.HASHING, file_formats={"PE"})

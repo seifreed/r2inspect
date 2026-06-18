@@ -119,7 +119,7 @@ class FileInfoStage(AnalysisStage):
 
     @staticmethod
     def _bin_arch_info(info_cmd: dict[str, Any] | None) -> dict[str, Any]:
-        if not (info_cmd and isinstance(info_cmd.get("bin"), dict)):
+        if not (isinstance(info_cmd, dict) and isinstance(info_cmd.get("bin"), dict)):
             return {}
         bin_info = info_cmd["bin"]
         arch = bin_info.get("arch", "Unknown")
@@ -185,7 +185,7 @@ class FormatDetectionStage(AnalysisStage):
 
     def _detect_via_r2(self) -> str | None:
         info_cmd = self.adapter.get_file_info()
-        if not info_cmd or not isinstance(info_cmd.get("bin"), dict):
+        if not isinstance(info_cmd, dict) or not isinstance(info_cmd.get("bin"), dict):
             return None
 
         bin_info = info_cmd["bin"]

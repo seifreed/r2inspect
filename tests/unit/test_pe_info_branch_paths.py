@@ -167,6 +167,16 @@ def test_get_pe_headers_info_ignores_non_dict_bin():
     assert result == {}
 
 
+def test_get_pe_headers_info_ignores_list_file_info():
+    log = StubLogger()
+    class AdapterWithListInfo(AdapterWithFullBin):
+        def get_file_info(self):
+            return []
+
+    result = pe_info.get_pe_headers_info(AdapterWithListInfo(), None, log)
+    assert result == {}
+
+
 def test_get_pe_headers_info_exception_returns_empty_dict():
     log = StubLogger()
     result = pe_info.get_pe_headers_info(AdapterRaisingFileInfo(), None, log)
@@ -408,6 +418,16 @@ def test_get_subsystem_info_ignores_non_dict_bin():
             return {"bin": "not-a-dict"}
 
     result = pe_info.get_subsystem_info(AdapterWithBadBin(), log)
+    assert result == {}
+
+
+def test_get_subsystem_info_ignores_list_file_info():
+    log = StubLogger()
+    class AdapterWithListInfo(AdapterWithFullBin):
+        def get_file_info(self):
+            return []
+
+    result = pe_info.get_subsystem_info(AdapterWithListInfo(), log)
     assert result == {}
 
 

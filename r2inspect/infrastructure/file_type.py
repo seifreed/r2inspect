@@ -41,7 +41,7 @@ def _pe_via_info_text(adapter: Any, log: Any) -> bool:
 def _pe_via_ij(adapter: Any, r2_instance: Any, log: Any) -> bool:
     try:
         info_cmd = cmdj_helper(adapter, r2_instance, "ij", {})
-        if info_cmd and isinstance(info_cmd.get("bin"), dict):
+        if isinstance(info_cmd, dict) and isinstance(info_cmd.get("bin"), dict):
             return _bin_info_has_pe(info_cmd["bin"])
     except Exception as exc:
         log.debug(f"Error with 'ij' command: {exc}")
@@ -81,7 +81,7 @@ def _elf_via_cmd(adapter: Any, r2_instance: Any, log: Any) -> bool:
 def _elf_via_ij(adapter: Any, r2_instance: Any, log: Any) -> bool:
     try:
         info_cmd = cmdj_helper(adapter, r2_instance, "ij", {})
-        if info_cmd and isinstance(info_cmd.get("bin"), dict):
+        if isinstance(info_cmd, dict) and isinstance(info_cmd.get("bin"), dict):
             return _bin_info_has_elf(info_cmd["bin"])
     except Exception as exc:
         log.debug(f"Error with 'ij' command: {exc}")

@@ -84,6 +84,13 @@ class BadBinAdapter(_StubBase):
         return {"bin": "not-a-dict"}
 
 
+class ListInfoAdapter(_StubBase):
+    """Adapter whose ij output is list-shaped instead of dict-shaped."""
+
+    def get_file_info(self) -> list[Any]:
+        return []  # type: ignore[return-value]
+
+
 class ELFFileInfoAdapter(_StubBase):
     """Adapter that reports ELF via the ij / get_file_info path."""
 
@@ -169,6 +176,13 @@ def test_is_pe_file_ij_non_dict_bin_returns_false(tmp_path: Path):
     f = tmp_path / "data.bin"
     f.write_bytes(b"\x00" * 8)
     result = is_pe_file(str(f), BadBinAdapter(), None)
+    assert result is False
+
+
+def test_is_pe_file_ij_list_info_returns_false(tmp_path: Path):
+    f = tmp_path / "data.bin"
+    f.write_bytes(b"\x00" * 8)
+    result = is_pe_file(str(f), ListInfoAdapter(), None)
     assert result is False
 
 
@@ -261,6 +275,13 @@ def test_is_elf_file_ij_non_dict_bin_returns_false(tmp_path: Path):
     f = tmp_path / "data.bin"
     f.write_bytes(b"\x00" * 8)
     result = is_elf_file(str(f), BadBinAdapter(), None)
+    assert result is False
+
+
+def test_is_elf_file_ij_list_info_returns_false(tmp_path: Path):
+    f = tmp_path / "data.bin"
+    f.write_bytes(b"\x00" * 8)
+    result = is_elf_file(str(f), ListInfoAdapter(), None)
     assert result is False
 
 
