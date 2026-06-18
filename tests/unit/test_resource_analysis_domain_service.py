@@ -72,6 +72,16 @@ def test_build_manifest_info_extracts_flags_and_truncates_content() -> None:
     assert result["dpi_aware"] is True
 
 
+def test_build_manifest_info_coerces_non_string_input() -> None:
+    result = build_manifest_info(None, 123)
+
+    assert result["content"] == ""
+    assert result["size"] == 123
+    assert result["requires_admin"] is False
+    assert result["requires_elevation"] is False
+    assert result["dpi_aware"] is False
+
+
 def test_build_resource_statistics_summarizes_inventory() -> None:
     resources = [
         {"type_name": "RT_ICON", "size": 100, "entropy": 2.0},

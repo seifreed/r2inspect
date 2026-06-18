@@ -97,12 +97,13 @@ def decode_resource_text(raw: bytes) -> str | None:
 
 def build_manifest_info(manifest_data: str, size: int) -> dict[str, Any]:
     """Summarize manifest content into stable flags."""
+    manifest_text = manifest_data if isinstance(manifest_data, str) else str(manifest_data or "")
     return {
-        "content": manifest_data[:2048],
+        "content": manifest_text[:2048],
         "size": size,
-        "requires_admin": "requireAdministrator" in manifest_data,
-        "requires_elevation": "highestAvailable" in manifest_data,
-        "dpi_aware": "dpiAware" in manifest_data,
+        "requires_admin": "requireAdministrator" in manifest_text,
+        "requires_elevation": "highestAvailable" in manifest_text,
+        "dpi_aware": "dpiAware" in manifest_text,
     }
 
 
