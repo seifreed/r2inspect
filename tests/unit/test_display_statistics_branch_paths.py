@@ -62,6 +62,24 @@ def test_display_retry_statistics_prints_and_calls_child() -> None:
     assert "cmd_a" in text
 
 
+def test_display_retry_statistics_accepts_string_success_rate() -> None:
+    console = _make_console()
+    with _console_scope(console):
+        stats._display_retry_statistics(
+            {
+                "total_retries": 3,
+                "successful_retries": 2,
+                "failed_after_retries": 1,
+                "success_rate": "66.6",
+                "commands_retried": {"cmd_a": 2},
+            }
+        )
+
+    text = _get_text(console)
+    assert "Success Rate" in text
+    assert "66.6%" in text
+
+
 def test_display_most_retried_commands_returns_on_empty() -> None:
     console = _make_console()
     with _console_scope(console):

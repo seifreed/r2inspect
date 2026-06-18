@@ -40,10 +40,7 @@ def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     retry_table.add_row("Total Retries", str(total_retries))
     retry_table.add_row("Successful Retries", str(successful_retries))
     retry_table.add_row("Failed After Retries", str(failed_after_retries))
-    try:
-        success_rate_text = f"{float(success_rate):.1f}%"
-    except (TypeError, ValueError):
-        success_rate_text = str(success_rate)
+    success_rate_text = f"{_coerce_float(success_rate):.1f}%"
     retry_table.add_row("Success Rate", success_rate_text)
 
     _get_console().print(retry_table)
