@@ -73,7 +73,7 @@ def parse_dwarf_compile_time(line: str) -> str | None:
 
 
 def parse_build_id_data(build_id_data: str | None) -> str | None:
-    if not build_id_data:
+    if not isinstance(build_id_data, str) or not build_id_data:
         return None
     # _read_section emits the raw section bytes as space-separated hex. A
     # .note.gnu.build-id section is an ELF note: a 12-byte Nhdr (namesz, descsz,

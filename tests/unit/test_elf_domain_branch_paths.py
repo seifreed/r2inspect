@@ -223,6 +223,11 @@ def test_parse_build_id_data_none_returns_none():
     assert result is None
 
 
+def test_parse_build_id_data_non_string_returns_none():
+    result = parse_build_id_data(123)  # type: ignore[arg-type]
+    assert result is None
+
+
 def test_parse_build_id_data_empty_string_returns_none():
     result = parse_build_id_data("")
     assert result is None
