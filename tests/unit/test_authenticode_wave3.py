@@ -147,6 +147,12 @@ def test_analyze_security_dir_vaddr_string_zero_returns_no_signature():
     assert result["has_signature"] is False
 
 
+def test_analyze_short_certificate_header_returns_no_signature():
+    analyzer = AuthenticodeAnalyzer(adapter=_ShortBytesAdapter())
+    result = analyzer.analyze()
+    assert result["has_signature"] is False
+
+
 def test_analyze_signed_pe_sets_has_signature_and_security_directory():
     analyzer = AuthenticodeAnalyzer(adapter=_SignedAdapter())
     result = analyzer.analyze()

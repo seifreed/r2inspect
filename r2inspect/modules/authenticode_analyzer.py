@@ -73,11 +73,14 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 result["has_signature"] = False
                 return result
 
-            _apply_security_directory_impl(result, security_dir)
-
             cert_info = self._read_win_certificate(security_dir, result)
             if cert_info:
+                _apply_security_directory_impl(result, security_dir)
                 _list_bucket(result, "certificates").append(cert_info)
+            else:
+                result["has_signature"] = False
+                result["signature_valid"] = False
+                return result
 
             # Check signature validity by computing authenticode hash
             auth_hash = self._compute_authenticode_hash()
