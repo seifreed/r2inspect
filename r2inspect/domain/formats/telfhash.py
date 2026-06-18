@@ -49,9 +49,17 @@ def filter_symbols_for_telfhash(symbols: list[dict[str, Any]]) -> list[dict[str,
     """Filter symbols for telfhash processing."""
     filtered: list[dict[str, Any]] = []
     for sym in symbols:
-        sym_type = sym.get("type", "").upper()
-        sym_bind = sym.get("bind", "").upper()
+        if not isinstance(sym, dict):
+            continue
+        type_value = sym.get("type", "")
+        bind_value = sym.get("bind", "")
         sym_name = sym.get("name", "")
+        if not isinstance(type_value, str) or not isinstance(bind_value, str):
+            continue
+        if not isinstance(sym_name, str):
+            continue
+        sym_type = type_value.upper()
+        sym_bind = bind_value.upper()
         if sym_type not in {"FUNC", "OBJECT"}:
             continue
         if sym_bind == "LOCAL":
@@ -66,7 +74,16 @@ def filter_symbols_for_telfhash(symbols: list[dict[str, Any]]) -> list[dict[str,
 
 def extract_symbol_names(symbols: list[dict[str, Any]]) -> list[str]:
     """Extract sorted symbol names from a list of symbols."""
-    names = [sym.get("name", "").strip() for sym in symbols if sym.get("name", "").strip()]
+    names = []
+    for sym in symbols:
+        if not isinstance(sym, dict):
+            continue
+        name = sym.get("name", "")
+        if not isinstance(name, str):
+            continue
+        stripped = name.strip()
+        if stripped:
+            names.append(stripped)
     names.sort()
     return names
 

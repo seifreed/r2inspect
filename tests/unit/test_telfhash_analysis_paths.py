@@ -249,6 +249,19 @@ def test_filter_symbols_for_telfhash() -> None:
     assert result[1]["name"] == "helper"
 
 
+def test_filter_symbols_for_telfhash_skips_malformed_symbols() -> None:
+    analyzer = TelfhashAnalyzer(FakeR2(), "/test/file")
+
+    symbols = [
+        "bad",
+        {"name": "missing_type", "type": None, "bind": "GLOBAL"},
+        {"name": "main", "type": "FUNC", "bind": "GLOBAL"},
+    ]
+
+    result = analyzer._filter_symbols_for_telfhash(symbols)  # type: ignore[arg-type]
+    assert result == [{"name": "main", "type": "FUNC", "bind": "GLOBAL"}]
+
+
 # --- _extract_symbol_names tests ---
 
 
@@ -264,6 +277,15 @@ def test_extract_symbol_names() -> None:
 
     result = analyzer._extract_symbol_names(symbols)
     assert result == ["apple", "banana", "zebra"]
+
+
+def test_extract_symbol_names_skips_malformed_symbols() -> None:
+    analyzer = TelfhashAnalyzer(FakeR2(), "/test/file")
+
+    symbols = ["bad", {"name": None}, {"name": "main"}]
+
+    result = analyzer._extract_symbol_names(symbols)  # type: ignore[arg-type]
+    assert result == ["main"]
 
 
 # --- compare_hashes tests ---
