@@ -159,6 +159,7 @@ def update_section_summary(
     entropy = _coerce_entropy(section.get("entropy", 0.0))
     if entropy > 7.0:
         summary["high_entropy_sections"] += 1
-    flags = str(section.get("flags", ""))
+    flags_value = section.get("flags", "")
+    flags = "" if flags_value is None else str(flags_value)
     flag_counts[flags] = flag_counts.get(flags, 0) + 1
     return entropy
