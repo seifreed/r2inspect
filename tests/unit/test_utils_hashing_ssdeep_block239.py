@@ -1,7 +1,8 @@
 import hashlib
-import importlib
 import sys
 from pathlib import Path
+
+import pytest
 
 import r2inspect.infrastructure.hashing as hashing
 import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
@@ -25,8 +26,8 @@ def test_calculate_hashes_and_imphash(tmp_path: Path):
     missing = hashing.calculate_hashes(str(tmp_path / "missing.bin"))
     assert missing["md5"] == ""
 
-    error = hashing.calculate_hashes(str(tmp_path))
-    assert error["md5"] == ""
+    with pytest.raises(IsADirectoryError):
+        hashing.calculate_hashes(str(tmp_path))
 
     assert hashing.calculate_imphash([]) is None
     imports = [

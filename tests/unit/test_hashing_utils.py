@@ -1,5 +1,7 @@
 import hashlib
 
+import pytest
+
 from r2inspect.infrastructure.hashing import calculate_hashes, calculate_imphash
 
 
@@ -22,6 +24,11 @@ def test_calculate_hashes_missing_file_returns_empty_hashes(tmp_path):
     missing = tmp_path / "missing.bin"
     hashes = calculate_hashes(str(missing))
     assert hashes == {"md5": "", "sha1": "", "sha256": "", "sha512": ""}
+
+
+def test_calculate_hashes_existing_unreadable_path_raises(tmp_path):
+    with pytest.raises(IsADirectoryError):
+        calculate_hashes(str(tmp_path))
 
 
 def test_calculate_imphash_builds_expected_string():

@@ -87,10 +87,8 @@ from r2inspect.infrastructure.hashing import (
 
 
 def test_calculate_hashes_exception_on_directory(tmp_path: Path):
-    # Passing a directory triggers IsADirectoryError -> returns empty strings
-    result = calculate_hashes(str(tmp_path))
-    for v in result.values():
-        assert v == ""
+    with pytest.raises(IsADirectoryError):
+        calculate_hashes(str(tmp_path))
 
 
 def test_calculate_hashes_for_bytes_exception_path():

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import hashlib
-import os
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 import r2inspect.infrastructure.command_helpers as command_helpers
 import r2inspect.infrastructure.hashing as hashing_utils
@@ -105,8 +106,8 @@ def test_hashing_utils(tmp_path: Path) -> None:
     missing = hashing_utils.calculate_hashes(str(tmp_path / "missing.bin"))
     assert missing["md5"] == ""
 
-    directory_hashes = hashing_utils.calculate_hashes(str(tmp_path))
-    assert directory_hashes["md5"] == ""
+    with pytest.raises(IsADirectoryError):
+        hashing_utils.calculate_hashes(str(tmp_path))
 
     imports = [
         {"library": "KERNEL32.dll", "name": "CreateFileA"},

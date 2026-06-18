@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from r2inspect.domain.constants import MIN_EXECUTABLE_SIZE_BYTES
 from r2inspect.core.file_validator import FileValidator
 import r2inspect.infrastructure.hashing as hashing
@@ -28,8 +30,8 @@ def test_calculate_hashes_success_and_missing(tmp_path: Path) -> None:
 
 
 def test_calculate_hashes_error_path(tmp_path: Path) -> None:
-    hashes = hashing.calculate_hashes(str(tmp_path))
-    assert all(value == "" for value in hashes.values())
+    with pytest.raises(IsADirectoryError):
+        hashing.calculate_hashes(str(tmp_path))
 
 
 def test_calculate_imphash_variations() -> None:

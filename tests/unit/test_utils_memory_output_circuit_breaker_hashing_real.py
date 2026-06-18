@@ -45,8 +45,8 @@ def test_hashing_utils_real(tmp_path: Path) -> None:
     ssdeep = hashing.calculate_ssdeep(str(data_path))
     assert ssdeep is None or isinstance(ssdeep, str)
 
-    error_hashes = hashing.calculate_hashes(str(tmp_path))
-    assert error_hashes["md5"] == ""
+    with pytest.raises(IsADirectoryError):
+        hashing.calculate_hashes(str(tmp_path))
 
     class BadImport:
         def get(self, *_args: object, **_kwargs: object) -> str:
