@@ -163,6 +163,13 @@ def test_compute_entry_point_from_entry_info():
     assert result == 0x402000
 
 
+def test_compute_entry_point_skips_malformed_base_offset():
+    """Malformed baddr/boffset does not prevent entry_info fallback."""
+    entry_info = [{"vaddr": "4202496"}]
+    result = compute_entry_point({"baddr": "bad", "boffset": 0x1000}, entry_info)
+    assert result == 0x402000
+
+
 def test_compute_entry_point_fallback_zero():
     """compute_entry_point returns 0 when no baddr and no entry_info."""
     result = compute_entry_point({}, None)
@@ -195,6 +202,15 @@ def test_apply_optional_header_info_with_entry_rva():
     pe_header = {"optional_header": {"ImageBase": 0x400000, "AddressOfEntryPoint": 0x1000}}
     result = apply_optional_header_info(info, pe_header)
     assert result["entry_point"] == 0x401000
+
+
+def test_apply_optional_header_info_skips_malformed_numeric_fields():
+    """Malformed ImageBase does not break AddressOfEntryPoint processing."""
+    info = {"image_base": "bad", "entry_point": 0}
+    pe_header = {"optional_header": {"ImageBase": "bad", "AddressOfEntryPoint": "4096"}}
+    result = apply_optional_header_info(info, pe_header)
+    assert result["image_base"] == "bad"
+    assert result["entry_point"] == 0x1000
 
 
 def test_apply_optional_header_info_zero_image_base_not_updated():
