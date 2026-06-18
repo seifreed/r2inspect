@@ -119,7 +119,7 @@ class FileInfoStage(AnalysisStage):
 
     @staticmethod
     def _bin_arch_info(info_cmd: dict[str, Any] | None) -> dict[str, Any]:
-        if not (info_cmd and "bin" in info_cmd):
+        if not (info_cmd and isinstance(info_cmd.get("bin"), dict)):
             return {}
         bin_info = info_cmd["bin"]
         arch = bin_info.get("arch", "Unknown")

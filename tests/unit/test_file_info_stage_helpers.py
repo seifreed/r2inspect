@@ -46,6 +46,10 @@ def test_bin_arch_info_empty_without_bin() -> None:
     assert FileInfoStage._bin_arch_info({}) == {}
 
 
+def test_bin_arch_info_non_dict_bin_is_ignored() -> None:
+    assert FileInfoStage._bin_arch_info({"bin": "not-a-dict"}) == {}
+
+
 def test_bin_arch_info_promotes_x86_64() -> None:
     info = FileInfoStage._bin_arch_info({"bin": {"arch": "x86", "bits": 64, "endian": "little"}})
     assert info == {"architecture": "x86-64", "bits": 64, "endian": "little"}
