@@ -485,6 +485,29 @@ def test_calculate_function_tlsh_malformed_data():
         os.unlink(path)
 
 
+def test_calculate_function_tlsh_non_list_functions():
+    """Test _calculate_function_tlsh returns empty when _get_functions is malformed."""
+    path = _tmp_file(b"\x00" * 100)
+    try:
+        class DirectAdapter:
+            def get_sections(self):
+                return []
+
+            def get_functions(self):
+                return {"bad": "shape"}
+
+            def read_bytes(self, address, size):
+                return b""
+
+        analyzer = TLSHAnalyzer(DirectAdapter(), path)
+
+        result = analyzer._calculate_function_tlsh()
+
+        assert result == {}
+    finally:
+        os.unlink(path)
+
+
 def test_calculate_function_tlsh_zero_size():
     """Test _calculate_function_tlsh with zero size function."""
     path = _tmp_file(b"\x00" * 100)

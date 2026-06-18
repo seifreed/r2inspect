@@ -103,7 +103,7 @@ def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str,
     function_hashes: dict[str, str | None] = {}
     try:
         functions = host._get_functions()
-        if not functions:
+        if not isinstance(functions, list) or not functions:
             return function_hashes
         for func in functions[:50]:
             if not isinstance(func, dict):
