@@ -169,6 +169,17 @@ def test_resolve_file_path_none_filepath_no_r2_info(tmp_path):
     assert path is None
 
 
+def test_resolve_file_path_skips_malformed_core_bucket(tmp_path):
+    """Malformed ij.core payload should degrade to None."""
+    config = FakeConfig(str(tmp_path / "rules"))
+    analyzer = YaraAnalyzer(
+        _make_adapter(cmdj_map={"ij": {"core": None}}),
+        config=config,
+        filepath=None,
+    )
+    assert analyzer._resolve_file_path() is None
+
+
 # ---------------------------------------------------------------------------
 # _resolve_rules_path
 # ---------------------------------------------------------------------------

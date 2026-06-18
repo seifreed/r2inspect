@@ -103,8 +103,10 @@ class YaraAnalyzer(CommandHelperMixin):
         file_path = self.filepath
         if not file_path:
             file_info = self._cmdj("ij", {})
-            if file_info and "core" in file_info:
-                file_path = str(file_info["core"].get("file", ""))
+            if file_info and isinstance(file_info, dict):
+                core = file_info.get("core")
+                if isinstance(core, dict):
+                    file_path = str(core.get("file", ""))
         if not file_path or not os.path.exists(file_path):
             logger.debug("File not accessible for YARA scan: %s", file_path)
             return None
