@@ -136,10 +136,11 @@ def _extract_compiler_info(adapter: Any) -> str | None:
         return None
     if hasattr(adapter, "get_strings_text"):
         strings_text = adapter.get_strings_text()
-        if strings_text:
-            filtered = [line for line in strings_text.splitlines() if "compiler" in line.lower()]
-            if filtered:
-                return "\n".join(filtered).strip()
+        if not isinstance(strings_text, str) or not strings_text:
+            return None
+        filtered = [line for line in strings_text.splitlines() if "compiler" in line.lower()]
+        if filtered:
+            return "\n".join(filtered).strip()
     return None
 
 

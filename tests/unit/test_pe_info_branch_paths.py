@@ -394,6 +394,15 @@ def test_extract_compiler_info_returns_none_when_strings_none():
     assert result is None
 
 
+def test_extract_compiler_info_ignores_non_string_strings_text():
+    class AdapterWithBytesStrings(AdapterWithFullBin):
+        def get_strings_text(self):
+            return b"Compiler: MSVC"
+
+    result = pe_info._extract_compiler_info(AdapterWithBytesStrings())
+    assert result is None
+
+
 # ---------------------------------------------------------------------------
 # get_subsystem_info
 # ---------------------------------------------------------------------------
