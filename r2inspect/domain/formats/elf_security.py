@@ -17,7 +17,9 @@ def has_nx(segments: list[dict[str, Any]] | None) -> bool:
         # and "flags". NX is on when the GNU_STACK segment is not executable.
         identifier = str(segment.get("name") or segment.get("type") or "").upper()
         if "GNU_STACK" in identifier:
-            perms = str(segment.get("perm") or segment.get("flags") or "")
+            perms = segment.get("perm") or segment.get("flags") or ""
+            if not isinstance(perms, str):
+                return False
             return "x" not in perms.lower()
     return False
 

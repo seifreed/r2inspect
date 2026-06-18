@@ -444,6 +444,11 @@ def test_elf_has_nx_empty():
     assert has_nx(None) is False
 
 
+def test_elf_has_nx_non_string_permissions():
+    headers = [{"type": "GNU_STACK", "flags": 123}]
+    assert has_nx(headers) is False
+
+
 def test_elf_has_stack_canary_true():
     symbols = [{"name": "__stack_chk_fail"}]
     assert elf_has_stack_canary(symbols) is True
