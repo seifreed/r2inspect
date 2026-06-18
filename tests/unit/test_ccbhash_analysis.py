@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -150,6 +150,12 @@ def test_ccbhash_canonical_with_blocks():
     assert canonical == "4096|4112|4128"
 
 
+def test_ccbhash_canonical_with_string_block_addresses():
+    cfg = {"blocks": [{"addr": "4096"}, {"offset": "4112"}]}
+    canonical = CCBHashAnalyzer._build_canonical_representation(cfg, 0x1000)
+    assert canonical == "4096|4112"
+
+
 def test_ccbhash_canonical_empty():
     cfg = {}
     canonical = CCBHashAnalyzer._build_canonical_representation(cfg, 0x1000)
@@ -169,6 +175,21 @@ def test_ccbhash_find_similar_functions():
     similar = analyzer._find_similar_functions(function_hashes)
     assert len(similar) >= 1
     assert similar[0]["count"] == 2
+
+
+def test_ccbhash_build_function_hashes_coerces_string_fields():
+    class _Analyzer(MockAdapter):
+        def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str:
+            return "hash"
+
+    hashes, analyzed = build_function_ccbhashes(
+        _Analyzer(),
+        [{"name": "func", "addr": "4096", "size": "33"}],
+    )
+
+    assert analyzed == 1
+    assert hashes["func"]["addr"] == 4096
+    assert hashes["func"]["size"] == 33
 
 
 def test_ccbhash_calculate_binary_hash():
@@ -369,10 +390,8 @@ def test_ccbhash_with_real_binary():
         pytest.skip("Could not open binary with r2pipe")
     finally:
         if r2 is not None:
-            try:
+            with suppress(Exception):
                 r2.quit()
-            except Exception:
-                pass
 
 
 def test_ccbhash_error_handling():

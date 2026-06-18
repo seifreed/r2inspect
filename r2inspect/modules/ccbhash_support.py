@@ -11,6 +11,13 @@ from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 from .function_extraction import collect_valid_functions
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 class CcbHashHost(Protocol):
     """Overridable collaboration contract the CCBHash helpers depend on."""
 
@@ -39,8 +46,8 @@ def build_function_ccbhashes(
     for func in functions:
         if not isinstance(func, dict):
             continue
-        func_offset = func.get("addr")
-        if func_offset is None:
+        func_offset = _to_int(func.get("addr"))
+        if func_offset <= 0:
             continue
         func_name_value = func.get("name")
         func_name = (
@@ -53,7 +60,7 @@ def build_function_ccbhashes(
             function_hashes[func_name] = {
                 "ccbhash": ccbhash,
                 "addr": func_offset,
-                "size": func.get("size", 0),
+                "size": _to_int(func.get("size", 0)),
             }
             analyzed_count += 1
     return function_hashes, analyzed_count
@@ -127,7 +134,7 @@ def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str
         # r2 basic blocks (agj/afbj) carry the address as "addr", not "offset",
         # so this read 0 for every block and collapsed edgeless functions to a
         # constant "0" canonical form.
-        block_addrs = sorted(block.get("addr") or block.get("offset", 0) for block in blocks)
+        block_addrs = sorted(_to_int(block.get("addr") or block.get("offset", 0)) for block in blocks)
         return "|".join(str(addr) for addr in block_addrs)
     return str(func_offset)
 
