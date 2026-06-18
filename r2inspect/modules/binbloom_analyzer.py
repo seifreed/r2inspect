@@ -164,6 +164,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
         def _build() -> tuple[BloomFilterType, list[str], str] | None:
             instructions = self._extract_instruction_mnemonics(func_addr, func_name)
+            instructions = [instruction for instruction in instructions if isinstance(instruction, str) and instruction]
             if not instructions:
                 logger.debug("No instructions found for function %s", func_name)
                 return None

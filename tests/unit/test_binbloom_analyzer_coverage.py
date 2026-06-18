@@ -756,6 +756,23 @@ def test_create_function_bloom_with_instructions():
     assert len(signature) == 64
 
 
+def test_create_function_bloom_skips_malformed_instructions():
+    if not BLOOM_AVAILABLE:
+        pytest.skip("pybloom-live not available")
+
+    class MalformedInstructionAnalyzer(BinbloomAnalyzer):
+        def _extract_instruction_mnemonics(self, func_addr: int, func_name: str):
+            return ["mov", None, "push", 123, ""]
+
+    adapter = FakeDisasmAdapter(disasm_data={"ops": [{"mnemonic": "mov"}]})
+    analyzer = MalformedInstructionAnalyzer(adapter, filepath="/tmp/test.bin")
+    result = analyzer._create_function_bloom(0x1000, "main", 256, 0.001)
+    assert result is not None
+    _, instructions, signature = result
+    assert instructions == ["mov", "push"]
+    assert len(signature) == 64
+
+
 # --- _collect_function_blooms ---
 
 
