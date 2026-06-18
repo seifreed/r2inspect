@@ -94,6 +94,18 @@ def test_get_exports_coerces_malformed_fields_and_preserves_valid_entries():
     assert exports[1]["size"] == 12
 
 
+def test_get_exports_coerces_hex_string_fields():
+    adapter = StubAdapter(
+        exports=[{"name": "hex", "vaddr": "0x1000", "size": "0x20"}],
+        func_info=[{"size": "0x11", "cc": 1}],
+    )
+    analyzer = _make_analyzer(adapter)
+    exports = analyzer.get_exports()
+    assert len(exports) == 1
+    assert exports[0]["address"] == "0x1000"
+    assert exports[0]["size"] == 32
+
+
 # ---------------------------------------------------------------------------
 # get_exports – exception handling (lines 61-62)
 # ---------------------------------------------------------------------------
