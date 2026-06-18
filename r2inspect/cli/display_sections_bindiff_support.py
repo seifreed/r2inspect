@@ -28,7 +28,7 @@ def _add_bindiff_entries(table: Table, bindiff_info: dict[str, Any]) -> None:
 
 
 def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
-    if not structural:
+    if not isinstance(structural, dict) or not structural:
         return
     file_type = structural.get("file_type", "Unknown")
     if not isinstance(file_type, str) or not file_type:
@@ -50,7 +50,7 @@ def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
 
 
 def _add_bindiff_functions(table: Table, function_features: dict[str, Any]) -> None:
-    if not function_features:
+    if not isinstance(function_features, dict) or not function_features:
         return
     table.add_row("Functions", str(function_features.get("function_count", 0)))
     if function_features.get("cfg_features"):
@@ -59,7 +59,7 @@ def _add_bindiff_functions(table: Table, function_features: dict[str, Any]) -> N
 
 
 def _add_bindiff_strings(table: Table, string_features: dict[str, Any]) -> None:
-    if not string_features:
+    if not isinstance(string_features, dict) or not string_features:
         return
     table.add_row("Strings", str(string_features.get("total_strings", 0)))
     categorized_strings = string_features.get("categorized_strings")

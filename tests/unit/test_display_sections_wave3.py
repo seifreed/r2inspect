@@ -558,6 +558,12 @@ def test_add_bindiff_structural_skips_non_list_section_names():
     assert len(table.rows) == 5
 
 
+def test_add_bindiff_structural_skips_non_dict_input():
+    table = _make_table()
+    _add_bindiff_structural(table, "bad")  # type: ignore[arg-type]
+    assert len(table.rows) == 0
+
+
 def test_add_bindiff_functions_with_cfg():
     table = _make_table()
     function_features = {
@@ -566,6 +572,12 @@ def test_add_bindiff_functions_with_cfg():
     }
     _add_bindiff_functions(table, function_features)
     assert len(table.rows) == 2
+
+
+def test_add_bindiff_functions_skips_non_dict_input():
+    table = _make_table()
+    _add_bindiff_functions(table, "bad")  # type: ignore[arg-type]
+    assert len(table.rows) == 0
 
 
 def test_add_bindiff_strings_with_many_categories():
