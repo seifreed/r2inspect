@@ -254,10 +254,9 @@ def test_process_imports_skips_ordinal_entries():
     assert result == []
 
 
-def test_process_imports_exception_returns_empty():
-    """Passing non-dict items triggers the exception handler (lines 280-282)."""
+def test_process_imports_skips_malformed_entries():
+    """Passing malformed import fields should be skipped without crashing."""
     analyzer = _make_analyzer(EmptyAdapter())
-    # libname as int triggers AttributeError on .lower(), hitting exception branch
     imports_data: list[dict[str, Any]] = [{"libname": 123, "name": "CreateFileA"}]
     result = analyzer._process_imports(imports_data)
     assert result == []

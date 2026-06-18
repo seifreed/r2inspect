@@ -139,11 +139,11 @@ def _import_func(imp: dict[str, Any]) -> Any:
 
 def _normalized_import(imp: dict[str, Any]) -> tuple[str, str] | None:
     func_name = _import_func(imp)
-    if not func_name or func_name == "unknown":
+    if not func_name or func_name == "unknown" or not isinstance(func_name, str):
         return None
     dll = _import_dll(imp)
-    if not isinstance(dll, str) or not isinstance(func_name, str):
-        raise TypeError("Import fields must be strings")
+    if not isinstance(dll, str):
+        return None
     func_clean = func_name.lower()
     if func_clean.startswith("ord_"):
         return None
