@@ -234,6 +234,27 @@ def test_collect_batch_statistics_returns_empty_when_no_results():
     assert stats["compilers"] == {}
 
 
+def test_collect_batch_statistics_skips_malformed_nested_values():
+    stats = collect_batch_statistics(
+        {
+            "bad.exe": {
+                "packer": "oops",
+                "crypto": {"algorithms": ["bad"]},
+                "indicators": ["bad"],
+                "file_info": "oops",
+                "compiler": "oops",
+            }
+        }
+    )
+
+    assert stats["packers_detected"] == []
+    assert stats["crypto_patterns"] == []
+    assert stats["suspicious_indicators"] == []
+    assert stats["file_types"] == {}
+    assert stats["architectures"] == {}
+    assert stats["compilers"] == {}
+
+
 def test_collect_batch_statistics_multiple_files_same_type():
     all_results = {
         "a.exe": {"file_info": {"file_type": "PE32", "architecture": "x86"}},

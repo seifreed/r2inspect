@@ -8,7 +8,7 @@ from typing import Any
 def update_packer_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update packer statistics."""
     packer = result.get("packer")
-    if packer and packer.get("is_packed"):
+    if isinstance(packer, dict) and packer.get("is_packed"):
         stats["packers_detected"].append(
             {
                 "file": file_key,
@@ -20,8 +20,10 @@ def update_packer_stats(stats: dict[str, Any], file_key: str, result: dict[str, 
 def update_crypto_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update crypto pattern statistics."""
     crypto = result.get("crypto")
-    if crypto:
+    if isinstance(crypto, dict):
         for algorithm in crypto.get("algorithms", []):
+            if not isinstance(algorithm, dict):
+                continue
             stats["crypto_patterns"].append(
                 {"file": file_key, "pattern": algorithm.get("algorithm", "Unknown")}
             )
@@ -29,9 +31,10 @@ def update_crypto_stats(stats: dict[str, Any], file_key: str, result: dict[str, 
 
 def update_indicator_stats(stats: dict[str, Any], file_key: str, result: dict[str, Any]) -> None:
     """Update suspicious indicator statistics."""
-    if "indicators" in result and result["indicators"]:
+    indicators = result.get("indicators")
+    if isinstance(indicators, list) and indicators:
         stats["suspicious_indicators"].extend(
-            [{"file": file_key, **indicator} for indicator in result["indicators"]]
+            [{"file": file_key, **indicator} for indicator in indicators if isinstance(indicator, dict)]
         )
 
 
@@ -48,8 +51,8 @@ def update_file_type_stats(stats: dict[str, Any], result: dict[str, Any]) -> Non
 
 def update_compiler_stats(stats: dict[str, Any], result: dict[str, Any]) -> None:
     """Update compiler statistics."""
-    if "compiler" in result:
-        compiler_info = result["compiler"]
+    compiler_info = result.get("compiler")
+    if isinstance(compiler_info, dict):
         compiler_name = compiler_info.get("compiler", "Unknown")
         if compiler_info.get("detected", False):
             stats["compilers"][compiler_name] = stats["compilers"].get(compiler_name, 0) + 1
