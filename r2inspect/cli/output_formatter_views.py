@@ -58,11 +58,16 @@ def format_sections(sections: list[dict[str, Any]]) -> Table:
     table.add_column("Suspicious", style="red")
     for section in sections:
         suspicious = "Yes" if section.get("suspicious_indicators") else "No"
+        entropy = section.get("entropy", 0)
+        try:
+            entropy_value = float(entropy)
+        except (TypeError, ValueError):
+            entropy_value = 0.0
         table.add_row(
             section.get("name", "Unknown"),
             str(section.get("raw_size", 0)),
             str(section.get("flags", "")),
-            f"{section.get('entropy', 0):.2f}",
+            f"{entropy_value:.2f}",
             suspicious,
         )
     return table

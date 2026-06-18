@@ -72,6 +72,12 @@ def test_format_sections_missing_keys() -> None:
     assert isinstance(result, Table)
 
 
+def test_format_sections_string_entropy() -> None:
+    sections = [{"name": ".text", "raw_size": 1, "flags": "r-x", "entropy": "7.5"}]
+    result = OutputFormatter({}).format_sections(sections)
+    assert isinstance(result, Table)
+
+
 def test_format_sections_suspicious_yes() -> None:
     sections = [{"suspicious_indicators": ["bad"]}]
     result = OutputFormatter({}).format_sections(sections)
