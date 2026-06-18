@@ -476,13 +476,15 @@ def test_read_bytes_hex_empty_bytes_returns_none(tmp_path):
     assert result is None
 
 
-def test_read_bytes_hex_exception_returns_none(tmp_path):
+def test_read_bytes_hex_exception_returns_none(tmp_path, caplog):
     """Lines 272-274: adapter.read_bytes raises -> None returned."""
     f = tmp_path / "test.bin"
     f.write_bytes(b"A" * 100)
     analyzer = TLSHAnalyzer(adapter=ErrorReadAdapter(), filename=str(f))
-    result = analyzer._read_bytes_hex(0x1000, 100)
+    with caplog.at_level("ERROR"):
+        result = analyzer._read_bytes_hex(0x1000, 100)
     assert result is None
+    assert "Error reading bytes for TLSH at 0x1000" in caplog.text
 
 
 # ---------------------------------------------------------------------------

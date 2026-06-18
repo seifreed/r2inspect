@@ -154,7 +154,8 @@ class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
             try:
                 data = self.adapter.read_bytes(vaddr, size)
                 return data.hex() if data else None
-            except Exception:
+            except Exception as exc:
+                logger.error("Error reading bytes for TLSH at 0x%x: %s", vaddr, exc)
                 return None
         return None
 
