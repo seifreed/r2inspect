@@ -11,6 +11,8 @@ from .binary_helpers import shannon_entropy
 
 def _coerce_int(value: Any) -> int:
     try:
+        if isinstance(value, str):
+            return int(value, 0)
         return int(value or 0)
     except (TypeError, ValueError):
         return 0

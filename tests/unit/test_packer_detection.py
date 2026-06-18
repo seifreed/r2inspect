@@ -253,6 +253,19 @@ def test_overlay_info_coerces_malformed_section_offsets():
     assert info["overlay_size"] == 99
 
 
+def test_overlay_info_accepts_hex_string_section_values():
+    from r2inspect.domain.services.packer_scoring import overlay_info
+
+    file_info = {"core": {"size": "0x100"}}
+    sections = [{"name": ".text", "paddr": "0x40", "size": "0x20"}]
+
+    info = overlay_info(file_info, sections)
+
+    assert info["has_overlay"] is True
+    assert info["overlay_size"] == 160
+    assert info["overlay_ratio"] == 160 / 256
+
+
 def test_packer_entropy_threshold():
     detector = _make_detector()
 
