@@ -332,6 +332,24 @@ def test_add_binbloom_stats_string_values():
     assert len(table.rows) >= 5
 
 
+def test_add_binbloom_stats_string_zero_analyzed_functions():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    binbloom_info = {
+        "total_functions": 100,
+        "analyzed_functions": "0",
+        "capacity": 1000,
+        "error_rate": "0.01",
+        "unique_signatures": "80",
+    }
+
+    _add_binbloom_stats(table, binbloom_info)
+
+    assert len(table.rows) >= 5
+
+
 def test_add_binbloom_stats_string_instruction_counts():
     table = Table()
     table.add_column("Property")

@@ -73,9 +73,10 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
     table.add_row("False Positive Rate", f"{error_rate:.4f} ({error_rate * 100:.2f}%)")
 
     unique_signatures = binbloom_info.get("unique_signatures", 0)
+    analyzed_functions_value = _coerce_float(analyzed_functions)
     diversity_ratio = (
-        (_coerce_float(unique_signatures) / _coerce_float(analyzed_functions)) * 100
-        if analyzed_functions
+        (_coerce_float(unique_signatures) / analyzed_functions_value) * 100
+        if analyzed_functions_value > 0
         else 0
     )
     table.add_row(
