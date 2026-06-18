@@ -79,6 +79,12 @@ def test_determine_pe_file_type_non_string_description_ignored():
     assert result == "PE32"
 
 
+def test_determine_pe_file_type_none_class_falls_back_to_pe():
+    """Missing class metadata should not leak the string 'None'."""
+    result = determine_pe_file_type({"class": None}, None, None)  # type: ignore[arg-type]
+    assert result == "PE"
+
+
 # ---------------------------------------------------------------------------
 # determine_pe_format() - lines 33, 37, 41-48
 # ---------------------------------------------------------------------------

@@ -18,7 +18,8 @@ def _to_int(value: Any) -> int | None:
 def determine_pe_file_type(
     bin_info: dict[str, Any], _filepath: str | None, file_desc: str | None
 ) -> str:
-    file_type = str(bin_info.get("class", "Unknown"))
+    raw_class = bin_info.get("class", "Unknown")
+    file_type = raw_class if isinstance(raw_class, str) and raw_class else "Unknown"
     if file_type not in {PE32_PLUS, "PE32", "PE", "Unknown"}:
         return file_type
 
@@ -31,7 +32,9 @@ def determine_pe_file_type(
         if "driver" in desc or "sys" in desc:
             return "SYS"
 
-    return str(bin_info.get("class", "PE"))
+    if raw_class == "Unknown":
+        return "Unknown"
+    return file_type if file_type != "Unknown" else "PE"
 
 
 def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | None) -> str:
