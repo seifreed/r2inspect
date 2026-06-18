@@ -36,7 +36,10 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _macho_headers(self) -> list[dict[str, Any]]:
         """Resolve Mach-O load-command headers via the injected provider or r2."""
         provider = self._headers_provider or get_macho_headers
-        return provider(self.adapter) or []
+        headers = provider(self.adapter) or []
+        if not isinstance(headers, list):
+            return []
+        return [header for header in headers if isinstance(header, dict)]
 
     def get_category(self) -> str:
         return "format"

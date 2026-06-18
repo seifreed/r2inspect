@@ -278,6 +278,20 @@ def test_get_macho_headers_defaults_for_missing_fields():
     assert result["machine"] == "Unknown"
 
 
+def test_extract_build_version_skips_non_dict_headers():
+    analyzer = MachOAnalyzer(
+        MinimalAdapter(),
+        headers_provider=lambda _: [
+            "bad",
+            {"type": "LC_BUILD_VERSION", "platform": "macOS", "minos": "14.0", "sdk": "14.1"},
+        ],
+    )
+    result = analyzer._extract_build_version()
+    assert result["platform"] == "macOS"
+    assert result["min_os_version"] == "14.0"
+    assert result["sdk_version"] == "14.1"
+
+
 # ---------------------------------------------------------------------------
 # _extract_build_version (lines 145-160)
 # ---------------------------------------------------------------------------
