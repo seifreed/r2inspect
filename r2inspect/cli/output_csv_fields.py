@@ -130,7 +130,8 @@ def add_rich_header(formatter: Any, csv_row: dict[str, Any], data: dict[str, Any
     csv_row["rich_header_checksum"] = hex(rich.get("checksum", 0)) if rich.get("checksum") else ""
     csv_row["richpe_hash"] = rich.get("richpe_hash", "")
     csv_row["rich_header_compilers"] = formatter._format_rich_header_compilers(rich)
-    csv_row["rich_header_entries"] = len(rich.get("compilers", []))
+    compilers = rich.get("compilers", [])
+    csv_row["rich_header_entries"] = len(compilers) if isinstance(compilers, list) else 0
 
 
 def add_imports_exports_sections(

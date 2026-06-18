@@ -376,6 +376,21 @@ def test_csv_formatter_rich_header_no_xor_key():
     assert "MSVC(1)" in csv_output
 
 
+def test_csv_formatter_rich_header_accepts_non_list_compilers():
+    results = {
+        "file_info": {"name": "test.exe"},
+        "rich_header": {
+            "xor_key": 0x12345678,
+            "compilers": "bad",
+        },
+    }
+
+    formatter = CsvOutputFormatter(results)
+    csv_data = formatter._extract_csv_data(results)
+
+    assert csv_data["rich_header_entries"] == 0
+
+
 def test_csv_formatter_all_counts():
     results = {
         "file_info": {"name": "test.exe"},
