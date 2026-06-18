@@ -673,6 +673,15 @@ def test_update_summary_for_section_replaces_missing_flags_with_empty_key():
     assert "None" not in flag_counts
 
 
+def test_apply_permissions_treats_missing_flags_as_empty():
+    analyzer = _build_analyzer(sections=[])
+    analysis = {"is_executable": False, "is_writable": False, "is_readable": False}
+    analyzer._apply_permissions({"flags": None, "perm": None}, analysis)  # type: ignore[arg-type]
+    assert analysis["is_executable"] is False
+    assert analysis["is_writable"] is False
+    assert analysis["is_readable"] is False
+
+
 def test_build_permission_indicators_treats_malformed_entropy_as_zero():
     result = build_permission_indicators(
         {"is_writable": False, "is_executable": True, "entropy": "low"}

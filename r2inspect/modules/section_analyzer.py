@@ -88,7 +88,8 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return _analyze_single_section_impl(self, section, logger=logger)
 
     def _apply_permissions(self, section: dict[str, Any], analysis: dict[str, Any]) -> None:
-        flags = str(section.get("flags", ""))
+        flags_value = section.get("flags", "")
+        flags = "" if flags_value is None else str(flags_value)
         analysis["is_executable"] = "x" in flags
         analysis["is_writable"] = "w" in flags
         analysis["is_readable"] = "r" in flags
