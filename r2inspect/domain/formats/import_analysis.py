@@ -154,8 +154,17 @@ def find_max_risk_score(
 ) -> tuple[int, list[str]]:
     max_score = 0
     tags: list[str] = []
+    if not isinstance(categories, dict):
+        return max_score, tags
     for api_dict in categories.values():
-        for api_name, (score, tag) in api_dict.items():
+        if not isinstance(api_dict, dict):
+            continue
+        for api_name, api_data in api_dict.items():
+            if not isinstance(api_data, tuple) or len(api_data) < 2:
+                continue
+            score, tag = api_data[:2]
+            if not isinstance(score, int) or not isinstance(tag, str):
+                continue
             if api_name in func_name:
                 if score > max_score:
                     max_score = score

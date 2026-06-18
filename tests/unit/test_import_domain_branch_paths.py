@@ -139,6 +139,19 @@ def test_find_max_risk_score_no_match_returns_zero():
     assert tags == []
 
 
+def test_find_max_risk_score_skips_malformed_category_entries():
+    score, tags = find_max_risk_score(
+        "CreateRemoteThread",
+        {
+            "Cat1": "bad",
+            "Cat2": {"CreateRemoteThread": "bad"},
+            "Cat3": {"CreateRemoteThread": (95, "TagA")},
+        },
+    )
+    assert score == 95
+    assert tags == ["TagA"]
+
+
 # ---------------------------------------------------------------------------
 # risk_level_from_score - all branches (lines 252, 256, 258)
 # ---------------------------------------------------------------------------
