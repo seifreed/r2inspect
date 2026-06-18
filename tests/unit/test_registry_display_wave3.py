@@ -418,6 +418,22 @@ def test_add_rich_header_entries_five_or_fewer_compilers():
     assert "more" not in text
 
 
+def test_add_rich_header_entries_skips_non_dict_compilers():
+    t = _make_table()
+    _add_rich_header_entries(
+        t,
+        {
+            "xor_key": 0x1,
+            "checksum": 0x2,
+            "compilers": [None, {"compiler_name": "MSVC", "count": 2, "build_number": 1900}],
+        },
+    )
+    console = Console(file=io.StringIO(), record=True, width=200)
+    console.print(t)
+    text = console.export_text()
+    assert "MSVC" in text
+
+
 # ---------------------------------------------------------------------------
 # analyzer_registry - _get_base_analyzer_class ImportError (lines 97-99)
 # ---------------------------------------------------------------------------

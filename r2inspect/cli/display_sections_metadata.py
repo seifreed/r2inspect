@@ -54,6 +54,8 @@ def _add_rich_header_entries(table: Table, rich_header_info: dict[str, Any]) -> 
     if compilers:
         compiler_summary = []
         for compiler in compilers[:5]:
+            if not isinstance(compiler, dict):
+                continue
             name = compiler.get("compiler_name", "Unknown")
             count = compiler.get("count", 0)
             build = compiler.get("build_number", 0)
