@@ -106,6 +106,16 @@ def test_add_binlex_basic_stats():
     assert len(table.rows) == 3
 
 
+def test_add_binlex_basic_stats_skips_non_list_ngram_sizes():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    ngram_sizes = _add_binlex_basic_stats(table, {"ngram_sizes": 2})
+
+    assert ngram_sizes == []
+
+
 def test_add_binlex_unique_signatures():
     table = Table()
     table.add_column("Property")

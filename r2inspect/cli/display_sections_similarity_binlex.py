@@ -66,7 +66,9 @@ def _add_binlex_basic_stats(table: Table, binlex_info: dict[str, Any]) -> list[A
     analyzed_functions = binlex_info.get("analyzed_functions", 0)
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(analyzed_functions))
 
-    ngram_sizes = cast(list[Any], binlex_info.get("ngram_sizes", []))
+    ngram_sizes = binlex_info.get("ngram_sizes", [])
+    if not isinstance(ngram_sizes, list):
+        ngram_sizes = []
     table.add_row("N-gram Sizes", ", ".join(map(str, ngram_sizes)))
     return ngram_sizes
 
