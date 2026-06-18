@@ -230,6 +230,17 @@ def test_simhash_analyzer_extract_opcodes_features_valid() -> None:
     assert len(result) > 0
 
 
+def test_simhash_analyzer_extract_opcodes_features_skips_malformed_functions() -> None:
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "aflj": ["bad", {"offset": 0x1000, "name": "test_func"}],
+            "pdfj @ 4096": {"ops": [{"mnemonic": "ret"}]},
+        },
+    )
+    result = analyzer._extract_opcodes_features()
+    assert "OP:ret" in result
+
+
 def test_simhash_analyzer_extract_opcodes_features_addr_field() -> None:
     analyzer = _make_analyzer(
         cmdj_map={

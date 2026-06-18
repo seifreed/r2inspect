@@ -32,6 +32,8 @@ def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> li
             if not functions:
                 return []
         for func in functions:
+            if not isinstance(func, dict):
+                continue
             func_addr = func.get("offset") or func.get("addr")
             if func_addr is None:
                 continue
