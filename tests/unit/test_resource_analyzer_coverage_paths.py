@@ -278,6 +278,13 @@ def test_resource_analyzer_get_dir_total_entries() -> None:
     assert result == 5
 
 
+def test_resource_analyzer_get_dir_total_entries_skips_non_int_bytes() -> None:
+    analyzer = _make_analyzer()
+    dir_data = [0] * 12 + [2, 0, "bad", 0]
+    result = analyzer._get_dir_total_entries(dir_data)
+    assert result == 0
+
+
 # ── _parse_dir_entries ───────────────────────────────────────────────────
 
 

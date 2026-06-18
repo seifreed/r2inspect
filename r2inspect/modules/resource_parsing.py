@@ -116,6 +116,8 @@ class ResourceParsingMixin:
         return bool(dir_data and len(dir_data) >= 16)
 
     def _get_dir_total_entries(self, dir_data: list[int]) -> int:
+        if len(dir_data) < 16 or not all(isinstance(value, int) for value in dir_data[:16]):
+            return 0
         num_named_entries = dir_data[12] | (dir_data[13] << 8)
         num_id_entries = dir_data[14] | (dir_data[15] << 8)
         return num_named_entries + num_id_entries
