@@ -206,9 +206,13 @@ def test_calculate_ssdeep_returns_string_or_none(tmp_path: Path):
     assert result is None or isinstance(result, str)
 
 
-def test_calculate_ssdeep_nonexistent_file_returns_none():
-    result = calculate_ssdeep("/nonexistent/file.bin")
-    assert result is None
+def test_calculate_ssdeep_propagates_backend_errors():
+    class BadSsdeep:
+        def hash_from_file(self, _path: str) -> str:
+            raise OSError("Path not found")
+
+    with pytest.raises(OSError, match="Path not found"):
+        calculate_ssdeep("/nonexistent/file.bin", get_ssdeep_fn=lambda: BadSsdeep())
 
 
 def test_calculate_ssdeep_returns_none_when_ssdeep_loader_unavailable(tmp_path: Path):

@@ -81,7 +81,8 @@ def test_calculate_ssdeep_error_path(tmp_path: Path) -> None:
     )
     sys.path.insert(0, str(tmp_path))
     try:
-        assert hashing.calculate_ssdeep("/dev/null") is None
+        with pytest.raises(RuntimeError, match="fail"):
+            hashing.calculate_ssdeep("/dev/null")
     finally:
         sys.path.remove(str(tmp_path))
         # Drop the injected fake from sys.modules/loader so it cannot poison

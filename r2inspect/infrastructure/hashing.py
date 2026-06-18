@@ -45,14 +45,11 @@ def calculate_ssdeep(file_path: str, get_ssdeep_fn: Callable[[], Any] | None = N
     ``get_ssdeep_fn`` defaults to the real loader; tests inject a resolver
     that returns ``None`` to exercise the unavailable path.
     """
-    try:
-        resolver = get_ssdeep_fn or get_ssdeep
-        ssdeep_module = resolver()
-        if ssdeep_module is None:
-            return None
-        return cast(str | None, ssdeep_module.hash_from_file(file_path))
-    except Exception:
+    resolver = get_ssdeep_fn or get_ssdeep
+    ssdeep_module = resolver()
+    if ssdeep_module is None:
         return None
+    return cast(str | None, ssdeep_module.hash_from_file(file_path))
 
 
 __all__ = [

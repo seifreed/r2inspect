@@ -214,9 +214,13 @@ def test_calculate_imphash_skips_non_text_values():
     assert imphash is None
 
 
-def test_calculate_ssdeep_nonexistent_file():
-    result = calculate_ssdeep("/nonexistent/file.bin")
-    assert result is None
+def test_calculate_ssdeep_propagates_backend_errors():
+    class BadSsdeep:
+        def hash_from_file(self, _path: str) -> str:
+            raise OSError("Path not found")
+
+    with pytest.raises(OSError, match="Path not found"):
+        calculate_ssdeep("/nonexistent/file.bin", get_ssdeep_fn=lambda: BadSsdeep())
 
 
 def test_calculate_ssdeep_with_file(tmp_path: Path):
@@ -226,16 +230,16 @@ def test_calculate_ssdeep_with_file(tmp_path: Path):
     calculate_ssdeep(str(test_file))
 
 
-def test_calculate_ssdeep_exception_handling(tmp_path: Path):
+def test_calculate_ssdeep_backend_runtime_error_propagates(tmp_path: Path):
     test_file = tmp_path / "test.bin"
     test_file.write_bytes(b"data")
-    os.chmod(test_file, 0o000)
 
-    try:
-        result = calculate_ssdeep(str(test_file))
-        assert result is None
-    finally:
-        os.chmod(test_file, 0o644)
+    class BadSsdeep:
+        def hash_from_file(self, _path: str) -> str:
+            raise RuntimeError("hash failed")
+
+    with pytest.raises(RuntimeError, match="hash failed"):
+        calculate_ssdeep(str(test_file), get_ssdeep_fn=lambda: BadSsdeep())
 
 
 def test_calculate_hashes_special_characters(tmp_path: Path):

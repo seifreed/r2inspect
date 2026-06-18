@@ -56,8 +56,8 @@ def test_hashing_utils_real(tmp_path: Path) -> None:
 
     ssdeep_module = get_ssdeep()
     if ssdeep_module is not None:
-        ssdeep_error = hashing.calculate_ssdeep(str(tmp_path))
-        assert ssdeep_error is None
+        with pytest.raises(OSError):
+            hashing.calculate_ssdeep(str(tmp_path))
 
     original_ssdeep = ssdeep_loader._ssdeep_module
 
@@ -67,7 +67,8 @@ def test_hashing_utils_real(tmp_path: Path) -> None:
 
     ssdeep_loader._ssdeep_module = BadSsdeep()
     try:
-        assert hashing.calculate_ssdeep(str(data_path)) is None
+        with pytest.raises(RuntimeError, match="boom"):
+            hashing.calculate_ssdeep(str(data_path))
     finally:
         ssdeep_loader._ssdeep_module = original_ssdeep
 

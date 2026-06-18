@@ -1,4 +1,3 @@
-import json
 import logging
 import sys
 from types import ModuleType
@@ -243,7 +242,8 @@ def test_ssdeep_loader_cache() -> None:
                 raise RuntimeError("boom")
 
         ssdeep_loader._ssdeep_module = BadModule()
-        assert hashing_utils.calculate_ssdeep("/tmp/missing") is None
+        with pytest.raises(RuntimeError, match="boom"):
+            hashing_utils.calculate_ssdeep("/tmp/missing")
     finally:
         ssdeep_loader._ssdeep_module = original_module
 
