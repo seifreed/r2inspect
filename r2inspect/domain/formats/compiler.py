@@ -77,9 +77,13 @@ def detect_msvc_version(
     strings_data: list[str], imports_data: list[str], versions: dict[str, str]
 ) -> str:
     for import_name in imports_data:
+        if not isinstance(import_name, str):
+            continue
         if import_name in versions:
             return versions[import_name]
     for string in strings_data:
+        if not isinstance(string, str):
+            continue
         match = re.search(r"Microsoft.*Visual.*C\+\+.*(\d+\.\d+)", string, re.IGNORECASE)
         if match:
             return f"Visual Studio {match.group(1)}"
@@ -88,6 +92,8 @@ def detect_msvc_version(
 
 def detect_gcc_version(strings_data: list[str]) -> str:
     for string in strings_data:
+        if not isinstance(string, str):
+            continue
         match = re.search(r"GCC.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
         if match:
             return f"GCC {match.group(1)}"
@@ -99,6 +105,8 @@ def detect_gcc_version(strings_data: list[str]) -> str:
 
 def detect_clang_version(strings_data: list[str]) -> str:
     for string in strings_data:
+        if not isinstance(string, str):
+            continue
         match = re.search(r"clang.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
         if match:
             return f"Clang {match.group(1)}"
@@ -110,6 +118,8 @@ def detect_clang_version(strings_data: list[str]) -> str:
 
 def detect_go_version(strings_data: list[str]) -> str:
     for string in strings_data:
+        if not isinstance(string, str):
+            continue
         match = re.search(r"go(\d+\.\d+\.\d+)", string, re.IGNORECASE)
         if match:
             return f"Go {match.group(1)}"
@@ -118,6 +128,8 @@ def detect_go_version(strings_data: list[str]) -> str:
 
 def detect_rust_version(strings_data: list[str]) -> str:
     for string in strings_data:
+        if not isinstance(string, str):
+            continue
         match = re.search(r"rustc.*(\d+\.\d+\.\d+)", string, re.IGNORECASE)
         if match:
             return f"Rust {match.group(1)}"
@@ -174,7 +186,11 @@ def _check_string_signatures(
     max_score = 3.0
 
     for pattern in signatures["strings"]:
+        if not isinstance(pattern, str):
+            continue
         for string in strings_data:
+            if not isinstance(string, str):
+                continue
             if re.search(pattern, string, re.IGNORECASE):
                 score += 3.0 / len(signatures["strings"])
                 break

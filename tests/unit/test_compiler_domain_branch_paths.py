@@ -46,6 +46,12 @@ def test_calculate_compiler_score_returns_capped_one():
     assert result <= 1.0
 
 
+def test_calculate_compiler_score_ignores_malformed_string_entries():
+    sigs = {"strings": ["GCC"], "imports": ["x"], "sections": ["x"], "symbols": ["x"]}
+    result = calculate_compiler_score(sigs, [None, "GCC 9.3.0"], [None], [None], [None])
+    assert result > 0.0
+
+
 # ---------------------------------------------------------------------------
 # detection_method – lines 32, 43, 45, 47, 49, 51, 53, 55, 57
 # ---------------------------------------------------------------------------
@@ -172,6 +178,13 @@ def test_detect_msvc_version_no_match_returns_unknown():
     assert detect_msvc_version(["no info"], ["nothing"], {}) == "Unknown"
 
 
+def test_detect_msvc_version_ignores_non_string_inputs():
+    assert (
+        detect_msvc_version([None, "Microsoft Visual C++ 19.0"], [None, "msvcp140.dll"], {})
+        == "Visual Studio 9.0"
+    )
+
+
 # ---------------------------------------------------------------------------
 # detect_gcc_version – lines 92-95 (GNU fallback pattern)
 # ---------------------------------------------------------------------------
@@ -196,6 +209,10 @@ def test_detect_gcc_version_empty_returns_unknown():
 
 def test_detect_gcc_version_no_match_returns_unknown():
     assert detect_gcc_version(["no version here"]) == "Unknown"
+
+
+def test_detect_gcc_version_ignores_non_string_inputs():
+    assert detect_gcc_version([None, "GCC 13.2.1"]) == "GCC 3.2.1"
 
 
 # ---------------------------------------------------------------------------
