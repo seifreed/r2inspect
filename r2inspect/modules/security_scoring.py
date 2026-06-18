@@ -61,6 +61,11 @@ def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _grade_from_percentage(percentage: float, max_score: int) -> str:
+    try:
+        percentage = float(percentage)
+        max_score = int(max_score)
+    except (TypeError, ValueError):
+        return "Unknown"
     if max_score == 0:
         return "Unknown"
     if percentage >= 90:

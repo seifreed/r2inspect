@@ -118,6 +118,11 @@ def test_grade_from_percentage_f_below_60() -> None:
     assert _grade_from_percentage(0.0, 100) == "F"
 
 
+def test_grade_from_percentage_non_numeric_inputs_return_unknown() -> None:
+    assert _grade_from_percentage(None, 100) == "Unknown"
+    assert _grade_from_percentage("90", "100") == "A"
+
+
 # ----- string_extraction tests -----
 
 
