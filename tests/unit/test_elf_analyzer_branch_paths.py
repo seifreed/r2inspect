@@ -334,6 +334,21 @@ def test_get_section_info_coerces_string_numeric_fields():
     assert sections[0]["paddr"] == 8192
 
 
+def test_get_section_info_coerces_hex_string_fields():
+    class HexSectionAnalyzer(ELFAnalyzer):
+        def _cmd_list(self, cmd: str):
+            if cmd == "iSj":
+                return [{"name": ".text", "size": "0x1000", "vaddr": "0x1000", "paddr": "0x2000"}]
+
+            return []
+
+    analyzer = HexSectionAnalyzer(ELFAdapterWithSections())
+    sections = analyzer._get_section_info()
+    assert sections[0]["size"] == 4096
+    assert sections[0]["vaddr"] == 4096
+    assert sections[0]["paddr"] == 8192
+
+
 def test_get_section_info_empty_sections():
     adapter = MinimalELFAdapter()
     analyzer = ELFAnalyzer(adapter)
