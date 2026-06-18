@@ -9,9 +9,10 @@ from collections.abc import Callable
 
 def detect_file_format(file_info: dict[str, Any], *, logger: Any) -> str:
     try:
-        if "bin" not in file_info:
+        bin_info = file_info.get("bin")
+        if not isinstance(bin_info, dict):
             return "Unknown"
-        format_info = str(file_info["bin"].get("class", "")).upper()
+        format_info = str(bin_info.get("class", "")).upper()
         if "PE" in format_info:
             return "PE"
         if "ELF" in format_info:

@@ -285,6 +285,12 @@ def test_get_file_format_returns_unknown_on_exception():
     assert cd._get_file_format() == "Unknown"
 
 
+def test_get_file_format_returns_unknown_for_malformed_bin_bucket():
+    adapter = _MinimalAdapter(file_info={"bin": "not-a-dict"})
+    cd = CompilerDetector(adapter)
+    assert cd._get_file_format() == "Unknown"
+
+
 # ---------------------------------------------------------------------------
 # _get_strings - lines 197-198: fallback path; lines 199-201: exception
 # ---------------------------------------------------------------------------
