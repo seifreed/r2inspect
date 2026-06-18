@@ -19,6 +19,10 @@ def test_extract_mnemonics_from_text_empty_returns_empty() -> None:
     assert extract_mnemonics_from_text("   \n\t  ") == []
 
 
+def test_extract_mnemonics_from_text_rejects_bytes_input() -> None:
+    assert extract_mnemonics_from_text(b"mov eax, ebx") == []  # type: ignore[arg-type]
+
+
 def test_extract_mnemonics_from_text_ignores_blank_lines() -> None:
     text = "mov eax, ebx\n\npush ecx\n\n"
     result = extract_mnemonics_from_text(text)
@@ -85,3 +89,9 @@ def test_machoc_hash_single_mnemonic() -> None:
     result = machoc_hash_from_mnemonics(["nop"])
     assert result is not None
     assert len(result) == 64
+
+
+def test_classify_function_type_rejects_non_string_name() -> None:
+    from r2inspect.domain.services.function_analysis import classify_function_type
+
+    assert classify_function_type(None, {"size": 4}) == "unknown"  # type: ignore[arg-type]

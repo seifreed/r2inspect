@@ -39,7 +39,7 @@ def extract_mnemonics_from_ops(ops: list[Any]) -> list[str]:
 
 def extract_mnemonics_from_text(text: str | None) -> list[str]:
     """Extract instruction mnemonics from plain-text disassembly."""
-    if not text or not text.strip():
+    if not isinstance(text, str) or not text.strip():
         return []
     mnemonics: list[str] = []
     for line in text.strip().split("\n"):
@@ -186,6 +186,9 @@ def calculate_cyclomatic_complexity_from_blocks(blocks: list[dict[str, Any]] | N
 def classify_function_type(func_name: str | None, func: dict[str, Any]) -> str:
     """Classify a function using stable naming and size heuristics."""
     if not func_name:
+        return "unknown"
+
+    if not isinstance(func_name, str):
         return "unknown"
 
     name = func_name.lower()
