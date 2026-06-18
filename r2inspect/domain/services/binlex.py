@@ -11,7 +11,7 @@ HTML_AMP = "&amp;"
 
 
 def normalize_mnemonic(mnemonic: str | None) -> str | None:
-    if not mnemonic:
+    if not isinstance(mnemonic, str) or not mnemonic:
         return None
     clean_mnemonic = mnemonic.strip().lower()
     clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(HTML_AMP, "&")

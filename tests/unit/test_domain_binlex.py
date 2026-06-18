@@ -17,6 +17,10 @@ def test_normalize_mnemonic_none_input() -> None:
     assert normalize_mnemonic(None) is None
 
 
+def test_normalize_mnemonic_rejects_bytes_input() -> None:
+    assert normalize_mnemonic(b"MOV") is None  # type: ignore[arg-type]
+
+
 def test_normalize_mnemonic_empty_string() -> None:
     assert normalize_mnemonic("") is None
 
