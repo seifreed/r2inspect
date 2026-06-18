@@ -489,3 +489,9 @@ def test_build_subsystem_info_rejects_non_string_input():
     result = build_subsystem_info(123)
     assert result["subsystem"] == "123"
     assert result["gui_app"] is None
+
+
+def test_build_subsystem_info_none_uses_unknown():
+    result = build_subsystem_info(None)  # type: ignore[arg-type]
+    assert result["subsystem"] == "Unknown"
+    assert result["gui_app"] is None

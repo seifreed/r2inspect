@@ -176,7 +176,7 @@ def characteristics_from_bin(bin_info: dict[str, Any], filepath: str | None) -> 
 
 
 def build_subsystem_info(subsystem: str) -> dict[str, Any]:
-    subsystem_text = subsystem if isinstance(subsystem, str) else str(subsystem)
+    subsystem_text = subsystem if isinstance(subsystem, str) else ("Unknown" if subsystem is None else str(subsystem))
     info: dict[str, Any] = {"subsystem": subsystem_text}
     lower = subsystem_text.lower()
     if "console" in lower:
