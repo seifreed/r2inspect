@@ -793,6 +793,15 @@ def test_parse_pe_header_text_empty_output_returns_none():
     assert result is None
 
 
+def test_parse_pe_header_text_non_string_output_returns_none():
+    class BadR2:
+        def cmd(self, cmd: str):
+            return 123
+
+    result = parse_pe_header_text(BadR2())
+    assert result is None
+
+
 def test_parse_pe_header_text_parses_all_sections():
     pe_text = (
         "IMAGE_NT_HEADERS\n"
@@ -998,6 +1007,15 @@ def test_get_elf_headers_empty_fallback():
     assert result == [] or result is None
 
 
+def test_get_elf_headers_non_string_text_returns_empty():
+    class BadR2:
+        def get_header_text(self):
+            return 123
+
+    result = get_elf_headers(BadR2())
+    assert result == []
+
+
 def test_get_elf_headers_dict_headers_wrapped():
     class R2DictHeaders:
         def get_headers_json(self):
@@ -1063,6 +1081,15 @@ def test_get_macho_headers_empty_text_returns_empty():
 
     result = get_macho_headers(R2Empty())
     assert result == [] or result is None
+
+
+def test_get_macho_headers_non_string_text_returns_empty():
+    class BadR2:
+        def get_header_text(self):
+            return 123
+
+    result = get_macho_headers(BadR2())
+    assert result == []
 
 
 # ---------------------------------------------------------------------------

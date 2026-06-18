@@ -15,7 +15,7 @@ def parse_pe_header_text(
     @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=None))
     def _parse() -> dict[str, Any] | None:
         text_output = safe_cmd_func(r2_instance, "ih")
-        if not text_output:
+        if not isinstance(text_output, str) or not text_output:
             return None
 
         result: dict[str, Any] = {
@@ -160,7 +160,7 @@ def get_elf_headers(
             if hasattr(r2_instance, "get_header_text")
             else safe_cmd_func(r2_instance, "ih")
         )
-        if not ph_output:
+        if not isinstance(ph_output, str) or not ph_output:
             return []
 
         return _parse_elf_headers_text(ph_output)
@@ -186,6 +186,8 @@ def _get_headers_json(
 
 
 def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
+    if not isinstance(ph_output, str):
+        return []
     headers: list[dict[str, Any]] = []
     for raw_line in ph_output.split("\n"):
         line = raw_line.strip()
@@ -201,6 +203,8 @@ def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
 
 def _parse_macho_headers_text(text_output: str) -> list[dict[str, Any]]:
     """Parse Mach-O header text output (ih) into a list of dicts."""
+    if not isinstance(text_output, str):
+        return []
     headers: list[dict[str, Any]] = []
     for raw_line in text_output.split("\n"):
         line = raw_line.strip()
@@ -237,7 +241,7 @@ def get_macho_headers(
             if hasattr(r2_instance, "get_header_text")
             else safe_cmd_func(r2_instance, "ih")
         )
-        if not headers_output:
+        if not isinstance(headers_output, str) or not headers_output:
             return []
         return _parse_macho_headers_text(headers_output)
 
