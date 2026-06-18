@@ -57,7 +57,7 @@ def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | No
 
 def normalize_pe_format(format_name: str) -> str:
     """Normalize PE format labels to the generic 'PE' bucket."""
-    if not format_name or format_name == "Unknown":
+    if not isinstance(format_name, str) or not format_name or format_name == "Unknown":
         return "PE"
     upper = format_name.upper()
     if "PE" in upper:

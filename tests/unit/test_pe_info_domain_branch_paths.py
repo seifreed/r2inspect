@@ -145,6 +145,10 @@ def test_normalize_pe_format_non_pe_format_returned_as_is():
     assert result == "ELF"
 
 
+def test_normalize_pe_format_rejects_non_string_input():
+    assert normalize_pe_format(123) == "PE"
+
+
 # ---------------------------------------------------------------------------
 # compute_entry_point() - lines 64, 76
 # ---------------------------------------------------------------------------
