@@ -106,7 +106,7 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
 
 def _add_binbloom_similar_groups(table: Table, binbloom_info: dict[str, Any]) -> None:
     similar_functions = binbloom_info.get("similar_functions", [])
-    if not similar_functions:
+    if not isinstance(similar_functions, list) or not similar_functions:
         table.add_row(SIMILAR_GROUPS_LABEL, "0 (all functions unique)")
         return
 

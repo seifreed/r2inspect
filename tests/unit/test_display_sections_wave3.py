@@ -313,6 +313,12 @@ def test_display_binbloom_signature_details_accepts_non_string_functions():
     assert "123" in text
 
 
+def test_add_binbloom_similar_groups_skips_non_list_groups():
+    table = _make_table()
+    _add_binbloom_similar_groups(table, {"similar_functions": {"bad": 1}})
+    assert len(table.rows) == 1
+
+
 def test_display_binbloom_signature_details_skips_non_dict_function_signatures():
     console = _make_console()
     binbloom_info = {
