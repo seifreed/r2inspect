@@ -348,6 +348,19 @@ def test_check_import_forwarding_with_forward():
     assert isinstance(result["detected"], bool)
 
 
+def test_check_import_forwarding_skips_malformed_strings():
+    strings_data = [
+        {"string": ["ntdll.RtlAllocateHeap"]},
+        "bad",
+        {"string": "kernel32.#12", "vaddr": 0x7000},
+    ]
+    analyzer = _make_analyzer(cmdj_map={"izj": strings_data})
+    result = analyzer.check_import_forwarding()
+
+    assert result["detected"] is True
+    assert result["forwards"] == [{"forward": "kernel32.#12", "address": 0x7000}]
+
+
 def test_check_import_forwarding_error():
     analyzer = _make_error_analyzer()
     result = analyzer.check_import_forwarding()

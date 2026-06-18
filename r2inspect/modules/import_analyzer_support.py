@@ -82,6 +82,8 @@ def check_import_forwarding(strings: list[Any], *, logger: logging.Logger) -> di
         for string_entry in strings:
             if isinstance(string_entry, dict) and "string" in string_entry:
                 string_value = string_entry["string"]
+                if not isinstance(string_value, str):
+                    continue
                 if re.match(r"^\w+\.(?:\w+|#\d+)$", string_value):
                     forwards.append(
                         {
