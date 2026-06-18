@@ -85,11 +85,16 @@ def _add_binlex_similarity_groups(
 ) -> None:
     for n in ngram_sizes:
         groups = _lookup_ngram_value(similar_functions, n)
-        if groups:
-            table.add_row(f"Similar {n}-gram Groups", str(len(groups)))
-            if groups:
-                largest_group = groups[0]
-                table.add_row(f"Largest {n}-gram Group", f"{largest_group['count']} functions")
+        if not groups:
+            continue
+        largest_group = groups[0]
+        if not isinstance(largest_group, dict):
+            continue
+        count = largest_group.get("count")
+        if count is None:
+            continue
+        table.add_row(f"Similar {n}-gram Groups", str(len(groups)))
+        table.add_row(f"Largest {n}-gram Group", f"{count} functions")
 
 
 def _add_binlex_binary_signatures(

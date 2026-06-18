@@ -166,6 +166,19 @@ def test_add_binlex_similarity_groups_accepts_string_keys():
     assert len(table.rows) == 2
 
 
+def test_add_binlex_similarity_groups_skips_malformed_group():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    ngram_sizes = [2]
+    similar_functions = {2: [{}]}
+
+    _add_binlex_similarity_groups(table, ngram_sizes, similar_functions)
+
+    assert len(table.rows) == 0
+
+
 def test_add_binlex_similarity_groups_empty():
     table = Table()
     table.add_column("Property")
