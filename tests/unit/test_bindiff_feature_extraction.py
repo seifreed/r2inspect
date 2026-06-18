@@ -259,6 +259,28 @@ def test_extract_function_features_success():
     assert "main" in result["function_names"]
 
 
+def test_extract_function_features_skips_malformed_entries():
+    """Malformed function entries do not abort later feature extraction."""
+    cmdj_map = {
+        "aflj": [
+            "bad",
+            {"name": ["bad"], "size": 10, "addr": 0x1000},
+            {"name": "ok", "size": 4, "addr": 0x2000},
+        ],
+        "agj @ 4096": [{"blocks": [{"addr": 0x1000}], "edges": []}],
+        "agj @ 8192": [{"blocks": [{"addr": 0x2000}], "edges": []}],
+    }
+    cmd_map = {"aaa": ""}
+    analyzer = _make_analyzer(cmdj_map=cmdj_map, cmd_map=cmd_map)
+
+    result = analyzer._extract_function_features()
+
+    assert result["function_count"] == 2
+    assert result["function_sizes"] == [10, 4]
+    assert result["function_names"] == ["ok"]
+    assert len(result["cfg_features"]) == 2
+
+
 def test_extract_function_features_with_analyze_all():
     """Test _extract_function_features calls analyze_all on adapter."""
     cmdj_map = {"aflj": []}
