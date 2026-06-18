@@ -4,6 +4,7 @@ from r2inspect.domain.services.binbloom import (
     accumulate_bloom_bits,
     build_binbloom_result,
     build_signature_components,
+    build_similar_groups,
     build_similar_function_groups,
     calculate_bloom_similarity,
     calculate_bloom_stats,
@@ -95,6 +96,20 @@ def test_build_similar_function_groups_skips_malformed_entries() -> None:
     }
 
     groups = build_similar_function_groups(function_signatures)
+
+    assert len(groups) == 1
+    assert groups[0]["count"] == 2
+
+
+def test_build_similar_groups_skips_non_list_buckets() -> None:
+    groups = build_similar_groups(
+        {
+            "same": ["func_a", "func_b"],
+            "bad_none": None,
+            "bad_int": 1,
+            "bad_string": "oops",
+        }
+    )
 
     assert len(groups) == 1
     assert groups[0]["count"] == 2

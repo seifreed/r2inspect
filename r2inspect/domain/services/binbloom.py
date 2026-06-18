@@ -87,10 +87,12 @@ def count_unique_signatures(function_signatures: dict[str, dict[str, Any]]) -> i
     return len(signatures)
 
 
-def build_similar_groups(signature_groups: dict[str, list[str]]) -> list[dict[str, Any]]:
+def build_similar_groups(signature_groups: dict[str, Any]) -> list[dict[str, Any]]:
     """Build similarity-group records for signatures shared by more than one function."""
     similar_groups: list[dict[str, Any]] = []
     for signature, func_names in signature_groups.items():
+        if not isinstance(func_names, list):
+            continue
         if len(func_names) > 1:
             similar_groups.append(
                 {
