@@ -642,6 +642,18 @@ def test_build_overlay_suspicious_indicators_coerces_scalar_fields():
     assert any(item["indicator"] == "High entropy" for item in indicators)
 
 
+def test_build_overlay_suspicious_indicators_ignores_none_buckets():
+    result = {
+        "overlay_size": 0,
+        "overlay_entropy": 0.0,
+        "embedded_files": None,
+        "patterns_found": None,
+        "extracted_strings": None,
+    }
+    indicators = build_overlay_suspicious_indicators(result)
+    assert indicators == []
+
+
 # ── _default_result ─────────────────────────────────────────────────
 
 

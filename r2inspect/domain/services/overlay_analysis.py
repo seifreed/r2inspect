@@ -147,6 +147,8 @@ def _indicator(indicator: str, details: str, severity: str) -> dict[str, str]:
 
 
 def _matching_suspicious_strings(strings: list[str]) -> list[str]:
+    if not isinstance(strings, list):
+        return []
     matches: list[str] = []
     for string in strings:
         if not isinstance(string, str):
@@ -174,7 +176,10 @@ def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str
         )
     if overlay_entropy > 7.5:
         suspicious.append(_indicator("High entropy", f"Entropy: {overlay_entropy:g}", "high"))
-    for embedded in result.get("embedded_files", []):
+    embedded_files = result.get("embedded_files", [])
+    if not isinstance(embedded_files, list):
+        embedded_files = []
+    for embedded in embedded_files:
         if not isinstance(embedded, dict):
             continue
         if embedded.get("type") in {"PE", "ELF"}:
@@ -185,7 +190,10 @@ def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str
                     "high",
                 )
             )
-    for pattern in result.get("patterns_found", []):
+    patterns_found = result.get("patterns_found", [])
+    if not isinstance(patterns_found, list):
+        patterns_found = []
+    for pattern in patterns_found:
         if not isinstance(pattern, dict):
             continue
         if pattern.get("name") == "AutoIt":
