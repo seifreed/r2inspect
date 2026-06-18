@@ -466,6 +466,11 @@ class TestR2PipeExtraction:
         result = RichHeaderDirectMixin._extract_offsets({"offset": 100}, {"offset": 80})
         assert result == (80, 100)
 
+    def test_extract_offsets_hex_string_values(self):
+        """Test _extract_offsets accepts hex string offsets."""
+        result = RichHeaderDirectMixin._extract_offsets({"offset": "0x100"}, {"offset": "0x80"})
+        assert result == (128, 256)
+
     def test_extract_offsets_missing(self):
         """Test _extract_offsets when offset key missing."""
         result = RichHeaderDirectMixin._extract_offsets({"other": 100}, {"offset": 80})
