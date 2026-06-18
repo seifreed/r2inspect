@@ -87,6 +87,18 @@ def test_display_most_retried_commands_sorts_commands() -> None:
     assert text.index("cmd_high") < text.index("cmd_low")
 
 
+def test_display_most_retried_commands_accepts_string_counts() -> None:
+    console = _make_console()
+    with _console_scope(console):
+        stats._display_most_retried_commands(
+            {"commands_retried": {"cmd_low": "1", "cmd_high": "3", "cmd_mid": "2"}}
+        )
+
+    text = _get_text(console)
+    assert "Most Retried Commands" in text
+    assert text.index("cmd_high") < text.index("cmd_low")
+
+
 def test_display_circuit_breaker_statistics_returns_on_empty_stats() -> None:
     console = _make_console()
     with _console_scope(console):

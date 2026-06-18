@@ -10,6 +10,13 @@ from rich.table import Table
 from .display_base import _get_console
 
 
+def _coerce_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     """Display retry statistics table"""
     if not isinstance(retry_stats, dict):
@@ -58,7 +65,7 @@ def _display_most_retried_commands(retry_stats: dict[str, Any]) -> None:
 
     sorted_commands = sorted(
         commands_retried.items(),
-        key=lambda x: x[1],
+        key=lambda x: _coerce_float(x[1]),
         reverse=True,
     )[:5]
 
