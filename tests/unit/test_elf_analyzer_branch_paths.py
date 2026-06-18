@@ -211,6 +211,25 @@ def test_get_elf_headers_populates_all_fields():
     assert info["entry_point"] == 0x400000
 
 
+def test_get_elf_headers_accepts_hex_string_fields():
+    adapter = ELFAdapterWithBinInfo()
+    adapter.get_file_info = lambda: {
+        "bin": {
+            "arch": "x86",
+            "machine": "x86",
+            "bits": "0x40",
+            "endian": "little",
+            "class": "ELF64",
+            "format": "elf",
+            "baddr": "0x400000",
+        }
+    }
+    analyzer = ELFAnalyzer(adapter)
+    info = analyzer._get_elf_headers()
+    assert info["bits"] == 64
+    assert info["entry_point"] == 0x400000
+
+
 # ---------------------------------------------------------------------------
 # _get_compilation_info – branches when sub-results are present (lines 105, 110, 115)
 # ---------------------------------------------------------------------------

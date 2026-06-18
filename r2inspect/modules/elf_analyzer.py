@@ -23,7 +23,7 @@ def _to_int(value: Any) -> int | None:
     try:
         if isinstance(value, str):
             return int(value, 0)
-        return int(value)
+        return int(value or 0)
     except (TypeError, ValueError):
         return None
 
@@ -90,11 +90,11 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
                 info["architecture"] = bin_info.get("arch", "Unknown")
                 info["machine"] = bin_info.get("machine", "Unknown")
-                info["bits"] = bin_info.get("bits", 0)
+                info["bits"] = _to_int(bin_info.get("bits", 0)) or 0
                 info["endian"] = bin_info.get("endian", "Unknown")
                 info["type"] = bin_info.get("class", "Unknown")
                 info["format"] = bin_info.get("format", "Unknown")
-                info["entry_point"] = bin_info.get("baddr", 0)
+                info["entry_point"] = _to_int(bin_info.get("baddr", 0)) or 0
 
         except Exception as e:
             logger.error("Error getting ELF headers: %s", e)
