@@ -229,6 +229,30 @@ def test_overlay_info_no_overlay_when_sections_fill_file():
     assert info["overlay_size"] == 0
 
 
+def test_packer_scoring_skips_malformed_strings_and_sections():
+    from r2inspect.domain.services.packer_scoring import analyze_sections, find_packer_string
+
+    signature = find_packer_string([{"string": ["UPX"]}, "bad"], {"UPX": [b"UPX"]})
+    sections = analyze_sections(["bad", {"name": ".text", "flags": "x", "size": "big"}])
+
+    assert signature is None
+    assert sections["section_count"] == 1
+    assert sections["executable_sections"] == 1
+    assert sections["suspicious_sections"][0]["size"] == 0
+
+
+def test_overlay_info_coerces_malformed_section_offsets():
+    from r2inspect.domain.services.packer_scoring import overlay_info
+
+    file_info = {"core": {"size": "100"}}
+    sections = ["bad", {"name": ".text", "paddr": "bad", "size": 1}]
+
+    info = overlay_info(file_info, sections)
+
+    assert info["has_overlay"] is True
+    assert info["overlay_size"] == 99
+
+
 def test_packer_entropy_threshold():
     detector = _make_detector()
 
