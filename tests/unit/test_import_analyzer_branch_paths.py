@@ -273,6 +273,18 @@ def test_get_missing_imports_skips_non_candidate_strings():
     assert result == []
 
 
+def test_get_missing_imports_skips_malformed_import_entries():
+    adapter = _StringsAdapter(strings=[{"string": "CreateFileA"}])
+
+    class _MalformedImportsAnalyzer(ImportAnalyzer):
+        def get_imports(self) -> list:
+            return [{"name": ["bad"]}, {"name": "Sleep"}]
+
+    analyzer = _MalformedImportsAnalyzer(adapter=adapter)
+    result = analyzer.get_missing_imports()
+    assert "CreateFileA" in result
+
+
 # ---------------------------------------------------------------------------
 # get_missing_imports - lines 263-264: exception handler
 # ---------------------------------------------------------------------------

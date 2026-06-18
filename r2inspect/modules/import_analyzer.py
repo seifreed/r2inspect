@@ -145,11 +145,21 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         try:
             # Get all string references that look like API calls
             strings = self._get_via_adapter("get_strings", "izj")
-            imported_apis = [imp["name"] for imp in self.get_imports()]
+            imported_apis = []
+            for imp in self.get_imports():
+                if not isinstance(imp, dict):
+                    continue
+                name = imp.get("name")
+                if isinstance(name, str) and name:
+                    imported_apis.append(name)
 
             if strings:
                 for string_info in strings:
+                    if not isinstance(string_info, dict):
+                        continue
                     string_val = string_info.get("string", "")
+                    if not isinstance(string_val, str) or not string_val:
+                        continue
                     if not self._is_candidate_api_string(string_val, imported_apis):
                         continue
                     if self._matches_known_api(string_val):

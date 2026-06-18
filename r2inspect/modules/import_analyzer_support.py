@@ -50,7 +50,7 @@ def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
     name_value = imp.get("name")
-    name = name_value if isinstance(name_value, str) and name_value else "unknown"
+    name = name_value if isinstance(name_value, str) else "unknown"
     analysis = {
         "name": name,
         "address": hex(_to_int(imp.get("plt", 0))),
