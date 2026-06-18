@@ -22,6 +22,13 @@ from ..domain.formats.string import parse_search_results
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 class CryptoAnalyzer(CommandHelperMixin):
     """Cryptographic patterns detection using a backend interface."""
 
@@ -122,9 +129,9 @@ class CryptoAnalyzer(CommandHelperMixin):
         return build_entropy_analysis(self, logger)
 
     def _do_calculate_section_entropy(self, section: dict[str, Any]) -> float:
-        vaddr = section.get("vaddr", 0)
-        size = section.get("size", 0)
-        if size == 0:
+        vaddr = _to_int(section.get("vaddr", 0))
+        size = _to_int(section.get("size", 0))
+        if vaddr is None or size is None or size == 0:
             return 0.0
         # The section size is attacker-controlled; cap the read so a crafted
         # oversized section cannot drive a huge read + hex decode. A 1 MiB sample

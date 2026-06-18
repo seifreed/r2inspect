@@ -5,8 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 
 # ---------------------------------------------------------------------------
@@ -512,3 +510,17 @@ def test_section_entropy_caps_attacker_controlled_size() -> None:
     analyzer._do_calculate_section_entropy({"vaddr": 0x1000, "size": 0xFFFFFFFF})
 
     assert recorded == [1024 * 1024]
+
+
+def test_section_entropy_coerces_string_size() -> None:
+    recorded: list[int] = []
+
+    class _RecordingAdapter(EmptyAdapter):
+        def read_bytes(self, vaddr: int, size: int) -> bytes:
+            recorded.append(size)
+            return b"\x00" * min(size, 16)
+
+    analyzer = CryptoAnalyzer(_RecordingAdapter())
+    analyzer._do_calculate_section_entropy({"vaddr": "4096", "size": "16"})
+
+    assert recorded == [16]
