@@ -253,7 +253,7 @@ class BinDiffFeatureExtractor:
         features: dict[str, Any] = {}
         try:
             entropy_info = self._entropy_pattern()
-            if entropy_info:
+            if isinstance(entropy_info, str) and entropy_info:
                 features["entropy_pattern"] = entropy_info.strip()
             try:
                 data = self._read_head()
@@ -317,7 +317,8 @@ class BinDiffFeatureExtractor:
 
     def _entropy_pattern(self) -> str:
         if self.adapter and hasattr(self.adapter, "get_entropy_pattern"):
-            return str(self.adapter.get_entropy_pattern())
+            entropy_pattern = self.adapter.get_entropy_pattern()
+            return entropy_pattern if isinstance(entropy_pattern, str) else ""
         return str(cmd_helper(self.adapter, self.adapter, "p=e 100"))
 
     def _read_head(self) -> bytes:

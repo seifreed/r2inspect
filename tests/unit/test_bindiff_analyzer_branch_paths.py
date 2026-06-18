@@ -397,6 +397,16 @@ def test_extract_byte_features_exception_returns_empty():
     assert isinstance(features, dict)
 
 
+def test_extract_byte_features_ignores_non_string_entropy_pattern():
+    class NonStringEntropyAdapter(EmptyBinDiffAdapter):
+        def get_entropy_pattern(self) -> str:
+            return 123  # type: ignore[return-value]
+
+    analyzer = BinDiffAnalyzer(NonStringEntropyAdapter(), "/nonexistent/path.bin")
+    features = analyzer._extract_byte_features()
+    assert "entropy_pattern" not in features
+
+
 # ---------------------------------------------------------------------------
 # _extract_behavioral_features  (lines 317-318)
 # ---------------------------------------------------------------------------
