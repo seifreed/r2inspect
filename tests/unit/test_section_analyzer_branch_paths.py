@@ -403,6 +403,17 @@ def test_count_nops_in_section_coerces_numeric_string_size():
     assert sample_size == 4
 
 
+def test_count_nops_in_section_coerces_hex_string_size():
+    analyzer = _build_analyzer(
+        sections=[{"name": ".text", "vaddr": 0x1000, "size": 4}],
+        arch="x86",
+        byte_hex=_hex_bytes(0x90, 4),
+    )
+    nop_count, sample_size = analyzer._count_nops_in_section(0x1000, "0x4")
+    assert nop_count == 4
+    assert sample_size == 4
+
+
 def test_count_nops_in_section_returns_zero_when_no_arch():
     analyzer = _build_analyzer(sections=[], file_info={})
     nop_count, sample_size = analyzer._count_nops_in_section(0x1000, 0x100)
