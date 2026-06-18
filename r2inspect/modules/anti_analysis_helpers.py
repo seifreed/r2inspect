@@ -117,7 +117,7 @@ def detect_obfuscation(
 
 def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
     modify_patterns = cmd_fn("/c mov.*cs:|/c mov.*ds:")
-    if modify_patterns and modify_patterns.strip():
+    if isinstance(modify_patterns, str) and modify_patterns.strip():
         return [
             {
                 "technique": "Self-Modifying Code",
@@ -130,7 +130,7 @@ def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
 
 def detect_api_hashing(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
     hash_patterns = cmd_fn("iz~hash|iz~crc32|iz~fnv")
-    if hash_patterns and hash_patterns.strip():
+    if isinstance(hash_patterns, str) and hash_patterns.strip():
         return [
             {
                 "technique": "API Hashing",
@@ -188,6 +188,6 @@ def detect_environment_checks(
     checks: list[dict[str, Any]] = []
     for command, check_type, description in env_commands:
         output = cmd_fn(command)
-        if output and output.strip():
+        if isinstance(output, str) and output.strip():
             checks.append({"type": check_type, "description": description})
     return checks

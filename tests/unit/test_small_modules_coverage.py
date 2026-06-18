@@ -758,6 +758,13 @@ def test_detect_self_modifying_none():
     assert detect_self_modifying(cmd) == []
 
 
+def test_detect_self_modifying_non_string_output():
+    def cmd(pattern):
+        return None  # type: ignore[return-value]
+
+    assert detect_self_modifying(cmd) == []
+
+
 def test_detect_api_hashing_detected():
     def cmd(pattern):
         return "crc32 hash found"
@@ -770,6 +777,13 @@ def test_detect_api_hashing_detected():
 def test_detect_api_hashing_none():
     def cmd(pattern):
         return ""
+
+    assert detect_api_hashing(cmd) == []
+
+
+def test_detect_api_hashing_non_string_output():
+    def cmd(pattern):
+        return None  # type: ignore[return-value]
 
     assert detect_api_hashing(cmd) == []
 
@@ -826,6 +840,15 @@ def test_detect_environment_checks_basic():
 def test_detect_environment_checks_empty_output():
     def cmd(command):
         return ""
+
+    env_commands = [("iz~cpuid", "cpuid", "CPUID")]
+    result = detect_environment_checks(cmd, env_commands)
+    assert result == []
+
+
+def test_detect_environment_checks_non_string_output():
+    def cmd(command):
+        return None  # type: ignore[return-value]
 
     env_commands = [("iz~cpuid", "cpuid", "CPUID")]
     result = detect_environment_checks(cmd, env_commands)
