@@ -654,6 +654,10 @@ def test_build_overlay_suspicious_indicators_ignores_none_buckets():
     assert indicators == []
 
 
+def test_build_overlay_suspicious_indicators_non_dict_returns_empty():
+    assert build_overlay_suspicious_indicators(None) == []  # type: ignore[arg-type]
+
+
 # ── _default_result ─────────────────────────────────────────────────
 
 

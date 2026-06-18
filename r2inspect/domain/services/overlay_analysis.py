@@ -167,6 +167,8 @@ def _coerce_number(value: Any, default: float = 0.0) -> float:
 
 
 def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str, Any]]:
+    if not isinstance(result, dict):
+        return []
     suspicious: list[dict[str, Any]] = []
     overlay_size = _coerce_number(result.get("overlay_size"))
     overlay_entropy = _coerce_number(result.get("overlay_entropy"))
