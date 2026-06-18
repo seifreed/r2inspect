@@ -25,6 +25,7 @@ from r2inspect.cli.display_sections_hashing_fuzzy_views import (
     display_ccbhash,
     display_impfuzzy,
     display_ssdeep,
+    add_ccbhash_entries,
 )
 from r2inspect.cli.display_sections_bindiff_support import (
     _add_bindiff_entries,
@@ -673,3 +674,18 @@ def test_add_bindiff_entries_no_optional_sections():
     table = _make_table()
     _add_bindiff_entries(table, {"filename": "sample.exe"})
     assert len(table.rows) == 1
+
+
+def test_add_ccbhash_entries_skips_non_list_functions():
+    table = _make_table()
+    add_ccbhash_entries(
+        table,
+        {
+            "binary_ccbhash": "abc",
+            "total_functions": 1,
+            "analyzed_functions": 1,
+            "unique_hashes": 1,
+            "similar_functions": [{"count": 2, "functions": None}],
+        },
+    )
+    assert len(table.rows) >= 4
