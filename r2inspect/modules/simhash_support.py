@@ -133,24 +133,27 @@ def find_similar_functions(
 
 
 def _resolve_current_hash(results: dict[str, Any], hash_type: str) -> int | None:
+    def _coerce_hash_value(value: Any) -> int | None:
+        try:
+            return int(value, 16) if isinstance(value, str) else cast(int, value)
+        except (TypeError, ValueError):
+            return None
+
     if hash_type == "combined":
         combined = results.get("combined_simhash")
         if isinstance(combined, dict):
             hash_value = combined.get("hash")
             if hash_value is not None:
-                return cast(int, hash_value)
+                return _coerce_hash_value(hash_value)
         hash_value = results.get("hash_value")
         if hash_value:
-            try:
-                return int(hash_value, 16) if isinstance(hash_value, str) else cast(int, hash_value)
-            except (TypeError, ValueError):
-                return None
+            return _coerce_hash_value(hash_value)
         return None
     section = results.get(f"{hash_type}_simhash")
     if isinstance(section, dict):
         hash_value = section.get("hash")
         if hash_value is not None:
-            return cast(int, hash_value)
+            return _coerce_hash_value(hash_value)
     return None
 
 
