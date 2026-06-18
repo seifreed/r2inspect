@@ -28,13 +28,14 @@ def init_import_result(init_result_structure: Any) -> dict[str, Any]:
 def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
     # Normalize DLL names to lowercase for case-insensitive deduplication (Windows)
     # Also check 'libname' field which some r2 versions use instead of 'library'
-    return list(
-        {
-            (imp.get("library") or imp.get("libname", "")).lower()
-            for imp in imports
-            if imp.get("library") or imp.get("libname")
-        }
-    )
+    dlls = set()
+    for imp in imports:
+        if not isinstance(imp, dict):
+            continue
+        dll = imp.get("library") or imp.get("libname")
+        if isinstance(dll, str) and dll:
+            dlls.add(dll.lower())
+    return list(dlls)
 
 
 def populate_import_statistics(

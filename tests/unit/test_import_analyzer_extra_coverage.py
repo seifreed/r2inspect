@@ -7,6 +7,7 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.import_analysis import build_import_statistics
 from r2inspect.modules.import_analyzer import ImportAnalyzer
+from r2inspect.modules.import_analyzer_result_support import collect_import_dlls
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -421,3 +422,16 @@ def test_build_import_statistics_coerces_malformed_fields():
     assert stats["risk_distribution"] == {"Unknown": 2}
     assert stats["library_distribution"] == {"unknown": 2}
     assert stats["suspicious_patterns"] == []
+
+
+def test_collect_import_dlls_skips_malformed_entries():
+    dlls = collect_import_dlls(
+        [
+            {"library": ["kernel32.dll"]},
+            {"libname": {"bad": "dll"}},
+            "bad",
+            {"library": "KERNEL32.DLL"},
+        ]
+    )
+
+    assert dlls == ["kernel32.dll"]
