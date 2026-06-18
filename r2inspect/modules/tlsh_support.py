@@ -145,11 +145,11 @@ def find_similar_sections(
         section_names = list(section_hashes.keys())
         for index, name1 in enumerate(section_names):
             hash1 = section_hashes[name1]
-            if not hash1:
+            if not isinstance(hash1, str) or not hash1:
                 continue
             for name2 in section_names[index + 1 :]:
                 hash2 = section_hashes[name2]
-                if not hash2:
+                if not isinstance(hash2, str) or not hash2:
                     continue
                 similarity = host.compare_tlsh(hash1, hash2)
                 if similarity is not None and similarity <= threshold:

@@ -717,6 +717,21 @@ def test_find_similar_sections_skips_malformed_section_hashes(tmp_path):
     assert result == []
 
 
+def test_find_similar_sections_skips_truthy_non_string_hashes(tmp_path):
+    if not TLSH_AVAILABLE:
+        pytest.skip("TLSH not available")
+    f = tmp_path / "binary.bin"
+    f.write_bytes(bytes(range(256)) * 10)
+
+    class MalformedAnalyzer(TLSHAnalyzer):
+        def analyze_sections(self):
+            return {"available": True, "section_tlsh": {"a": ["bad"], "b": "good"}}
+
+    analyzer = MalformedAnalyzer(adapter=FakeAdapter(), filename=str(f))
+    result = analyzer.find_similar_sections()
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # compare_hashes static method - lines 344-355
 # ---------------------------------------------------------------------------
