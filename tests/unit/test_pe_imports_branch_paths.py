@@ -56,6 +56,15 @@ def test_fetch_imports_fallback_without_method() -> None:
     assert isinstance(result, list)
 
 
+def test_fetch_imports_rejects_dict_response() -> None:
+    class _BadImportsAdapter:
+        def get_imports(self) -> dict:
+            return {"name": "CreateFileA"}
+
+    result = fetch_imports(_BadImportsAdapter())
+    assert result == []
+
+
 def test_fetch_imports_none_adapter_returns_empty() -> None:
     result = fetch_imports(None)
     assert result == []

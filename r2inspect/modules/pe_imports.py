@@ -12,7 +12,7 @@ def fetch_imports(adapter: Any) -> list[dict[str, Any]]:
         imports = adapter.get_imports()
     else:
         imports = cmdj_helper(adapter, None, "iij", [])
-    return imports if imports else []
+    return imports if isinstance(imports, list) and imports else []
 
 
 def group_imports_by_library(
