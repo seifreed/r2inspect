@@ -162,6 +162,18 @@ def test_get_arch_reads_nested_bin_info_shape():
     assert analyzer2._count_nops_in_section(0x1000, 3) == (3, 3)
 
 
+def test_get_functions_in_section_accepts_hex_string_addresses():
+    analyzer = _build_analyzer(
+        sections=[],
+        functions=[
+            {"name": "main", "offset": "0x1000", "size": 10},
+            {"name": "skip", "offset": "0x5000", "size": 10},
+        ],
+    )
+    result = analyzer._get_functions_in_section(0x1000, 0x200)
+    assert [f["name"] for f in result] == ["main"]
+
+
 def test_analyze_single_section_records_errors():
     """When _apply_permissions encounters bad data, the error is recorded."""
     # Provide a section with data that will cause an internal error

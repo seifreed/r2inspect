@@ -195,7 +195,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 continue
             addr = func.get("offset", func.get("addr"))
             try:
-                addr_int = int(addr)
+                addr_int = int(addr, 0) if isinstance(addr, str) else int(addr)
             except (TypeError, ValueError):
                 continue
             if vaddr <= addr_int < end:
