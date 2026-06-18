@@ -194,6 +194,18 @@ def test_packer_confidence_calculation():
     assert 0.0 <= result["confidence"] <= 1.0
 
 
+def test_packer_entropy_analysis_coerces_string_sizes():
+    from r2inspect.domain.services.packer_scoring import analyze_entropy
+
+    entropy = analyze_entropy(
+        [{"name": ".text", "size": "0x10", "vaddr": "0x1000"}],
+        lambda _vaddr, _size: b"\x00" * 16,
+        7.0,
+    )
+
+    assert entropy[".text"]["size"] == 16
+
+
 def test_packer_overlay_info():
     detector = _make_detector()
     overlay = detector.get_overlay_info()

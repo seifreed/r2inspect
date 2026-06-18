@@ -72,7 +72,7 @@ def analyze_entropy(
 
         entropy_info[section_name] = {
             "entropy": entropy,
-            "size": section.get("size", 0),
+            "size": _coerce_int(section.get("size")),
             "high_entropy": entropy > entropy_threshold,
         }
 
