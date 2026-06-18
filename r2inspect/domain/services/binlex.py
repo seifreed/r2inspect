@@ -77,7 +77,10 @@ def calculate_binary_signature(
         signatures = [
             func_sigs[n]["signature"]
             for func_sigs in function_signatures.values()
-            if n in func_sigs and "signature" in func_sigs[n]
+            if isinstance(func_sigs, dict)
+            and n in func_sigs
+            and isinstance(func_sigs[n], dict)
+            and isinstance(func_sigs[n].get("signature"), str)
         ]
         if signatures:
             binary_signatures[n] = hashlib.sha256(

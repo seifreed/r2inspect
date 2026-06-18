@@ -331,6 +331,18 @@ def test_calculate_binary_signature_with_multiple_functions() -> None:
     assert len(result[3]) == 64
 
 
+def test_calculate_binary_signature_skips_malformed_signature_buckets() -> None:
+    function_signatures = {
+        "func_a": {2: {"signature": "sig1", "ngrams": ["a b"]}},
+        "func_b": {2: {"signature": None, "ngrams": ["b c"]}},
+        "func_c": {2: {"signature": ["bad"], "ngrams": ["c d"]}},
+        "func_d": "bad",
+    }
+    result = calculate_binary_signature(function_signatures, [2])
+    assert 2 in result
+    assert len(result[2]) == 64
+
+
 def test_calculate_binary_signature_empty_function_signatures() -> None:
     result = calculate_binary_signature({}, [2, 3])
     assert result == {}
