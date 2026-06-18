@@ -291,6 +291,22 @@ def test_display_binbloom_signature_details_long_hash():
     assert "Signature Details" in text
 
 
+def test_display_binbloom_signature_details_accepts_non_string_functions():
+    console = _make_console()
+    binbloom_info = {
+        "available": True,
+        "unique_signatures": 2,
+        "function_signatures": {
+            123: {"signature": "shared_hash"},
+            456: {"signature": "shared_hash"},
+        },
+    }
+    with _console_scope(console):
+        _display_binbloom_signature_details(binbloom_info)
+    text = _get_text(console)
+    assert "123" in text
+
+
 def test_display_simhash_available_with_hashes():
     console = _make_console()
     results = {

@@ -639,6 +639,29 @@ def test_add_ccbhash_entries_accepts_tuple_functions():
     assert len(table.rows) >= 7
 
 
+def test_add_ccbhash_entries_accepts_non_string_functions():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    ccbhash_info = {
+        "binary_ccbhash": "ccb123",
+        "total_functions": 100,
+        "analyzed_functions": 95,
+        "unique_hashes": 80,
+        "similar_functions": [
+            {
+                "count": 10,
+                "functions": [123, 456, 789],
+            }
+        ],
+    }
+
+    _add_ccbhash_entries(table, ccbhash_info)
+
+    assert len(table.rows) >= 7
+
+
 def test_add_ccbhash_entries_no_similar_functions():
     table = Table()
     table.add_column("Property")

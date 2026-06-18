@@ -177,7 +177,7 @@ def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     unique_sigs = list(signatures_by_hash.keys())[:5]
     for i, sig_hash in enumerate(unique_sigs):
         funcs = signatures_by_hash[sig_hash]
-        clean_funcs = [re.sub(r"&nbsp;?", " ", func).replace(HTML_AMP, "&") for func in funcs[:3]]
+        clean_funcs = [re.sub(r"&nbsp;?", " ", str(func)).replace(HTML_AMP, "&") for func in funcs[:3]]
         func_list = ", ".join(clean_funcs) + ("..." if len(funcs) > 3 else "")
         sig_table.add_row(
             f"Signature {i + 1}",
