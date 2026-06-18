@@ -283,6 +283,27 @@ def test_adapter_get_file_info_cache_and_error() -> None:
     assert adapter_err.get_file_info() == {}
 
 
+def test_adapter_get_file_info_logs_error(caplog: pytest.LogCaptureFixture) -> None:
+    class FakeR2:
+        def cmd(self, command: str):
+            return "{}"
+
+        def cmdj(self, command: str):
+            return {}
+
+    adapter = R2PipeAdapter(FakeR2(), fault_injector=_selective_raise("get_file_info"))
+    with caplog.at_level("ERROR"):
+        assert adapter.get_file_info() == {}
+    assert any("Error retrieving file info" in record.message for record in caplog.records)
+
+
+def test_adapter_get_disasm_logs_error(caplog: pytest.LogCaptureFixture) -> None:
+    adapter = R2PipeAdapter(FallbackR2(), fault_injector=_selective_raise("get_disasm"))
+    with caplog.at_level("ERROR"):
+        assert adapter.get_disasm() == {}
+    assert any("Error retrieving disassembly" in record.message for record in caplog.records)
+
+
 def test_adapter_error_branches() -> None:
     class FakeR2:
         def cmd(self, command: str):

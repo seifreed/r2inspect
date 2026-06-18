@@ -7,6 +7,10 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 if TYPE_CHECKING:
     from ..interfaces.core import R2CommandInterface
 
+from ..infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class R2PipeCachedQueryMixin:
     """Methods that primarily rely on cached JSON queries."""
@@ -59,7 +63,8 @@ class R2PipeCachedQueryMixin:
 
             self._cache["ij"] = validated
             return cast(dict[str, Any], validated)
-        except Exception:
+        except Exception as exc:
+            facade.logger.exception("Error retrieving file info: %s", exc)
             return {}
 
     def get_sections(self) -> list[dict[str, Any]]:
@@ -150,14 +155,10 @@ class R2PipeCachedQueryMixin:
         )
 
     def get_disasm(self, address: int | None = None, size: int | None = None) -> Any:
+        cmd = "pdfj" if size is None else f"pdj {size}"
         try:
             self._maybe_force_error("get_disasm")
-            if size is None:
-                cmd = "pdfj"
-                data_type = "dict"
-            else:
-                cmd = f"pdj {size}"
-                data_type = "list"
+            data_type = "dict" if size is None else "list"
             if address is not None:
                 cmd = f"{cmd} @ {address}"
             return self._cached_query(
@@ -166,13 +167,14 @@ class R2PipeCachedQueryMixin:
                 error_msg=f"No disassembly found for '{cmd}'",
                 cache=address is None,
             )
-        except Exception:
+        except Exception as exc:
+            logger.exception("Error retrieving disassembly for '%s': %s", cmd, exc)
             return {} if size is None else []
 
     def get_cfg(self, address: int | None = None) -> Any:
+        cmd = "agj"
         try:
             self._maybe_force_error("get_cfg")
-            cmd = "agj"
             if address is not None:
                 cmd = f"{cmd} @ {address}"
             return self._cached_query(
@@ -181,7 +183,8 @@ class R2PipeCachedQueryMixin:
                 error_msg=f"No CFG data found for '{cmd}'",
                 cache=address is None,
             )
-        except Exception:
+        except Exception as exc:
+            logger.exception("Error retrieving CFG for '%s': %s", cmd, exc)
             return []
 
     def get_strings_basic(self) -> list[dict[str, Any]]:
@@ -213,7 +216,8 @@ class R2PipeCachedQueryMixin:
             if isinstance(data, dict):
                 return data
             return {}
-        except Exception:
+        except Exception as exc:
+            facade.logger.exception("Error retrieving PE header: %s", exc)
             return {}
 
     def get_pe_optional_header(self) -> dict[str, Any]:
