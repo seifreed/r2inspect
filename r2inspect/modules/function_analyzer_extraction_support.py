@@ -144,7 +144,7 @@ def try_pi_extraction(
 ) -> list[str]:
     try:
         instructions_text = analyzer._cmd(f"pi 100 @ {func_addr}")
-        if instructions_text and instructions_text.strip():
+        if isinstance(instructions_text, str) and instructions_text.strip():
             logger.debug(
                 "pi succeeded for %s, got %s instruction lines",
                 func_name,

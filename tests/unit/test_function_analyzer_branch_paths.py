@@ -565,6 +565,19 @@ def test_try_pi_extraction_returns_empty_when_no_disasm_text():
     assert result == []
 
 
+def test_try_pi_extraction_returns_empty_when_output_is_non_string():
+    class _BadTextAdapter:
+        def get_functions(self) -> list:
+            return []
+
+        def get_disasm_text(self, address=None, size=None):
+            return 123
+
+    analyzer = FunctionAnalyzer(_BadTextAdapter())
+    result = analyzer._try_pi_extraction("fn", 0x1000)
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # _generate_function_stats - empty input (line 282)
 # ---------------------------------------------------------------------------
