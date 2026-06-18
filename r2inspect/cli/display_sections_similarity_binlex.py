@@ -110,7 +110,7 @@ def _add_binlex_top_ngrams(
             top_3 = ngram_entries[:3]
             ngram_strs = []
             for ngram, count in top_3:
-                clean_ngram = ngram.replace("&nbsp;", " ").replace(HTML_AMP, "&").strip()
+                clean_ngram = str(ngram).replace("&nbsp;", " ").replace(HTML_AMP, "&").strip()
                 if len(clean_ngram) > 50:
                     clean_ngram = clean_ngram[:47] + "..."
                 ngram_strs.append(f"• {clean_ngram} ({count})")

@@ -211,6 +211,19 @@ def test_add_binlex_top_ngrams():
     assert len(table.rows) == 1
 
 
+def test_add_binlex_top_ngrams_accepts_non_string_ngrams():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    ngram_sizes = [2]
+    top_ngrams = {2: [(123, 10), (456, 5)]}
+
+    _add_binlex_top_ngrams(table, ngram_sizes, top_ngrams)
+
+    assert len(table.rows) == 1
+
+
 def test_add_binlex_entries():
     table = Table()
     table.add_column("Property")
