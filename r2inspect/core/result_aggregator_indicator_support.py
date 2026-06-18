@@ -51,23 +51,28 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
         "CreateRemoteThread",
         "SetThreadContext",
     }
-    indicators.extend(
-        {
-            "type": "Suspicious API",
-            "description": f"Suspicious API call: {imp.get('name')}",
-            "severity": "Medium",
-        }
-        for imp in (results.get("imports") if isinstance(results.get("imports"), list) else [])
-        if any(api in (imp.get("name") or "") for api in suspicious_apis)
-    )
-    indicators.extend(
-        {
-            "type": "YARA Match",
-            "description": f"YARA rule matched: {match.get('rule', 'Unknown')}",
-            "severity": "High",
-        }
-        for match in (
-            results.get("yara_matches") if isinstance(results.get("yara_matches"), list) else []
+    for imp in results.get("imports") if isinstance(results.get("imports"), list) else []:
+        if not isinstance(imp, dict):
+            continue
+        name = imp.get("name") or ""
+        if any(api in name for api in suspicious_apis):
+            indicators.append(
+                {
+                    "type": "Suspicious API",
+                    "description": f"Suspicious API call: {name}",
+                    "severity": "Medium",
+                }
+            )
+    for match in (
+        results.get("yara_matches") if isinstance(results.get("yara_matches"), list) else []
+    ):
+        if not isinstance(match, dict):
+            continue
+        indicators.append(
+            {
+                "type": "YARA Match",
+                "description": f"YARA rule matched: {match.get('rule', 'Unknown')}",
+                "severity": "High",
+            }
         )
-    )
     return indicators

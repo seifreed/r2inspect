@@ -600,6 +600,18 @@ def test_result_aggregator_generate_indicators_yara():
     assert len(yara_indicators) == 2
 
 
+def test_result_aggregator_generate_indicators_skips_malformed_list_entries():
+    agg = ResultAggregator()
+    results = {
+        "imports": ["bad", {"name": "VirtualAlloc"}],
+        "yara_matches": ["bad", {"rule": "malware"}],
+    }
+
+    indicators = agg.generate_indicators(results)
+    assert any(i["type"] == "Suspicious API" for i in indicators)
+    assert any(i["type"] == "YARA Match" for i in indicators)
+
+
 def test_result_aggregator_generate_indicators_combined():
     agg = ResultAggregator()
     results = {
