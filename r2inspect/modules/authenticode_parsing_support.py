@@ -25,13 +25,17 @@ def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
 def _validate_security_dir(
     security_dir: dict[str, Any], result: dict[str, Any]
 ) -> tuple[int, int] | None:
+    errors = result.get("errors")
+    if not isinstance(errors, list):
+        errors = []
+        result["errors"] = errors
     cert_offset = _to_int(security_dir.get("paddr", 0))
     cert_size = _to_int(security_dir.get("size", 0))
     if cert_offset is None or cert_size is None:
-        result["errors"].append("Invalid security directory types")
+        errors.append("Invalid security directory types")
         return None
     if cert_offset <= 0 or cert_size <= 0 or cert_offset > 0xFFFFFFFF or cert_size > 0xFFFFFFFF:
-        result["errors"].append("Invalid security directory")
+        errors.append("Invalid security directory")
         return None
     return cert_offset, cert_size
 
