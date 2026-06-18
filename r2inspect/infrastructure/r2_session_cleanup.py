@@ -38,8 +38,8 @@ def _fat_macho_header_layout(header: bytes) -> tuple[str, int] | None:
 
 
 def detect_fat_macho_arches(filename: str) -> set[str]:
-    path = Path(filename)
     try:
+        path = Path(filename)
         with open(path, "rb") as handle:
             layout = _fat_macho_header_layout(handle.read(8))
             if layout is None:
@@ -55,7 +55,7 @@ def detect_fat_macho_arches(filename: str) -> set[str]:
                 if arch is not None:
                     arches.add(arch)
             return arches
-    except OSError:
+    except (OSError, TypeError, ValueError):
         return set()
 
 
@@ -76,8 +76,11 @@ def select_r2_flags(
     # suffix. The magic check is an 8-byte read and returns set() for any
     # non-fat input, so it is safe to run unconditionally.
     arches = detect_fat_macho_arches(session.filename)
-    path = Path(session.filename)
-    is_macho_by_ext = path.suffix.lower() in {".macho", ".dylib"}
+    try:
+        path = Path(session.filename)
+    except (TypeError, ValueError):
+        path = None
+    is_macho_by_ext = path is not None and path.suffix.lower() in {".macho", ".dylib"}
     if arches or is_macho_by_ext:
         if "-NN" not in flags:
             flags.append("-NN")

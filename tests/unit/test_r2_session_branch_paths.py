@@ -273,6 +273,14 @@ def test_select_r2_flags_fat_macho_no_duplicate_NN_with_disable_plugins(tmp_path
         os.environ.pop("R2INSPECT_DISABLE_PLUGINS", None)
 
 
+def test_select_r2_flags_non_string_filename_falls_back_cleanly():
+    """Non-string filenames should not crash fat Mach-O detection or suffix checks."""
+    session = R2Session("/tmp/test")
+    session.filename = None
+    flags = session._select_r2_flags()
+    assert "-2" in flags
+
+
 # ---------------------------------------------------------------------------
 # _open_with_timeout timeout path - lines 212-215
 # ---------------------------------------------------------------------------
