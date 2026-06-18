@@ -509,6 +509,14 @@ def test_extract_mnemonics_from_text_skips_blank_lines():
     assert "mov" in result
 
 
+def test_extract_mnemonics_from_text_returns_empty_for_non_string_text():
+    """Lines 278-279: non-string text is treated as empty input."""
+    adapter = DisasmAdapter(disasm_text=None)
+    analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
+    result = analyzer._extract_mnemonics_from_text(0x1000, "func_bad_text")
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # _collect_mnemonics_from_ops
 # ---------------------------------------------------------------------------
@@ -528,6 +536,14 @@ def test_collect_mnemonics_from_ops_skips_entries_without_mnemonic():
     ops = [{"type": "call"}, {"mnemonic": "nop"}, {}]
     result = analyzer._collect_mnemonics_from_ops(ops)
     assert result == ["nop"]
+
+
+def test_collect_mnemonics_from_ops_skips_non_string_mnemonics():
+    """Lines 298-300: non-string mnemonics are ignored."""
+    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
+    ops = [{"mnemonic": None}, {"mnemonic": 123}, {"mnemonic": "RET"}]
+    result = analyzer._collect_mnemonics_from_ops(ops)
+    assert result == ["ret"]
 
 
 def test_collect_mnemonics_from_ops_normalizes_to_lowercase():

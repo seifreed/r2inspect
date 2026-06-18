@@ -84,7 +84,7 @@ def extract_mnemonics_from_text(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm_text")
         else analyzer._cmd(f"pi 100 @ {func_addr}")
     )
-    if not instructions_text or not instructions_text.strip():
+    if not isinstance(instructions_text, str) or not instructions_text.strip():
         return []
 
     mnemonics: list[str] = []

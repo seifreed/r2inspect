@@ -92,7 +92,7 @@ class BinbloomMixin:
 
     @staticmethod
     def _normalize_mnemonic(mnemonic: str | None) -> str | None:
-        if not mnemonic:
+        if not isinstance(mnemonic, str) or not mnemonic:
             return None
         clean_mnemonic = mnemonic.strip().lower()
         return clean_mnemonic or None
