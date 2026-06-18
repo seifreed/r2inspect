@@ -10,6 +10,9 @@ from typing import Any, cast
 
 from ..application.batch_discovery import check_executable_signature
 from ..application.batch_discovery import find_files_by_extensions as core_find_files_by_extensions
+from ..infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 _MAGIC_UNINITIALIZED = object()
 magic: Any = _MAGIC_UNINITIALIZED
@@ -41,7 +44,8 @@ def resolve_magic_module(
         return magic
     try:
         magic = (importer if importer is not None else _import_magic)()
-    except Exception:
+    except Exception as exc:
+        logger.error("Error importing python-magic: %s", exc)
         magic = None
     return magic
 

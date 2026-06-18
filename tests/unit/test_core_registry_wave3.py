@@ -33,7 +33,7 @@ def _failing_magic_importer() -> Any:
     raise ImportError("blocked for test")
 
 
-def test_magic_import_failure_sets_magic_none():
+def test_magic_import_failure_sets_magic_none(caplog):
     """Cover the except->None branch of the magic import guard.
 
     Drives the real resolve_magic_module except path through its importer
@@ -50,11 +50,13 @@ def test_magic_import_failure_sets_magic_none():
         # hits the importer (which raises -> except -> magic = None).
         bp.magic = bp._MAGIC_UNINITIALIZED
         rt.magic = rt._MAGIC_UNINITIALIZED
-        result = bp._init_magic(
-            resolve_fn=lambda: rt.resolve_magic_module(importer=_failing_magic_importer)
-        )
+        with caplog.at_level("ERROR"):
+            result = bp._init_magic(
+                resolve_fn=lambda: rt.resolve_magic_module(importer=_failing_magic_importer)
+            )
         assert result is None
         assert bp.magic is None
+        assert "Error importing python-magic: blocked for test" in caplog.text
     finally:
         rt.magic = saved_rt_magic
         bp.magic = saved_bp_magic
