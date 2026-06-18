@@ -40,7 +40,7 @@ def test_cli_batch_processing_signature_and_extension_helpers(tmp_path: Path) ->
         header = handle.read(64)
         assert is_pe_executable(header, handle) is True
 
-    files = find_files_by_extensions(tmp_path, "exe,dll", recursive=False)
+    files = find_files_by_extensions(tmp_path, ".exe,dll,", recursive=False)
     assert sorted(path.name for path in files) == ["sample.dll", "sample.exe"]
 
 
