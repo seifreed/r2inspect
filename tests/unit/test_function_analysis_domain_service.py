@@ -97,6 +97,14 @@ def test_group_functions_by_machoc_hash_keeps_only_duplicates() -> None:
     assert result == {"h1": ["a", "b"], "h3": ["d", "e"]}
 
 
+def test_group_functions_by_machoc_hash_skips_malformed_hashes() -> None:
+    hashes = {"a": "h1", "b": ["bad"], "c": None, "d": "h1"}  # type: ignore[dict-item]
+
+    result = group_functions_by_machoc_hash(hashes)  # type: ignore[arg-type]
+
+    assert result == {"h1": ["a", "d"]}
+
+
 def test_build_machoc_summary_reports_common_patterns() -> None:
     hashes = {"func_a": "abcdef1234567890x", "func_b": "abcdef1234567890x", "func_c": "z"}
 

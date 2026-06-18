@@ -129,6 +129,8 @@ def group_functions_by_machoc_hash(machoc_hashes: dict[str, str] | None) -> dict
 
     hash_to_functions: dict[str, list[str]] = {}
     for func_name, machoc_hash in machoc_hashes.items():
+        if not isinstance(machoc_hash, str) or not machoc_hash:
+            continue
         hash_to_functions.setdefault(machoc_hash, []).append(func_name)
 
     return {
