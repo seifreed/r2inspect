@@ -247,6 +247,11 @@ def test_format_summary_with_packer() -> None:
     assert "UPX" in result
 
 
+def test_format_summary_accepts_non_dict_yara_matches() -> None:
+    result = OutputFormatter({"yara_matches": [None, {"rule": "r1"}]}).format_summary()
+    assert "Invalid YARA match entry" in result
+
+
 def test_format_summary_with_string_confidence() -> None:
     results = {"packer": {"is_packed": True, "packer_type": "UPX", "confidence": "0.95"}}
     result = OutputFormatter(results).format_summary()

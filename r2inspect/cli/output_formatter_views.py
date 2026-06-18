@@ -172,7 +172,10 @@ def append_yara_summary(summary_lines: list[str], results: dict[str, Any]) -> No
         return
     summary_lines.append(f"YARA Matches: {len(yara_matches)}")
     for match in yara_matches[:MAX_SUMMARY_YARA_MATCHES]:
-        summary_lines.append(f"  - {match.get('rule', 'Unknown')}")
+        if isinstance(match, dict):
+            summary_lines.append(f"  - {match.get('rule', 'Unknown')}")
+        else:
+            summary_lines.append(f"  - Invalid YARA match entry: {match}")
     summary_lines.append("")
 
 
