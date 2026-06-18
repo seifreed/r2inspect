@@ -35,13 +35,21 @@ def _count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
     return sum(
         1
         for imp in imports
-        if any(api in (imp.get("name") or "") for api in SUSPICIOUS_IMPORT_APIS)
+        if isinstance(imp, dict)
+        and isinstance(name := imp.get("name"), str)
+        and any(api in name for api in SUSPICIOUS_IMPORT_APIS)
     )
 
 
 def _count_high_entropy_sections(sections: list[dict[str, Any]]) -> int:
     """Count sections whose entropy is high enough to look packed or obfuscated."""
-    return sum(1 for section in sections if section.get("entropy", 0) > 7.0)
+    return sum(
+        1
+        for section in sections
+        if isinstance(section, dict)
+        and isinstance(entropy := section.get("entropy", 0), int | float)
+        and entropy > 7.0
+    )
 
 
 def _count_suspicious_sections(sections: list[dict[str, Any]]) -> int:
@@ -49,7 +57,14 @@ def _count_suspicious_sections(sections: list[dict[str, Any]]) -> int:
     return sum(
         1
         for section in sections
-        if section.get("suspicious_indicators") or section.get("name") in SUSPICIOUS_SECTION_NAMES
+        if isinstance(section, dict)
+        and (
+            section.get("suspicious_indicators")
+            or (
+                isinstance(name := section.get("name"), str)
+                and name in SUSPICIOUS_SECTION_NAMES
+            )
+        )
     )
 
 

@@ -309,6 +309,15 @@ def test_count_suspicious_imports_empty():
     assert _count_suspicious_imports([]) == 0
 
 
+def test_count_suspicious_imports_skips_malformed_entries():
+    imports = [
+        "bad",
+        {"name": ["VirtualAlloc"]},
+        {"name": "VirtualAllocEx"},
+    ]
+    assert _count_suspicious_imports(imports) == 1
+
+
 def test_count_high_entropy_sections():
     sections = [
         {"entropy": 7.5},
@@ -331,6 +340,11 @@ def test_count_high_entropy_sections_missing_entropy():
     sections = [{"name": ".text"}, {"entropy": 7.5}]
     count = _count_high_entropy_sections(sections)
     assert count == 1
+
+
+def test_count_high_entropy_sections_skips_malformed_entries():
+    sections = ["bad", {"entropy": "high"}, {"entropy": 8.0}]
+    assert _count_high_entropy_sections(sections) == 1
 
 
 def test_count_suspicious_sections_by_name():
@@ -363,6 +377,16 @@ def test_count_suspicious_sections_both():
 
     count = _count_suspicious_sections(sections)
     assert count == 2
+
+
+def test_count_suspicious_sections_skips_malformed_entries():
+    sections = [
+        "bad",
+        {"name": ["UPX0"]},
+        {"name": "UPX0"},
+        {"name": ".text", "suspicious_indicators": ["packed"]},
+    ]
+    assert _count_suspicious_sections(sections) == 2
 
 
 def test_count_crypto_indicators():
