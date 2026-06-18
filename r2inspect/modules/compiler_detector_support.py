@@ -90,7 +90,7 @@ def apply_best_compiler(
     detect_version: Callable[[str, list[str], list[str]], str],
     detection_method_fn: Callable[[str, float], str],
 ) -> None:
-    if not compiler_scores:
+    if not isinstance(compiler_scores, dict) or not compiler_scores:
         return
     best_compiler = max(compiler_scores, key=lambda k: compiler_scores[k])
     best_score = compiler_scores[best_compiler]

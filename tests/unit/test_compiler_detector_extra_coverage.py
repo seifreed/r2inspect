@@ -481,6 +481,22 @@ def test_detect_compiler_version_skips_non_dict_detectors():
     )
 
 
+def test_apply_best_compiler_skips_non_dict_scores():
+    from r2inspect.modules.compiler_detector_support import apply_best_compiler
+
+    results: dict[str, object] = {}
+    apply_best_compiler(
+        results,
+        [],  # type: ignore[arg-type]
+        [],
+        [],
+        "ELF",
+        detect_version=lambda *_: "Unknown",
+        detection_method_fn=lambda *_: "method",
+    )
+    assert results == {}
+
+
 def test_apply_best_compiler_no_scores():
     """Test _apply_best_compiler with empty scores"""
     adapter = FakeAdapter()
