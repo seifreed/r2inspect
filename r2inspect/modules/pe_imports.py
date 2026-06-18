@@ -75,6 +75,8 @@ def _library_import_strings(normalized_lib: str, functions: Any) -> list[str]:
             continue
         if isinstance(funcname, bytes):
             funcname = funcname.decode(errors="ignore")
+        if not isinstance(funcname, str):
+            continue
         strings.append(f"{normalized_lib}.{funcname.lower()}")
     return strings
 

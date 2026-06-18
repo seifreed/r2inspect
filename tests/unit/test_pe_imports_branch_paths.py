@@ -22,6 +22,12 @@ def test_build_import_strings_skips_unknown_libraries_and_decodes_bytes() -> Non
     assert result == ["kernel32.createfilew", "kernel32.readfile"]
 
 
+def test_build_import_strings_skips_non_string_function_entries() -> None:
+    imports_by_lib = {"kernel32.dll": ["CreateFileW", 123, None]}
+    result = _build_import_strings(imports_by_lib, ["ocx", "sys", "dll"])
+    assert result == ["kernel32.createfilew"]
+
+
 class _FakeLogger:
     def debug(self, msg: str, *args: object) -> None:
         pass
