@@ -84,6 +84,11 @@ def test_generate_recommendations_ignores_malformed_aslr_bucket():
     assert isinstance(recs, list)
 
 
+def test_generate_recommendations_ignores_malformed_pe_info():
+    recs = generate_recommendations({"mitigations": {}, "pe_info": None})
+    assert isinstance(recs, list)
+
+
 def test_generate_recommendations_skips_none_nested_buckets():
     recs = generate_recommendations(
         {"mitigations": None, "security": None, "crypto": None, "anti_analysis": None}
