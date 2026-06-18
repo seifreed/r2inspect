@@ -427,6 +427,12 @@ def test_add_simhash_feature_stats_missing_keys():
     assert len(table.rows) == 4
 
 
+def test_add_simhash_feature_stats_skips_non_dict_input():
+    table = _make_table()
+    _add_simhash_feature_stats(table, "bad")  # type: ignore[arg-type]
+    assert len(table.rows) == 0
+
+
 def test_format_simhash_hex_exactly_32_chars():
     result = _format_simhash_hex("a" * 32)
     assert "\n" not in result

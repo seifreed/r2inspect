@@ -23,6 +23,8 @@ def _coerce_text(value: Any) -> str:
 
 
 def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> None:
+    if not isinstance(feature_stats, dict):
+        return
     total_features = feature_stats.get("total_features", 0)
     total_strings = feature_stats.get("total_strings", 0)
     total_opcodes = feature_stats.get("total_opcodes", 0)
