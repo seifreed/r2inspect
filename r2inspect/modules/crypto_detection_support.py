@@ -23,6 +23,13 @@ class CryptoHost(Protocol):
     def _search_hex(self, hex_pattern: str) -> str: ...
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
     crypto_info: dict[str, Any] = {
         "algorithms": [],
@@ -89,7 +96,11 @@ def detect_crypto_apis(analyzer: CryptoHost, logger: logging.Logger) -> list[dic
             "SHA256_Init": "SHA256",
         }
         for imp in imports:
+            if not isinstance(imp, dict):
+                continue
             func_name = imp.get("name", "")
+            if not isinstance(func_name, str):
+                continue
             for api_name, algo_type in all_apis.items():
                 if api_name in func_name:
                     crypto_apis.append(
@@ -97,7 +108,7 @@ def detect_crypto_apis(analyzer: CryptoHost, logger: logging.Logger) -> list[dic
                             "function": func_name,
                             "algorithm": algo_type,
                             "library": imp.get("libname") or imp.get("library", "unknown"),
-                            "address": hex(imp.get("plt", 0)),
+                            "address": hex(_to_int(imp.get("plt", 0))),
                         }
                     )
     except Exception as exc:
@@ -111,8 +122,11 @@ def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, A
         sections = analyzer._get_sections()
         if sections:
             for section in sections:
-                section_name = section.get("name", "unknown")
-                section_size = section.get("size", 0)
+                if not isinstance(section, dict):
+                    continue
+                section_name_value = section.get("name", "unknown")
+                section_name = section_name_value if isinstance(section_name_value, str) else "unknown"
+                section_size = _to_int(section.get("size", 0))
                 if section_size > 0:
                     entropy = analyzer._calculate_section_entropy(section)
                     entropy_info[section_name] = {
@@ -193,14 +207,18 @@ def detect_crypto_libraries(analyzer: CryptoHost, logger: logging.Logger) -> lis
             ],
         }
         for imp in imports:
+            if not isinstance(imp, dict):
+                continue
             imp_name = imp.get("name", "")
+            if not isinstance(imp_name, str):
+                continue
             for lib_name, api_list in crypto_api_patterns.items():
                 if any(api in imp_name for api in api_list):
                     crypto_libs.append(
                         {
                             "library": lib_name,
                             "api_function": imp_name,
-                            "address": hex(imp.get("plt", 0)),
+                            "address": hex(_to_int(imp.get("plt", 0))),
                         }
                     )
     except Exception as exc:

@@ -47,6 +47,17 @@ class CryptoImportsAdapter(EmptyAdapter):
         ]
 
 
+class MalformedCryptoImportsAdapter(EmptyAdapter):
+    """Adapter with malformed imports before valid crypto imports."""
+
+    def get_imports(self) -> list[Any]:
+        return [
+            "bad",
+            {"name": ["CryptCreateHash"], "plt": "bad"},
+            {"name": "CryptEncrypt", "libname": "advapi32.dll", "plt": "4096"},
+        ]
+
+
 class CryptoSectionsAdapter(EmptyAdapter):
     """Adapter with sections and readable bytes for entropy analysis."""
 
@@ -54,6 +65,22 @@ class CryptoSectionsAdapter(EmptyAdapter):
         return [
             {"name": ".text", "vaddr": 0x1000, "size": 16},
             {"name": ".empty", "vaddr": 0x2000, "size": 0},
+        ]
+
+    def read_bytes(self, vaddr: int, size: int) -> bytes:
+        if vaddr == 0x1000:
+            return bytes(range(16))
+        return b""
+
+
+class MalformedCryptoSectionsAdapter(EmptyAdapter):
+    """Adapter with malformed sections before a valid high-entropy section."""
+
+    def get_sections(self) -> list[Any]:
+        return [
+            "bad",
+            {"name": ["bad"], "size": "bad", "vaddr": 0x1000},
+            {"name": ".packed", "vaddr": 0x1000, "size": 16},
         ]
 
     def read_bytes(self, vaddr: int, size: int) -> bytes:
@@ -207,6 +234,14 @@ def test_detect_via_api_calls_populates_detected_algos():
     assert len(detected_algos) > 0
 
 
+def test_detect_crypto_apis_skips_malformed_imports():
+    analyzer = CryptoAnalyzer(MalformedCryptoImportsAdapter())
+    result = analyzer._detect_crypto_apis()
+    assert len(result) == 1
+    assert result[0]["function"] == "CryptEncrypt"
+    assert result[0]["address"] == "0x1000"
+
+
 # ---------------------------------------------------------------------------
 # _detect_via_constants() - line 190
 # ---------------------------------------------------------------------------
@@ -246,6 +281,13 @@ def test_analyze_entropy_with_sections():
     if ".text" in result:
         assert "entropy" in result[".text"]
         assert "size" in result[".text"]
+
+
+def test_analyze_entropy_skips_malformed_sections():
+    analyzer = CryptoAnalyzer(MalformedCryptoSectionsAdapter())
+    result = analyzer._analyze_entropy()
+    assert set(result) == {".packed"}
+    assert result[".packed"]["size"] == 16
 
 
 # ---------------------------------------------------------------------------
@@ -387,6 +429,14 @@ def test_detect_crypto_libraries_with_crypto_imports():
     assert len(result) > 0
     libs = [entry["library"] for entry in result]
     assert any("CryptoAPI" in lib or "BCrypt" in lib or "OpenSSL" in lib for lib in libs)
+
+
+def test_detect_crypto_libraries_skips_malformed_imports():
+    analyzer = CryptoAnalyzer(MalformedCryptoImportsAdapter())
+    result = analyzer.detect_crypto_libraries()
+    assert len(result) == 1
+    assert result[0]["api_function"] == "CryptEncrypt"
+    assert result[0]["address"] == "0x1000"
 
 
 def test_detect_crypto_libraries_exception_path():
