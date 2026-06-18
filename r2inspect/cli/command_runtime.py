@@ -37,18 +37,17 @@ def configure_quiet_logging(quiet: bool) -> None:
 def apply_thread_settings(config: Any, threads: int | None) -> None:
     if threads is None:
         return
-    try:
-        thread_count = int(threads)
-        config.apply_overrides(
-            {
-                "pipeline": {
-                    "max_workers": thread_count,
-                    "parallel_execution": bool(thread_count > 1),
-                }
+    thread_count = int(threads)
+    if thread_count < 1 or thread_count > 50:
+        raise ValueError("threads must be between 1 and 50")
+    config.apply_overrides(
+        {
+            "pipeline": {
+                "max_workers": thread_count,
+                "parallel_execution": bool(thread_count > 1),
             }
-        )
-    except Exception:
-        return
+        }
+    )
 
 
 def build_analysis_options(yara: str | None = None, xor: str | None = None) -> dict[str, Any]:

@@ -897,7 +897,8 @@ def test_apply_thread_settings_invalid():
     from r2inspect.config import Config
 
     config = Config()
-    apply_thread_settings(config, "bad")  # Should not raise
+    with pytest.raises(ValueError):
+        apply_thread_settings(config, "bad")
 
 
 # ---------------------------------------------------------------------------

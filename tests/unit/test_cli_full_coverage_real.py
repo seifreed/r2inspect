@@ -326,7 +326,8 @@ def test_cli_command_base_and_config_version(tmp_path: Path) -> None:
     config = Config()
     apply_thread_settings(config, 2)
     apply_thread_settings(config, None)
-    apply_thread_settings(config, "bad")
+    with pytest.raises(ValueError):
+        apply_thread_settings(config, "bad")
 
     context = CommandContext.create(config=config, verbose=True, quiet=False)
     command = _Command(context)

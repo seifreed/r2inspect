@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from r2inspect.cli.commands.base import Command, CommandContext, apply_thread_settings
 from r2inspect.config import Config
 
@@ -34,8 +36,8 @@ def test_apply_thread_settings_updates_config(tmp_path: Path):
     assert config.typed_config.pipeline.max_workers == 8
     assert config.typed_config.pipeline.parallel_execution is True
 
-    # Invalid threads should not crash or change config
-    apply_thread_settings(config, "bad")
+    with pytest.raises(ValueError):
+        apply_thread_settings(config, "bad")
     assert config.typed_config.pipeline.max_workers == 8
 
 

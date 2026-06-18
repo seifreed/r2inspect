@@ -63,7 +63,8 @@ def test_apply_thread_settings_valid_and_invalid(tmp_path: Path):
     assert config.typed_config.pipeline.parallel_execution is False
 
     before = config.to_dict()
-    apply_thread_settings(config, "not-a-number")
+    with pytest.raises(ValueError):
+        apply_thread_settings(config, "not-a-number")
     assert config.to_dict() == before
 
 

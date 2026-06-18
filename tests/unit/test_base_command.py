@@ -103,9 +103,8 @@ def test_apply_thread_settings_invalid_value():
     """Test apply_thread_settings with invalid thread count."""
     config = Config()
 
-    # Should not raise an exception, just keep config unchanged
-    apply_thread_settings(config, threads="invalid")
-    assert True
+    with pytest.raises(ValueError):
+        apply_thread_settings(config, threads="invalid")
 
 
 def test_command_context_create_default():
