@@ -221,6 +221,19 @@ def test_add_binbloom_group_long_function_names_truncated():
     assert len(table.rows) == 3
 
 
+def test_add_binbloom_group_accepts_non_string_function_names():
+    table = _make_table()
+    group = {
+        "count": 2,
+        "signature": "sig",
+        "functions": [123, 456],
+    }
+    _add_binbloom_group(table, 1, group)
+    console = _make_console()
+    console.print(table)
+    assert "123" in _get_text(console)
+
+
 def test_display_binbloom_available_with_similar_groups():
     console = _make_console()
     results = {

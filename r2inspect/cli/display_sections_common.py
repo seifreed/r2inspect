@@ -24,7 +24,9 @@ def add_group_functions_row(table: Table, group: dict[str, Any], index: int) -> 
         return
     func_display = []
     for func in functions[:5]:
-        func_name = func if len(func) <= 30 else func[:27] + "..."
+        func_name = str(func)
+        if len(func_name) > 30:
+            func_name = func_name[:27] + "..."
         func_display.append(f"• {func_name}")
     if len(functions) > 5:
         func_display.append(f"• ... and {len(functions) - 5} more")
