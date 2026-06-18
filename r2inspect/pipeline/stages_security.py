@@ -18,6 +18,16 @@ from .stages_common import RegistryStage, default_analyzer_factory
 logger = logging.getLogger(__name__)
 
 
+def _bucket(context: dict[str, Any], key: str) -> dict[str, Any]:
+    results = context["results"]
+    value = results.get(key)
+    if isinstance(value, dict):
+        return value
+    value = {}
+    results[key] = value
+    return value
+
+
 class SecurityStage(RegistryStage):
     """Analyze security features and exploit mitigations."""
 
@@ -66,11 +76,11 @@ class SecurityStage(RegistryStage):
                     filename=self.filename,
                 )
                 data = analyzer.get_security_features()
-                context["results"]["security"] = data
+                _bucket(context, "security").update(data)
                 return {"security": data}
             except Exception as e:
                 logger.warning("PE security analysis failed: %s", e)
-                context["results"]["security"] = {"error": str(e)}
+                _bucket(context, "security")["error"] = str(e)
                 return {"security": {"error": str(e)}}
         return None
 
@@ -82,10 +92,7 @@ class SecurityStage(RegistryStage):
                     mitigation_class, adapter=self.adapter, config=self.config
                 )
                 mitigations = analyzer.analyze()
-                if "security" in context["results"]:
-                    context["results"]["security"].update(mitigations)
-                else:
-                    context["results"]["security"] = mitigations
+                _bucket(context, "security").update(mitigations)
             except Exception as e:
                 logger.debug("Mitigation analysis failed: %s", e)
                 return None

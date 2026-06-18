@@ -114,3 +114,22 @@ def test_security_stage_runs_only_mitigations_for_non_pe_formats() -> None:
 
     assert result["security"]["stack_canary"] is True
     assert "nx" not in result["security"]
+
+
+def test_security_stage_initializes_non_dict_security_bucket() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register("exploit_mitigation", MitigationAnalyzer, AnalyzerCategory.SECURITY)
+
+    stage = SecurityStage(
+        registry=registry,
+        adapter=FakeAdapter(),
+        config=FakeConfig(),
+        filename="sample.elf",
+    )
+    context = make_stage_context()
+    context["metadata"]["file_format"] = "ELF"
+    context["results"]["security"] = None
+
+    result = stage.execute(context)
+
+    assert result["security"]["stack_canary"] is True
