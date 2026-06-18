@@ -43,7 +43,7 @@ def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | No
     if format_name and format_name != "Unknown":
         return format_name
 
-    bits = bin_info.get("bits", 0)
+    bits = _to_int(bin_info.get("bits", 0))
     if bits == 32:
         return "PE32"
     if bits == 64:

@@ -138,6 +138,11 @@ def test_determine_pe_format_none_format_falls_back_to_bits():
     assert result == "PE32"
 
 
+def test_determine_pe_format_string_bits_are_parsed():
+    result = determine_pe_format({"format": "Unknown", "bits": "64"}, None)  # type: ignore[arg-type]
+    assert result == PE32_PLUS
+
+
 # ---------------------------------------------------------------------------
 # normalize_pe_format() - lines 54, 58
 # ---------------------------------------------------------------------------
