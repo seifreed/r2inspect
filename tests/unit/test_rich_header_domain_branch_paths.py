@@ -226,6 +226,11 @@ def test_validate_decoded_entries_mixed_valid_invalid():
     assert validate_decoded_entries(entries) is True
 
 
+def test_validate_decoded_entries_skips_malformed_entries():
+    entries = [{"prodid": 0x0001, "count": 1}, "bad", {"prodid": "x", "count": 1}]
+    assert validate_decoded_entries(entries) is True
+
+
 def test_validate_decoded_entries_boundary_values():
     entries = [
         {"prodid": 0xFFFF0001, "count": 9999},
@@ -258,6 +263,13 @@ def test_build_rich_header_result_multiple_entries_checksum():
         {"prodid": 0x0001, "count": 10},
         {"prodid": 0x0002, "count": 5},
     ]
+    result = build_rich_header_result(entries, 0)
+    expected = 0x0001 ^ 10 ^ 0x0002 ^ 5
+    assert result["checksum"] == expected
+
+
+def test_build_rich_header_result_skips_malformed_entries():
+    entries = [{"prodid": 0x0001, "count": 10}, "bad", {"prodid": 0x0002, "count": 5}]
     result = build_rich_header_result(entries, 0)
     expected = 0x0001 ^ 10 ^ 0x0002 ^ 5
     assert result["checksum"] == expected

@@ -58,8 +58,12 @@ def validate_decoded_entries(decoded_entries: list[dict[str, Any]]) -> bool:
         return False
     valid_entries = 0
     for entry in decoded_entries:
+        if not isinstance(entry, dict):
+            continue
         prodid = entry.get("prodid", 0)
         count = entry.get("count", 0)
+        if not isinstance(prodid, int) or not isinstance(count, int):
+            continue
         product_id = prodid & 0xFFFF
         if 0 < count < 10000 and 0 <= prodid <= 0xFFFFFFFF and 0 <= product_id <= 0xFFFF:
             valid_entries += 1
@@ -69,6 +73,8 @@ def validate_decoded_entries(decoded_entries: list[dict[str, Any]]) -> bool:
 def build_rich_header_result(decoded_entries: list[dict[str, Any]], xor_key: int) -> dict[str, Any]:
     checksum = 0
     for entry in decoded_entries:
+        if not isinstance(entry, dict):
+            continue
         checksum ^= entry.get("prodid", 0)
         checksum ^= entry.get("count", 0)
     return {
