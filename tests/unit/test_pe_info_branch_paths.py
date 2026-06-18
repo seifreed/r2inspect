@@ -324,6 +324,16 @@ def test_get_compilation_info_returns_empty_when_no_bin():
     assert result == {}
 
 
+def test_get_compilation_info_ignores_non_dict_bin():
+    log = StubLogger()
+    class AdapterWithBadBin(AdapterWithFullBin):
+        def get_file_info(self):
+            return {"bin": "not-a-dict"}
+
+    result = pe_info.get_compilation_info(AdapterWithBadBin(), log)
+    assert result == {}
+
+
 def test_get_compilation_info_returns_compiler_info_when_present():
     log = StubLogger()
     result = pe_info.get_compilation_info(AdapterWithCompilerInStrings(), log)
@@ -388,6 +398,16 @@ def test_get_subsystem_info_returns_dict():
 def test_get_subsystem_info_returns_empty_when_no_bin():
     log = StubLogger()
     result = pe_info.get_subsystem_info(AdapterWithNoBin(), log)
+    assert result == {}
+
+
+def test_get_subsystem_info_ignores_non_dict_bin():
+    log = StubLogger()
+    class AdapterWithBadBin(AdapterWithFullBin):
+        def get_file_info(self):
+            return {"bin": "not-a-dict"}
+
+    result = pe_info.get_subsystem_info(AdapterWithBadBin(), log)
     assert result == {}
 
 

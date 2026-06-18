@@ -119,7 +119,7 @@ def get_compilation_info(adapter: Any, logger: Any) -> dict[str, Any]:
     info: dict[str, Any] = {}
     try:
         pe_info = adapter.get_file_info()
-        if pe_info and "bin" in pe_info:
+        if pe_info and isinstance(pe_info.get("bin"), dict):
             bin_info = pe_info["bin"]
             if "compiled" in bin_info:
                 info["compile_time"] = bin_info["compiled"]
@@ -147,7 +147,7 @@ def get_subsystem_info(adapter: Any, logger: Any) -> dict[str, Any]:
     info: dict[str, Any] = {}
     try:
         pe_info = adapter.get_file_info()
-        if pe_info and "bin" in pe_info:
+        if pe_info and isinstance(pe_info.get("bin"), dict):
             bin_info = pe_info["bin"]
             subsystem = bin_info.get("subsys", "Unknown")
             info.update(build_subsystem_info(subsystem))
