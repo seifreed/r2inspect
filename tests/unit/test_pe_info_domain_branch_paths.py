@@ -133,6 +133,11 @@ def test_determine_pe_format_ignores_non_dict_optional_header():
     assert result == "PE"
 
 
+def test_determine_pe_format_none_format_falls_back_to_bits():
+    result = determine_pe_format({"format": None, "bits": 32}, None)  # type: ignore[arg-type]
+    assert result == "PE32"
+
+
 # ---------------------------------------------------------------------------
 # normalize_pe_format() - lines 54, 58
 # ---------------------------------------------------------------------------

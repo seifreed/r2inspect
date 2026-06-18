@@ -38,7 +38,8 @@ def determine_pe_file_type(
 
 
 def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | None) -> str:
-    format_name = str(bin_info.get("format", "Unknown"))
+    raw_format = bin_info.get("format", "Unknown")
+    format_name = raw_format if isinstance(raw_format, str) and raw_format else "Unknown"
     if format_name and format_name != "Unknown":
         return format_name
 
