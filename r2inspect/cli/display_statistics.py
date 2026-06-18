@@ -22,10 +22,7 @@ def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     if not isinstance(retry_stats, dict):
         return
 
-    try:
-        if float(retry_stats.get("total_retries", 0)) <= 0:
-            return
-    except (TypeError, ValueError):
+    if _coerce_float(retry_stats.get("total_retries", 0)) <= 0:
         return
 
     retry_table = Table(title="Retry Statistics", show_header=True)
