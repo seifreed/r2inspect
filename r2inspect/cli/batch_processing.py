@@ -83,7 +83,8 @@ def _validate_magic_module(candidate: Any) -> Any | None:
     try:
         candidate.Magic(mime=True)
         candidate.Magic()
-    except Exception:
+    except Exception as exc:
+        logger.error("Error validating python-magic module: %s", exc)
         return None
     return candidate
 

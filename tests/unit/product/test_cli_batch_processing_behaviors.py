@@ -82,14 +82,16 @@ class _BadMagicModule:
             raise RuntimeError("boom")
 
 
-def test_cli_batch_processing_magic_and_rate_limit_behaviors(tmp_path: Path) -> None:
+def test_cli_batch_processing_magic_and_rate_limit_behaviors(tmp_path: Path, caplog) -> None:
     original_magic = batch_processing.magic
     try:
         batch_processing.magic = None
         assert batch_processing._init_magic() is None
 
         batch_processing.magic = _BadMagicModule()
-        assert batch_processing._init_magic() is None
+        with caplog.at_level("ERROR"):
+            assert batch_processing._init_magic() is None
+        assert "Error validating python-magic module: boom" in caplog.text
 
         batch_processing.magic = _MagicModule()
         (tmp_path / "small.bin").write_bytes(b"x" * 10)
