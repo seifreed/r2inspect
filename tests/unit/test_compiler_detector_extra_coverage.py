@@ -502,6 +502,22 @@ def test_apply_best_compiler_skips_non_dict_scores():
     assert results == {}
 
 
+def test_apply_best_compiler_skips_non_numeric_scores():
+    from r2inspect.modules.compiler_detector_support import apply_best_compiler
+
+    results: dict[str, object] = {}
+    apply_best_compiler(
+        results,
+        {"MSVC": "bad", "GCC": None},  # type: ignore[arg-type]
+        [],
+        [],
+        "ELF",
+        detect_version=lambda *_: "Unknown",
+        detection_method_fn=lambda *_: "method",
+    )
+    assert results == {}
+
+
 def test_detect_file_format_skips_non_dict_input():
     assert detect_file_format("bad", logger=_Logger()) == "Unknown"  # type: ignore[arg-type]
 

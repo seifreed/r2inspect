@@ -94,8 +94,15 @@ def apply_best_compiler(
 ) -> None:
     if not isinstance(compiler_scores, dict) or not compiler_scores:
         return
-    best_compiler = max(compiler_scores, key=lambda k: compiler_scores[k])
-    best_score = compiler_scores[best_compiler]
+    numeric_scores = {
+        compiler_name: score
+        for compiler_name, score in compiler_scores.items()
+        if isinstance(score, (int, float))
+    }
+    if not numeric_scores:
+        return
+    best_compiler = max(numeric_scores, key=lambda k: numeric_scores[k])
+    best_score = float(numeric_scores[best_compiler])
     if best_score <= 0.3:
         return
     results["detected"] = True
