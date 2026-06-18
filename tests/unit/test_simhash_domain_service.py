@@ -65,6 +65,16 @@ def test_build_similarity_groups_skips_malformed_hashes() -> None:
     assert groups[0]["functions"] == ["a", "b"]
 
 
+def test_build_similarity_groups_skips_non_dict_input() -> None:
+    groups = build_similarity_groups(
+        None,  # type: ignore[arg-type]
+        max_distance=5,
+        distance_fn=lambda left, right: abs(left - right),
+    )
+
+    assert groups == []
+
+
 def test_interpret_similarity_distance() -> None:
     assert interpret_similarity_distance(0) == "identical"
     assert interpret_similarity_distance(3) == "very_similar"

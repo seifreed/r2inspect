@@ -34,6 +34,8 @@ def build_similarity_groups(
     """Find groups of similar functions based on a distance function."""
     similar_groups: list[dict[str, Any]] = []
     processed_functions = set()
+    if not isinstance(function_features, dict):
+        return similar_groups
     valid_features = {
         name: data
         for name, data in function_features.items()
