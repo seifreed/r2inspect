@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from typing import Any
 
 from .binary_helpers import clean_function_name
@@ -120,11 +121,14 @@ def accumulate_bloom_bits(function_blooms: dict[str, Any]) -> tuple[int, int]:
     total_capacity = 0
     for bloom_filter in function_blooms.values():
         bit_sequence = get_bloom_bits(bloom_filter)
-        if bit_sequence is None:
+        if isinstance(bit_sequence, (str, bytes, bytearray)) or not isinstance(bit_sequence, Iterable):
             continue
-        bits_set = sum(bit_sequence)
+        bits = list(bit_sequence)
+        if not all(isinstance(bit, (bool, int)) for bit in bits):
+            continue
+        bits_set = sum(1 for bit in bits if bit)
         total_bits_set += bits_set
-        total_capacity += len(bit_sequence)
+        total_capacity += len(bits)
     return total_bits_set, total_capacity
 
 
@@ -157,11 +161,20 @@ def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
     """Calculate Jaccard similarity between two bloom filters."""
     bit_array_1 = get_bloom_bits(bloom1)
     bit_array_2 = get_bloom_bits(bloom2)
-    if bit_array_1 is None or bit_array_2 is None:
+    if (
+        isinstance(bit_array_1, (str, bytes, bytearray))
+        or isinstance(bit_array_2, (str, bytes, bytearray))
+        or not isinstance(bit_array_1, Iterable)
+        or not isinstance(bit_array_2, Iterable)
+    ):
+        return 0.0
+    bits1_raw = list(bit_array_1)
+    bits2_raw = list(bit_array_2)
+    if not all(isinstance(bit, (bool, int)) for bit in bits1_raw + bits2_raw):
         return 0.0
 
-    bits1 = {i for i, bit in enumerate(bit_array_1) if bit}
-    bits2 = {i for i, bit in enumerate(bit_array_2) if bit}
+    bits1 = {i for i, bit in enumerate(bits1_raw) if bit}
+    bits2 = {i for i, bit in enumerate(bits2_raw) if bit}
     return _jaccard_similarity(bits1, bits2)
 
 

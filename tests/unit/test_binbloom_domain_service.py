@@ -103,6 +103,19 @@ def test_accumulate_bloom_bits_and_stats() -> None:
     assert stats["average_fill_rate"] == 4 / 7
 
 
+def test_accumulate_bloom_bits_skips_malformed_bit_sequences() -> None:
+    blooms = {
+        "f1": _FakeBloom([1, 0, 1]),
+        "bad": _FakeBloom("1010"),
+        "bad2": _FakeBloom([1, "x", 0]),
+    }
+
+    bits_set, total_capacity = accumulate_bloom_bits(blooms)
+
+    assert bits_set == 2
+    assert total_capacity == 3
+
+
 def test_calculate_bloom_similarity() -> None:
     bloom1 = _FakeBloom([1, 0, 1, 0])
     bloom2 = _FakeBloom([1, 1, 1, 0])
@@ -118,3 +131,7 @@ def test_calculate_bloom_similarity_both_empty_returns_one() -> None:
 
 def test_calculate_bloom_similarity_returns_zero_without_bit_array() -> None:
     assert calculate_bloom_similarity(object(), _FakeBloom([1, 0, 1])) == 0.0
+
+
+def test_calculate_bloom_similarity_skips_malformed_bit_sequences() -> None:
+    assert calculate_bloom_similarity(_FakeBloom("1010"), _FakeBloom([1, 0, 1])) == 0.0
