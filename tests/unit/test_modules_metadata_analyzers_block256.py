@@ -25,6 +25,9 @@ class DummyAdapter:
             {"name": "DllMain", "vaddr": 1, "ordinal": 1, "type": "func", "size": 10},
         ]
 
+    def get_function_info(self, address):
+        return [{"size": 10, "cc": 1, "address": address}]
+
     def get_sections(self):
         return [
             {"name": ".text", "vaddr": 0, "vsize": 10, "size": 10, "flags": "r-x"},
@@ -98,3 +101,18 @@ def test_import_export_section_resource_function_analyzers():
     resource_analyzer = ResourceAnalyzer(adapter)
     res_result = resource_analyzer.analyze()
     assert res_result["has_resources"] is True
+
+
+def test_export_analyzer_coerces_hex_addresses():
+    class HexExportAdapter(DummyAdapter):
+        def get_exports(self):
+            return [
+                {"name": "DllMain", "vaddr": "0x10", "ordinal": 1, "type": "func", "size": "0x10"},
+            ]
+
+    analyzer = ExportAnalyzer(HexExportAdapter())
+    result = analyzer.analyze()
+
+    assert result["total_exports"] == 1
+    assert result["exports"][0]["address"] == "0x10"
+    assert result["exports"][0]["size"] == 16
