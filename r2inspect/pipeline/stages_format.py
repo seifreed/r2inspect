@@ -42,6 +42,15 @@ def _resolved_path(path: str, resolver: Callable[[str], str] = _default_resolver
         return path
 
 
+def _metadata_bucket(context: dict[str, Any]) -> dict[str, Any]:
+    metadata = context.get("metadata")
+    if isinstance(metadata, dict):
+        return metadata
+    metadata = {}
+    context["metadata"] = metadata
+    return metadata
+
+
 def _get_magic_detectors() -> tuple[Any, Any] | None:
     """Return cached magic detectors for legacy callers."""
     return _magic_detectors
@@ -168,9 +177,6 @@ class FormatDetectionStage(AnalysisStage):
         self.magic_detector_provider = magic_detector_provider
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
-        if "metadata" not in context:
-            context["metadata"] = {}
-
         file_format = self._detect_via_r2()
         if not file_format:
             file_format = self._detect_via_enhanced_magic()
@@ -179,7 +185,7 @@ class FormatDetectionStage(AnalysisStage):
         if not file_format:
             file_format = "Unknown"
 
-        context["metadata"]["file_format"] = file_format
+        _metadata_bucket(context)["file_format"] = file_format
         logger.info("Detected file format: %s", file_format)
 
         return {"format_detection": {"file_format": file_format}}

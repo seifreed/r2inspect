@@ -256,6 +256,19 @@ def test_format_detection_stage_ignores_list_file_info() -> None:
     assert result["format_detection"]["file_format"] in {"PE", "ELF", "Mach-O", "Unknown"}
 
 
+def test_format_detection_stage_initializes_non_dict_metadata_bucket() -> None:
+    stage = FormatDetectionStage(
+        adapter=FakeAdapter({"bin": {"format": "elf64", "arch": "x86", "bits": 64}}),
+        filename="sample.elf",
+    )
+    context = {"results": {}, "metadata": None}
+
+    result = stage._execute(context)
+
+    assert result["format_detection"]["file_format"] == "ELF"
+    assert context["metadata"]["file_format"] == "ELF"
+
+
 def test_analysis_stage_execute_initializes_non_dict_results_on_error() -> None:
     stage = _FailingStage()
     context = {"results": None}
