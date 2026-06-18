@@ -450,6 +450,7 @@ def test_parse_build_id_data_none():
 def test_get_security_features():
     """Test get_security_features runs through real security check code."""
     ij = _elf_bin_info()
+    ij["bin"]["relro"] = "full"  # r2 reports RELRO in ij.bin (partial/full)
     adapter = _make_adapter(
         cmdj_map={
             "ij": ij,

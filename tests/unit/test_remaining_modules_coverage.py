@@ -437,11 +437,15 @@ def test_elf_has_stack_canary_none():
 
 
 def test_elf_has_relro_true():
-    assert has_relro("BIND_NOW 0x1") is True
+    # r2 reports relro as "partial"/"full" in ij.bin; both mean RELRO present.
+    assert has_relro("partial") is True
+    assert has_relro("full") is True
+    assert has_relro("FULL") is True
 
 
 def test_elf_has_relro_false():
-    assert has_relro("NEEDED libc.so") is False
+    assert has_relro("none") is False
+    assert has_relro("no") is False
     assert has_relro(None) is False
     assert has_relro("") is False
 

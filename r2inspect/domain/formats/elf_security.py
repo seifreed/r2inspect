@@ -28,8 +28,12 @@ def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
     return False
 
 
-def has_relro(dynamic_info: str | None) -> bool:
-    return bool(dynamic_info and "BIND_NOW" in dynamic_info)
+def has_relro(relro_value: str | None) -> bool:
+    # r2 reports RELRO status in ij.bin/iIj as "partial" or "full" (or "no"/
+    # "none"). The previous check scanned the "id" (debug-info) command output
+    # for "BIND_NOW", but id is empty for normal binaries, so relro was always
+    # False. RELRO is present when the value is partial or full.
+    return str(relro_value or "").strip().lower() in {"partial", "full"}
 
 
 def is_pie(elf_info: dict[str, Any] | None) -> bool:

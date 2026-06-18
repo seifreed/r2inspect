@@ -68,7 +68,7 @@ def test_elf_security_features():
             cmdj_map={
                 "iSSj": segments,
                 "isj": [{"name": "__stack_chk_fail"}],
-                "ij": {"bin": {"pic": True}},
+                "ij": {"bin": {"pic": True, "relro": "full"}},
             },
         )
     )

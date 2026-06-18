@@ -21,10 +21,11 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
     try:
         features["nx"] = has_nx(_get_elf_segments(adapter))
         features["stack_canary"] = has_stack_canary(adapter.get_symbols())
-        dynamic_info = _get_dynamic_info_text(adapter)
-        features["relro"] = has_relro(dynamic_info)
-        features["pie"] = is_pie(adapter.get_file_info())
-        features.update(path_features(dynamic_info))
+        file_info = adapter.get_file_info()
+        bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
+        features["relro"] = has_relro(bin_info.get("relro"))
+        features["pie"] = is_pie(file_info)
+        features.update(path_features(_get_dynamic_info_text(adapter)))
     except Exception as exc:
         logger.debug("Error checking security features: %s", exc)
 

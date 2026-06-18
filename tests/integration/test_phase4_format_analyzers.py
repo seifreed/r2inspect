@@ -67,6 +67,9 @@ def test_elf_analyzer_basic(tmp_path: Path) -> None:
     assert result["security_features"]["pie"] is True
     # Its GNU_STACK segment is non-executable (perm rw-), so NX must be detected.
     assert result["security_features"]["nx"] is True
+    # hello_elf has a GNU_RELRO segment (partial RELRO); r2 reports it in
+    # ij.bin.relro, so relro must be True.
+    assert result["security_features"]["relro"] is True
 
 
 def test_macho_analyzer_basic(tmp_path: Path) -> None:
