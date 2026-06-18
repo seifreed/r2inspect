@@ -240,6 +240,11 @@ def test_format_summary_with_file_info() -> None:
     assert "1024" in result
 
 
+def test_format_summary_accepts_non_dict_file_info() -> None:
+    result = OutputFormatter({"file_info": object()}).format_summary()
+    assert "Error generating summary" not in result
+
+
 def test_format_summary_with_indicators() -> None:
     indicators = [{"type": "suspicious", "description": "bad thing"} for _ in range(7)]
     result = OutputFormatter({"indicators": indicators}).format_summary()
