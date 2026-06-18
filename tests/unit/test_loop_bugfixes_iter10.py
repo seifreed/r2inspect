@@ -34,3 +34,10 @@ def test_count_suspicious_imports_includes_ex_variants() -> None:
 
 def test_count_suspicious_imports_handles_missing_name() -> None:
     assert _count_suspicious_imports([{"ordinal": 3}, {"name": None}]) == 0
+
+
+def test_generate_indicators_skips_none_buckets() -> None:
+    indicators = generate_indicators(
+        {"packer": None, "anti_analysis": None, "imports": None, "yara_matches": None}, []
+    )
+    assert indicators == []

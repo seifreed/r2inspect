@@ -79,6 +79,14 @@ def test_generate_recommendations_skips_non_dict_mitigations():
     assert isinstance(recs, list)
 
 
+def test_generate_recommendations_skips_none_nested_buckets():
+    recs = generate_recommendations(
+        {"mitigations": None, "security": None, "crypto": None, "anti_analysis": None}
+    )
+    assert isinstance(recs, list)
+    assert recs
+
+
 def test_dll_characteristics_has_key():
     assert 0x0040 in DLL_CHARACTERISTICS
     assert DLL_CHARACTERISTICS[0x0040] == "DYNAMIC_BASE"

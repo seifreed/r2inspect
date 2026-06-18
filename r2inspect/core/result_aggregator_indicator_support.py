@@ -9,16 +9,18 @@ from typing import Any
 def indicator_rules() -> list[Any]:
     return [
         (
-            lambda results: results["packer"].get("is_packed"),
+            lambda results: isinstance((packer := results.get("packer")), dict)
+            and packer.get("is_packed"),
             lambda results: {
                 "type": "Packer",
                 "description": "File appears to be packed with "
-                f"{results['packer'].get('packer_type', 'Unknown')}",
+                f"{results.get('packer', {}).get('packer_type', 'Unknown')}",
                 "severity": "Medium",
             },
         ),
         (
-            lambda results: results["anti_analysis"].get("anti_debug"),
+            lambda results: isinstance((anti_analysis := results.get("anti_analysis")), dict)
+            and anti_analysis.get("anti_debug"),
             lambda _results: {
                 "type": "Anti-Debug",
                 "description": "Anti-debugging techniques detected",
@@ -26,7 +28,8 @@ def indicator_rules() -> list[Any]:
             },
         ),
         (
-            lambda results: results["anti_analysis"].get("anti_vm"),
+            lambda results: isinstance((anti_analysis := results.get("anti_analysis")), dict)
+            and anti_analysis.get("anti_vm"),
             lambda _results: {
                 "type": "Anti-VM",
                 "description": "Anti-virtualization techniques detected",
@@ -54,7 +57,7 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
             "description": f"Suspicious API call: {imp.get('name')}",
             "severity": "Medium",
         }
-        for imp in results["imports"]
+        for imp in (results.get("imports") if isinstance(results.get("imports"), list) else [])
         if any(api in (imp.get("name") or "") for api in suspicious_apis)
     )
     indicators.extend(
@@ -63,6 +66,8 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
             "description": f"YARA rule matched: {match.get('rule', 'Unknown')}",
             "severity": "High",
         }
-        for match in results["yara_matches"]
+        for match in (
+            results.get("yara_matches") if isinstance(results.get("yara_matches"), list) else []
+        )
     )
     return indicators
