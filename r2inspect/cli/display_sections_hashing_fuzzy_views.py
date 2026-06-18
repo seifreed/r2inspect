@@ -72,7 +72,7 @@ def add_impfuzzy_entries(table: Table, impfuzzy_info: dict[str, Any]) -> None:
         sample_imports = list(imports_processed[:10])
         if len(imports_processed) > 10:
             sample_imports.append(f"... and {len(imports_processed) - 10} more")
-        table.add_row("Sample Imports", "\n".join(sample_imports))
+        table.add_row("Sample Imports", "\n".join(map(str, sample_imports)))
 
 
 def display_ccbhash(results: Results) -> None:

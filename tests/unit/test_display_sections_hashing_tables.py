@@ -468,6 +468,23 @@ def test_add_impfuzzy_entries_accepts_tuple_imports():
     assert len(table.rows) == 4
 
 
+def test_add_impfuzzy_entries_accepts_non_string_imports():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    impfuzzy_info = {
+        "impfuzzy_hash": "96:ABC:DEF",
+        "import_count": 15,
+        "dll_count": 3,
+        "imports_processed": [1, 2, 3, 4],
+    }
+
+    _add_impfuzzy_entries(table, impfuzzy_info)
+
+    assert len(table.rows) == 4
+
+
 def test_add_impfuzzy_entries_no_imports():
     table = Table()
     table.add_column("Property")
