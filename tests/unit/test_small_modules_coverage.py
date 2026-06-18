@@ -680,6 +680,14 @@ def test_add_simple_evidence_empty_checks():
     assert result["detected"] is False
 
 
+def test_add_simple_evidence_non_string_checks():
+    result = {"detected": False, "evidence": []}
+    add_simple_evidence(
+        result, checks=None, evidence_type="T", detail_prefix="d", field="x", limit=5  # type: ignore[arg-type]
+    )
+    assert result["detected"] is False
+
+
 def test_add_simple_evidence_initializes_missing_evidence_bucket():
     result = {}
     add_simple_evidence(
@@ -704,6 +712,13 @@ def test_count_opcode_occurrences_basic():
 def test_count_opcode_occurrences_no_match():
     def search(pattern):
         return ""
+
+    assert count_opcode_occurrences(search, "jmp") == 0
+
+
+def test_count_opcode_occurrences_non_string_output():
+    def search(pattern):
+        return None  # type: ignore[return-value]
 
     assert count_opcode_occurrences(search, "jmp") == 0
 

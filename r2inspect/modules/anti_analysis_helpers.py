@@ -60,7 +60,7 @@ def add_simple_evidence(
     field: str,
     limit: int,
 ) -> None:
-    if not checks or not checks.strip():
+    if not isinstance(checks, str) or not checks.strip():
         return
     evidence = result.get("evidence")
     if not isinstance(evidence, list):
@@ -78,7 +78,7 @@ def add_simple_evidence(
 
 def count_opcode_occurrences(search_fn: Callable[[str], str], pattern: str) -> int:
     output = search_fn(pattern)
-    if not output or not output.strip():
+    if not isinstance(output, str) or not output.strip():
         return 0
     return len(output.strip().split("\n"))
 
