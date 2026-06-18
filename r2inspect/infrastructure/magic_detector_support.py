@@ -183,7 +183,7 @@ def analyze_pe_details(header: bytes, file_handle: BinaryIO, logger: Any) -> dic
 
 
 def fallback_detection(header: bytes, file_path: Path) -> dict[str, Any]:
-    suffix = file_path.suffix.lower()
+    suffix = file_path.suffix.lower() if isinstance(file_path, Path) else ""
     if suffix in {".exe", ".dll"}:
         return {
             "file_format": "PE32",

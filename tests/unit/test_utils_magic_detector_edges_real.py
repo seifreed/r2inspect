@@ -124,6 +124,12 @@ def test_magic_detector_fallback_and_threat_levels(tmp_path: Path) -> None:
     assert get_file_threat_level(str(text_threat)) == "Low"
 
 
+def test_magic_detector_fallback_accepts_non_path_file_input() -> None:
+    detector = MagicByteDetector()
+    result = detector._fallback_detection(b"\x7fELF" + b"\x00" * 8, "file.elf")  # type: ignore[arg-type]
+    assert result["file_format"] == "ELF"
+
+
 def test_magic_detector_ignores_non_dict_detail_merges(tmp_path: Path) -> None:
     class _BadFallbackDetector(MagicByteDetector):
         def _fallback_detection(self, header: bytes, file_path: Path):  # type: ignore[override]
