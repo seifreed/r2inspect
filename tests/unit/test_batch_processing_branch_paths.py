@@ -204,6 +204,20 @@ def test_find_executable_files_by_magic_verbose_prints_file_error(tmp_path: Path
     assert "Error checking" in out
 
 
+def test_find_executable_files_by_magic_skips_malformed_file_errors(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    """find_executable_files_by_magic skips malformed file error entries."""
+
+    def _fake_discover(*args: Any, **kwargs: Any):
+        return [], [], [("ok.bin", 123), "bad"], 1
+
+    monkeypatch.setattr(batch_processing, "discover_executables_by_magic", _fake_discover)
+    find_executable_files_by_magic(tmp_path, recursive=False, verbose=True)
+    out = capsys.readouterr().out
+    assert "ok.bin" in out
+
+
 def test_find_executable_files_by_magic_verbose_prints_found_executable(
     tmp_path: Path, capsys
 ) -> None:

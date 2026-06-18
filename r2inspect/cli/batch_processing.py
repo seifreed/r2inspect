@@ -178,8 +178,11 @@ def find_executable_files_by_magic(
 
     if verbose:
         console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
-        for file_path, error in file_errors:
-            console.print(f"[yellow]Error checking {file_path}: {error}[/yellow]")
+        for item in file_errors:
+            if not isinstance(item, tuple) or len(item) < 2:
+                continue
+            file_path, error = item[0], item[1]
+            console.print(f"[yellow]Error checking {file_path}: {str(error)}[/yellow]")
         for file_path in files:
             console.print(f"[green]Found executable: {file_path}[/green]")
 
