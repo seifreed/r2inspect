@@ -81,6 +81,8 @@ def build_xor_matches(
 def find_suspicious(strings: list[str]) -> list[dict[str, Any]]:
     suspicious: list[dict[str, Any]] = []
     for string in strings:
+        if not isinstance(string, str):
+            continue
         for pattern_name, pattern in SUSPICIOUS_PATTERNS.items():
             matches = re.findall(pattern, string, re.IGNORECASE)
             if matches:
