@@ -103,7 +103,8 @@ def run_detailed_simhash_analysis(
         # Feature statistics
         results["feature_stats"] = build_feature_stats(strings_features, opcodes_features)
 
-        combined_hex = results["combined_simhash"]["hex"] if combined_features else "N/A"
+        combined = results.get("combined_simhash")
+        combined_hex = combined.get("hex", "N/A") if isinstance(combined, dict) else "N/A"
         log_debug(f"SimHash analysis completed: {len(combined_features)} total features")
         log_debug(f"Binary SimHash: {combined_hex}")
 

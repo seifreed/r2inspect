@@ -160,6 +160,33 @@ def test_simhash_with_both_features() -> None:
     assert result["feature_stats"]["total_opcodes"] == 2
 
 
+def test_simhash_with_malformed_combined_simhash_is_tolerated() -> None:
+    try:
+        from simhash import Simhash
+    except ImportError:
+        pytest.skip("simhash not installed")
+
+    import r2inspect.modules.simhash_detailed as simhash_detailed
+
+    original_simhash_entry = simhash_detailed._simhash_entry
+
+    def _malformed_simhash_entry(features, simhash_cls):
+        return [None]
+
+    simhash_detailed._simhash_entry = _malformed_simhash_entry
+    try:
+        params = _make_simhash_params(
+            simhash_available=True,
+            extract_string_features=lambda: ["hello"],
+            extract_opcodes_features=lambda: ["mov"],
+        )
+        result = run_detailed_simhash_analysis(**params)
+    finally:
+        simhash_detailed._simhash_entry = original_simhash_entry
+
+    assert result["combined_simhash"] == [None]
+
+
 def test_simhash_with_function_features() -> None:
     try:
         from simhash import Simhash
