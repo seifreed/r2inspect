@@ -62,6 +62,10 @@ def add_simple_evidence(
 ) -> None:
     if not checks or not checks.strip():
         return
+    evidence = result.get("evidence")
+    if not isinstance(evidence, list):
+        evidence = []
+        result["evidence"] = evidence
     result["detected"] = True
     items = checks.strip().split("\n")[:limit]
     detail = (
@@ -69,7 +73,7 @@ def add_simple_evidence(
         if field == "addresses"
         else detail_prefix
     )
-    result["evidence"].append({"type": evidence_type, "detail": detail, field: items})
+    evidence.append({"type": evidence_type, "detail": detail, field: items})
 
 
 def count_opcode_occurrences(search_fn: Callable[[str], str], pattern: str) -> int:

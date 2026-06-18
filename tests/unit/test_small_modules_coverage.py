@@ -674,6 +674,20 @@ def test_add_simple_evidence_empty_checks():
     assert result["detected"] is False
 
 
+def test_add_simple_evidence_initializes_missing_evidence_bucket():
+    result = {}
+    add_simple_evidence(
+        result,
+        checks="0x1000",
+        evidence_type="OpcodePattern",
+        detail_prefix="test detail",
+        field="addresses",
+        limit=10,
+    )
+    assert result["detected"] is True
+    assert len(result["evidence"]) == 1
+
+
 def test_count_opcode_occurrences_basic():
     def search(pattern):
         return "match1\nmatch2\nmatch3"
