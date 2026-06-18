@@ -965,9 +965,20 @@ class TestSupportFunctionsDirect:
 
         apply_security_directory(result, security_dir)
 
-        assert result["security_directory"]["offset"] == 0
+        assert result["security_directory"]["offset"] == 0x800
         assert result["security_directory"]["size"] == 512
         assert result["security_directory"]["virtual_address"] == 4096
+
+    def test_apply_security_directory_direct_hex_string_values(self):
+        """Test apply_security_directory coerces hex string values."""
+        result = {"has_signature": False, "security_directory": None}
+        security_dir = {"paddr": "0x800", "size": "0x200", "vaddr": "0x1000"}
+
+        apply_security_directory(result, security_dir)
+
+        assert result["security_directory"]["offset"] == 0x800
+        assert result["security_directory"]["size"] == 0x200
+        assert result["security_directory"]["virtual_address"] == 0x1000
 
     def test_read_win_certificate_direct_invalid_types(self):
         """Test read_win_certificate with non-integer types."""
