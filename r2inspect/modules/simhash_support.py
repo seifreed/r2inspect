@@ -46,6 +46,8 @@ def collect_string_features(
         if not isinstance(string_entry, dict) or "string" not in string_entry:
             continue
         string_value = string_entry["string"]
+        if not isinstance(string_value, str):
+            continue
         if len(string_value) < host.min_string_length:
             continue
         if not host._is_useful_string(string_value):
@@ -79,7 +81,7 @@ def append_data_section_string(host: SimHashHost, section: Any, data_strings: li
 
 
 def is_useful_string(string_value: str) -> bool:
-    if not string_value:
+    if not isinstance(string_value, str) or not string_value:
         return False
     useless_patterns = [
         r"^\s*$",

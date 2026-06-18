@@ -50,6 +50,7 @@ def test_simhash_is_useful_string():
     assert analyzer._is_useful_string("Hello World") is True
     assert analyzer._is_useful_string("   ") is False
     assert analyzer._is_useful_string("12345") is False
+    assert analyzer._is_useful_string(["Hello"]) is False  # type: ignore[arg-type]
 
 
 def test_simhash_length_category():
@@ -199,6 +200,27 @@ def test_simhash_extract_string_features_empty():
     analyzer = SimHashAnalyzer(adapter, SAMPLE)
     features = analyzer._extract_string_features()
     assert isinstance(features, list)
+
+
+def test_simhash_extract_string_features_skips_malformed_strings():
+    if not SIMHASH_AVAILABLE:
+        pytest.skip("simhash library not available")
+
+    adapter = _make_adapter(
+        cmdj_map={
+            "izzj": [
+                {"bad": "missing"},
+                {"string": ["not", "text"]},
+                "bad",
+                {"string": "UsefulString"},
+            ],
+            "iSj": [],
+        },
+    )
+    analyzer = SimHashAnalyzer(adapter, SAMPLE)
+    features = analyzer._extract_string_features()
+
+    assert "STR:UsefulString" in features
 
 
 # ---------------------------------------------------------------------------
