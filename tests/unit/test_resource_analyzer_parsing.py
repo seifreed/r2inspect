@@ -94,6 +94,28 @@ class TestResourceParsingEdgeCases:
         result = analyzer._parse_resources_manual()
         assert result == []
 
+    def test_parse_resources_manual_skips_malformed_sections(self):
+        """Manual parsing should ignore bad section names and coerce offsets."""
+        header_bytes = [0] * 12 + [1, 0, 0, 0]
+        entry_bytes = [3, 0, 0, 0, 0, 1, 0, 0]
+
+        cmdj_map = {
+            "iSj": [
+                {"name": None, "paddr": 1},
+                {"name": ".rsrc", "paddr": "1000", "size": "500"},
+            ],
+        }
+        cmd_map = {
+            "p8 16 @ 1000": _hex_for(header_bytes),
+            "p8 8 @ 1016": _hex_for(entry_bytes),
+        }
+        analyzer = _make_analyzer(cmdj_map=cmdj_map, cmd_map=cmd_map)
+        result = analyzer._parse_resources_manual()
+
+        assert len(result) == 1
+        assert result[0]["type_id"] == 3
+        assert result[0]["offset"] == 1000 + 0x100
+
     def test_parse_resources_manual_valid_entries(self):
         """Manual parsing with valid directory entries."""
         # Header: 12 zero bytes, 1 named entry, 2 id entries = 3 total

@@ -5,6 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 class ResourceParsingMixin:
     """Resource directory discovery and parsing helpers."""
 
@@ -22,12 +29,12 @@ class ResourceParsingMixin:
                 if (
                     isinstance(dd, dict)
                     and dd.get("name") == "RESOURCE"
-                    and dd.get("vaddr", 0) != 0
+                    and _to_int(dd.get("vaddr", 0)) != 0
                 ):
                     return {
-                        "offset": dd.get("paddr", 0),
-                        "size": dd.get("size", 0),
-                        "virtual_address": dd.get("vaddr", 0),
+                        "offset": _to_int(dd.get("paddr", 0)),
+                        "size": _to_int(dd.get("size", 0)),
+                        "virtual_address": _to_int(dd.get("vaddr", 0)),
                     }
             return None
         except Exception:
@@ -44,19 +51,23 @@ class ResourceParsingMixin:
                 if not isinstance(res, dict):
                     continue
 
+                type_id = _to_int(res.get("type_id", 0))
+                offset = _to_int(res.get("paddr", 0))
+                size = _to_int(res.get("size", 0))
+                virtual_address = _to_int(res.get("vaddr", 0))
                 resource_info = {
                     "name": res.get("name", ""),
                     "type": res.get("type", ""),
-                    "type_id": res.get("type_id", 0),
-                    "type_name": self._get_resource_type_name(res.get("type_id", 0)),
+                    "type_id": type_id,
+                    "type_name": self._get_resource_type_name(type_id),
                     "language": res.get("lang", ""),
-                    "offset": res.get("paddr", 0),
-                    "size": res.get("size", 0),
-                    "virtual_address": res.get("vaddr", 0),
+                    "offset": offset,
+                    "size": size,
+                    "virtual_address": virtual_address,
                     "entropy": 0.0,
                     "hashes": {},
                 }
-                if resource_info["size"] > 0 and resource_info["offset"] > 0:
+                if size > 0 and offset > 0:
                     self._analyze_resource_data(resource_info)
                 parsed_resources.append(resource_info)
 
@@ -70,7 +81,7 @@ class ResourceParsingMixin:
             if not rsrc_section:
                 return []
 
-            rsrc_offset = rsrc_section.get("paddr", 0)
+            rsrc_offset = _to_int(rsrc_section.get("paddr", 0))
             if rsrc_offset == 0:
                 return []
 
@@ -88,7 +99,8 @@ class ResourceParsingMixin:
         if not sections or not isinstance(sections, list):
             return None
         for section in sections:
-            if isinstance(section, dict) and ".rsrc" in section.get("name", ""):
+            name = section.get("name") if isinstance(section, dict) else None
+            if isinstance(name, str) and ".rsrc" in name:
                 return section
         return None
 
@@ -102,7 +114,7 @@ class ResourceParsingMixin:
 
     def _parse_dir_entries(self, rsrc_offset: int, total_entries: int) -> list[dict[str, Any]]:
         resources: list[dict[str, Any]] = []
-        entry_offset = rsrc_offset + 16
+        entry_offset = _to_int(rsrc_offset) + 16
         for i in range(min(total_entries, 20)):
             entry_data = self._cmdj(f"pxj 8 @ {entry_offset}", [])
             resource = self._parse_dir_entry(rsrc_offset, entry_data, i)
@@ -116,6 +128,7 @@ class ResourceParsingMixin:
     ) -> dict[str, Any] | None:
         if not entry_data or len(entry_data) < 8:
             return None
+        rsrc_base = _to_int(rsrc_offset)
         name_or_id = (
             entry_data[0] | (entry_data[1] << 8) | (entry_data[2] << 16) | (entry_data[3] << 24)
         )
@@ -132,7 +145,7 @@ class ResourceParsingMixin:
             "name": resource_name,
             "type_id": type_id,
             "type_name": self._get_resource_type_name(type_id),
-            "offset": rsrc_offset + (offset_to_data & 0x7FFFFFFF),
+            "offset": rsrc_base + (offset_to_data & 0x7FFFFFFF),
             "is_directory": bool(offset_to_data & 0x80000000),
             "size": 0,
             "entropy": 0.0,

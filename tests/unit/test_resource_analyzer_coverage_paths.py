@@ -125,6 +125,31 @@ def test_resource_analyzer_parse_resources_valid() -> None:
     assert result[0]["type_name"] == "RT_ICON"
 
 
+def test_resource_analyzer_parse_resources_coerces_string_fields() -> None:
+    resource_data = [
+        {
+            "name": "test.ico",
+            "type": "RT_ICON",
+            "type_id": "3",
+            "lang": "en-US",
+            "paddr": "4096",
+            "size": "8",
+            "vaddr": "8192",
+        }
+    ]
+    hex_str = _bytes_to_hex([ord("a")] * 8)
+    analyzer = _make_analyzer(
+        cmdj_map={"iRj": resource_data},
+        cmd_map={"p8": hex_str},
+    )
+    result = analyzer._parse_resources()
+    assert len(result) == 1
+    assert result[0]["type_name"] == "RT_ICON"
+    assert result[0]["offset"] == 4096
+    assert result[0]["size"] == 8
+    assert result[0]["virtual_address"] == 8192
+
+
 def test_resource_analyzer_parse_resources_zero_offset() -> None:
     resource_data = [
         {
@@ -440,6 +465,12 @@ def test_resource_analyzer_parse_version_info_no_data() -> None:
     assert result is None
 
 
+def test_resource_analyzer_parse_version_info_coerces_string_args() -> None:
+    analyzer = _make_analyzer(cmd_map={"p8": ""})
+    result = analyzer._parse_version_info("4096", "100")
+    assert result is None
+
+
 def test_resource_analyzer_parse_version_info_no_strings() -> None:
     # Provide 100 zero bytes -> no version strings found -> returns None
     byte_data = [0] * 100
@@ -480,6 +511,15 @@ def test_resource_analyzer_read_version_info_data_valid() -> None:
     hex_str = _bytes_to_hex(byte_data)
     analyzer = _make_analyzer(cmd_map={"p8": hex_str})
     result = analyzer._read_version_info_data(0x1000, 100)
+    assert result is not None
+    assert len(result) == 100
+
+
+def test_resource_analyzer_read_version_info_data_coerces_string_args() -> None:
+    byte_data = [0] * 100
+    hex_str = _bytes_to_hex(byte_data)
+    analyzer = _make_analyzer(cmd_map={"p8": hex_str})
+    result = analyzer._read_version_info_data("4096", "100")
     assert result is not None
     assert len(result) == 100
 
@@ -713,6 +753,15 @@ def test_resource_analyzer_read_resource_as_string_ascii() -> None:
     hex_str = _bytes_to_hex(byte_data)
     analyzer = _make_analyzer(cmd_map={"p8": hex_str})
     result = analyzer._read_resource_as_string(0x1000, 100)
+    assert result == text
+
+
+def test_resource_analyzer_read_resource_as_string_coerces_string_args() -> None:
+    text = "Test"
+    byte_data = list(text.encode("ascii"))
+    hex_str = _bytes_to_hex(byte_data)
+    analyzer = _make_analyzer(cmd_map={"p8": hex_str})
+    result = analyzer._read_resource_as_string("4096", "100")
     assert result == text
 
 

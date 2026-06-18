@@ -27,6 +27,13 @@ class ResourceHost(Protocol):
     def _extract_version_strings(self, data: list[int]) -> dict[str, str]: ...
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _coerce_resource_int(resource: dict[str, Any], field: str) -> int | None:
     value = resource.get(field, 0)
     try:
@@ -78,6 +85,8 @@ def read_resource_as_string(
     analyzer: ResourceHost, offset: int, size: int, *, logger: logging.Logger
 ) -> str | None:
     try:
+        offset = _to_int(offset)
+        size = _to_int(size)
         if offset <= 0 or size <= 0:
             return None
         read_size = min(size, 8192)
@@ -124,6 +133,8 @@ def parse_version_info(
     analyzer: ResourceHost, offset: int, size: int, *, logger: logging.Logger
 ) -> dict[str, Any] | None:
     try:
+        offset = _to_int(offset)
+        size = _to_int(size)
         if offset == 0 or size < 64:
             return None
         data = analyzer._read_version_info_data(offset, size)
