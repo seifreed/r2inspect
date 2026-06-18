@@ -67,6 +67,8 @@ def get_stats(retry_stats: Any, lock: Any) -> dict[str, Any]:
 
 
 def is_retryable_command(command: str, unstable_commands: tuple[str, ...]) -> bool:
+    if not isinstance(command, str):
+        return False
     command_base = command.split(" ", 1)[0].strip()
     return bool(command_base) and command_base in unstable_commands
 

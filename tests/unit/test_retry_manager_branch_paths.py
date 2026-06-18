@@ -48,6 +48,11 @@ def test_is_retryable_command_with_trailing_args():
     assert manager.is_retryable_command("aflj @main") is True
 
 
+def test_is_retryable_command_non_string_returns_false():
+    manager = RetryManager()
+    assert manager.is_retryable_command(None) is False  # type: ignore[arg-type]
+
+
 # ---------------------------------------------------------------------------
 # is_retryable_error - lines 153-154, 157-158, 161
 # ---------------------------------------------------------------------------
