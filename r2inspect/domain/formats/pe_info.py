@@ -74,9 +74,11 @@ def compute_entry_point(bin_info: dict[str, Any], entry_info: list[dict[str, Any
             entry_point = base + offset
 
     if entry_info:
-        entry_vaddr = _to_int(entry_info[0].get("vaddr", entry_point))
-        if entry_vaddr is not None:
-            entry_point = entry_vaddr
+        first_entry = entry_info[0]
+        if isinstance(first_entry, dict):
+            entry_vaddr = _to_int(first_entry.get("vaddr", entry_point))
+            if entry_vaddr is not None:
+                entry_point = entry_vaddr
 
     return entry_point
 

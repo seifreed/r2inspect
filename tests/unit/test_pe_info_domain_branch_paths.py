@@ -170,6 +170,11 @@ def test_compute_entry_point_skips_malformed_base_offset():
     assert result == 0x402000
 
 
+def test_compute_entry_point_skips_malformed_entry_info_item():
+    result = compute_entry_point({"baddr": 0x400000, "boffset": 0x1000}, ["bad"])
+    assert result == 0x401000
+
+
 def test_compute_entry_point_fallback_zero():
     """compute_entry_point returns 0 when no baddr and no entry_info."""
     result = compute_entry_point({}, None)
