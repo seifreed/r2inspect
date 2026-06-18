@@ -116,7 +116,7 @@ def test_hashing_utils(tmp_path: Path) -> None:
     assert (
         imphash
         == hashlib.md5(
-            b"kernel32.dll.createfilea,user32.dll.messageboxa", usedforsecurity=False
+            b"kernel32.createfilea,user32.messageboxa", usedforsecurity=False
         ).hexdigest()
     )
     assert hashing_utils.calculate_imphash([]) is None

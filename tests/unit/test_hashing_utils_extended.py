@@ -130,7 +130,7 @@ def test_calculate_imphash_missing_library():
     imphash = calculate_imphash(imports)
 
     assert imphash is not None
-    import_string = "user32.dll.messageboxa"
+    import_string = "user32.messageboxa"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert imphash == expected
 
@@ -144,7 +144,7 @@ def test_calculate_imphash_missing_name():
     imphash = calculate_imphash(imports)
 
     assert imphash is not None
-    import_string = "user32.dll.messageboxa"
+    import_string = "user32.messageboxa"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert imphash == expected
 
@@ -171,7 +171,7 @@ def test_calculate_imphash_dll_key_contract():
     imphash = calculate_imphash(imports)
 
     assert imphash is not None
-    expected = hashlib.md5(b"kernel32.dll.createfilea", usedforsecurity=False).hexdigest()
+    expected = hashlib.md5(b"kernel32.createfilea", usedforsecurity=False).hexdigest()
     assert imphash == expected
 
 
@@ -272,7 +272,7 @@ def test_calculate_imphash_single_import():
     imphash = calculate_imphash(imports)
 
     assert imphash is not None
-    import_string = "kernel32.dll.exitprocess"
+    import_string = "kernel32.exitprocess"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert imphash == expected
 

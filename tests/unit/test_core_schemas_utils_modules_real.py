@@ -322,7 +322,7 @@ def test_hashing_utils_real_file(tmp_path: Path) -> None:
     assert calculate_hashes(str(tmp_path / "missing.bin"))["md5"] == ""
 
     imports = [{"library": "KERNEL32.DLL", "name": "VirtualAlloc"}]
-    expected = hashlib.md5(b"kernel32.dll.virtualalloc", usedforsecurity=False).hexdigest()
+    expected = hashlib.md5(b"kernel32.virtualalloc", usedforsecurity=False).hexdigest()
     assert calculate_imphash(imports) == expected
     assert calculate_imphash([]) is None
 

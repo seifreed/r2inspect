@@ -144,7 +144,7 @@ def test_calculate_imphash_matches_expected_md5():
         {"library": "KERNEL32.DLL", "name": "CreateFileW"},
         {"library": "USER32.DLL", "name": "MessageBoxA"},
     ]
-    import_string = "kernel32.dll.createfilew,user32.dll.messageboxa"
+    import_string = "kernel32.createfilew,user32.messageboxa"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert calculate_imphash(imports) == expected
 
@@ -164,7 +164,7 @@ def test_calculate_imphash_skips_entries_with_missing_lib_or_name():
     ]
     result = calculate_imphash(imports)
     assert result is not None
-    import_string = "user32.dll.messageboxa"
+    import_string = "user32.messageboxa"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert result == expected
 
@@ -175,16 +175,24 @@ def test_calculate_imphash_lowercases_lib_and_name():
     assert calculate_imphash(imports_lower) == calculate_imphash(imports_upper)
 
 
+def test_calculate_imphash_strips_module_extension():
+    # The imphash spec (Mandiant/pefile) strips .dll/.ocx/.sys, so the hash of a
+    # "kernel32.dll" import must equal that of the same import named "kernel32".
+    with_ext = calculate_imphash([{"library": "KERNEL32.DLL", "name": "CreateFileA"}])
+    no_ext = calculate_imphash([{"library": "kernel32", "name": "createfilea"}])
+    assert with_ext == no_ext
+
+
 def test_calculate_imphash_accepts_dll_key_fallback():
     imports = [{"dll": "KERNEL32.DLL", "name": "CreateFileA"}]
-    import_string = "kernel32.dll.createfilea"
+    import_string = "kernel32.createfilea"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert calculate_imphash(imports) == expected
 
 
 def test_calculate_imphash_accepts_libname_key_fallback():
     imports = [{"libname": "KERNEL32.DLL", "name": "CreateFileA"}]
-    import_string = "kernel32.dll.createfilea"
+    import_string = "kernel32.createfilea"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert calculate_imphash(imports) == expected
 

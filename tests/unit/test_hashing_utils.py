@@ -29,7 +29,7 @@ def test_calculate_imphash_builds_expected_string():
         {"library": "KERNEL32.DLL", "name": "CreateFileW"},
         {"library": "user32.dll", "name": "MessageBoxA"},
     ]
-    import_string = "kernel32.dll.createfilew,user32.dll.messageboxa"
+    import_string = "kernel32.createfilew,user32.messageboxa"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
     assert calculate_imphash(imports) == expected
 

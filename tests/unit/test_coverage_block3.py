@@ -39,7 +39,7 @@ def test_calculate_imphash_variations() -> None:
         {"library": "", "name": "Ignore"},
         {"library": "ADVAPI32.dll", "name": ""},
     ]
-    import_string = "kernel32.dll.createfilea,user32.dll.messageboxa"
+    import_string = "kernel32.createfilea,user32.messageboxa"  # extension stripped (imphash spec)
     expected = hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
 
     assert hashing.calculate_imphash(imports) == expected

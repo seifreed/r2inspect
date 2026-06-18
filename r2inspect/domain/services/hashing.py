@@ -36,6 +36,12 @@ def calculate_imphash(imports: list[Any]) -> str | None:
         import_string = ""
         for imp in imports:
             lib = imp.get("library", imp.get("dll", imp.get("libname", ""))).lower()
+            # The imphash spec (Mandiant/pefile) strips the module extension so
+            # the token is "kernel32.createfile", not "kernel32.dll.createfile";
+            # otherwise the hash matches no public imphash IOC.
+            parts = lib.rsplit(".", 1)
+            if len(parts) > 1 and parts[1] in ("ocx", "sys", "dll"):
+                lib = parts[0]
             func = imp.get("name", "").lower()
             if lib and func:
                 import_string += f"{lib}.{func},"
