@@ -56,7 +56,7 @@ def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> lis
                 except (TypeError, ValueError):
                     continue
                 result = analyzer._search_hex(f"{const_value:08x}")
-                if result and result.strip():
+                if isinstance(result, str) and result.strip():
                     found_constants.append(
                         {
                             "type": const_name,

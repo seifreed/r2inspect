@@ -433,6 +433,16 @@ def test_find_suspicious_patterns_skips_non_string_search_output():
     assert result == []
 
 
+def test_detect_crypto_constants_skips_non_string_search_output():
+    class _BadSearchAdapter(XorPatternAdapter):
+        def search_hex(self, hex_pattern: str):
+            return None
+
+    analyzer = CryptoAnalyzer(_BadSearchAdapter())
+    result = analyzer._detect_crypto_constants()
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # _coerce_dict_list() - lines 322-324
 # ---------------------------------------------------------------------------
