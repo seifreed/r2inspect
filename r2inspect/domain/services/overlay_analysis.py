@@ -157,16 +157,23 @@ def _matching_suspicious_strings(strings: list[str]) -> list[str]:
     return matches
 
 
+def _coerce_number(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str, Any]]:
     suspicious: list[dict[str, Any]] = []
-    if result["overlay_size"] > 1024 * 1024:
+    overlay_size = _coerce_number(result.get("overlay_size"))
+    overlay_entropy = _coerce_number(result.get("overlay_entropy"))
+    if overlay_size > 1024 * 1024:
         suspicious.append(
-            _indicator("Large overlay", f"Overlay size: {result['overlay_size']} bytes", "medium")
+            _indicator("Large overlay", f"Overlay size: {overlay_size:g} bytes", "medium")
         )
-    if result["overlay_entropy"] > 7.5:
-        suspicious.append(
-            _indicator("High entropy", f"Entropy: {result['overlay_entropy']}", "high")
-        )
+    if overlay_entropy > 7.5:
+        suspicious.append(_indicator("High entropy", f"Entropy: {overlay_entropy:g}", "high"))
     for embedded in result.get("embedded_files", []):
         if not isinstance(embedded, dict):
             continue
