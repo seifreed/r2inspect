@@ -247,6 +247,16 @@ def test_add_binlex_top_ngrams_accepts_non_string_ngrams():
     assert len(table.rows) == 1
 
 
+def test_add_binlex_top_ngrams_skips_malformed_entries():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    _add_binlex_top_ngrams(table, [2], {2: [("ok", 1), "bad"]})
+
+    assert len(table.rows) == 1
+
+
 def test_add_binlex_similarity_groups_accepts_non_list_groups():
     table = Table()
     table.add_column("Property")

@@ -107,7 +107,10 @@ def _add_simhash_top_features(table: Table, feature_stats: dict[str, Any]) -> No
         return
 
     top_features = []
-    for feature, count in most_common[:5]:
+    for item in most_common[:5]:
+        if not isinstance(item, (list, tuple)) or len(item) < 2:
+            continue
+        feature, count = item[0], item[1]
         clean_feature = str(feature).replace("STR:", "").replace("OP:", "").replace("OPTYPE:", "")
         if len(clean_feature) > 40:
             clean_feature = clean_feature[:37] + "..."

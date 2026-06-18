@@ -114,7 +114,10 @@ def _add_binlex_top_ngrams(
         if isinstance(ngram_entries, list) and ngram_entries:
             top_3 = ngram_entries[:3]
             ngram_strs = []
-            for ngram, count in top_3:
+            for item in top_3:
+                if not isinstance(item, (list, tuple)) or len(item) < 2:
+                    continue
+                ngram, count = item[0], item[1]
                 clean_ngram = str(ngram).replace("&nbsp;", " ").replace(HTML_AMP, "&").strip()
                 if len(clean_ngram) > 50:
                     clean_ngram = clean_ngram[:47] + "..."

@@ -490,6 +490,13 @@ def test_add_simhash_top_features_strips_prefixes():
     assert len(table.rows) == 1
 
 
+def test_add_simhash_top_features_skips_malformed_entries():
+    table = _make_table()
+    feature_stats = {"most_common_features": [("STR:hello", 10), "bad"]}
+    _add_simhash_top_features(table, feature_stats)
+    assert len(table.rows) == 1
+
+
 def test_add_simhash_top_features_ignores_non_list_features():
     table = _make_table()
     _add_simhash_top_features(table, {"most_common_features": {"feature": 1}})
