@@ -486,6 +486,12 @@ def test_extract_strings_from_entries_missing_string_key():
     assert result == []
 
 
+def test_extract_strings_from_entries_skips_non_dict_entry():
+    entries = [{"string": "hello"}, 123, {"string": "world"}]
+    result = extract_strings_from_entries(entries, min_length=4)
+    assert result == ["hello", "world"]
+
+
 def test_extract_ascii_from_bytes_basic():
     data = list(b"hello\x00world")
     result = extract_ascii_from_bytes(data, min_length=4)
