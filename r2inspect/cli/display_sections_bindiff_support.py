@@ -16,7 +16,10 @@ def _coerce_int(value: Any) -> int:
 
 
 def _add_bindiff_entries(table: Table, bindiff_info: dict[str, Any]) -> None:
-    table.add_row("Filename", bindiff_info.get("filename", "Unknown"))
+    filename = bindiff_info.get("filename", "Unknown")
+    if not isinstance(filename, str) or not filename:
+        filename = "Unknown"
+    table.add_row("Filename", filename)
 
     _add_bindiff_structural(table, bindiff_info.get("structural_features", {}))
     _add_bindiff_functions(table, bindiff_info.get("function_features", {}))

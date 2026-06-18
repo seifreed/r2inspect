@@ -411,6 +411,18 @@ def test_add_bindiff_entries_minimal():
     assert len(table.rows) == 1
 
 
+def test_add_bindiff_entries_missing_filename():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    bindiff_info = {"filename": None}
+
+    _add_bindiff_entries(table, bindiff_info)
+
+    assert len(table.rows) == 1
+
+
 def test_add_bindiff_structural_full():
     table = Table()
     table.add_column("Property")
