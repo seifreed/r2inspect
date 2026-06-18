@@ -10,6 +10,8 @@ def has_nx(segments: list[dict[str, Any]] | None) -> bool:
     if not segments:
         return False
     for segment in segments:
+        if not isinstance(segment, dict):
+            continue
         # r2's segment list (iSSj) names the stack segment in "name" with the
         # permissions in "perm" (e.g. "-rw-"); older/text shapes used "type"
         # and "flags". NX is on when the GNU_STACK segment is not executable.
@@ -22,7 +24,11 @@ def has_nx(segments: list[dict[str, Any]] | None) -> bool:
 
 def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
     for symbol in symbols or []:
+        if not isinstance(symbol, dict):
+            continue
         name = symbol.get("name", "")
+        if not isinstance(name, str):
+            continue
         if "__stack_chk_fail" in name or "__stack_chk_guard" in name:
             return True
     return False
@@ -40,6 +46,8 @@ def is_pie(elf_info: dict[str, Any] | None) -> bool:
     if not elf_info or "bin" not in elf_info:
         return False
     bin_info = elf_info["bin"]
+    if not isinstance(bin_info, dict):
+        return False
     # r2 exposes position-independence as bin.pic. The ELF object type (DYN vs
     # EXEC) lives in bin.type; bin.class holds the ELF32/ELF64 magic, so the old
     # `"DYN" in class` check was always False and ELF PIE was never detected.

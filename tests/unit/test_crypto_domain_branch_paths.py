@@ -196,6 +196,11 @@ def test_has_nx_returns_false_when_no_gnu_stack() -> None:
     assert esd.has_nx(headers) is False
 
 
+def test_has_nx_skips_malformed_segments() -> None:
+    headers = ["bad", {"type": "GNU_STACK", "flags": "rw-"}]
+    assert esd.has_nx(headers) is True
+
+
 def test_has_nx_returns_true_when_gnu_stack_without_exec() -> None:
     """has_nx returns True when GNU_STACK header exists and flags have no 'x'."""
     headers = [{"type": "GNU_STACK", "flags": "rw-"}]
@@ -214,9 +219,18 @@ def test_has_stack_canary_elf_returns_true() -> None:
     assert esd.has_stack_canary(symbols) is True
 
 
+def test_has_stack_canary_elf_skips_malformed_symbols() -> None:
+    symbols = ["bad", {"name": None}, {"name": "__stack_chk_fail"}]
+    assert esd.has_stack_canary(symbols) is True
+
+
 def test_is_pie_elf_returns_false_for_missing_bin() -> None:
     """ELF is_pie returns False when elf_info has no 'bin' key."""
     assert esd.is_pie({}) is False
+
+
+def test_is_pie_elf_returns_false_for_malformed_bin_info() -> None:
+    assert esd.is_pie({"bin": "bad"}) is False
 
 
 def test_path_features_rpath_and_runpath() -> None:
