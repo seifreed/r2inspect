@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from r2inspect.modules.tlsh_analyzer import TLSH_AVAILABLE, TLSHAnalyzer
+from r2inspect.modules.tlsh_support import build_detailed_analysis
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +70,17 @@ class SentinelTLSHAnalyzer(TLSHAnalyzer):
 
     def _calculate_tlsh_from_hex(self, hex_data: str | None) -> str | None:
         return "hash" if hex_data else None
+
+
+class MalformedDetailedHost:
+    def _calculate_binary_tlsh(self) -> str | None:
+        return "binary"
+
+    def _calculate_section_tlsh(self) -> list[object]:
+        return ["bad"]
+
+    def _calculate_function_tlsh(self) -> list[object]:
+        return ["bad"]
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +190,16 @@ def test_analyze_sections_unavailable_returns_error_dict(tmp_path):
     result = analyzer.analyze_sections()
     assert result["available"] is False
     assert "error" in result
+
+
+def test_build_detailed_analysis_coerces_malformed_host_results():
+    result = build_detailed_analysis(MalformedDetailedHost(), available=True)
+
+    assert result["available"] is True
+    assert result["section_tlsh"] == {}
+    assert result["function_tlsh"] == {}
+    assert result["stats"]["sections_analyzed"] == 0
+    assert result["stats"]["functions_analyzed"] == 0
 
 
 def test_analyze_sections_computes_binary_tlsh(tmp_path):

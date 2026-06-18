@@ -53,14 +53,18 @@ def build_detailed_analysis(host: TlshHost, available: bool) -> dict[str, Any]:
         },
     }
     result["binary_tlsh"] = host._calculate_binary_tlsh()
-    result["section_tlsh"] = host._calculate_section_tlsh()
-    stats = cast(dict[str, int], result["stats"])
-    section_hashes = cast(dict[str, str | None], result["section_tlsh"])
+    section_hashes_raw = host._calculate_section_tlsh()
+    section_hashes = section_hashes_raw if isinstance(section_hashes_raw, dict) else {}
+    result["section_tlsh"] = section_hashes
+    stats_raw = result.get("stats", {})
+    stats = stats_raw if isinstance(stats_raw, dict) else {}
+    result["stats"] = stats
     stats["sections_analyzed"] = len(section_hashes)
     stats["sections_with_tlsh"] = sum(1 for value in section_hashes.values() if value)
     result["text_section_tlsh"] = section_hashes.get(".text")
-    result["function_tlsh"] = host._calculate_function_tlsh()
-    function_hashes = cast(dict[str, str | None], result["function_tlsh"])
+    function_hashes_raw = host._calculate_function_tlsh()
+    function_hashes = function_hashes_raw if isinstance(function_hashes_raw, dict) else {}
+    result["function_tlsh"] = function_hashes
     stats["functions_analyzed"] = len(function_hashes)
     stats["functions_with_tlsh"] = sum(1 for value in function_hashes.values() if value)
     return result
