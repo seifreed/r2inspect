@@ -327,10 +327,7 @@ def test_overlay_type_installer():
 
 
 def test_overlay_type_encrypted():
-    # Very high entropy random data
-    import random
-
-    random_data = [random.randint(0, 255) for _ in range(1024)]
+    random_data = list(range(256)) * 4
     adapter = MockAdapter(
         {
             "ij": {"core": {"size": 2000}},
