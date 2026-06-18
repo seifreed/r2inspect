@@ -403,6 +403,11 @@ def test_clamp_score_inverted_range():
     assert result == 100
 
 
+def test_clamp_score_non_numeric_inputs_return_zero():
+    assert clamp_score(None) == 0
+    assert clamp_score("50", "10", "90") == 50
+
+
 def test_count_suspicious_imports_empty_names():
     """Test counting with imports that have empty names."""
     imports = [

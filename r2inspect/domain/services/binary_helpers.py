@@ -28,6 +28,12 @@ def entropy_from_ints(data: list[int]) -> float:
 
 
 def clamp_score(score: int, minimum: int = 0, maximum: int = 100) -> int:
+    try:
+        score = int(score)
+        minimum = int(minimum)
+        maximum = int(maximum)
+    except (TypeError, ValueError):
+        return 0
     if score < minimum:
         return minimum
     if score > maximum:
