@@ -41,7 +41,9 @@ def has_relro(relro_value: str | None) -> bool:
     # "none"). The previous check scanned the "id" (debug-info) command output
     # for "BIND_NOW", but id is empty for normal binaries, so relro was always
     # False. RELRO is present when the value is partial or full.
-    return str(relro_value or "").strip().lower() in {"partial", "full"}
+    if not isinstance(relro_value, str):
+        return False
+    return relro_value.strip().lower() in {"partial", "full"}
 
 
 def is_pie(elf_info: dict[str, Any] | None) -> bool:

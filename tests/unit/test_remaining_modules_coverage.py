@@ -481,6 +481,10 @@ def test_elf_has_relro_false():
     assert has_relro("") is False
 
 
+def test_elf_has_relro_non_string():
+    assert has_relro(123) is False
+
+
 def test_elf_is_pie_dyn():
     # r2 puts the ELF object type in bin.type (not bin.class, which is ELF32/64).
     info = {"bin": {"type": "DYN (Shared object file)"}}
