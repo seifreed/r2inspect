@@ -191,9 +191,23 @@ def test_apply_authenticode_feature_sets_true_when_security_dir_has_size():
     assert features["authenticode"] is True
 
 
+def test_apply_authenticode_feature_accepts_numeric_string_size():
+    features = {"authenticode": False}
+    pe_header = {"data_directories": {"security": {"size": "1024", "offset": 0x100}}}
+    _apply_authenticode_feature(features, pe_header)
+    assert features["authenticode"] is True
+
+
 def test_apply_authenticode_feature_stays_false_when_security_dir_size_zero():
     features = {"authenticode": False}
     pe_header = {"data_directories": {"security": {"size": 0}}}
+    _apply_authenticode_feature(features, pe_header)
+    assert features["authenticode"] is False
+
+
+def test_apply_authenticode_feature_skips_malformed_size():
+    features = {"authenticode": False}
+    pe_header = {"data_directories": {"security": {"size": "bad"}}}
     _apply_authenticode_feature(features, pe_header)
     assert features["authenticode"] is False
 

@@ -88,5 +88,11 @@ def _apply_authenticode_feature(
         return
     data_dir = pe_header.get("data_directories", {})
     security_dir = data_dir.get("security", {})
-    if isinstance(security_dir, dict) and security_dir.get("size", 0) > 0:
+    if not isinstance(security_dir, dict):
+        return
+    try:
+        security_size = int(security_dir.get("size", 0))
+    except (TypeError, ValueError):
+        return
+    if security_size > 0:
         features["authenticode"] = True
