@@ -380,6 +380,14 @@ def test_display_simhash_handles_non_list_similarity_groups():
     assert "SimHash" in text
 
 
+def test_display_bindiff_skips_non_dict_section():
+    console = _make_console()
+    with _console_scope(console):
+        _display_bindiff({"bindiff": "bad"})
+    text = _get_text(console)
+    assert "BinDiff" in text
+
+
 def test_display_bindiff_not_ready_no_error():
     console = _make_console()
     results = {"bindiff": {"comparison_ready": False}}

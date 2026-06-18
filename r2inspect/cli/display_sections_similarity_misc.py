@@ -52,6 +52,8 @@ def _display_bindiff(results: Results) -> None:
     bindiff_info, present = _get_section(results, "bindiff", {})
     if not present:
         return
+    if not isinstance(bindiff_info, dict):
+        bindiff_info = {}
     table = Table(title="BinDiff (Binary Comparison Features)", show_header=True)
     table.add_column("Property", style="cyan", width=25)
     table.add_column("Value", style="yellow", no_wrap=False)
