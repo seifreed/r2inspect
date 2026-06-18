@@ -347,6 +347,34 @@ def test_analyze_overlay_content_skips_malformed_pattern_and_string_results():
     assert result["extracted_strings"] == []
 
 
+def test_analyze_overlay_content_skips_malformed_signature_results():
+    class _MalformedSignatureOverlayAnalyzer(OverlayAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return [0x41, 0x42, 0x43, 0x44]
+            return default
+
+        def _calculate_entropy(self, data: list[int]) -> float:
+            return 0.0
+
+        def _check_patterns(self, data: list[int]) -> list[dict[str, Any]]:
+            return []
+
+        def _determine_overlay_type(self, patterns: list[dict[str, Any]], data: list[int]) -> str:
+            return "data"
+
+        def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
+            return []
+
+        def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
+            return "bad"  # type: ignore[return-value]
+
+    analyzer = _MalformedSignatureOverlayAnalyzer(None)
+    result = analyzer._default_result()
+    analyzer._analyze_overlay_content(result, offset=0, size=4)
+    assert result["embedded_files"] == []
+
+
 def test_analyze_overlay_content_coerces_string_size():
     """String offsets and sizes should still reach overlay content analysis."""
 

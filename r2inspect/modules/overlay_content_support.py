@@ -60,7 +60,7 @@ def analyze_overlay_content(
         result["extracted_strings"] = extracted_strings[:20]
 
         signatures = check_file_signatures_fn(overlay_data)
-        if signatures:
+        if isinstance(signatures, list) and signatures:
             result["embedded_files"] = signatures
 
     except Exception as exc:
