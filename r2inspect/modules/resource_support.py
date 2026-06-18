@@ -29,6 +29,8 @@ class ResourceHost(Protocol):
 
 def _to_int(value: Any) -> int:
     try:
+        if isinstance(value, str):
+            return int(value, 0)
         return int(value or 0)
     except (TypeError, ValueError):
         return 0
@@ -37,6 +39,8 @@ def _to_int(value: Any) -> int:
 def _coerce_resource_int(resource: dict[str, Any], field: str) -> int | None:
     value = resource.get(field, 0)
     try:
+        if isinstance(value, str):
+            return int(value, 0)
         return int(value or 0)
     except (TypeError, ValueError):
         return None

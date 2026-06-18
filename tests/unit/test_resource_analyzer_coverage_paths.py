@@ -83,6 +83,21 @@ def test_resource_analyzer_get_resource_directory_coerces_hex_strings() -> None:
     assert result["virtual_address"] == 0x1000
 
 
+def test_resource_analyzer_parse_resources_coerces_hex_fields() -> None:
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "iRj": [
+                {"name": "one", "type": "RT_STRING", "type_id": "0x6", "paddr": "0x800", "size": "0x20", "vaddr": "0x1000"},
+            ]
+        }
+    )
+    result = analyzer._parse_resources()
+    assert result[0]["type_id"] == 6
+    assert result[0]["offset"] == 0x800
+    assert result[0]["size"] == 0x20
+    assert result[0]["virtual_address"] == 0x1000
+
+
 def test_resource_analyzer_get_resource_directory_exception() -> None:
     # When cmdj raises, the adapter layers catch the error and return default/None.
     # _get_resource_directory then returns None.
