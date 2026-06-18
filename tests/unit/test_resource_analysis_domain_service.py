@@ -198,3 +198,12 @@ def test_build_suspicious_resources_skips_malformed_entries() -> None:
     resources = ["bad", {"type_name": "RT_RCDATA", "size": 1, "entropy": "high"}]
 
     assert build_suspicious_resources(resources, lambda _: []) == []
+
+
+def test_resource_helpers_replace_missing_names_and_types() -> None:
+    from r2inspect.domain.services.resource_analysis import _resource_name, _resource_type_name
+
+    resource = {"name": None, "type_name": None}
+
+    assert _resource_name(resource) == "UNKNOWN"
+    assert _resource_type_name(resource) == "UNKNOWN"

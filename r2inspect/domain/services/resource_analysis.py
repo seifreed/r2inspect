@@ -6,11 +6,20 @@ from typing import Any
 
 
 def _resource_name(resource: dict[str, Any]) -> str:
-    return str(resource.get("name") or resource.get("type_name", "UNKNOWN"))
+    value = resource.get("name")
+    if isinstance(value, str) and value:
+        return value
+    type_name = resource.get("type_name")
+    if isinstance(type_name, str) and type_name:
+        return type_name
+    return "UNKNOWN"
 
 
 def _resource_type_name(resource: dict[str, Any]) -> str:
-    return str(resource.get("type_name", "UNKNOWN"))
+    value = resource.get("type_name")
+    if isinstance(value, str) and value:
+        return value
+    return "UNKNOWN"
 
 
 def _coerce_int(value: Any) -> int:
