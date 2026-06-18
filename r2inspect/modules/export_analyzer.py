@@ -10,6 +10,13 @@ from ..infrastructure.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Export table analysis using radare2"""
 
@@ -55,8 +62,11 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                     if not isinstance(exp, dict):
                         logger.debug("Skipping malformed export data: %s - %s", type(exp), exp)
                         continue
-                    export_analysis = self._analyze_export(exp)
-                    exports_info.append(export_analysis)
+                    try:
+                        export_analysis = self._analyze_export(exp)
+                        exports_info.append(export_analysis)
+                    except Exception as exc:
+                        logger.debug("Skipping malformed export entry: %s - %s", type(exp), exc)
 
         except Exception as e:
             logger.error("Error getting exports: %s", e)
@@ -65,9 +75,12 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _analyze_export(self, exp: dict[str, Any]) -> dict[str, Any]:
         """Analyze a single export"""
+        name_value = exp.get("name")
+        name = name_value if isinstance(name_value, str) and name_value else "unknown"
+        vaddr = _to_int(exp.get("vaddr", 0))
         analysis = {
-            "name": exp.get("name", "unknown"),
-            "address": hex(exp.get("vaddr", 0)),
+            "name": name,
+            "address": hex(vaddr),
             "ordinal": exp.get("ordinal", 0),
             "type": exp.get("type", "unknown"),
             "size": exp.get("size", 0),
@@ -91,8 +104,9 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         characteristics: dict[str, Any] = {}
 
         try:
-            name = exp.get("name", "")
-            vaddr = exp.get("vaddr", 0)
+            name_value = exp.get("name", "")
+            name = name_value if isinstance(name_value, str) else ""
+            vaddr = _to_int(exp.get("vaddr", 0))
 
             # Check if export is a common DLL export
             if name.startswith("Dll"):

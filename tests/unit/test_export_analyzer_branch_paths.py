@@ -74,6 +74,24 @@ def test_get_exports_skips_non_dict_entries():
     assert exports[0]["name"] == "valid"
 
 
+def test_get_exports_coerces_malformed_fields_and_preserves_valid_entries():
+    adapter = StubAdapter(
+        exports=[
+            {"name": ["bad"], "vaddr": "bad"},
+            {"name": "good", "vaddr": "4096"},
+        ],
+        func_info=[{"size": 10, "cc": 1}],
+    )
+    analyzer = _make_analyzer(adapter)
+    exports = analyzer.get_exports()
+
+    assert len(exports) == 2
+    assert exports[0]["name"] == "unknown"
+    assert exports[0]["address"] == "0x0"
+    assert exports[1]["name"] == "good"
+    assert exports[1]["address"] == "0x1000"
+
+
 # ---------------------------------------------------------------------------
 # get_exports – exception handling (lines 61-62)
 # ---------------------------------------------------------------------------
