@@ -96,6 +96,14 @@ def test_calculate_hash_no_hash_returned() -> None:
     assert error == "Telfhash calculation returned no hash"
 
 
+def test_calculate_hash_malformed_list_result_returns_no_hash() -> None:
+    analyzer = _elf_analyzer(telfhash_fn=lambda fp: ["bad"])
+    h, method, error = analyzer._calculate_hash()
+    assert h is None
+    assert method is None
+    assert error == "Telfhash calculation returned no hash"
+
+
 def test_calculate_hash_dict_falsy_hash() -> None:
     analyzer = _elf_analyzer(telfhash_fn=lambda fp: {"telfhash": "", "msg": "dict error msg"})
     h, method, error = analyzer._calculate_hash()

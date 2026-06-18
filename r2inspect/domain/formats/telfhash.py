@@ -26,8 +26,9 @@ def parse_telfhash_result(telfhash_result: Any) -> tuple[str | None, str | None]
     message = None
     if isinstance(telfhash_result, list) and len(telfhash_result) > 0:
         result_dict = telfhash_result[0]
-        hash_value = normalize_telfhash_value(result_dict.get("telfhash"))
-        message = cast(str | None, result_dict.get("msg"))
+        if isinstance(result_dict, dict):
+            hash_value = normalize_telfhash_value(result_dict.get("telfhash"))
+            message = cast(str | None, result_dict.get("msg"))
     elif isinstance(telfhash_result, dict):
         hash_value = normalize_telfhash_value(telfhash_result.get("telfhash"))
         message = cast(str | None, telfhash_result.get("msg"))
