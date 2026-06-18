@@ -79,6 +79,8 @@ def _display_machoc_functions(results: Results) -> None:
     table.add_row(TOTAL_FUNCTIONS_LABEL, str(functions_info.get("total_functions", 0)))
 
     machoc_hashes = functions_info.get("machoc_hashes", {})
+    if not isinstance(machoc_hashes, dict):
+        machoc_hashes = {}
     unique_hashes = len(set(machoc_hashes.values())) if machoc_hashes else 0
     table.add_row("Unique MACHOC Hashes", str(unique_hashes))
 

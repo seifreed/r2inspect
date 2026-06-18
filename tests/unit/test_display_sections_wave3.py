@@ -409,6 +409,15 @@ def test_display_machoc_functions_duplicate_hashes():
     assert "2" in text
 
 
+def test_display_machoc_functions_skips_non_dict_hashes():
+    console = _make_console()
+    results = {"functions": {"machoc_hashes": "bad"}}
+    with _console_scope(console):
+        _display_machoc_functions(results)
+    text = _get_text(console)
+    assert "Function Analysis" in text
+
+
 # --- display_sections_helpers: additional branch coverage ---
 
 
