@@ -44,11 +44,24 @@ def populate_import_statistics(
     get_risk_level_fn: Any,
     count_suspicious_indicators_fn: Any,
 ) -> None:
+    api_analysis = result.get("api_analysis")
+    if not isinstance(api_analysis, dict):
+        api_analysis = {}
+    obfuscation = result.get("obfuscation")
+    if not isinstance(obfuscation, dict):
+        obfuscation = {}
+    anomalies = result.get("anomalies")
+    if not isinstance(anomalies, dict):
+        anomalies = {}
+    dll_analysis = result.get("dll_analysis")
+    if not isinstance(dll_analysis, dict):
+        dll_analysis = {}
+
     total_risk = (
-        result["api_analysis"].get("risk_score", 0) * 0.4
-        + result["obfuscation"].get("score", 0) * 0.3
-        + (result["anomalies"].get("count", 0) * 10) * 0.2
-        + (len(result["dll_analysis"].get("suspicious_dlls", [])) * 5) * 0.1
+        api_analysis.get("risk_score", 0) * 0.4
+        + obfuscation.get("score", 0) * 0.3
+        + (anomalies.get("count", 0) * 10) * 0.2
+        + (len(dll_analysis.get("suspicious_dlls", [])) * 5) * 0.1
     )
 
     result["statistics"] = {

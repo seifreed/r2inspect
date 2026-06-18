@@ -6,7 +6,10 @@ import logging
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.import_analysis import build_import_statistics
 from r2inspect.modules.import_analyzer import ImportAnalyzer
-from r2inspect.modules.import_analyzer_result_support import collect_import_dlls
+from r2inspect.modules.import_analyzer_result_support import (
+    collect_import_dlls,
+    populate_import_statistics,
+)
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -462,3 +465,21 @@ def test_collect_import_dlls_skips_malformed_entries():
     )
 
     assert dlls == ["kernel32.dll"]
+
+
+def test_populate_import_statistics_skips_non_dict_buckets():
+    result = {
+        "api_analysis": None,
+        "obfuscation": None,
+        "anomalies": None,
+        "dll_analysis": None,
+        "statistics": {},
+    }
+
+    populate_import_statistics(
+        result,
+        get_risk_level_fn=lambda _score: "LOW",
+        count_suspicious_indicators_fn=lambda _result: 0,
+    )
+
+    assert result["statistics"]["risk_level"] == "LOW"
