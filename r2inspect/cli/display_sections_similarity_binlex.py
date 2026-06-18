@@ -85,7 +85,7 @@ def _add_binlex_similarity_groups(
 ) -> None:
     for n in ngram_sizes:
         groups = _lookup_ngram_value(similar_functions, n)
-        if not groups:
+        if not isinstance(groups, list) or not groups:
             continue
         largest_group = groups[0]
         if not isinstance(largest_group, dict):
@@ -111,7 +111,7 @@ def _add_binlex_top_ngrams(
 ) -> None:
     for n in ngram_sizes:
         ngram_entries = _lookup_ngram_value(top_ngrams, n)
-        if ngram_entries:
+        if isinstance(ngram_entries, list) and ngram_entries:
             top_3 = ngram_entries[:3]
             ngram_strs = []
             for ngram, count in top_3:

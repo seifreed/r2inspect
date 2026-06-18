@@ -224,6 +224,16 @@ def test_add_binlex_top_ngrams():
     assert len(table.rows) == 1
 
 
+def test_add_binlex_top_ngrams_accepts_non_list_entries():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    _add_binlex_top_ngrams(table, [2], {2: {"count": 1}})
+
+    assert len(table.rows) == 0
+
+
 def test_add_binlex_top_ngrams_accepts_non_string_ngrams():
     table = Table()
     table.add_column("Property")
@@ -235,6 +245,16 @@ def test_add_binlex_top_ngrams_accepts_non_string_ngrams():
     _add_binlex_top_ngrams(table, ngram_sizes, top_ngrams)
 
     assert len(table.rows) == 1
+
+
+def test_add_binlex_similarity_groups_accepts_non_list_groups():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    _add_binlex_similarity_groups(table, [2], {2: {"count": 1}})
+
+    assert len(table.rows) == 0
 
 
 def test_add_binlex_entries():
