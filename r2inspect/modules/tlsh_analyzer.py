@@ -113,7 +113,7 @@ class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
         Returns:
             TLSH hash string or None if calculation fails
         """
-        if not hex_data or not hex_data.strip():
+        if not isinstance(hex_data, str) or not hex_data.strip():
             return None
 
         try:

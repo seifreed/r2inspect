@@ -153,6 +153,11 @@ def test_calculate_tlsh_from_hex_empty():
     assert analyzer._calculate_tlsh_from_hex("") is None
 
 
+def test_calculate_tlsh_from_hex_non_string():
+    analyzer = TLSHAnalyzer(adapter=FakeAdapter(), filename="/tmp/test.bin")
+    assert analyzer._calculate_tlsh_from_hex(123) is None  # type: ignore[arg-type]
+
+
 def test_calculate_tlsh_from_hex_too_small():
     analyzer = TLSHAnalyzer(adapter=FakeAdapter(), filename="/tmp/test.bin")
     # Less than TLSH_MIN_DATA_SIZE (50 bytes)
