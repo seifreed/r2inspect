@@ -271,6 +271,10 @@ class YaraAnalyzer(CommandHelperMixin):
             "warnings": [],
             "rules_count": 0,
         }
+        errors = validation_result["errors"]
+        if not isinstance(errors, list):
+            errors = []
+            validation_result["errors"] = errors
 
         try:
             rules = self._compile_rules(rules_path)
@@ -284,10 +288,10 @@ class YaraAnalyzer(CommandHelperMixin):
                     validation_result["rules_count"] = 1
             else:
                 validation_result["valid"] = False
-                validation_result["errors"].append("Failed to compile rules")
+                errors.append("Failed to compile rules")
         except Exception as e:
             validation_result["valid"] = False
-            validation_result["errors"].append(str(e))
+            errors.append(str(e))
 
         return validation_result
 
