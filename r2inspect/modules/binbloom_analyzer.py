@@ -128,7 +128,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
     @staticmethod
     def _coerce_function_size(value: Any) -> int:
         try:
-            size = int(value or 0)
+            size = int(value, 0) if isinstance(value, str) else int(value or 0)
         except (TypeError, ValueError):
             return 0
         return size if size > 0 else 0

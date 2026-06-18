@@ -106,6 +106,13 @@ def test_normalize_mnemonic_whitespace_only():
     assert analyzer._normalize_mnemonic("   ") is None
 
 
+# --- _coerce_function_size ---
+
+
+def test_coerce_function_size_accepts_hex_strings():
+    assert BinbloomAnalyzer._coerce_function_size("0x10") == 16
+
+
 # --- _collect_mnemonics_from_ops ---
 
 
