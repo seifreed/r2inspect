@@ -358,6 +358,11 @@ def test_suspicious_section_name_indicator_returns_string():
     assert "upx" in result
 
 
+def test_suspicious_section_name_indicator_skips_malformed_values():
+    assert suspicious_section_name_indicator(None, ["upx"]) is None
+    assert suspicious_section_name_indicator("UPX0", [None, "upx"]) == "Suspicious section name: upx"
+
+
 def test_normalize_section_name_preserves_case_in_string():
     """Test that normalize actually lowercases."""
     result = normalize_section_name("TEXT")

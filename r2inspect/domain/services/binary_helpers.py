@@ -86,8 +86,12 @@ STANDARD_PE_SECTIONS = [
 
 
 def suspicious_section_name_indicator(name: str, suspicious: list[str]) -> str | None:
+    if not isinstance(name, str):
+        return None
     lowered = name.lower()
     for sus_name in suspicious:
+        if not isinstance(sus_name, str):
+            continue
         if sus_name in lowered:
             return f"Suspicious section name: {sus_name}"
     return None
