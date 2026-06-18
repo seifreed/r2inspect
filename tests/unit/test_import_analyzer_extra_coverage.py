@@ -490,6 +490,14 @@ def test_detect_import_anomalies_skips_non_dict_entries_in_dll_scan():
     assert "many_unusual_dlls" in types
 
 
+def test_detect_import_anomalies_non_list_input_returns_no_imports():
+    from r2inspect.domain.services.import_analysis import detect_import_anomalies
+
+    result = detect_import_anomalies(1)  # type: ignore[arg-type]
+    assert result["count"] == 1
+    assert result["anomalies"][0]["type"] == "no_imports"
+
+
 def test_find_suspicious_patterns_skips_malformed_entries():
     patterns = find_suspicious_patterns(
         [

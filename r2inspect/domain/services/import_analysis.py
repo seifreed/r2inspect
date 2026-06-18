@@ -326,7 +326,7 @@ def _append_excessive_imports(anomalies: list[dict[str, Any]], imports: list[dic
 
 
 def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    if not imports:
+    if not isinstance(imports, list) or not imports:
         return _anomaly_result([_no_imports_anomaly()])
 
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]
