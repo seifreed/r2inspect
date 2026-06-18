@@ -58,7 +58,9 @@ def detected_file_format(context: dict[str, Any], default: str = "Unknown") -> s
     fmt = metadata.get("file_format")
     if fmt:
         return str(fmt)
-    results = context.get("results") or {}
+    results = context.get("results")
+    if not isinstance(results, dict):
+        results = {}
     format_detection = results.get("format_detection") or {}
     fmt = format_detection.get("file_format")
     return str(fmt) if fmt else default

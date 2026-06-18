@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from tests.helpers import make_stage_context, write_minimal_pe_file
 
 from r2inspect.pipeline.stage_models import AnalysisStage
+from r2inspect.pipeline.pipeline_runtime_common import detected_file_format
 from r2inspect.pipeline.stages_detection import DetectionStage
 from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage
 from r2inspect.pipeline.stages_hashing import HashingStage
@@ -264,6 +265,11 @@ def test_analysis_stage_execute_initializes_non_dict_results_on_error() -> None:
     assert result["failing"]["success"] is False
     assert isinstance(context["results"], dict)
     assert context["results"]["failing"]["error"] == "boom"
+
+
+def test_detected_file_format_ignores_non_dict_results_bucket() -> None:
+    context = {"results": ["bad"], "metadata": {}}
+    assert detected_file_format(context) == "Unknown"
 
 
 def test_hashing_stage_runs_format_supported_hashers() -> None:
