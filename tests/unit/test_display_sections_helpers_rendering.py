@@ -367,6 +367,18 @@ def test_add_simhash_top_features_long_names():
     assert len(table.rows) == 1
 
 
+def test_add_simhash_top_features_accepts_non_string_features():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    feature_stats = {"most_common_features": [(123, 10), (456, 8)]}
+
+    _add_simhash_top_features(table, feature_stats)
+
+    assert len(table.rows) == 1
+
+
 def test_add_simhash_top_features_empty():
     table = Table()
     table.add_column("Property")
