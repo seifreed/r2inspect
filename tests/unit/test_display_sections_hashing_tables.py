@@ -434,6 +434,23 @@ def test_add_impfuzzy_entries_few_imports():
     assert "more" not in str(table)
 
 
+def test_add_impfuzzy_entries_accepts_tuple_imports():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    impfuzzy_info = {
+        "impfuzzy_hash": "96:ABC:DEF",
+        "import_count": 15,
+        "dll_count": 3,
+        "imports_processed": ("dll1.func1", "dll2.func2", "dll3.func3", "dll4.func4"),
+    }
+
+    _add_impfuzzy_entries(table, impfuzzy_info)
+
+    assert len(table.rows) == 4
+
+
 def test_add_impfuzzy_entries_no_imports():
     table = Table()
     table.add_column("Property")

@@ -69,7 +69,7 @@ def add_impfuzzy_entries(table: Table, impfuzzy_info: dict[str, Any]) -> None:
     table.add_row("DLL Count", str(impfuzzy_info.get("dll_count", 0)))
     imports_processed = impfuzzy_info.get("imports_processed", [])
     if imports_processed:
-        sample_imports = imports_processed[:10]
+        sample_imports = list(imports_processed[:10])
         if len(imports_processed) > 10:
             sample_imports.append(f"... and {len(imports_processed) - 10} more")
         table.add_row("Sample Imports", "\n".join(sample_imports))
