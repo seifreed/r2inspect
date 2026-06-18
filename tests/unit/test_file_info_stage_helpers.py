@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from typing import Any
 
-from r2inspect.pipeline.stages_format import FileInfoStage
+from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage
 
 
 def _detection(**overrides: Any) -> dict[str, Any]:
@@ -39,6 +41,30 @@ def test_enhanced_detection_info_omits_unknown_arch_and_bits() -> None:
     assert info["threat_level"] == "Low"
     assert "detected_architecture" not in info
     assert "detected_bits" not in info
+
+
+def test_enhanced_detection_info_rejects_malformed_input() -> None:
+    assert FileInfoStage._enhanced_detection_info({}) == {}
+    assert FileInfoStage._enhanced_detection_info({"confidence": "bad"}) == {}
+
+
+def test_format_detection_stage_ignores_malformed_enhanced_detector() -> None:
+    class _NullAdapter:
+        def get_file_info(self) -> dict[str, Any]:
+            return {}
+
+    class _BadDetector:
+        def __call__(self, filename: str) -> object:
+            return ["bad"]
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
+        f.write(b"\x00" * 32)
+        path = Path(f.name)
+    try:
+        stage = FormatDetectionStage(adapter=_NullAdapter(), filename=str(path), file_type_detector=_BadDetector())
+        assert stage._detect_via_enhanced_magic() is None
+    finally:
+        path.unlink(missing_ok=True)
 
 
 def test_bin_arch_info_empty_without_bin() -> None:

@@ -116,17 +116,27 @@ class FileInfoStage(AnalysisStage):
 
     @staticmethod
     def _enhanced_detection_info(enhanced_detection: dict[str, Any]) -> dict[str, Any]:
-        if enhanced_detection["confidence"] <= 0.7:
+        if not isinstance(enhanced_detection, dict):
+            return {}
+
+        try:
+            confidence = float(enhanced_detection.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            return {}
+
+        if confidence <= 0.7:
             return {}
         info: dict[str, Any] = {
-            "precise_format": enhanced_detection["file_format"],
-            "format_category": enhanced_detection["format_category"],
-            "threat_level": "High" if enhanced_detection["potential_threat"] else "Low",
+            "precise_format": enhanced_detection.get("file_format", "Unknown"),
+            "format_category": enhanced_detection.get("format_category", "Unknown"),
+            "threat_level": "High" if enhanced_detection.get("potential_threat") else "Low",
         }
-        if enhanced_detection["architecture"] != "Unknown":
-            info["detected_architecture"] = enhanced_detection["architecture"]
-        if enhanced_detection["bits"] != "Unknown":
-            info["detected_bits"] = enhanced_detection["bits"]
+        architecture = enhanced_detection.get("architecture", "Unknown")
+        bits = enhanced_detection.get("bits", "Unknown")
+        if architecture != "Unknown":
+            info["detected_architecture"] = architecture
+        if bits != "Unknown":
+            info["detected_bits"] = bits
         return info
 
     @staticmethod
@@ -215,14 +225,21 @@ class FormatDetectionStage(AnalysisStage):
 
     def _detect_via_enhanced_magic(self) -> str | None:
         enhanced_detection = self.file_type_detector(self.filename)
-        if enhanced_detection["confidence"] <= 0.7:
-            if enhanced_detection["confidence"] > 0.0 and enhanced_detection[
-                "file_format"
-            ].startswith("PE"):
+        if not isinstance(enhanced_detection, dict):
+            return None
+
+        try:
+            confidence = float(enhanced_detection.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            return None
+
+        file_format = str(enhanced_detection.get("file_format", ""))
+
+        if confidence <= 0.7:
+            if confidence > 0.0 and file_format.startswith("PE"):
                 return "PE"
             return None
 
-        format_name = enhanced_detection["file_format"]
         format_map = {
             "PE": "PE",
             "ELF": "ELF",
@@ -232,12 +249,12 @@ class FormatDetectionStage(AnalysisStage):
         }
 
         for prefix, result in format_map.items():
-            if format_name.startswith(prefix) or format_name == prefix:
+            if file_format.startswith(prefix) or file_format == prefix:
                 return result
 
-        if format_name in ["ZIP", "RAR", "7ZIP"]:
+        if file_format in ["ZIP", "RAR", "7ZIP"]:
             return "Archive"
-        if format_name in ["PDF", "DOC", "DOCX", "RTF"]:
+        if file_format in ["PDF", "DOC", "DOCX", "RTF"]:
             return "Document"
 
         return None

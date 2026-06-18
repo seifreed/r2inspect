@@ -689,8 +689,8 @@ def test_pe_security_exception_is_logged():
 # ---------------------------------------------------------------------------
 
 
-def test_default_registry_entry_points_exception_is_swallowed():
-    """Lines 271-272: exception from load_entry_points is caught and logged."""
+def test_default_registry_entry_points_exception_propagates():
+    """load_entry_points failures should not be masked by the default registry wrapper."""
     orig = _ar_mod.AnalyzerRegistry.load_entry_points
 
     def _raising_load(self: Any, *args: Any, **kwargs: Any) -> None:
@@ -698,8 +698,8 @@ def test_default_registry_entry_points_exception_is_swallowed():
 
     _ar_mod.AnalyzerRegistry.load_entry_points = _raising_load
     try:
-        registry = create_default_registry()
-        assert registry is not None
+        with pytest.raises(RuntimeError, match="simulated entry point failure"):
+            create_default_registry()
     finally:
         _ar_mod.AnalyzerRegistry.load_entry_points = orig
 
