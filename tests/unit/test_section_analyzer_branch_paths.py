@@ -10,6 +10,7 @@ from __future__ import annotations
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.section_analysis import (
     _mark_entropy_anomaly,
+    build_permission_indicators,
     update_section_summary,
 )
 from r2inspect.modules.section_analyzer import SectionAnalyzer
@@ -460,6 +461,26 @@ def test_update_summary_for_section_no_indicators():
     assert summary["suspicious_sections"] == 0
     assert summary["high_entropy_sections"] == 0
     assert entropy == 3.0
+
+
+def test_update_summary_for_section_treats_malformed_entropy_as_zero():
+    summary = {
+        "executable_sections": 0,
+        "writable_sections": 0,
+        "suspicious_sections": 0,
+        "high_entropy_sections": 0,
+    }
+    flag_counts: dict[str, int] = {}
+    entropy = update_section_summary(summary, {"entropy": "high", "flags": "r--"}, flag_counts)
+    assert entropy == 0.0
+    assert summary["high_entropy_sections"] == 0
+
+
+def test_build_permission_indicators_treats_malformed_entropy_as_zero():
+    result = build_permission_indicators(
+        {"is_writable": False, "is_executable": True, "entropy": "low"}
+    )
+    assert result == ["Executable section with very low entropy"]
 
 
 def test_get_arch_handles_file_info_errors():

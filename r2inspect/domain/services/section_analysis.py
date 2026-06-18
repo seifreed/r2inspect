@@ -71,7 +71,7 @@ def build_permission_indicators(analysis: dict[str, Any]) -> list[str]:
     indicators: list[str] = []
     if analysis["is_writable"] and analysis["is_executable"]:
         indicators.append("Writable and executable section")
-    if analysis["is_executable"] and analysis.get("entropy", 0) < 1.0:
+    if analysis["is_executable"] and _coerce_entropy(analysis.get("entropy", 0)) < 1.0:
         indicators.append("Executable section with very low entropy")
     return indicators
 
@@ -83,6 +83,13 @@ def build_entropy_indicators(entropy: float) -> list[str]:
     elif entropy > 7.0:
         indicators.append(f"Moderate high entropy ({entropy:.2f})")
     return indicators
+
+
+def _coerce_entropy(value: Any) -> float:
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def build_size_indicators(vsize: int, raw_size: int) -> list[str]:
@@ -149,7 +156,7 @@ def update_section_summary(
         summary["writable_sections"] += 1
     if section.get("suspicious_indicators"):
         summary["suspicious_sections"] += 1
-    entropy = float(section.get("entropy", 0.0) or 0.0)
+    entropy = _coerce_entropy(section.get("entropy", 0.0))
     if entropy > 7.0:
         summary["high_entropy_sections"] += 1
     flags = section.get("flags", "")
