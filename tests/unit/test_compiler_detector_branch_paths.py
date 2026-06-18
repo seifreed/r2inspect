@@ -365,6 +365,13 @@ def test_analyze_rich_header_returns_empty_when_filepath_is_empty():
     assert result == {}
 
 
+def test_analyze_rich_header_returns_empty_when_core_is_malformed():
+    adapter = _MinimalAdapter(file_info={"core": None})
+    cd = CompilerDetector(adapter)
+    result = cd._analyze_rich_header()
+    assert result == {}
+
+
 def test_analyze_rich_header_executes_rich_analyzer_path(tmp_path):
     sample = tmp_path / "minimal_mz.bin"
     sample.write_bytes(b"MZ" + b"\x00" * 256)

@@ -120,9 +120,12 @@ def analyze_rich_header(detector: Any, *, logger: Any) -> dict[str, Any]:
         from .rich_header_analyzer import RichHeaderAnalyzer
 
         file_info = detector._get_file_info()
-        if "core" not in file_info:
+        if not isinstance(file_info, dict):
             return {}
-        filepath = file_info["core"].get("file", "")
+        core = file_info.get("core")
+        if not isinstance(core, dict):
+            return {}
+        filepath = core.get("file", "")
         if not filepath:
             return {}
         return RichHeaderAnalyzer(detector.adapter, filepath).analyze()
