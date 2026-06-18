@@ -46,6 +46,15 @@ def test_match_patterns_adds_detection() -> None:
     assert detected["AES"][0]["evidence_type"] == "String Reference"
 
 
+def test_detect_algorithms_from_strings_skips_malformed_entries() -> None:
+    detected: dict = {}
+    strings = ["bad", {"string": None}, {"string": "aes encryption used", "vaddr": 0x1000}]
+
+    cd.detect_algorithms_from_strings(strings, detected)
+
+    assert "AES" in detected
+
+
 def test_add_detection_populates_dict() -> None:
     """_add_detection appends an entry to detected_algos under the algo name."""
     detected: dict = {}

@@ -50,7 +50,12 @@ def detect_algorithms_from_strings(
     strings_result: list[dict[str, Any]], detected_algos: dict[str, list]
 ) -> None:
     for string_info in strings_result:
-        string_val = string_info.get("string", "").lower()
+        if not isinstance(string_info, dict):
+            continue
+        raw_string = string_info.get("string", "")
+        if not isinstance(raw_string, str):
+            continue
+        string_val = raw_string.lower()
         if not _is_candidate_string(string_val):
             continue
         _match_patterns(string_info, string_val, detected_algos)
