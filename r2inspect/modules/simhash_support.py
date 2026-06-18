@@ -141,7 +141,10 @@ def _resolve_current_hash(results: dict[str, Any], hash_type: str) -> int | None
                 return cast(int, hash_value)
         hash_value = results.get("hash_value")
         if hash_value:
-            return int(hash_value, 16) if isinstance(hash_value, str) else cast(int, hash_value)
+            try:
+                return int(hash_value, 16) if isinstance(hash_value, str) else cast(int, hash_value)
+            except (TypeError, ValueError):
+                return None
         return None
     section = results.get(f"{hash_type}_simhash")
     if isinstance(section, dict):
