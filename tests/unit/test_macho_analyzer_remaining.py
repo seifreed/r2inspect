@@ -185,6 +185,13 @@ def test_get_macho_headers_missing_bin():
     assert result == {}
 
 
+def test_get_macho_headers_non_dict_bin():
+    """_get_macho_headers ignores a malformed bin bucket."""
+    analyzer = _make_analyzer(cmdj_map={"ij": {"bin": "not-a-dict"}})
+    result = analyzer._get_macho_headers()
+    assert result == {}
+
+
 def test_get_macho_headers_exception():
     """_get_macho_headers handles exception from r2 gracefully."""
     fake = FakeR2(cmdj_map={"ij": RuntimeError("Test error")})

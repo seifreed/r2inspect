@@ -108,6 +108,14 @@ def test_get_elf_headers_missing_bin_info():
     assert result == {}
 
 
+def test_get_elf_headers_non_dict_bin_info():
+    """Test _get_elf_headers ignores a malformed bin bucket."""
+    adapter = _make_adapter(cmdj_map={"ij": {"bin": "not-a-dict"}})
+    analyzer = ELFAnalyzer(adapter)
+    result = analyzer._get_elf_headers()
+    assert result == {}
+
+
 def test_get_compilation_info_complete():
     """Test _get_compilation_info combines all sources."""
     comment_bytes = b"GCC: (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0\x00"

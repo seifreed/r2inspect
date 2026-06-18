@@ -24,7 +24,7 @@ def get_pe_headers_info(adapter: Any, filepath: str | None, logger: Any) -> dict
     info: dict[str, Any] = {}
     try:
         pe_info = adapter.get_file_info()
-        if pe_info and "bin" in pe_info:
+        if pe_info and isinstance(pe_info.get("bin"), dict):
             bin_info = pe_info["bin"]
 
             info["architecture"] = bin_info.get("arch", "Unknown")
@@ -95,7 +95,7 @@ def get_file_characteristics(
     characteristics: dict[str, Any] = {}
     try:
         pe_info = adapter.get_file_info()
-        if pe_info and "bin" in pe_info:
+        if pe_info and isinstance(pe_info.get("bin"), dict):
             bin_info = pe_info["bin"]
             characteristics["has_debug"] = "debug" in bin_info
 

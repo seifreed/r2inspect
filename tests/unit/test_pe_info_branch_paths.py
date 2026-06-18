@@ -157,6 +157,16 @@ def test_get_pe_headers_info_returns_data_when_bin_present():
     assert result.get("bits") == 32
 
 
+def test_get_pe_headers_info_ignores_non_dict_bin():
+    log = StubLogger()
+    class AdapterWithBadBin(AdapterWithFullBin):
+        def get_file_info(self):
+            return {"bin": "not-a-dict"}
+
+    result = pe_info.get_pe_headers_info(AdapterWithBadBin(), None, log)
+    assert result == {}
+
+
 def test_get_pe_headers_info_exception_returns_empty_dict():
     log = StubLogger()
     result = pe_info.get_pe_headers_info(AdapterRaisingFileInfo(), None, log)
@@ -264,6 +274,16 @@ def test_get_file_characteristics_returns_has_debug_when_bin_present():
     log = StubLogger()
     result = pe_info.get_file_characteristics(AdapterWithFullBin(), None, log)
     assert "has_debug" in result
+
+
+def test_get_file_characteristics_ignores_non_dict_bin():
+    log = StubLogger()
+    class AdapterWithBadBin(AdapterWithFullBin):
+        def get_file_info(self):
+            return {"bin": "not-a-dict"}
+
+    result = pe_info.get_file_characteristics(AdapterWithBadBin(), None, log)
+    assert result == {}
 
 
 def test_get_file_characteristics_returns_empty_on_exception():
