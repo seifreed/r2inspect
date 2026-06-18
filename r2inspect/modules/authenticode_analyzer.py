@@ -31,6 +31,15 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _list_bucket(result: dict[str, Any], key: str) -> list[Any]:
+    value = result.get(key)
+    if isinstance(value, list):
+        return value
+    value = []
+    result[key] = value
+    return value
+
+
 class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Analyzes and verifies Authenticode signatures in PE files."""
 
@@ -68,7 +77,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
             cert_info = self._read_win_certificate(security_dir, result)
             if cert_info:
-                result["certificates"].append(cert_info)
+                _list_bucket(result, "certificates").append(cert_info)
 
             # Check signature validity by computing authenticode hash
             auth_hash = self._compute_authenticode_hash()

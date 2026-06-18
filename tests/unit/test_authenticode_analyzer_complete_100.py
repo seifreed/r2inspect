@@ -118,6 +118,33 @@ def test_analyze_success():
     assert len(result["certificates"]) >= 1
 
 
+def test_analyze_initializes_missing_certificates_bucket():
+    class _BadInit(AuthenticodeAnalyzer):
+        def _init_result_structure(self, additional_fields: dict[str, Any] | None = None) -> dict[str, Any]:
+            result = super()._init_result_structure(additional_fields)
+            result["certificates"] = None
+            return result
+
+    pkcs7_data = _build_pkcs7_data_with_sha256_rsa_cn_ts()
+    cmd_map = {
+        "p8 8": _bytes_to_hex(WIN_CERT_HEADER),
+        "p8": _bytes_to_hex(pkcs7_data),
+    }
+    cmdj_map = {
+        "ihj": {"machine": "i386"},
+        "iHj": {"magic": "PE32"},
+        "iDj": [
+            {"name": "SECURITY", "vaddr": 0x1000, "paddr": 0x800, "size": 500},
+        ],
+        "ij": {"core": {"size": 10000}},
+    }
+    analyzer = _BadInit(adapter=_make_analyzer(cmdj_map=cmdj_map, cmd_map=cmd_map).adapter)
+    result = analyzer.analyze()
+    assert result["available"] is True
+    assert isinstance(result["certificates"], list)
+    assert len(result["certificates"]) >= 1
+
+
 # ---------------------------------------------------------------------------
 # analyze() - no required headers
 # ---------------------------------------------------------------------------
