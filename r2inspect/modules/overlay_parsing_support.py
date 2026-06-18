@@ -17,7 +17,10 @@ def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:
     file_info = cmdj("ij", {})
     if not isinstance(file_info, dict):
         return None
-    file_size = _to_int(file_info.get("core", {}).get("size", 0))
+    core = file_info.get("core", {})
+    if not isinstance(core, dict):
+        return None
+    file_size = _to_int(core.get("size", 0))
     if not file_size:
         return None
     return file_size

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from r2inspect.modules.telfhash_guard import (
     MAX_PROGRAM_HEADER_TABLE_BYTES,
+    _resolve_telfhash_timeout,
     _telfhash_safe_to_call,
 )
 
@@ -39,6 +40,11 @@ def _ph_entry(p_type: int, size: int) -> bytes:
     entry = bytearray(size)
     struct.pack_into("<I", entry, 0, p_type)
     return bytes(entry)
+
+
+def test_resolve_telfhash_timeout_invalid_override(monkeypatch):
+    monkeypatch.setenv("R2INSPECT_TELFHASH_TIMEOUT_SECONDS", "bad-value")
+    assert _resolve_telfhash_timeout() > 0
 
 
 def _write(tmp_path: Path, data: bytes) -> str:

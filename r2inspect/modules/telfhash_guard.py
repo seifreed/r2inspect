@@ -45,7 +45,7 @@ def _resolve_telfhash_timeout() -> float:
             if value > 0:
                 return value
         except ValueError:
-            pass
+            logger.debug("Invalid telfhash timeout override %r; using default", raw)
     return TELFHASH_TIMEOUT_SECONDS
 
 

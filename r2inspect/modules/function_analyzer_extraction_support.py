@@ -10,6 +10,8 @@ from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import extract_mnemonics_from_text
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
+logger = logging.getLogger(__name__)
+
 
 class FunctionExtractionHost(Protocol):
     """Overridable collaboration contract the extraction helpers depend on."""
@@ -51,8 +53,8 @@ def should_run_full_analysis(config: Any | None, file_size_mb: float | None) -> 
             and config.typed_config.analysis.deep_analysis
         ):
             return True
-    except (AttributeError, TypeError, ValueError, RuntimeError):
-        pass
+    except (AttributeError, TypeError, ValueError, RuntimeError) as exc:
+        logger.debug("Error checking deep analysis flag: %s", exc)
     if file_size_mb is not None:
         return file_size_mb <= VERY_LARGE_FILE_THRESHOLD_MB
     return True

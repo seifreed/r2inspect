@@ -623,6 +623,8 @@ def test_get_function_similarity_multiple_groups():
 
 
 def test_get_function_similarity_exception_returns_empty():
+    from contextlib import suppress
+
     class _BrokenSimilarity(FunctionAnalyzer):
         def get_function_similarity(self, machoc_hashes):
             # Call through to the real implementation but with bad input
@@ -633,10 +635,8 @@ def test_get_function_similarity_exception_returns_empty():
     analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
     # Confirm the method handles non-iterable gracefully via the except clause
     # by directly invoking the unbound method with bad input
-    try:
+    with suppress(Exception):
         FunctionAnalyzer.get_function_similarity(analyzer, None)  # type: ignore
-    except Exception:
-        pass  # if exception escapes, that is also acceptable for this path check
 
 
 # ---------------------------------------------------------------------------

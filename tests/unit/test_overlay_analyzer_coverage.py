@@ -114,6 +114,12 @@ def test_get_file_size_invalid_dict():
     assert size is None
 
 
+def test_get_file_size_non_dict_core():
+    analyzer = _make_analyzer(cmdj_map={"ij": {"core": []}})
+    size = analyzer._get_file_size()
+    assert size is None
+
+
 def test_get_file_size_missing_size():
     analyzer = _make_analyzer(cmdj_map={"ij": {"core": {}}})
     size = analyzer._get_file_size()
