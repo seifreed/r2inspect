@@ -447,12 +447,20 @@ def test_elf_has_relro_false():
 
 
 def test_elf_is_pie_dyn():
-    info = {"bin": {"class": "DYN"}}
+    # r2 puts the ELF object type in bin.type (not bin.class, which is ELF32/64).
+    info = {"bin": {"type": "DYN (Shared object file)"}}
     assert elf_is_pie(info) is True
 
 
+def test_elf_is_pie_via_pic_flag():
+    # A real PIE ELF reports bin.pic=True with bin.type often absent; pie must
+    # still be detected (bin.class only ever holds ELF32/ELF64, never DYN).
+    assert elf_is_pie({"bin": {"pic": True}}) is True
+    assert elf_is_pie({"bin": {"pic": True, "class": "ELF64"}}) is True
+
+
 def test_elf_is_pie_exec():
-    info = {"bin": {"class": "EXEC"}}
+    info = {"bin": {"type": "EXEC (Executable file)", "class": "ELF64"}}
     assert elf_is_pie(info) is False
 
 

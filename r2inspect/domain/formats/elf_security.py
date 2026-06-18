@@ -31,7 +31,13 @@ def has_relro(dynamic_info: str | None) -> bool:
 def is_pie(elf_info: dict[str, Any] | None) -> bool:
     if not elf_info or "bin" not in elf_info:
         return False
-    elf_type = elf_info["bin"].get("class", "")
+    bin_info = elf_info["bin"]
+    # r2 exposes position-independence as bin.pic. The ELF object type (DYN vs
+    # EXEC) lives in bin.type; bin.class holds the ELF32/ELF64 magic, so the old
+    # `"DYN" in class` check was always False and ELF PIE was never detected.
+    if bin_info.get("pic"):
+        return True
+    elf_type = str(bin_info.get("type", ""))
     return "DYN" in elf_type.upper()
 
 

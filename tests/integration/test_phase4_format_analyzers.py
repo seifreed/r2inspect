@@ -63,6 +63,8 @@ def test_elf_analyzer_basic(tmp_path: Path) -> None:
     assert result["sections"]
     assert result["program_headers"]
     assert isinstance(result["security_features"], dict)
+    # hello_elf is a PIE executable; r2 exposes it via bin.pic, so pie must be True.
+    assert result["security_features"]["pie"] is True
 
 
 def test_macho_analyzer_basic(tmp_path: Path) -> None:
