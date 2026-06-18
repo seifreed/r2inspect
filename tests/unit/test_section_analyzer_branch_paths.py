@@ -400,6 +400,27 @@ def test_analyze_code_section_tracks_function_size_stats():
     assert result["max_function_size"] == 8
 
 
+def test_analyze_code_section_skips_malformed_function_sizes():
+    functions = [
+        {"size": "bad", "offset": 0x1000},
+        {"size": 10, "offset": 0x1010},
+        {"size": 20, "offset": 0x1020},
+    ]
+    analyzer = _build_analyzer(
+        sections=[],
+        arch="x86",
+        functions=functions,
+        cmd_map_extra={f"p8 512 @ {0x1000}": _hex_bytes(0xCC, 512)},
+    )
+
+    result = analyzer._analyze_code_section({"name": ".text", "vaddr": 0x1000, "size": 0x200})
+
+    assert result["function_count"] == 3
+    assert result["avg_function_size"] == 15.0
+    assert result["min_function_size"] == 10
+    assert result["max_function_size"] == 20
+
+
 def test_analyze_code_section_handles_internal_errors():
     """When functions cache lookup fails, code section analysis returns empty dict."""
     # Provide a section with size but no p8 response and no functions

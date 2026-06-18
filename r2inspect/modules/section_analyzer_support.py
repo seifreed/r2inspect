@@ -92,7 +92,11 @@ def analyze_code_section(
         code_info["function_count"] = len(functions)
         if functions:
             sizes = [
-                f.get("size", 0) for f in functions if isinstance(f, dict) and f.get("size", 0) > 0
+                size
+                for f in functions
+                if isinstance(f, dict)
+                and isinstance(size := f.get("size", 0), int)
+                and size > 0
             ]
             if sizes:
                 code_info["avg_function_size"] = sum(sizes) / len(sizes)
