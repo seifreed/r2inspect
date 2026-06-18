@@ -67,8 +67,9 @@ def _pattern_entry(pattern: str, description: str, severity: str, count: int) ->
 
 def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     patterns: list[dict[str, Any]] = []
-    import_names = [_text_value(imp.get("name"), "") for imp in imports]
-    categories = [_text_value(imp.get("category"), "") for imp in imports]
+    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    import_names = [_text_value(imp.get("name"), "") for imp in valid_imports]
+    categories = [_text_value(imp.get("category"), "") for imp in valid_imports]
     _append_injection_patterns(patterns, import_names)
     _append_behavior_patterns(patterns, import_names, categories)
     return patterns

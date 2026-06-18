@@ -5,7 +5,7 @@ import logging
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.formats.import_analysis import assess_api_risk, categorize_apis
-from r2inspect.domain.services.import_analysis import build_import_statistics
+from r2inspect.domain.services.import_analysis import build_import_statistics, find_suspicious_patterns
 from r2inspect.modules.import_analyzer import ImportAnalyzer
 from r2inspect.modules.import_categories import get_api_categories
 from r2inspect.modules.import_analyzer_result_support import (
@@ -454,6 +454,17 @@ def test_build_import_statistics_coerces_malformed_fields():
     assert stats["risk_distribution"] == {"Unknown": 2}
     assert stats["library_distribution"] == {"unknown": 2}
     assert stats["suspicious_patterns"] == []
+
+
+def test_find_suspicious_patterns_skips_malformed_entries():
+    patterns = find_suspicious_patterns(
+        [
+            "bad",
+            {"name": "CreateRemoteThread", "category": "DLL Injection"},
+            {"name": "WriteProcessMemory", "category": "Memory Management"},
+        ]
+    )
+    assert any(pattern["pattern"] == "DLL Injection" for pattern in patterns)
 
 
 def test_assess_api_risk_uses_runtime_category_names():
