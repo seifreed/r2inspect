@@ -304,6 +304,26 @@ def test_display_memory_stats_runs_without_error(capsys):
     assert isinstance(captured.out, str)
 
 
+def test_display_memory_stats_accepts_string_values(capsys):
+    """Test memory statistics display with string values."""
+    import r2inspect.infrastructure.memory as memory_mod
+
+    original = memory_mod.get_memory_stats
+    memory_mod.get_memory_stats = lambda: {
+        "status": "ok",
+        "peak_memory_mb": "12.5",
+        "process_memory_mb": "9.25",
+        "gc_count": 3,
+    }
+    try:
+        display_memory_stats()
+        captured = capsys.readouterr()
+        assert "12.5MB" in captured.out
+        assert "9.2MB" in captured.out
+    finally:
+        memory_mod.get_memory_stats = original
+
+
 def test_display_failed_files_verbose(capsys):
     """Test failed files display in verbose mode."""
     failed_files = [

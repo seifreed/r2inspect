@@ -29,9 +29,11 @@ def display_memory_stats(console: Any) -> None:
     memory_stats = get_memory_stats()
     if memory_stats.get("status") != "error":
         console.print("[dim]Memory stats:[/dim]")
-        console.print(f"[dim]  Peak usage: {memory_stats.get('peak_memory_mb', 0):.1f}MB[/dim]")
+        peak_memory_mb = _coerce_float(memory_stats.get("peak_memory_mb", 0))
+        process_memory_mb = _coerce_float(memory_stats.get("process_memory_mb", 0))
+        console.print(f"[dim]  Peak usage: {peak_memory_mb:.1f}MB[/dim]")
         console.print(
-            f"[dim]  Current usage: {memory_stats.get('process_memory_mb', 0):.1f}MB[/dim]"
+            f"[dim]  Current usage: {process_memory_mb:.1f}MB[/dim]"
         )
         console.print(f"[dim]  GC cycles: {memory_stats.get('gc_count', 0)}[/dim]")
 
