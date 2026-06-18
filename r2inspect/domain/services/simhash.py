@@ -152,6 +152,8 @@ def previous_mnemonic(ops: list[Any], index: int) -> str | None:
     if index <= 0 or index >= len(ops):
         return None
     prev_op = ops[index - 1]
-    if isinstance(prev_op, dict) and "mnemonic" in prev_op:
-        return str(prev_op["mnemonic"]).strip().lower()
+    if isinstance(prev_op, dict):
+        mnemonic = prev_op.get("mnemonic")
+        if isinstance(mnemonic, str) and mnemonic.strip():
+            return mnemonic.strip().lower()
     return None

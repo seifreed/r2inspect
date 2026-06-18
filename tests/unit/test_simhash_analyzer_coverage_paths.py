@@ -454,6 +454,10 @@ def test_previous_mnemonic_not_dict() -> None:
     assert previous_mnemonic(["not a dict", {"mnemonic": "add"}], 1) is None
 
 
+def test_previous_mnemonic_non_string_is_skipped() -> None:
+    assert previous_mnemonic([{"mnemonic": 123}, {"mnemonic": "add"}], 1) is None
+
+
 # ---------------------------------------------------------------------------
 # _extract_data_section_strings / _append_data_section_string
 # ---------------------------------------------------------------------------
