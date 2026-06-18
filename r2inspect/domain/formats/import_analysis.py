@@ -178,6 +178,10 @@ def find_max_risk_score(
 
 
 def risk_level_from_score(score: int) -> str:
+    try:
+        score = int(score)
+    except (TypeError, ValueError):
+        score = 0
     if score >= 80:
         return "Critical"
     if score >= 65:

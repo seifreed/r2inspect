@@ -180,3 +180,8 @@ def test_risk_level_low():
 def test_risk_level_minimal():
     assert risk_level_from_score(0) == "Minimal"
     assert risk_level_from_score(24) == "Minimal"
+
+
+def test_risk_level_non_numeric_inputs_fall_back_to_minimal():
+    assert risk_level_from_score(None) == "Minimal"
+    assert risk_level_from_score("65") == "High"
