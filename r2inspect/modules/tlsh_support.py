@@ -26,6 +26,13 @@ class TlshHost(Protocol):
     def compare_tlsh(self, hash1: str, hash2: str) -> int | None: ...
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def build_detailed_analysis(host: TlshHost, available: bool) -> dict[str, Any]:
     if not available:
         return {"available": False, "error": "TLSH library not installed"}
@@ -64,9 +71,13 @@ def calculate_section_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str, 
         if not sections:
             return section_hashes
         for section in sections:
+            if not isinstance(section, dict):
+                logger.debug("Skipping malformed section data: %s - %s", type(section), section)
+                continue
             section_name = section.get("name", "unknown")
-            vaddr = section.get("vaddr", 0)
-            size = section.get("size", 0)
+            section_name = section_name if isinstance(section_name, str) and section_name else "unknown"
+            vaddr = _to_int(section.get("vaddr", 0))
+            size = _to_int(section.get("size", 0))
             if size == 0 or size > 50 * 1024 * 1024:
                 section_hashes[section_name] = None
                 continue
@@ -92,15 +103,14 @@ def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str,
             if not isinstance(func, dict):
                 logger.debug("Skipping malformed function data: %s - %s", type(func), func)
                 continue
-            func_addr = func.get("addr")
+            func_addr = _to_int(func.get("addr", func.get("offset", 0)))
             func_name_value = func.get("name")
             func_name = (
                 func_name_value
                 if isinstance(func_name_value, str) and func_name_value
                 else f"func_{func_addr or 'unknown'}"
             )
-            func_size_value = func.get("size", 0)
-            func_size = func_size_value if isinstance(func_size_value, int) else 0
+            func_size = _to_int(func.get("size", 0))
             if not func_addr or func_size == 0 or func_size > 100000:
                 function_hashes[func_name] = None
                 continue

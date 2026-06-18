@@ -64,6 +64,13 @@ class ErrorFunctionsAdapter(FakeAdapter):
         raise RuntimeError("get_functions failed intentionally")
 
 
+class SentinelTLSHAnalyzer(TLSHAnalyzer):
+    """TLSH analyzer that returns a sentinel hash when hashing is reached."""
+
+    def _calculate_tlsh_from_hex(self, hex_data: str | None) -> str | None:
+        return "hash" if hex_data else None
+
+
 # ---------------------------------------------------------------------------
 # _check_library_availability - line 42
 # ---------------------------------------------------------------------------
@@ -284,6 +291,22 @@ def test_calculate_section_tlsh_read_error_sets_none(tmp_path):
     assert result[".text"] is None
 
 
+def test_calculate_section_tlsh_coerces_numeric_string_size(tmp_path):
+    """Numeric-string section sizes should still reach TLSH hashing."""
+    if not TLSH_AVAILABLE:
+        pytest.skip("TLSH not available")
+    f = tmp_path / "binary.bin"
+    f.write_bytes(bytes(range(256)) * 10)
+    sections = [{"name": ".text", "vaddr": 0x1000, "size": "100"}]
+    adapter = FakeAdapter(
+        sections=sections,
+        bytes_data={0x1000: bytes(range(100))},
+    )
+    analyzer = SentinelTLSHAnalyzer(adapter=adapter, filename=str(f))
+    result = analyzer._calculate_section_tlsh()
+    assert result[".text"] == "hash"
+
+
 def test_calculate_section_tlsh_outer_exception_returns_empty(tmp_path):
     """Lines 204-205: get_sections() raises -> outer except catches, empty dict returned."""
     if not TLSH_AVAILABLE:
@@ -334,6 +357,22 @@ def test_calculate_function_tlsh_zero_size_sets_none(tmp_path):
     result = analyzer._calculate_function_tlsh()
     assert "zero_func" in result
     assert result["zero_func"] is None
+
+
+def test_calculate_function_tlsh_coerces_numeric_string_size(tmp_path):
+    """Numeric-string function sizes should still reach TLSH hashing."""
+    if not TLSH_AVAILABLE:
+        pytest.skip("TLSH not available")
+    f = tmp_path / "binary.bin"
+    f.write_bytes(bytes(range(256)) * 10)
+    functions = [{"name": "main", "addr": 0x1000, "size": "100"}]
+    adapter = FakeAdapter(
+        functions=functions,
+        bytes_data={0x1000: bytes(range(100))},
+    )
+    analyzer = SentinelTLSHAnalyzer(adapter=adapter, filename=str(f))
+    result = analyzer._calculate_function_tlsh()
+    assert result["main"] == "hash"
 
 
 def test_calculate_function_tlsh_no_addr_sets_none(tmp_path):
