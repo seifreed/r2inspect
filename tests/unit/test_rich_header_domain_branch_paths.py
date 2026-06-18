@@ -162,12 +162,12 @@ def test_decode_rich_header_break_when_entry_does_not_fit():
 
 
 # ---------------------------------------------------------------------------
-# decode_rich_header - lines 304-305: exception handler
+# decode_rich_header - invalid bytes-like input
 # ---------------------------------------------------------------------------
 
 
 class _ExplodingBytesLike:
-    """Bytes-like object that raises ValueError on slice access to trigger exception handler."""
+    """Bytes-like object that raises ValueError on slice access."""
 
     def __bool__(self) -> bool:
         return True
@@ -179,10 +179,9 @@ class _ExplodingBytesLike:
         raise ValueError("simulated error to cover exception handler")
 
 
-def test_decode_rich_header_exception_handler_returns_empty_list():
-    """Passing a faulty bytes-like object triggers the except block at lines 304-305."""
-    result = decode_rich_header(_ExplodingBytesLike(), 0x12345678)  # type: ignore[arg-type]
-    assert result == []
+def test_decode_rich_header_invalid_bytes_like_propagates_error():
+    with pytest.raises(ValueError, match="simulated error"):
+        decode_rich_header(_ExplodingBytesLike(), 0x12345678)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

@@ -30,27 +30,24 @@ def decode_rich_header(encoded_data: bytes, xor_key: int) -> list[dict[str, Any]
     entries: list[dict[str, Any]] = []
     if not encoded_data:
         return entries
-    try:
-        for i in range(4, len(encoded_data) - 4, 8):
-            if i + 8 > len(encoded_data):
-                break
-            entry_bytes = encoded_data[i : i + 8]
-            prodid_encoded, count_encoded = struct.unpack("<II", entry_bytes)
-            prodid = prodid_encoded ^ xor_key
-            count = count_encoded ^ xor_key
-            if count > 0:
-                entries.append(
-                    {
-                        "prodid": prodid,
-                        "product_id": prodid & 0xFFFF,
-                        "build_number": (prodid >> 16) & 0xFFFF,
-                        "count": count,
-                        "prodid_encoded": prodid_encoded,
-                        "count_encoded": count_encoded,
-                    }
-                )
-    except Exception:
-        return []
+    for i in range(4, len(encoded_data) - 4, 8):
+        if i + 8 > len(encoded_data):
+            break
+        entry_bytes = encoded_data[i : i + 8]
+        prodid_encoded, count_encoded = struct.unpack("<II", entry_bytes)
+        prodid = prodid_encoded ^ xor_key
+        count = count_encoded ^ xor_key
+        if count > 0:
+            entries.append(
+                {
+                    "prodid": prodid,
+                    "product_id": prodid & 0xFFFF,
+                    "build_number": (prodid >> 16) & 0xFFFF,
+                    "count": count,
+                    "prodid_encoded": prodid_encoded,
+                    "count_encoded": count_encoded,
+                }
+            )
     return entries
 
 
