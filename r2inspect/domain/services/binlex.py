@@ -45,7 +45,7 @@ def extract_tokens_from_ops(ops: list[Any]) -> list[str]:
 
 
 def extract_tokens_from_text(instructions_text: str) -> list[str]:
-    if not instructions_text or not instructions_text.strip():
+    if not isinstance(instructions_text, str) or not instructions_text.strip():
         return []
     tokens: list[str] = []
     for line in instructions_text.strip().split("\n"):

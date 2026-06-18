@@ -62,6 +62,10 @@ def test_extract_mnemonic_from_op_empty() -> None:
     assert extract_mnemonic_from_op({"mnemonic": ""}) is None
 
 
+def test_extract_tokens_from_text_rejects_non_string_input() -> None:
+    assert extract_tokens_from_text(b"mov\nret") == []  # type: ignore[arg-type]
+
+
 def test_extract_tokens_from_ops_basic() -> None:
     ops = [{"mnemonic": "mov"}, {"mnemonic": "push"}, {"mnemonic": "call"}]
     tokens = extract_tokens_from_ops(ops)
