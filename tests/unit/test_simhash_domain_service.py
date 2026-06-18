@@ -16,6 +16,16 @@ def test_build_feature_stats() -> None:
     assert "most_common_features" in stats
 
 
+def test_build_feature_stats_skips_malformed_entries() -> None:
+    stats = build_feature_stats(["STR:a", 1, None], ["OP:mov", object(), "OP:mov"])  # type: ignore[list-item]
+
+    assert stats["total_strings"] == 1
+    assert stats["total_opcodes"] == 2
+    assert stats["total_features"] == 3
+    assert stats["unique_strings"] == 1
+    assert stats["unique_opcodes"] == 1
+
+
 def test_build_similarity_groups() -> None:
     function_features = {
         "a": {"simhash": 10},
