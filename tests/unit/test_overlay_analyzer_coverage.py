@@ -266,6 +266,16 @@ def test_get_max_section_end():
     assert max_end == 1700
 
 
+def test_get_max_section_end_skips_malformed_numeric_fields():
+    sections = [
+        {"paddr": "bad", "size": 500},
+        {"paddr": 500, "size": "bad"},
+        {"paddr": "1500", "size": "200"},
+    ]
+    max_end = OverlayAnalyzer._get_max_section_end(sections)
+    assert max_end == 1700
+
+
 def test_get_max_section_end_empty():
     max_end = OverlayAnalyzer._get_max_section_end([])
     assert max_end == 0
@@ -284,6 +294,19 @@ def test_extend_end_with_certificate_smaller():
     analyzer = _make_analyzer(cmdj_map={"iDj": [{"name": "SECURITY", "paddr": 2000, "size": 500}]})
     extended_end = analyzer._extend_end_with_certificate(5000)
     assert extended_end == 5000
+
+
+def test_extend_end_with_certificate_skips_malformed_numeric_fields():
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "iDj": [
+                {"name": "SECURITY", "paddr": "bad", "size": 1000},
+                {"name": "SECURITY", "paddr": 5000, "size": "1000"},
+            ]
+        }
+    )
+    extended_end = analyzer._extend_end_with_certificate(3000)
+    assert extended_end == 6000
 
 
 def test_extend_end_with_certificate_no_security():

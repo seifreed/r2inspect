@@ -6,6 +6,13 @@ from collections.abc import Callable
 from typing import Any
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:
     file_info = cmdj("ij", {})
     if not isinstance(file_info, dict):
@@ -60,7 +67,11 @@ def get_sections(cmdj: Callable[[str, Any], Any]) -> list[dict[str, Any]]:
 def get_max_section_end(sections: list[dict[str, Any]]) -> int:
     max_end = 0
     for section in sections:
-        section_end = section.get("paddr", 0) + section.get("size", 0)
+        paddr = _to_int(section.get("paddr", 0))
+        size = _to_int(section.get("size", 0))
+        if paddr is None or size is None:
+            continue
+        section_end = paddr + size
         if section_end > max_end:
             max_end = section_end
     return max_end
@@ -73,8 +84,10 @@ def extend_end_with_certificate(cmdj: Callable[[str, Any], Any], max_end: int) -
     for dd in data_dirs:
         if not isinstance(dd, dict) or dd.get("name") != "SECURITY":
             continue
-        cert_offset = dd.get("paddr", 0)
-        cert_size = dd.get("size", 0)
+        cert_offset = _to_int(dd.get("paddr", 0))
+        cert_size = _to_int(dd.get("size", 0))
+        if cert_offset is None or cert_size is None:
+            continue
         if cert_offset > 0 and cert_size > 0:
             max_end = max(max_end, cert_offset + cert_size)
     return max_end
