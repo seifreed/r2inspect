@@ -51,6 +51,8 @@ def build_icon_entries(resources: list[dict[str, Any]]) -> list[dict[str, Any]]:
     icons: list[dict[str, Any]] = []
 
     for resource in resources:
+        if not isinstance(resource, dict):
+            continue
         if resource.get("type_name") not in ["RT_ICON", "RT_GROUP_ICON"]:
             continue
 
@@ -58,7 +60,7 @@ def build_icon_entries(resources: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "type": _resource_type_name(resource),
             "size": _resource_size(resource),
             "offset": _resource_offset(resource),
-            "entropy": resource.get("entropy", 0.0),
+            "entropy": _resource_entropy(resource),
         }
         if icon_info["entropy"] > 7.5:
             icon_info["suspicious"] = "High entropy (possibly encrypted)"
@@ -110,6 +112,11 @@ def _positive_entropy(resource: dict[str, Any]) -> float | None:
     return float(value) if isinstance(value, int | float) and value > 0 else None
 
 
+def _resource_entropy(resource: dict[str, Any]) -> float:
+    value = resource.get("entropy", 0.0)
+    return float(value) if isinstance(value, int | float) else 0.0
+
+
 def _size_statistics(sizes: list[int]) -> dict[str, Any]:
     """Aggregate size statistics, collapsing to zeros for an empty inventory."""
     if not sizes:
@@ -154,7 +161,8 @@ def build_resource_statistics(resources: list[dict[str, Any]]) -> dict[str, Any]
 
 def check_resource_entropy(resource: dict[str, Any]) -> list[dict[str, Any]]:
     """Flag high-entropy non-icon resources."""
-    if resource.get("entropy", 0) <= 7.5:
+    entropy = _resource_entropy(resource)
+    if entropy <= 7.5:
         return []
     type_name = _resource_type_name(resource)
     if type_name in ["RT_ICON", "RT_BITMAP"]:
@@ -163,7 +171,7 @@ def check_resource_entropy(resource: dict[str, Any]) -> list[dict[str, Any]]:
         {
             "resource": _resource_name(resource),
             "reason": "High entropy (possibly encrypted/packed)",
-            "entropy": resource["entropy"],
+            "entropy": entropy,
             "size": _resource_size(resource),
         }
     ]
@@ -236,6 +244,8 @@ def build_suspicious_resources(
     suspicious: list[dict[str, Any]] = []
 
     for resource in resources:
+        if not isinstance(resource, dict):
+            continue
         suspicious.extend(check_resource_entropy(resource))
         suspicious.extend(check_resource_size(resource))
         suspicious.extend(check_resource_rcdata(resource))

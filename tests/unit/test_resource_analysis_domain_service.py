@@ -150,6 +150,12 @@ def test_build_icon_entries_tolerates_partial_icon_entries() -> None:
     assert icons == [{"type": "RT_ICON", "size": 0, "offset": 0, "entropy": 0.0}]
 
 
+def test_build_icon_entries_skips_malformed_entries() -> None:
+    icons = build_icon_entries(["bad", {"type_name": "RT_ICON", "entropy": "high"}])
+
+    assert icons == [{"type": "RT_ICON", "size": 0, "offset": 0, "entropy": 0.0}]
+
+
 def test_build_suspicious_resources_tolerates_partial_entries() -> None:
     result = build_suspicious_resources([{"entropy": 8.0}], lambda _: [])
 
@@ -161,3 +167,9 @@ def test_build_suspicious_resources_tolerates_partial_entries() -> None:
             "size": 0,
         }
     ]
+
+
+def test_build_suspicious_resources_skips_malformed_entries() -> None:
+    resources = ["bad", {"type_name": "RT_RCDATA", "size": 1, "entropy": "high"}]
+
+    assert build_suspicious_resources(resources, lambda _: []) == []
