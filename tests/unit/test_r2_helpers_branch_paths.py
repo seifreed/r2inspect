@@ -689,6 +689,11 @@ def test_select_json_policy_dict_default():
     assert _select_json_policy("ij", None) is R2_JSON_DICT_POLICY
 
 
+def test_select_json_policy_rejects_non_string_command():
+    with pytest.raises(TypeError):
+        _select_json_policy(None, None)  # type: ignore[arg-type]
+
+
 # ---------------------------------------------------------------------------
 # _parse_section_header  (lines 384-390)
 # ---------------------------------------------------------------------------

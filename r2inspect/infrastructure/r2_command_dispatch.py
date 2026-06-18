@@ -254,6 +254,8 @@ def cmd_list(adapter: Any, r2_fallback: Any, command: str) -> list[Any]:
 
 
 def _select_json_policy(command: str, default: Any) -> Any:
+    if not isinstance(command, str):
+        raise TypeError("command must be a string")
     command_lower = command.lower().strip()
     if command_lower.startswith(("aaa", "aac", "af", "a")):
         return R2_ANALYSIS_POLICY
