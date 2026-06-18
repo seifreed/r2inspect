@@ -434,6 +434,23 @@ def test_add_rich_header_entries_skips_non_dict_compilers():
     assert "MSVC" in text
 
 
+def test_add_rich_header_entries_accepts_string_hex_values():
+    t = _make_table()
+    _add_rich_header_entries(
+        t,
+        {
+            "xor_key": "0xABCD1234",
+            "checksum": "0x12345678",
+            "compilers": [],
+        },
+    )
+    console = Console(file=io.StringIO(), record=True, width=200)
+    console.print(t)
+    text = console.export_text()
+    assert "0xABCD1234" in text
+    assert "0x12345678" in text
+
+
 # ---------------------------------------------------------------------------
 # analyzer_registry - _get_base_analyzer_class ImportError (lines 97-99)
 # ---------------------------------------------------------------------------

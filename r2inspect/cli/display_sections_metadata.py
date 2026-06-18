@@ -12,6 +12,13 @@ from .display_sections_common import Results, _get_console
 from .presenter import get_section as _get_section
 
 
+def _coerce_int(value: Any) -> int:
+    try:
+        return int(value, 0) if isinstance(value, str) else int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _display_rich_header(results: Results) -> None:
     rich_header_info, present = _get_section(results, "rich_header", {})
     if not present:
@@ -38,11 +45,11 @@ def _display_rich_header(results: Results) -> None:
 def _add_rich_header_entries(table: Table, rich_header_info: dict[str, Any]) -> None:
     xor_key = rich_header_info.get("xor_key")
     if xor_key is not None:
-        table.add_row("XOR Key", f"0x{xor_key:08X}")
+        table.add_row("XOR Key", f"0x{_coerce_int(xor_key):08X}")
 
     checksum = rich_header_info.get("checksum")
     if checksum is not None:
-        table.add_row("Checksum", f"0x{checksum:08X}")
+        table.add_row("Checksum", f"0x{_coerce_int(checksum):08X}")
 
     richpe_hash = rich_header_info.get("richpe_hash")
     if richpe_hash:
