@@ -253,6 +253,19 @@ def test_packer_scoring_skips_malformed_strings_and_sections():
     assert sections["suspicious_sections"][0]["size"] == 0
 
 
+def test_packer_scoring_replaces_missing_section_names():
+    from r2inspect.domain.services.packer_scoring import analyze_entropy, analyze_sections
+
+    sections = [{"name": None, "vaddr": 0, "size": 4, "flags": None}]
+    entropy = analyze_entropy(sections, lambda _addr, _size: b"\x00" * 4, 7.0)
+    summary = analyze_sections(sections)
+
+    assert "unknown" in entropy
+    assert "None" not in entropy
+    assert summary["suspicious_sections"][0]["name"] == ""
+    assert all(entry.get("name") != "None" for entry in summary["suspicious_sections"])
+
+
 def test_search_signature_hex_skips_non_string_search_output():
     from r2inspect.domain.services.packer_scoring import _search_signature_hex
 

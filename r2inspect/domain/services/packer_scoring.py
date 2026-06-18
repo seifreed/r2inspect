@@ -67,7 +67,7 @@ def analyze_entropy(
     total_sections = len(valid_sections)
 
     for section in valid_sections:
-        section_name = str(section.get("name", "unknown"))
+        section_name = section.get("name") or "unknown"
         entropy = calculate_section_entropy(read_bytes_fn, section)
 
         entropy_info[section_name] = {
@@ -126,8 +126,8 @@ def analyze_sections(sections: list[dict[str, Any]] | None) -> dict[str, Any]:
 
 
 def update_section_info(section_info: dict[str, Any], section: dict[str, Any]) -> None:
-    name = str(section.get("name", ""))
-    flags = str(section.get("flags", ""))
+    name = section.get("name") or ""
+    flags = section.get("flags") or ""
     size = _coerce_int(section.get("size"))
 
     if "x" in flags:
