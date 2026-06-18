@@ -25,6 +25,13 @@ def test_magic_adapter_available_false_when_magic_not_importable() -> None:
     assert adapter.available is False
 
 
+def test_magic_adapter_import_error_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level("ERROR"):
+        adapter = MagicAdapter(importer=_raise_import_error)
+    assert adapter.available is False
+    assert any("Error importing python-magic" in record.message for record in caplog.records)
+
+
 def test_magic_adapter_create_detectors_returns_none_when_unavailable() -> None:
     """MagicAdapter.create_detectors returns None when magic module is not available."""
     adapter = MagicAdapter(importer=_raise_import_error)
@@ -52,6 +59,18 @@ def test_magic_adapter_create_detectors_exception_returns_none() -> None:
 
     adapter = MagicAdapter(importer=lambda: _BrokenMagicModule())
     assert adapter.create_detectors() is None
+
+
+def test_magic_adapter_create_detectors_logs_error(caplog: pytest.LogCaptureFixture) -> None:
+    class _BrokenMagicModule:
+        class Magic:
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                raise RuntimeError("boom")
+
+    adapter = MagicAdapter(importer=lambda: _BrokenMagicModule())
+    with caplog.at_level("ERROR"):
+        assert adapter.create_detectors() is None
+    assert any("Error creating python-magic detectors" in record.message for record in caplog.records)
 
 
 # ---------------------------------------------------------------------------

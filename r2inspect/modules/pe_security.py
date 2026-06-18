@@ -17,6 +17,15 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _parse_dll_characteristics(value: Any) -> int | None:
+    try:
+        if isinstance(value, str):
+            return int(value, 0)
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
     features = {
         "aslr": False,
@@ -50,7 +59,9 @@ def _apply_security_flags_from_header(
     opt_header = pe_header.get("optional_header", {})
     if not isinstance(opt_header, dict):
         return
-    dll_characteristics = _to_int(opt_header.get("DllCharacteristics", 0))
+    dll_characteristics = _parse_dll_characteristics(opt_header.get("DllCharacteristics", 0))
+    if dll_characteristics is None:
+        return
 
     features["aslr"] = bool(dll_characteristics & 0x0040)
     features["dep"] = bool(dll_characteristics & 0x0100)

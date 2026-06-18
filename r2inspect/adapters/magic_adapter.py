@@ -6,6 +6,10 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
+from ..infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def _default_magic_importer() -> Any:
     import magic as _magic
@@ -30,7 +34,8 @@ class MagicAdapter:
         resolve = importer if importer is not None else _default_magic_importer
         try:
             self._magic = resolve()
-        except Exception:
+        except Exception as exc:
+            logger.exception("Error importing python-magic: %s", exc)
             self._magic = None
 
     @property
@@ -42,5 +47,6 @@ class MagicAdapter:
             return None
         try:
             return self._magic.Magic(mime=True), self._magic.Magic()
-        except Exception:
+        except Exception as exc:
+            logger.exception("Error creating python-magic detectors: %s", exc)
             return None
