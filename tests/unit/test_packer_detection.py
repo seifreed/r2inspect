@@ -273,6 +273,22 @@ def test_packer_entropy_threshold():
     assert isinstance(detector.entropy_threshold, float)
 
 
+def test_packer_entropy_logs_read_errors(caplog):
+    from r2inspect.domain.services.packer_scoring import calculate_section_entropy
+
+    def boom(_addr: int, _size: int) -> bytes:
+        raise RuntimeError("read failed")
+
+    with caplog.at_level("ERROR"):
+        entropy = calculate_section_entropy(
+            boom,
+            {"name": ".text", "vaddr": 0x1000, "size": 16},
+        )
+
+    assert entropy == 0.0
+    assert "Error calculating section entropy: read failed" in caplog.text
+
+
 def test_packer_result_structure():
     detector = _make_detector()
     result = detector.detect()

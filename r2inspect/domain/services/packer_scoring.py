@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 from typing import Any
 
 from .binary_helpers import shannon_entropy
+
+logger = logging.getLogger(__name__)
 
 
 def _coerce_int(value: Any) -> int:
@@ -99,7 +102,8 @@ def calculate_section_entropy(
             return 0.0
 
         return shannon_entropy(data)
-    except Exception:
+    except Exception as exc:
+        logger.error("Error calculating section entropy: %s", exc)
         return 0.0
 
 
