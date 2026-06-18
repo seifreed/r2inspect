@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
+from r2inspect.modules.ccbhash_support import build_function_ccbhashes
 
 
 class MockAdapter:
@@ -269,6 +270,20 @@ def test_ccbhash_unique_hashes_count():
 
     unique_hashes = {f["ccbhash"] for f in function_hashes.values()}
     assert len(unique_hashes) == 3
+
+
+def test_ccbhash_build_function_hashes_skips_malformed_functions():
+    class Host:
+        def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str:
+            return f"hash-{func_name}-{func_offset}"
+
+    hashes, analyzed = build_function_ccbhashes(
+        Host(),
+        ["bad", {"addr": 0x1000, "name": ["bad"], "size": 4}],
+    )
+
+    assert analyzed == 1
+    assert set(hashes) == {"func_4096"}
 
 
 def test_ccbhash_similar_functions_sorting():

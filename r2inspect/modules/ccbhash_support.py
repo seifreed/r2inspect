@@ -37,10 +37,17 @@ def build_function_ccbhashes(
     function_hashes: dict[str, dict[str, Any]] = {}
     analyzed_count = 0
     for func in functions:
-        func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
+        if not isinstance(func, dict):
+            continue
         func_offset = func.get("addr")
         if func_offset is None:
             continue
+        func_name_value = func.get("name")
+        func_name = (
+            func_name_value
+            if isinstance(func_name_value, str) and func_name_value
+            else f"func_{func_offset}"
+        )
         ccbhash = analyzer._calculate_function_ccbhash(func_offset, func_name)
         if ccbhash:
             function_hashes[func_name] = {
