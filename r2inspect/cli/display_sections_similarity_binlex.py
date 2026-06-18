@@ -50,6 +50,15 @@ def _add_binlex_entries(table: Table, binlex_info: dict[str, Any]) -> None:
     _add_binlex_top_ngrams(table, ngram_sizes, binlex_info.get("top_ngrams", {}))
 
 
+def _lookup_ngram_value(mapping: dict[Any, Any], n: Any) -> Any | None:
+    if n in mapping:
+        return mapping[n]
+    key = str(n)
+    if key in mapping:
+        return mapping[key]
+    return None
+
+
 def _add_binlex_basic_stats(table: Table, binlex_info: dict[str, Any]) -> list[Any]:
     total_functions = binlex_info.get("total_functions", 0)
     table.add_row(TOTAL_FUNCTIONS_LABEL, str(total_functions))
@@ -66,16 +75,17 @@ def _add_binlex_unique_signatures(
     table: Table, ngram_sizes: list[Any], unique_signatures: dict[str, Any]
 ) -> None:
     for n in ngram_sizes:
-        if n in unique_signatures:
-            table.add_row(f"Unique {n}-gram Signatures", str(unique_signatures[n]))
+        value = _lookup_ngram_value(unique_signatures, n)
+        if value is not None:
+            table.add_row(f"Unique {n}-gram Signatures", str(value))
 
 
 def _add_binlex_similarity_groups(
     table: Table, ngram_sizes: list[Any], similar_functions: dict[str, Any]
 ) -> None:
     for n in ngram_sizes:
-        if n in similar_functions and similar_functions[n]:
-            groups = similar_functions[n]
+        groups = _lookup_ngram_value(similar_functions, n)
+        if groups:
             table.add_row(f"Similar {n}-gram Groups", str(len(groups)))
             if groups:
                 largest_group = groups[0]
@@ -86,8 +96,8 @@ def _add_binlex_binary_signatures(
     table: Table, ngram_sizes: list[Any], binary_signature: dict[str, Any]
 ) -> None:
     for n in ngram_sizes:
-        if n in binary_signature:
-            sig = binary_signature[n]
+        sig = _lookup_ngram_value(binary_signature, n)
+        if sig is not None:
             table.add_row(f"Binary {n}-gram Signature", format_hash_display(sig, max_length=64))
 
 
@@ -95,8 +105,9 @@ def _add_binlex_top_ngrams(
     table: Table, ngram_sizes: list[Any], top_ngrams: dict[str, Any]
 ) -> None:
     for n in ngram_sizes:
-        if n in top_ngrams and top_ngrams[n]:
-            top_3 = top_ngrams[n][:3]
+        ngram_entries = _lookup_ngram_value(top_ngrams, n)
+        if ngram_entries:
+            top_3 = ngram_entries[:3]
             ngram_strs = []
             for ngram, count in top_3:
                 clean_ngram = ngram.replace("&nbsp;", " ").replace(HTML_AMP, "&").strip()
