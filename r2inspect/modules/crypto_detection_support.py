@@ -148,25 +148,25 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
     patterns: list[dict[str, Any]] = []
     try:
         xor_patterns = analyzer._search_text("xor")
-        if xor_patterns and xor_patterns.strip():
+        if isinstance(xor_patterns, str) and xor_patterns.strip():
             patterns.append(
                 {
                     "type": "XOR Operations",
                     "description": "Multiple XOR operations found",
                     "evidence": "XOR instructions detected",
                 }
-            )
+        )
         rot_patterns = analyzer._search_text("rol,ror")
-        if rot_patterns and rot_patterns.strip():
+        if isinstance(rot_patterns, str) and rot_patterns.strip():
             patterns.append(
                 {
                     "type": "Bit Rotation",
                     "description": "Bit rotation operations found",
                     "evidence": "ROL/ROR instructions detected",
                 }
-            )
+        )
         mov_patterns = analyzer._search_text("mov.*\\[.*\\\\+.*\\]")
-        if mov_patterns and mov_patterns.strip():
+        if isinstance(mov_patterns, str) and mov_patterns.strip():
             count = len(mov_patterns.strip().split("\n"))
             if count > 10:
                 patterns.append(

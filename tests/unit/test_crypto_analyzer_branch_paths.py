@@ -423,6 +423,16 @@ def test_find_suspicious_patterns_exception_path():
     assert isinstance(result, list)
 
 
+def test_find_suspicious_patterns_skips_non_string_search_output():
+    class _BadSearchAdapter(XorPatternAdapter):
+        def search_text(self, pattern: str):
+            return None
+
+    analyzer = CryptoAnalyzer(_BadSearchAdapter())
+    result = analyzer._find_suspicious_patterns()
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # _coerce_dict_list() - lines 322-324
 # ---------------------------------------------------------------------------
