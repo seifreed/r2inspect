@@ -17,7 +17,8 @@ def search_text(adapter: Any, pattern: str) -> str:
     if not pattern:
         return ""
     if adapter is not None and hasattr(adapter, "search_text"):
-        return cast(str, adapter.search_text(pattern))
+        result = adapter.search_text(pattern)
+        return result if isinstance(result, str) else ""
     return ""
 
 
@@ -26,5 +27,6 @@ def search_hex(adapter: Any, pattern: str) -> str:
     if not pattern:
         return ""
     if adapter is not None and hasattr(adapter, "search_hex"):
-        return cast(str, adapter.search_hex(pattern))
+        result = adapter.search_hex(pattern)
+        return result if isinstance(result, str) else ""
     return ""
