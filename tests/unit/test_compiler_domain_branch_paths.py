@@ -313,6 +313,10 @@ def test_parse_strings_output_only_whitespace():
     assert parse_strings_output("   \n\t\n   ") == []
 
 
+def test_parse_strings_output_non_string_input_returns_empty():
+    assert parse_strings_output(123) == []  # type: ignore[arg-type]
+
+
 # ---------------------------------------------------------------------------
 # _check_string_signatures – line 165 (early return when "strings" absent)
 # ---------------------------------------------------------------------------

@@ -137,6 +137,8 @@ def detect_rust_version(strings_data: list[str]) -> str:
 
 
 def parse_strings_output(strings_output: str) -> list[str]:
+    if not isinstance(strings_output, str):
+        return []
     strings = []
     for line in strings_output.split("\n"):
         if line.strip():
