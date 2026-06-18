@@ -121,7 +121,8 @@ class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
             if len(data) < self.TLSH_MIN_DATA_SIZE:
                 return None
             return cast(str | None, tlsh.hash(data))
-        except Exception:
+        except Exception as exc:
+            logger.error("Error calculating TLSH from hex data: %s", exc)
             return None
 
     def _calculate_binary_tlsh(self) -> str | None:

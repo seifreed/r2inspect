@@ -172,12 +172,14 @@ def test_calculate_tlsh_from_hex_sufficient_data():
     assert result is None or isinstance(result, str)
 
 
-def test_calculate_tlsh_from_hex_invalid_hex():
+def test_calculate_tlsh_from_hex_invalid_hex(caplog):
     if not TLSH_AVAILABLE:
         pytest.skip("TLSH not available")
     analyzer = TLSHAnalyzer(adapter=FakeAdapter(), filename="/tmp/test.bin")
-    result = analyzer._calculate_tlsh_from_hex("not_valid_hex!!")
+    with caplog.at_level("ERROR"):
+        result = analyzer._calculate_tlsh_from_hex("not_valid_hex!!")
     assert result is None
+    assert "Error calculating TLSH from hex data" in caplog.text
 
 
 # --- _calculate_binary_tlsh ---
