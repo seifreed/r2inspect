@@ -35,7 +35,7 @@ def clamp_score(score: int, minimum: int = 0, maximum: int = 100) -> int:
 
 
 def count_suspicious_imports(imports: list[dict[str, Any]], suspicious: set[str]) -> int:
-    return sum(1 for imp in imports if imp.get("name") in suspicious)
+    return sum(1 for imp in imports if isinstance(imp, dict) and imp.get("name") in suspicious)
 
 
 def normalize_section_name(name: str | None) -> str:

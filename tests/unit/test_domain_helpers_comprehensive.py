@@ -201,6 +201,11 @@ def test_count_suspicious_imports_missing_name():
     assert result == 2
 
 
+def test_count_suspicious_imports_skips_malformed_entries():
+    imports = ["bad", {"name": None}, {"name": "VirtualAlloc"}]
+    assert count_suspicious_imports(imports, {"VirtualAlloc"}) == 1
+
+
 def test_normalize_section_name_valid():
     """Test normalizing valid section name."""
     assert normalize_section_name(".text") == ".text"
