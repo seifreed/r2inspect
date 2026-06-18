@@ -198,6 +198,18 @@ def test_format_detection_stage_prefers_r2_format_mapping_when_available() -> No
     assert result["format_detection"]["file_format"] == "ELF"
 
 
+def test_format_detection_stage_ignores_non_dict_bin_info() -> None:
+    stage = FormatDetectionStage(
+        adapter=FakeAdapter({"bin": "not-a-dict"}),
+        filename="sample.elf",
+    )
+    context = make_stage_context()
+
+    result = stage._execute(context)
+
+    assert result["format_detection"]["file_format"] in {"ELF", "PE", "Mach-O", "Unknown"}
+
+
 def test_hashing_stage_runs_format_supported_hashers() -> None:
     registry = AnalyzerRegistry(lazy_loading=False)
     registry.register("tlsh", TLSHAnalyzer, AnalyzerCategory.HASHING, file_formats={"PE"})

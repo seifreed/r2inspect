@@ -185,7 +185,7 @@ class FormatDetectionStage(AnalysisStage):
 
     def _detect_via_r2(self) -> str | None:
         info_cmd = self.adapter.get_file_info()
-        if not info_cmd or "bin" not in info_cmd:
+        if not info_cmd or not isinstance(info_cmd.get("bin"), dict):
             return None
 
         bin_info = info_cmd["bin"]
