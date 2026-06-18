@@ -100,7 +100,7 @@ def test_analyze_success():
             "iSj": [{"name": ".text", "size": 200, "perm": "r-x"}],
             "iij": [{"libname": "kernel32.dll", "name": "CreateFileA"}],
             "iEj": [{"name": "DllMain"}],
-            "aflj": [{"name": "main", "size": 100, "offset": 0x1000}],
+            "aflj": [{"name": "main", "size": 100, "addr": 0x1000}],
             "izzj": [{"string": "CreateFileA"}, {"string": "hello"}],
             "agj @ 0x1000": [{"blocks": [{"addr": 0x1000}], "edges": []}],
         }
@@ -239,8 +239,8 @@ def test_extract_function_features_success():
     """Test _extract_function_features with functions and CFG."""
     cmdj_map = {
         "aflj": [
-            {"name": "main", "size": 200, "offset": 0x1000},
-            {"name": "helper", "size": 100, "offset": 0x2000},
+            {"name": "main", "size": 200, "addr": 0x1000},
+            {"name": "helper", "size": 100, "addr": 0x2000},
         ],
         "agj @ 0x1000": [
             {
@@ -273,7 +273,7 @@ def test_extract_function_features_with_analyze_all():
 def test_extract_function_features_cfg_dict():
     """Test _extract_function_features with CFG returned as dict."""
     cmdj_map = {
-        "aflj": [{"name": "main", "size": 200, "offset": 0x1000}],
+        "aflj": [{"name": "main", "size": 200, "addr": 0x1000}],
         # Return a dict (not wrapped in a list) -- the adapter's get_cfg
         # for a specific address normally returns a list, but the extraction
         # code handles both dict and list forms.
