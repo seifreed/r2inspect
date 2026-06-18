@@ -49,6 +49,22 @@ def test_build_function_stats_accepts_string_sizes() -> None:
     assert result["largest_functions"][0] == ("func2", 25)
 
 
+def test_build_function_stats_accepts_hex_string_sizes() -> None:
+    functions = [
+        {"name": "func1", "size": "0x10", "type": "fcn"},
+        {"name": "func2", "size": "0x25", "type": "imp"},
+        {"name": "func3", "size": "bad", "type": "fcn"},
+    ]
+
+    result = build_function_stats(functions)
+
+    assert result["total_functions"] == 3
+    assert result["functions_with_size"] == 2
+    assert result["avg_function_size"] == 26.5
+    assert result["total_code_size"] == 53
+    assert result["largest_functions"][0] == ("func2", 37)
+
+
 def test_build_function_stats_skips_malformed_entries() -> None:
     functions = ["bad", {"name": "main", "size": 12, "type": "fcn"}]
 
