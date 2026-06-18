@@ -305,6 +305,12 @@ def test_detect_api_obfuscation_none():
     assert result["detected"] is False
 
 
+def test_detect_api_obfuscation_non_list_input_returns_empty_result():
+    analyzer = _make_analyzer()
+    result = analyzer.detect_api_obfuscation(123)  # type: ignore[arg-type]
+    assert result == {"detected": False, "indicators": [], "score": 0}
+
+
 # ---------------------------------------------------------------------------
 # analyze_dll_dependencies
 # ---------------------------------------------------------------------------

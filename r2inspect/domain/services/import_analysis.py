@@ -185,6 +185,8 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
+    if not isinstance(imports, list):
+        return {"detected": False, "indicators": [], "score": 0}
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     indicators = _obfuscation_indicators(valid_imports)
     return {
