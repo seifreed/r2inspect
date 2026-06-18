@@ -542,11 +542,23 @@ def test_add_bindiff_strings_with_many_categories():
     assert len(table.rows) == 2
 
 
+def test_add_bindiff_strings_skips_non_dict_categories():
+    table = _make_table()
+    _add_bindiff_strings(table, {"total_strings": 300, "categorized_strings": "bad"})
+    assert len(table.rows) == 1
+
+
 def test_add_bindiff_signatures_mixed():
     table = _make_table()
     signatures = {"md5": "abc", "sha1": None, "imphash": ""}
     _add_bindiff_signatures(table, signatures)
     assert len(table.rows) == 1
+
+
+def test_add_bindiff_signatures_skips_non_dict_input():
+    table = _make_table()
+    _add_bindiff_signatures(table, "bad")  # type: ignore[arg-type]
+    assert len(table.rows) == 0
 
 
 def test_add_bindiff_entries_no_optional_sections():

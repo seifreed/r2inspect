@@ -61,13 +61,16 @@ def _add_bindiff_strings(table: Table, string_features: dict[str, Any]) -> None:
     if not string_features:
         return
     table.add_row("Strings", str(string_features.get("total_strings", 0)))
-    if string_features.get("categorized_strings"):
-        categories = [str(category) for category in list(string_features["categorized_strings"].keys())[:3]]
+    categorized_strings = string_features.get("categorized_strings")
+    if isinstance(categorized_strings, dict) and categorized_strings:
+        categories = [str(category) for category in list(categorized_strings.keys())[:3]]
         table.add_row("String Types", ", ".join(categories))
 
 
 def _add_bindiff_signatures(table: Table, signatures: dict[str, Any]) -> None:
     if not signatures:
+        return
+    if not isinstance(signatures, dict):
         return
     for key, value in signatures.items():
         if value:
