@@ -40,6 +40,18 @@ SUSPICIOUS_DLLS = {
 NETWORK_CATEGORY = "Network/Internet"
 
 
+def _text_value(value: Any, default: str) -> str:
+    return value if isinstance(value, str) and value else default
+
+
+def _library_value(imp: dict[str, Any]) -> str:
+    for key in ("library", "dll", "libname"):
+        value = imp.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return "unknown"
+
+
 def _count_matching_apis(import_names: list[str], apis: list[str]) -> int:
     return sum(1 for name in import_names if any(api in name for api in apis))
 
@@ -55,8 +67,8 @@ def _pattern_entry(pattern: str, description: str, severity: str, count: int) ->
 
 def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
     patterns: list[dict[str, Any]] = []
-    import_names = [imp.get("name", "") for imp in imports]
-    categories = [imp.get("category", "") for imp in imports]
+    import_names = [_text_value(imp.get("name"), "") for imp in imports]
+    categories = [_text_value(imp.get("category"), "") for imp in imports]
     _append_injection_patterns(patterns, import_names)
     _append_behavior_patterns(patterns, import_names, categories)
     return patterns
@@ -157,11 +169,9 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
         return stats
 
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]
-    categories = [imp.get("category", "Unknown") for imp in valid_imports]
-    risks = [imp.get("risk_level", "Unknown") for imp in valid_imports]
-    libraries = [
-        imp.get("library", imp.get("dll", imp.get("libname", "unknown"))) for imp in valid_imports
-    ]
+    categories = [_text_value(imp.get("category"), "Unknown") for imp in valid_imports]
+    risks = [_text_value(imp.get("risk_level"), "Unknown") for imp in valid_imports]
+    libraries = [_library_value(imp) for imp in valid_imports]
     stats["total_imports"] = len(valid_imports)
     stats["category_distribution"] = dict(Counter(categories))
     stats["risk_distribution"] = dict(Counter(risks))

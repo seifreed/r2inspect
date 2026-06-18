@@ -406,3 +406,18 @@ def test_build_import_statistics_accepts_libname_key_for_library_distribution():
     )
     assert stats["unique_libraries"] == 1
     assert stats["library_distribution"] == {"kernel32.dll": 1}
+
+
+def test_build_import_statistics_coerces_malformed_fields():
+    stats = build_import_statistics(
+        [
+            {"name": 1, "category": ["File"], "risk_level": {"bad": "risk"}, "library": ["bad"]},
+            {"name": None, "category": None, "risk_level": None, "libname": {"bad": "lib"}},
+        ]
+    )
+
+    assert stats["total_imports"] == 2
+    assert stats["category_distribution"] == {"Unknown": 2}
+    assert stats["risk_distribution"] == {"Unknown": 2}
+    assert stats["library_distribution"] == {"unknown": 2}
+    assert stats["suspicious_patterns"] == []
