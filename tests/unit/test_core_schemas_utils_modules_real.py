@@ -146,7 +146,8 @@ def test_result_aggregator_summary_error_path() -> None:
         "rich_header": {"available": True, "compilers": [None]},
     }
     summary = aggregator.generate_executive_summary(bad_results)
-    assert "error" in summary
+    assert "error" not in summary
+    assert "toolset" not in summary["file_overview"]
 
 
 class _SimpleAnalyzer:

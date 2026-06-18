@@ -95,10 +95,13 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(rich_header, dict):
         rich_header = {}
     if rich_header.get("available") and rich_header.get("compilers"):
-        overview["toolset"] = [
+        toolset = [
             f"{c.get('compiler_name', 'Unknown')} (Build {c.get('build_number', 0)})"
             for c in rich_header["compilers"][:3]
+            if isinstance(c, dict)
         ]
+        if toolset:
+            overview["toolset"] = toolset
     return overview
 
 
