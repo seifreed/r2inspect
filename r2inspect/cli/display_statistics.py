@@ -88,6 +88,7 @@ def _display_circuit_breaker_statistics(circuit_stats: dict[str, Any]) -> None:
     cb_table.add_column("Value", style="green")
 
     for metric, value in cb_entries:
-        cb_table.add_row(metric.replace("_", " ").title(), str(value))
+        metric_label = str(metric) if metric is not None else "unknown"
+        cb_table.add_row(metric_label.replace("_", " ").title(), str(value))
 
     _get_console().print(cb_table)
