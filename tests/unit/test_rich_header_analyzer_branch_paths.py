@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import struct
 import tempfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -244,6 +245,12 @@ class _FakeRichHeader:
     clear_data = b"\xab\xcd" * 16
 
 
+class _FakeRichHeaderNoClearData:
+    checksum = 0xDEADBEEF
+    values = [_FakeEntry()]
+    clear_data = None
+
+
 class _FakePE:
     RICH_HEADER = _FakeRichHeader()
 
@@ -320,6 +327,13 @@ def test_pefile_entries_from_clear_data_empty_when_no_attribute() -> None:
     assert result == []
 
 
+def test_pefile_entries_from_clear_data_empty_when_clear_data_is_none() -> None:
+    """Line 201: returns empty list when clear_data is present but invalid."""
+    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
+    result = analyzer._pefile_entries_from_clear_data(SimpleNamespace(RICH_HEADER=_FakeRichHeaderNoClearData()))
+    assert result == []
+
+
 def test_pefile_extract_entries_populates_list() -> None:
     """Lines 171-180: extracts entries from pefile RICH_HEADER.values."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
@@ -351,6 +365,19 @@ def test_build_pefile_rich_result_has_expected_fields() -> None:
     assert result["richpe_hash"] == "deadbeef01234567"
     assert result["method"] == "pefile"
     assert "clear_data" in result
+
+
+def test_build_pefile_rich_result_handles_none_clear_data() -> None:
+    """Lines 204-224: None clear_data should not crash the pefile result builder."""
+    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
+    result = analyzer._build_pefile_rich_result(
+        pe=SimpleNamespace(RICH_HEADER=_FakeRichHeaderNoClearData()),
+        xor_key=0xABCD,
+        entries=[],
+        rich_hash="deadbeef01234567",
+    )
+    assert result["clear_data"] is None
+    assert result["clear_data_bytes"] is None
 
 
 # ---------------------------------------------------------------------------

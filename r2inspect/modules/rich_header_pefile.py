@@ -95,9 +95,10 @@ class RichHeaderPefileMixin:
 
     @staticmethod
     def _pefile_entries_from_clear_data(pe: Any) -> list[dict[str, Any]]:
-        if not hasattr(pe.RICH_HEADER, "clear_data"):
+        clear_data = getattr(pe.RICH_HEADER, "clear_data", None)
+        if not isinstance(clear_data, (bytes, bytearray)):
             return []
-        return parse_clear_data_entries(pe.RICH_HEADER.clear_data)
+        return parse_clear_data_entries(bytes(clear_data))
 
     @staticmethod
     def _build_pefile_rich_result(
@@ -106,16 +107,14 @@ class RichHeaderPefileMixin:
         entries: list[dict[str, Any]],
         rich_hash: str,
     ) -> dict[str, Any]:
+        clear_data = getattr(pe.RICH_HEADER, "clear_data", None)
+        clear_data_bytes = clear_data if isinstance(clear_data, (bytes, bytearray)) else None
         return {
             "xor_key": xor_key,
             "checksum": xor_key,
             "entries": entries,
             "richpe_hash": rich_hash,
-            "clear_data": (
-                pe.RICH_HEADER.clear_data.hex() if hasattr(pe.RICH_HEADER, "clear_data") else None
-            ),
+            "clear_data": clear_data_bytes.hex() if clear_data_bytes is not None else None,
             "method": "pefile",
-            "clear_data_bytes": (
-                pe.RICH_HEADER.clear_data if hasattr(pe.RICH_HEADER, "clear_data") else None
-            ),
+            "clear_data_bytes": clear_data_bytes,
         }
