@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_extraction_support import coerce_positive_int
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 import r2inspect.modules.function_analyzer as fa_module
 
@@ -392,6 +393,10 @@ def test_extract_function_mnemonics_returns_empty_when_all_fail():
     analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
     mnemonics = analyzer._extract_function_mnemonics("fn", 0, 0x1000)
     assert mnemonics == []
+
+
+def test_coerce_positive_int_accepts_hex_string():
+    assert coerce_positive_int("0x40") == 64
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,7 @@ class FunctionExtractionHost(Protocol):
 
 def coerce_positive_int(value: Any) -> int:
     try:
-        parsed = int(value or 0)
+        parsed = int(value, 0) if isinstance(value, str) else int(value or 0)
     except (TypeError, ValueError):
         return 0
     return parsed if parsed > 0 else 0
