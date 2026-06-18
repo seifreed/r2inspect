@@ -58,4 +58,5 @@ def _add_bindiff_signatures(table: Table, signatures: dict[str, Any]) -> None:
         return
     for key, value in signatures.items():
         if value:
-            table.add_row(f"{key.title()} Signature", value)
+            label = str(key) if key is not None else "unknown"
+            table.add_row(f"{label.title()} Signature", str(value))

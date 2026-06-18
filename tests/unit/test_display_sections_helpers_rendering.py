@@ -581,6 +581,18 @@ def test_add_bindiff_signatures():
     assert len(table.rows) == 3
 
 
+def test_add_bindiff_signatures_numeric_key():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    signatures = {404: "sig404"}
+
+    _add_bindiff_signatures(table, signatures)
+
+    assert len(table.rows) == 1
+
+
 def test_add_bindiff_signatures_empty_values():
     table = Table()
     table.add_column("Property")
