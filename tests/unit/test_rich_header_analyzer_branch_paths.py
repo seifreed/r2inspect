@@ -150,6 +150,33 @@ def test_analyze_method_r2pipe_forced_by_disabling_pefile() -> None:
         os.unlink(path)
 
 
+def test_analyze_with_pefile_disabled_and_r2pipe_rich_data() -> None:
+    """analyze() should still use the r2pipe fallback when pefile is disabled."""
+    original = rha_module.PEFILE_AVAILABLE
+    rha_module.PEFILE_AVAILABLE = False
+
+    class _FallbackAnalyzer(RichHeaderAnalyzer):
+        def _is_pe_file(self) -> bool:
+            return True
+
+        def _extract_rich_header_r2pipe(self) -> dict[str, object] | None:
+            return {
+                "xor_key": 1,
+                "checksum": 1,
+                "entries": [{"prodid": 1, "count": 1}],
+                "richpe_hash": "deadbeef",
+            }
+
+    try:
+        analyzer = _FallbackAnalyzer(adapter=_MinimalAdapter(), filepath="/tmp/test.exe")
+        result = analyzer.analyze()
+        assert result["available"] is True
+        assert result["method_used"] == "r2pipe"
+        assert result["richpe_hash"] == "deadbeef"
+    finally:
+        rha_module.PEFILE_AVAILABLE = original
+
+
 # ---------------------------------------------------------------------------
 # analyze() - exception branch (lines 122-124)
 # ---------------------------------------------------------------------------

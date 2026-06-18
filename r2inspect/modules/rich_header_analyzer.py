@@ -56,6 +56,7 @@ class RichHeaderAnalyzer(
         )
 
         try:
+            rich_data: dict[str, Any] | None = None
             # Check if file is PE
             if not self._is_pe_file():
                 results["error"] = "File is not a PE binary"
