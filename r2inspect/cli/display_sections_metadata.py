@@ -56,6 +56,8 @@ def _add_rich_header_entries(table: Table, rich_header_info: dict[str, Any]) -> 
         table.add_row("RichPE Hash", richpe_hash)
 
     compilers = rich_header_info.get("compilers", [])
+    if not isinstance(compilers, list):
+        compilers = []
     table.add_row("Compiler Entries", str(len(compilers)))
 
     if compilers:

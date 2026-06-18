@@ -94,6 +94,8 @@ def format_imports(imports: list[dict[str, Any]]) -> Table:
         risk_score = imp.get("risk_score", 0)
         risk_level = imp.get("risk_level", "Minimal")
         risk_tags = imp.get("risk_tags", [])
+        if not isinstance(risk_tags, list):
+            risk_tags = []
         risk_color, score_color = IMPORT_RISK_STYLES.get(risk_level, ("dim", "dim"))
         tags_display = ", ".join(map(str, risk_tags[:2]))
         if len(risk_tags) > 2:
@@ -141,7 +143,7 @@ def append_file_info_summary(summary_lines: list[str], results: dict[str, Any]) 
 def append_indicators_summary(summary_lines: list[str], results: dict[str, Any]) -> None:
     """Append suspicious indicator lines to the text summary."""
     indicators = results.get("indicators")
-    if not indicators:
+    if not isinstance(indicators, list) or not indicators:
         return
     summary_lines.append(f"Suspicious Indicators: {len(indicators)}")
     for indicator in indicators[:MAX_SUMMARY_INDICATORS]:
@@ -169,7 +171,7 @@ def append_packer_summary(summary_lines: list[str], results: dict[str, Any]) -> 
 def append_yara_summary(summary_lines: list[str], results: dict[str, Any]) -> None:
     """Append a short YARA summary to the text output."""
     yara_matches = results.get("yara_matches")
-    if not yara_matches:
+    if not isinstance(yara_matches, list) or not yara_matches:
         return
     summary_lines.append(f"YARA Matches: {len(yara_matches)}")
     for match in yara_matches[:MAX_SUMMARY_YARA_MATCHES]:

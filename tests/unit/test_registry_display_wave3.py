@@ -338,6 +338,14 @@ def test_display_rich_header_available_is_pe():
     assert "aabbccdd" in text
 
 
+def test_display_rich_header_handles_non_list_compilers():
+    c = _make_console()
+    with _console_scope(c):
+        _display_rich_header({"rich_header": {"available": True, "is_pe": True, "compilers": None}})
+    text = _text(c)
+    assert "Compiler Entries" in text
+
+
 def test_display_rich_header_available_not_pe():
     c = _make_console()
     with _console_scope(c):

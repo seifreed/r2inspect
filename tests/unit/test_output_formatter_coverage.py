@@ -207,6 +207,21 @@ def test_format_imports_accepts_non_string_risk_tags() -> None:
     assert isinstance(result, Table)
 
 
+def test_format_imports_accepts_non_list_risk_tags() -> None:
+    imports = [
+        {
+            "name": "F",
+            "library": "L",
+            "category": "C",
+            "risk_score": 50,
+            "risk_level": "Medium",
+            "risk_tags": None,
+        }
+    ]
+    result = OutputFormatter({}).format_imports(imports)
+    assert isinstance(result, Table)
+
+
 def test_format_imports_skips_non_dict_entries() -> None:
     imports = [
         None,
@@ -256,6 +271,11 @@ def test_format_summary_accepts_non_dict_indicators() -> None:
     assert "Invalid indicator entry" in result
 
 
+def test_format_summary_accepts_non_list_indicators() -> None:
+    result = OutputFormatter({"indicators": {"type": "suspicious"}}).format_summary()
+    assert "Suspicious Indicators" not in result
+
+
 def test_format_summary_with_few_indicators() -> None:
     results = {"indicators": [{"type": "X", "description": "Y"}]}
     result = OutputFormatter(results).format_summary()
@@ -276,6 +296,11 @@ def test_format_summary_accepts_non_dict_packer() -> None:
 def test_format_summary_accepts_non_dict_yara_matches() -> None:
     result = OutputFormatter({"yara_matches": [None, {"rule": "r1"}]}).format_summary()
     assert "Invalid YARA match entry" in result
+
+
+def test_format_summary_accepts_non_list_yara_matches() -> None:
+    result = OutputFormatter({"yara_matches": {"rule": "r1"}}).format_summary()
+    assert "YARA Matches" not in result
 
 
 def test_format_summary_with_string_confidence() -> None:
