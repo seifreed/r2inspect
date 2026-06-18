@@ -399,6 +399,11 @@ def test_entropy_calculations_match():
     assert result1 == result2
 
 
+def test_entropy_from_ints_skips_non_byte_values():
+    result = entropy_from_ints([65, 999, "x", 66])
+    assert result == shannon_entropy(b"AB")
+
+
 def test_suspicious_section_name_with_common_section():
     """Test that common sections are not flagged."""
     suspicious = ["upx", "packed"]

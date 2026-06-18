@@ -23,7 +23,8 @@ def shannon_entropy(data: bytes) -> float:
 def entropy_from_ints(data: list[int]) -> float:
     if not data:
         return 0.0
-    return shannon_entropy(bytes(data))
+    valid_bytes = bytes(value for value in data if isinstance(value, int) and 0 <= value <= 255)
+    return shannon_entropy(valid_bytes)
 
 
 def clamp_score(score: int, minimum: int = 0, maximum: int = 100) -> int:
