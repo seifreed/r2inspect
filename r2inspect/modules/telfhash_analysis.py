@@ -119,6 +119,8 @@ def is_elf_binary(
     try:
         if analyzer.adapter is None:
             return False
+        if not analyzer.filepath:
+            return False
         if _magic_rules_out_elf(Path(analyzer.filepath)):
             return False
         if is_elf_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):

@@ -79,3 +79,9 @@ def test_is_elf_binary_false_when_format_excludes_elf(tmp_path: Path) -> None:
 def test_is_elf_binary_swallows_unexpected_errors(tmp_path: Path) -> None:
     host = _Host(_elf_file(tmp_path), info={}, raise_cmdj=True)
     assert is_elf_binary(host, logger=_LOGGER, is_elf_file_fn=_never, is_pe_file_fn=_never) is False
+
+
+def test_is_elf_binary_returns_false_when_filepath_missing() -> None:
+    host = _Host("/tmp/sample", info={})
+    host.filepath = None
+    assert is_elf_binary(host, logger=_LOGGER, is_elf_file_fn=_never, is_pe_file_fn=_never) is False
