@@ -255,6 +255,14 @@ def test_classify_string_type_none():
     assert classify_string_type("plaintext") is None
 
 
+def test_string_classification_rejects_non_strings():
+    assert is_api_string(b"CreateFileW") is False
+    assert is_path_string(None) is False
+    assert is_url_string(b"https://example.com") is False
+    assert is_registry_string(123) is False
+    assert classify_string_type(b"error occurred") is None
+
+
 # ---------------------------------------------------------------------------
 # 16. output_json
 # ---------------------------------------------------------------------------
