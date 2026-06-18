@@ -500,6 +500,17 @@ def test_analyze_dll_dependencies_mixed():
     assert result["analysis"]["total_dlls"] == 3
 
 
+def test_analyze_dll_dependencies_skips_malformed_dlls():
+    """Test malformed DLL values do not hide valid dependencies."""
+    adapter = MinimalAdapter()
+    analyzer = ImportAnalyzer(adapter)
+
+    result = analyzer.analyze_dll_dependencies([None, "kernel32.dll"])
+
+    assert result["common_dlls"] == ["kernel32.dll"]
+    assert result["analysis"]["total_dlls"] == 1
+
+
 def test_analyze_dll_dependencies_error():
     """Test analyze_dll_dependencies handles errors."""
     adapter = MinimalAdapter()

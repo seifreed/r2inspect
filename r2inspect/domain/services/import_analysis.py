@@ -237,19 +237,23 @@ def analyze_dll_dependencies(dlls: list[str]) -> dict[str, Any]:
     if not dlls:
         return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
-    common_found = [dll for dll in dlls if dll.lower() in COMMON_SYSTEM_DLLS]
-    suspicious_found = [dll for dll in dlls if dll.lower() in SUSPICIOUS_DLLS]
+    valid_dlls = [dll for dll in dlls if isinstance(dll, str)]
+    if not valid_dlls:
+        return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
+
+    common_found = [dll for dll in valid_dlls if dll.lower() in COMMON_SYSTEM_DLLS]
+    suspicious_found = [dll for dll in valid_dlls if dll.lower() in SUSPICIOUS_DLLS]
     analysis = {
-        "total_dlls": len(dlls),
-        "common_ratio": len(common_found) / len(dlls) if dlls else 0,
-        "suspicious_ratio": len(suspicious_found) / len(dlls) if dlls else 0,
-        "unique_dlls": len({dll.lower() for dll in dlls}),
+        "total_dlls": len(valid_dlls),
+        "common_ratio": len(common_found) / len(valid_dlls),
+        "suspicious_ratio": len(suspicious_found) / len(valid_dlls),
+        "unique_dlls": len({dll.lower() for dll in valid_dlls}),
     }
     return {
         "common_dlls": common_found,
         "suspicious_dlls": suspicious_found,
         "analysis": analysis,
-        "all_dlls": dlls,
+        "all_dlls": valid_dlls,
     }
 
 
