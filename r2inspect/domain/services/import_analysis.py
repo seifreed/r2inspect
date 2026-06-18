@@ -269,7 +269,18 @@ def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
         )
         return {"anomalies": anomalies, "count": len(anomalies)}
 
-    duplicates = _duplicate_imports(imports)
+    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    if not valid_imports:
+        anomalies.append(
+            {
+                "type": "no_imports",
+                "description": "No imports found - possible packing or static linking",
+                "severity": "HIGH",
+            }
+        )
+        return {"anomalies": anomalies, "count": len(anomalies)}
+
+    duplicates = _duplicate_imports(valid_imports)
     if duplicates:
         anomalies.append(
             {
@@ -279,7 +290,7 @@ def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
                 "count": len(duplicates),
             }
         )
-    unusual_dlls = _unusual_dlls(imports)
+    unusual_dlls = _unusual_dlls(valid_imports)
     if len(unusual_dlls) > 5:
         anomalies.append(
             {
@@ -289,11 +300,11 @@ def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
                 "dlls": unusual_dlls[:10],
             }
         )
-    if len(imports) > 500:
+    if len(valid_imports) > 500:
         anomalies.append(
             {
                 "type": "excessive_imports",
-                "description": f"Excessive number of imports: {len(imports)}",
+                "description": f"Excessive number of imports: {len(valid_imports)}",
                 "severity": "MEDIUM",
             }
         )
@@ -316,7 +327,10 @@ def _duplicate_imports(imports: list[Any]) -> list[str]:
 def _unusual_dlls(imports: list[dict[str, Any]]) -> list[str]:
     unusual_dlls: list[str] = []
     for imp in imports:
-        dll = imp.get("library", imp.get("dll", "")).lower()
+        dll_value = imp.get("library", imp.get("dll", ""))
+        if not isinstance(dll_value, str):
+            continue
+        dll = dll_value.lower()
         if (
             dll
             and dll not in unusual_dlls

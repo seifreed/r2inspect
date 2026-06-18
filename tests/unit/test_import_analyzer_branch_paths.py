@@ -544,17 +544,23 @@ def test_detect_import_anomalies_excessive_imports_detected():
 
 
 # ---------------------------------------------------------------------------
-# detect_import_anomalies - lines 496-498: exception handler
+# detect_import_anomalies - malformed imports
 # ---------------------------------------------------------------------------
 
 
-def test_detect_import_anomalies_exception_returns_empty():
+def test_detect_import_anomalies_malformed_imports_are_no_imports():
     analyzer = ImportAnalyzer(adapter=None)
-    # Pass a non-empty list of non-dict items to bypass the empty-imports early
-    # return and trigger AttributeError on imp.get() inside the try block.
     result = analyzer.detect_import_anomalies(["not_a_dict"])  # type: ignore[arg-type]
-    assert result["count"] == 0
-    assert result["anomalies"] == []
+    assert result["count"] == 1
+    assert result["anomalies"][0]["type"] == "no_imports"
+
+
+def test_detect_import_anomalies_skips_malformed_imports():
+    analyzer = ImportAnalyzer(adapter=None)
+    imports = ["bad", *({"name": f"Func{i}", "library": f"unusual{i}.dll"} for i in range(6))]
+    result = analyzer.detect_import_anomalies(imports)  # type: ignore[arg-type]
+    types = [a["type"] for a in result["anomalies"]]
+    assert "many_unusual_dlls" in types
 
 
 # ---------------------------------------------------------------------------
