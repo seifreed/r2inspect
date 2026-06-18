@@ -314,6 +314,24 @@ def test_add_binbloom_stats_with_function_signatures():
     assert len(table.rows) >= 7
 
 
+def test_add_binbloom_stats_string_values():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    binbloom_info = {
+        "total_functions": 100,
+        "analyzed_functions": "95",
+        "capacity": 1000,
+        "error_rate": "0.01",
+        "unique_signatures": "80",
+    }
+
+    _add_binbloom_stats(table, binbloom_info)
+
+    assert len(table.rows) >= 5
+
+
 def test_add_binbloom_similar_groups_empty():
     table = Table()
     table.add_column("Property")
@@ -464,6 +482,18 @@ def test_add_binbloom_bloom_stats():
             "total_filters": 10,
         }
     }
+
+    _add_binbloom_bloom_stats(table, binbloom_info)
+
+    assert len(table.rows) == 2
+
+
+def test_add_binbloom_bloom_stats_string_fill_rate():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    binbloom_info = {"bloom_stats": {"average_fill_rate": "0.75", "total_filters": 10}}
 
     _add_binbloom_bloom_stats(table, binbloom_info)
 

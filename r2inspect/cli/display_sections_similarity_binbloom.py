@@ -22,6 +22,13 @@ from .display_sections_common import Results, _get_console, add_group_functions_
 from .presenter import get_section as _get_section
 
 
+def _coerce_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _display_binbloom(results: Results) -> None:
     binbloom_info, present = _get_section(results, "binbloom", {})
     if not present:
@@ -57,12 +64,16 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(analyzed_functions))
 
     capacity = binbloom_info.get("capacity", 0)
-    error_rate = binbloom_info.get("error_rate", 0.0)
+    error_rate = _coerce_float(binbloom_info.get("error_rate", 0.0))
     table.add_row("Bloom Filter Capacity", str(capacity))
     table.add_row("False Positive Rate", f"{error_rate:.4f} ({error_rate * 100:.2f}%)")
 
     unique_signatures = binbloom_info.get("unique_signatures", 0)
-    diversity_ratio = (unique_signatures / analyzed_functions * 100) if analyzed_functions else 0
+    diversity_ratio = (
+        (_coerce_float(unique_signatures) / _coerce_float(analyzed_functions)) * 100
+        if analyzed_functions
+        else 0
+    )
     table.add_row(
         "Unique Function Signatures",
         f"{unique_signatures} ({diversity_ratio:.1f}% diversity)",
@@ -123,7 +134,7 @@ def _add_binbloom_bloom_stats(table: Table, binbloom_info: dict[str, Any]) -> No
     if not bloom_stats:
         return
 
-    avg_fill_rate = bloom_stats.get("average_fill_rate", 0.0)
+    avg_fill_rate = _coerce_float(bloom_stats.get("average_fill_rate", 0.0))
     table.add_row("Average Fill Rate", f"{avg_fill_rate:.4f} ({avg_fill_rate * 100:.2f}%)")
 
     total_filters = bloom_stats.get("total_filters", 0)

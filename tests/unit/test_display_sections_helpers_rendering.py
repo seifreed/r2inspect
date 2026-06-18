@@ -54,6 +54,23 @@ def test_add_simhash_feature_stats_zero_values():
     assert len(table.rows) == 4
 
 
+def test_add_simhash_feature_stats_string_diversity():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    feature_stats = {
+        "total_features": 1000,
+        "total_strings": 600,
+        "total_opcodes": 400,
+        "feature_diversity": "0.85",
+    }
+
+    _add_simhash_feature_stats(table, feature_stats)
+
+    assert len(table.rows) == 4
+
+
 def test_format_simhash_hex_short():
     hash_hex = "abc123"
     result = _format_simhash_hex(hash_hex)

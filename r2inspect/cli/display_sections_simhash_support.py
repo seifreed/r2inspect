@@ -11,6 +11,13 @@ from .display_base import ANALYZED_FUNCTIONS_LABEL, SIMILAR_GROUPS_LABEL, TOTAL_
 from .display_sections_common import add_group_functions_row
 
 
+def _coerce_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> None:
     total_features = feature_stats.get("total_features", 0)
     total_strings = feature_stats.get("total_strings", 0)
@@ -21,7 +28,7 @@ def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> N
     table.add_row("Opcode Features", str(total_opcodes))
 
     feature_diversity = feature_stats.get("feature_diversity", 0.0)
-    table.add_row("Feature Diversity", f"{feature_diversity:.3f}")
+    table.add_row("Feature Diversity", f"{_coerce_float(feature_diversity):.3f}")
 
 
 def _format_simhash_hex(hash_hex: str) -> str:
