@@ -712,6 +712,17 @@ def test_generate_machoc_summary_with_duplicate_groups():
     assert len(result["most_common_patterns"]) <= 5
 
 
+def test_generate_machoc_summary_skips_malformed_hash_values():
+    analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
+    result = analyzer.generate_machoc_summary(
+        {"machoc_hashes": {"fn_a": "dup1", "fn_b": ["bad"], "fn_c": None, "fn_d": "dup1"}}
+    )
+    assert result["total_functions_hashed"] == 4
+    assert result["unique_machoc_hashes"] == 1
+    assert result["duplicate_function_groups"] == 1
+    assert result["total_duplicate_functions"] == 2
+
+
 def test_generate_machoc_summary_exception_returns_error():
     class _BrokenSummaryAnalyzer(FunctionAnalyzer):
         def get_function_similarity(self, machoc_hashes):
