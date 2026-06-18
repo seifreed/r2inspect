@@ -162,6 +162,29 @@ def test_display_batch_results_verbose(tmp_path, capsys):
     assert "Success rate" in captured.out
 
 
+def test_display_batch_results_accepts_string_elapsed_time(capsys):
+    """Test batch results display with string elapsed time."""
+    all_results = {"test.exe": {"file_info": {"name": "test.exe"}}}
+    failed_files = []
+    files_to_process = [Path("test.exe")]
+
+    rate_limiter = FakeRateLimiter({})
+
+    display_batch_results(
+        all_results=all_results,
+        failed_files=failed_files,
+        elapsed_time="2.5",
+        files_to_process=files_to_process,
+        rate_limiter=rate_limiter,
+        verbose=False,
+        output_filename=None,
+    )
+
+    captured = capsys.readouterr()
+    assert "Time: 2.5s" in captured.out
+    assert "Rate: 0.4 files/sec" in captured.out
+
+
 def test_setup_batch_mode_defaults():
     """Test batch mode setup with defaults."""
     recursive, use_auto_detect, output = setup_batch_mode(

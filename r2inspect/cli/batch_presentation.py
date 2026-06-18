@@ -67,6 +67,7 @@ def display_batch_results(
     rate_stats = rate_limiter.get_stats()
     success_count = len(all_results)
     total_count = len(files_to_process)
+    elapsed_time = _coerce_float(elapsed_time)
 
     console.print("\n[bold green]Analysis Complete![/bold green]")
     console.print(f"[green]Processed: {success_count}/{total_count} files[/green]")
