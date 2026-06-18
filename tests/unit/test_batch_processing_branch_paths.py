@@ -72,6 +72,10 @@ def test_check_executable_signature_propagates_read_errors(tmp_path: Path) -> No
         batch_signatures.open = original_open  # type: ignore[attr-defined]
 
 
+def test_check_executable_signature_directory_returns_false(tmp_path: Path) -> None:
+    assert check_executable_signature(tmp_path) is False
+
+
 def test_is_executable_signature_pe_mime() -> None:
     """_is_executable_signature wrapper returns True for PE MIME type."""
     assert _is_executable_signature("application/x-dosexec", "") is True
