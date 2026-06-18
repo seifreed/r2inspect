@@ -23,15 +23,21 @@ MITIGATION_SCORES = {
 def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
     score = 0
     max_score = 0
+    mitigations = result.get("mitigations")
+    if not isinstance(mitigations, dict):
+        mitigations = {}
+    vulnerabilities = result.get("vulnerabilities")
+    if not isinstance(vulnerabilities, list):
+        vulnerabilities = []
 
     for mitigation_name, scoring in MITIGATION_SCORES.items():
-        mitigation = result["mitigations"].get(mitigation_name, {})
+        mitigation = mitigations.get(mitigation_name, {})
         for check, points in scoring.items():
             max_score += points
             if mitigation.get(check):
                 score += points
 
-    for vuln in result.get("vulnerabilities", []):
+    for vuln in vulnerabilities:
         if vuln.get("severity") == "high":
             score -= 10
         elif vuln.get("severity") == "medium":

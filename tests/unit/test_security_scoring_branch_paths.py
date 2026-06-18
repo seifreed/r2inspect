@@ -71,6 +71,12 @@ def test_build_security_score_score_clamped_to_zero() -> None:
     assert score["score"] == 0
 
 
+def test_build_security_score_skips_non_dict_buckets() -> None:
+    score = build_security_score({"mitigations": None, "vulnerabilities": None})
+    assert score["score"] == 0
+    assert score["grade"] == "F"
+
+
 def test_grade_from_percentage_unknown_when_max_zero() -> None:
     assert _grade_from_percentage(0.0, 0) == "Unknown"
 
