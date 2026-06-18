@@ -240,6 +240,17 @@ def test_detect_crypto_apis_skips_malformed_imports():
     assert result[0]["address"] == "0x1000"
 
 
+def test_detect_crypto_apis_accepts_hex_plt_value():
+    class HexPltAdapter(EmptyAdapter):
+        def get_imports(self) -> list[dict[str, Any]]:
+            return [{"name": "CryptEncrypt", "libname": "advapi32.dll", "plt": "0x1000"}]
+
+    analyzer = CryptoAnalyzer(HexPltAdapter())
+    result = analyzer._detect_crypto_apis()
+    assert len(result) == 1
+    assert result[0]["address"] == "0x1000"
+
+
 # ---------------------------------------------------------------------------
 # _detect_via_constants() - line 190
 # ---------------------------------------------------------------------------
