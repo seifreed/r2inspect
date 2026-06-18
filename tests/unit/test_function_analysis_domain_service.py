@@ -118,6 +118,17 @@ def test_build_machoc_summary_reports_common_patterns() -> None:
     assert result["most_common_patterns"] == [(2, "abcdef1234567890")]
 
 
+def test_build_machoc_summary_skips_non_list_similarity_buckets(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "r2inspect.domain.services.function_analysis.group_functions_by_machoc_hash",
+        lambda _hashes: {"h1": "bad"},
+    )
+    result = build_machoc_summary({"func_a": "h1", "func_b": "h1", "func_c": "h2"})
+
+    assert result["duplicate_function_groups"] == 0
+    assert "similarities" not in result
+
+
 def test_build_machoc_summary_without_hashes_returns_error() -> None:
     assert build_machoc_summary({}) == {"error": "No MACHOC hashes available"}
     assert build_machoc_summary(None) == {"error": "No MACHOC hashes available"}

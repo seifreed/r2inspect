@@ -148,6 +148,13 @@ def build_machoc_summary(machoc_hashes: dict[str, str] | None) -> dict[str, Any]
         return {"error": "No MACHOC hashes available"}
 
     similarities = group_functions_by_machoc_hash(machoc_hashes)
+    if not isinstance(similarities, dict):
+        similarities = {}
+    similarities = {
+        hash_value: funcs
+        for hash_value, funcs in similarities.items()
+        if isinstance(funcs, list)
+    }
     valid_hashes = {
         value for value in machoc_hashes.values() if isinstance(value, str) and value
     }
