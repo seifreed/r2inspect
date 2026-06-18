@@ -53,7 +53,12 @@ def _library_value(imp: dict[str, Any]) -> str:
 
 
 def _count_matching_apis(import_names: list[str], apis: list[str]) -> int:
-    return sum(1 for name in import_names if any(api in name for api in apis))
+    lowered_apis = [api.lower() for api in apis if isinstance(api, str)]
+    return sum(
+        1
+        for name in import_names
+        if isinstance(name, str) and any(api in name.lower() for api in lowered_apis)
+    )
 
 
 def _pattern_entry(pattern: str, description: str, severity: str, count: int) -> dict[str, Any]:

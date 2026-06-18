@@ -501,6 +501,16 @@ def test_find_suspicious_patterns_skips_malformed_entries():
     assert any(pattern["pattern"] == "DLL Injection" for pattern in patterns)
 
 
+def test_find_suspicious_patterns_is_case_insensitive():
+    patterns = find_suspicious_patterns(
+        [
+            {"name": "createremotethread", "category": "dll injection"},
+            {"name": "writeprocessmemory", "category": "memory management"},
+        ]
+    )
+    assert any(pattern["pattern"] == "DLL Injection" for pattern in patterns)
+
+
 def test_assess_api_risk_uses_runtime_category_names():
     imports = [
         {"name": "CreateProcess"},
