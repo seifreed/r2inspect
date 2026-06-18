@@ -468,6 +468,20 @@ def test_simhash_analyzer_append_data_section_string_no_addr() -> None:
     assert data_strings == []
 
 
+def test_simhash_analyzer_append_data_section_string_skips_malformed_section_fields() -> None:
+    analyzer = _make_analyzer()
+    data_strings: list[str] = []
+
+    for section in (
+        {"name": [".data"], "vaddr": 0x1000, "size": 100},
+        {"name": ".data", "vaddr": "bad", "size": 100},
+        {"name": ".data", "vaddr": 0x1000, "size": "bad"},
+    ):
+        analyzer._append_data_section_string(section, data_strings)
+
+    assert data_strings == []
+
+
 def test_simhash_analyzer_append_data_section_string_no_adapter() -> None:
     analyzer = SimHashAnalyzer(adapter=None, filepath="/fake/path")
     data_strings: list[str] = []

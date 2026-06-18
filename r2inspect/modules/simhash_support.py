@@ -67,10 +67,15 @@ def add_string_feature_set(
 
 
 def append_data_section_string(host: SimHashHost, section: Any, data_strings: list[str]) -> None:
-    if not isinstance(section, dict) or not section.get("name", "").startswith(".data"):
+    if not isinstance(section, dict):
+        return
+    section_name = section.get("name", "")
+    if not isinstance(section_name, str) or not section_name.startswith(".data"):
         return
     section_addr = section.get("vaddr", 0)
     section_size = section.get("size", 0)
+    if not isinstance(section_addr, int) or not isinstance(section_size, int):
+        return
     if not (section_addr and section_size):
         return
     if host.adapter is None or not hasattr(host.adapter, "read_bytes"):
