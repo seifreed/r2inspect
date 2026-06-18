@@ -335,6 +335,12 @@ def test_analyze_dll_dependencies_single():
     assert "common_dlls" in result
 
 
+def test_analyze_dll_dependencies_non_list_input_returns_empty_result():
+    analyzer = _make_analyzer()
+    result = analyzer.analyze_dll_dependencies(1)  # type: ignore[arg-type]
+    assert result == {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
+
+
 # ---------------------------------------------------------------------------
 # detect_import_anomalies
 # ---------------------------------------------------------------------------

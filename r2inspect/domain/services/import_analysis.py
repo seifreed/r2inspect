@@ -249,7 +249,7 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
 
 
 def analyze_dll_dependencies(dlls: list[str]) -> dict[str, Any]:
-    if not dlls:
+    if not isinstance(dlls, list) or not dlls:
         return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
     valid_dlls = [dll for dll in dlls if isinstance(dll, str)]
