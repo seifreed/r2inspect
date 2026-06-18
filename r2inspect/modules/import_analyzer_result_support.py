@@ -56,12 +56,15 @@ def populate_import_statistics(
     dll_analysis = result.get("dll_analysis")
     if not isinstance(dll_analysis, dict):
         dll_analysis = {}
+    suspicious_dlls = dll_analysis.get("suspicious_dlls")
+    if not isinstance(suspicious_dlls, list):
+        suspicious_dlls = []
 
     total_risk = (
         api_analysis.get("risk_score", 0) * 0.4
         + obfuscation.get("score", 0) * 0.3
         + (anomalies.get("count", 0) * 10) * 0.2
-        + (len(dll_analysis.get("suspicious_dlls", [])) * 5) * 0.1
+        + (len(suspicious_dlls) * 5) * 0.1
     )
 
     result["statistics"] = {

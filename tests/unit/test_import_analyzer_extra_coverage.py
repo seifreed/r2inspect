@@ -592,3 +592,21 @@ def test_populate_import_statistics_skips_non_dict_buckets():
     )
 
     assert result["statistics"]["risk_level"] == "LOW"
+
+
+def test_populate_import_statistics_skips_non_list_suspicious_dlls():
+    result = {
+        "api_analysis": {"risk_score": 10},
+        "obfuscation": {"score": 10},
+        "anomalies": {"count": 1},
+        "dll_analysis": {"suspicious_dlls": None},
+        "statistics": {},
+    }
+
+    populate_import_statistics(
+        result,
+        get_risk_level_fn=lambda _score: "LOW",
+        count_suspicious_indicators_fn=lambda _result: 0,
+    )
+
+    assert result["statistics"]["risk_level"] == "LOW"
