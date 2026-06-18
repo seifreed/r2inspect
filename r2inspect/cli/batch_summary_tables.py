@@ -16,6 +16,8 @@ def render_summary_row(
     include_md5: bool,
 ) -> tuple[str, ...]:
     file_info = result.get("file_info", {})
+    if not isinstance(file_info, dict):
+        file_info = {}
     shared = (
         simplify_file_type(file_info.get("file_type", "Unknown")),
         compiler_name(result),
@@ -43,7 +45,7 @@ def show_summary_table(
 
 
 def simplify_file_type(file_type: str) -> str:
-    cleaned = re.sub(r",\s*\d+\s+sections?", "", file_type)
+    cleaned = re.sub(r",\s*\d+\s+sections?", "", str(file_type or ""))
     cleaned = re.sub(r"\d+\s+sections?,?\s*", "", cleaned)
     cleaned = re.sub(r",\s*$", "", cleaned.strip())
     if "PE32+" in cleaned:
@@ -59,7 +61,10 @@ def simplify_file_type(file_type: str) -> str:
 
 def extract_compile_time(result: dict[str, Any]) -> str:
     for key in ("pe_info", "elf_info", "macho_info"):
-        compile_time = result.get(key, {}).get("compile_time")
+        info = result.get(key)
+        if not isinstance(info, dict):
+            continue
+        compile_time = info.get("compile_time")
         if compile_time:
             return str(compile_time)
     return "N/A"
@@ -67,6 +72,8 @@ def extract_compile_time(result: dict[str, Any]) -> str:
 
 def compiler_name(result: dict[str, Any]) -> str:
     compiler_info = result.get("compiler", {})
+    if not isinstance(compiler_info, dict):
+        return "Unknown"
     if not compiler_info.get("detected", False):
         return "Unknown"
     compiler = str(compiler_info.get("compiler", "Unknown"))

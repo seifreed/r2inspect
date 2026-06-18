@@ -259,6 +259,18 @@ def test_build_large_row_error():
     assert file_type == "Error"
 
 
+def test_build_summary_row_handles_none_nested_sections():
+    result = {
+        "file_info": None,
+        "pe_info": None,
+        "compiler": None,
+        "yara_matches": None,
+    }
+
+    assert _build_small_row("file1", result) == ("file1", "Unknown", "Unknown", "N/A")
+    assert _build_large_row("file1", result) == ("N/A", "Unknown", "Unknown", "N/A", "None")
+
+
 def test_build_summary_table_small():
     """Test building small summary table."""
     results = {
