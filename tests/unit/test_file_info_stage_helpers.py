@@ -67,6 +67,33 @@ def test_format_detection_stage_ignores_malformed_enhanced_detector() -> None:
         path.unlink(missing_ok=True)
 
 
+def test_format_detection_stage_ignores_basic_magic_detector_errors() -> None:
+    class _NullAdapter:
+        def get_file_info(self) -> dict[str, Any]:
+            return {}
+
+    class _ExplodingDesc:
+        def from_file(self, _path: str) -> str:
+            raise PermissionError("magic failed")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
+        f.write(b"\x00" * 32)
+        path = Path(f.name)
+    try:
+        stage = FormatDetectionStage(
+            adapter=_NullAdapter(),
+            filename=str(path),
+            magic_detector_provider=type(
+                "_Provider",
+                (),
+                {"get_detectors": staticmethod(lambda: (None, _ExplodingDesc()))},
+            )(),
+        )
+        assert stage._detect_via_basic_magic() is None
+    finally:
+        path.unlink(missing_ok=True)
+
+
 def test_bin_arch_info_empty_without_bin() -> None:
     assert FileInfoStage._bin_arch_info(None) == {}
     assert FileInfoStage._bin_arch_info({}) == {}

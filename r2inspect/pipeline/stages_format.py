@@ -267,7 +267,11 @@ class FormatDetectionStage(AnalysisStage):
         if detectors is None:
             return _detect_via_header_bytes(self.filename)
         _, desc_magic = detectors
-        file_type = desc_magic.from_file(_resolved_path(self.filename)).lower()
+        try:
+            file_type = desc_magic.from_file(_resolved_path(self.filename)).lower()
+        except Exception as exc:
+            logger.debug("Basic magic detection failed for %s: %s", self.filename, exc)
+            return None
 
         if "pe32" in file_type or "ms-dos" in file_type:
             return "PE"
