@@ -146,9 +146,12 @@ def build_machoc_summary(machoc_hashes: dict[str, str] | None) -> dict[str, Any]
         return {"error": "No MACHOC hashes available"}
 
     similarities = group_functions_by_machoc_hash(machoc_hashes)
+    valid_hashes = {
+        value for value in machoc_hashes.values() if isinstance(value, str) and value
+    }
     summary: dict[str, Any] = {
         "total_functions_hashed": len(machoc_hashes),
-        "unique_machoc_hashes": len(set(machoc_hashes.values())),
+        "unique_machoc_hashes": len(valid_hashes),
         "duplicate_function_groups": len(similarities),
         "total_duplicate_functions": sum(len(funcs) for funcs in similarities.values()),
     }

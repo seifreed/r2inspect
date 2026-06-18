@@ -123,6 +123,15 @@ def test_build_machoc_summary_without_hashes_returns_error() -> None:
     assert build_machoc_summary(None) == {"error": "No MACHOC hashes available"}
 
 
+def test_build_machoc_summary_skips_malformed_hash_values() -> None:
+    result = build_machoc_summary({"a": "h1", "b": ["bad"], "c": None, "d": "h1"})  # type: ignore[dict-item]
+
+    assert result["total_functions_hashed"] == 4
+    assert result["unique_machoc_hashes"] == 1
+    assert result["duplicate_function_groups"] == 1
+    assert result["total_duplicate_functions"] == 2
+
+
 def test_calculate_cyclomatic_complexity_from_blocks_uses_edges_and_nodes() -> None:
     blocks = [
         {"offset": 0x1000, "jump": 0x1010, "fail": 0x1020},
