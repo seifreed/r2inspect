@@ -412,6 +412,13 @@ def test_collect_signatures_for_size_no_signature_key():
     assert len(signatures) == 0
 
 
+def test_collect_signatures_for_size_non_dict_input():
+    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
+    signatures, groups = analyzer._collect_signatures_for_size("bad", 2)  # type: ignore[arg-type]
+    assert len(signatures) == 0
+    assert len(groups) == 0
+
+
 # Test _build_similar_groups with groups that have only 1 function (not similar)
 
 

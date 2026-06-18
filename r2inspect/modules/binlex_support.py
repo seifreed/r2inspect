@@ -119,6 +119,8 @@ def collect_signatures_for_size(
 ) -> tuple[set[str], defaultdict[str, list[str]]]:
     signatures: set[str] = set()
     signature_groups: defaultdict[str, list[str]] = defaultdict(list)
+    if not isinstance(function_signatures, dict):
+        return signatures, signature_groups
     for func_name, func_sigs in function_signatures.items():
         if n not in func_sigs or "signature" not in func_sigs[n]:
             continue
