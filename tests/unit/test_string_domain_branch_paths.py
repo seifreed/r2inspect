@@ -110,6 +110,13 @@ def test_build_xor_matches_ignores_non_string_search_results():
     assert build_xor_matches("A", search_hex) == []
 
 
+def test_build_xor_matches_non_string_search_string_returns_empty():
+    def search_hex(pattern: str) -> str:
+        return ""
+
+    assert build_xor_matches(None, search_hex) == []  # type: ignore[arg-type]
+
+
 # ---------------------------------------------------------------------------
 # find_suspicious() - lines 75, 80-89
 # ---------------------------------------------------------------------------
