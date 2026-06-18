@@ -576,6 +576,11 @@ def test_collect_import_dlls_skips_malformed_entries():
     assert dlls == ["kernel32.dll"]
 
 
+def test_collect_import_dlls_decodes_bytes_names():
+    dlls = collect_import_dlls([{"library": b"KERNEL32.DLL"}])
+    assert dlls == ["kernel32.dll"]
+
+
 def test_populate_import_statistics_skips_non_dict_buckets():
     result = {
         "api_analysis": None,

@@ -33,6 +33,8 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
         if not isinstance(imp, dict):
             continue
         dll = imp.get("library") or imp.get("libname")
+        if isinstance(dll, bytes):
+            dll = dll.decode(errors="ignore")
         if isinstance(dll, str) and dll:
             dlls.add(dll.lower())
     return list(dlls)
