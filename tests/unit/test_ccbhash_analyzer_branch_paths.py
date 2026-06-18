@@ -378,6 +378,19 @@ def test_find_similar_functions_no_duplicates():
     assert result == []
 
 
+def test_find_similar_functions_skips_malformed_entries():
+    analyzer = CCBHashAnalyzer(None, "/path/to/binary")
+    fhashes = {
+        "alpha": {"ccbhash": "aaa"},
+        "bad": {"ccbhash": None},
+        "worse": None,  # type: ignore[dict-item]
+        "beta": {"ccbhash": "aaa"},
+    }
+    result = analyzer._find_similar_functions(fhashes)
+    assert len(result) == 1
+    assert result[0]["count"] == 2
+
+
 def test_find_similar_functions_exception_handler():
     """Corrupt input triggers exception handler (lines 316-318)."""
     analyzer = CCBHashAnalyzer(None, "/path/to/binary")
@@ -394,6 +407,16 @@ def test_calculate_binary_ccbhash_returns_none_for_empty():
     """Empty dict → returns None (line 332)."""
     analyzer = CCBHashAnalyzer(None, "/path/to/binary")
     assert analyzer._calculate_binary_ccbhash({}) is None
+
+
+def test_calculate_binary_ccbhash_skips_malformed_entries():
+    analyzer = CCBHashAnalyzer(None, "/path/to/binary")
+    fhashes = {
+        "good": {"ccbhash": "aaa"},
+        "bad": {"ccbhash": None},
+        "also_bad": None,  # type: ignore[dict-item]
+    }
+    assert analyzer._calculate_binary_ccbhash(fhashes) is not None
 
 
 def test_calculate_binary_ccbhash_exception_handler():

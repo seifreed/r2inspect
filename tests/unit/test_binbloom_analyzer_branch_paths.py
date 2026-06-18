@@ -691,6 +691,18 @@ def test_group_functions_by_signature_handles_html_entities():
     assert "func b" in groups["sig1"]
 
 
+def test_group_functions_by_signature_skips_malformed_entries():
+    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
+    sigs = {
+        "func_a": {"signature": "sig1"},
+        "bad": {"signature": None},
+        "worse": None,  # type: ignore[dict-item]
+        "func_b": {"signature": "sig1"},
+    }
+    groups = analyzer._group_functions_by_signature(sigs)
+    assert groups["sig1"] == ["func_a", "func_b"]
+
+
 # ---------------------------------------------------------------------------
 # _build_similar_groups
 # ---------------------------------------------------------------------------

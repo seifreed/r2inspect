@@ -177,7 +177,11 @@ class BinbloomMixin:
 
         signature_groups: dict[str, list[str]] = defaultdict(list)
         for func_name, func_data in function_signatures.items():
-            signature = func_data["signature"]
+            if not isinstance(func_data, dict):
+                continue
+            signature = func_data.get("signature")
+            if not isinstance(signature, str) or not signature:
+                continue
             signature_groups[signature].append(clean_function_name(func_name))
         return signature_groups
 

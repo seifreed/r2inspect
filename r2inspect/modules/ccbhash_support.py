@@ -169,7 +169,11 @@ def find_similar_functions(
     try:
         hash_groups: dict[str, list[str]] = {}
         for func_name, func_data in function_hashes.items():
-            ccbhash = func_data["ccbhash"]
+            if not isinstance(func_data, dict):
+                continue
+            ccbhash = func_data.get("ccbhash")
+            if not isinstance(ccbhash, str) or not ccbhash:
+                continue
             hash_groups.setdefault(ccbhash, []).append(clean_function_name(func_name))
         similar_groups = [
             {"ccbhash": ccbhash, "functions": func_names, "count": len(func_names)}
@@ -189,7 +193,15 @@ def calculate_binary_ccbhash(
     try:
         if not function_hashes:
             return None
-        all_hashes = sorted([func_data["ccbhash"] for func_data in function_hashes.values()])
+        all_hashes = sorted(
+            func_data["ccbhash"]
+            for func_data in function_hashes.values()
+            if isinstance(func_data, dict)
+            and isinstance(func_data.get("ccbhash"), str)
+            and func_data["ccbhash"]
+        )
+        if not all_hashes:
+            return None
         combined = "|".join(all_hashes)
         binary_ccbhash = hashlib.sha256(combined.encode("utf-8")).hexdigest()
         logger.debug("Binary CCBHash calculated: %s...", binary_ccbhash[:16])
