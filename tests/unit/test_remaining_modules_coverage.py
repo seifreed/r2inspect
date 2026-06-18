@@ -74,6 +74,11 @@ def test_generate_recommendations_safeseh_64bit_skipped():
     assert "SafeSEH" not in types
 
 
+def test_generate_recommendations_skips_non_dict_mitigations():
+    recs = generate_recommendations({"mitigations": None, "pe_info": {}})
+    assert isinstance(recs, list)
+
+
 def test_dll_characteristics_has_key():
     assert 0x0040 in DLL_CHARACTERISTICS
     assert DLL_CHARACTERISTICS[0x0040] == "DYNAMIC_BASE"
