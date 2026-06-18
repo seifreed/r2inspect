@@ -321,6 +321,23 @@ def test_update_export_stats_suspicious_export_increments_counter():
     assert stats["suspicious_exports"] == 1
 
 
+def test_update_export_stats_ignores_malformed_characteristics_bucket():
+    analyzer = _make_analyzer(StubAdapter())
+    stats = {
+        "total_exports": 0,
+        "function_exports": 0,
+        "data_exports": 0,
+        "forwarded_exports": 0,
+        "suspicious_exports": 0,
+        "export_names": [],
+    }
+
+    analyzer._update_export_stats(stats, {"name": "bad", "characteristics": None})
+
+    assert stats["function_exports"] == 0
+    assert stats["data_exports"] == 1
+
+
 # ---------------------------------------------------------------------------
 # get_export_statistics – exception path (lines 163-164)
 # ---------------------------------------------------------------------------

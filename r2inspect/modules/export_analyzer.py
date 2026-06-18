@@ -191,10 +191,14 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         if exp.get("is_forwarded"):
             stats["forwarded_exports"] += 1
 
-        if exp.get("characteristics", {}).get("is_function"):
+        characteristics = exp.get("characteristics")
+        if not isinstance(characteristics, dict):
+            characteristics = {}
+
+        if characteristics.get("is_function"):
             stats["function_exports"] += 1
         elif not exp.get("is_forwarded"):
             stats["data_exports"] += 1
 
-        if exp.get("characteristics", {}).get("suspicious_name"):
+        if characteristics.get("suspicious_name"):
             stats["suspicious_exports"] += 1
