@@ -8,6 +8,13 @@ from typing import Any
 from rich.table import Table
 
 
+def _coerce_int(value: Any) -> int:
+    try:
+        return int(value, 0) if isinstance(value, str) else int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _add_bindiff_entries(table: Table, bindiff_info: dict[str, Any]) -> None:
     table.add_row("Filename", bindiff_info.get("filename", "Unknown"))
 
@@ -21,7 +28,7 @@ def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
     if not structural:
         return
     table.add_row("File Type", structural.get("file_type", "Unknown"))
-    table.add_row("File Size", f"{structural.get('file_size', 0):,} bytes")
+    table.add_row("File Size", f"{_coerce_int(structural.get('file_size', 0)):,} bytes")
     table.add_row("Sections", str(structural.get("section_count", 0)))
     if structural.get("section_names"):
         section_names = structural["section_names"]

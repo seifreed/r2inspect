@@ -430,6 +430,25 @@ def test_add_bindiff_structural_full():
     assert len(table.rows) == 6
 
 
+def test_add_bindiff_structural_string_file_size():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    structural = {
+        "file_type": "PE32",
+        "file_size": "102400",
+        "section_count": 5,
+        "section_names": [".text", ".data", ".rdata"],
+        "import_count": 50,
+        "export_count": 10,
+    }
+
+    _add_bindiff_structural(table, structural)
+
+    assert len(table.rows) == 6
+
+
 def test_add_bindiff_structural_many_sections():
     table = Table()
     table.add_column("Property")
