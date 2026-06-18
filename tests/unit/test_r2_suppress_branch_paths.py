@@ -53,6 +53,16 @@ class FakeR2WithCmdJson:
         return self._cmd_text
 
 
+class FakeR2WithNonStringCmd:
+    """Returns a non-string cmd payload to exercise the type guard."""
+
+    def cmdj(self, _command: str):
+        return None
+
+    def cmd(self, _command: str):
+        return 123
+
+
 class FalsyR2:
     """Evaluates to False so the early-exit branch in silent_cmdj fires."""
 
@@ -174,6 +184,12 @@ def test_try_cmd_parse_returns_default_when_parsed_result_is_none():
     assert result == {"d": 0}
 
 
+def test_try_cmd_parse_returns_default_when_cmd_output_is_non_string():
+    r2 = FakeR2WithNonStringCmd()
+    result = _try_cmd_parse(r2, "ij", default={"fallback": True})
+    assert result == {"fallback": True}
+
+
 # ---------------------------------------------------------------------------
 # _parse_raw_result (lines 107-114)
 # ---------------------------------------------------------------------------
@@ -208,6 +224,10 @@ def test_parse_raw_result_invalid_json_single_char_returns_none():
 def test_parse_raw_result_strips_whitespace_before_returning():
     result = _parse_raw_result("  some text  ")
     assert result == "some text"
+
+
+def test_parse_raw_result_returns_none_for_non_string_input():
+    assert _parse_raw_result(123) is None
 
 
 # ---------------------------------------------------------------------------

@@ -90,7 +90,7 @@ def _try_cmd_parse(
 ) -> Any | None:
     with R2PipeErrorSuppressor():
         raw_result = r2_instance.cmd(command)
-        if raw_result and raw_result.strip():
+        if isinstance(raw_result, str) and raw_result.strip():
             parsed = _parse_raw_result(raw_result)
             if parsed is not None:
                 return parsed
@@ -100,6 +100,8 @@ def _try_cmd_parse(
 def _parse_raw_result(raw_result: str) -> Any | None:
     import json
 
+    if not isinstance(raw_result, str):
+        return None
     try:
         return json.loads(raw_result)
     except (json.JSONDecodeError, TypeError):
