@@ -222,6 +222,12 @@ def test_format_summary_with_packer() -> None:
     assert "UPX" in result
 
 
+def test_format_summary_with_string_confidence() -> None:
+    results = {"packer": {"is_packed": True, "packer_type": "UPX", "confidence": "0.95"}}
+    result = OutputFormatter(results).format_summary()
+    assert "0.95" in result
+
+
 def test_format_summary_packer_not_packed() -> None:
     results = {"packer": {"is_packed": False}}
     result = OutputFormatter(results).format_summary()

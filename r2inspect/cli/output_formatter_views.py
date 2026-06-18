@@ -157,7 +157,7 @@ def append_packer_summary(summary_lines: list[str], results: dict[str, Any]) -> 
     if not packer or not packer.get("is_packed"):
         return
     summary_lines.append(f"Packer Detected: {packer.get('packer_type', 'Unknown')}")
-    summary_lines.append(f"Confidence: {packer.get('confidence', 0):.2f}")
+    summary_lines.append(f"Confidence: {_coerce_float(packer.get('confidence')):.2f}")
     summary_lines.append("")
 
 
@@ -177,3 +177,10 @@ def _stringify_table_value(value: Any) -> str:
     if isinstance(value, dict | list):
         return json.dumps(value, indent=2, default=str)
     return str(value)
+
+
+def _coerce_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
