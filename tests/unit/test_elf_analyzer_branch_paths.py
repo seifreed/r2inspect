@@ -317,6 +317,23 @@ def test_get_section_info_with_sections():
     assert sections[0]["name"] == ".text"
 
 
+def test_get_section_info_coerces_string_numeric_fields():
+    class StringSectionAnalyzer(ELFAnalyzer):
+        def _cmd_list(self, cmd: str):
+            if cmd == "iSj":
+                return [
+                    {"name": ".text", "size": "4096", "vaddr": "4096", "paddr": "8192"}
+                ]
+
+            return []
+
+    analyzer = StringSectionAnalyzer(ELFAdapterWithSections())
+    sections = analyzer._get_section_info()
+    assert sections[0]["size"] == 4096
+    assert sections[0]["vaddr"] == 4096
+    assert sections[0]["paddr"] == 8192
+
+
 def test_get_section_info_empty_sections():
     adapter = MinimalELFAdapter()
     analyzer = ELFAnalyzer(adapter)

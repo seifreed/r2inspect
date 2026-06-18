@@ -117,6 +117,12 @@ def test_analyze_returns_no_overlay_when_file_size_invalid_type():
     assert result["has_overlay"] is False
 
 
+def test_analyze_accepts_string_file_size():
+    """String file sizes are coerced before overlay checks."""
+    adapter = OverlayAdapter(file_info={"core": {"size": "10000"}})
+    assert OverlayAnalyzer(adapter)._get_file_size() == 10000
+
+
 def test_analyze_returns_no_overlay_when_no_sections():
     """_calculate_pe_end returns 0 when sections list is empty (line 133, 109 -> 52)."""
     adapter = OverlayAdapter(

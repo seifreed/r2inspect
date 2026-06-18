@@ -17,13 +17,10 @@ def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:
     file_info = cmdj("ij", {})
     if not isinstance(file_info, dict):
         return None
-    file_size = file_info.get("core", {}).get("size", 0)
+    file_size = _to_int(file_info.get("core", {}).get("size", 0))
     if not file_size:
         return None
-    try:
-        return int(file_size)
-    except (ValueError, TypeError):
-        return None
+    return file_size
 
 
 def get_valid_pe_end(calculate_pe_end: Callable[[], int], file_size: int) -> int | None:

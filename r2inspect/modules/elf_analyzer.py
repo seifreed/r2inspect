@@ -203,9 +203,9 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                             "name": section.get("name", "Unknown"),
                             "type": section.get("type", "Unknown"),
                             "flags": section.get("flags", ""),
-                            "size": section.get("size", 0),
-                            "vaddr": section.get("vaddr", 0),
-                            "paddr": section.get("paddr", 0),
+                            "size": _to_int(section.get("size", 0)),
+                            "vaddr": _to_int(section.get("vaddr", 0)),
+                            "paddr": _to_int(section.get("paddr", 0)),
                         }
                     )
             else:

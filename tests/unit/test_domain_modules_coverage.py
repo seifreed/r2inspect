@@ -590,6 +590,12 @@ def test_build_load_commands_missing_keys() -> None:
     assert result[0]["size"] == 0
 
 
+def test_build_load_commands_coerces_string_fields() -> None:
+    result = build_load_commands([{"type": "LC_SEGMENT", "size": "72", "offset": "64"}])
+    assert result[0]["size"] == 72
+    assert result[0]["offset"] == 64
+
+
 def test_build_sections_normal() -> None:
     sections_info = [
         {
@@ -616,6 +622,13 @@ def test_build_sections_missing_keys() -> None:
     result = build_sections([{}])
     assert result[0]["name"] == "Unknown"
     assert result[0]["size"] == 0
+
+
+def test_build_sections_coerces_string_numeric_fields() -> None:
+    result = build_sections([{"name": "__text", "size": "4096", "vaddr": "4096", "paddr": "256"}])
+    assert result[0]["size"] == 4096
+    assert result[0]["vaddr"] == 4096
+    assert result[0]["paddr"] == 256
 
 
 # ===========================================================================

@@ -17,6 +17,13 @@ SDK_VERSION_MAP = {
 }
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def estimate_from_sdk_version(sdk_version: str) -> str | None:
     version_match = re.search(r"(\d+\.\d+)", sdk_version)
     if version_match:
@@ -52,8 +59,8 @@ def build_load_commands(headers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
             "type": header.get("type", "Unknown"),
-            "size": header.get("size", 0),
-            "offset": header.get("offset", 0),
+            "size": _to_int(header.get("size", 0)),
+            "offset": _to_int(header.get("offset", 0)),
             "data": header,
         }
         for header in headers
@@ -67,9 +74,9 @@ def build_sections(sections_info: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "segment": section.get("segment", "Unknown"),
             "type": section.get("type", "Unknown"),
             "flags": section.get("flags", ""),
-            "size": section.get("size", 0),
-            "vaddr": section.get("vaddr", 0),
-            "paddr": section.get("paddr", 0),
+            "size": _to_int(section.get("size", 0)),
+            "vaddr": _to_int(section.get("vaddr", 0)),
+            "paddr": _to_int(section.get("paddr", 0)),
         }
         for section in sections_info
     ]

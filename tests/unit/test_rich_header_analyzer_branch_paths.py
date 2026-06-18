@@ -548,6 +548,13 @@ def test_extract_offsets_returns_tuple() -> None:
     assert result == (0x50, 0xA0)
 
 
+def test_extract_offsets_coerces_string_offsets() -> None:
+    """String offsets are normalized before comparison."""
+    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
+    result = analyzer._extract_offsets({"offset": "160"}, {"offset": "80"})
+    assert result == (80, 160)
+
+
 def test_extract_offsets_returns_none_when_rich_offset_missing() -> None:
     """Line 364-366: returns None when rich_offset is None."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from r2inspect.domain.formats.macho import (
     build_load_commands,
     build_sections,
@@ -149,6 +147,13 @@ def test_build_load_commands_defaults_for_missing_fields():
     assert commands[0]["offset"] == 0
 
 
+def test_build_load_commands_coerces_string_fields():
+    headers = [{"type": "LC_SEGMENT", "size": "72", "offset": "64"}]
+    commands = build_load_commands(headers)
+    assert commands[0]["size"] == 72
+    assert commands[0]["offset"] == 64
+
+
 def test_build_load_commands_empty_list():
     assert build_load_commands([]) == []
 
@@ -188,6 +193,15 @@ def test_build_sections_defaults_for_missing_fields():
     assert result[0]["size"] == 0
     assert result[0]["vaddr"] == 0
     assert result[0]["paddr"] == 0
+
+
+def test_build_sections_coerces_string_numeric_fields():
+    result = build_sections(
+        [{"name": "__text", "segment": "__TEXT", "size": "4096", "vaddr": "4096", "paddr": "256"}]
+    )
+    assert result[0]["size"] == 4096
+    assert result[0]["vaddr"] == 4096
+    assert result[0]["paddr"] == 256
 
 
 def test_build_sections_empty_list():

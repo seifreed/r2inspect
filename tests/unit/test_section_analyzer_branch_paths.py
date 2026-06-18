@@ -218,6 +218,15 @@ def test_check_suspicious_characteristics_handles_invalid_analysis_input():
     assert indicators == []
 
 
+def test_check_suspicious_characteristics_coerces_string_sizes():
+    analyzer = _build_analyzer(sections=[])
+    indicators = analyzer._check_suspicious_characteristics(
+        {"name": ".text", "vsize": "50", "size": "50"},
+        analysis={"entropy": 0.1, "is_writable": False, "is_executable": False},
+    )
+    assert any("small" in i.lower() for i in indicators)
+
+
 # ---------------------------------------------------------------------------
 # _check_size_indicators - very small section (line 248)
 # ---------------------------------------------------------------------------

@@ -36,6 +36,13 @@ from ..domain.services.binary_helpers import (
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Section analysis using backend data."""
 
@@ -122,8 +129,8 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         try:
             name = str(section.get("name", ""))
-            vsize = section.get("vsize", 0)
-            raw_size = section.get("size", 0)
+            vsize = _to_int(section.get("vsize", 0))
+            raw_size = _to_int(section.get("size", 0))
             entropy = analysis.get("entropy", 0)
 
             indicators.extend(self._check_section_name_indicators(name))
