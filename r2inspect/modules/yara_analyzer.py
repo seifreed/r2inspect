@@ -117,7 +117,7 @@ class YaraAnalyzer(CommandHelperMixin):
         if os.path.exists(rules_path):
             return rules_path
         logger.info("YARA rules path not found: %s. Creating defaults.", rules_path)
-        self.create_default_rules()
+        self.create_default_rules(rules_path)
         return rules_path if os.path.exists(rules_path) else None
 
     def _get_cached_rules(self, rules_path: str) -> Any | None:
@@ -223,7 +223,7 @@ class YaraAnalyzer(CommandHelperMixin):
 
     def _compile_default_rules(self, rules_path: str) -> yara.Rules | None:
         logger.info("No valid YARA rules found in: %s. Using defaults.", rules_path)
-        self.create_default_rules()
+        self.create_default_rules(rules_path)
         try:
             # Compile every bundled default rule set, not just packer detection:
             # previously the suspicious-API and crypto rules were silently dropped
@@ -251,10 +251,10 @@ class YaraAnalyzer(CommandHelperMixin):
         """Process YARA matches into structured format"""
         return process_matches(yara_matches, logger)
 
-    def create_default_rules(self) -> None:
+    def create_default_rules(self, rules_path: str | None = None) -> None:
         """Create default YARA rules if none exist"""
         try:
-            rules_dir = Path(self.rules_path)
+            rules_dir = Path(rules_path or self.rules_path)
             rules_dir.mkdir(parents=True, exist_ok=True)
             for filename, content in DEFAULT_YARA_RULES.items():
                 rule_file = rules_dir / filename

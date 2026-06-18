@@ -136,6 +136,18 @@ def test_resolve_rules_path_custom_existing(tmp_path):
     assert result == str(custom)
 
 
+def test_resolve_rules_path_custom_missing_creates_defaults(tmp_path):
+    custom = tmp_path / "custom_rules"
+    config = FakeConfig(str(tmp_path / "rules"))
+    analyzer = YaraAnalyzer(FakeAdapter(), config=config)
+
+    result = analyzer._resolve_rules_path(str(custom))
+
+    assert result == str(custom)
+    assert custom.exists()
+    assert any(custom.iterdir())
+
+
 def test_resolve_rules_path_not_existing_creates_defaults(tmp_path):
     rules_dir = tmp_path / "new_rules"
     config = FakeConfig(str(rules_dir))
