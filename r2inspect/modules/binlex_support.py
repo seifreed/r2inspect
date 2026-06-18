@@ -54,8 +54,15 @@ def collect_function_signatures(
     all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
     analyzed_count = 0
     for func in functions:
-        func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
+        if not isinstance(func, dict):
+            continue
         func_addr = func.get("addr")
+        func_name_value = func.get("name")
+        func_name = (
+            func_name_value
+            if isinstance(func_name_value, str) and func_name_value
+            else f"func_{func_addr or 'unknown'}"
+        )
         if func_addr is None:
             continue
         func_sigs = analyzer._analyze_function(func_addr, func_name, ngram_sizes)

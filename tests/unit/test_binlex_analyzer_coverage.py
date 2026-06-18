@@ -822,6 +822,60 @@ def test_collect_function_signatures_skips_no_addr():
     assert sigs == {}
 
 
+def test_collect_function_signatures_skips_malformed_function_entries():
+    class StableSignatureBinlexAnalyzer(BinlexAnalyzer):
+        def _analyze_function(
+            self, func_addr: int, func_name: str, ngram_sizes: list[int]
+        ) -> dict[int, dict[str, Any]]:
+            return {
+                2: {
+                    "signature": "sig",
+                    "ngrams": ["mov ret"],
+                    "token_count": 2,
+                    "ngram_count": 1,
+                    "unique_ngrams": 1,
+                }
+            }
+
+    analyzer = StableSignatureBinlexAnalyzer(adapter=None, filepath=None)
+    functions = [
+        "bad",
+        {"name": ["bad"], "addr": 0x1000, "size": 100},
+        {"name": "valid_func", "addr": 0x2000, "size": 100},
+    ]
+
+    sigs, all_ngrams, count = analyzer._collect_function_signatures(functions, [2])
+
+    assert count == 2
+    assert set(sigs) == {"func_4096", "valid_func"}
+    assert all_ngrams[2]["mov ret"] == 2
+
+
+def test_extract_functions_skips_malformed_aflj_entries():
+    class AdapterWithMalformedFunctions:
+        def analyze_all(self) -> None:
+            pass
+
+        def cmdj(self, command: str, default: Any = None) -> Any:
+            if command == "aflj":
+                return [
+                    "bad",
+                    {"name": ["bad"], "addr": 0x1000, "size": 100},
+                    {"name": "badsize", "addr": 0x2000, "size": "bad"},
+                    {"name": "valid_func", "addr": 0x3000, "size": 50},
+                ]
+            return default if default is not None else {}
+
+    analyzer = BinlexAnalyzer(adapter=AdapterWithMalformedFunctions(), filepath=None)
+
+    functions = analyzer._extract_functions()
+
+    assert functions == [
+        {"name": ["bad"], "addr": 0x1000, "size": 100},
+        {"name": "valid_func", "addr": 0x3000, "size": 50},
+    ]
+
+
 # Test _calculate_binary_signature exception path (lines 475-476)
 
 

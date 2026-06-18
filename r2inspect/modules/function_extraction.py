@@ -36,8 +36,13 @@ def collect_valid_functions(
         return []
     valid_functions = []
     for func in functions:
-        if func.get("addr") is not None and func.get("size", 0) > 0:
-            if clean_names and func.get("name"):
+        if not isinstance(func, dict):
+            continue
+        size = func.get("size", 0)
+        if not isinstance(size, int):
+            size = 0
+        if func.get("addr") is not None and size > 0:
+            if clean_names and isinstance(func.get("name"), str) and func.get("name"):
                 func["name"] = clean_function_name(func["name"])
             valid_functions.append(func)
     logger.debug("Extracted %s valid functions", len(valid_functions))
