@@ -7,6 +7,7 @@ from r2inspect.domain.services.binary_helpers import (
     entropy_from_ints,
     clamp_score,
     count_suspicious_imports,
+    clean_function_name,
     normalize_section_name,
     suspicious_section_name_indicator,
     STANDARD_PE_SECTIONS,
@@ -245,6 +246,10 @@ def test_normalize_section_name_non_string():
     assert normalize_section_name([]) == ""
 
 
+def test_clean_function_name_non_string_returns_empty():
+    assert clean_function_name(None) == ""
+
+
 def test_suspicious_section_name_indicator_not_suspicious():
     """Test section name that is not suspicious."""
     result = suspicious_section_name_indicator(".text", ["upx", "packed"])
@@ -262,6 +267,10 @@ def test_suspicious_section_name_indicator_case_insensitive():
     """Test suspicious section name is case insensitive."""
     result = suspicious_section_name_indicator("PACKED", ["packed"])
     assert result is not None
+
+
+def test_suspicious_section_name_indicator_invalid_suspicious_input():
+    assert suspicious_section_name_indicator("UPX0", None) is None
 
 
 def test_suspicious_section_name_indicator_partial_match():

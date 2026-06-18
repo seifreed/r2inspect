@@ -53,6 +53,8 @@ def normalize_section_name(name: str | None) -> str:
 
 def clean_function_name(name: str) -> str:
     """Unescape the HTML entities radare2 emits in function names."""
+    if not isinstance(name, str):
+        return ""
     return name.replace("&nbsp;", " ").replace("&amp;", "&")
 
 
@@ -94,7 +96,7 @@ STANDARD_PE_SECTIONS = [
 
 
 def suspicious_section_name_indicator(name: str, suspicious: list[str]) -> str | None:
-    if not isinstance(name, str):
+    if not isinstance(name, str) or not isinstance(suspicious, (list, tuple, set)):
         return None
     lowered = name.lower()
     for sus_name in suspicious:
