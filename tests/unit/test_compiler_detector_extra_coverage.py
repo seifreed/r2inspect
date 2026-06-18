@@ -467,6 +467,20 @@ def test_score_compilers_skips_non_dict_input():
     assert scores == {}
 
 
+def test_detect_compiler_version_skips_non_dict_detectors():
+    from r2inspect.modules.compiler_detector_support import detect_compiler_version
+
+    assert (
+        detect_compiler_version(
+            "MSVC",
+            [],
+            [],
+            detectors=None,  # type: ignore[arg-type]
+        )
+        == "Unknown"
+    )
+
+
 def test_apply_best_compiler_no_scores():
     """Test _apply_best_compiler with empty scores"""
     adapter = FakeAdapter()

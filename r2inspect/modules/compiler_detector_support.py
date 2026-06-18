@@ -114,6 +114,8 @@ def detect_compiler_version(
     *,
     detectors: dict[str, Callable[[list[str], list[str]], str]],
 ) -> str:
+    if not isinstance(detectors, dict):
+        return "Unknown"
     detector = detectors.get(compiler)
     return detector(strings_data, imports_data) if detector else "Unknown"
 
