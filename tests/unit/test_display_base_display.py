@@ -524,6 +524,20 @@ def test_display_error_statistics_with_categories():
     assert "2" in output
 
 
+def test_display_error_statistics_with_non_string_category_keys():
+    con, buf = _make_console()
+    error_stats = {
+        "total_errors": 1,
+        "recent_errors": 1,
+        "recovery_strategies_available": 0,
+        "errors_by_category": {None: 3},
+        "errors_by_severity": {},
+    }
+    runtime_display_error_statistics(error_stats, get_console=lambda: con)
+    output = _captured(buf)
+    assert "Unknown" in output
+
+
 def test_display_error_statistics_with_severities():
     con, buf = _make_console()
     error_stats = {
