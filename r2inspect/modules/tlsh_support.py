@@ -92,9 +92,15 @@ def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str,
             if not isinstance(func, dict):
                 logger.debug("Skipping malformed function data: %s - %s", type(func), func)
                 continue
-            func_name = func.get("name", f"func_{func.get('addr', 'unknown')}")
             func_addr = func.get("addr")
-            func_size = func.get("size", 0)
+            func_name_value = func.get("name")
+            func_name = (
+                func_name_value
+                if isinstance(func_name_value, str) and func_name_value
+                else f"func_{func_addr or 'unknown'}"
+            )
+            func_size_value = func.get("size", 0)
+            func_size = func_size_value if isinstance(func_size_value, int) else 0
             if not func_addr or func_size == 0 or func_size > 100000:
                 function_hashes[func_name] = None
                 continue

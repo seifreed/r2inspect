@@ -531,6 +531,28 @@ def test_calculate_function_tlsh_malformed():
         os.unlink(path)
 
 
+def test_calculate_function_tlsh_coerces_malformed_metadata():
+    """Malformed function metadata does not abort later function hashes."""
+    path = _tmp_file(b"\x00" * 100)
+    try:
+        functions = [
+            {"name": ["bad"], "addr": 0x1111, "size": 0},
+            {"name": "badsize", "addr": 0x2222, "size": "bad"},
+            {"name": "valid", "addr": 0x1000, "size": 100},
+        ]
+        cmd_map = {f"p8 100 @ {0x1000}": "CC" * 100}
+        adapter = DirectAdapter(functions=functions, cmd_map=cmd_map)
+        analyzer = TLSHAnalyzer(adapter, path)
+
+        result = analyzer._calculate_function_tlsh()
+
+        assert result["func_4369"] is None
+        assert result["badsize"] is None
+        assert "valid" in result
+    finally:
+        os.unlink(path)
+
+
 def test_calculate_function_tlsh_limit_50():
     """_calculate_function_tlsh processes at most 50 functions."""
     path = _tmp_file(b"\x00" * 100)
