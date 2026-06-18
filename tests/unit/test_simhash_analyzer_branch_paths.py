@@ -401,6 +401,18 @@ def test_extract_function_features_coerces_string_offset_and_size() -> None:
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
+def test_extract_function_features_coerces_hex_string_offset_and_size() -> None:
+    adapter = StubAdapter(
+        functions=[{"offset": "0x1000", "name": "hex_func", "size": "0x32"}],
+        disasm_map={4096: {"ops": [{"mnemonic": "mov"}, {"mnemonic": "ret"}]}},
+    )
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    result = analyzer._extract_function_features()
+    assert result["hex_func"]["addr"] == 4096
+    assert result["hex_func"]["size"] == 50
+
+
+@pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
 def test_extract_function_features_exception_in_outer_loop_returns_empty() -> None:
     class BrokenFunctions:
         def get_functions(self) -> None:

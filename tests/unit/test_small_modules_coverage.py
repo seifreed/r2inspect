@@ -632,6 +632,13 @@ def test_collect_artifact_strings_basic():
     assert result[0]["artifact"] == "VirtualBox"
 
 
+def test_collect_artifact_strings_accepts_hex_string_address():
+    strings = [{"string": "VirtualBox", "vaddr": "0x1000"}]
+    result = collect_artifact_strings(strings, ["VirtualBox"])
+    assert len(result) == 1
+    assert result[0]["address"] == "0x1000"
+
+
 def test_collect_artifact_strings_case_insensitive():
     strings = [{"string": "VMWARE TOOLS", "vaddr": 0}]
     result = collect_artifact_strings(strings, ["vmware"])
