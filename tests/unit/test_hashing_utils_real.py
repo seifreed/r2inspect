@@ -148,7 +148,7 @@ def test_calculate_imphash_case_insensitive():
     assert result1 == result2
 
 
-def test_calculate_imphash_exception():
+def test_calculate_imphash_skips_non_text_values():
     imports = [{"library": None, "name": None}]
 
     result = hashing.calculate_imphash(imports)

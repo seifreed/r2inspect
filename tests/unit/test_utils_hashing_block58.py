@@ -25,8 +25,8 @@ def test_calculate_hashes_error(tmp_path: Path):
     # Remove read permissions to trigger error on open
     os.chmod(file_path, 0)
     try:
-        hashes = calculate_hashes(str(file_path))
-        assert hashes["md5"] == ""
+        with pytest.raises(PermissionError):
+            calculate_hashes(str(file_path))
     finally:
         os.chmod(file_path, 0o600)
 

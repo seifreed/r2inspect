@@ -205,7 +205,7 @@ def test_calculate_imphash_missing_keys():
     assert imphash is None
 
 
-def test_calculate_imphash_exception_handling():
+def test_calculate_imphash_skips_non_text_values():
     imports = [
         {"library": None, "name": "CreateFileA"},
     ]

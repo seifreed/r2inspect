@@ -23,28 +23,36 @@ def calculate_hashes_for_bytes(data: bytes, *, include_sha512: bool = False) -> 
 
 def calculate_imphash(imports: list[Any]) -> str | None:
     """Calculate import hash (imphash) from import entries."""
-    try:
-        if not imports:
-            return None
-
-        import_string = ""
-        for imp in imports:
-            lib = imp.get("library", imp.get("dll", imp.get("libname", ""))).lower()
-            # The imphash spec (Mandiant/pefile) strips the module extension so
-            # the token is "kernel32.createfile", not "kernel32.dll.createfile";
-            # otherwise the hash matches no public imphash IOC.
-            parts = lib.rsplit(".", 1)
-            if len(parts) > 1 and parts[1] in ("ocx", "sys", "dll"):
-                lib = parts[0]
-            func = imp.get("name", "").lower()
-            if lib and func:
-                import_string += f"{lib}.{func},"
-
-        if not import_string:
-            return None
-
-        import_string = import_string.rstrip(",")
-        return hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()
-
-    except Exception:
+    if not imports:
         return None
+
+    import_string = ""
+    for imp in imports:
+        if not isinstance(imp, dict):
+            continue
+
+        lib_value = imp.get("library") or imp.get("dll") or imp.get("libname") or ""
+        func_value = imp.get("name") or ""
+        if isinstance(lib_value, bytes):
+            lib_value = lib_value.decode(errors="ignore")
+        if isinstance(func_value, bytes):
+            func_value = func_value.decode(errors="ignore")
+        if not isinstance(lib_value, str) or not isinstance(func_value, str):
+            continue
+
+        lib = lib_value.lower()
+        # The imphash spec (Mandiant/pefile) strips the module extension so
+        # the token is "kernel32.createfile", not "kernel32.dll.createfile";
+        # otherwise the hash matches no public imphash IOC.
+        parts = lib.rsplit(".", 1)
+        if len(parts) > 1 and parts[1] in ("ocx", "sys", "dll"):
+            lib = parts[0]
+        func = func_value.lower()
+        if lib and func:
+            import_string += f"{lib}.{func},"
+
+    if not import_string:
+        return None
+
+    import_string = import_string.rstrip(",")
+    return hashlib.md5(import_string.encode(), usedforsecurity=False).hexdigest()

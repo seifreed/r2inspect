@@ -111,8 +111,7 @@ def test_calculate_imphash_with_valid_imports():
     assert len(result) == 32
 
 
-def test_calculate_imphash_exception_non_dict_items():
-    # Non-dict items cause AttributeError -> lines 91, 92 (except path)
+def test_calculate_imphash_skips_non_dict_items():
     result = calculate_imphash(["not_a_dict", 42])
     assert result is None
 

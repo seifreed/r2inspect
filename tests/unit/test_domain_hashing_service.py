@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from r2inspect.domain.services.hashing import (
     calculate_hashes_for_bytes,
     calculate_imphash,
@@ -57,6 +59,11 @@ def test_calculate_imphash_empty() -> None:
 
 def test_calculate_imphash_none() -> None:
     assert calculate_imphash(None) is None  # type: ignore
+
+
+def test_calculate_imphash_rejects_non_iterable() -> None:
+    with pytest.raises(TypeError):
+        calculate_imphash(1)  # type: ignore[arg-type]
 
 
 def test_calculate_imphash_with_dll_key() -> None:
