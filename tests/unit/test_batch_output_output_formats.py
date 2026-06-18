@@ -376,6 +376,19 @@ def test_collect_yara_matches_objects():
     assert "Rule2" in matches
 
 
+def test_collect_yara_matches_numeric_rule_values():
+    """Test YARA matches collection coerces numeric rule values."""
+
+    class YaraMatch:
+        def __init__(self, rule: int) -> None:
+            self.rule = rule
+
+    result = {"yara_matches": [YaraMatch(1), YaraMatch(2)]}
+    matches = _collect_yara_matches(result)
+    assert "1" in matches
+    assert "2" in matches
+
+
 def test_collect_yara_matches_none():
     """Test YARA matches collection when none exist."""
     result = {"yara_matches": []}

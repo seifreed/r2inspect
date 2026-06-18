@@ -88,9 +88,9 @@ def collect_yara_matches(result: dict[str, Any]) -> str:
     names: list[str] = []
     for match in matches:
         if isinstance(match, dict) and "rule" in match:
-            names.append(match["rule"])
+            names.append(str(match["rule"]))
         elif hasattr(match, "rule"):
-            names.append(match.rule)
+            names.append(str(match.rule))
         else:
             names.append(str(match))
     return ", ".join(names) if names else "None"
