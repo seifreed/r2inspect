@@ -64,7 +64,11 @@ def format_sections(sections: list[dict[str, Any]]) -> Table:
     table.add_column("Flags", style="magenta")
     table.add_column("Entropy", style="green")
     table.add_column("Suspicious", style="red")
+    if not isinstance(sections, list):
+        sections = []
     for section in sections:
+        if not isinstance(section, dict):
+            continue
         suspicious = "Yes" if section.get("suspicious_indicators") else "No"
         entropy = section.get("entropy", 0)
         try:

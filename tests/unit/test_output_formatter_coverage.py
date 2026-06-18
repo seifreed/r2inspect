@@ -90,6 +90,16 @@ def test_format_sections_suspicious_yes() -> None:
     assert isinstance(result, Table)
 
 
+def test_format_sections_accepts_non_list_sections() -> None:
+    result = OutputFormatter({}).format_sections({"name": ".text"})
+    assert isinstance(result, Table)
+
+
+def test_format_sections_skips_non_dict_entries() -> None:
+    result = OutputFormatter({}).format_sections([None, {"name": ".text"}])
+    assert isinstance(result, Table)
+
+
 # ---------------------------------------------------------------------------
 # format_imports
 # ---------------------------------------------------------------------------
