@@ -282,6 +282,38 @@ def test_detect_timing_checks_with_rdtsc() -> None:
     assert "RDTSC Instruction" in types
 
 
+def test_detect_anti_debug_detailed_skips_malformed_imports() -> None:
+    adapter = _make_adapter(
+        cmdj_map={
+            "iij": [
+                {"name": ["bad"], "plt": "bad"},
+                {"name": "IsDebuggerPresent", "plt": "4096", "libname": "kernel32.dll"},
+            ]
+        }
+    )
+    detector = AntiAnalysisDetector(adapter)
+    result = detector._detect_anti_debug_detailed()
+
+    assert result["detected"] is True
+    assert any(e.get("type") == "API Call" for e in result["evidence"])
+
+
+def test_detect_timing_checks_detailed_skips_malformed_imports() -> None:
+    adapter = _make_adapter(
+        cmdj_map={
+            "iij": [
+                {"name": ["bad"], "plt": "bad"},
+                {"name": "GetTickCount", "plt": "4096", "libname": "kernel32.dll"},
+            ]
+        }
+    )
+    detector = AntiAnalysisDetector(adapter)
+    result = detector._detect_timing_checks_detailed()
+
+    assert result["detected"] is True
+    assert any(e.get("type") == "Timing API Calls" for e in result["evidence"])
+
+
 def test_detect_environment_checks_returns_list() -> None:
     adapter = _full_adapter()
     detector = AntiAnalysisDetector(adapter)
@@ -362,6 +394,23 @@ def test_find_suspicious_apis_returns_list() -> None:
     detector = AntiAnalysisDetector(adapter)
     suspicious = detector._find_suspicious_apis()
     assert isinstance(suspicious, list)
+
+
+def test_find_suspicious_apis_skips_malformed_imports() -> None:
+    adapter = _make_adapter(
+        cmdj_map={
+            "iij": [
+                {"name": ["bad"], "plt": "bad"},
+                {"name": "VirtualAlloc", "plt": "4096", "libname": "kernel32.dll"},
+            ]
+        }
+    )
+    detector = AntiAnalysisDetector(adapter)
+    suspicious = detector._find_suspicious_apis()
+
+    assert len(suspicious) == 1
+    assert suspicious[0]["api"] == "VirtualAlloc"
+    assert suspicious[0]["address"] == "0x1000"
 
 
 def test_detect_evasion_techniques_returns_list() -> None:

@@ -22,6 +22,17 @@ from .anti_analysis_helpers import (
 )
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _string_value(value: Any) -> str:
+    return value if isinstance(value, str) else ""
+
+
 def empty_anti_analysis_report() -> dict[str, Any]:
     """Return the default anti-analysis report skeleton with no detections."""
     return {
@@ -67,13 +78,15 @@ def _anti_debug_import_evidence(detector: Any) -> list[dict[str, Any]]:
         return []
     evidence: list[dict[str, Any]] = []
     for imp in imports:
-        func_name = imp.get("name", "")
+        if not isinstance(imp, dict):
+            continue
+        func_name = _string_value(imp.get("name"))
         if func_name in detector.anti_debug_apis:
             evidence.append(
                 {
                     "type": "API Call",
                     "detail": f"Anti-debug API: {func_name}",
-                    "address": hex(imp.get("plt", 0)),
+                    "address": hex(_to_int(imp.get("plt", 0))),
                     "library": imp.get("libname") or imp.get("library", "unknown"),
                 }
             )
@@ -232,13 +245,15 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
     if imports:
         timing_imports = []
         for imp in imports:
-            func_name = imp.get("name", "")
+            if not isinstance(imp, dict):
+                continue
+            func_name = _string_value(imp.get("name"))
             if func_name in TIMING_APIS:
                 timing_imports.append(
                     {
                         "function": func_name,
                         "description": TIMING_APIS[func_name],
-                        "address": hex(imp.get("plt", 0)),
+                        "address": hex(_to_int(imp.get("plt", 0))),
                         "library": imp.get("libname") or imp.get("library", "unknown"),
                     }
                 )

@@ -7,6 +7,17 @@ from collections.abc import Callable
 from typing import Any
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _string_value(value: Any) -> str:
+    return value if isinstance(value, str) else ""
+
+
 def collect_artifact_strings(
     strings_result: list[dict[str, Any]] | None, artifacts: list[str]
 ) -> list[dict[str, Any]]:
@@ -22,14 +33,18 @@ def collect_artifact_strings(
         for artifact in artifacts
     }
     for string_info in strings_result:
-        string_val = string_info.get("string", "")
+        if not isinstance(string_info, dict):
+            continue
+        string_val = _string_value(string_info.get("string"))
+        if not string_val:
+            continue
         for artifact, pattern in patterns.items():
             if pattern.search(string_val):
                 matches.append(
                     {
                         "artifact": artifact,
                         "string": string_val,
-                        "address": hex(string_info.get("vaddr", 0)),
+                        "address": hex(_to_int(string_info.get("vaddr", 0))),
                     }
                 )
     return matches
@@ -125,7 +140,9 @@ def detect_injection_apis(
 ) -> list[dict[str, Any]]:
     injection_found = 0
     for imp in imports or []:
-        if imp.get("name") in injection_apis:
+        if not isinstance(imp, dict):
+            continue
+        if _string_value(imp.get("name")) in injection_apis:
             injection_found += 1
     # Two or more injection-related APIs together are the established
     # detection threshold. Commit 8f3da63 silently raised this to 3 under a
@@ -145,14 +162,16 @@ def detect_injection_apis(
 def match_suspicious_api(
     imp: dict[str, Any], suspicious_api_categories: dict[str, list[str]]
 ) -> dict[str, Any] | None:
-    imp_name = imp.get("name", "")
+    if not isinstance(imp, dict):
+        return None
+    imp_name = _string_value(imp.get("name"))
     for category, apis in suspicious_api_categories.items():
         for api in apis:
             if api in imp_name:
                 return {
                     "api": imp_name,
                     "category": category,
-                    "address": hex(imp.get("plt", 0)),
+                    "address": hex(_to_int(imp.get("plt", 0))),
                 }
     return None
 
