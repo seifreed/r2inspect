@@ -511,6 +511,10 @@ def test_find_suspicious_patterns_is_case_insensitive():
     assert any(pattern["pattern"] == "DLL Injection" for pattern in patterns)
 
 
+def test_find_suspicious_patterns_non_list_input_returns_empty():
+    assert find_suspicious_patterns(123) == []  # type: ignore[arg-type]
+
+
 def test_assess_api_risk_uses_runtime_category_names():
     imports = [
         {"name": "CreateProcess"},
