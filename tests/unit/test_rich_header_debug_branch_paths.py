@@ -11,8 +11,6 @@ from __future__ import annotations
 import struct
 from typing import Any
 
-import pytest
-
 from r2inspect.modules.rich_header_debug import RichHeaderDebugMixin
 
 
@@ -127,6 +125,12 @@ def test_debug_file_structure_exception_is_caught():
 
 def test_debug_get_file_size_returns_size_from_file_info():
     adapter = _ByteAdapter(file_info={"core": {"size": 12345}})
+    dbg = _ConcreteDebug(adapter=adapter)
+    assert dbg._debug_get_file_size() == 12345
+
+
+def test_debug_get_file_size_coerces_numeric_string():
+    adapter = _ByteAdapter(file_info={"core": {"size": "12345"}})
     dbg = _ConcreteDebug(adapter=adapter)
     assert dbg._debug_get_file_size() == 12345
 

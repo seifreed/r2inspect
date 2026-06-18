@@ -11,6 +11,13 @@ from ..infrastructure.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class RichHeaderDebugMixin:
     """Debug and low-level helpers for Rich Header analysis."""
 
@@ -41,7 +48,7 @@ class RichHeaderDebugMixin:
             logger.debug("Debug analysis failed: %s", e)
 
     def _debug_get_file_size(self) -> int:
-        return int(self._get_file_info().get("core", {}).get("size", 0))
+        return _to_int(self._get_file_info().get("core", {}).get("size", 0))
 
     def _debug_read_bytes(self, size: int) -> bytes | None:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
