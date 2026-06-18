@@ -122,7 +122,7 @@ def display_error_statistics(error_stats: dict[str, Any], *, get_console: Any) -
         category_table.add_column("Count", style="red")
         for category, count in errors_by_category.items():
             if hasattr(category, "value"):
-                label = category.value if category.value else "unknown"
+                label = category.value if isinstance(category.value, str) and category.value else "unknown"
             else:
                 label = str(category) if category is not None else "unknown"
             category_table.add_row(label.replace("_", " ").title(), str(count))
