@@ -70,6 +70,19 @@ def test_resource_analyzer_get_resource_directory_valid() -> None:
     assert result["virtual_address"] == 0x1000
 
 
+def test_resource_analyzer_get_resource_directory_coerces_hex_strings() -> None:
+    analyzer = _make_analyzer(
+        cmdj_map={
+            "iDj": [{"name": "RESOURCE", "vaddr": "0x1000", "size": "0x200", "paddr": "0x800"}]
+        }
+    )
+    result = analyzer._get_resource_directory()
+    assert result is not None
+    assert result["offset"] == 0x800
+    assert result["size"] == 0x200
+    assert result["virtual_address"] == 0x1000
+
+
 def test_resource_analyzer_get_resource_directory_exception() -> None:
     # When cmdj raises, the adapter layers catch the error and return default/None.
     # _get_resource_directory then returns None.
