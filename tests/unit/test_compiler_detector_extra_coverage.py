@@ -5,7 +5,7 @@ No the stdlib mock library, no mock objects, no patch. Real objects and plain ad
 """
 
 from r2inspect.modules.compiler_detector import CompilerDetector
-from r2inspect.modules.compiler_detector_support import score_compilers
+from r2inspect.modules.compiler_detector_support import detect_file_format, score_compilers
 
 
 class FakeAdapter:
@@ -36,6 +36,11 @@ class FakeAdapter:
 
     def cmdj(self, command, default=None):
         return default
+
+
+class _Logger:
+    def debug(self, *args, **kwargs):
+        pass
 
 
 def test_compiler_detector_init():
@@ -495,6 +500,10 @@ def test_apply_best_compiler_skips_non_dict_scores():
         detection_method_fn=lambda *_: "method",
     )
     assert results == {}
+
+
+def test_detect_file_format_skips_non_dict_input():
+    assert detect_file_format("bad", logger=_Logger()) == "Unknown"  # type: ignore[arg-type]
 
 
 def test_apply_best_compiler_no_scores():
