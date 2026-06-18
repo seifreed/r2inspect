@@ -126,7 +126,7 @@ def build_function_stats(functions: list[dict[str, Any]] | None) -> dict[str, An
 
 def group_functions_by_machoc_hash(machoc_hashes: dict[str, str] | None) -> dict[str, list[str]]:
     """Group functions that share the same MACHOC hash."""
-    if not machoc_hashes:
+    if not isinstance(machoc_hashes, dict) or not machoc_hashes:
         return {}
 
     hash_to_functions: dict[str, list[str]] = {}

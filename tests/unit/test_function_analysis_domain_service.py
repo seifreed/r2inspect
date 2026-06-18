@@ -105,6 +105,11 @@ def test_group_functions_by_machoc_hash_skips_malformed_hashes() -> None:
     assert result == {"h1": ["a", "d"]}
 
 
+def test_group_functions_by_machoc_hash_skips_non_dict_input() -> None:
+    result = group_functions_by_machoc_hash(None)  # type: ignore[arg-type]
+    assert result == {}
+
+
 def test_build_machoc_summary_reports_common_patterns() -> None:
     hashes = {"func_a": "abcdef1234567890x", "func_b": "abcdef1234567890x", "func_c": "z"}
 
