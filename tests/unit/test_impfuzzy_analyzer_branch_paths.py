@@ -450,6 +450,18 @@ def test_process_imports_skips_non_dict_entries_without_crashing():
     assert result == ["kernel32.closehandle"]
 
 
+def test_process_imports_strips_only_trailing_module_extension():
+    analyzer = _make_analyzer(EmptyAdapter(), "/tmp/a.exe")
+    result = analyzer._process_imports(
+        [
+            {"libname": "comctl32.ocx", "name": "Func"},  # .ocx stripped too
+            {"libname": "driver.sys", "name": "Ioctl"},  # .sys stripped
+            {"libname": "weird.dll.name", "name": "X"},  # mid-string .dll kept
+        ]
+    )
+    assert result == ["comctl32.func", "driver.ioctl", "weird.dll.name.x"]
+
+
 def test_compare_hashes_returns_none_when_ssdeep_loader_missing():
     assert (
         ImpfuzzyAnalyzer.compare_hashes(

@@ -147,7 +147,14 @@ def _normalized_import(imp: dict[str, Any]) -> tuple[str, str] | None:
     func_clean = func_name.lower()
     if func_clean.startswith("ord_"):
         return None
-    return dll.lower().replace(".dll", ""), func_clean
+    # Strip only the trailing module extension (dll/ocx/sys), matching the
+    # imphash normalization. A substring replace would also strip a ".dll" that
+    # appears mid-name and would miss .ocx/.sys modules.
+    dll_clean = dll.lower()
+    parts = dll_clean.rsplit(".", 1)
+    if len(parts) > 1 and parts[1] in ("ocx", "sys", "dll"):
+        dll_clean = parts[0]
+    return dll_clean, func_clean
 
 
 def process_imports(imports_data: list[Any], *, logger: logging.Logger) -> list[str]:
