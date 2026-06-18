@@ -590,6 +590,16 @@ def test_scan_patterns_continues_after_exception() -> None:
     assert result == []
 
 
+def test_scan_patterns_treats_dict_match_as_single_result() -> None:
+    class DictSearchAdapter:
+        def search_hex_json(self, pattern: str) -> dict[str, int]:
+            return {"offset": 0x80}
+
+    analyzer = RichHeaderAnalyzer(adapter=DictSearchAdapter(), filepath=None)
+    result = analyzer._scan_patterns(["52696368"], "Rich")
+    assert result == [{"offset": 0x80}]
+
+
 # ---------------------------------------------------------------------------
 # _try_rich_dans_combinations (lines 342-356)
 # ---------------------------------------------------------------------------

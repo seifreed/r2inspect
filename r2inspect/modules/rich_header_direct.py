@@ -95,8 +95,15 @@ class RichHeaderDirectMixin:
             try:
                 found = cmd_helper(self.adapter, self.adapter, f"/xj {pattern}", {})
                 if found:
-                    results.extend(found)
-                    logger.debug("Found %s pattern %s at %s locations", label, pattern, len(found))
+                    if isinstance(found, list):
+                        results.extend(item for item in found if isinstance(item, dict))
+                        found_count = len(found)
+                    elif isinstance(found, dict):
+                        results.append(found)
+                        found_count = 1
+                    else:
+                        continue
+                    logger.debug("Found %s pattern %s at %s locations", label, pattern, found_count)
             except Exception as exc:
                 logger.debug("Failed %s pattern scan %s: %s", label, pattern, exc)
         return results
