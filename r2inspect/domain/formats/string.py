@@ -60,7 +60,7 @@ def build_xor_matches(
     matches: list[dict[str, Any]] = []
     for key in range(1, 256):
         xor_result = xor_string(search_string, key)
-        hex_pattern = xor_result.encode().hex()
+        hex_pattern = bytes(ord(char) ^ key for char in search_string).hex()
         result = search_hex_fn(hex_pattern)
         if result and result.strip():
             matches.append(

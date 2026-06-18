@@ -157,6 +157,20 @@ def test_build_xor_matches_with_results():
     assert matched[0]["xor_key"] == 42
 
 
+def test_build_xor_matches_searches_raw_xor_bytes():
+    seen = []
+
+    def mock_search_hex(pattern):
+        seen.append(pattern)
+        return "0x00401000 found" if pattern == "be" else ""
+
+    matches = build_xor_matches("A", mock_search_hex)
+
+    assert "be" in seen
+    assert "c2be" not in seen
+    assert matches[0]["xor_key"] == 0xFF
+
+
 def test_build_xor_matches_no_results():
     search_string = "test"
 
