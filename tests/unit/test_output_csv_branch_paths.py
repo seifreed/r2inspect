@@ -374,6 +374,27 @@ def test_add_function_info_with_machoc_hashes():
     assert csv_row["num_duplicate_functions"] == 1
 
 
+def test_add_function_info_skips_malformed_machoc_hashes():
+    formatter = CsvOutputFormatter({})
+    csv_row: dict[str, Any] = {}
+    data = {
+        "functions": {
+            "total_functions": 10,
+            "machoc_hashes": {
+                "func_a": "h1",
+                "func_b": None,
+                "func_c": ["bad"],
+                "func_d": "",
+                "func_e": "h1",
+            },
+        }
+    }
+    formatter._add_function_info(csv_row, data)
+    assert csv_row["num_functions"] == 10
+    assert csv_row["num_unique_machoc"] == 1
+    assert csv_row["num_duplicate_functions"] == 1
+
+
 def test_add_function_info_empty_functions():
     formatter = CsvOutputFormatter({})
     csv_row: dict[str, Any] = {}

@@ -456,6 +456,27 @@ def test_display_machoc_functions_duplicate_hashes():
     assert "2" in text
 
 
+def test_display_machoc_functions_skips_malformed_hash_values():
+    console = _make_console()
+    results = {
+        "functions": {
+            "total_functions": 10,
+            "machoc_hashes": {
+                "f1": "h1",
+                "f2": None,
+                "f3": ["bad"],
+                "f4": "",
+                "f5": "h1",
+            },
+        }
+    }
+    with _console_scope(console):
+        _display_machoc_functions(results)
+    text = _get_text(console)
+    assert "Function Analysis" in text
+    assert "1" in text
+
+
 def test_display_machoc_functions_skips_non_dict_hashes():
     console = _make_console()
     results = {"functions": {"machoc_hashes": "bad"}}

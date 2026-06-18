@@ -160,7 +160,11 @@ def add_function_info(formatter: Any, csv_row: dict[str, Any], data: dict[str, A
     functions_info = _as_dict(data.get("functions"))
     csv_row["num_functions"] = functions_info.get("total_functions", 0)
     machoc_hashes = _as_dict(functions_info.get("machoc_hashes"))
-    csv_row["num_unique_machoc"] = len(set(machoc_hashes.values())) if machoc_hashes else 0
+    csv_row["num_unique_machoc"] = (
+        len({value for value in machoc_hashes.values() if isinstance(value, str) and value})
+        if machoc_hashes
+        else 0
+    )
     csv_row["num_duplicate_functions"] = formatter._count_duplicate_machoc(machoc_hashes)
 
 

@@ -88,12 +88,14 @@ def _display_machoc_functions(results: Results) -> None:
     machoc_hashes = functions_info.get("machoc_hashes", {})
     if not isinstance(machoc_hashes, dict):
         machoc_hashes = {}
-    unique_hashes = len(set(machoc_hashes.values())) if machoc_hashes else 0
+    unique_hashes = len({value for value in machoc_hashes.values() if isinstance(value, str) and value}) if machoc_hashes else 0
     table.add_row("Unique MACHOC Hashes", str(unique_hashes))
 
     if machoc_hashes:
         hash_counts: dict[str, int] = {}
         for _, machoc_hash in machoc_hashes.items():
+            if not isinstance(machoc_hash, str) or not machoc_hash:
+                continue
             hash_counts[machoc_hash] = hash_counts.get(machoc_hash, 0) + 1
         duplicates = sum(count - 1 for count in hash_counts.values() if count > 1)
         table.add_row("Duplicate Functions", str(duplicates))
