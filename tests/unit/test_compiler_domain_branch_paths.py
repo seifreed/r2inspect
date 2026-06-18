@@ -375,6 +375,16 @@ def test_check_symbol_signatures_no_match():
     assert max_score == 1.0
 
 
+def test_check_signatures_ignores_malformed_inputs():
+    sigs = {"imports": [None], "sections": [None], "symbols": [None]}
+    score_i, max_i = _check_import_signatures(sigs, [None, "kernel32.dll"])
+    score_s, max_s = _check_section_signatures(sigs, [None, ".text"])
+    score_y, max_y = _check_symbol_signatures(sigs, [None, "main"])
+    assert (score_i, max_i) == (0.0, 2.0)
+    assert (score_s, max_s) == (0.0, 1.0)
+    assert (score_y, max_y) == (0.0, 1.0)
+
+
 # ---------------------------------------------------------------------------
 # extract_* helpers – round-trip smoke tests
 # ---------------------------------------------------------------------------

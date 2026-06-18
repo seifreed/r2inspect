@@ -192,7 +192,9 @@ def _check_import_signatures(
     max_score = 2.0
 
     for import_name in signatures["imports"]:
-        if any(import_name.lower() in imp.lower() for imp in imports_data):
+        if not isinstance(import_name, str):
+            continue
+        if any(isinstance(imp, str) and import_name.lower() in imp.lower() for imp in imports_data):
             score += 2.0 / len(signatures["imports"])
 
     return score, max_score
@@ -208,7 +210,9 @@ def _check_section_signatures(
     max_score = 1.0
 
     for section_name in signatures["sections"]:
-        if any(section_name.lower() in sec.lower() for sec in sections_data):
+        if not isinstance(section_name, str):
+            continue
+        if any(isinstance(sec, str) and section_name.lower() in sec.lower() for sec in sections_data):
             score += 1.0 / len(signatures["sections"])
 
     return score, max_score
@@ -224,7 +228,9 @@ def _check_symbol_signatures(
     max_score = 1.0
 
     for symbol_name in signatures["symbols"]:
-        if any(symbol_name.lower() in sym.lower() for sym in symbols_data):
+        if not isinstance(symbol_name, str):
+            continue
+        if any(isinstance(sym, str) and symbol_name.lower() in sym.lower() for sym in symbols_data):
             score += 1.0 / len(signatures["symbols"])
 
     return score, max_score
