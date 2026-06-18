@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import pytest
 
 from r2inspect.infrastructure.hashing import (
     calculate_hashes,
@@ -116,13 +117,9 @@ def test_calculate_hashes_for_bytes_sha512_value_correct():
     assert result["sha512"] == hashlib.sha512(data).hexdigest()
 
 
-def test_calculate_hashes_for_bytes_handles_non_bytes_gracefully():
-    """Test that passing invalid input is handled (error values returned)."""
-    # Passing None triggers an exception inside the function; it should
-    # return Error: messages rather than raise.
-    result = calculate_hashes_for_bytes(None, include_sha512=True)  # type: ignore[arg-type]
-    # The function catches exceptions and returns "Error: ..." strings.
-    assert all(isinstance(v, str) for v in result.values())
+def test_calculate_hashes_for_bytes_rejects_non_bytes():
+    with pytest.raises(TypeError):
+        calculate_hashes_for_bytes(None, include_sha512=True)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

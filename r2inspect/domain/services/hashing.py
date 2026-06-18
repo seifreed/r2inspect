@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-import logging
 from typing import Any
-
-_log = logging.getLogger(__name__)
 
 
 def calculate_hashes_for_bytes(data: bytes, *, include_sha512: bool = False) -> dict[str, str]:
@@ -15,14 +12,11 @@ def calculate_hashes_for_bytes(data: bytes, *, include_sha512: bool = False) -> 
     if include_sha512:
         hashes["sha512"] = ""
 
-    try:
-        hashes["md5"] = hashlib.md5(data, usedforsecurity=False).hexdigest()
-        hashes["sha1"] = hashlib.sha1(data, usedforsecurity=False).hexdigest()
-        hashes["sha256"] = hashlib.sha256(data).hexdigest()
-        if include_sha512:
-            hashes["sha512"] = hashlib.sha512(data).hexdigest()
-    except Exception as exc:
-        _log.debug("Hash calculation failed for in-memory buffer: %s", exc)
+    hashes["md5"] = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    hashes["sha1"] = hashlib.sha1(data, usedforsecurity=False).hexdigest()
+    hashes["sha256"] = hashlib.sha256(data).hexdigest()
+    if include_sha512:
+        hashes["sha512"] = hashlib.sha512(data).hexdigest()
 
     return hashes
 

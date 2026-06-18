@@ -17,13 +17,10 @@ from __future__ import annotations
 import io
 import os
 import struct
-import tempfile
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
-from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # schemas/base.py  (lines 64, 73, 85, 97, 120, 122-126)
@@ -91,11 +88,9 @@ def test_calculate_hashes_exception_on_directory(tmp_path: Path):
         calculate_hashes(str(tmp_path))
 
 
-def test_calculate_hashes_for_bytes_exception_path():
-    # Passing None triggers TypeError inside hashlib -> returns empty strings
-    result = calculate_hashes_for_bytes(None)  # type: ignore[arg-type]
-    for v in result.values():
-        assert v == ""
+def test_calculate_hashes_for_bytes_rejects_non_bytes():
+    with pytest.raises(TypeError):
+        calculate_hashes_for_bytes(None)  # type: ignore[arg-type]
 
 
 def test_calculate_hashes_for_bytes_with_sha512():
@@ -259,9 +254,7 @@ def test_bin_info_has_elf_false():
 # ---------------------------------------------------------------------------
 from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
-    detect_file_type,
     get_file_threat_level,
-    is_executable_file,
 )
 
 
