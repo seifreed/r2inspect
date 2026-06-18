@@ -43,6 +43,8 @@ def build_function_ccbhashes(
     """Hash each function's CFG, returning the hash map and the count hashed."""
     function_hashes: dict[str, dict[str, Any]] = {}
     analyzed_count = 0
+    if not isinstance(functions, list):
+        return function_hashes, analyzed_count
     for func in functions:
         if not isinstance(func, dict):
             continue

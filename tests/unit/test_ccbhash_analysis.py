@@ -105,6 +105,15 @@ def test_ccbhash_extract_functions():
     assert all("size" in f for f in functions)
 
 
+def test_ccbhash_build_function_hashes_rejects_non_list_functions():
+    adapter = MockAdapter(has_functions=True)
+    analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
+    hashes, count = build_function_ccbhashes(analyzer, None)  # type: ignore[arg-type]
+
+    assert hashes == {}
+    assert count == 0
+
+
 def test_ccbhash_calculate_function_hash():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
