@@ -116,6 +116,11 @@ def test_determine_pe_format_fallback_to_pe():
     assert result == "PE"
 
 
+def test_determine_pe_format_ignores_non_dict_optional_header():
+    result = determine_pe_format({"format": "Unknown", "bits": 0}, {"optional_header": "bad"})
+    assert result == "PE"
+
+
 # ---------------------------------------------------------------------------
 # normalize_pe_format() - lines 54, 58
 # ---------------------------------------------------------------------------
@@ -222,6 +227,13 @@ def test_apply_optional_header_info_skips_malformed_numeric_fields():
     assert result["entry_point"] == 0x1000
 
 
+def test_apply_optional_header_info_ignores_non_dict_optional_header():
+    info = {"image_base": 0x400000}
+    pe_header = {"optional_header": "bad"}
+    result = apply_optional_header_info(info, pe_header)
+    assert result == info
+
+
 def test_apply_optional_header_info_zero_image_base_not_updated():
     """apply_optional_header_info skips zero ImageBase."""
     info = {"image_base": 0x400000}
@@ -272,6 +284,10 @@ def test_characteristics_from_header_missing_characteristics():
     assert result is not None
     assert result["is_dll"] is False
     assert result["is_executable"] is False
+
+
+def test_characteristics_from_header_ignores_non_dict_file_header():
+    assert characteristics_from_header({"file_header": "bad"}) is None
 
 
 # ---------------------------------------------------------------------------

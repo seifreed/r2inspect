@@ -47,6 +47,8 @@ def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | No
 
     if pe_header:
         opt_header = pe_header.get("optional_header", {})
+        if not isinstance(opt_header, dict):
+            opt_header = {}
         magic = opt_header.get("Magic", 0)
         if magic == 0x10B:
             return "PE32"
@@ -91,6 +93,8 @@ def apply_optional_header_info(
 
     updated = dict(info)
     opt_header = pe_header.get("optional_header", {})
+    if not isinstance(opt_header, dict):
+        return updated
     image_base = _to_int(opt_header.get("ImageBase", updated.get("image_base", 0)))
     if image_base is not None and image_base > 0:
         updated["image_base"] = image_base
@@ -108,6 +112,8 @@ def characteristics_from_header(
     if not pe_header:
         return None
     file_header = pe_header.get("file_header", {})
+    if not isinstance(file_header, dict):
+        return None
     characteristics_flags = file_header.get("Characteristics", 0)
     if not isinstance(characteristics_flags, int):
         return None
