@@ -159,7 +159,7 @@ def append_indicators_summary(summary_lines: list[str], results: dict[str, Any])
 def append_packer_summary(summary_lines: list[str], results: dict[str, Any]) -> None:
     """Append packer detection details to the text summary."""
     packer = results.get("packer")
-    if not packer or not packer.get("is_packed"):
+    if not isinstance(packer, dict) or not packer.get("is_packed"):
         return
     summary_lines.append(f"Packer Detected: {packer.get('packer_type', 'Unknown')}")
     summary_lines.append(f"Confidence: {_coerce_float(packer.get('confidence')):.2f}")
