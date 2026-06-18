@@ -196,6 +196,17 @@ def test_categorize_apis_no_match():
     assert len(result) == 0
 
 
+def test_categorize_apis_skips_malformed_category_entries():
+    imports = [{"name": "CreateRemoteThread"}]
+    api_categories = {
+        "Broken": 123,
+        "AlsoBroken": [42, None],
+        "Injection": ["CreateRemoteThread"],
+    }
+    result = categorize_apis(imports, api_categories)
+    assert result == {"Injection": {"count": 1, "apis": ["CreateRemoteThread"]}}
+
+
 def test_assess_api_risk_empty():
     """Test assessing risk with empty categories."""
     suspicious, risk = assess_api_risk({})

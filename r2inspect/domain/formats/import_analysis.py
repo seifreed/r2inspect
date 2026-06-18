@@ -100,15 +100,18 @@ def categorize_apis(
 ) -> dict[str, Any]:
     categories: dict[str, Any] = {}
     for category, apis in api_categories.items():
+        if not isinstance(apis, (list, tuple, set)):
+            continue
         category_count = 0
         category_apis = []
+        valid_apis = [api for api in apis if isinstance(api, str)]
         for imp in imports:
             if not isinstance(imp, dict):
                 continue
             api_name = imp.get("name", "")
             if not isinstance(api_name, str):
                 continue
-            if any(api.lower() in api_name.lower() for api in apis):
+            if any(api.lower() in api_name.lower() for api in valid_apis):
                 category_count += 1
                 category_apis.append(api_name)
         if category_count > 0:
