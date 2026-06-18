@@ -449,6 +449,25 @@ def test_add_bindiff_structural_string_file_size():
     assert len(table.rows) == 6
 
 
+def test_add_bindiff_structural_numeric_section_names():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    structural = {
+        "file_type": "PE32",
+        "file_size": 102400,
+        "section_count": 3,
+        "section_names": [1, 2, 3],
+        "import_count": 50,
+        "export_count": 10,
+    }
+
+    _add_bindiff_structural(table, structural)
+
+    assert len(table.rows) == 6
+
+
 def test_add_bindiff_structural_many_sections():
     table = Table()
     table.add_column("Property")
@@ -550,6 +569,25 @@ def test_add_bindiff_strings():
             "ascii": 300,
             "unicode": 150,
             "urls": 50,
+        },
+    }
+
+    _add_bindiff_strings(table, string_features)
+
+    assert len(table.rows) == 2
+
+
+def test_add_bindiff_strings_numeric_categories():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    string_features = {
+        "total_strings": 500,
+        "categorized_strings": {
+            1: 300,
+            2: 150,
+            3: 50,
         },
     }
 

@@ -31,7 +31,7 @@ def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
     table.add_row("File Size", f"{_coerce_int(structural.get('file_size', 0)):,} bytes")
     table.add_row("Sections", str(structural.get("section_count", 0)))
     if structural.get("section_names"):
-        section_names = structural["section_names"]
+        section_names = [str(name) for name in structural["section_names"]]
         if len(section_names) <= 7:
             table.add_row("Section Names", ", ".join(section_names))
         else:
@@ -56,7 +56,7 @@ def _add_bindiff_strings(table: Table, string_features: dict[str, Any]) -> None:
         return
     table.add_row("Strings", str(string_features.get("total_strings", 0)))
     if string_features.get("categorized_strings"):
-        categories = list(string_features["categorized_strings"].keys())[:3]
+        categories = [str(category) for category in list(string_features["categorized_strings"].keys())[:3]]
         table.add_row("String Types", ", ".join(categories))
 
 
