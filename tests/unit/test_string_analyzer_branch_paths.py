@@ -33,6 +33,11 @@ class _RaisingUnicodeStringAnalyzer(StringAnalyzer):
         raise RuntimeError("extract error")
 
 
+class _MalformedStringAnalyzer(StringAnalyzer):
+    def extract_strings(self) -> list[str]:
+        return ["ascii", None, 123, "ábc"]  # type: ignore[list-item]
+
+
 def _config_with_overrides(overrides: dict[str, Any]) -> Config:
     cfg = Config()
     cfg.apply_overrides(overrides)
@@ -99,6 +104,17 @@ def test_get_string_statistics_counts_unicode_characters():
     stats = analyzer.get_string_statistics()
     assert stats["charset_analysis"]["unicode"] >= 1
     assert stats["charset_analysis"]["ascii"] >= 1
+
+
+def test_get_string_statistics_skips_malformed_string_entries():
+    analyzer = _MalformedStringAnalyzer(adapter=_StringEntriesAdapter([]), config=Config())
+    stats = analyzer.get_string_statistics()
+    assert stats["total_strings"] == 2
+    assert stats["avg_length"] == 4.0
+    assert stats["min_length"] == 3
+    assert stats["max_length"] == 5
+    assert stats["charset_analysis"]["ascii"] == 1
+    assert stats["charset_analysis"]["unicode"] == 1
 
 
 def test_extract_strings_exception_path_returns_partial_result():

@@ -143,7 +143,7 @@ class StringAnalyzer(BaseAnalyzer):
 
     def get_string_statistics(self) -> dict[str, Any]:
         """Get statistics about extracted strings"""
-        strings = self.extract_strings()
+        strings = [string for string in self.extract_strings() if isinstance(string, str)]
 
         stats = {
             "total_strings": len(strings),
@@ -160,6 +160,8 @@ class StringAnalyzer(BaseAnalyzer):
         charset_count = {"ascii": 0, "unicode": 0, "printable": 0, "alphanumeric": 0}
 
         for string in strings:
+            if not isinstance(string, str):
+                continue
             if all(ord(c) < 128 for c in string):
                 charset_count["ascii"] += 1
             else:
