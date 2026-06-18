@@ -116,6 +116,16 @@ def test_calculate_entropy_returns_zero_when_size_is_zero():
     assert entropy == 0.0
 
 
+def test_calculate_entropy_coerces_numeric_string_size():
+    section = {"name": ".text", "vaddr": 0x1000, "size": "16"}
+    analyzer = _build_analyzer(
+        sections=[{"name": ".text", "vaddr": 0x1000, "size": 16}],
+        byte_hex=_hex_bytes(0x41, 16),
+    )
+    entropy = analyzer._calculate_entropy(section)
+    assert entropy == 0.0
+
+
 def test_calculate_entropy_returns_zero_on_read_exception():
     section = {"name": ".text", "vaddr": 0x1000, "size": 0x100}
     # No p8 command registered -> read_bytes returns empty -> 0.0
@@ -330,6 +340,17 @@ def test_count_nops_in_section_returns_zero_when_size_zero():
     nop_count, sample_size = analyzer._count_nops_in_section(0x1000, 0)
     assert nop_count == 0
     assert sample_size == 0
+
+
+def test_count_nops_in_section_coerces_numeric_string_size():
+    analyzer = _build_analyzer(
+        sections=[{"name": ".text", "vaddr": 0x1000, "size": 4}],
+        arch="x86",
+        byte_hex=_hex_bytes(0x90, 4),
+    )
+    nop_count, sample_size = analyzer._count_nops_in_section(0x1000, "4")
+    assert nop_count == 4
+    assert sample_size == 4
 
 
 def test_count_nops_in_section_returns_zero_when_no_arch():

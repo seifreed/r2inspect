@@ -21,6 +21,13 @@ class SectionRuntimeHost(Protocol):
     def analyze_sections(self) -> list[dict[str, Any]]: ...
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def analyze_sections(analyzer: SectionRuntimeHost, logger: logging.Logger) -> list[dict[str, Any]]:
     sections_info = []
 
@@ -44,8 +51,8 @@ def calculate_entropy(
     analyzer: SectionRuntimeHost, section: dict[str, Any], logger: logging.Logger
 ) -> float:
     try:
-        vaddr = section.get("vaddr", 0)
-        size = section.get("size", 0)
+        vaddr = _to_int(section.get("vaddr", 0))
+        size = _to_int(section.get("size", 0))
 
         if size == 0 or size > 50000000 or analyzer.adapter is None:
             return 0.0
@@ -63,6 +70,8 @@ def calculate_entropy(
 
 
 def count_nops_in_section(analyzer: SectionRuntimeHost, vaddr: int, size: int) -> tuple[int, int]:
+    vaddr = _to_int(vaddr)
+    size = _to_int(size)
     arch = analyzer._get_arch()
     if not arch or size <= 0 or analyzer.adapter is None:
         return 0, 0
