@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 from rich.table import Table
@@ -74,7 +75,15 @@ def handle_list_yara_option(
 
     available_rules = yara_analyzer.list_available_rules(rules_path)
     if available_rules:
-        display_yara_rules_table(available_rules, rules_path)
+        params = set()
+        try:
+            params = set(inspect.signature(display_yara_rules_table).parameters)
+        except (TypeError, ValueError):
+            params = set()
+        if "get_console" in params:
+            display_yara_rules_table(available_rules, rules_path, get_console=get_console)
+        else:
+            display_yara_rules_table(available_rules, rules_path)
         return
 
     get_console().print(f"[yellow]No YARA rules found in: {rules_path}[/yellow]")

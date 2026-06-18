@@ -396,6 +396,32 @@ def test_handle_list_yara_option_with_rules(tmp_path: Path):
     assert "Total: 1 YARA rule file(s) found" in output
 
 
+def test_handle_list_yara_option_with_runtime_renderer(tmp_path: Path):
+    yara_path = str(tmp_path / "yara")
+    Path(yara_path).mkdir(parents=True, exist_ok=True)
+    (Path(yara_path) / "test.yar").write_text("rule test { condition: true }")
+
+    con, buf = _make_console()
+
+    class StubYaraAnalyzer:
+        def __init__(self, _r2: Any, _config: Any) -> None:
+            pass
+
+        def list_available_rules(self, _rules_path: str) -> list[dict[str, Any]]:
+            return [{"name": "test.yar", "path": str(Path(yara_path) / "test.yar"), "size": 28}]
+
+    runtime_handle_list_yara_option(
+        {},
+        yara_path,
+        config_cls=_make_stub_config_cls(yara_path),
+        display_yara_rules_table=runtime_display_yara_rules_table,
+        get_console=lambda: con,
+        yara_analyzer_cls=StubYaraAnalyzer,
+    )
+    output = _captured(buf)
+    assert "test.yar" in output
+
+
 def test_handle_list_yara_option_no_rules(tmp_path: Path):
     yara_path = str(tmp_path / "empty_yara")
     Path(yara_path).mkdir(parents=True, exist_ok=True)
