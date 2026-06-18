@@ -192,6 +192,21 @@ def test_analyze_single_section_coerces_numeric_string_sizes():
     assert result["entropy"] == 0.0
 
 
+def test_analyze_single_section_coerces_hex_string_sizes():
+    section = {"name": ".text", "vaddr": "0x1000", "vsize": "0x200", "size": "0x200", "flags": "r-x"}
+    analyzer = _build_analyzer(
+        sections=[{"name": ".text", "vaddr": 0x1000, "vsize": 0x200, "size": 0x200, "flags": "r-x"}],
+        cmd_map_extra={f"p8 512 @ {0x1000}": _hex_bytes(0xCC, 512)},
+    )
+
+    result = analyzer._analyze_single_section(section)
+
+    assert result["raw_size"] == 512
+    assert result["virtual_size"] == 512
+    assert result["size_ratio"] == 1.0
+    assert result["entropy"] == 0.0
+
+
 def test_apply_pe_characteristics_sets_memory_flags():
     analyzer = _build_analyzer(sections=[])
     section = {"characteristics": 0x20000000 | 0x80000000 | 0x40000000}
