@@ -73,7 +73,7 @@ def add_telfhash_entries(table: Table, telfhash_info: dict[str, Any]) -> None:
     table.add_row("Filtered Symbols", str(telfhash_info.get("filtered_symbols", 0)))
     symbols_used = telfhash_info.get("symbols_used", [])
     if symbols_used:
-        symbols_preview = ", ".join(symbols_used[:5])
+        symbols_preview = ", ".join(map(str, symbols_used[:5]))
         if len(symbols_used) > 5:
             symbols_preview += f" (+ {len(symbols_used) - 5} more)"
         table.add_row("Symbols Used", symbols_preview)

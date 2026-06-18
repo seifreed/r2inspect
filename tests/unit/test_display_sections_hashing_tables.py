@@ -204,6 +204,23 @@ def test_display_telfhash_elf_available():
         assert "80" in text
 
 
+def test_display_telfhash_accepts_non_string_symbols():
+    console = _make_console()
+    with _console_scope(console):
+        results = {
+            "telfhash": {
+                "available": True,
+                "is_elf": True,
+                "symbols_used": [1, 2, 3, 4, 5, 6],
+            }
+        }
+
+        _display_telfhash(results)
+        text = _get_text(console)
+
+        assert "1, 2, 3, 4, 5" in text
+
+
 def test_display_telfhash_not_elf():
     console = _make_console()
     with _console_scope(console):
