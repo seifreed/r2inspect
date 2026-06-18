@@ -67,6 +67,13 @@ def test_add_detection_populates_dict() -> None:
     assert entry["address"] == hex(0x2000)
 
 
+def test_add_detection_coerces_string_vaddr() -> None:
+    detected: dict = {}
+    string_info = {"string": "sha256", "vaddr": "8192"}
+    cd._add_detection(detected, "SHA", string_info, "sha256")
+    assert detected["SHA"][0]["address"] == hex(8192)
+
+
 def test_consolidate_detections_multiple_evidence_types_boosts_confidence() -> None:
     """consolidate_detections boosts confidence when multiple evidence types exist."""
     detected = {

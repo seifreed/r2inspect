@@ -46,6 +46,15 @@ NOISE_PATTERNS = [
 ]
 
 
+def _coerce_int(value: Any) -> int:
+    try:
+        if isinstance(value, str):
+            return int(value, 0)
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def detect_algorithms_from_strings(
     strings_result: list[dict[str, Any]], detected_algos: dict[str, list]
 ) -> None:
@@ -94,12 +103,13 @@ def _add_detection(
     string_info: dict[str, Any],
     string_val: str,
 ) -> None:
+    vaddr = _coerce_int(string_info.get("vaddr", 0))
     detected_algos.setdefault(algo_name, []).append(
         {
             "evidence_type": "String Reference",
             "evidence": string_val,
             "confidence": 0.4,
-            "address": hex(string_info.get("vaddr", 0)),
+            "address": hex(vaddr),
         }
     )
 
