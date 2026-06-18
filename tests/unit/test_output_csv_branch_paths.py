@@ -20,13 +20,11 @@ from r2inspect.cli.output_csv import CsvOutputFormatter
 
 
 def test_to_csv_exception_path_writes_error_row():
-    # file_info=None causes _add_file_info to raise AttributeError when it
-    # calls None.get(...).  _extract_csv_data catches it and adds an "error"
-    # key.  dict_writer.writerow then raises ValueError (extra key) which is
-    # caught by to_csv's own except block.
+    # file_info=None now degrades to empty/default fields instead of failing.
     formatter = CsvOutputFormatter({"file_info": None})
     output = formatter.to_csv()
-    assert "Error" in output or "CSV Export Failed" in output or "error" in output.lower()
+    assert "CSV Export Failed" not in output
+    assert "name,size,compile_time" in output
 
 
 # ---------------------------------------------------------------------------
@@ -69,10 +67,37 @@ def test_extract_names_from_list_dict_item_without_name_field():
 
 
 def test_extract_csv_data_exception_adds_error_key():
-    # Pass file_info=None to trigger AttributeError in _add_file_info
+    # Pass file_info=None and verify the extractor normalizes it instead of failing.
     formatter = CsvOutputFormatter({"file_info": None})
     csv_row = formatter._extract_csv_data({"file_info": None})
-    assert "error" in csv_row
+    assert "error" not in csv_row
+    assert csv_row["name"] == ""
+    assert csv_row["compiler"] == "Unknown"
+
+
+def test_extract_csv_data_handles_none_nested_sections():
+    formatter = CsvOutputFormatter(
+        {
+            "file_info": None,
+            "pe_info": None,
+            "ssdeep": None,
+            "tlsh": None,
+            "telfhash": None,
+            "rich_header": None,
+            "anti_analysis": None,
+            "compiler": None,
+            "functions": None,
+            "imports": None,
+            "exports": None,
+            "sections": None,
+            "yara_matches": None,
+        }
+    )
+    csv_row = formatter._extract_csv_data(formatter.results)
+    assert csv_row["name"] == ""
+    assert csv_row["ssdeep_hash"] == ""
+    assert csv_row["tlsh_available"] is False
+    assert csv_row["compiler"] == "Unknown"
 
 
 # ---------------------------------------------------------------------------
