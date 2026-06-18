@@ -108,7 +108,7 @@ def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
     if not largest_group:
         return
     table.add_row("Largest Similar Group", f"{largest_group['count']} functions")
-    sample_funcs = largest_group["functions"][:3].copy()
+    sample_funcs = list(largest_group["functions"][:3])
     clean_sample_funcs = [
         re.sub(r"&nbsp;?", " ", func).replace(HTML_AMP, "&") for func in sample_funcs
     ]
