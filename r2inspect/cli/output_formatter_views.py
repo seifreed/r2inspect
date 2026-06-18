@@ -94,7 +94,7 @@ def format_imports(imports: list[dict[str, Any]]) -> Table:
         risk_level = imp.get("risk_level", "Minimal")
         risk_tags = imp.get("risk_tags", [])
         risk_color, score_color = IMPORT_RISK_STYLES.get(risk_level, ("dim", "dim"))
-        tags_display = ", ".join(risk_tags[:2])
+        tags_display = ", ".join(map(str, risk_tags[:2]))
         if len(risk_tags) > 2:
             tags_display += f" (+{len(risk_tags) - 2})"
         table.add_row(

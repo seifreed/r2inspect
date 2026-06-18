@@ -192,6 +192,21 @@ def test_format_imports_more_than_two_tags() -> None:
     assert isinstance(result, Table)
 
 
+def test_format_imports_accepts_non_string_risk_tags() -> None:
+    imports = [
+        {
+            "name": "F",
+            "library": "L",
+            "category": "C",
+            "risk_score": 50,
+            "risk_level": "Medium",
+            "risk_tags": [1, 2, 3],
+        }
+    ]
+    result = OutputFormatter({}).format_imports(imports)
+    assert isinstance(result, Table)
+
+
 # ---------------------------------------------------------------------------
 # format_summary
 # ---------------------------------------------------------------------------
