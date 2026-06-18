@@ -364,6 +364,13 @@ def test_telfhash_analyzer_has_elf_symbols_no_bin(tmp_path):
     assert analyzer._has_elf_symbols({}) is False
 
 
+def test_telfhash_analyzer_has_elf_symbols_non_dict_bin(tmp_path):
+    filepath = _make_elf_file(tmp_path)
+    adapter = _make_adapter(cmdj_map={"isj": [{"name": "symbol"}]})
+    analyzer = TelfhashAnalyzer(adapter, filepath)
+    assert analyzer._has_elf_symbols({"bin": "not-a-dict"}) is False
+
+
 def test_telfhash_analyzer_has_elf_symbols_linux(tmp_path):
     filepath = _make_elf_file(tmp_path)
     adapter = _make_adapter(cmdj_map={"isj": [{"name": "symbol"}]})

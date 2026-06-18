@@ -111,7 +111,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             symbols = self._cmd_list("isj")
             if not symbols:
                 return False
-            if not info_cmd or "bin" not in info_cmd:
+            if not info_cmd or not isinstance(info_cmd.get("bin"), dict):
                 return False
             os_info = str(info_cmd["bin"].get("os", "")).lower()
             return "linux" in os_info or "unix" in os_info
