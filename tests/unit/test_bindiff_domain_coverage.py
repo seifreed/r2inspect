@@ -200,6 +200,7 @@ def test_is_suspicious_api_positive():
 def test_is_suspicious_api_negative():
     assert is_suspicious_api("ReadFile") is False
     assert is_suspicious_api("printf") is False
+    assert is_suspicious_api(None) is False  # type: ignore[arg-type]
 
 
 def test_is_crypto_api_positive():
@@ -211,6 +212,7 @@ def test_is_crypto_api_positive():
 
 def test_is_crypto_api_negative():
     assert is_crypto_api("OpenFile") is False
+    assert is_crypto_api({"name": "CryptEncrypt"}) is False  # type: ignore[arg-type]
 
 
 def test_is_network_api_positive():
@@ -226,6 +228,7 @@ def test_is_network_api_positive():
 
 def test_is_network_api_negative():
     assert is_network_api("ReadFile") is False
+    assert is_network_api(["connect"]) is False  # type: ignore[arg-type]
 
 
 # --- build_* signature builders ---

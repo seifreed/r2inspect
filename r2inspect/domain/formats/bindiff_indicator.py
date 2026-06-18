@@ -61,33 +61,37 @@ NETWORK_APIS = [
 ]
 
 
+def _lower_text(value: Any) -> str:
+    return value.lower() if isinstance(value, str) else ""
+
+
 def has_crypto_indicators(text: str) -> bool:
-    lowered = text.lower()
+    lowered = _lower_text(text)
     return any(term in lowered for term in CRYPTO_TERMS)
 
 
 def has_network_indicators(text: str) -> bool:
-    lowered = text.lower()
+    lowered = _lower_text(text)
     return any(term in lowered for term in NETWORK_TERMS)
 
 
 def has_persistence_indicators(text: str) -> bool:
-    lowered = text.lower()
+    lowered = _lower_text(text)
     return any(term in lowered for term in PERSIST_TERMS)
 
 
 def is_suspicious_api(api: str) -> bool:
-    lowered = api.lower()
+    lowered = _lower_text(api)
     return any(sus_api.lower() in lowered for sus_api in SUSPICIOUS_APIS)
 
 
 def is_crypto_api(api: str) -> bool:
-    lowered = api.lower()
+    lowered = _lower_text(api)
     return any(crypto_api.lower() in lowered for crypto_api in CRYPTO_APIS)
 
 
 def is_network_api(api: str) -> bool:
-    lowered = api.lower()
+    lowered = _lower_text(api)
     return any(net_api.lower() in lowered for net_api in NETWORK_APIS)
 
 
