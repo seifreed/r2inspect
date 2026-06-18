@@ -19,6 +19,8 @@ def group_imports_by_library(
     imports: list[dict[str, Any]],
 ) -> dict[str, list[str | bytes]]:
     imports_by_lib: dict[str, list[str | bytes]] = {}
+    if not isinstance(imports, list):
+        return imports_by_lib
 
     for imp in imports:
         if not isinstance(imp, dict) or "name" not in imp:
@@ -83,6 +85,8 @@ def _library_import_strings(normalized_lib: str, functions: Any) -> list[str]:
 
 def _build_import_strings(imports_by_lib: dict[str, Any], extensions: list[str]) -> list[str]:
     impstrs: list[str] = []
+    if not isinstance(imports_by_lib, dict):
+        return impstrs
     for libname, functions in imports_by_lib.items():
         if not has_known_library_name(libname):
             continue

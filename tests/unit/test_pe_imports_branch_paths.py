@@ -28,6 +28,10 @@ def test_build_import_strings_skips_non_string_function_entries() -> None:
     assert result == ["kernel32.createfilew"]
 
 
+def test_build_import_strings_rejects_non_dict_input() -> None:
+    assert _build_import_strings(None, ["dll"]) == []  # type: ignore[arg-type]
+
+
 class _FakeLogger:
     def debug(self, msg: str, *args: object) -> None:
         pass
@@ -115,6 +119,10 @@ def test_group_imports_non_dict_entries_skipped() -> None:
     ]
     result = group_imports_by_library(imports)
     assert "kernel32.dll" in result
+
+
+def test_group_imports_rejects_non_list_input() -> None:
+    assert group_imports_by_library(None) == {}  # type: ignore[arg-type]
 
 
 def test_group_imports_skips_non_string_name_values() -> None:
