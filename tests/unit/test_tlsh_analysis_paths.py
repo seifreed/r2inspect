@@ -250,6 +250,34 @@ def test_calculate_section_tlsh_success():
         os.unlink(path)
 
 
+def test_calculate_section_tlsh_hex_sizes_and_offsets():
+    """Test _calculate_section_tlsh accepts hex string section fields."""
+    data = os.urandom(512)
+    path = _tmp_file(data)
+    try:
+        sections = [
+            {
+                "name": ".text",
+                "vaddr": "0x1000",
+                "vsize": "0x1f4",
+                "size": "0x1f4",
+                "paddr": "0x0",
+                "perm": "r-x",
+                "type": "",
+            }
+        ]
+        cmd_map = {f"p8 500 @ {4096}": "AA" * 500}
+        cmdj_map = {"iSj": sections}
+        adapter = _make_adapter(cmdj_map=cmdj_map, cmd_map=cmd_map)
+        analyzer = TLSHAnalyzer(adapter, path)
+
+        result = analyzer._calculate_section_tlsh()
+
+        assert ".text" in result
+    finally:
+        os.unlink(path)
+
+
 def test_calculate_section_tlsh_empty_size():
     """Test _calculate_section_tlsh with zero size section."""
     path = _tmp_file(b"\x00" * 100)
@@ -389,6 +417,25 @@ def test_calculate_function_tlsh_success():
 
         assert "main" in result
         assert "helper" in result
+    finally:
+        os.unlink(path)
+
+
+def test_calculate_function_tlsh_hex_sizes_and_offsets():
+    """Test _calculate_function_tlsh accepts hex string function fields."""
+    path = _tmp_file(b"\x00" * 100)
+    try:
+        functions = [
+            {"name": "main", "offset": "0x1000", "addr": "0x1000", "size": "0xc8"},
+        ]
+        cmd_map = {f"p8 200 @ {4096}": "BB" * 200}
+        cmdj_map = {"aflj": functions}
+        adapter = _make_adapter(cmdj_map=cmdj_map, cmd_map=cmd_map)
+        analyzer = TLSHAnalyzer(adapter, path)
+
+        result = analyzer._calculate_function_tlsh()
+
+        assert "main" in result
     finally:
         os.unlink(path)
 
