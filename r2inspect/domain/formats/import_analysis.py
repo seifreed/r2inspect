@@ -165,6 +165,8 @@ def find_max_risk_score(
     tags: list[str] = []
     if not isinstance(categories, dict):
         return max_score, tags
+    if not isinstance(func_name, str):
+        return max_score, tags
     for api_dict in categories.values():
         if not isinstance(api_dict, dict):
             continue

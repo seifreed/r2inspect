@@ -164,6 +164,15 @@ def test_find_max_risk_score_skips_malformed_category_entries():
     assert tags == ["TagA"]
 
 
+def test_find_max_risk_score_rejects_non_string_function_name():
+    score, tags = find_max_risk_score(
+        None,  # type: ignore[arg-type]
+        {"Injection": {"CreateRemoteThread": (95, "Remote Thread Injection")}},
+    )
+    assert score == 0
+    assert tags == []
+
+
 # ---------------------------------------------------------------------------
 # risk_level_from_score - all branches (lines 252, 256, 258)
 # ---------------------------------------------------------------------------
