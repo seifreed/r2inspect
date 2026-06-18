@@ -774,7 +774,7 @@ class TestSectionAnalyzer:
             "size": 0x2000,
             "flags": "",
             "perm": "",
-            "characteristics": 0x07000020,  # CODE | MEM_EXECUTE | MEM_READ | MEM_WRITE
+            "characteristics": 0xE0000020,  # CODE | MEM_EXECUTE | MEM_READ | MEM_WRITE
         }
         sa = self._make(SectionStubAdapter([section]))
         result = sa._analyze_single_section(section)

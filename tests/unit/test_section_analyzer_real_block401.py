@@ -212,7 +212,7 @@ def test_section_analyzer_pe_characteristics():
         "vaddr": 0x1000,
         "vsize": 1000,
         "size": 1000,
-        "characteristics": 0x03000020,  # CODE | EXECUTE | READ
+        "characteristics": 0x60000020,  # CODE | EXECUTE | READ
     }
     analyzer = _build_analyzer(
         sections=[section_with_chars],

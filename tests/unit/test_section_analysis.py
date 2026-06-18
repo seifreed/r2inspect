@@ -180,7 +180,7 @@ def test_section_decode_pe_characteristics():
     flags = analyzer._decode_pe_characteristics(0x20000020)
 
     assert "IMAGE_SCN_CNT_CODE" in flags
-    assert "IMAGE_SCN_MEM_NOT_PAGED" in flags
+    assert "IMAGE_SCN_MEM_EXECUTE" in flags  # 0x20000000 per winnt.h
 
 
 # ---------------------------------------------------------------------------
