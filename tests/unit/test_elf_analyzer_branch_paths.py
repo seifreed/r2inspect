@@ -377,6 +377,14 @@ def test_read_section_psz_returns_null_terminated_string():
     assert result == "GCC: (Ubuntu 11.3.0) 11.3.0"
 
 
+def test_read_section_accepts_numeric_string_fields():
+    adapter = ELFAdapterWithSections()
+    analyzer = ELFAnalyzer(adapter)
+    section = {"vaddr": str(0x403000), "size": "32"}
+    result = analyzer._read_section(section, "psz")
+    assert result == "GCC: (Ubuntu 11.3.0) 11.3.0"
+
+
 def test_read_section_px_returns_hex_string():
     adapter = ELFAdapterWithSections()
     analyzer = ELFAnalyzer(adapter)

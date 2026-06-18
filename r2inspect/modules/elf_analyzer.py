@@ -19,6 +19,13 @@ from .elf_security import get_security_features as _get_security_features
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """ELF file analysis using radare2"""
 
@@ -248,8 +255,8 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return None
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
-        vaddr = section.get("vaddr", 0)
-        size = section.get("size", 0)
+        vaddr = _to_int(section.get("vaddr", 0))
+        size = _to_int(section.get("size", 0))
         if not vaddr or not size:
             return None
         # An ELF section-header size is attacker-controlled, and these callers
