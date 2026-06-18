@@ -67,7 +67,9 @@ class MagicByteDetector:
                 header = file_handle.read(1024)
                 self._scan_magic_patterns(header, file_handle, result)
                 if result["confidence"] == 0:
-                    result.update(self._fallback_detection(header, path))
+                    fallback = self._fallback_detection(header, path)
+                    if isinstance(fallback, dict):
+                        result.update(fallback)
         except Exception as exc:
             logger.error("Error detecting file type for %s: %s", path, exc)
             result["error"] = str(exc)
@@ -105,7 +107,9 @@ class MagicByteDetector:
                 }
             )
             if confidence > result["confidence"]:
-                result.update(self._get_format_details(format_name, header, file_handle))
+                details = self._get_format_details(format_name, header, file_handle)
+                if isinstance(details, dict):
+                    result.update(details)
                 result["confidence"] = confidence
                 result["extensions"] = format_info.get("extensions", [])
 

@@ -124,6 +124,33 @@ def test_magic_detector_fallback_and_threat_levels(tmp_path: Path) -> None:
     assert get_file_threat_level(str(text_threat)) == "Low"
 
 
+def test_magic_detector_ignores_non_dict_detail_merges(tmp_path: Path) -> None:
+    class _BadFallbackDetector(MagicByteDetector):
+        def _fallback_detection(self, header: bytes, file_path: Path):  # type: ignore[override]
+            return ["not-a-dict"]
+
+    class _BadDetailDetector(MagicByteDetector):
+        def _check_magic_pattern(self, header: bytes, format_info, file_handle):  # type: ignore[override]
+            return 0.9
+
+        def _get_format_details(
+            self, format_name: str, header: bytes, file_handle
+        ):  # type: ignore[override]
+            return ["also-not-a-dict"]
+
+    plain = tmp_path / "plain.bin"
+    _write_bytes(plain, b"\x00" * 16)
+    result = _BadFallbackDetector().detect_file_type(str(plain))
+    assert result["file_format"] == "Unknown"
+    assert "error" not in result
+
+    detail = tmp_path / "detail.bin"
+    _write_bytes(detail, b"\x00" * 16)
+    result = _BadDetailDetector().detect_file_type(str(detail))
+    assert result["confidence"] > 0
+    assert "error" not in result
+
+
 def test_magic_detector_read_at_offset_wrapper(tmp_path: Path) -> None:
     sample = tmp_path / "offset.bin"
     _write_bytes(sample, b"0123456789abcdef")
