@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
+
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_machoc_support import generate_machoc_summary
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 
 
@@ -706,6 +709,29 @@ def test_generate_machoc_summary_with_similarities():
     assert result["total_duplicate_functions"] == 4
     assert "similarities" in result
     assert "most_common_patterns" in result
+
+
+def test_generate_machoc_summary_ignores_malformed_similarity_buckets():
+    result = generate_machoc_summary(
+        {"machoc_hashes": {"func_a": "dup_hash", "func_b": "other_hash"}},
+        logger=logging.getLogger("test_generate_machoc_summary_ignores_malformed_similarity_buckets"),
+        similarity_fn=lambda _: {
+            "dup_hash": ["func_a", "func_b"],
+            "bad_none": None,
+            "bad_string": "oops",
+            "bad_int": 3,
+        },
+    )
+    assert result["duplicate_function_groups"] == 1
+    assert result["total_duplicate_functions"] == 2
+    assert result["similarities"] == {"dup_hash": ["func_a", "func_b"]}
+    assert result["most_common_patterns"] == [
+        {
+            "machoc_hash": "dup_hash",
+            "function_count": 2,
+            "functions": ["func_a", "func_b"],
+        }
+    ]
 
 
 def test_generate_machoc_summary_exception():

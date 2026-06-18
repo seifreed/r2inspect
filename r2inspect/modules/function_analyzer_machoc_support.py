@@ -140,23 +140,28 @@ def generate_machoc_summary(
         similarities = similarity_fn(machoc_hashes)
         if not isinstance(similarities, dict):
             similarities = {}
-        total_duplicate_functions = sum(len(names) for names in similarities.values())
+        valid_similarities = {
+            machoc_hash: function_names
+            for machoc_hash, function_names in similarities.items()
+            if isinstance(function_names, list)
+        }
+        total_duplicate_functions = sum(len(names) for names in valid_similarities.values())
         valid_hashes = {
             value for value in machoc_hashes.values() if isinstance(value, str) and value
         }
         result: dict[str, Any] = {
             "total_functions_hashed": len(machoc_hashes),
             "unique_machoc_hashes": len(valid_hashes),
-            "duplicate_function_groups": len(similarities),
+            "duplicate_function_groups": len(valid_similarities),
             "total_duplicate_functions": total_duplicate_functions,
         }
-        if similarities:
+        if valid_similarities:
             sorted_patterns = sorted(
-                similarities.items(),
+                valid_similarities.items(),
                 key=lambda item: len(item[1]),
                 reverse=True,
             )
-            result["similarities"] = similarities
+            result["similarities"] = valid_similarities
             result["most_common_patterns"] = [
                 {
                     "machoc_hash": machoc_hash,
