@@ -123,6 +123,8 @@ def generate_machoc_summary(
         if not machoc_hashes:
             raise ValueError("No MACHOC hashes available")
         similarities = similarity_fn(machoc_hashes)
+        if not isinstance(similarities, dict):
+            similarities = {}
         total_duplicate_functions = sum(len(names) for names in similarities.values())
         valid_hashes = {
             value for value in machoc_hashes.values() if isinstance(value, str) and value

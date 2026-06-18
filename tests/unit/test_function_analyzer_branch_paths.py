@@ -7,11 +7,13 @@ Covers lines: 43-44, 66-68, 82-86, 91-93, 98-101, 107-109, 111, 139,
 
 from __future__ import annotations
 
+import logging
 
 import pytest
 
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.function_analyzer_extraction_support import coerce_positive_int
+from r2inspect.modules.function_analyzer_machoc_support import generate_machoc_summary
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 import r2inspect.modules.function_analyzer as fa_module
 
@@ -721,6 +723,18 @@ def test_generate_machoc_summary_skips_malformed_hash_values():
     assert result["unique_machoc_hashes"] == 1
     assert result["duplicate_function_groups"] == 1
     assert result["total_duplicate_functions"] == 2
+
+
+def test_generate_machoc_summary_skips_non_dict_similarity_results():
+    result = generate_machoc_summary(
+        {"machoc_hashes": {"fn_a": "dup1", "fn_b": "dup1"}},
+        logging.getLogger("test"),
+        similarity_fn=lambda _hashes: ["bad"],
+    )
+    assert result["total_functions_hashed"] == 2
+    assert result["unique_machoc_hashes"] == 1
+    assert result["duplicate_function_groups"] == 0
+    assert result["total_duplicate_functions"] == 0
 
 
 def test_generate_machoc_summary_exception_returns_error():
