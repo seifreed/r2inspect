@@ -234,6 +234,12 @@ def test_add_binbloom_group_accepts_non_string_function_names():
     assert "123" in _get_text(console)
 
 
+def test_add_binbloom_group_skips_non_dict_group():
+    table = _make_table()
+    _add_binbloom_group(table, 1, None)  # type: ignore[arg-type]
+    assert len(table.rows) == 0
+
+
 def test_display_binbloom_available_with_similar_groups():
     console = _make_console()
     results = {
