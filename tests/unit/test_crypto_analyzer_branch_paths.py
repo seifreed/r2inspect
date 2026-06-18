@@ -291,6 +291,21 @@ def test_detect_via_constants_with_aes_constant():
     assert isinstance(detected_algos, dict)
 
 
+def test_detect_via_constants_skips_malformed_addresses():
+    class BadConstantAdapter(EmptyAdapter):
+        def search_hex(self, pattern: str) -> str:
+            return "0x00401234 match\n"
+
+    analyzer = CryptoAnalyzer(BadConstantAdapter())
+    analyzer._detect_crypto_constants = lambda: [
+        {"type": "aes_sbox", "value": "x", "addresses": None},
+        {"type": "aes_sbox", "value": "y", "addresses": ["0x1000"]},
+    ]
+    detected_algos: dict[str, list] = {}
+    analyzer._detect_via_constants(detected_algos)
+    assert detected_algos["AES"][0]["address"] == "N/A"
+
+
 # ---------------------------------------------------------------------------
 # _analyze_entropy() - exception path (lines 235-236)
 # ---------------------------------------------------------------------------

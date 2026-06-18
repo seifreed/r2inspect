@@ -94,14 +94,16 @@ class CryptoAnalyzer(CommandHelperMixin):
             if algo_name:
                 if algo_name not in detected_algos:
                     detected_algos[algo_name] = []
+                addresses = const_info.get("addresses")
+                address = "N/A"
+                if isinstance(addresses, list) and addresses:
+                    address = addresses[0]
                 detected_algos[algo_name].append(
                     {
                         "evidence_type": "Crypto Constant",
                         "evidence": f"{const_info['type']}: {const_info['value']}",
                         "confidence": 0.8,
-                        "address": (
-                            const_info["addresses"][0] if const_info["addresses"] else "N/A"
-                        ),
+                        "address": address,
                     }
                 )
 
