@@ -623,6 +623,17 @@ def test_compute_authenticode_hash_coerces_string_file_size():
     assert result["file_size"] == 10000
 
 
+def test_compute_authenticode_hash_coerces_hex_file_size():
+    class HexSizeAdapter(_BaseAdapter):
+        def get_file_info(self):
+            return {"core": {"size": "0x2710"}}
+
+    analyzer = AuthenticodeAnalyzer(adapter=HexSizeAdapter())
+    result = analyzer._compute_authenticode_hash()
+    assert result is not None
+    assert result["file_size"] == 10000
+
+
 def test_compute_authenticode_hash_no_file_info_returns_none():
     class NullFileInfoAdapter(_BaseAdapter):
         def get_file_info(self):
