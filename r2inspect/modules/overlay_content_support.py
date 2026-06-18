@@ -6,6 +6,13 @@ from collections.abc import Callable
 from typing import Any
 
 
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 def analyze_overlay_content(
     *,
     cmdj: Callable[[str, Any], Any],
@@ -21,6 +28,10 @@ def analyze_overlay_content(
     check_file_signatures_fn: Callable[[list[int]], list[dict[str, Any]]],
 ) -> None:
     try:
+        offset = _to_int(offset)
+        size = _to_int(size)
+        if offset is None or size is None:
+            return
         read_size = min(size, 65536)
         overlay_data = cmdj(f"pxj {read_size} @ {offset}", [])
 
