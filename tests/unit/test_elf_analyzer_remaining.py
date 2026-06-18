@@ -454,7 +454,7 @@ def test_get_security_features():
         cmdj_map={
             "ij": ij,
             "isj": [],
-            "ihj": [{"type": "GNU_STACK", "flags": "rw"}],
+            "iSSj": [{"name": "GNU_STACK", "perm": "-rw-"}],
         },
         cmd_map={"id": "BIND_NOW\nRPATH=/foo\n"},
     )
@@ -462,7 +462,7 @@ def test_get_security_features():
     result = analyzer.get_security_features()
     assert isinstance(result, dict)
     assert "nx" in result
-    # GNU_STACK with flags "rw" (no "x") => NX enabled
+    # GNU_STACK segment without "x" perm => NX enabled
     assert result["nx"] is True
     assert result["relro"] is True
     assert result["rpath"] is True

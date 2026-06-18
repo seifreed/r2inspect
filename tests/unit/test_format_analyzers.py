@@ -60,14 +60,15 @@ def test_pe_security_features_from_header():
 
 
 def test_elf_security_features():
-    ihj = [{"type": "GNU_STACK", "flags": "rw"}]
+    # NX is read from the GNU_STACK program segment (iSSj); PIE from bin.pic.
+    segments = [{"name": "GNU_STACK", "perm": "-rw-"}]
     adapter = R2PipeAdapter(
         FakeR2(
             cmd_map={"id": "BIND_NOW\nRPATH\nRUNPATH"},
             cmdj_map={
-                "ihj": ihj,
+                "iSSj": segments,
                 "isj": [{"name": "__stack_chk_fail"}],
-                "ij": {"bin": {"class": "DYN"}},
+                "ij": {"bin": {"pic": True}},
             },
         )
     )

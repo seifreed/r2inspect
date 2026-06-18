@@ -6,13 +6,17 @@ from __future__ import annotations
 from typing import Any
 
 
-def has_nx(ph_info: list[dict[str, Any]] | None) -> bool:
-    if not ph_info:
+def has_nx(segments: list[dict[str, Any]] | None) -> bool:
+    if not segments:
         return False
-    for header in ph_info:
-        if header.get("type") == "GNU_STACK":
-            flags = header.get("flags", "")
-            return "x" not in str(flags).lower()
+    for segment in segments:
+        # r2's segment list (iSSj) names the stack segment in "name" with the
+        # permissions in "perm" (e.g. "-rw-"); older/text shapes used "type"
+        # and "flags". NX is on when the GNU_STACK segment is not executable.
+        identifier = str(segment.get("name") or segment.get("type") or "").upper()
+        if "GNU_STACK" in identifier:
+            perms = str(segment.get("perm") or segment.get("flags") or "")
+            return "x" not in perms.lower()
     return False
 
 
