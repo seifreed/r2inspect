@@ -50,7 +50,10 @@ class PackerEvidenceScorer:
     def add_entropy_results(self, entropy_results: dict[str, Any]) -> None:
         """Register high-entropy sections (up to 30 points)."""
         self._entropy_results = entropy_results
-        high_entropy_count = entropy_results.get("summary", {}).get("high_entropy_sections", 0)
+        summary = entropy_results.get("summary")
+        if not isinstance(summary, dict):
+            summary = {}
+        high_entropy_count = summary.get("high_entropy_sections", 0)
         if high_entropy_count > 0:
             self._score += min(high_entropy_count * 15, 30)
             self._reasons.append(f"{high_entropy_count} high entropy sections (>7.0)")

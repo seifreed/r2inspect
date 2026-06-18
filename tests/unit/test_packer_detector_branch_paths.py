@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.modules.packer_detector import PackerDetector
+from r2inspect.modules.packer_detector import PackerDetector, PackerEvidenceScorer
 
 # ---------------------------------------------------------------------------
 # Stub helpers
@@ -125,6 +125,13 @@ def test_packer_detector_requires_config():
 def test_packer_detector_stores_entropy_threshold():
     detector = PackerDetector(AdapterWithAllMethods(), StubConfig())
     assert detector.entropy_threshold == 7.0
+
+
+def test_entropy_results_ignores_non_dict_summary():
+    scorer = PackerEvidenceScorer()
+    scorer.add_entropy_results({"summary": None})
+    result = scorer.verdict()
+    assert result["is_packed"] is False
 
 
 # ---------------------------------------------------------------------------
