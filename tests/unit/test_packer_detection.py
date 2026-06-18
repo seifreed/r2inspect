@@ -201,6 +201,34 @@ def test_packer_overlay_info():
     assert isinstance(overlay, dict)
 
 
+def test_overlay_info_uses_file_offsets_and_core_size():
+    # Overlay is computed in file space: total size from core.size and each
+    # section ending at paddr + size. Using vaddr (a virtual address) or
+    # bin.size (absent for PE) made overlay_size always negative.
+    from r2inspect.domain.services.packer_scoring import overlay_info
+
+    file_info = {"core": {"size": 1000}, "bin": {}}
+    sections = [
+        {"name": ".text", "paddr": 0, "size": 400, "vaddr": 0x1000},
+        {"name": ".data", "paddr": 400, "size": 200, "vaddr": 0x2000},
+    ]
+    info = overlay_info(file_info, sections)
+    # last on-disk end = 400 + 200 = 600; overlay = 1000 - 600 = 400.
+    assert info["has_overlay"] is True
+    assert info["overlay_size"] == 400
+    assert info["overlay_ratio"] == 0.4
+
+
+def test_overlay_info_no_overlay_when_sections_fill_file():
+    from r2inspect.domain.services.packer_scoring import overlay_info
+
+    file_info = {"core": {"size": 600}}
+    sections = [{"name": ".text", "paddr": 0, "size": 600}]
+    info = overlay_info(file_info, sections)
+    assert info["has_overlay"] is False
+    assert info["overlay_size"] == 0
+
+
 def test_packer_entropy_threshold():
     detector = _make_detector()
 

@@ -145,16 +145,20 @@ def count_imports(imports: list[dict[str, Any]] | None) -> int:
 def overlay_info(
     file_info: dict[str, Any] | None, sections: list[dict[str, Any]] | None
 ) -> dict[str, Any]:
-    if not file_info or "bin" not in file_info:
+    if not file_info:
         return {}
-    bin_info = file_info["bin"]
-    file_size = bin_info.get("size", 0)
-    if not sections:
+    # The overlay lives in the file after the last section's on-disk data, so
+    # this must work in file space: the total file size is r2's core.size (not
+    # bin.size, which is absent for PE), and each section ends at paddr + size
+    # (its file offset), not vaddr + size (a virtual address far larger than
+    # the file, which made overlay_size always negative).
+    file_size = file_info.get("core", {}).get("size", 0)
+    if not sections or not file_size:
         return {}
 
     last_section_end = 0
     for section in sections:
-        section_end = section.get("vaddr", 0) + section.get("size", 0)
+        section_end = section.get("paddr", 0) + section.get("size", 0)
         last_section_end = max(last_section_end, section_end)
 
     overlay_size = file_size - last_section_end
