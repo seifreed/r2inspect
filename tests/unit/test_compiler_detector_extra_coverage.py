@@ -4,8 +4,6 @@
 No the stdlib mock library, no mock objects, no patch. Real objects and plain adapters only.
 """
 
-import pytest
-
 from r2inspect.modules.compiler_detector import CompilerDetector
 
 
@@ -115,6 +113,22 @@ def test_get_file_format_error():
 def test_get_strings_with_adapter():
     """Test _get_strings uses adapter when available"""
     strings = [{"string": "test1"}, {"string": "test2"}, {"other": "skip"}]
+    adapter = FakeAdapter(strings=strings)
+    detector = CompilerDetector(adapter)
+
+    result = detector._get_strings()
+    assert result == ["test1", "test2"]
+
+
+def test_get_strings_skips_malformed_entries():
+    """Malformed string rows should not abort string extraction."""
+    strings = [
+        "bad",
+        {"string": "test1"},
+        {"string": ["skip"]},
+        {"other": "skip"},
+        {"string": "test2"},
+    ]
     adapter = FakeAdapter(strings=strings)
     detector = CompilerDetector(adapter)
 

@@ -9,6 +9,7 @@ from ..infrastructure.logging import get_logger
 from .compiler_detector_collection_support import (
     get_file_format as _collect_file_format,
     get_file_info as _collect_file_info,
+    get_strings as _collect_strings,
 )
 from .compiler_detector_result_support import (
     gather_detection_inputs as _gather_detection_inputs,
@@ -34,7 +35,6 @@ from ..domain.formats.compiler import (
     extract_section_names,
     extract_symbol_names,
     map_msvc_version_from_rich,
-    parse_strings_output,
 )
 from .compiler_signatures import (
     COMPILER_SIGNATURES,
@@ -163,11 +163,7 @@ class CompilerDetector(CommandHelperMixin):
     def _get_strings(self) -> list[str]:
         """Extract strings from binary."""
         return self._safe_call(
-            lambda: (
-                [e.get("string", "") for e in self.adapter.get_strings() if e.get("string")]
-                if self.adapter is not None and hasattr(self.adapter, "get_strings")
-                else parse_strings_output(self._get_strings_raw())
-            ),
+            lambda: _collect_strings(self, logger),
             default=[],
             error_msg="Error extracting strings",
         )

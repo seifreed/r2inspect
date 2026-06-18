@@ -25,7 +25,15 @@ def get_strings(detector: Any, logger: Any) -> list[str]:
     try:
         if detector.adapter is not None and hasattr(detector.adapter, "get_strings"):
             entries = detector.adapter.get_strings()
-            return [entry.get("string", "") for entry in entries if entry.get("string")]
+            if not isinstance(entries, list):
+                return []
+            return [
+                string_value
+                for entry in entries
+                if isinstance(entry, dict)
+                and isinstance(string_value := entry.get("string"), str)
+                and string_value
+            ]
         strings_output = get_strings_raw(detector)
         return parse_strings_output(strings_output)
     except Exception as exc:
