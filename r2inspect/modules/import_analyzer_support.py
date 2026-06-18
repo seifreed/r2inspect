@@ -68,7 +68,10 @@ def analyze_import(
     try:
         risk_analysis = analyzer._calculate_risk_score(name)
         analysis.update(risk_analysis)
-        for category, functions in analyzer.api_categories.items():
+        api_categories = analyzer.api_categories
+        if not isinstance(api_categories, dict):
+            api_categories = {}
+        for category, functions in api_categories.items():
             if any(api in name for api in functions):
                 analysis["category"] = category
                 analysis["description"] = analyzer._get_function_description(name)

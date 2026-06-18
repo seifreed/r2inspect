@@ -173,6 +173,15 @@ def test_analyze_import_missing_fields():
     assert result["name"] == "unknown"
 
 
+def test_analyze_import_skips_non_dict_api_categories():
+    analyzer = _make_analyzer()
+    analyzer.api_categories = "bad"  # type: ignore[assignment]
+    imp = {"name": "CreateFileA", "plt": 0x1000, "libname": "kernel32.dll"}
+    result = analyzer._analyze_import(imp)
+    assert result["name"] == "CreateFileA"
+    assert result["category"] == "Unknown"
+
+
 # ---------------------------------------------------------------------------
 # _get_function_description
 # ---------------------------------------------------------------------------
