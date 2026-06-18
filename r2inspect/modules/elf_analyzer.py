@@ -200,6 +200,8 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
             if sections_info:
                 for section in sections_info:
+                    if not isinstance(section, dict):
+                        continue
                     sections.append(
                         {
                             "name": section.get("name", "Unknown"),

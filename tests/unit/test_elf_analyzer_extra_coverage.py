@@ -120,6 +120,23 @@ def test_get_section_info():
     assert isinstance(result, list)
 
 
+def test_get_section_info_skips_non_dict_entries():
+    adapter = FakeAdapter(
+        cmdj_responses={
+            "iSj": [
+                {"name": ".text", "type": "PROGBITS", "size": 4096, "vaddr": 0x1000, "paddr": 0x1000},
+                "bad",
+                {"name": ".data", "type": "PROGBITS", "size": 256, "vaddr": 0x2000, "paddr": 0x2000},
+            ]
+        }
+    )
+    analyzer = ELFAnalyzer(adapter)
+    result = analyzer._get_section_info()
+    assert len(result) == 2
+    assert result[0]["name"] == ".text"
+    assert result[1]["name"] == ".data"
+
+
 def test_get_section_info_error():
     adapter = ErrorCmdAdapter()
     analyzer = ELFAnalyzer(adapter)
