@@ -20,6 +20,13 @@ IMPORT_RISK_STYLES = {
 }
 
 
+def _coerce_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def flatten_results(data: Any, prefix: str = "") -> list[dict[str, str]]:
     """Flatten nested dictionaries and lists into table-friendly rows."""
     rows: list[dict[str, str]] = []
@@ -81,7 +88,7 @@ def format_imports(imports: list[dict[str, Any]]) -> Table:
     table.add_column("Category", style="magenta", width=20)
     table.add_column("Risk Score", style="red", width=10)
     table.add_column("Risk Tags", style="bright_red", width=30)
-    for imp in sorted(imports, key=lambda item: item.get("risk_score", 0), reverse=True):
+    for imp in sorted(imports, key=lambda item: _coerce_float(item.get("risk_score")), reverse=True):
         risk_score = imp.get("risk_score", 0)
         risk_level = imp.get("risk_level", "Minimal")
         risk_tags = imp.get("risk_tags", [])

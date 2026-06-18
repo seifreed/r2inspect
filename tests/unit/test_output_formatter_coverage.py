@@ -128,6 +128,29 @@ def test_format_imports_all_risk_levels() -> None:
         assert isinstance(result, Table)
 
 
+def test_format_imports_accepts_string_risk_scores() -> None:
+    imports = [
+        {
+            "name": "LowFunc",
+            "library": "lib.dll",
+            "category": "X",
+            "risk_score": "5",
+            "risk_level": "Low",
+            "risk_tags": [],
+        },
+        {
+            "name": "HighFunc",
+            "library": "lib.dll",
+            "category": "X",
+            "risk_score": "90",
+            "risk_level": "High",
+            "risk_tags": [],
+        },
+    ]
+    result = OutputFormatter({}).format_imports(imports)
+    assert isinstance(result, Table)
+
+
 def test_format_imports_empty_tags() -> None:
     imports = [
         {
