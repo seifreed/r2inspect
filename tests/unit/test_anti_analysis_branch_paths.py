@@ -282,6 +282,17 @@ def test_detect_timing_checks_with_rdtsc() -> None:
     assert "RDTSC Instruction" in types
 
 
+def test_detect_anti_debug_detailed_skips_non_string_search_output() -> None:
+    class _BadSearchDetector(AntiAnalysisDetector):
+        def _search_opcode(self, _pattern: str):
+            return None
+
+    detector = _BadSearchDetector(_empty_adapter())
+    result = detector._detect_anti_debug_detailed()
+    assert result["detected"] is False
+    assert result["evidence"] == []
+
+
 def test_detect_anti_debug_detailed_skips_malformed_imports() -> None:
     adapter = _make_adapter(
         cmdj_map={

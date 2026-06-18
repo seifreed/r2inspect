@@ -105,7 +105,7 @@ def _anti_debug_import_evidence(detector: Any) -> list[dict[str, Any]]:
 
 def _peb_access_evidence(detector: Any) -> list[dict[str, Any]]:
     peb_checks = detector._search_opcode("fs:[0x30]")
-    if not (peb_checks and peb_checks.strip()):
+    if not isinstance(peb_checks, str) or not peb_checks.strip():
         return []
     addresses = peb_checks.strip().split("\n")
     return [
@@ -119,7 +119,7 @@ def _peb_access_evidence(detector: Any) -> list[dict[str, Any]]:
 
 def _int3_breakpoint_evidence(detector: Any) -> list[dict[str, Any]]:
     int3_checks = detector._search_opcode("cc")
-    if not (int3_checks and int3_checks.strip()):
+    if not isinstance(int3_checks, str) or not int3_checks.strip():
         return []
     addresses = int3_checks.strip().split("\n")
     if len(addresses) <= 5:
@@ -135,7 +135,7 @@ def _int3_breakpoint_evidence(detector: Any) -> list[dict[str, Any]]:
 
 def _rdtsc_timing_evidence(detector: Any) -> list[dict[str, Any]]:
     rdtsc_checks = detector._search_opcode("rdtsc")
-    if not (rdtsc_checks and rdtsc_checks.strip()):
+    if not isinstance(rdtsc_checks, str) or not rdtsc_checks.strip():
         return []
     addresses = rdtsc_checks.strip().split("\n")
     return [
@@ -277,7 +277,7 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
                 }
             )
     rdtsc_usage = detector._search_opcode("rdtsc")
-    if rdtsc_usage and rdtsc_usage.strip():
+    if isinstance(rdtsc_usage, str) and rdtsc_usage.strip():
         result["detected"] = True
         addresses = rdtsc_usage.strip().split("\n")
         result["evidence"].append(
