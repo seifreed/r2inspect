@@ -21,6 +21,8 @@ MITIGATION_SCORES = {
 
 
 def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(result, dict):
+        return {"score": 0, "max_score": 0, "percentage": 0.0, "grade": "Unknown"}
     score = 0
     max_score = 0
     mitigations = result.get("mitigations")

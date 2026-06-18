@@ -77,6 +77,11 @@ def test_build_security_score_skips_non_dict_buckets() -> None:
     assert score["grade"] == "F"
 
 
+def test_build_security_score_non_dict_input_returns_empty_score() -> None:
+    score = build_security_score(123)  # type: ignore[arg-type]
+    assert score == {"score": 0, "max_score": 0, "percentage": 0.0, "grade": "Unknown"}
+
+
 def test_build_security_score_skips_malformed_entries() -> None:
     score = build_security_score(
         {
