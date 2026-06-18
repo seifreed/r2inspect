@@ -20,6 +20,15 @@ from .analysis_pipeline import AnalysisStage
 logger = get_logger(__name__)
 
 
+def _results_bucket(context: dict[str, Any]) -> dict[str, Any]:
+    results = context.get("results")
+    if isinstance(results, dict):
+        return results
+    results = {}
+    context["results"] = results
+    return results
+
+
 def run_registered_analyzer(
     stage: Any,
     context: dict[str, Any],
@@ -47,12 +56,12 @@ def run_registered_analyzer(
             filename=stage.filename,
         )
         data = invoke(analyzer)
-        context["results"][result_key] = data
+        _results_bucket(context)[result_key] = data
         return {result_key: data}
     except Exception as e:
         logger.warning("%s failed: %s", log_label, e)
         fallback = error_default(e)
-        context["results"][result_key] = fallback
+        _results_bucket(context)[result_key] = fallback
         return {result_key: fallback}
 
 

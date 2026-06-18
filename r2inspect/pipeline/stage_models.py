@@ -8,6 +8,15 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+
+def _results_bucket(context: dict[str, Any]) -> dict[str, Any]:
+    results = context.get("results")
+    if isinstance(results, dict):
+        return results
+    results = {}
+    context["results"] = results
+    return results
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,8 +76,7 @@ class AnalysisStage:
         except Exception as e:
             logger.error("Stage '%s' failed: %s", self.name, e)
             # Return error structure under results
-            context.setdefault("results", {})
-            context["results"][self.name] = {"error": str(e), "success": False}
+            _results_bucket(context)[self.name] = {"error": str(e), "success": False}
             return {self.name: {"error": str(e), "success": False}}
 
 

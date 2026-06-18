@@ -13,13 +13,13 @@ from ..interfaces import (
     ConfigLike,
 )
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import RegistryStage, default_analyzer_factory
+from .stages_common import RegistryStage, default_analyzer_factory, _results_bucket
 
 logger = logging.getLogger(__name__)
 
 
 def _bucket(context: dict[str, Any], key: str) -> dict[str, Any]:
-    results = context["results"]
+    results = _results_bucket(context)
     value = results.get(key)
     if isinstance(value, dict):
         return value
@@ -96,5 +96,5 @@ class SecurityStage(RegistryStage):
             except Exception as e:
                 logger.debug("Mitigation analysis failed: %s", e)
                 return None
-            return {"security": context["results"].get("security", {})}
+            return {"security": _results_bucket(context).get("security", {})}
         return None

@@ -18,7 +18,7 @@ from ..interfaces import (
     ConfigLike,
 )
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import RegistryStage, default_analyzer_factory
+from .stages_common import RegistryStage, default_analyzer_factory, _results_bucket
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class FormatAnalysisStage(RegistryStage):
         context: dict[str, Any], result_key: str, data: dict[str, Any]
     ) -> dict[str, Any]:
         """Persist a format analysis payload in the shared execution context."""
-        context["results"][result_key] = data
+        _results_bucket(context)[result_key] = data
         return {result_key: data}
 
 

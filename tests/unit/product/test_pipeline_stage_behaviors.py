@@ -10,6 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from tests.helpers import make_stage_context, write_minimal_pe_file
 
+from r2inspect.pipeline.stage_models import AnalysisStage
 from r2inspect.pipeline.stages_detection import DetectionStage
 from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage
 from r2inspect.pipeline.stages_hashing import HashingStage
@@ -26,6 +27,14 @@ class FakeAdapter:
 
 class FakeConfig:
     pass
+
+
+class _FailingStage(AnalysisStage):
+    def __init__(self) -> None:
+        super().__init__(name="failing")
+
+    def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
+        raise RuntimeError("boom")
 
 
 class PackerDetector:
@@ -173,6 +182,21 @@ def test_file_info_stage_collects_basic_metadata_and_hashes(tmp_path: Path) -> N
     assert "sha256" in info
 
 
+def test_file_info_stage_initializes_non_dict_results_bucket(tmp_path: Path) -> None:
+    sample = write_minimal_pe_file(tmp_path / "sample.exe")
+    stage = FileInfoStage(
+        adapter=FakeAdapter({"bin": {"arch": "x86", "bits": 64, "endian": "little"}}),
+        filename=str(sample),
+    )
+    context = {"results": None}
+
+    result = stage._execute(context)
+
+    assert "file_info" in result
+    assert isinstance(context["results"], dict)
+    assert context["results"]["file_info"]["architecture"] == "x86-64"
+
+
 def test_format_detection_stage_falls_back_to_header_bytes_without_r2_info(
     tmp_path: Path,
 ) -> None:
@@ -229,6 +253,17 @@ def test_format_detection_stage_ignores_list_file_info() -> None:
     result = stage._execute(context)
 
     assert result["format_detection"]["file_format"] in {"PE", "ELF", "Mach-O", "Unknown"}
+
+
+def test_analysis_stage_execute_initializes_non_dict_results_on_error() -> None:
+    stage = _FailingStage()
+    context = {"results": None}
+
+    result = stage.execute(context)
+
+    assert result["failing"]["success"] is False
+    assert isinstance(context["results"], dict)
+    assert context["results"]["failing"]["error"] == "boom"
 
 
 def test_hashing_stage_runs_format_supported_hashers() -> None:

@@ -15,7 +15,7 @@ from ..interfaces import (
 )
 from ..registry.analyzer_registry import AnalyzerCategory
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import RegistryStage, default_analyzer_factory
+from .stages_common import RegistryStage, default_analyzer_factory, _results_bucket
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class HashingStage(RegistryStage):
                 self._store_hashing_result(context, results, name, result)
             except Exception as e:
                 logger.warning("Hashing analyzer '%s' failed: %s", name, e)
-                context["results"][name] = {"error": str(e)}
+                _results_bucket(context)[name] = {"error": str(e)}
 
         return results
 
@@ -88,5 +88,5 @@ class HashingStage(RegistryStage):
     def _store_hashing_result(
         self, context: dict[str, Any], results: dict[str, Any], name: str, result: Any
     ) -> None:
-        context["results"][name] = result
+        _results_bucket(context)[name] = result
         results[name] = result
