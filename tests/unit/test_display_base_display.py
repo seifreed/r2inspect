@@ -630,6 +630,27 @@ def test_display_performance_statistics_empty():
     assert "Performance Statistics" in output
 
 
+def test_display_performance_statistics_skips_malformed_stats():
+    con, buf = _make_console()
+    retry_stats = {"total_retries": "bad", "commands_retried": ["bad"]}
+    circuit_stats = ["bad"]
+
+    from r2inspect.cli.display_statistics import (
+        _display_circuit_breaker_statistics,
+        _display_retry_statistics,
+    )
+
+    runtime_display_performance_statistics(
+        retry_stats,
+        circuit_stats,
+        get_console=lambda: con,
+        display_retry_statistics=_display_retry_statistics,
+        display_circuit_breaker_statistics=_display_circuit_breaker_statistics,
+    )
+    output = _captured(buf)
+    assert "Performance Statistics" in output
+
+
 # ---------------------------------------------------------------------------
 # display_results — exercises the real normalize + dispatch pipeline
 # ---------------------------------------------------------------------------

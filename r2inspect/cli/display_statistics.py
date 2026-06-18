@@ -12,17 +12,32 @@ from .display_base import _get_console
 
 def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     """Display retry statistics table"""
-    if retry_stats["total_retries"] <= 0:
+    if not isinstance(retry_stats, dict):
+        return
+
+    try:
+        if float(retry_stats.get("total_retries", 0)) <= 0:
+            return
+    except (TypeError, ValueError):
         return
 
     retry_table = Table(title="Retry Statistics", show_header=True)
     retry_table.add_column("Metric", style="cyan")
     retry_table.add_column("Value", style="green")
 
-    retry_table.add_row("Total Retries", str(retry_stats["total_retries"]))
-    retry_table.add_row("Successful Retries", str(retry_stats["successful_retries"]))
-    retry_table.add_row("Failed After Retries", str(retry_stats["failed_after_retries"]))
-    retry_table.add_row("Success Rate", f"{retry_stats['success_rate']:.1f}%")
+    total_retries = retry_stats.get("total_retries", 0)
+    successful_retries = retry_stats.get("successful_retries", 0)
+    failed_after_retries = retry_stats.get("failed_after_retries", 0)
+    success_rate = retry_stats.get("success_rate", 0.0)
+
+    retry_table.add_row("Total Retries", str(total_retries))
+    retry_table.add_row("Successful Retries", str(successful_retries))
+    retry_table.add_row("Failed After Retries", str(failed_after_retries))
+    try:
+        success_rate_text = f"{float(success_rate):.1f}%"
+    except (TypeError, ValueError):
+        success_rate_text = str(success_rate)
+    retry_table.add_row("Success Rate", success_rate_text)
 
     _get_console().print(retry_table)
     _display_most_retried_commands(retry_stats)
@@ -30,7 +45,11 @@ def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
 
 def _display_most_retried_commands(retry_stats: dict[str, Any]) -> None:
     """Display table of most retried commands"""
-    if not retry_stats["commands_retried"]:
+    if not isinstance(retry_stats, dict):
+        return
+
+    commands_retried = retry_stats.get("commands_retried", {})
+    if not isinstance(commands_retried, dict) or not commands_retried:
         return
 
     cmd_table = Table(title="Most Retried Commands", show_header=True)
@@ -38,7 +57,7 @@ def _display_most_retried_commands(retry_stats: dict[str, Any]) -> None:
     cmd_table.add_column("Retry Count", style="yellow")
 
     sorted_commands = sorted(
-        retry_stats["commands_retried"].items(),
+        commands_retried.items(),
         key=lambda x: x[1],
         reverse=True,
     )[:5]
@@ -51,7 +70,7 @@ def _display_most_retried_commands(retry_stats: dict[str, Any]) -> None:
 
 def _display_circuit_breaker_statistics(circuit_stats: dict[str, Any]) -> None:
     """Display circuit breaker statistics table"""
-    if not circuit_stats:
+    if not isinstance(circuit_stats, dict) or not circuit_stats:
         return
 
     cb_entries = []
