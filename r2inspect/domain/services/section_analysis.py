@@ -69,9 +69,9 @@ def build_section_name_indicators(
 
 def build_permission_indicators(analysis: dict[str, Any]) -> list[str]:
     indicators: list[str] = []
-    if analysis["is_writable"] and analysis["is_executable"]:
+    if analysis.get("is_writable") and analysis.get("is_executable"):
         indicators.append("Writable and executable section")
-    if analysis["is_executable"] and _coerce_entropy(analysis.get("entropy", 0)) < 1.0:
+    if analysis.get("is_executable") and _coerce_entropy(analysis.get("entropy", 0)) < 1.0:
         indicators.append("Executable section with very low entropy")
     return indicators
 

@@ -653,6 +653,13 @@ def test_build_permission_indicators_treats_malformed_entropy_as_zero():
     assert result == ["Executable section with very low entropy"]
 
 
+def test_build_permission_indicators_handles_missing_flags():
+    assert build_permission_indicators({"entropy": 0.5}) == []
+    assert build_permission_indicators({"is_executable": True, "entropy": 0.5}) == [
+        "Executable section with very low entropy"
+    ]
+
+
 def test_get_arch_handles_file_info_errors():
     # ij returns None -> get_file_info returns empty/None -> _get_arch returns None
     analyzer = _build_analyzer(sections=[], file_info={})
