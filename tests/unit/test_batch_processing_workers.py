@@ -188,6 +188,15 @@ def test_display_failed_files_long_error():
     assert "..." in output  # truncated
 
 
+def test_display_failed_files_skips_malformed_entries():
+    console, buf = _make_console()
+    failed_files = [("file1.exe", "Error 1"), "bad", ("file2.exe", 123)]
+    presentation_display_failed_files(console, failed_files, verbose=True)
+    output = buf.getvalue()
+    assert "file1.exe" in output
+    assert "123" in output
+
+
 # ---------------------------------------------------------------------------
 # display_batch_results tests (using real BatchRateLimiter)
 # ---------------------------------------------------------------------------
