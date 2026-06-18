@@ -31,7 +31,10 @@ def _display_simhash(results: Results) -> None:
     table.add_column("Value", style="yellow", width=90, overflow="fold")
 
     if simhash_info.get("available"):
-        _add_simhash_feature_stats(table, feature_stats := simhash_info.get("feature_stats", {}))
+        feature_stats = simhash_info.get("feature_stats", {})
+        if not isinstance(feature_stats, dict):
+            feature_stats = {}
+        _add_simhash_feature_stats(table, feature_stats)
         _add_simhash_hashes(table, simhash_info)
         _add_simhash_function_analysis(table, simhash_info)
         _add_simhash_top_features(table, feature_stats)

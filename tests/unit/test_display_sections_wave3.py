@@ -380,6 +380,15 @@ def test_display_simhash_handles_non_list_similarity_groups():
     assert "SimHash" in text
 
 
+def test_display_simhash_skips_non_dict_feature_stats():
+    console = _make_console()
+    results = {"simhash": {"available": True, "feature_stats": "bad"}}
+    with _console_scope(console):
+        _display_simhash(results)
+    text = _get_text(console)
+    assert "SimHash" in text
+
+
 def test_display_bindiff_skips_non_dict_section():
     console = _make_console()
     with _console_scope(console):
