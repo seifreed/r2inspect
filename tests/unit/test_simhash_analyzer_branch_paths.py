@@ -771,6 +771,19 @@ def test_calculate_similarity_skips_invalid_hex_hash_value() -> None:
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
+def test_calculate_similarity_accepts_zero_hash_value() -> None:
+    adapter = StubAdapter()
+    analyzer = _ControlledSimHashAnalyzer(
+        adapter=adapter,
+        filepath="/fake/path",
+        result={"available": True, "hash_value": 0},
+    )
+    result = analyzer.calculate_similarity(0, hash_type="combined")
+    assert result["distance"] == 0
+    assert result["current_hash"] == "0x0"
+
+
+@pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
 def test_calculate_similarity_skips_invalid_combined_simhash_hash_value() -> None:
     adapter = StubAdapter()
     analyzer = _ControlledSimHashAnalyzer(

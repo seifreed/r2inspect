@@ -146,7 +146,7 @@ def _resolve_current_hash(results: dict[str, Any], hash_type: str) -> int | None
             if hash_value is not None:
                 return _coerce_hash_value(hash_value)
         hash_value = results.get("hash_value")
-        if hash_value:
+        if hash_value is not None:
             return _coerce_hash_value(hash_value)
         return None
     section = results.get(f"{hash_type}_simhash")
