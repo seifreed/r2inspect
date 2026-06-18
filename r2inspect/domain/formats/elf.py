@@ -86,6 +86,8 @@ def parse_build_id_data(build_id_data: str | None) -> str | None:
 def find_section_by_name(sections: list[dict[str, Any]], name_substr: str) -> dict[str, Any] | None:
     target = name_substr.lower()
     for section in sections or []:
+        if not isinstance(section, dict):
+            continue
         name = section.get("name", "")
         if target in str(name).lower():
             return section

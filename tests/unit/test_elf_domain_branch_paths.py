@@ -297,3 +297,9 @@ def test_find_section_by_name_no_name_key():
     sections = [{"size": 100}]
     result = find_section_by_name(sections, ".text")
     assert result is None
+
+
+def test_find_section_by_name_skips_malformed_entries():
+    sections = ["bad", {"name": ".text"}]
+    result = find_section_by_name(sections, ".text")
+    assert result == {"name": ".text"}
