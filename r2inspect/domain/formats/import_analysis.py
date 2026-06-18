@@ -119,24 +119,34 @@ def categorize_apis(
 def assess_api_risk(categories: dict[str, Any]) -> tuple[list[str], int]:
     suspicious_apis: list[str] = []
     risk_score = 0
-    if categories.get("Anti-Analysis", {}).get("count", 0) >= 2:
+    if _category_count(categories, "Anti-Analysis") >= 2:
         suspicious_apis.append("Multiple anti-debug APIs detected")
         risk_score += 20
-    if categories.get("DLL Injection", {}).get("count", 0) >= 3:
+    if _category_count(categories, "DLL Injection", "Injection") >= 3:
         suspicious_apis.append("DLL injection pattern detected")
         risk_score += 30
-    process_count = categories.get("Process/Thread Management", {}).get("count", 0)
-    memory_count = categories.get("Memory Management", {}).get("count", 0)
+    process_count = _category_count(categories, "Process/Thread Management", "Process")
+    memory_count = _category_count(categories, "Memory Management", "Memory")
     if process_count >= 3 and memory_count >= 3:
         suspicious_apis.append("Process manipulation pattern detected")
         risk_score += 25
-    if categories.get("Registry", {}).get("count", 0) >= 4:
+    if _category_count(categories, "Registry", "Persistence") >= 4:
         suspicious_apis.append("Extensive registry manipulation")
         risk_score += 15
-    if categories.get(NETWORK_CATEGORY, {}).get("count", 0) >= 3:
+    if _category_count(categories, NETWORK_CATEGORY, "Network") >= 3:
         suspicious_apis.append("Network communication capabilities")
         risk_score += 10
     return suspicious_apis, risk_score
+
+
+def _category_count(categories: dict[str, Any], *names: str) -> int:
+    for name in names:
+        value = categories.get(name)
+        if isinstance(value, dict):
+            count = value.get("count", 0)
+            if isinstance(count, int):
+                return count
+    return 0
 
 
 def find_max_risk_score(

@@ -4,8 +4,10 @@
 import logging
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.formats.import_analysis import assess_api_risk, categorize_apis
 from r2inspect.domain.services.import_analysis import build_import_statistics
 from r2inspect.modules.import_analyzer import ImportAnalyzer
+from r2inspect.modules.import_categories import get_api_categories
 from r2inspect.modules.import_analyzer_result_support import (
     collect_import_dlls,
     populate_import_statistics,
@@ -452,6 +454,32 @@ def test_build_import_statistics_coerces_malformed_fields():
     assert stats["risk_distribution"] == {"Unknown": 2}
     assert stats["library_distribution"] == {"unknown": 2}
     assert stats["suspicious_patterns"] == []
+
+
+def test_assess_api_risk_uses_runtime_category_names():
+    imports = [
+        {"name": "CreateProcess"},
+        {"name": "CreateRemoteThread"},
+        {"name": "TerminateProcess"},
+        {"name": "WriteProcessMemory"},
+        {"name": "VirtualAllocEx"},
+        {"name": "OpenProcess"},
+        {"name": "VirtualAlloc"},
+        {"name": "VirtualProtect"},
+        {"name": "InternetOpen"},
+        {"name": "URLDownloadToFile"},
+        {"name": "WinHttpSendRequest"},
+        {"name": "RegSetValueEx"},
+        {"name": "CreateService"},
+        {"name": "SetWindowsHookEx"},
+        {"name": "CopyFile"},
+    ]
+    categories = categorize_apis(imports, get_api_categories())
+    suspicious, score = assess_api_risk(categories)
+    assert any("dll injection" in item.lower() for item in suspicious)
+    assert any("process manipulation" in item.lower() for item in suspicious)
+    assert any("network communication" in item.lower() for item in suspicious)
+    assert score >= 65
 
 
 def test_collect_import_dlls_skips_malformed_entries():
