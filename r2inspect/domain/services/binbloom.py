@@ -50,6 +50,9 @@ def create_instruction_signature(
 
 def build_signature_components(instructions: list[str]) -> list[str]:
     """Build the logical components used to create a signature."""
+    if not isinstance(instructions, list):
+        instructions = []
+    instructions = [instr for instr in instructions if isinstance(instr, str) and instr]
     unique_instructions = sorted(set(instructions))
     freq_patterns = _build_frequency_patterns(instructions, unique_instructions)
     unique_bigrams = _build_unique_bigrams(instructions)
@@ -66,6 +69,8 @@ def _build_frequency_patterns(instructions: list[str], unique_instructions: list
 
 
 def _build_unique_bigrams(instructions: list[str]) -> list[str]:
+    if not isinstance(instructions, list):
+        return []
     bigrams = [f"{instructions[i]}→{instructions[i + 1]}" for i in range(len(instructions) - 1)]
     return sorted(set(bigrams))
 

@@ -40,6 +40,18 @@ def test_build_signature_components_contains_expected_sections() -> None:
     assert components[2].startswith("BIGR:")
 
 
+def test_build_signature_components_rejects_non_list_input() -> None:
+    assert build_signature_components(None) == ["UNIQ:", "FREQ:", "BIGR:"]  # type: ignore[arg-type]
+
+
+def test_build_signature_components_skips_non_string_entries() -> None:
+    assert build_signature_components(["mov", 1, None, "ret"]) == [
+        "UNIQ:mov|ret",
+        "FREQ:mov:1|ret:1",
+        "BIGR:mov→ret",
+    ]
+
+
 def test_count_unique_signatures() -> None:
     function_signatures = {
         "f1": {"signature": "a"},
