@@ -338,6 +338,37 @@ def test_analyze_overlay_content_coerces_string_size():
     assert result["overlay_hashes"]
 
 
+def test_analyze_overlay_content_coerces_hex_strings():
+    """Hex string offsets and sizes should still reach overlay content analysis."""
+
+    class _HexStringOverlayAnalyzer(OverlayAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command == "pxj 4 @ 4096":
+                return [0x41, 0x42, 0x43, 0x44]
+            return default
+
+        def _calculate_entropy(self, data: list[int]) -> float:
+            return 0.0
+
+        def _check_patterns(self, data: list[int]) -> list[dict[str, Any]]:
+            return []
+
+        def _determine_overlay_type(self, patterns: list[dict[str, Any]], data: list[int]) -> str:
+            return "data"
+
+        def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
+            return []
+
+        def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
+            return []
+
+    analyzer = _HexStringOverlayAnalyzer(None)
+    result = analyzer._default_result()
+    analyzer._analyze_overlay_content(result, offset="0x1000", size="0x4")
+    assert result["overlay_entropy"] == 0.0
+    assert result["overlay_hashes"]
+
+
 def test_analyze_overlay_content_embedded_files_populated():
     """File signatures found in overlay; embedded_files populated (line 204)."""
     pe_magic = [0x4D, 0x5A]  # MZ
