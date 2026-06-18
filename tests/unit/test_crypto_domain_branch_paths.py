@@ -123,9 +123,19 @@ def test_is_pie_returns_false_for_empty_dict() -> None:
     assert msd.is_pie({}) is False
 
 
+def test_is_pie_returns_false_for_malformed_bin_info() -> None:
+    """is_pie returns False when macho_info['bin'] is malformed."""
+    assert msd.is_pie({"bin": "bad"}) is False
+
+
 def test_has_stack_canary_returns_true() -> None:
     """has_stack_canary returns True when ___stack_chk_fail symbol is present."""
     symbols = [{"name": "___stack_chk_fail"}]
+    assert msd.has_stack_canary(symbols) is True
+
+
+def test_has_stack_canary_skips_malformed_symbols() -> None:
+    symbols = ["bad", {"name": None}, {"name": "___stack_chk_fail"}]
     assert msd.has_stack_canary(symbols) is True
 
 
@@ -137,6 +147,11 @@ def test_has_stack_canary_returns_false_for_empty() -> None:
 def test_has_arc_returns_true() -> None:
     """has_arc returns True when _objc_retain symbol is present."""
     symbols = [{"name": "_objc_retain"}]
+    assert msd.has_arc(symbols) is True
+
+
+def test_has_arc_skips_malformed_symbols() -> None:
+    symbols = ["bad", {"name": None}, {"name": "_objc_retain"}]
     assert msd.has_arc(symbols) is True
 
 

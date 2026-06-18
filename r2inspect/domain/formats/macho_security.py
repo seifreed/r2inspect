@@ -10,6 +10,8 @@ def is_pie(macho_info: dict[str, Any] | None) -> bool:
     if not macho_info or "bin" not in macho_info:
         return False
     bin_info = macho_info["bin"]
+    if not isinstance(bin_info, dict):
+        return False
     # r2 surfaces the MH_PIE header flag as bin.pic; this is the real signal for
     # a position-independent Mach-O executable. filetype does not carry it, so a
     # filetype-only check reported pie=False for every PIE executable.
@@ -22,7 +24,11 @@ def is_pie(macho_info: dict[str, Any] | None) -> bool:
 
 def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
     for symbol in symbols or []:
+        if not isinstance(symbol, dict):
+            continue
         name = symbol.get("name", "")
+        if not isinstance(name, str):
+            continue
         if "___stack_chk_fail" in name or "___stack_chk_guard" in name:
             return True
     return False
@@ -30,7 +36,11 @@ def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
 
 def has_arc(symbols: list[dict[str, Any]] | None) -> bool:
     for symbol in symbols or []:
+        if not isinstance(symbol, dict):
+            continue
         name = symbol.get("name", "")
+        if not isinstance(name, str):
+            continue
         if "_objc_" in name and ("retain" in name or "release" in name):
             return True
     return False
