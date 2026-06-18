@@ -356,6 +356,16 @@ def test_display_yara_rules_table_with_relative_path():
     assert "0.5 KB" in output
 
 
+def test_display_yara_rules_table_skips_malformed_entries():
+    con, buf = _make_console()
+    rules = [{"name": "rule.yar", "size": "2048", "path": "/full/path"}, "bad", {"size": None}]
+    runtime_display_yara_rules_table(rules, "/rules", get_console=lambda: con)
+    output = _captured(buf)
+    assert "rule.yar" in output
+    assert "2.0 KB" in output
+    assert "unknown" in output
+
+
 # ---------------------------------------------------------------------------
 # handle_list_yara_option — using runtime helper with real console
 # ---------------------------------------------------------------------------

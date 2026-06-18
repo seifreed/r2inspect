@@ -36,11 +36,19 @@ def display_yara_rules_table(
     table.add_column("Path", style="green")
 
     for rule in available_rules:
-        size_kb = rule["size"] / 1024
+        if not isinstance(rule, dict):
+            continue
+        size = rule.get("size", 0)
+        try:
+            size_kb = float(size) / 1024
+        except (TypeError, ValueError):
+            size_kb = 0.0
+        rule_name = str(rule.get("name", "unknown"))
+        path = rule.get("relative_path", rule.get("path", rule_name))
         table.add_row(
-            rule["name"],
+            rule_name,
             f"{size_kb:.1f} KB",
-            rule.get("relative_path", rule["path"]),
+            str(path),
         )
 
     get_console().print(table)
