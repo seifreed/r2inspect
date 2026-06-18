@@ -136,6 +136,8 @@ class ResourceParsingMixin:
     ) -> dict[str, Any] | None:
         if not entry_data or len(entry_data) < 8:
             return None
+        if not all(isinstance(value, int) for value in entry_data[:8]):
+            return None
         rsrc_base = _to_int(rsrc_offset)
         name_or_id = (
             entry_data[0] | (entry_data[1] << 8) | (entry_data[2] << 16) | (entry_data[3] << 24)

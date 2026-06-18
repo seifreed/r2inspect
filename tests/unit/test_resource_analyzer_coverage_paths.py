@@ -335,6 +335,13 @@ def test_resource_analyzer_parse_dir_entry_is_directory() -> None:
     assert result["is_directory"] is True
 
 
+def test_resource_analyzer_parse_dir_entry_skips_non_int_bytes() -> None:
+    analyzer = _make_analyzer()
+    entry_data = [3, 0, 0, 0, "bad", 0, 0, 0]
+    result = analyzer._parse_dir_entry(0x1000, entry_data, 0)
+    assert result is None
+
+
 # ── _get_resource_type_name ──────────────────────────────────────────────
 
 
