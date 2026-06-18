@@ -348,6 +348,15 @@ def test_normalize_resource_entries_skips_malformed_entries():
     ]
 
 
+def test_normalize_resource_entries_replaces_none_values():
+    result = normalize_resource_entries(
+        [{"name": None, "type": None, "size": None, "lang": None}]  # type: ignore[list-item]
+    )
+    assert result == [
+        {"name": "Unknown", "type": "Unknown", "size": 0, "lang": "Unknown"},
+    ]
+
+
 # ---------------------------------------------------------------------------
 # parse_version_info_text() - lines 118-123
 # ---------------------------------------------------------------------------

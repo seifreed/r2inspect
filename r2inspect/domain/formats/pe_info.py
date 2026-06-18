@@ -134,10 +134,10 @@ def normalize_resource_entries(resources: list[dict[str, Any]]) -> list[dict[str
             continue
         normalized.append(
             {
-                "name": resource.get("name", "Unknown"),
-                "type": resource.get("type", "Unknown"),
-                "size": resource.get("size", 0),
-                "lang": resource.get("lang", "Unknown"),
+                "name": resource.get("name") or "Unknown",
+                "type": resource.get("type") or "Unknown",
+                "size": resource.get("size") or 0,
+                "lang": resource.get("lang") or "Unknown",
             }
         )
     return normalized
