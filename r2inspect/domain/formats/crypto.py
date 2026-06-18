@@ -107,8 +107,28 @@ def _add_detection(
 def consolidate_detections(detected_algos: dict[str, list]) -> list[dict[str, Any]]:
     algorithms: list[dict[str, Any]] = []
     for algo_name, evidences in detected_algos.items():
-        max_confidence = max(e["confidence"] for e in evidences)
-        evidence_types = {e["evidence_type"] for e in evidences}
+        normalized_evidences: list[dict[str, Any]] = []
+        for evidence in evidences:
+            if not isinstance(evidence, dict):
+                continue
+            try:
+                confidence = float(evidence.get("confidence", 0.0))
+            except (TypeError, ValueError):
+                continue
+            normalized_evidences.append(
+                {
+                    "evidence_type": str(evidence.get("evidence_type", "Unknown")),
+                    "evidence": evidence.get("evidence"),
+                    "confidence": confidence,
+                    "address": evidence.get("address"),
+                }
+            )
+
+        if not normalized_evidences:
+            continue
+
+        max_confidence = max(e["confidence"] for e in normalized_evidences)
+        evidence_types = {e["evidence_type"] for e in normalized_evidences}
         if len(evidence_types) > 1:
             # Independent evidence types corroborate each other: apply a flat
             # boost capped below certainty.
@@ -117,9 +137,9 @@ def consolidate_detections(detected_algos: dict[str, list]) -> list[dict[str, An
             {
                 "algorithm": algo_name,
                 "confidence": max_confidence,
-                "evidence_count": len(evidences),
+                "evidence_count": len(normalized_evidences),
                 "evidence_types": list(evidence_types),
-                "evidences": evidences[:3],
+                "evidences": normalized_evidences[:3],
             }
         )
     return algorithms

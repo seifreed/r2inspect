@@ -108,6 +108,25 @@ def test_consolidate_detections_single_evidence_type_no_boost() -> None:
     assert result[0]["confidence"] == 0.4
 
 
+def test_consolidate_detections_skips_malformed_evidence() -> None:
+    detected = {
+        "AES": [
+            "bad",
+            {"evidence_type": "API Call", "evidence": "AES_encrypt", "confidence": "bad"},
+            {
+                "evidence_type": "String Reference",
+                "evidence": "aes-256",
+                "confidence": 0.4,
+                "address": "0x2000",
+            },
+        ]
+    }
+    result = cd.consolidate_detections(detected)
+    assert len(result) == 1
+    assert result[0]["confidence"] == 0.4
+    assert result[0]["evidence_count"] == 1
+
+
 # ---------------------------------------------------------------------------
 # macho_security_domain.py
 # ---------------------------------------------------------------------------
