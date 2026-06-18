@@ -40,6 +40,13 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
     return list(dlls)
 
 
+def _coerce_number(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def populate_import_statistics(
     result: dict[str, Any],
     *,
@@ -63,9 +70,9 @@ def populate_import_statistics(
         suspicious_dlls = []
 
     total_risk = (
-        api_analysis.get("risk_score", 0) * 0.4
-        + obfuscation.get("score", 0) * 0.3
-        + (anomalies.get("count", 0) * 10) * 0.2
+        _coerce_number(api_analysis.get("risk_score", 0)) * 0.4
+        + _coerce_number(obfuscation.get("score", 0)) * 0.3
+        + (_coerce_number(anomalies.get("count", 0)) * 10) * 0.2
         + (len(suspicious_dlls) * 5) * 0.1
     )
 

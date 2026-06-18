@@ -615,3 +615,21 @@ def test_populate_import_statistics_skips_non_list_suspicious_dlls():
     )
 
     assert result["statistics"]["risk_level"] == "LOW"
+
+
+def test_populate_import_statistics_coerces_numeric_strings():
+    result = {
+        "api_analysis": {"risk_score": "10"},
+        "obfuscation": {"score": "5"},
+        "anomalies": {"count": "2"},
+        "dll_analysis": {"suspicious_dlls": []},
+        "statistics": {},
+    }
+
+    populate_import_statistics(
+        result,
+        get_risk_level_fn=lambda score: f"{score:.1f}",
+        count_suspicious_indicators_fn=lambda _result: 0,
+    )
+
+    assert result["statistics"]["total_risk_score"] == 9.5
