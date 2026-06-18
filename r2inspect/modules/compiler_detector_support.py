@@ -32,11 +32,15 @@ def apply_rich_header_detection(
     logger: Any,
 ) -> bool:
     rich_header = detector._analyze_rich_header()
+    if not isinstance(rich_header, dict):
+        rich_header = {}
     results["rich_header_info"] = rich_header
     if not (rich_header.get("available") and rich_header.get("compilers")):
         return False
 
     for compiler_entry in rich_header["compilers"]:
+        if not isinstance(compiler_entry, dict):
+            continue
         compiler_name = compiler_entry.get("compiler_name", "")
         if "MSVC" not in compiler_name and "Utc" not in compiler_name:
             continue
