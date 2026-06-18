@@ -19,9 +19,12 @@ Targets lines:
   398-410 calculate_telfhash_from_file
 """
 
+import logging
+
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.modules.telfhash_analysis import analyze_symbols
 from r2inspect.modules.telfhash_analyzer import TELFHASH_AVAILABLE, TelfhashAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -525,4 +528,19 @@ def test_calculate_telfhash_from_file_skips_malformed_list_entry():
         ELF_FIXTURE,
         telfhash_fn=lambda _path: ["not-a-dict"],
     )
-    assert result == "not-a-dict" or result is None
+    assert result is None
+
+
+def test_analyze_symbols_skips_malformed_list_entry():
+    if not TELFHASH_AVAILABLE:
+        pytest.skip("telfhash not available")
+
+    analyzer = TelfhashAnalyzer(make_adapter(), filepath=ELF_FIXTURE)
+    analyzer._is_elf_file = lambda: True  # type: ignore[method-assign]
+    result = analyze_symbols(
+        analyzer,
+        telfhash_available=True,
+        telfhash_fn=lambda _path: ["T1111ABCD"],
+        logger=logging.getLogger(__name__),
+    )
+    assert result["telfhash"] == "T1111ABCD"

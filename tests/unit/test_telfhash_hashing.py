@@ -435,6 +435,11 @@ class TestParseTelfhashResult:
         hash_val, msg = parse_telfhash_result(result)
         assert hash_val is None
 
+    def test_list_with_plain_string_entry(self):
+        hash_val, msg = parse_telfhash_result(["T1111ABCD"])
+        assert hash_val is None
+        assert msg is None
+
 
 # ---------------------------------------------------------------------------
 # Tests: normalize_telfhash_value  (support function, pure logic)

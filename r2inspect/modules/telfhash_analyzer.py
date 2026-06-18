@@ -212,7 +212,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
                     return TelfhashAnalyzer._normalize_telfhash_value(
                         first_entry.get("telfhash")
                     )
-                return TelfhashAnalyzer._normalize_telfhash_value(first_entry)
+                return None
             elif isinstance(result, dict):
                 return TelfhashAnalyzer._normalize_telfhash_value(result.get("telfhash"))
             return TelfhashAnalyzer._normalize_telfhash_value(result)

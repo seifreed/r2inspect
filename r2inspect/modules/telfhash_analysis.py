@@ -35,9 +35,11 @@ def _telfhash_from_result(telfhash_result: Any, analyzer: TelfhashHost) -> tuple
         payload = telfhash_result
     else:
         return analyzer._normalize_telfhash_value(telfhash_result), None
-    value = analyzer._normalize_telfhash_value(payload.get("telfhash"))
-    error = payload.get("msg") if payload.get("msg") and not value else None
-    return value, error
+    if isinstance(payload, dict):
+        value = analyzer._normalize_telfhash_value(payload.get("telfhash"))
+        error = payload.get("msg") if payload.get("msg") and not value else None
+        return value, error
+    return analyzer._normalize_telfhash_value(payload), None
 
 
 def analyze_symbols(
