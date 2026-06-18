@@ -152,7 +152,7 @@ def _add_binbloom_bloom_stats(table: Table, binbloom_info: dict[str, Any]) -> No
 def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     if not binbloom_info.get("available"):
         return
-    if binbloom_info.get("unique_signatures", 0) <= 1:
+    if _coerce_float(binbloom_info.get("unique_signatures", 0)) <= 1:
         return
 
     function_signatures = binbloom_info.get("function_signatures", {})

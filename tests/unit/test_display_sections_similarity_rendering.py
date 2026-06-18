@@ -658,6 +658,21 @@ def test_display_binbloom_signature_details_with_data():
         assert "Signature Details" in text
 
 
+def test_display_binbloom_signature_details_accepts_string_unique_signatures():
+    console = _make_console()
+    with _console_scope(console):
+        binbloom_info = {
+            "available": True,
+            "unique_signatures": "2",
+            "function_signatures": {"func1": {"signature": "sig1"}, "func2": {"signature": "sig2"}},
+        }
+
+        _display_binbloom_signature_details(binbloom_info)
+        text = _get_text(console)
+
+        assert "Signature Details" in text
+
+
 def test_display_binbloom_signature_details_skips_malformed_entries():
     console = _make_console()
     with _console_scope(console):
