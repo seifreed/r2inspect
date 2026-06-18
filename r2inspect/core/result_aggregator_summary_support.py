@@ -35,6 +35,15 @@ def _list_bucket(analysis_results: dict[str, Any], key: str) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _coerce_float(value: Any) -> float | None:
+    try:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
     """Count imported APIs commonly associated with suspicious execution flows.
 
@@ -57,7 +66,7 @@ def _count_high_entropy_sections(sections: list[dict[str, Any]]) -> int:
         1
         for section in sections
         if isinstance(section, dict)
-        and isinstance(entropy := section.get("entropy", 0), int | float)
+        and (entropy := _coerce_float(section.get("entropy"))) is not None
         and entropy > 7.0
     )
 
@@ -97,9 +106,7 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     }
     if "compilation_timestamp" in pe_info:
         overview["compiled"] = pe_info["compilation_timestamp"]
-    rich_header = analysis_results["rich_header"]
-    if not isinstance(rich_header, dict):
-        rich_header = {}
+    rich_header = _dict_bucket(analysis_results, "rich_header")
     if rich_header.get("available") and rich_header.get("compilers"):
         toolset = [
             f"{c.get('compiler_name', 'Unknown')} (Build {c.get('build_number', 0)})"

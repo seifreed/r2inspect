@@ -185,6 +185,17 @@ def test_build_file_overview_non_dict_buckets_are_skipped():
     assert "toolset" not in overview
 
 
+def test_build_file_overview_missing_rich_header_key():
+    results = {
+        "file_info": {},
+        "pe_info": {},
+    }
+
+    overview = _build_file_overview(results)
+    assert overview["filename"] == "Unknown"
+    assert "toolset" not in overview
+
+
 def test_build_security_assessment_all_features():
     results = {
         "security": {
@@ -400,6 +411,11 @@ def test_count_high_entropy_sections_missing_entropy():
 
 def test_count_high_entropy_sections_skips_malformed_entries():
     sections = ["bad", {"entropy": "high"}, {"entropy": 8.0}]
+    assert _count_high_entropy_sections(sections) == 1
+
+
+def test_count_high_entropy_sections_accepts_string_entropy():
+    sections = [{"entropy": "7.5"}, {"entropy": "6.9"}, {"entropy": ""}]
     assert _count_high_entropy_sections(sections) == 1
 
 
