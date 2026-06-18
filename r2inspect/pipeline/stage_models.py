@@ -122,7 +122,7 @@ class ThreadSafeContext:
         if not stage_result:
             return
         with self._lock:
-            self._data.setdefault("results", {}).update(stage_result)
+            _results_bucket(self._data).update(stage_result)
 
     def get_all(self) -> dict[str, Any]:
         """

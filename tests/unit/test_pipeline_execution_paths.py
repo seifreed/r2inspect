@@ -566,6 +566,13 @@ class TestThreadSafeContext:
         assert ctx.get("b") == 2
         assert ctx.get("c") == 3
 
+    def test_merge_results_initializes_non_dict_results(self) -> None:
+        ctx = ThreadSafeContext({"results": None})
+
+        ctx.merge_results({"stage": {"ok": True}})
+
+        assert ctx.get("results") == {"stage": {"ok": True}}
+
     def test_get_all(self) -> None:
         """Test getting all data."""
         data = {"a": 1, "b": 2}
