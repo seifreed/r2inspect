@@ -24,6 +24,14 @@ def _build_kwargs(params: Iterable[str], backend: Any, config: Any, filename: st
     return kwargs
 
 
+def _signature_accepts(sig: inspect.Signature, *args: Any, **kwargs: Any) -> bool:
+    try:
+        sig.bind(*args, **kwargs)
+    except TypeError:
+        return False
+    return True
+
+
 def create_analyzer(
     analyzer_class: type,
     *,
@@ -34,16 +42,16 @@ def create_analyzer(
 ) -> Any:
     """Instantiate an analyzer using introspection and fallback signatures."""
     backend = adapter or r2
+    sig: inspect.Signature | None
     try:
         sig = inspect.signature(analyzer_class)
+    except (TypeError, ValueError):
+        sig = None
+    else:
         params = [param for param in sig.parameters if param != "self"]
         kwargs = _build_kwargs(params, backend, config, filename)
-        try:
+        if _signature_accepts(sig, **kwargs):
             return analyzer_class(**kwargs)
-        except TypeError:
-            pass
-    except (TypeError, ValueError):
-        pass
 
     candidates = [
         (backend, config, filename),
@@ -56,9 +64,13 @@ def create_analyzer(
     for args in candidates:
         if any(arg is None for arg in args):
             continue
+        if sig is not None and not _signature_accepts(sig, *args):
+            continue
         try:
             return analyzer_class(*args)
         except TypeError:
+            if sig is not None:
+                raise
             continue
     return analyzer_class()
 

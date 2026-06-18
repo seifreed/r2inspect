@@ -79,8 +79,8 @@ def test_analyzer_factory_fallbacks() -> None:
     analyzer = create_analyzer(_SigError, adapter=adapter, config=config)
     assert isinstance(analyzer, _SigError)
 
-    analyzer = create_analyzer(_FallbackAnalyzer, adapter=adapter, config=config)
-    assert isinstance(analyzer, _FallbackAnalyzer)
+    with pytest.raises(TypeError, match="force fallback"):
+        create_analyzer(_FallbackAnalyzer, adapter=adapter, config=config)
 
     analyzer = create_analyzer(_Analyzer)
     assert run_analysis_method(analyzer, ["analyze"]) == {"ok": True}

@@ -226,17 +226,14 @@ class _ValueErrorOnKwargsAnalyzer:
             raise ValueError("config caused ValueError in __init__")
 
 
-def test_create_analyzer_outer_except_catches_value_error_from_init():
-    """Line 46: ValueError from analyzer_class(**kwargs) is caught by outer except."""
+def test_create_analyzer_propagates_value_error_from_init():
+    """ValueError from analyzer_class(**kwargs) is a constructor bug, not a fallback signal."""
 
     class _FakeConfig:
         pass
 
-    # create_analyzer passes config=_FakeConfig() via kwargs → __init__ raises ValueError.
-    # The outer except (TypeError, ValueError) catches it (line 46).
-    # All fallback candidates have backend=None → skipped; analyzer_class() called successfully.
-    result = create_analyzer(_ValueErrorOnKwargsAnalyzer, config=_FakeConfig())
-    assert isinstance(result, _ValueErrorOnKwargsAnalyzer)
+    with pytest.raises(ValueError, match="config caused ValueError"):
+        create_analyzer(_ValueErrorOnKwargsAnalyzer, config=_FakeConfig())
 
 
 # ---------------------------------------------------------------------------
