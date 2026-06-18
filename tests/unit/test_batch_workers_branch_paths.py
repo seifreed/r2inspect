@@ -333,6 +333,38 @@ def test_process_files_parallel_records_worker_exception_and_continues(tmp_path:
     assert any(path.endswith("bad.bin") for path, _ in failed_files)
 
 
+def test_process_files_parallel_records_on_result_sink_failure(tmp_path: Path):
+    sample = _sample_pe()
+    local = tmp_path / sample.name
+    local.write_bytes(sample.read_bytes())
+
+    all_results: dict = {}
+    failed_files: list = []
+    output_path = tmp_path / "out"
+    output_path.mkdir()
+
+    def sink(_file_key, _results):
+        raise RuntimeError("sink boom")
+
+    rate_limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=100.0, enable_adaptive=False)
+    process_files_parallel(
+        [local],
+        all_results,
+        failed_files,
+        output_path,
+        tmp_path,
+        Config(),
+        {"full_analysis": False},
+        False,
+        1,
+        rate_limiter,
+        on_result=sink,
+    )
+
+    assert str(local) not in all_results
+    assert any("sink boom" in error for _, error in failed_files)
+
+
 def test_process_files_parallel_thread_cap_applied(tmp_path: Path):
     sample = _sample_pe()
     local = tmp_path / sample.name

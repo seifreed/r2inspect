@@ -182,7 +182,13 @@ def process_files_parallel(
                             # between files with the same basename in different dirs
                             file_key = str(file_path)
                             if on_result is not None:
-                                all_results[file_key] = on_result(file_key, results)
+                                try:
+                                    all_results[file_key] = on_result(file_key, results)
+                                except Exception as exc:
+                                    logger.error(
+                                        "Failed to stream result for %s: %s", file_path, exc
+                                    )
+                                    failed_files.append((str(file_path), str(exc)))
                             else:
                                 all_results[file_key] = results
         progress.stop()
