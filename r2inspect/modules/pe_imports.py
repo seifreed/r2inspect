@@ -29,7 +29,7 @@ def group_imports_by_library(
             continue
 
         funcname = imp.get("name", "")
-        if not funcname or funcname.strip() == "":
+        if not isinstance(funcname, (str, bytes)) or not funcname.strip():
             continue
 
         imports_by_lib.setdefault(str(libname), []).append(funcname)

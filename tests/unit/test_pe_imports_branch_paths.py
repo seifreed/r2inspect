@@ -117,6 +117,16 @@ def test_group_imports_non_dict_entries_skipped() -> None:
     assert "kernel32.dll" in result
 
 
+def test_group_imports_skips_non_string_name_values() -> None:
+    imports = [
+        {"libname": "kernel32.dll", "name": None},
+        {"libname": "kernel32.dll", "name": 123},
+        {"libname": "kernel32.dll", "name": "CreateFileA"},
+    ]
+    result = group_imports_by_library(imports)
+    assert result == {"kernel32.dll": ["CreateFileA"]}
+
+
 def test_normalize_library_name_bytes_input() -> None:
     result = normalize_library_name(b"KERNEL32.DLL", ["dll", "ocx", "sys"])
     assert result == "kernel32"
