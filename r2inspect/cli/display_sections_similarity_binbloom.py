@@ -158,6 +158,8 @@ def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
         return
 
     function_signatures = binbloom_info.get("function_signatures", {})
+    if not isinstance(function_signatures, dict):
+        return
     signatures_by_hash: dict[str, list[str]] = {}
     for func_name, sig_data in function_signatures.items():
         if not isinstance(sig_data, dict):
