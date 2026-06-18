@@ -251,6 +251,17 @@ def test_detect_crypto_apis_accepts_hex_plt_value():
     assert result[0]["address"] == "0x1000"
 
 
+def test_detect_crypto_apis_handles_missing_plt_value():
+    class MissingPltAdapter(EmptyAdapter):
+        def get_imports(self) -> list[dict[str, Any]]:
+            return [{"name": "CryptEncrypt", "libname": "advapi32.dll", "plt": None}]
+
+    analyzer = CryptoAnalyzer(MissingPltAdapter())
+    result = analyzer._detect_crypto_apis()
+    assert len(result) == 1
+    assert result[0]["address"] == "0x0"
+
+
 # ---------------------------------------------------------------------------
 # _detect_via_constants() - line 190
 # ---------------------------------------------------------------------------
