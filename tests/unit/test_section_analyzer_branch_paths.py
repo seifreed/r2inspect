@@ -646,6 +646,19 @@ def test_update_summary_for_section_treats_malformed_entropy_as_zero():
     assert summary["high_entropy_sections"] == 0
 
 
+def test_update_summary_for_section_coerces_unhashable_flags():
+    summary = {
+        "executable_sections": 0,
+        "writable_sections": 0,
+        "suspicious_sections": 0,
+        "high_entropy_sections": 0,
+    }
+    flag_counts: dict[str, int] = {}
+    entropy = update_section_summary(summary, {"flags": ["r", "x"], "entropy": 0.0}, flag_counts)
+    assert entropy == 0.0
+    assert flag_counts.get("['r', 'x']") == 1
+
+
 def test_build_permission_indicators_treats_malformed_entropy_as_zero():
     result = build_permission_indicators(
         {"is_writable": False, "is_executable": True, "entropy": "low"}
