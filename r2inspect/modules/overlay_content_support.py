@@ -50,9 +50,14 @@ def analyze_overlay_content(
             result["overlay_hashes"] = {}
 
         patterns = check_patterns_fn(overlay_data)
+        if not isinstance(patterns, list):
+            patterns = []
         result["patterns_found"] = patterns
         result["potential_type"] = determine_overlay_type_fn(patterns, overlay_data)
-        result["extracted_strings"] = extract_strings_fn(overlay_data, 6)[:20]
+        extracted_strings = extract_strings_fn(overlay_data, 6)
+        if not isinstance(extracted_strings, list):
+            extracted_strings = []
+        result["extracted_strings"] = extracted_strings[:20]
 
         signatures = check_file_signatures_fn(overlay_data)
         if signatures:
