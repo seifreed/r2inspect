@@ -31,6 +31,8 @@ def _display_file_info(results: Results) -> None:
     file_info, present = _get_section(results, "file_info", {})
     if not present:
         return
+    if not isinstance(file_info, dict):
+        file_info = {}
     table = create_info_table("File Information", prop_width=14, value_min_width=60)
 
     basic_info = {
@@ -72,6 +74,8 @@ def _display_pe_info(results: Results) -> None:
     pe_info, present = _get_section(results, "pe_info", {})
     if not present:
         return
+    if not isinstance(pe_info, dict):
+        pe_info = {}
     table = Table(title="PE Analysis", show_header=True, expand=True)
     table.add_column("Property", style="cyan", width=15, no_wrap=True)
     table.add_column("Value", style="yellow", min_width=30, overflow="fold")
@@ -102,6 +106,8 @@ def _display_security(results: Results) -> None:
     security, present = _get_section(results, "security", {})
     if not present:
         return
+    if not isinstance(security, dict):
+        security = {}
     table = Table(title="Security Features", show_header=True)
     table.add_column("Feature", style="cyan")
     table.add_column("Status", style="magenta")

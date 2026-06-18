@@ -159,6 +159,12 @@ def test_display_file_info_accepts_non_dict_enhanced_detection():
     assert "test.exe" in output
 
 
+def test_display_file_info_accepts_non_dict_section():
+    results = {"file_info": "bad"}
+    output = _capture(_display_file_info, results)
+    assert "File Information" in output
+
+
 def test_display_file_info_all_fields():
     results = {
         "file_info": {
@@ -253,6 +259,11 @@ def test_display_pe_info_excluded_keys():
     # Excluded keys should not appear as rows
     assert "x86" not in output
     assert "i386" not in output
+
+
+def test_display_pe_info_accepts_non_dict_section():
+    output = _capture(_display_pe_info, {"pe_info": "bad"})
+    assert "PE Analysis" in output
 
 
 def test_display_pe_info_with_list_values():
@@ -386,6 +397,11 @@ def test_display_security_underscores():
 def test_display_security_empty():
     results = {"security": {}}
     output = _capture(_display_security, results)
+    assert "Security Features" in output
+
+
+def test_display_security_accepts_non_dict_section():
+    output = _capture(_display_security, {"security": "bad"})
     assert "Security Features" in output
 
 
