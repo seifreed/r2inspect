@@ -432,3 +432,9 @@ def test_build_subsystem_info_native():
     """build_subsystem_info returns gui_app=None for Native subsystem."""
     result = build_subsystem_info("Native")
     assert result["gui_app"] is None
+
+
+def test_build_subsystem_info_rejects_non_string_input():
+    result = build_subsystem_info(123)
+    assert result["subsystem"] == "123"
+    assert result["gui_app"] is None
