@@ -92,7 +92,7 @@ def compute_entry_point(bin_info: dict[str, Any], entry_info: list[dict[str, Any
 def apply_optional_header_info(
     info: dict[str, Any], pe_header: dict[str, Any] | None
 ) -> dict[str, Any]:
-    if not pe_header:
+    if not isinstance(pe_header, dict) or not pe_header:
         return info
 
     updated = dict(info)

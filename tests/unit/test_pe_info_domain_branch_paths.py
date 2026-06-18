@@ -256,6 +256,12 @@ def test_apply_optional_header_info_ignores_non_dict_optional_header():
     assert result == info
 
 
+def test_apply_optional_header_info_skips_non_dict_header():
+    info = {"image_base": 0x400000}
+    result = apply_optional_header_info(info, ["bad"])  # type: ignore[arg-type]
+    assert result == info
+
+
 def test_apply_optional_header_info_zero_image_base_not_updated():
     """apply_optional_header_info skips zero ImageBase."""
     info = {"image_base": 0x400000}
