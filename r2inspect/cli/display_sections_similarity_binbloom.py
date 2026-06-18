@@ -155,6 +155,8 @@ def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     function_signatures = binbloom_info.get("function_signatures", {})
     signatures_by_hash: dict[str, list[str]] = {}
     for func_name, sig_data in function_signatures.items():
+        if not isinstance(sig_data, dict):
+            continue
         sig_hash = _coerce_text(sig_data.get("signature", ""))
         signatures_by_hash.setdefault(sig_hash, []).append(func_name)
 
