@@ -515,6 +515,20 @@ def test_find_suspicious_patterns_non_list_input_returns_empty():
     assert find_suspicious_patterns(123) == []  # type: ignore[arg-type]
 
 
+def test_find_suspicious_patterns_normalizes_behavior_categories():
+    patterns = find_suspicious_patterns(
+        [
+            {"name": "InternetOpen", "category": " Network/Internet "},
+            {"name": "socket", "category": "NETWORK/INTERNET"},
+            {"name": "connect", "category": "network/internet"},
+            {"name": "WinHttpSendRequest", "category": "Network/Internet"},
+            {"name": "URLDownloadToFile", "category": "network/internet"},
+            {"name": "send", "category": "network/internet"},
+        ]
+    )
+    assert any(pattern["pattern"] == "Heavy Network Usage" for pattern in patterns)
+
+
 def test_assess_api_risk_uses_runtime_category_names():
     imports = [
         {"name": "CreateProcess"},

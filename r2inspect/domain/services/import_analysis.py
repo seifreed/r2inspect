@@ -76,7 +76,7 @@ def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, An
     patterns: list[dict[str, Any]] = []
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     import_names = [_text_value(imp.get("name"), "") for imp in valid_imports]
-    categories = [_text_value(imp.get("category"), "") for imp in valid_imports]
+    categories = [_text_value(imp.get("category"), "").strip().lower() for imp in valid_imports]
     _append_injection_patterns(patterns, import_names)
     _append_behavior_patterns(patterns, import_names, categories)
     return patterns
@@ -133,30 +133,30 @@ def _append_behavior_patterns(
     del import_names
     for predicate, entry in (
         (
-            categories.count(NETWORK_CATEGORY) > 5,
+            categories.count(NETWORK_CATEGORY.lower()) > 5,
             _pattern_entry(
                 "Heavy Network Usage",
-                f"Many network-related APIs ({categories.count(NETWORK_CATEGORY)})",
+                f"Many network-related APIs ({categories.count(NETWORK_CATEGORY.lower())})",
                 "Medium",
-                categories.count(NETWORK_CATEGORY),
+                categories.count(NETWORK_CATEGORY.lower()),
             ),
         ),
         (
-            categories.count("Anti-Analysis") > 0,
+            categories.count("anti-analysis") > 0,
             _pattern_entry(
                 "Anti-Analysis",
-                f"Anti-analysis APIs detected ({categories.count('Anti-Analysis')})",
+                f"Anti-analysis APIs detected ({categories.count('anti-analysis')})",
                 "High",
-                categories.count("Anti-Analysis"),
+                categories.count("anti-analysis"),
             ),
         ),
         (
-            categories.count("Cryptography") > 3,
+            categories.count("cryptography") > 3,
             _pattern_entry(
                 "Heavy Cryptography",
-                f"Many cryptographic APIs ({categories.count('Cryptography')})",
+                f"Many cryptographic APIs ({categories.count('cryptography')})",
                 "Medium",
-                categories.count("Cryptography"),
+                categories.count("cryptography"),
             ),
         ),
     ):
