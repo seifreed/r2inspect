@@ -136,15 +136,17 @@ def test_ccbhash_canonical_representation():
 
 
 def test_ccbhash_canonical_with_blocks():
+    # r2 basic blocks carry the address in "addr"; the canonical form must use
+    # the real block addresses, not collapse to 0.
     cfg = {
         "blocks": [
-            {"offset": 0x1000},
-            {"offset": 0x1010},
-            {"offset": 0x1020},
+            {"addr": 0x1000},
+            {"addr": 0x1010},
+            {"addr": 0x1020},
         ]
     }
     canonical = CCBHashAnalyzer._build_canonical_representation(cfg, 0x1000)
-    assert canonical is not None
+    assert canonical == "4096|4112|4128"
 
 
 def test_ccbhash_canonical_empty():

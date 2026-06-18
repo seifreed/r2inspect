@@ -117,7 +117,10 @@ def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str
         return "|".join(edge_strs)
     blocks = cfg.get("blocks", [])
     if blocks:
-        block_addrs = sorted(block.get("offset", 0) for block in blocks)
+        # r2 basic blocks (agj/afbj) carry the address as "addr", not "offset",
+        # so this read 0 for every block and collapsed edgeless functions to a
+        # constant "0" canonical form.
+        block_addrs = sorted(block.get("addr") or block.get("offset", 0) for block in blocks)
         return "|".join(str(addr) for addr in block_addrs)
     return str(func_offset)
 
