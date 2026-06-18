@@ -532,6 +532,24 @@ def test_analyzer_runner_returns_none_without_analyze_method():
     assert result is None
 
 
+def test_analyzer_runner_propagates_analyze_errors():
+    class _BrokenAnalyzer:
+        def __init__(self, adapter: Any, filepath: str) -> None:
+            pass
+
+        def analyze(self) -> dict[str, Any]:
+            raise RuntimeError("analysis failed")
+
+    old = _arn_mod.open_r2_adapter
+    _arn_mod.open_r2_adapter = _fake_open_r2_adapter
+    try:
+        with tempfile.NamedTemporaryFile() as handle:
+            with pytest.raises(RuntimeError, match="analysis failed"):
+                run_analyzer_on_file(_BrokenAnalyzer, handle.name)
+    finally:
+        _arn_mod.open_r2_adapter = old
+
+
 # ---------------------------------------------------------------------------
 # 8. modules/pe_imports.py - lines 88-89
 # ---------------------------------------------------------------------------

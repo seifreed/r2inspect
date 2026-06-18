@@ -112,9 +112,7 @@ def test_run_analyzer_on_file_executes_analyze_with_real_file() -> None:
         pytest.skip("hello_pe.exe fixture not found")
 
     result = run_analyzer_on_file(SimpleAnalyzer, str(pe_path))
-    # result may be None if r2pipe context-manager cleanup raises, which is caught
-    # by the except-clause; lines 27-30 are still executed before cleanup.
-    assert result is None or result == {"completed": True}
+    assert result == {"completed": True}
 
 
 def test_run_analyzer_on_file_returns_none_when_analyze_missing() -> None:

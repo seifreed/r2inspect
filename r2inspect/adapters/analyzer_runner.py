@@ -24,12 +24,9 @@ def run_analyzer_on_file(
     if not Path(filepath).exists():
         return None
 
-    try:
-        with open_r2_adapter(filepath) as adapter:
-            analyzer = analyzer_factory(adapter, filepath)
-            analyze = getattr(analyzer, "analyze", None)
-            if callable(analyze):
-                return analyze(*args, **kwargs)
-            return None
-    except Exception:
+    with open_r2_adapter(filepath) as adapter:
+        analyzer = analyzer_factory(adapter, filepath)
+        analyze = getattr(analyzer, "analyze", None)
+        if callable(analyze):
+            return analyze(*args, **kwargs)
         return None
