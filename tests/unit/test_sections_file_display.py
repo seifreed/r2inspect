@@ -223,6 +223,12 @@ def test_display_pe_info_basic():
     assert "2024-01-01" in output
 
 
+def test_display_pe_info_numeric_key():
+    results = {"pe_info": {404: "missing"}}
+    output = _capture(_display_pe_info, results)
+    assert "404" in output
+
+
 def test_display_pe_info_excluded_keys():
     results = {
         "pe_info": {
@@ -313,6 +319,12 @@ def test_display_security_all_enabled():
     assert "Nx" in output
     assert "Pie" in output
     assert "Canary" in output
+
+
+def test_display_security_numeric_key():
+    results = {"security": {404: True}}
+    output = _capture(_display_security, results)
+    assert "404" in output
 
 
 def test_display_security_all_disabled():

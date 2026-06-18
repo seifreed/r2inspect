@@ -59,7 +59,7 @@ def _display_file_info(results: Results) -> None:
 
     for key, value in basic_info.items():
         if value is not None:
-            display_key = key.replace("_", " ").title()
+            display_key = str(key).replace("_", " ").title()
             if key in ["sha256", "sha512"]:
                 value = str(value)
             table.add_row(display_key, str(value))
@@ -92,7 +92,7 @@ def _display_pe_info(results: Results) -> None:
             value = ", ".join(map(str, value))
         elif isinstance(value, dict):
             continue
-        table.add_row(key.replace("_", " ").title(), str(value))
+        table.add_row(str(key).replace("_", " ").title(), str(value))
 
     _get_console().print(table)
     _get_console().print()
@@ -108,7 +108,7 @@ def _display_security(results: Results) -> None:
 
     for key, value in security.items():
         status = "[green]✓[/green]" if value else "[red]✗[/red]"
-        table.add_row(key.replace("_", " ").title(), status)
+        table.add_row(str(key).replace("_", " ").title(), status)
 
     _get_console().print(table)
     _get_console().print()
