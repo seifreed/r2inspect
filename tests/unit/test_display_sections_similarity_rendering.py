@@ -332,6 +332,28 @@ def test_add_binbloom_stats_string_values():
     assert len(table.rows) >= 5
 
 
+def test_add_binbloom_stats_string_instruction_counts():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    binbloom_info = {
+        "total_functions": 100,
+        "analyzed_functions": 95,
+        "capacity": 1000,
+        "error_rate": 0.01,
+        "unique_signatures": 80,
+        "function_signatures": {
+            "func1": {"instruction_count": "10", "unique_instructions": "8"},
+            "func2": {"instruction_count": "20", "unique_instructions": "15"},
+        },
+    }
+
+    _add_binbloom_stats(table, binbloom_info)
+
+    assert len(table.rows) >= 7
+
+
 def test_add_binbloom_similar_groups_empty():
     table = Table()
     table.add_column("Property")
