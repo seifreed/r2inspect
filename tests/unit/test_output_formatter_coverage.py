@@ -30,6 +30,12 @@ def test_format_table_with_list_value() -> None:
     assert isinstance(result, Table)
 
 
+def test_format_table_with_numeric_key() -> None:
+    fmt = OutputFormatter({})
+    result = fmt.format_table({404: "missing"})
+    assert isinstance(result, Table)
+
+
 def test_format_table_empty_data() -> None:
     fmt = OutputFormatter({})
     result = fmt.format_table({})

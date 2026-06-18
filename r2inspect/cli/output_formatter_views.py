@@ -51,7 +51,8 @@ def format_table(data: dict[str, Any], title: str = "Analysis Results") -> Table
     table.add_column("Value", style="green")
     for key, value in data.items():
         value_str = _stringify_table_value(value)
-        table.add_row(key.replace("_", " ").title(), value_str)
+        label = str(key) if key is not None else "unknown"
+        table.add_row(label.replace("_", " ").title(), value_str)
     return table
 
 
