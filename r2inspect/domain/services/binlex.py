@@ -15,6 +15,7 @@ def normalize_mnemonic(mnemonic: str | None) -> str | None:
         return None
     clean_mnemonic = mnemonic.strip().lower()
     clean_mnemonic = clean_mnemonic.replace(HTML_NBSP, " ").replace(HTML_AMP, "&")
+    clean_mnemonic = clean_mnemonic.strip()
     if clean_mnemonic and not clean_mnemonic.startswith("&"):
         return clean_mnemonic
     return None

@@ -35,6 +35,8 @@ def test_normalize_mnemonic_html_entities() -> None:
     assert result == "mov test"
     result2 = normalize_mnemonic("push&amp;pop")
     assert result2 == "push&pop"
+    assert normalize_mnemonic("mov&nbsp;") == "mov"
+    assert normalize_mnemonic("&nbsp;mov") == "mov"
 
 
 def test_normalize_mnemonic_ampersand_prefix() -> None:
