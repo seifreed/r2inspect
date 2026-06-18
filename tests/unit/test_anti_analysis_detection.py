@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.modules.anti_analysis_support import build_anti_analysis_report
 from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -391,3 +392,33 @@ def test_detection_details_structure():
     assert "anti_vm_evidence" in details
     assert "anti_sandbox_evidence" in details
     assert "timing_evidence" in details
+
+
+def test_build_anti_analysis_report_ignores_non_list_evidence():
+    class _BadDetailedDetector:
+        def _detect_anti_debug_detailed(self):
+            return {"detected": True, "evidence": "not-a-list"}
+
+        def _detect_anti_vm_detailed(self):
+            return {"detected": False, "evidence": None}
+
+        def _detect_anti_sandbox_detailed(self):
+            return {"detected": False, "evidence": {}}
+
+        def _detect_evasion_techniques(self):
+            return []
+
+        def _find_suspicious_apis(self):
+            return []
+
+        def _detect_timing_checks_detailed(self):
+            return {"detected": False, "evidence": "bad"}
+
+        def _detect_environment_checks(self):
+            return []
+
+    result = build_anti_analysis_report(_BadDetailedDetector())
+    assert result["detection_details"]["anti_debug_evidence"] == []
+    assert result["detection_details"]["anti_vm_evidence"] == []
+    assert result["detection_details"]["anti_sandbox_evidence"] == []
+    assert result["detection_details"]["timing_evidence"] == []

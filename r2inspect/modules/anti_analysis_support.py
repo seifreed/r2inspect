@@ -35,6 +35,14 @@ def _string_value(value: Any) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _evidence_list(result: Any) -> list[Any]:
+    if isinstance(result, dict):
+        evidence = result.get("evidence")
+        if isinstance(evidence, list):
+            return evidence
+    return []
+
+
 def empty_anti_analysis_report() -> dict[str, Any]:
     """Return the default anti-analysis report skeleton with no detections."""
     return {
@@ -58,18 +66,18 @@ def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
     anti_analysis = empty_anti_analysis_report()
     debug_result = detector._detect_anti_debug_detailed()
     anti_analysis["anti_debug"] = debug_result["detected"]
-    anti_analysis["detection_details"]["anti_debug_evidence"] = debug_result["evidence"]
+    anti_analysis["detection_details"]["anti_debug_evidence"] = _evidence_list(debug_result)
     vm_result = detector._detect_anti_vm_detailed()
     anti_analysis["anti_vm"] = vm_result["detected"]
-    anti_analysis["detection_details"]["anti_vm_evidence"] = vm_result["evidence"]
+    anti_analysis["detection_details"]["anti_vm_evidence"] = _evidence_list(vm_result)
     sandbox_result = detector._detect_anti_sandbox_detailed()
     anti_analysis["anti_sandbox"] = sandbox_result["detected"]
-    anti_analysis["detection_details"]["anti_sandbox_evidence"] = sandbox_result["evidence"]
+    anti_analysis["detection_details"]["anti_sandbox_evidence"] = _evidence_list(sandbox_result)
     anti_analysis["evasion_techniques"] = detector._detect_evasion_techniques()
     anti_analysis["suspicious_apis"] = detector._find_suspicious_apis()
     timing_result = detector._detect_timing_checks_detailed()
     anti_analysis["timing_checks"] = timing_result["detected"]
-    anti_analysis["detection_details"]["timing_evidence"] = timing_result["evidence"]
+    anti_analysis["detection_details"]["timing_evidence"] = _evidence_list(timing_result)
     anti_analysis["environment_checks"] = detector._detect_environment_checks()
     return anti_analysis
 
