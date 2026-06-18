@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import struct
 
+import pytest
+
 from r2inspect.cli.output_csv import CsvOutputFormatter
 from r2inspect.cli.output_csv_fields import escape_csv_formula
 from r2inspect.domain.services.rich_header import decode_rich_header
@@ -51,6 +53,20 @@ def test_detect_via_header_bytes_does_not_read_whole_file(tmp_path) -> None:
 
     missing = tmp_path / "nope.bin"
     assert detect_via_header_bytes(str(missing)) is None
+
+
+def test_detect_via_header_bytes_reports_existing_unreadable_paths(tmp_path) -> None:
+    with pytest.raises(IsADirectoryError):
+        detect_via_header_bytes(str(tmp_path))
+
+    sample = tmp_path / "secret.bin"
+    sample.write_bytes(b"MZ")
+    sample.chmod(0)
+    try:
+        with pytest.raises(PermissionError):
+            detect_via_header_bytes(str(sample))
+    finally:
+        sample.chmod(0o600)
 
 
 def test_escape_csv_formula_neutralizes_dangerous_prefixes() -> None:

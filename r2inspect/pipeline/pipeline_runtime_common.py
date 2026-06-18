@@ -68,7 +68,7 @@ def detect_via_header_bytes(filename: str) -> str | None:
     try:
         with open(filename, "rb") as handle:
             header = handle.read(8)
-    except Exception:
+    except FileNotFoundError:
         return None
 
     if header.startswith(b"MZ"):
