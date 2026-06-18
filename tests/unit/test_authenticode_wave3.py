@@ -59,6 +59,11 @@ class _ZeroVaddrAdapter(_BaseAdapter):
         return [{"name": "SECURITY", "vaddr": 0, "paddr": 0, "size": 0}]
 
 
+class _ZeroStringVaddrAdapter(_BaseAdapter):
+    def get_data_directories(self):
+        return [{"name": "SECURITY", "vaddr": "0", "paddr": 0, "size": 0}]
+
+
 class _NonListDirAdapter(_BaseAdapter):
     def get_data_directories(self):
         return {"not": "a list"}
@@ -132,6 +137,12 @@ def test_analyze_no_security_directory_returns_no_signature():
 
 def test_analyze_security_dir_vaddr_zero_returns_no_signature():
     analyzer = AuthenticodeAnalyzer(adapter=_ZeroVaddrAdapter())
+    result = analyzer.analyze()
+    assert result["has_signature"] is False
+
+
+def test_analyze_security_dir_vaddr_string_zero_returns_no_signature():
+    analyzer = AuthenticodeAnalyzer(adapter=_ZeroStringVaddrAdapter())
     result = analyzer.analyze()
     assert result["has_signature"] is False
 

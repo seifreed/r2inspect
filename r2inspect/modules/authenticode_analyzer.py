@@ -69,7 +69,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 return result
 
             security_dir = self._get_security_directory()
-            if not security_dir or security_dir.get("vaddr", 0) == 0:
+            if not security_dir or _to_int(security_dir.get("vaddr", 0)) == 0:
                 result["has_signature"] = False
                 return result
 
