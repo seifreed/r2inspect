@@ -122,6 +122,8 @@ def collect_signatures_for_size(
     if not isinstance(function_signatures, dict):
         return signatures, signature_groups
     for func_name, func_sigs in function_signatures.items():
+        if not isinstance(func_sigs, dict):
+            continue
         if n not in func_sigs or "signature" not in func_sigs[n]:
             continue
         sig_value = func_sigs[n].get("signature")

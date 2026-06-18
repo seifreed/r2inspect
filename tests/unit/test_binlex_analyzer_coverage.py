@@ -419,6 +419,19 @@ def test_collect_signatures_for_size_non_dict_input():
     assert len(groups) == 0
 
 
+def test_collect_signatures_for_size_skips_malformed_function_buckets():
+    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
+    function_signatures = {
+        "func_a": {2: {"signature": "same"}},
+        "func_b": "bad",
+        "func_c": {2: {"signature": "same"}},
+        "func_d": {2: {"signature": None}},
+    }
+    signatures, groups = analyzer._collect_signatures_for_size(function_signatures, 2)
+    assert signatures == {"same"}
+    assert groups["same"] == ["func_a", "func_c"]
+
+
 # Test _build_similar_groups with groups that have only 1 function (not similar)
 
 
