@@ -274,9 +274,10 @@ class YaraAnalyzer(CommandHelperMixin):
             rules = self._compile_rules(rules_path)
             if rules:
                 if os.path.isdir(rules_path):
-                    yar_files = list(Path(rules_path).glob(YARA_EXT))
-                    yara_ext_files = list(Path(rules_path).glob(YARA_YARA_EXT))
-                    validation_result["rules_count"] = len(yar_files) + len(yara_ext_files)
+                    # Match compilation's recursive, full-extension discovery; a
+                    # non-recursive *.yar/*.yara-only glob undercounted.
+                    found = self._discover_rule_files(Path(rules_path))
+                    validation_result["rules_count"] = len(found)
                 else:
                     validation_result["rules_count"] = 1
             else:
