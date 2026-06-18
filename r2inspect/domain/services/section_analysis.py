@@ -94,6 +94,8 @@ def _coerce_entropy(value: Any) -> float:
 
 def build_size_indicators(vsize: int, raw_size: int) -> list[str]:
     indicators: list[str] = []
+    if not isinstance(vsize, int) or not isinstance(raw_size, int):
+        return indicators
     if vsize > 0 and raw_size > 0:
         ratio = vsize / raw_size
         size_diff_ratio = abs(vsize - raw_size) / max(vsize, raw_size)

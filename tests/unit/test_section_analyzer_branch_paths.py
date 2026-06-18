@@ -11,6 +11,7 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.section_analysis import (
     _mark_entropy_anomaly,
     decode_pe_characteristics,
+    build_size_indicators,
     build_permission_indicators,
     update_section_summary,
 )
@@ -676,6 +677,11 @@ def test_update_summary_for_section_replaces_missing_flags_with_empty_key():
 
 def test_decode_pe_characteristics_skips_non_int_input():
     assert decode_pe_characteristics("bad") == []  # type: ignore[arg-type]
+
+
+def test_build_size_indicators_skips_non_int_input():
+    assert build_size_indicators("bad", 100) == []  # type: ignore[arg-type]
+    assert build_size_indicators(100, None) == []  # type: ignore[arg-type]
 
 
 def test_apply_permissions_treats_missing_flags_as_empty():
