@@ -346,6 +346,21 @@ def test_display_simhash_available_with_hashes():
     assert "SimHash" in text
 
 
+def test_display_simhash_handles_non_list_similarity_groups():
+    console = _make_console()
+    results = {
+        "simhash": {
+            "available": True,
+            "function_simhashes": {"func1": "h1"},
+            "similarity_groups": {"count": 2},
+        }
+    }
+    with _console_scope(console):
+        _display_simhash(results)
+    text = _get_text(console)
+    assert "SimHash" in text
+
+
 def test_display_bindiff_not_ready_no_error():
     console = _make_console()
     results = {"bindiff": {"comparison_ready": False}}
@@ -473,6 +488,12 @@ def test_add_simhash_top_features_strips_prefixes():
     }
     _add_simhash_top_features(table, feature_stats)
     assert len(table.rows) == 1
+
+
+def test_add_simhash_top_features_ignores_non_list_features():
+    table = _make_table()
+    _add_simhash_top_features(table, {"most_common_features": {"feature": 1}})
+    assert len(table.rows) == 0
 
 
 def test_add_bindiff_structural_seven_sections_exactly():

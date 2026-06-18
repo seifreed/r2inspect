@@ -43,18 +43,18 @@ def _format_simhash_hex(hash_hex: str) -> str:
 
 def _add_simhash_hashes(table: Table, simhash_info: dict[str, Any]) -> None:
     combined_simhash = simhash_info.get("combined_simhash")
-    if combined_simhash:
+    if isinstance(combined_simhash, dict):
         hash_hex = combined_simhash.get("hex", "")
         table.add_row("Binary SimHash", _format_simhash_hex(hash_hex))
         table.add_row("Combined Features", str(combined_simhash.get("feature_count", 0)))
 
     strings_simhash = simhash_info.get("strings_simhash")
-    if strings_simhash:
+    if isinstance(strings_simhash, dict):
         hash_hex = strings_simhash.get("hex", "")
         table.add_row("Strings SimHash", _format_simhash_hex(hash_hex))
 
     opcodes_simhash = simhash_info.get("opcodes_simhash")
-    if opcodes_simhash:
+    if isinstance(opcodes_simhash, dict):
         hash_hex = opcodes_simhash.get("hex", "")
         table.add_row("Opcodes SimHash", _format_simhash_hex(hash_hex))
 
@@ -70,7 +70,7 @@ def _add_simhash_function_analysis(table: Table, simhash_info: dict[str, Any]) -
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(analyzed_functions))
 
     similarity_groups = simhash_info.get("similarity_groups", [])
-    if not similarity_groups:
+    if not isinstance(similarity_groups, list) or not similarity_groups:
         table.add_row(SIMILAR_GROUPS_LABEL, "0 (all functions unique)")
         return
 
@@ -78,6 +78,8 @@ def _add_simhash_function_analysis(table: Table, simhash_info: dict[str, Any]) -
 
 
 def _add_simhash_similarity_groups(table: Table, similarity_groups: list[dict[str, Any]]) -> None:
+    if not isinstance(similarity_groups, list):
+        return
     table.add_row(SIMILAR_GROUPS_LABEL, str(len(similarity_groups)))
     for i, group in enumerate(similarity_groups[:3]):
         _add_simhash_similarity_group(table, i + 1, group)
@@ -87,6 +89,8 @@ def _add_simhash_similarity_groups(table: Table, similarity_groups: list[dict[st
 
 
 def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any]) -> None:
+    if not isinstance(group, dict):
+        return
     group_size = group.get("count", 0)
     group_hash = _coerce_text(group.get("representative_hash", ""))
     hash_display = f"{group_hash[:24]}...{group_hash[-8:]}" if len(group_hash) > 24 else group_hash
@@ -99,7 +103,7 @@ def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any
 
 def _add_simhash_top_features(table: Table, feature_stats: dict[str, Any]) -> None:
     most_common = feature_stats.get("most_common_features", [])
-    if not most_common:
+    if not isinstance(most_common, list) or not most_common:
         return
 
     top_features = []
