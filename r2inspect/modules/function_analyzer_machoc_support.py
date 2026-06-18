@@ -17,6 +17,15 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _function_name(func: dict[str, Any], func_offset: int | None = None) -> str:
+    name = func.get("name")
+    if isinstance(name, str) and name:
+        return name
+    if func_offset is not None and func_offset > 0:
+        return f"func_{func_offset}"
+    return "unknown"
+
+
 class FunctionMachocHost(Protocol):
     """Overridable collaboration contract the MACHOC helpers depend on."""
 
@@ -45,7 +54,7 @@ def generate_machoc_hashes(
         except Exception as exc:
             logger.error(
                 "Error generating MACHOC hash for function %s: %s",
-                func.get("name", "unknown"),
+                _function_name(func),
                 str(exc),
             )
             failed_functions += 1
@@ -69,7 +78,7 @@ def process_single_function_hash(
 ) -> tuple[str, str] | None:
     func_offset = _to_int(func.get("addr"))
     func_size = _to_int(func.get("size", 0))
-    func_name = func.get("name", f"func_{func_offset or 'unknown'}")
+    func_name = _function_name(func, func_offset)
     if func_offset <= 0:
         logger.warning("No address found for function %s", func_name)
         return None
