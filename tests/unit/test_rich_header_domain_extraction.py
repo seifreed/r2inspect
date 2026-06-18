@@ -197,6 +197,15 @@ def test_parse_compiler_entries_empty():
     assert result == []
 
 
+def test_parse_compiler_entries_skips_malformed_entries():
+    entries = ["bad", {"prodid": 0x00930001, "count": 10}]
+
+    result = parse_compiler_entries(entries)
+
+    assert len(result) == 1
+    assert result[0]["product_id"] == 0x0001
+
+
 def test_decode_rich_header_basic():
     xor_key = 0x12345678
     prodid = 0x00930001

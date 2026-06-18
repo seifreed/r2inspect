@@ -29,6 +29,8 @@ def parse_compiler_entries(
 ) -> list[dict[str, Any]]:
     compilers: list[dict[str, Any]] = []
     for entry in entries:
+        if not isinstance(entry, dict):
+            continue
         prodid = entry.get("prodid", 0)
         count = entry.get("count", 0)
         product_id = prodid & 0xFFFF
