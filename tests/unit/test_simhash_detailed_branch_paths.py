@@ -210,6 +210,29 @@ def test_simhash_with_function_features() -> None:
     assert len(result["similarity_groups"]) == 1
 
 
+def test_simhash_with_zero_function_hash_counts_as_analyzed() -> None:
+    try:
+        from simhash import Simhash
+    except ImportError:
+        pytest.skip("simhash not installed")
+
+    func_features = {
+        "main": {"simhash": 0, "name": "main"},
+        "sub_1000": {"simhash": 0x1234, "name": "sub_1000"},
+    }
+
+    params = _make_simhash_params(
+        simhash_available=True,
+        extract_string_features=lambda: ["hello"],
+        extract_opcodes_features=lambda: ["mov"],
+        extract_function_features=lambda: func_features,
+        find_similar_functions=lambda _ffs: [],
+    )
+    result = run_detailed_simhash_analysis(**params)
+    assert result["total_functions"] == 2
+    assert result["analyzed_functions"] == 2
+
+
 def test_simhash_feature_stats_includes_most_common() -> None:
     try:
         from simhash import Simhash
