@@ -291,6 +291,12 @@ def test_find_section_by_name_none_list():
     assert result is None
 
 
+def test_find_section_by_name_non_string_query_returns_none():
+    sections = [{"name": ".text"}]
+    result = find_section_by_name(sections, None)  # type: ignore[arg-type]
+    assert result is None
+
+
 def test_find_section_by_name_case_insensitive():
     sections = [{"name": ".TEXT"}]
     result = find_section_by_name(sections, ".text")
