@@ -313,6 +313,16 @@ def test_extract_opcodes_features_uses_addr_field_when_no_offset() -> None:
     assert len(result) > 0
 
 
+def test_extract_opcodes_features_falls_back_to_offset_when_name_missing() -> None:
+    adapter = StubAdapter(
+        functions=[{"offset": 0x2000, "name": None}],
+        disasm_map={0x2000: {"ops": [{"mnemonic": "push"}, {"mnemonic": "pop"}]}},
+    )
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    result = analyzer._extract_opcodes_features()
+    assert len(result) > 0
+
+
 def test_extract_opcodes_features_coerces_string_addr() -> None:
     adapter = StubAdapter(
         functions=[{"addr": "8192", "name": "string_addr"}],
@@ -386,6 +396,17 @@ def test_extract_function_features_records_simhash_for_valid_function() -> None:
     assert "simhash" in result["real_func"]
     assert "addr" in result["real_func"]
     assert result["real_func"]["addr"] == 0x1000
+
+
+@pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
+def test_extract_function_features_falls_back_to_offset_when_name_missing() -> None:
+    adapter = StubAdapter(
+        functions=[{"offset": 0x1000, "name": None, "size": 50}],
+        disasm_map={0x1000: {"ops": [{"mnemonic": "mov"}, {"mnemonic": "ret"}]}},
+    )
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    result = analyzer._extract_function_features()
+    assert "func_4096" in result
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")
