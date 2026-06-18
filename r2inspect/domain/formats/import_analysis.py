@@ -98,6 +98,8 @@ def build_api_categories() -> dict[str, dict[str, tuple[int, str]]]:
 def categorize_apis(
     imports: list[dict[str, Any]], api_categories: dict[str, list[str]]
 ) -> dict[str, Any]:
+    if not isinstance(imports, list) or not isinstance(api_categories, dict):
+        return {}
     categories: dict[str, Any] = {}
     for category, apis in api_categories.items():
         if not isinstance(apis, (list, tuple, set)):
@@ -120,6 +122,8 @@ def categorize_apis(
 
 
 def assess_api_risk(categories: dict[str, Any]) -> tuple[list[str], int]:
+    if not isinstance(categories, dict):
+        return [], 0
     suspicious_apis: list[str] = []
     risk_score = 0
     if _category_count(categories, "Anti-Analysis") >= 2:
@@ -143,6 +147,8 @@ def assess_api_risk(categories: dict[str, Any]) -> tuple[list[str], int]:
 
 
 def _category_count(categories: dict[str, Any], *names: str) -> int:
+    if not isinstance(categories, dict):
+        return 0
     for name in names:
         value = categories.get(name)
         if isinstance(value, dict):

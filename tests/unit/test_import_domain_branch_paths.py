@@ -5,6 +5,7 @@ from __future__ import annotations
 from r2inspect.domain.formats.import_analysis import (
     NETWORK_CATEGORY,
     assess_api_risk,
+    categorize_apis,
     find_max_risk_score,
     risk_level_from_score,
     build_api_categories,
@@ -106,6 +107,12 @@ def test_assess_api_risk_network_below_threshold_no_flag():
     assert not any("network communication" in s.lower() for s in suspicious)
 
 
+def test_assess_api_risk_non_dict_input_returns_empty_score():
+    suspicious, risk = assess_api_risk(None)  # type: ignore[arg-type]
+    assert suspicious == []
+    assert risk == 0
+
+
 # ---------------------------------------------------------------------------
 # find_max_risk_score - tied scores append tag (lines 245-246)
 # ---------------------------------------------------------------------------
@@ -137,6 +144,11 @@ def test_find_max_risk_score_no_match_returns_zero():
     score, tags = find_max_risk_score("CompletelyUnknownFunction", categories)
     assert score == 0
     assert tags == []
+
+
+def test_categorize_apis_non_dict_api_categories_returns_empty():
+    result = categorize_apis([{"name": "CreateRemoteThread"}], None)  # type: ignore[arg-type]
+    assert result == {}
 
 
 def test_find_max_risk_score_skips_malformed_category_entries():
