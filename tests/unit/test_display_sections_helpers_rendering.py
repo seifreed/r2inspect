@@ -461,6 +461,25 @@ def test_add_bindiff_structural_string_file_size():
     assert len(table.rows) == 6
 
 
+def test_add_bindiff_structural_missing_file_type():
+    table = Table()
+    table.add_column("Property")
+    table.add_column("Value")
+
+    structural = {
+        "file_type": None,
+        "file_size": 102400,
+        "section_count": 3,
+        "section_names": [".text", ".data"],
+        "import_count": 50,
+        "export_count": 10,
+    }
+
+    _add_bindiff_structural(table, structural)
+
+    assert len(table.rows) == 6
+
+
 def test_add_bindiff_structural_numeric_section_names():
     table = Table()
     table.add_column("Property")

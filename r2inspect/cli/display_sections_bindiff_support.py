@@ -30,7 +30,10 @@ def _add_bindiff_entries(table: Table, bindiff_info: dict[str, Any]) -> None:
 def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
     if not structural:
         return
-    table.add_row("File Type", structural.get("file_type", "Unknown"))
+    file_type = structural.get("file_type", "Unknown")
+    if not isinstance(file_type, str) or not file_type:
+        file_type = "Unknown"
+    table.add_row("File Type", file_type)
     table.add_row("File Size", f"{_coerce_int(structural.get('file_size', 0)):,} bytes")
     table.add_row("Sections", str(structural.get("section_count", 0)))
     if structural.get("section_names"):
