@@ -166,7 +166,7 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
         "library_distribution": {},
         "suspicious_patterns": [],
     }
-    if not imports:
+    if not isinstance(imports, list) or not imports:
         return stats
 
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]

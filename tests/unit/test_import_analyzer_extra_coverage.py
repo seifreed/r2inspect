@@ -475,6 +475,13 @@ def test_build_import_statistics_all_invalid_entries_returns_empty_stats():
     assert stats["suspicious_patterns"] == []
 
 
+def test_build_import_statistics_non_list_input_returns_empty_stats():
+    stats = build_import_statistics(123)  # type: ignore[arg-type]
+    assert stats["total_imports"] == 0
+    assert stats["unique_libraries"] == 0
+    assert stats["suspicious_patterns"] == []
+
+
 def test_find_suspicious_patterns_skips_malformed_entries():
     patterns = find_suspicious_patterns(
         [
