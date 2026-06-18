@@ -254,6 +254,15 @@ def test_check_suspicious_characteristics_coerces_string_sizes():
     assert any("small" in i.lower() for i in indicators)
 
 
+def test_check_suspicious_characteristics_coerces_hex_sizes():
+    analyzer = _build_analyzer(sections=[])
+    indicators = analyzer._check_suspicious_characteristics(
+        {"name": ".text", "vsize": "0x32", "size": "0x32"},
+        analysis={"entropy": 0.1, "is_writable": False, "is_executable": False},
+    )
+    assert any("small" in i.lower() for i in indicators)
+
+
 # ---------------------------------------------------------------------------
 # _check_size_indicators - very small section (line 248)
 # ---------------------------------------------------------------------------

@@ -135,6 +135,12 @@ def test_debug_get_file_size_coerces_numeric_string():
     assert dbg._debug_get_file_size() == 12345
 
 
+def test_debug_get_file_size_coerces_hex_string():
+    adapter = _ByteAdapter(file_info={"core": {"size": "0x3039"}})
+    dbg = _ConcreteDebug(adapter=adapter)
+    assert dbg._debug_get_file_size() == 12345
+
+
 def test_debug_get_file_size_returns_zero_for_non_dict_core():
     adapter = _ByteAdapter(file_info={"core": []})
     dbg = _ConcreteDebug(adapter=adapter)

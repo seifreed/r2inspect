@@ -192,6 +192,21 @@ def test_ccbhash_build_function_hashes_coerces_string_fields():
     assert hashes["func"]["size"] == 33
 
 
+def test_ccbhash_build_function_hashes_coerces_hex_string_fields():
+    class _Analyzer(MockAdapter):
+        def _calculate_function_ccbhash(self, func_offset: int, func_name: str) -> str:
+            return "hash"
+
+    hashes, analyzed = build_function_ccbhashes(
+        _Analyzer(),
+        [{"name": "func", "addr": "0x1000", "size": "0x21"}],
+    )
+
+    assert analyzed == 1
+    assert hashes["func"]["addr"] == 4096
+    assert hashes["func"]["size"] == 33
+
+
 def test_ccbhash_calculate_binary_hash():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")

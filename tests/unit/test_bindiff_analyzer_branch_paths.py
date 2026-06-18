@@ -98,6 +98,25 @@ class RichBinDiffAdapter(EmptyBinDiffAdapter):
         return "▁▂▃▄▅▆▇█"
 
 
+class HexBinDiffAdapter(EmptyBinDiffAdapter):
+    """Adapter that returns hex strings to exercise numeric coercion."""
+
+    def get_file_info(self) -> dict[str, Any]:
+        return {
+            "core": {"format": "PE", "size": "0x19000"},
+            "bin": {"arch": "x86", "bits": "0x20", "endian": "little"},
+        }
+
+    def get_sections(self) -> list[dict[str, Any]]:
+        return [{"name": ".text", "size": "0x2000", "perm": "r-x"}]
+
+    def get_functions(self) -> list[dict[str, Any]]:
+        return [{"name": "main", "addr": "0x1000", "size": "0x80"}]
+
+    def get_cfg(self, func_addr: int) -> list[dict[str, Any]]:
+        return [{"blocks": [{"offset": func_addr}], "edges": []}]
+
+
 class RaisingBinDiffAdapter(EmptyBinDiffAdapter):
     """Adapter that raises during get_file_info to trigger exception handlers."""
 
@@ -265,6 +284,20 @@ def test_extract_structural_features_full(tmp_path: Path):
     features = analyzer._extract_structural_features()
     assert features.get("section_count") == 3
     assert features.get("import_count") == 4
+
+
+def test_extract_features_accepts_hex_numeric_strings(tmp_path: Path):
+    """Hex strings in adapter data are coerced to ints."""
+    dummy = tmp_path / "dummy.bin"
+    dummy.write_bytes(b"\x00" * 64)
+    analyzer = BinDiffAnalyzer(HexBinDiffAdapter(), str(dummy))
+    structural = analyzer._extract_structural_features()
+    function = analyzer._extract_function_features()
+    assert structural.get("file_size") == 0x19000
+    assert structural.get("bits") == 0x20
+    assert structural.get("section_sizes") == [0x2000]
+    assert function.get("function_sizes") == [0x80]
+    assert function.get("cfg_features")
 
 
 # ---------------------------------------------------------------------------

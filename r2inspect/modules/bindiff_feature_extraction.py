@@ -45,7 +45,7 @@ logger = get_logger(__name__)
 
 def _to_int(value: Any) -> int:
     try:
-        return int(value)
+        return int(value, 0) if isinstance(value, str) else int(value)
     except (TypeError, ValueError):
         return 0
 

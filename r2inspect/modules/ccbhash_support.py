@@ -13,7 +13,7 @@ from .function_extraction import collect_valid_functions
 
 def _to_int(value: Any) -> int:
     try:
-        return int(value or 0)
+        return int(value, 0) if isinstance(value, str) else int(value or 0)
     except (TypeError, ValueError):
         return 0
 
