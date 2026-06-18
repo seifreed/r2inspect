@@ -164,6 +164,15 @@ def test_from_dict_returns_new_config_instance(tmp_path: Path):
     assert clone.typed_config.general.max_strings == cfg.typed_config.general.max_strings
 
 
+def test_from_dict_instance_can_set(tmp_path: Path):
+    # from_dict builds the instance via __new__, bypassing __init__; set() must
+    # still work (it acquires self._lock, which __new__ would otherwise skip).
+    cfg = Config(str(tmp_path / "cfg.json"))
+    clone = cfg.from_dict(cfg.to_dict())
+    clone.set("general", "verbose", True)
+    assert clone.to_dict()["general"]["verbose"] is True
+
+
 def test_from_dict_uses_same_config_path(tmp_path: Path):
     cfg = Config(str(tmp_path / "cfg.json"))
     clone = cfg.from_dict(cfg.to_dict())

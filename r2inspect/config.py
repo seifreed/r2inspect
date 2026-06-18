@@ -203,6 +203,9 @@ class Config:
         """
         config_instance = Config.__new__(Config)
         config_instance.config_path = self.config_path
+        # __new__ bypasses __init__, so initialize the lock that set()/
+        # apply_overrides() acquire; otherwise they raise AttributeError.
+        config_instance._lock = threading.Lock()
         config_instance._load_from_dict(config_dict)
         return config_instance
 
