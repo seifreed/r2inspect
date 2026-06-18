@@ -8,6 +8,7 @@ from r2inspect.domain.services.binary_helpers import (
     clamp_score,
     count_suspicious_imports,
     clean_function_name,
+    extract_printable_strings,
     normalize_section_name,
     suspicious_section_name_indicator,
     STANDARD_PE_SECTIONS,
@@ -248,6 +249,10 @@ def test_normalize_section_name_non_string():
 
 def test_clean_function_name_non_string_returns_empty():
     assert clean_function_name(None) == ""
+
+
+def test_extract_printable_strings_non_iterable_returns_empty():
+    assert extract_printable_strings(None, min_length=3) == []
 
 
 def test_suspicious_section_name_indicator_not_suspicious():

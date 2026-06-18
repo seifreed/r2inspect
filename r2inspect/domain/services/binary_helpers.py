@@ -62,6 +62,8 @@ def extract_printable_strings(
     data: bytes | list[int], *, min_length: int, limit: int | None = None
 ) -> list[str]:
     """Collect runs of printable ASCII at least ``min_length`` long from bytes."""
+    if not isinstance(data, (bytes, bytearray, list, tuple)):
+        return []
     strings: list[str] = []
     current: list[str] = []
     for byte in data:
