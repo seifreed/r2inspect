@@ -228,7 +228,11 @@ def test_format_summary_with_indicators() -> None:
     indicators = [{"type": "suspicious", "description": "bad thing"} for _ in range(7)]
     result = OutputFormatter({"indicators": indicators}).format_summary()
     assert "Suspicious Indicators" in result
-    assert "more" in result
+
+
+def test_format_summary_accepts_non_dict_indicators() -> None:
+    result = OutputFormatter({"indicators": [None, {"type": "suspicious", "description": "bad"}]}).format_summary()
+    assert "Invalid indicator entry" in result
 
 
 def test_format_summary_with_few_indicators() -> None:

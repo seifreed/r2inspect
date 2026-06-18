@@ -144,9 +144,12 @@ def append_indicators_summary(summary_lines: list[str], results: dict[str, Any])
         return
     summary_lines.append(f"Suspicious Indicators: {len(indicators)}")
     for indicator in indicators[:MAX_SUMMARY_INDICATORS]:
-        summary_lines.append(
-            f"  - {indicator.get('type', 'Unknown')}: {indicator.get('description', 'N/A')}"
-        )
+        if isinstance(indicator, dict):
+            summary_lines.append(
+                f"  - {indicator.get('type', 'Unknown')}: {indicator.get('description', 'N/A')}"
+            )
+        else:
+            summary_lines.append(f"  - Invalid indicator entry: {indicator}")
     if len(indicators) > MAX_SUMMARY_INDICATORS:
         summary_lines.append(f"  ... and {len(indicators) - MAX_SUMMARY_INDICATORS} more")
     summary_lines.append("")
