@@ -24,6 +24,7 @@ from r2inspect.cli.display_sections_similarity import (
 from r2inspect.cli.display_sections_hashing_fuzzy_views import (
     display_ccbhash,
     display_impfuzzy,
+    display_ssdeep,
 )
 from r2inspect.cli.display_sections_bindiff_support import (
     _add_bindiff_entries,
@@ -329,6 +330,14 @@ def test_display_impfuzzy_skips_non_dict_section():
         display_impfuzzy({"impfuzzy": "bad"})
     text = _get_text(console)
     assert "Impfuzzy" in text
+
+
+def test_display_ssdeep_skips_non_dict_section():
+    console = _make_console()
+    with _console_scope(console):
+        display_ssdeep({"ssdeep": "bad"})
+    text = _get_text(console)
+    assert "SSDeep" in text
 
 
 def test_display_ccbhash_skips_non_dict_section():

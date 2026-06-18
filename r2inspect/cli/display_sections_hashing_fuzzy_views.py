@@ -26,6 +26,8 @@ def display_ssdeep(results: Results) -> None:
     ssdeep_info, present = _get_section(results, "ssdeep", {})
     if not present:
         return
+    if not isinstance(ssdeep_info, dict):
+        ssdeep_info = {}
     table = Table(title="SSDeep Fuzzy Hash", show_header=True, expand=True)
     table.add_column("Property", style="cyan", width=10, no_wrap=True)
     table.add_column("Value", style="yellow", min_width=50, overflow="fold")
