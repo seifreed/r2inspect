@@ -437,6 +437,17 @@ class TestExtractImportNames:
         assert len(result) == 1
         assert "kernel32.dll" in result
 
+    def test_extract_import_names_skip_non_string_values(self):
+        """Test that malformed import names are skipped."""
+        imports = [
+            "invalid import",
+            {"libname": None},
+            {"name": 123},
+            {"name": "GetProcAddress"},
+        ]
+        result = extract_import_names(imports)
+        assert result == ["GetProcAddress"]
+
 
 class TestExtractSectionNames:
     """Tests for extract_section_names function."""
@@ -473,6 +484,16 @@ class TestExtractSectionNames:
         ]
         result = extract_section_names(sections)
         assert len(result) == 2
+
+    def test_extract_section_names_skip_non_string_values(self):
+        """Test that malformed section names are skipped."""
+        sections = [
+            {"name": None},
+            {"name": 123},
+            {"name": ".text"},
+        ]
+        result = extract_section_names(sections)
+        assert result == [".text"]
 
     def test_extract_section_names_case_sensitive(self):
         """Test that names are preserved as-is."""
@@ -517,6 +538,16 @@ class TestExtractSymbolNames:
         ]
         result = extract_symbol_names(symbols)
         assert len(result) == 2
+
+    def test_extract_symbol_names_skip_non_string_values(self):
+        """Test that malformed symbol names are skipped."""
+        symbols = [
+            {"name": None},
+            {"name": 123},
+            {"name": "main"},
+        ]
+        result = extract_symbol_names(symbols)
+        assert result == ["main"]
 
     def test_extract_symbol_names_case_sensitive(self):
         """Test that names are preserved as-is."""

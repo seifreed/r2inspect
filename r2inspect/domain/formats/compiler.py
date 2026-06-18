@@ -137,17 +137,21 @@ def parse_strings_output(strings_output: str) -> list[str]:
 def extract_import_names(imports_data: list[dict[str, Any]]) -> list[str]:
     imports: list[str] = []
     for imp in imports_data:
-        if "libname" in imp:
-            imports.append(imp["libname"])
-        if "name" in imp:
-            imports.append(imp["name"])
+        if not isinstance(imp, dict):
+            continue
+        libname = imp.get("libname")
+        name = imp.get("name")
+        if isinstance(libname, str):
+            imports.append(libname)
+        if isinstance(name, str):
+            imports.append(name)
     return imports
 
 
 def extract_section_names(sections_data: list[dict[str, Any]]) -> list[str]:
     sections: list[str] = []
     for section in sections_data:
-        if isinstance(section, dict) and "name" in section:
+        if isinstance(section, dict) and isinstance(section.get("name"), str):
             sections.append(section["name"])
     return sections
 
@@ -155,7 +159,7 @@ def extract_section_names(sections_data: list[dict[str, Any]]) -> list[str]:
 def extract_symbol_names(symbols_data: list[dict[str, Any]]) -> list[str]:
     symbols: list[str] = []
     for symbol in symbols_data:
-        if isinstance(symbol, dict) and "name" in symbol:
+        if isinstance(symbol, dict) and isinstance(symbol.get("name"), str):
             symbols.append(symbol["name"])
     return symbols
 
