@@ -89,7 +89,7 @@ def extract_tokens_from_pdfj(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
         else analyzer._cmdj("pdfj", {})
     )
-    if not disasm or "ops" not in disasm:
+    if not isinstance(disasm, dict) or "ops" not in disasm:
         return []
     tokens = extract_tokens_from_ops(disasm["ops"])
     if tokens:

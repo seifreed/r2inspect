@@ -346,6 +346,16 @@ def test_extract_tokens_from_pdfj_empty_disasm():
     assert tokens == []
 
 
+def test_extract_tokens_from_pdfj_non_dict_result():
+    class AdapterNonDictDisasm:
+        def get_disasm(self, address: int = 0, size: int = 0) -> Any:
+            return ["not", "a", "dict"]
+
+    analyzer = BinlexAnalyzer(adapter=AdapterNonDictDisasm(), filepath=None)
+    tokens = analyzer._extract_tokens_from_pdfj(0x1000, "func")
+    assert tokens == []
+
+
 # Tests for _extract_tokens_from_pdj
 
 
