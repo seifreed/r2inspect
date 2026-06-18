@@ -290,6 +290,17 @@ def test_pefile_get_xor_key_returns_none_without_checksum() -> None:
     assert analyzer._pefile_get_xor_key(_FakePENoChecksum()) is None
 
 
+def test_pefile_get_xor_key_returns_none_for_zero_checksum() -> None:
+    """Line 179: returns None when checksum is zero."""
+
+    class _ZeroChecksumPE:
+        class RICH_HEADER:
+            checksum = 0
+
+    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
+    assert analyzer._pefile_get_xor_key(_ZeroChecksumPE()) is None
+
+
 def test_pefile_parse_entry_returns_dict() -> None:
     """Lines 190-191: builds product-id dict from entry attributes."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)

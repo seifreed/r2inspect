@@ -65,7 +65,10 @@ class RichHeaderPefileMixin:
 
     @staticmethod
     def _pefile_get_xor_key(pe: Any) -> int | None:
-        return pe.RICH_HEADER.checksum if hasattr(pe.RICH_HEADER, "checksum") else None
+        checksum = pe.RICH_HEADER.checksum if hasattr(pe.RICH_HEADER, "checksum") else None
+        if not isinstance(checksum, int) or checksum == 0:
+            return None
+        return checksum
 
     def _pefile_extract_entries(self, pe: Any) -> list[dict[str, Any]]:
         entries: list[dict[str, Any]] = []
