@@ -383,6 +383,20 @@ def test_detect_api_obfuscation_getprocaddress():
     assert result["score"] > 0
 
 
+def test_detect_api_obfuscation_skips_malformed_imports():
+    """Test malformed imports do not hide valid obfuscation indicators."""
+    adapter = MinimalAdapter()
+    analyzer = ImportAnalyzer(adapter)
+
+    imports = ["bad", {"name": None}, {"name": "GetProcAddress"}]
+
+    result = analyzer.detect_api_obfuscation(imports)
+
+    assert result["detected"] is True
+    types = [indicator["type"] for indicator in result["indicators"]]
+    assert "dynamic_loading" in types
+
+
 def test_detect_api_obfuscation_loadlibrary():
     """Test detect_api_obfuscation detects LoadLibrary."""
     adapter = MinimalAdapter()

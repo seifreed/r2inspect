@@ -172,7 +172,8 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    indicators = _obfuscation_indicators(imports)
+    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    indicators = _obfuscation_indicators(valid_imports)
     return {
         "detected": len(indicators) > 0,
         "indicators": indicators,
@@ -191,13 +192,20 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
         (
             "dynamic_loading",
             "GetProcAddress usage detected - possible dynamic API loading",
-            _count_imports(imports, lambda imp: "GetProcAddress" in imp.get("name", "")),
+            _count_imports(
+                imports,
+                lambda imp: isinstance(imp.get("name"), str)
+                and "GetProcAddress" in imp["name"],
+            ),
             False,
         ),
         (
             "dynamic_library_loading",
             "LoadLibrary usage detected - possible dynamic library loading",
-            _count_imports(imports, lambda imp: "LoadLibrary" in imp.get("name", "")),
+            _count_imports(
+                imports,
+                lambda imp: isinstance(imp.get("name"), str) and "LoadLibrary" in imp["name"],
+            ),
             False,
         ),
         (
@@ -209,7 +217,12 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
         (
             "ordinal_imports",
             "Ordinal-only imports detected - possible obfuscation",
-            _count_imports(imports, lambda imp: not imp.get("name") and imp.get("ordinal", 0) > 0),
+            _count_imports(
+                imports,
+                lambda imp: not imp.get("name")
+                and isinstance(imp.get("ordinal"), int)
+                and imp["ordinal"] > 0,
+            ),
             False,
         ),
     )
