@@ -39,12 +39,21 @@ __all__ = [
 ]
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
+    name_value = imp.get("name")
+    name = name_value if isinstance(name_value, str) and name_value else "unknown"
     analysis = {
-        "name": imp.get("name", "unknown"),
-        "address": hex(imp.get("plt", 0)),
+        "name": name,
+        "address": hex(_to_int(imp.get("plt", 0))),
         "ordinal": imp.get("ordinal", 0),
         "library": imp.get("libname") or imp.get("library", "unknown"),
         "type": imp.get("type", "unknown"),
@@ -55,13 +64,12 @@ def analyze_import(
         "description": "",
     }
     try:
-        func_name = imp.get("name", "")
-        risk_analysis = analyzer._calculate_risk_score(func_name)
+        risk_analysis = analyzer._calculate_risk_score(name)
         analysis.update(risk_analysis)
         for category, functions in analyzer.api_categories.items():
-            if any(api in func_name for api in functions):
+            if any(api in name for api in functions):
                 analysis["category"] = category
-                analysis["description"] = analyzer._get_function_description(func_name)
+                analysis["description"] = analyzer._get_function_description(name)
                 break
     except Exception as exc:
         logger.error(

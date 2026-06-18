@@ -114,6 +114,21 @@ def test_get_imports_multiple():
     assert len(result) == 2
 
 
+def test_get_imports_coerces_malformed_fields():
+    imports_data = [
+        {"name": ["bad"], "plt": "bad", "libname": "kernel32.dll"},
+        {"name": "CreateFileA", "plt": "4096", "libname": "kernel32.dll"},
+    ]
+    analyzer = _make_analyzer(cmdj_map={"iij": imports_data})
+    result = analyzer.get_imports()
+
+    assert len(result) == 2
+    assert result[0]["name"] == "unknown"
+    assert result[0]["address"] == "0x0"
+    assert result[1]["name"] == "CreateFileA"
+    assert result[1]["address"] == "0x1000"
+
+
 def test_get_imports_empty():
     analyzer = _make_analyzer(cmdj_map={"iij": []})
     result = analyzer.get_imports()
