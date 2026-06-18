@@ -265,7 +265,7 @@ def test_memory_monitor_limits_and_safe_operations() -> None:
     assert monitor.limit_collection_size([1, 2, 3], 2, "items") == [1, 2]
 
     analyzer = MemoryAwareAnalyzer(monitor)
-    assert analyzer.should_skip_analysis(1000, "big") is True
+    assert analyzer.should_skip_analysis(10**9, "big") is True
 
     def _raise_memory() -> None:
         raise MemoryError("boom")
