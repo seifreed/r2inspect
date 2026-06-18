@@ -506,6 +506,13 @@ def test_generate_recommendations_multiple():
     assert len(recommendations) == 4
 
 
+def test_generate_recommendations_skips_non_dict_buckets():
+    recommendations = _generate_recommendations(
+        {"packer": None, "security": None, "crypto": None, "anti_analysis": None}
+    )
+    assert isinstance(recommendations, list)
+
+
 def test_result_aggregator_generate_indicators_packer():
     agg = ResultAggregator()
     results = {

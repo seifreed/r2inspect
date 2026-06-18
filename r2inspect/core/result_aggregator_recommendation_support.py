@@ -8,21 +8,27 @@ from typing import Any
 
 RecommendationPredicate = Callable[[dict[str, Any]], Any]
 
+
+def _bucket(results: dict[str, Any], key: str) -> dict[str, Any]:
+    value = results.get(key)
+    return value if isinstance(value, dict) else {}
+
+
 RECOMMENDATION_RULES: list[tuple[RecommendationPredicate, str]] = [
     (
-        lambda results: results["packer"].get("is_packed"),
+        lambda results: _bucket(results, "packer").get("is_packed"),
         "File appears packed; consider unpacking before deeper analysis.",
     ),
     (
-        lambda results: results["security"].get("authenticode") is False,
+        lambda results: _bucket(results, "security").get("authenticode") is False,
         "File is unsigned; verify source and integrity.",
     ),
     (
-        lambda results: results["crypto"].get("matches"),
+        lambda results: _bucket(results, "crypto").get("matches"),
         "Cryptographic routines detected; check for encryption or obfuscation.",
     ),
     (
-        lambda results: results["anti_analysis"].get("anti_debug"),
+        lambda results: _bucket(results, "anti_analysis").get("anti_debug"),
         "Anti-debugging detected; use anti-anti-debug techniques.",
     ),
 ]
