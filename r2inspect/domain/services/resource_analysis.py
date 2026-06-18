@@ -13,14 +13,21 @@ def _resource_type_name(resource: dict[str, Any]) -> str:
     return str(resource.get("type_name", "UNKNOWN"))
 
 
+def _coerce_int(value: Any) -> int:
+    try:
+        if isinstance(value, str):
+            return int(value, 0)
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _resource_size(resource: dict[str, Any]) -> int:
-    size = resource.get("size", 0)
-    return int(size) if isinstance(size, int | float) else 0
+    return _coerce_int(resource.get("size", 0))
 
 
 def _resource_offset(resource: dict[str, Any]) -> int:
-    offset = resource.get("offset", 0)
-    return int(offset) if isinstance(offset, int | float) else 0
+    return _coerce_int(resource.get("offset", 0))
 
 
 def summarize_resource_types(resources: list[Any]) -> tuple[list[dict[str, Any]], int]:

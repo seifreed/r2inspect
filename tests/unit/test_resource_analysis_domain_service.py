@@ -32,8 +32,17 @@ def test_summarize_resource_types_counts_and_sizes() -> None:
 def test_summarize_resource_types_tolerates_non_numeric_size() -> None:
     summary, total_size = summarize_resource_types([{"type_name": "RT_ICON", "size": "100"}])
 
-    assert total_size == 0
-    assert summary == [{"type": "RT_ICON", "count": 1, "total_size": 0}]
+    assert total_size == 100
+    assert summary == [{"type": "RT_ICON", "count": 1, "total_size": 100}]
+
+
+def test_summarize_resource_types_coerces_hex_size_and_offset() -> None:
+    summary, total_size = summarize_resource_types(
+        [{"type_name": "RT_ICON", "size": "0x100", "offset": "0x10"}]
+    )
+
+    assert total_size == 256
+    assert summary == [{"type": "RT_ICON", "count": 1, "total_size": 256}]
 
 
 def test_summarize_resource_types_skips_non_dict_entries() -> None:
@@ -158,6 +167,12 @@ def test_build_icon_entries_tolerates_partial_icon_entries() -> None:
     icons = build_icon_entries([{"type_name": "RT_ICON"}])
 
     assert icons == [{"type": "RT_ICON", "size": 0, "offset": 0, "entropy": 0.0}]
+
+
+def test_build_icon_entries_coerces_string_size_and_offset() -> None:
+    icons = build_icon_entries([{"type_name": "RT_ICON", "size": "0x20", "offset": "16"}])
+
+    assert icons == [{"type": "RT_ICON", "size": 32, "offset": 16, "entropy": 0.0}]
 
 
 def test_build_icon_entries_skips_malformed_entries() -> None:
