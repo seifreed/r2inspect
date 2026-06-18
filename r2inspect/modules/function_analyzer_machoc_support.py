@@ -17,7 +17,11 @@ def _to_int(value: Any) -> int:
         return 0
 
 
-def _function_name(func: dict[str, Any], func_offset: int | None = None) -> str:
+def _function_name(func: Any, func_offset: int | None = None) -> str:
+    if not isinstance(func, dict):
+        if func_offset is not None and func_offset > 0:
+            return f"func_{func_offset}"
+        return "unknown"
     name = func.get("name")
     if isinstance(name, str) and name:
         return name

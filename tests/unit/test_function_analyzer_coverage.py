@@ -308,6 +308,17 @@ def test_generate_machoc_hashes_increments_failed_on_exception():
     assert hashes == {}
 
 
+def test_generate_machoc_hashes_logs_bad_function_shape_without_crashing():
+    class PartialAnalyzer(FunctionAnalyzer):
+        def _process_single_function_hash(self, func, index, total):
+            raise RuntimeError("hash error")
+
+    adapter = MinimalAdapter()
+    analyzer = PartialAnalyzer(adapter)
+    hashes = analyzer._generate_machoc_hashes(["bad"])  # type: ignore[list-item]
+    assert hashes == {}
+
+
 def test_generate_machoc_hashes_with_valid_functions():
     ops = [{"opcode": "mov eax, 1"}, {"opcode": "ret"}]
     funcs = [{"name": "func_a", "addr": 0x1000, "size": 20}]
