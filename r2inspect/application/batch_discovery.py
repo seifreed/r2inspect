@@ -151,7 +151,9 @@ def discover_executables_by_magic(
 def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool) -> list[Path]:
     """Find files by specified extensions."""
     files_to_process: list[Path] = []
-    ext_list = [ext.strip().lower().lstrip(".") for ext in extensions.split(",") if ext.strip()]
+    ext_list = dict.fromkeys(
+        ext.strip().lower().lstrip(".") for ext in extensions.split(",") if ext.strip()
+    )
 
     for ext in ext_list:
         pattern = f"**/*.{ext}" if recursive else f"*.{ext}"
