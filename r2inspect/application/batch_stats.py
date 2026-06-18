@@ -37,11 +37,12 @@ def update_indicator_stats(stats: dict[str, Any], file_key: str, result: dict[st
 
 def update_file_type_stats(stats: dict[str, Any], result: dict[str, Any]) -> None:
     """Update file type and architecture statistics."""
-    if "file_info" in result:
-        file_type = result["file_info"].get("file_type", "Unknown")
+    file_info = result.get("file_info")
+    if isinstance(file_info, dict):
+        file_type = file_info.get("file_type", "Unknown")
         stats["file_types"][file_type] = stats["file_types"].get(file_type, 0) + 1
 
-        architecture = result["file_info"].get("architecture", "Unknown")
+        architecture = file_info.get("architecture", "Unknown")
         stats["architectures"][architecture] = stats["architectures"].get(architecture, 0) + 1
 
 

@@ -170,6 +170,19 @@ def test_build_file_overview_missing_fields():
     assert overview["sha256"] == "Unknown"
 
 
+def test_build_file_overview_non_dict_buckets_are_skipped():
+    results = {
+        "file_info": None,
+        "pe_info": None,
+        "rich_header": None,
+    }
+
+    overview = _build_file_overview(results)
+    assert overview["filename"] == "Unknown"
+    assert "compiled" not in overview
+    assert "toolset" not in overview
+
+
 def test_build_security_assessment_all_features():
     results = {
         "security": {
@@ -282,6 +295,19 @@ def test_build_technical_details_empty():
     details = _build_technical_details(results)
     assert details["imports"] == 0
     assert details["sections"] == 0
+    assert details["functions"] == 0
+    assert details["crypto_matches"] == 0
+
+
+def test_build_technical_details_non_dict_buckets_are_skipped():
+    results = {
+        "imports": [],
+        "sections": [],
+        "functions": None,
+        "crypto": None,
+    }
+
+    details = _build_technical_details(results)
     assert details["functions"] == 0
     assert details["crypto_matches"] == 0
 

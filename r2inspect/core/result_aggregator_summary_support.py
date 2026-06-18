@@ -76,7 +76,11 @@ def _count_crypto_indicators(crypto: dict[str, Any]) -> int:
 def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the high-level file identity section of the executive summary."""
     file_info = analysis_results["file_info"]
+    if not isinstance(file_info, dict):
+        file_info = {}
     pe_info = analysis_results["pe_info"]
+    if not isinstance(pe_info, dict):
+        pe_info = {}
     overview = {
         "filename": file_info.get("name", "Unknown"),
         "file_type": file_info.get("file_type", "Unknown"),
@@ -88,6 +92,8 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     if "compilation_timestamp" in pe_info:
         overview["compiled"] = pe_info["compilation_timestamp"]
     rich_header = analysis_results["rich_header"]
+    if not isinstance(rich_header, dict):
+        rich_header = {}
     if rich_header.get("available") and rich_header.get("compilers"):
         overview["toolset"] = [
             f"{c.get('compiler_name', 'Unknown')} (Build {c.get('build_number', 0)})"
@@ -127,11 +133,17 @@ def build_threat_indicators(analysis_results: dict[str, Any]) -> dict[str, Any]:
 
 def build_technical_details(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the technical-detail section of the executive summary."""
+    functions = analysis_results["functions"]
+    if not isinstance(functions, dict):
+        functions = {}
+    crypto = analysis_results["crypto"]
+    if not isinstance(crypto, dict):
+        crypto = {}
     return {
         "imports": len(analysis_results["imports"]),
         "sections": len(analysis_results["sections"]),
-        "functions": analysis_results["functions"].get("count", 0),
-        "crypto_matches": len(analysis_results["crypto"].get("matches", [])),
+        "functions": functions.get("count", 0),
+        "crypto_matches": len(crypto.get("matches", [])),
     }
 
 

@@ -148,6 +148,13 @@ def test_update_file_type_stats_no_file_info_key_skipped():
     assert stats["file_types"] == {}
 
 
+def test_update_file_type_stats_none_file_info_skipped():
+    stats = _empty_stats()
+    update_file_type_stats(stats, {"file_info": None})
+    assert stats["file_types"] == {}
+    assert stats["architectures"] == {}
+
+
 # ---------------------------------------------------------------------------
 # update_compiler_stats (lines 46-50)
 # ---------------------------------------------------------------------------
