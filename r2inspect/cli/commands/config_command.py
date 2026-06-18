@@ -73,7 +73,10 @@ class ConfigCommand(Command):
         self.context.console.print(f"\n[dim]Rules directory: {rules_path}[/dim]")
 
     def _format_file_size(self, size_bytes: int) -> str:
-        size_value = float(size_bytes)
+        try:
+            size_value = float(size_bytes)
+        except (TypeError, ValueError):
+            return str(size_bytes)
         for unit in ["B", "KB", "MB"]:
             if size_value < 1024.0:
                 return f"{size_value:.1f} {unit}"

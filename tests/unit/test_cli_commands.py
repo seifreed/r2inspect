@@ -180,6 +180,7 @@ def test_config_command_format_file_size(tmp_path):
     cmd = ConfigCommand(_make_context(tmp_path))
     assert cmd._format_file_size(1) == "1.0 B"
     assert cmd._format_file_size(1024) == "1.0 KB"
+    assert cmd._format_file_size("1024") == "1.0 KB"
 
 
 def test_interactive_command_should_exit(tmp_path):
