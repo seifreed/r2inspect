@@ -136,6 +136,12 @@ def test_categorize_apis_basic():
     assert result["Memory"]["count"] == 1
 
 
+def test_categorize_apis_skips_malformed_imports():
+    imports = ["bad", {"name": None}, {"name": "CreateRemoteThread"}]
+    result = categorize_apis(imports, {"Injection": ["CreateRemoteThread"]})
+    assert result == {"Injection": {"count": 1, "apis": ["CreateRemoteThread"]}}
+
+
 def test_categorize_apis_multiple_matches():
     """Test categorizing imports with multiple matches."""
     imports = [

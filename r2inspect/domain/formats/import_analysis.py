@@ -103,7 +103,11 @@ def categorize_apis(
         category_count = 0
         category_apis = []
         for imp in imports:
+            if not isinstance(imp, dict):
+                continue
             api_name = imp.get("name", "")
+            if not isinstance(api_name, str):
+                continue
             if any(api.lower() in api_name.lower() for api in apis):
                 category_count += 1
                 category_apis.append(api_name)
