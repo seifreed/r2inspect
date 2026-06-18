@@ -45,6 +45,8 @@ def display_impfuzzy(results: Results) -> None:
     impfuzzy_info, present = _get_section(results, "impfuzzy", {})
     if not present:
         return
+    if not isinstance(impfuzzy_info, dict):
+        impfuzzy_info = {}
     table = Table(title="Impfuzzy (PE Import Fuzzy Hash)", show_header=True, expand=True)
     table.add_column("Property", style="cyan", width=16, no_wrap=True)
     table.add_column("Value", style="yellow", min_width=80, overflow="fold")
@@ -68,7 +70,7 @@ def add_impfuzzy_entries(table: Table, impfuzzy_info: dict[str, Any]) -> None:
     table.add_row("Total Imports", str(impfuzzy_info.get("import_count", 0)))
     table.add_row("DLL Count", str(impfuzzy_info.get("dll_count", 0)))
     imports_processed = impfuzzy_info.get("imports_processed", [])
-    if imports_processed:
+    if isinstance(imports_processed, list) and imports_processed:
         sample_imports = list(imports_processed[:10])
         if len(imports_processed) > 10:
             sample_imports.append(f"... and {len(imports_processed) - 10} more")
@@ -79,6 +81,8 @@ def display_ccbhash(results: Results) -> None:
     ccbhash_info, present = _get_section(results, "ccbhash", {})
     if not present:
         return
+    if not isinstance(ccbhash_info, dict):
+        ccbhash_info = {}
     table = Table(title="CCBHash (Control Flow Graph Hash)", show_header=True, expand=True)
     table.add_column("Property", style="cyan", width=25, no_wrap=True)
     table.add_column("Value", style="yellow", min_width=50, overflow="fold")

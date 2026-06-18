@@ -21,6 +21,10 @@ from r2inspect.cli.display_sections_similarity import (
     _display_bindiff,
     _display_machoc_functions,
 )
+from r2inspect.cli.display_sections_hashing_fuzzy_views import (
+    display_ccbhash,
+    display_impfuzzy,
+)
 from r2inspect.cli.display_sections_bindiff_support import (
     _add_bindiff_entries,
     _add_bindiff_structural,
@@ -317,6 +321,22 @@ def test_add_binbloom_similar_groups_skips_non_list_groups():
     table = _make_table()
     _add_binbloom_similar_groups(table, {"similar_functions": {"bad": 1}})
     assert len(table.rows) == 1
+
+
+def test_display_impfuzzy_skips_non_dict_section():
+    console = _make_console()
+    with _console_scope(console):
+        display_impfuzzy({"impfuzzy": "bad"})
+    text = _get_text(console)
+    assert "Impfuzzy" in text
+
+
+def test_display_ccbhash_skips_non_dict_section():
+    console = _make_console()
+    with _console_scope(console):
+        display_ccbhash({"ccbhash": "bad"})
+    text = _get_text(console)
+    assert "CCBHash" in text
 
 
 def test_display_binbloom_signature_details_skips_non_dict_function_signatures():
