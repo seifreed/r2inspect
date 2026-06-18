@@ -194,4 +194,4 @@ def overlay_info(
 
 def _search_signature_hex(search_hex_fn: Callable[[str], str], hex_sig: str) -> bool:
     result = search_hex_fn(hex_sig)
-    return bool(result and result.strip())
+    return bool(isinstance(result, str) and result.strip())

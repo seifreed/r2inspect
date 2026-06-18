@@ -253,6 +253,15 @@ def test_packer_scoring_skips_malformed_strings_and_sections():
     assert sections["suspicious_sections"][0]["size"] == 0
 
 
+def test_search_signature_hex_skips_non_string_search_output():
+    from r2inspect.domain.services.packer_scoring import _search_signature_hex
+
+    def bad_search(_hex_sig: str):
+        return None
+
+    assert _search_signature_hex(bad_search, "deadbeef") is False
+
+
 def test_overlay_info_coerces_malformed_section_offsets():
     from r2inspect.domain.services.packer_scoring import overlay_info
 
