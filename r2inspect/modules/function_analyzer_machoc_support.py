@@ -42,6 +42,8 @@ def generate_machoc_hashes(
 ) -> dict[str, str]:
     machoc_hashes: dict[str, str] = {}
     failed_functions = 0
+    if not isinstance(functions, list):
+        return machoc_hashes
     logger.debug("Starting MACHOC hash generation for %s functions", len(functions))
     for i, func in enumerate(functions):
         try:

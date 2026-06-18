@@ -289,6 +289,13 @@ def test_generate_machoc_hashes_returns_empty_when_result_is_none():
     assert hashes == {}
 
 
+def test_generate_machoc_hashes_rejects_non_list_input():
+    adapter = MinimalAdapter()
+    analyzer = FunctionAnalyzer(adapter)
+    hashes = analyzer._generate_machoc_hashes(None)  # type: ignore[arg-type]
+    assert hashes == {}
+
+
 def test_generate_machoc_hashes_increments_failed_on_exception():
     class PartialAnalyzer(FunctionAnalyzer):
         def _process_single_function_hash(self, func, index, total):
