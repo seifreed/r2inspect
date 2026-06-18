@@ -5,6 +5,7 @@ No the stdlib mock library, no mock objects, no patch. Real objects and plain ad
 """
 
 from r2inspect.modules.compiler_detector import CompilerDetector
+from r2inspect.modules.compiler_detector_support import score_compilers
 
 
 class FakeAdapter:
@@ -452,6 +453,18 @@ def test_score_compilers():
 
     scores = detector._score_compilers([], [], [], [])
     assert isinstance(scores, dict)
+
+
+def test_score_compilers_skips_non_dict_input():
+    scores = score_compilers(
+        None,  # type: ignore[arg-type]
+        [],
+        [],
+        [],
+        [],
+        calculate_score=lambda signatures, *_: float(len(signatures)),
+    )
+    assert scores == {}
 
 
 def test_apply_best_compiler_no_scores():

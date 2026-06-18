@@ -66,6 +66,8 @@ def score_compilers(
         [dict[str, list[str]], list[str], list[str], list[str], list[str]], float
     ],
 ) -> dict[str, float]:
+    if not isinstance(compiler_signatures, dict):
+        return {}
     return {
         compiler_name: calculate_score(
             signatures,
