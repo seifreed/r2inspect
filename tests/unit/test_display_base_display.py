@@ -556,6 +556,21 @@ def test_display_error_statistics_complete():
     assert "20" in output
 
 
+def test_display_error_statistics_skips_malformed_collections():
+    con, buf = _make_console()
+    error_stats = {
+        "total_errors": "5",
+        "recent_errors": None,
+        "recovery_strategies_available": "2",
+        "errors_by_category": ["bad"],
+        "errors_by_severity": "bad",
+    }
+    runtime_display_error_statistics(error_stats, get_console=lambda: con)
+    output = _captured(buf)
+    assert "5" in output
+    assert "2" in output
+
+
 # ---------------------------------------------------------------------------
 # display_performance_statistics — using runtime helper with real console
 # ---------------------------------------------------------------------------

@@ -105,27 +105,29 @@ def display_error_statistics(error_stats: dict[str, Any], *, get_console: Any) -
     table = Table(title="Analysis Error Summary", show_header=True)
     table.add_column("Metric", style="cyan")
     table.add_column("Count", style="red")
-    table.add_row("Total Errors", str(error_stats["total_errors"]))
-    table.add_row("Recent Errors", str(error_stats["recent_errors"]))
+    table.add_row("Total Errors", str(error_stats.get("total_errors", 0)))
+    table.add_row("Recent Errors", str(error_stats.get("recent_errors", 0)))
     table.add_row(
-        "Recovery Strategies Available", str(error_stats["recovery_strategies_available"])
+        "Recovery Strategies Available", str(error_stats.get("recovery_strategies_available", 0))
     )
     get_console().print(table)
 
-    if error_stats["errors_by_category"]:
+    errors_by_category = error_stats.get("errors_by_category", {})
+    if isinstance(errors_by_category, dict) and errors_by_category:
         category_table = Table(title="Errors by Category", show_header=True)
         category_table.add_column("Category", style="cyan")
         category_table.add_column("Count", style="red")
-        for category, count in error_stats["errors_by_category"].items():
+        for category, count in errors_by_category.items():
             label = str(category.value) if hasattr(category, "value") else str(category)
             category_table.add_row(label.replace("_", " ").title(), str(count))
         get_console().print(category_table)
 
-    if error_stats["errors_by_severity"]:
+    errors_by_severity = error_stats.get("errors_by_severity", {})
+    if isinstance(errors_by_severity, dict) and errors_by_severity:
         severity_table = Table(title="Errors by Severity", show_header=True)
         severity_table.add_column("Severity", style="cyan")
         severity_table.add_column("Count", style="red")
-        for severity, count in error_stats["errors_by_severity"].items():
+        for severity, count in errors_by_severity.items():
             color = "red" if severity == "critical" else "yellow" if severity == "high" else "dim"
             severity_table.add_row(f"[{color}]{severity.title()}[/{color}]", str(count))
         get_console().print(severity_table)
