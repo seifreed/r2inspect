@@ -432,6 +432,21 @@ def test_collect_signatures_for_size_skips_malformed_function_buckets():
     assert groups["same"] == ["func_a", "func_c"]
 
 
+def test_accumulate_ngrams_skips_malformed_function_buckets():
+    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
+    all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
+    func_sigs: dict[Any, Any] = {
+        2: {"ngrams": ["a b", "b c"]},
+        3: "bad",
+        4: {"ngrams": None},
+    }
+    analyzer._accumulate_ngrams(all_ngrams, func_sigs, [2, 3, 4])
+    assert all_ngrams[2]["a b"] == 1
+    assert all_ngrams[2]["b c"] == 1
+    assert 3 not in all_ngrams or not all_ngrams[3]
+    assert 4 not in all_ngrams or not all_ngrams[4]
+
+
 # Test _build_similar_groups with groups that have only 1 function (not similar)
 
 

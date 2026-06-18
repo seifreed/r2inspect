@@ -88,7 +88,11 @@ def accumulate_ngrams(
     func_sigs: dict[int, dict[str, Any]],
     ngram_sizes: list[int],
 ) -> None:
+    if not isinstance(func_sigs, dict):
+        return
     for n in ngram_sizes:
+        if not isinstance(func_sigs.get(n), dict):
+            continue
         if n not in func_sigs or "ngrams" not in func_sigs[n]:
             continue
         ngrams_value = func_sigs[n].get("ngrams")
