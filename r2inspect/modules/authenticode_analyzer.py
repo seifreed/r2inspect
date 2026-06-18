@@ -88,10 +88,10 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _has_required_headers(self) -> bool:
         pe_header = self._cmdj("ihj", {})
-        if not pe_header:
+        if not isinstance(pe_header, dict):
             return False
         optional_header = self._cmdj("iHj", {})
-        return bool(optional_header)
+        return isinstance(optional_header, dict) and bool(optional_header)
 
     def _get_security_directory(self) -> dict[str, Any] | None:
         return _get_security_directory_impl(self._cmdj)

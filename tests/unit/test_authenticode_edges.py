@@ -41,6 +41,14 @@ def test_has_required_headers_no_optional_header():
     assert result is False
 
 
+def test_has_required_headers_non_dict_headers():
+    analyzer = _make_analyzer(cmdj_map={"ihj": [], "iHj": []})
+
+    result = analyzer._has_required_headers()
+
+    assert result is False
+
+
 # ---------------------------------------------------------------------------
 # _get_security_directory
 # ---------------------------------------------------------------------------
