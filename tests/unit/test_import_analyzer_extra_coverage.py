@@ -482,6 +482,14 @@ def test_build_import_statistics_non_list_input_returns_empty_stats():
     assert stats["suspicious_patterns"] == []
 
 
+def test_detect_import_anomalies_skips_non_dict_entries_in_dll_scan():
+    analyzer = _make_analyzer()
+    imports = [{"library": f"unknown{i}.dll"} for i in range(6)] + ["bad"]
+    result = analyzer.detect_import_anomalies(imports)  # type: ignore[arg-type]
+    types = {item["type"] for item in result["anomalies"]}
+    assert "many_unusual_dlls" in types
+
+
 def test_find_suspicious_patterns_skips_malformed_entries():
     patterns = find_suspicious_patterns(
         [

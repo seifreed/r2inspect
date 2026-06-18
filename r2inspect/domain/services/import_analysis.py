@@ -349,6 +349,8 @@ def _duplicate_imports(imports: list[Any]) -> list[str]:
 def _unusual_dlls(imports: list[dict[str, Any]]) -> list[str]:
     unusual_dlls: list[str] = []
     for imp in imports:
+        if not isinstance(imp, dict):
+            continue
         dll_value = imp.get("library", imp.get("dll", ""))
         if not isinstance(dll_value, str):
             continue
