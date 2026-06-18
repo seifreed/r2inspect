@@ -366,6 +366,15 @@ def test_display_yara_rules_table_skips_malformed_entries():
     assert "unknown" in output
 
 
+def test_display_yara_rules_table_falls_back_for_missing_names_and_paths():
+    con, buf = _make_console()
+    rules = [{"name": None, "size": 1024, "path": None, "relative_path": None}]
+    runtime_display_yara_rules_table(rules, "/rules", get_console=lambda: con)
+    output = _captured(buf)
+    assert "unknown" in output
+    assert "1.0 KB" in output
+
+
 # ---------------------------------------------------------------------------
 # handle_list_yara_option — using runtime helper with real console
 # ---------------------------------------------------------------------------
