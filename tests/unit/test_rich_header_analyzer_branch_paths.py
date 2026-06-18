@@ -313,6 +313,18 @@ def test_pefile_parse_entry_returns_none_for_incomplete_entry() -> None:
     assert analyzer._pefile_parse_entry(_NoCount()) is None
 
 
+def test_pefile_parse_entry_returns_none_for_non_positive_count() -> None:
+    """Lines 190-191: returns None when count is not a positive integer."""
+
+    class _ZeroCount:
+        product_id = 1
+        build_version = 2
+        count = 0
+
+    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
+    assert analyzer._pefile_parse_entry(_ZeroCount()) is None
+
+
 def test_pefile_entries_from_clear_data_with_valid_clear_data() -> None:
     """Line 201: delegates to parse_clear_data_entries when clear_data is present."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)

@@ -85,6 +85,13 @@ class RichHeaderPefileMixin:
             and hasattr(entry, "count")
         ):
             return None
+        if not (
+            isinstance(entry.product_id, int)
+            and isinstance(entry.build_version, int)
+            and isinstance(entry.count, int)
+            and entry.count > 0
+        ):
+            return None
         prodid = entry.product_id | (entry.build_version << 16)
         return {
             "product_id": entry.product_id,
