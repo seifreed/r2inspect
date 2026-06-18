@@ -107,7 +107,12 @@ def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
     largest_group = similar_functions[0] if similar_functions else None
     if not largest_group:
         return
-    table.add_row("Largest Similar Group", f"{largest_group['count']} functions")
+    if not isinstance(largest_group, dict):
+        return
+    count = largest_group.get("count")
+    if count is None:
+        return
+    table.add_row("Largest Similar Group", f"{count} functions")
     sample_funcs = list(largest_group["functions"][:3])
     clean_sample_funcs = [
         re.sub(r"&nbsp;?", " ", str(func)).replace(HTML_AMP, "&") for func in sample_funcs
