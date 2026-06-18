@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from r2inspect.registry.analyzer_registry import AnalyzerCategory, AnalyzerRegistry
 from r2inspect.registry.default_registry import (
     create_default_registry,
@@ -33,6 +35,16 @@ def test_create_default_registry_has_elf_analyzer() -> None:
 def test_create_default_registry_loads_entry_points_without_error() -> None:
     registry = create_default_registry()
     assert registry is not None
+
+
+def test_create_default_registry_propagates_loader_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _raise_loader(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(AnalyzerRegistry, "load_entry_points", _raise_loader)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        create_default_registry()
 
 
 def test_get_format_specific_analyzers_pe() -> None:
