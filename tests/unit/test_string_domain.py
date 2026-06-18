@@ -64,6 +64,12 @@ def test_filter_strings_edge_cases():
     assert "abcd" not in result
 
 
+def test_filter_strings_skips_non_string_items():
+    strings = ["abc", None, 123, "def"]
+    result = filter_strings(strings, min_length=3, max_length=10)
+    assert result == ["abc", "def"]
+
+
 def test_parse_search_results_valid_addresses():
     result = "0x00401000 some data\n0x00402000 more data\n0x00403000 end"
     addresses = parse_search_results(result)

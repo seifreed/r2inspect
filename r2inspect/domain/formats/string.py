@@ -32,6 +32,8 @@ SUSPICIOUS_PATTERNS = {
 def filter_strings(strings: list[str], min_length: int, max_length: int) -> list[str]:
     filtered = []
     for string in strings:
+        if not isinstance(string, str):
+            continue
         if len(string) < min_length or len(string) > max_length:
             continue
         cleaned = "".join(c for c in string if c.isprintable())
