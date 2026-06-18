@@ -72,6 +72,8 @@ def _display_machoc_functions(results: Results) -> None:
     functions_info, present = _get_section(results, "functions", {})
     if not present:
         return
+    if not isinstance(functions_info, dict):
+        functions_info = {}
     table = Table(title="Function Analysis (MACHOC)", show_header=True)
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="yellow")

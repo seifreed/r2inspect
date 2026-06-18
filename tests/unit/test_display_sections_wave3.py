@@ -418,6 +418,15 @@ def test_display_machoc_functions_skips_non_dict_hashes():
     assert "Function Analysis" in text
 
 
+def test_display_machoc_functions_skips_non_dict_functions_section():
+    console = _make_console()
+    results = {"functions": "bad"}
+    with _console_scope(console):
+        _display_machoc_functions(results)
+    text = _get_text(console)
+    assert "Function Analysis" in text
+
+
 # --- display_sections_helpers: additional branch coverage ---
 
 
