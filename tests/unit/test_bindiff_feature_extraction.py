@@ -4,7 +4,6 @@ All tests use real objects (FakeR2 + R2PipeAdapter) instead of mocks.
 Domain functions are tested directly with real data.
 """
 
-import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -191,6 +190,39 @@ def test_extract_structural_features_success():
     assert result["export_count"] == 1
 
 
+def test_extract_structural_features_skips_malformed_entries():
+    """Malformed structural rows should not abort later feature extraction."""
+    cmdj_map = {
+        "ij": {
+            "core": {"format": "pe", "size": "100000"},
+            "bin": {"arch": "x86", "bits": "32", "endian": "little"},
+        },
+        "iSj": [
+            "bad",
+            {"name": ".text", "size": "5000", "perm": "r-x"},
+        ],
+        "iij": [
+            "bad",
+            {"libname": "kernel32.dll", "name": "CreateFileA"},
+        ],
+        "iEj": [
+            "bad",
+            {"name": "ExportedFunc"},
+        ],
+    }
+    analyzer = _make_analyzer(cmdj_map=cmdj_map)
+    result = analyzer._extract_structural_features()
+
+    assert result["file_size"] == 100000
+    assert result["bits"] == 32
+    assert result["section_count"] == 1
+    assert result["section_sizes"] == [5000]
+    assert result["import_count"] == 1
+    assert result["imported_functions"] == ["CreateFileA"]
+    assert result["export_count"] == 1
+    assert result["exported_functions"] == ["ExportedFunc"]
+
+
 def test_extract_structural_features_accepts_library_key():
     """Test _extract_structural_features accepts normalized import library field."""
     cmdj_map = {
@@ -350,6 +382,24 @@ def test_extract_string_features_success():
     assert "string_signature" in result
 
 
+def test_extract_string_features_skips_malformed_entries():
+    """Malformed string rows should be ignored instead of aborting."""
+    cmdj_map = {
+        "izzj": [
+            "bad",
+            {"string": "CreateFileA"},
+            {"string": ["http://bad"]},
+            {"string": "http://example.com"},
+        ],
+    }
+    analyzer = _make_analyzer(cmdj_map=cmdj_map)
+    result = analyzer._extract_string_features()
+
+    assert result["total_strings"] == 2
+    assert len(result["api_strings"]) >= 1
+    assert len(result["url_strings"]) >= 1
+
+
 def test_extract_string_features_empty():
     """Test _extract_string_features with empty strings."""
     cmdj_map = {"izzj": []}
@@ -442,6 +492,33 @@ def test_extract_behavioral_features_success():
     assert result["suspicious_apis"] >= 1  # VirtualAllocEx matches
     assert result["crypto_apis"] >= 1  # CryptEncrypt matches
     assert result["network_apis"] >= 1  # connect matches
+
+
+def test_extract_behavioral_features_skips_malformed_entries():
+    """Malformed string/import rows should not abort behavioral extraction."""
+    cmdj_map = {
+        "izzj": [
+            "bad",
+            {"string": "aes_encrypt"},
+            {"string": ["http://bad"]},
+            {"string": "http://malware.c2"},
+        ],
+        "iij": [
+            "bad",
+            {"name": ["bad"]},
+            {"name": "VirtualAllocEx"},
+            {"name": "CryptEncrypt"},
+            {"name": "connect"},
+        ],
+    }
+    analyzer = _make_analyzer(cmdj_map=cmdj_map)
+    result = analyzer._extract_behavioral_features()
+
+    assert result["crypto_indicators"] >= 1
+    assert result["network_indicators"] >= 1
+    assert result["suspicious_apis"] >= 1
+    assert result["crypto_apis"] >= 1
+    assert result["network_apis"] >= 1
 
 
 def test_extract_behavioral_features_empty():

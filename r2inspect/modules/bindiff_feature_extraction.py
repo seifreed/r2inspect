@@ -43,44 +43,72 @@ from .string_classification import (
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _string_value(value: Any) -> str:
+    return value if isinstance(value, str) else ""
+
+
 def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
+    core_info = file_info.get("core", {}) if isinstance(file_info, dict) else {}
+    bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
+    if not isinstance(core_info, dict):
+        core_info = {}
+    if not isinstance(bin_info, dict):
+        bin_info = {}
     return {
-        "file_type": file_info.get("core", {}).get("format", ""),
-        "architecture": file_info.get("bin", {}).get("arch", ""),
-        "bits": file_info.get("bin", {}).get("bits", 0),
-        "endian": file_info.get("bin", {}).get("endian", ""),
-        "file_size": file_info.get("core", {}).get("size", 0),
+        "file_type": _string_value(core_info.get("format", "")),
+        "architecture": _string_value(bin_info.get("arch", "")),
+        "bits": _to_int(bin_info.get("bits", 0)),
+        "endian": _string_value(bin_info.get("endian", "")),
+        "file_size": _to_int(core_info.get("size", 0)),
     }
 
 
 def _structural_sections(sections: list[dict[str, Any]]) -> dict[str, Any]:
+    valid_sections = [section for section in sections if isinstance(section, dict)]
     return {
-        "section_count": len(sections),
-        "section_names": sorted([s.get("name", "") for s in sections if s.get("name")]),
-        "section_sizes": [s.get("size", 0) for s in sections],
-        "executable_sections": len([s for s in sections if "x" in s.get("perm", "")]),
-        "writable_sections": len([s for s in sections if "w" in s.get("perm", "")]),
+        "section_count": len(valid_sections),
+        "section_names": sorted(
+            [name for s in valid_sections if (name := _string_value(s.get("name")))]
+        ),
+        "section_sizes": [_to_int(s.get("size", 0)) for s in valid_sections],
+        "executable_sections": len(
+            [s for s in valid_sections if "x" in _string_value(s.get("perm"))]
+        ),
+        "writable_sections": len([s for s in valid_sections if "w" in _string_value(s.get("perm"))]),
     }
 
 
 def _structural_imports(imports: list[dict[str, Any]]) -> dict[str, Any]:
+    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     return {
-        "import_count": len(imports),
+        "import_count": len(valid_imports),
         "imported_dlls": list(
             {
-                imp.get("libname") or imp.get("library", "")
-                for imp in imports
-                if imp.get("libname") or imp.get("library")
+                dll
+                for imp in valid_imports
+                if (dll := _string_value(imp.get("libname") or imp.get("library")))
             }
         ),
-        "imported_functions": [imp.get("name", "") for imp in imports if imp.get("name")],
+        "imported_functions": [
+            name for imp in valid_imports if (name := _string_value(imp.get("name")))
+        ],
     }
 
 
 def _structural_exports(exports: list[dict[str, Any]]) -> dict[str, Any]:
+    valid_exports = [exp for exp in exports if isinstance(exp, dict)]
     return {
-        "export_count": len(exports),
-        "exported_functions": [exp.get("name", "") for exp in exports if exp.get("name")],
+        "export_count": len(valid_exports),
+        "exported_functions": [
+            name for exp in valid_exports if (name := _string_value(exp.get("name")))
+        ],
     }
 
 
@@ -203,7 +231,12 @@ class BinDiffFeatureExtractor:
         try:
             strings = self.adapter.get_strings() if self.adapter else []
             if strings:
-                string_values = [s.get("string", "") for s in strings if s.get("string")]
+                string_values = [
+                    string_value
+                    for s in strings
+                    if isinstance(s, dict)
+                    and (string_value := _string_value(s.get("string")))
+                ]
                 features["total_strings"] = len(string_values)
                 features["unique_strings"] = len(set(string_values))
                 features["string_lengths"] = [len(s) for s in string_values]
@@ -238,10 +271,19 @@ class BinDiffFeatureExtractor:
             strings = self.adapter.get_strings() if self.adapter else []
             imports = self.adapter.get_imports() if self.adapter else []
             if strings:
-                string_values = [s.get("string", "") for s in strings if s.get("string")]
+                string_values = [
+                    string_value
+                    for s in strings
+                    if isinstance(s, dict)
+                    and (string_value := _string_value(s.get("string")))
+                ]
                 features.update(_behavioral_string_indicators(string_values))
             if imports:
-                import_names = [imp.get("name", "") for imp in imports if imp.get("name")]
+                import_names = [
+                    name
+                    for imp in imports
+                    if isinstance(imp, dict) and (name := _string_value(imp.get("name")))
+                ]
                 features.update(_behavioral_import_indicators(import_names))
         except Exception as exc:
             logger.debug("Error extracting behavioral features: %s", exc)
