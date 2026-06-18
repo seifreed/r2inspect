@@ -71,7 +71,14 @@ def _build_unique_bigrams(instructions: list[str]) -> list[str]:
 
 def count_unique_signatures(function_signatures: dict[str, dict[str, Any]]) -> int:
     """Count unique function signatures."""
-    return len({sig["signature"] for sig in function_signatures.values()})
+    signatures: set[str] = set()
+    for sig in function_signatures.values():
+        if not isinstance(sig, dict):
+            continue
+        signature = sig.get("signature")
+        if isinstance(signature, str) and signature:
+            signatures.add(signature)
+    return len(signatures)
 
 
 def build_similar_groups(signature_groups: dict[str, list[str]]) -> list[dict[str, Any]]:
@@ -95,7 +102,11 @@ def build_similar_function_groups(
     """Group functions that share the same signature."""
     signature_groups: dict[str, list[str]] = defaultdict(list)
     for func_name, func_data in function_signatures.items():
-        signature = func_data["signature"]
+        if not isinstance(func_data, dict):
+            continue
+        signature = func_data.get("signature")
+        if not isinstance(signature, str) or not signature:
+            continue
         signature_groups[signature].append(clean_function_name(func_name))
 
     similar_groups = build_similar_groups(signature_groups)

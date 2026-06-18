@@ -50,6 +50,16 @@ def test_count_unique_signatures() -> None:
     assert count_unique_signatures(function_signatures) == 2
 
 
+def test_count_unique_signatures_skips_malformed_entries() -> None:
+    function_signatures = {
+        "f1": {"signature": "a"},
+        "f2": "bad",
+        "f3": {"signature": None},
+    }
+
+    assert count_unique_signatures(function_signatures) == 1
+
+
 def test_build_similar_function_groups_only_returns_duplicates() -> None:
     function_signatures = {
         "func_a": {"signature": "same"},
@@ -62,6 +72,20 @@ def test_build_similar_function_groups_only_returns_duplicates() -> None:
     assert len(groups) == 1
     assert groups[0]["count"] == 2
     assert "func_a" in groups[0]["functions"]
+
+
+def test_build_similar_function_groups_skips_malformed_entries() -> None:
+    function_signatures = {
+        "func_a": {"signature": "same"},
+        "func_b": "bad",
+        "func_c": {"signature": None},
+        "func_d": {"signature": "same"},
+    }
+
+    groups = build_similar_function_groups(function_signatures)
+
+    assert len(groups) == 1
+    assert groups[0]["count"] == 2
 
 
 def test_accumulate_bloom_bits_and_stats() -> None:
