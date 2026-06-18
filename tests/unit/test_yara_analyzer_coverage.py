@@ -514,6 +514,23 @@ def test_process_matches_exception():
     assert isinstance(result, list)
 
 
+def test_process_matches_skips_malformed_items():
+    config = FakeConfig("/tmp/rules")
+    analyzer = YaraAnalyzer(FakeAdapter(), config=config)
+    instance = FakeMatchInstance(0x100, b"hello", has_length=True)
+    valid = FakeYaraMatch(
+        rule="TestRule",
+        namespace="default",
+        tags=["tag1"],
+        meta={"description": "test"},
+        strings=[FakeStringMatch("$a", [instance])],
+    )
+    malformed = object()
+    result = analyzer._process_matches([malformed, valid])
+    assert len(result) == 1
+    assert result[0]["rule"] == "TestRule"
+
+
 # ---------------------------------------------------------------------------
 # create_default_rules
 # ---------------------------------------------------------------------------

@@ -51,6 +51,8 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
     matches: list[dict[str, Any]] = []
     try:
         for match in yara_matches:
+            if not hasattr(match, "rule") or not hasattr(match, "strings"):
+                continue
             match_info = {
                 "rule": match.rule,
                 "namespace": match.namespace,
@@ -59,8 +61,12 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
                 "strings": [],
             }
             for string_match in match.strings:
+                if not hasattr(string_match, "identifier") or not hasattr(string_match, "instances"):
+                    continue
                 string_info = {"identifier": string_match.identifier, "instances": []}
                 for instance in string_match.instances:
+                    if not hasattr(instance, "offset") or not hasattr(instance, "matched_data"):
+                        continue
                     matched_data = instance.matched_data.decode("utf-8", errors="ignore")
                     length = getattr(instance, "length", len(instance.matched_data))
                     string_info["instances"].append(
