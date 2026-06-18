@@ -230,6 +230,17 @@ def test_apply_pe_characteristics_sets_memory_flags():
     assert analysis["is_writable"] is True
 
 
+def test_apply_pe_characteristics_accepts_hex_string():
+    analyzer = _build_analyzer(sections=[])
+    section = {"characteristics": "0x20000000"}
+    analysis = {"is_executable": False, "is_writable": False, "is_readable": False}
+
+    analyzer._apply_pe_characteristics(section, analysis)
+
+    assert analysis["pe_characteristics"]
+    assert analysis["is_executable"] is True
+
+
 def test_check_section_name_indicators_include_nonstandard_and_suspicious():
     analyzer = _build_analyzer(sections=[])
     indicators = analyzer._check_section_name_indicators(".custom")

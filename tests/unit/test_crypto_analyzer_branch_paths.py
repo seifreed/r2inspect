@@ -219,6 +219,21 @@ def test_detect_crypto_constants_finds_hits():
     assert len(result) >= 0
 
 
+def test_detect_crypto_constants_accepts_hex_string_values():
+    analyzer = CryptoAnalyzer(CryptoConstantAdapter())
+    analyzer.crypto_constants = {"aes_sbox": ["0x63"]}
+
+    result = analyzer._detect_crypto_constants()
+
+    assert result == [
+        {
+            "type": "aes_sbox",
+            "value": "0x63",
+            "addresses": ["0x00401234"],
+        }
+    ]
+
+
 # ---------------------------------------------------------------------------
 # _detect_via_api_calls() - lines 147-150
 # ---------------------------------------------------------------------------

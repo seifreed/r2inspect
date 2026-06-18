@@ -51,16 +51,19 @@ def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> lis
     try:
         for const_name, const_values in analyzer.crypto_constants.items():
             for value in const_values:
-                if isinstance(value, int):
-                    result = analyzer._search_hex(f"{value:08x}")
-                    if result and result.strip():
-                        found_constants.append(
-                            {
-                                "type": const_name,
-                                "value": hex(value),
-                                "addresses": analyzer._parse_search_results(result),
-                            }
-                        )
+                try:
+                    const_value = int(value, 0) if isinstance(value, str) else int(value)
+                except (TypeError, ValueError):
+                    continue
+                result = analyzer._search_hex(f"{const_value:08x}")
+                if result and result.strip():
+                    found_constants.append(
+                        {
+                            "type": const_name,
+                            "value": hex(const_value),
+                            "addresses": analyzer._parse_search_results(result),
+                        }
+                    )
     except Exception as exc:
         logger.error("Error detecting crypto constants: %s", exc)
     return found_constants
