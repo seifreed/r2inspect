@@ -612,6 +612,17 @@ def test_compute_authenticode_hash_success():
     assert "regions" in result
 
 
+def test_compute_authenticode_hash_coerces_string_file_size():
+    class StringSizeAdapter(_BaseAdapter):
+        def get_file_info(self):
+            return {"core": {"size": "10000"}}
+
+    analyzer = AuthenticodeAnalyzer(adapter=StringSizeAdapter())
+    result = analyzer._compute_authenticode_hash()
+    assert result is not None
+    assert result["file_size"] == 10000
+
+
 def test_compute_authenticode_hash_no_file_info_returns_none():
     class NullFileInfoAdapter(_BaseAdapter):
         def get_file_info(self):
@@ -714,6 +725,21 @@ def test_verify_signature_integrity_security_dir_size_zero_returns_false():
                 "certificates": ["cert"],
                 "errors": [],
                 "security_directory": {"size": 0},
+            }
+        )
+        is False
+    )
+
+
+def test_verify_signature_integrity_string_zero_size_returns_false():
+    analyzer = AuthenticodeAnalyzer(adapter=None)
+    assert (
+        analyzer._verify_signature_integrity(
+            {
+                "has_signature": True,
+                "certificates": ["cert"],
+                "errors": [],
+                "security_directory": {"size": "0"},
             }
         )
         is False

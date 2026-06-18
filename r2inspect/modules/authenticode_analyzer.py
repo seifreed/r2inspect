@@ -22,6 +22,13 @@ from .authenticode_result_support import (
 logger = get_logger(__name__)
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Analyzes and verifies Authenticode signatures in PE files."""
 
@@ -206,13 +213,13 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 positions.append(i)
         return positions
 
-    def _compute_authenticode_hash(self) -> dict[str, str | None] | None:
+    def _compute_authenticode_hash(self) -> dict[str, Any] | None:
         """Compute the Authenticode hash of the PE file."""
         try:
             file_info = self._cmdj("ij", {})
             if not file_info:
                 return None
-            file_size = file_info.get("core", {}).get("size", 0)
+            file_size = _to_int(file_info.get("core", {}).get("size", 0))
             if file_size == 0:
                 return None
             pe_header = self._cmdj("ihj", {})
@@ -241,7 +248,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             if signature_info.get("errors"):
                 return False
             sec_dir = signature_info.get("security_directory")
-            return not (not sec_dir or sec_dir.get("size", 0) == 0)
+            return not (not sec_dir or _to_int(sec_dir.get("size", 0)) == 0)
         except Exception as exc:
             logger.error("Error verifying signature: %s", exc)
             return False
