@@ -189,11 +189,13 @@ class FormatDetectionStage(AnalysisStage):
             return None
 
         bin_info = info_cmd["bin"]
+        core_info = info_cmd.get("core")
+        core_format = str(core_info.get("format", "")) if isinstance(core_info, dict) else ""
         bin_format = (
             str(bin_info.get("format", ""))
             or str(bin_info.get("class", ""))
             or str(bin_info.get("bintype", ""))
-            or str(info_cmd.get("core", {}).get("format", ""))
+            or core_format
         ).upper()
         format_map = {"PE": "PE", "ELF": "ELF", "MACH": "Mach-O"}
 
