@@ -207,7 +207,12 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         try:
             result = (telfhash_fn or _safe_telfhash)(filepath)
             if isinstance(result, list) and len(result) > 0:
-                return TelfhashAnalyzer._normalize_telfhash_value(result[0].get("telfhash"))
+                first_entry = result[0]
+                if isinstance(first_entry, dict):
+                    return TelfhashAnalyzer._normalize_telfhash_value(
+                        first_entry.get("telfhash")
+                    )
+                return TelfhashAnalyzer._normalize_telfhash_value(first_entry)
             elif isinstance(result, dict):
                 return TelfhashAnalyzer._normalize_telfhash_value(result.get("telfhash"))
             return TelfhashAnalyzer._normalize_telfhash_value(result)

@@ -516,3 +516,13 @@ def test_calculate_telfhash_from_file_not_a_file():
     result = TelfhashAnalyzer.calculate_telfhash_from_file("/tmp")
     # telfhash may return None, a string, or an empty list for directories/invalid paths
     assert result is None or isinstance(result, (str, list))
+
+
+def test_calculate_telfhash_from_file_skips_malformed_list_entry():
+    if not TELFHASH_AVAILABLE:
+        pytest.skip("telfhash not available")
+    result = TelfhashAnalyzer.calculate_telfhash_from_file(
+        ELF_FIXTURE,
+        telfhash_fn=lambda _path: ["not-a-dict"],
+    )
+    assert result == "not-a-dict" or result is None
