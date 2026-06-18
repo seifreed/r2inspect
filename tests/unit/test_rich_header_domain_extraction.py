@@ -390,6 +390,23 @@ def test_calculate_richpe_hash_from_entries():
     assert result == expected
 
 
+def test_calculate_richpe_hash_skips_malformed_entries():
+    entries = [
+        "bad",
+        {"prodid": None, "count": 10},
+        {"prodid": 0x00930001, "count": 10},
+    ]
+    rich_data = {"entries": entries}
+
+    result = calculate_richpe_hash(rich_data)
+
+    clear_bytes = bytearray(struct.pack("<I", 0x536E6144)) + b"\x00" * 12
+    clear_bytes.extend(struct.pack("<I", 0x00930001))
+    clear_bytes.extend(struct.pack("<I", 10))
+    expected = hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
+    assert result == expected
+
+
 def test_calculate_richpe_hash_no_data():
     rich_data = {}
 

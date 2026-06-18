@@ -268,9 +268,17 @@ def calculate_richpe_hash(rich_data: dict[str, Any]) -> str | None:
     # that matches neither pefile nor any other tool's RichPE IOC.
     clear_bytes = bytearray(struct.pack("<I", 0x536E6144))
     clear_bytes.extend(b"\x00" * 12)
+    packed_entries = 0
     for entry in entries:
+        if not isinstance(entry, dict):
+            continue
         prodid = entry.get("prodid", 0)
         count = entry.get("count", 0)
+        if not isinstance(prodid, int) or not isinstance(count, int):
+            continue
         clear_bytes.extend(struct.pack("<I", prodid))
         clear_bytes.extend(struct.pack("<I", count))
+        packed_entries += 1
+    if packed_entries == 0:
+        return None
     return hashlib.md5(clear_bytes, usedforsecurity=False).hexdigest()
