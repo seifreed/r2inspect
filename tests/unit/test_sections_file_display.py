@@ -95,6 +95,24 @@ def test_display_file_info_with_enhanced_detection():
     assert "high" in output
 
 
+def test_display_file_info_with_string_confidence():
+    results = {
+        "file_info": {
+            "name": "test.exe",
+            "enhanced_detection": {
+                "file_format": "PE",
+                "format_category": "executable",
+                "architecture": "x86",
+                "bits": 32,
+                "endianness": "little",
+                "confidence": "0.95",
+            },
+        }
+    }
+    output = _capture(_display_file_info, results)
+    assert "95.00%" in output
+
+
 def test_display_file_info_empty_enhanced():
     results = {"file_info": {"name": "test.exe", "enhanced_detection": {}}}
     output = _capture(_display_file_info, results)

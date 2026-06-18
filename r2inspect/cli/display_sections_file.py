@@ -14,6 +14,13 @@ from .presenter import get_section as _get_section
 Results = dict[str, Any]
 
 
+def _coerce_percent(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _get_console() -> Console:
     from .display_base import _get_console as _base_get_console
 
@@ -47,7 +54,7 @@ def _display_file_info(results: Results) -> None:
             f"{enhanced.get('architecture', 'Unknown')} ({enhanced.get('bits', 'Unknown')} bits)",
         )
         table.add_row("Endianness", enhanced.get("endianness", "Unknown"))
-        table.add_row("Confidence", f"{enhanced.get('confidence', 0):.2%}")
+        table.add_row("Confidence", f"{_coerce_percent(enhanced.get('confidence')):.2%}")
         table.add_row("Threat Level", file_info.get("threat_level", "Unknown"))
 
     for key, value in basic_info.items():
