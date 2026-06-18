@@ -22,7 +22,7 @@ def determine_pe_file_type(
     if file_type not in {PE32_PLUS, "PE32", "PE", "Unknown"}:
         return file_type
 
-    if file_desc:
+    if isinstance(file_desc, str) and file_desc:
         desc = file_desc.lower()
         if "dll" in desc:
             return "DLL"

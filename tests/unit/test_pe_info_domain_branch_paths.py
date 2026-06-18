@@ -73,6 +73,12 @@ def test_determine_pe_file_type_pe32plus_dll():
     assert result == "DLL"
 
 
+def test_determine_pe_file_type_non_string_description_ignored():
+    """Non-string descriptions are ignored and fall back to class."""
+    result = determine_pe_file_type({"class": "PE32"}, None, 123)  # type: ignore[arg-type]
+    assert result == "PE32"
+
+
 # ---------------------------------------------------------------------------
 # determine_pe_format() - lines 33, 37, 41-48
 # ---------------------------------------------------------------------------
