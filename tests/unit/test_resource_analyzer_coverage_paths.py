@@ -524,6 +524,15 @@ def test_resource_analyzer_read_version_info_data_coerces_string_args() -> None:
     assert len(result) == 100
 
 
+def test_resource_analyzer_read_version_info_data_coerces_hex_string_args() -> None:
+    byte_data = [0] * 100
+    hex_str = _bytes_to_hex(byte_data)
+    analyzer = _make_analyzer(cmd_map={"p8": hex_str})
+    result = analyzer._read_version_info_data("0x1000", "0x100")
+    assert result is not None
+    assert len(result) == 100
+
+
 # ── _find_vs_signature ───────────────────────────────────────────────────
 
 
