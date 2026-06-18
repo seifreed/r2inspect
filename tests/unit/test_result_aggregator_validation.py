@@ -232,12 +232,40 @@ def test_build_security_assessment_no_security():
     assert assessment["security_features"]["dep"] is False
 
 
+def test_build_security_assessment_non_dict_buckets_are_skipped():
+    results = {
+        "security": None,
+        "packer": None,
+    }
+
+    assessment = _build_security_assessment(results)
+    assert assessment["is_signed"] is False
+    assert assessment["is_packed"] is False
+    assert assessment["packer_type"] is None
+
+
 def test_build_threat_indicators_clean():
     results = {
         "imports": [],
         "yara_matches": [],
         "sections": [],
         "crypto": {},
+    }
+
+    indicators = _build_threat_indicators(results)
+    assert indicators["suspicious_imports"] == 0
+    assert indicators["yara_matches"] == 0
+    assert indicators["entropy_warnings"] == 0
+    assert indicators["suspicious_sections"] == 0
+    assert indicators["crypto_indicators"] == 0
+
+
+def test_build_threat_indicators_non_list_buckets_are_skipped():
+    results = {
+        "imports": None,
+        "yara_matches": None,
+        "sections": None,
+        "crypto": None,
     }
 
     indicators = _build_threat_indicators(results)

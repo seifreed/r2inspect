@@ -25,6 +25,16 @@ SUMMARY_BUILDERS = {
 }
 
 
+def _dict_bucket(analysis_results: dict[str, Any], key: str) -> dict[str, Any]:
+    value = analysis_results.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _list_bucket(analysis_results: dict[str, Any], key: str) -> list[Any]:
+    value = analysis_results.get(key)
+    return value if isinstance(value, list) else []
+
+
 def _count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
     """Count imported APIs commonly associated with suspicious execution flows.
 
@@ -75,12 +85,8 @@ def _count_crypto_indicators(crypto: dict[str, Any]) -> int:
 
 def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the high-level file identity section of the executive summary."""
-    file_info = analysis_results["file_info"]
-    if not isinstance(file_info, dict):
-        file_info = {}
-    pe_info = analysis_results["pe_info"]
-    if not isinstance(pe_info, dict):
-        pe_info = {}
+    file_info = _dict_bucket(analysis_results, "file_info")
+    pe_info = _dict_bucket(analysis_results, "pe_info")
     overview = {
         "filename": file_info.get("name", "Unknown"),
         "file_type": file_info.get("file_type", "Unknown"),
@@ -107,8 +113,8 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
 
 def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the security posture section for the executive summary."""
-    security = analysis_results["security"]
-    packer = analysis_results["packer"]
+    security = _dict_bucket(analysis_results, "security")
+    packer = _dict_bucket(analysis_results, "packer")
     return {
         "is_signed": security.get("authenticode", False),
         "is_packed": packer.get("is_packed", False),
@@ -126,25 +132,21 @@ def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any
 def build_threat_indicators(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the threat-indicator section from imports, sections, YARA and crypto."""
     return {
-        "suspicious_imports": _count_suspicious_imports(analysis_results["imports"]),
-        "yara_matches": len(analysis_results["yara_matches"]),
-        "entropy_warnings": _count_high_entropy_sections(analysis_results["sections"]),
-        "suspicious_sections": _count_suspicious_sections(analysis_results["sections"]),
-        "crypto_indicators": _count_crypto_indicators(analysis_results["crypto"]),
+        "suspicious_imports": _count_suspicious_imports(_list_bucket(analysis_results, "imports")),
+        "yara_matches": len(_list_bucket(analysis_results, "yara_matches")),
+        "entropy_warnings": _count_high_entropy_sections(_list_bucket(analysis_results, "sections")),
+        "suspicious_sections": _count_suspicious_sections(_list_bucket(analysis_results, "sections")),
+        "crypto_indicators": _count_crypto_indicators(_dict_bucket(analysis_results, "crypto")),
     }
 
 
 def build_technical_details(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the technical-detail section of the executive summary."""
-    functions = analysis_results["functions"]
-    if not isinstance(functions, dict):
-        functions = {}
-    crypto = analysis_results["crypto"]
-    if not isinstance(crypto, dict):
-        crypto = {}
+    functions = _dict_bucket(analysis_results, "functions")
+    crypto = _dict_bucket(analysis_results, "crypto")
     return {
-        "imports": len(analysis_results["imports"]),
-        "sections": len(analysis_results["sections"]),
+        "imports": len(_list_bucket(analysis_results, "imports")),
+        "sections": len(_list_bucket(analysis_results, "sections")),
         "functions": functions.get("count", 0),
         "crypto_matches": len(crypto.get("matches", [])),
     }
