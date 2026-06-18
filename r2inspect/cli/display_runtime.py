@@ -131,8 +131,15 @@ def display_error_statistics(error_stats: dict[str, Any], *, get_console: Any) -
         severity_table.add_column("Severity", style="cyan")
         severity_table.add_column("Count", style="red")
         for severity, count in errors_by_severity.items():
-            color = "red" if severity == "critical" else "yellow" if severity == "high" else "dim"
-            severity_table.add_row(f"[{color}]{severity.title()}[/{color}]", str(count))
+            severity_label = str(severity) if severity is not None else "unknown"
+            color = (
+                "red"
+                if severity_label == "critical"
+                else "yellow"
+                if severity_label == "high"
+                else "dim"
+            )
+            severity_table.add_row(f"[{color}]{severity_label.title()}[/{color}]", str(count))
         get_console().print(severity_table)
 
     get_console().print()

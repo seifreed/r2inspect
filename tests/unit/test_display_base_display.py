@@ -542,6 +542,20 @@ def test_display_error_statistics_with_severities():
     assert "Low" in output
 
 
+def test_display_error_statistics_with_non_string_severity_keys():
+    con, buf = _make_console()
+    error_stats = {
+        "total_errors": 1,
+        "recent_errors": 1,
+        "recovery_strategies_available": 0,
+        "errors_by_category": {},
+        "errors_by_severity": {None: 2},
+    }
+    runtime_display_error_statistics(error_stats, get_console=lambda: con)
+    output = _captured(buf)
+    assert "Unknown" in output
+
+
 def test_display_error_statistics_complete():
     class ErrorCategory:
         def __init__(self, value: str):
