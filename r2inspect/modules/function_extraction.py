@@ -8,6 +8,13 @@ from typing import Any, Protocol
 from ..domain.services.binary_helpers import clean_function_name
 
 
+def _to_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 class FunctionExtractionHost(Protocol):
     """Capabilities a host must expose to collect functions via radare2."""
 
@@ -38,10 +45,11 @@ def collect_valid_functions(
     for func in functions:
         if not isinstance(func, dict):
             continue
-        size = func.get("size", 0)
-        if not isinstance(size, int):
-            size = 0
-        if func.get("addr") is not None and size > 0:
+        addr = _to_int(func.get("addr", 0))
+        size = _to_int(func.get("size", 0))
+        if addr > 0 and size > 0:
+            func["addr"] = addr
+            func["size"] = size
             if clean_names and isinstance(func.get("name"), str) and func.get("name"):
                 func["name"] = clean_function_name(func["name"])
             valid_functions.append(func)
