@@ -256,6 +256,16 @@ def test_apply_rich_header_detection_skips_malformed_entries():
     assert cd._apply_rich_header_detection(results) is False
 
 
+def test_apply_rich_header_detection_skips_non_string_compiler_name():
+    class _MalformedRich(CompilerDetector):
+        def _analyze_rich_header(self) -> dict[str, Any]:
+            return {"available": True, "compilers": [{"compiler_name": 123}]}
+
+    cd = _MalformedRich(_MinimalAdapter())
+    results: dict[str, Any] = {}
+    assert cd._apply_rich_header_detection(results) is False
+
+
 # ---------------------------------------------------------------------------
 # _apply_best_compiler - line 156: empty scores early return
 # ---------------------------------------------------------------------------

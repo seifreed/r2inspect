@@ -45,6 +45,8 @@ def apply_rich_header_detection(
         if not isinstance(compiler_entry, dict):
             continue
         compiler_name = compiler_entry.get("compiler_name", "")
+        if not isinstance(compiler_name, str):
+            continue
         if "MSVC" not in compiler_name and "Utc" not in compiler_name:
             continue
         results["detected"] = True
