@@ -231,6 +231,8 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
             if ph_info:
                 for header in ph_info:
+                    if not isinstance(header, dict):
+                        continue
                     headers.append(
                         {
                             "type": header.get("type", "Unknown"),

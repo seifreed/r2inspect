@@ -137,6 +137,23 @@ def test_get_section_info_skips_non_dict_entries():
     assert result[1]["name"] == ".data"
 
 
+def test_get_program_headers_skips_non_dict_entries():
+    adapter = FakeAdapter(
+        cmdj_responses={
+            "ihj": [
+                {"type": "LOAD", "flags": "R", "offset": 0, "vaddr": 0x1000, "paddr": 0x1000, "filesz": 1, "memsz": 1},
+                "bad",
+                {"type": "NOTE", "flags": "R", "offset": 1, "vaddr": 0x2000, "paddr": 0x2000, "filesz": 2, "memsz": 2},
+            ]
+        }
+    )
+    analyzer = ELFAnalyzer(adapter)
+    result = analyzer._get_program_headers()
+    assert len(result) == 2
+    assert result[0]["type"] == "LOAD"
+    assert result[1]["type"] == "NOTE"
+
+
 def test_get_section_info_error():
     adapter = ErrorCmdAdapter()
     analyzer = ELFAnalyzer(adapter)
