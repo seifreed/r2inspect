@@ -530,6 +530,13 @@ def test_add_bindiff_structural_seven_sections_exactly():
     assert len(table.rows) == 6
 
 
+def test_add_bindiff_structural_skips_non_list_section_names():
+    table = _make_table()
+    structural = {"file_type": "ELF", "section_names": 123}
+    _add_bindiff_structural(table, structural)
+    assert len(table.rows) == 5
+
+
 def test_add_bindiff_functions_with_cfg():
     table = _make_table()
     function_features = {
