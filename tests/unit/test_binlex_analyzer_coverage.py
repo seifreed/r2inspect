@@ -876,6 +876,31 @@ def test_collect_function_signatures_coerces_string_addr():
     assert sigs["string_func"][2]["signature"] == "sig"
 
 
+def test_collect_function_signatures_coerces_hex_string_addr():
+    class StableSignatureBinlexAnalyzer(BinlexAnalyzer):
+        def _analyze_function(
+            self, func_addr: int, func_name: str, ngram_sizes: list[int]
+        ) -> dict[int, dict[str, Any]]:
+            self.recorded = (func_addr, func_name, ngram_sizes)
+            return {
+                2: {
+                    "signature": "sig",
+                    "ngrams": ["mov ret"],
+                    "token_count": 2,
+                    "ngram_count": 1,
+                    "unique_ngrams": 1,
+                }
+            }
+
+    analyzer = StableSignatureBinlexAnalyzer(adapter=None, filepath=None)
+    functions = [{"name": "hex_func", "addr": "0x1000", "size": 100}]
+    sigs, _all_ngrams, count = analyzer._collect_function_signatures(functions, [2])
+
+    assert count == 1
+    assert analyzer.recorded == (4096, "hex_func", [2])
+    assert sigs["hex_func"][2]["signature"] == "sig"
+
+
 def test_extract_functions_skips_malformed_aflj_entries():
     class AdapterWithMalformedFunctions:
         def analyze_all(self) -> None:
