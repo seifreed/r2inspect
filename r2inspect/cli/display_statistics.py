@@ -76,8 +76,9 @@ def _display_circuit_breaker_statistics(circuit_stats: dict[str, Any]) -> None:
 
     cb_entries = []
     for metric, value in circuit_stats.items():
-        if isinstance(value, int | float) and value > 0:
-            cb_entries.append((metric, value))
+        coerced_value = _coerce_float(value)
+        if coerced_value > 0:
+            cb_entries.append((metric, coerced_value))
 
     if not cb_entries:
         return

@@ -169,3 +169,16 @@ def test_display_circuit_breaker_statistics_prints_positive_metrics() -> None:
     assert "4" in text
     assert "Open Circuits" in text
     assert "2" in text
+
+
+def test_display_circuit_breaker_statistics_accepts_string_metrics() -> None:
+    console = _make_console()
+    with _console_scope(console):
+        stats._display_circuit_breaker_statistics(
+            {"total_failures": "4", "open_circuits": "2", "state": "closed"}
+        )
+
+    text = _get_text(console)
+    assert "Circuit Breaker Statistics" in text
+    assert "Total Failures" in text
+    assert "Open Circuits" in text
