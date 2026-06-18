@@ -13,6 +13,10 @@ def _coerce_function_size(value: Any) -> int:
         return 0
 
 
+def _coerce_function_type(value: Any) -> str:
+    return value if isinstance(value, str) and value else "unknown"
+
+
 def extract_mnemonics_from_ops(ops: list[Any]) -> list[str]:
     """Extract instruction mnemonics from radare2 op dictionaries."""
     mnemonics: list[str] = []
@@ -89,7 +93,7 @@ def build_function_stats(functions: list[dict[str, Any]] | None) -> dict[str, An
 
     function_types: dict[str, int] = {}
     for func in functions:
-        func_type = func.get("type", "unknown")
+        func_type = _coerce_function_type(func.get("type"))
         function_types[func_type] = function_types.get(func_type, 0) + 1
     stats["function_types"] = function_types
 

@@ -59,6 +59,20 @@ def test_build_function_stats_skips_malformed_entries() -> None:
     assert result["largest_functions"] == [("main", 12)]
 
 
+def test_build_function_stats_coerces_malformed_types() -> None:
+    functions = [
+        {"name": "main", "size": 12, "type": "fcn"},
+        {"name": "bad_list", "size": 8, "type": ["bad"]},
+        {"name": "bad_dict", "size": 4, "type": {"bad": "type"}},
+        {"name": "missing", "size": 2, "type": None},
+    ]
+
+    result = build_function_stats(functions)
+
+    assert result["total_functions"] == 4
+    assert result["function_types"] == {"fcn": 1, "unknown": 3}
+
+
 def test_group_functions_by_machoc_hash_keeps_only_duplicates() -> None:
     hashes = {"a": "h1", "b": "h1", "c": "h2", "d": "h3", "e": "h3"}
 

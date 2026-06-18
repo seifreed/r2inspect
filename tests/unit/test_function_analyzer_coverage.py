@@ -557,14 +557,12 @@ def test_generate_function_stats_no_size():
     assert result["functions_with_size"] == 0
 
 
-def test_generate_function_stats_exception_returns_error():
+def test_generate_function_stats_skips_malformed_entries():
     adapter = MinimalAdapter()
     analyzer = FunctionAnalyzer(adapter)
-    # Trigger exception in stats by passing something that causes iteration error on .get()
-    # Wrapping list of non-dicts so that func.get("size", 0) raises AttributeError
     funcs_bad = [1, 2, 3]  # ints have no .get()
     result = analyzer._generate_function_stats(funcs_bad)  # type: ignore
-    assert "error" in result
+    assert result == {}
 
 
 # ---------------------------------------------------------------------------

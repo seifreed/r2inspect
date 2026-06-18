@@ -577,15 +577,14 @@ def test_generate_function_stats_with_no_size_field():
 
 
 # ---------------------------------------------------------------------------
-# _generate_function_stats - exception path (lines 326-328)
+# _generate_function_stats - malformed input
 # ---------------------------------------------------------------------------
 
 
-def test_generate_function_stats_returns_error_on_exception():
+def test_generate_function_stats_skips_malformed_entries():
     analyzer = FunctionAnalyzer(_NoFunctionsAdapter())
-    # Passing integers (no .get()) triggers AttributeError inside the loop
     result = analyzer._generate_function_stats([1, 2, 3])  # type: ignore
-    assert "error" in result
+    assert result == {}
 
 
 # ---------------------------------------------------------------------------
