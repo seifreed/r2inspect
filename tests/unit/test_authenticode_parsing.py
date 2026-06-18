@@ -727,6 +727,21 @@ class TestAuthenticodeHash:
         assert result["algorithm"] == "SHA256"
         assert result["file_size"] == 10000
 
+    def test_compute_authenticode_hash_accepts_hex_file_size(self):
+        """Test hash computation accepts hex string file size."""
+        analyzer = _make_analyzer(
+            cmdj_map={
+                "ij": {"core": {"size": "0x2710"}},
+                "ihj": {"format": "pe"},
+                "iHj": {"optional_header": True},
+            }
+        )
+
+        result = analyzer._compute_authenticode_hash()
+
+        assert result is not None
+        assert result["file_size"] == 10000
+
     def test_compute_authenticode_hash_exception(self):
         """Test hash computation with exception."""
         fake_r2 = FakeR2()
