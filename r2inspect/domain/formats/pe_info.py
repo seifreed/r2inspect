@@ -103,15 +103,19 @@ def characteristics_from_header(
 
 
 def normalize_resource_entries(resources: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "name": resource.get("name", "Unknown"),
-            "type": resource.get("type", "Unknown"),
-            "size": resource.get("size", 0),
-            "lang": resource.get("lang", "Unknown"),
-        }
-        for resource in resources
-    ]
+    normalized = []
+    for resource in resources:
+        if not isinstance(resource, dict):
+            continue
+        normalized.append(
+            {
+                "name": resource.get("name", "Unknown"),
+                "type": resource.get("type", "Unknown"),
+                "size": resource.get("size", 0),
+                "lang": resource.get("lang", "Unknown"),
+            }
+        )
+    return normalized
 
 
 def parse_version_info_text(version_result: str) -> dict[str, str]:
@@ -124,8 +128,10 @@ def parse_version_info_text(version_result: str) -> dict[str, str]:
 
 
 def characteristics_from_bin(bin_info: dict[str, Any], filepath: str | None) -> dict[str, bool]:
-    file_type = bin_info.get("type", "").lower()
-    class_type = bin_info.get("class", "").lower()
+    type_value = bin_info.get("type", "")
+    class_value = bin_info.get("class", "")
+    file_type = type_value.lower() if isinstance(type_value, str) else ""
+    class_type = class_value.lower() if isinstance(class_value, str) else ""
     path = (filepath or "").lower()
 
     is_dll = (

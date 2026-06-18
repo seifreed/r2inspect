@@ -282,6 +282,14 @@ def test_normalize_resource_entries_uses_defaults():
     assert result[0]["lang"] == "Unknown"
 
 
+def test_normalize_resource_entries_skips_malformed_entries():
+    """normalize_resource_entries skips non-dict resource entries."""
+    result = normalize_resource_entries(["bad", {"name": "ICON"}])
+    assert result == [
+        {"name": "ICON", "type": "Unknown", "size": 0, "lang": "Unknown"},
+    ]
+
+
 # ---------------------------------------------------------------------------
 # parse_version_info_text() - lines 118-123
 # ---------------------------------------------------------------------------
@@ -365,6 +373,13 @@ def test_characteristics_from_bin_none_path():
     assert isinstance(result, dict)
     assert "is_dll" in result
     assert "is_executable" in result
+
+
+def test_characteristics_from_bin_none_fields():
+    """characteristics_from_bin handles null fields from bin info."""
+    result = characteristics_from_bin({"type": None, "class": None}, "sample.dll")
+    assert result["is_dll"] is True
+    assert result["is_executable"] is False
 
 
 # ---------------------------------------------------------------------------
