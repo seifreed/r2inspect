@@ -85,7 +85,11 @@ def interpret_similarity_distance(distance: int) -> str:
     return "different"
 
 
-def get_length_category(length: int) -> str:
+def get_length_category(length: int | str | Any) -> str:
+    try:
+        length = int(length)
+    except (TypeError, ValueError):
+        return "short"
     if length < 8:
         return "short"
     if length < 32:
@@ -95,7 +99,10 @@ def get_length_category(length: int) -> str:
     return "very_long"
 
 
-def classify_opcode_type(mnemonic: str) -> str:
+def classify_opcode_type(mnemonic: str | Any) -> str:
+    if not isinstance(mnemonic, str) or not mnemonic:
+        return "other"
+    mnemonic = mnemonic.lower()
     if mnemonic in ["jmp", "je", "jne", "jz", "jnz", "jg", "jl", "jge", "jle", "call", "ret"]:
         return "control"
     if mnemonic in ["mov", "lea", "push", "pop", "xchg"]:

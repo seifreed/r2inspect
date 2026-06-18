@@ -3,6 +3,8 @@ from __future__ import annotations
 from r2inspect.domain.services.simhash import (
     build_feature_stats,
     build_similarity_groups,
+    classify_opcode_type,
+    get_length_category,
     interpret_similarity_distance,
 )
 
@@ -69,3 +71,10 @@ def test_interpret_similarity_distance() -> None:
     assert interpret_similarity_distance(10) == "similar"
     assert interpret_similarity_distance(20) == "somewhat_similar"
     assert interpret_similarity_distance(40) == "different"
+
+
+def test_classify_opcode_type_and_length_category_skip_malformed_inputs() -> None:
+    assert classify_opcode_type(None) == "other"
+    assert classify_opcode_type(123) == "other"
+    assert get_length_category("12") == "medium"
+    assert get_length_category("bad") == "short"
