@@ -34,8 +34,10 @@ class EntryPointLoader:
     def _get_entry_points_group(self, group: str) -> list[Any]:
         try:
             return list(self._entry_points_fn().select(group=group))
-        except Exception:
-            logging.getLogger(__name__).debug("No entry points available")
+        except Exception as exc:
+            logging.getLogger(__name__).exception(
+                "Error loading entry points for group '%s': %s", group, exc
+            )
             return []
 
     def _handle_entry_point(self, ep: Any) -> int:

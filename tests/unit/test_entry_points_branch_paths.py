@@ -96,6 +96,19 @@ def test_get_entry_points_group_returns_list():
     assert isinstance(result, list)
 
 
+def test_get_entry_points_group_logs_exception(caplog: pytest.LogCaptureFixture):
+    class _Boom:
+        def select(self, group=None):
+            raise RuntimeError("boom")
+
+    registry = AnalyzerRegistry(lazy_loading=False)
+    loader = EntryPointLoader(registry, entry_points_fn=lambda: _Boom())
+    with caplog.at_level("ERROR"):
+        result = loader._get_entry_points_group("nonexistent.group")
+    assert result == []
+    assert any("Error loading entry points" in record.message for record in caplog.records)
+
+
 # ---------------------------------------------------------------------------
 # EntryPointLoader._handle_entry_point() - lines 35-49
 # ---------------------------------------------------------------------------
