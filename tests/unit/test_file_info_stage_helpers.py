@@ -89,7 +89,11 @@ def test_format_detection_stage_ignores_basic_magic_detector_errors() -> None:
                 {"get_detectors": staticmethod(lambda: (None, _ExplodingDesc()))},
             )(),
         )
-        assert stage._detect_via_basic_magic() is None
+        try:
+            stage._detect_via_basic_magic()
+            raise AssertionError("expected PermissionError")
+        except PermissionError:
+            pass
     finally:
         path.unlink(missing_ok=True)
 
