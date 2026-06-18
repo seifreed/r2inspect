@@ -72,11 +72,17 @@ def validate_decoded_entries(decoded_entries: list[dict[str, Any]]) -> bool:
 
 def build_rich_header_result(decoded_entries: list[dict[str, Any]], xor_key: int) -> dict[str, Any]:
     checksum = 0
+    if not isinstance(decoded_entries, list):
+        return {"xor_key": xor_key, "checksum": checksum, "entries": []}
     for entry in decoded_entries:
         if not isinstance(entry, dict):
             continue
-        checksum ^= entry.get("prodid", 0)
-        checksum ^= entry.get("count", 0)
+        prodid = entry.get("prodid", 0)
+        count = entry.get("count", 0)
+        if not isinstance(prodid, int) or not isinstance(count, int):
+            continue
+        checksum ^= prodid
+        checksum ^= count
     return {
         "xor_key": xor_key,
         "checksum": checksum,

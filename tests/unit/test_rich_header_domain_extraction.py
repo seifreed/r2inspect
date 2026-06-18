@@ -368,6 +368,20 @@ def test_build_rich_header_result_empty_entries():
     assert result["entries"] == []
 
 
+def test_build_rich_header_result_non_list_entries():
+    result = build_rich_header_result(None, 0x12345678)  # type: ignore[arg-type]
+
+    assert result["checksum"] == 0
+    assert result["entries"] == []
+
+
+def test_build_rich_header_result_skips_non_int_fields():
+    entries = [{"prodid": 0x0001, "count": "bad"}]
+    result = build_rich_header_result(entries, 0x12345678)
+
+    assert result["checksum"] == 0
+
+
 def test_calculate_richpe_hash_from_clear_data_bytes():
     clear_data = struct.pack("<II", 0x00930001, 10)
     rich_data = {"clear_data_bytes": clear_data}
