@@ -44,11 +44,11 @@ class RichHeaderDirectMixin:
     def _bin_info_has_pe(bin_info: dict[str, Any]) -> bool:
         if not isinstance(bin_info, dict):
             return False
-        bin_format = bin_info.get("format", "").lower()
+        bin_format = str(bin_info.get("format", "")).lower()
         if "pe" in bin_format:
             logger.debug("PE detected via 'ij' format field")
             return True
-        bin_class = bin_info.get("class", "").lower()
+        bin_class = str(bin_info.get("class", "")).lower()
         if "pe" in bin_class:
             logger.debug("PE detected via 'ij' class field")
             return True
