@@ -9,6 +9,8 @@ from typing import Any
 
 def parse_comment_compiler_info(comment_data: str) -> dict[str, Any]:
     info: dict[str, Any] = {}
+    if not isinstance(comment_data, str):
+        return info
     compiler_match = re.search(r"GCC:\s*\(([^)]+)\)\s*([0-9.]+)", comment_data)
     if compiler_match:
         info["compiler"] = f"GCC {compiler_match.group(2)}"
@@ -34,6 +36,8 @@ def parse_dwarf_info(dwarf_lines: list[str]) -> dict[str, Any]:
 
 
 def parse_dwarf_producer(line: str) -> dict[str, Any] | None:
+    if not isinstance(line, str):
+        return None
     if "DW_AT_producer" not in line:
         return None
     producer_match = re.search(r"DW_AT_producer\s*:\s*(.+)", line)
@@ -55,6 +59,8 @@ def parse_dwarf_producer(line: str) -> dict[str, Any] | None:
 
 
 def parse_dwarf_compile_time(line: str) -> str | None:
+    if not isinstance(line, str):
+        return None
     if "DW_AT_comp_dir" not in line and "compilation" not in line.lower():
         return None
     date_match = re.search(r"(\d{4}-\d{2}-\d{2})", line)

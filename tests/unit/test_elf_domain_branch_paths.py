@@ -51,6 +51,11 @@ def test_parse_comment_compiler_info_empty_string():
     assert result == {}
 
 
+def test_parse_comment_compiler_info_non_string_returns_empty():
+    result = parse_comment_compiler_info(None)  # type: ignore[arg-type]
+    assert result == {}
+
+
 def test_parse_comment_compiler_info_gcc_and_clang_gcc_wins():
     # Only one should win - GCC match overwrites, then clang may set
     data = "GCC: (GNU) 11.1.0 clang version 13.0.0"
@@ -162,6 +167,11 @@ def test_parse_dwarf_compile_time_full_date_string():
     result = parse_dwarf_compile_time(line)
     # The extended pattern may or may not match, but should not crash
     assert result is None or isinstance(result, str)
+
+
+def test_parse_dwarf_helpers_non_string_inputs_return_none():
+    assert parse_dwarf_producer(None) is None  # type: ignore[arg-type]
+    assert parse_dwarf_compile_time(None) is None  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
