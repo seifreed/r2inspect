@@ -189,6 +189,13 @@ def test_analyze_import_exception_adds_error_key():
     assert "risk calculation error" in result["error"]
 
 
+def test_analyze_import_coerces_hex_plt_address():
+    analyzer = ImportAnalyzer(adapter=None)
+    imp = {"name": "CreateFileA", "plt": "0x1000", "libname": "kernel32.dll"}
+    result = analyzer._analyze_import(imp)
+    assert result["address"] == "0x1000"
+
+
 # ---------------------------------------------------------------------------
 # _get_function_description - line 206: return desc inside loop
 # ---------------------------------------------------------------------------

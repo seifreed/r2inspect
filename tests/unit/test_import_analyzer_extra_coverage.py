@@ -3,7 +3,6 @@
 
 import logging
 
-import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.import_analysis import build_import_statistics
 from r2inspect.modules.import_analyzer import ImportAnalyzer
