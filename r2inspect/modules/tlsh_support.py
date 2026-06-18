@@ -135,6 +135,8 @@ def find_similar_sections(
         if not analysis.get("available"):
             return []
         section_hashes = analysis.get("section_tlsh", {})
+        if not isinstance(section_hashes, dict):
+            return []
         similar_pairs: list[dict[str, Any]] = []
         section_names = list(section_hashes.keys())
         for index, name1 in enumerate(section_names):
