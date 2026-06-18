@@ -40,6 +40,8 @@ def indicator_rules() -> list[Any]:
 
 
 def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[str, Any]]:
+    if not isinstance(results, dict):
+        return []
     indicators: list[dict[str, Any]] = []
     for predicate, builder in rules:
         if predicate(results):
