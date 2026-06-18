@@ -95,7 +95,9 @@ class FileInfoStage(AnalysisStage):
         info["enhanced_detection"] = enhanced_detection
         info.update(self._enhanced_detection_info(enhanced_detection))
 
-        info.update(self.hash_calculator(self.filename))
+        hash_info = self.hash_calculator(self.filename)
+        if isinstance(hash_info, dict):
+            info.update(hash_info)
         info.update(self._bin_arch_info(self.adapter.get_file_info()))
 
         _results_bucket(context)["file_info"] = info

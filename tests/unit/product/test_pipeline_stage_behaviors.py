@@ -198,6 +198,25 @@ def test_file_info_stage_initializes_non_dict_results_bucket(tmp_path: Path) -> 
     assert context["results"]["file_info"]["architecture"] == "x86-64"
 
 
+def test_file_info_stage_ignores_non_dict_hash_calculator_result(tmp_path: Path) -> None:
+    sample = write_minimal_pe_file(tmp_path / "sample.exe")
+
+    def bad_hash_calculator(_filename: str) -> list[str]:
+        return ["not", "a", "dict"]
+
+    stage = FileInfoStage(
+        adapter=FakeAdapter({"bin": {"arch": "x86", "bits": 64, "endian": "little"}}),
+        filename=str(sample),
+        hash_calculator=bad_hash_calculator,  # type: ignore[arg-type]
+    )
+    context = make_stage_context()
+
+    result = stage._execute(context)
+
+    assert result["file_info"]["name"] == "sample.exe"
+    assert "sha256" not in result["file_info"]
+
+
 def test_format_detection_stage_falls_back_to_header_bytes_without_r2_info(
     tmp_path: Path,
 ) -> None:
