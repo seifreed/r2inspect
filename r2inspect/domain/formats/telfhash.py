@@ -39,6 +39,8 @@ def parse_telfhash_result(telfhash_result: Any) -> tuple[str | None, str | None]
 
 def should_skip_symbol(symbol_name: str) -> bool:
     """Check if a symbol should be skipped for telfhash."""
+    if not isinstance(symbol_name, str):
+        return True
     if len(symbol_name) < 2:
         return True
     skip_patterns = ["__", "_GLOBAL_", "_DYNAMIC", ".L", "_edata", "_end", "_start"]
