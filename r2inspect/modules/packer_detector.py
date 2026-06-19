@@ -212,6 +212,9 @@ class PackerDetector(CommandHelperMixin):
 
     def _read_bytes(self, addr: int, size: int) -> bytes:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
-            return cast(bytes, self.adapter.read_bytes(addr, size))
+            data = self.adapter.read_bytes(addr, size)
+            if isinstance(data, (bytes, bytearray)):
+                return cast(bytes, data)
+            return b""
         hex_data = self._cmd(f"p8 {size} @ {addr}")
         return bytes.fromhex(hex_data) if hex_data else b""

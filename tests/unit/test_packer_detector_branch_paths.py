@@ -231,6 +231,16 @@ def test_read_bytes_uses_adapter_method_when_available():
     assert isinstance(data, bytes)
 
 
+def test_read_bytes_rejects_text_payload():
+    class TextAdapter(AdapterWithAllMethods):
+        def read_bytes(self, addr: int, size: int) -> str:
+            return "bad"
+
+    detector = PackerDetector(TextAdapter(), StubConfig())
+    data = detector._read_bytes(0x1000, 16)
+    assert data == b""
+
+
 def test_read_bytes_falls_back_when_adapter_has_no_method():
     detector = PackerDetector(AdapterWithoutOptionalMethods(), StubConfig())
     data = detector._read_bytes(0x1000, 16)
