@@ -106,6 +106,13 @@ class _RaisingForwardingAnalyzer(ImportAnalyzer):
         raise RuntimeError("simulated forwarding error")
 
 
+class _IterableImportsAnalyzer(ImportAnalyzer):
+    """Subclass that returns an iterable instead of a list from get_imports."""
+
+    def get_imports(self):  # type: ignore[override]
+        return (imp for imp in [{"name": "CreateFileA", "library": "kernel32.dll"}])
+
+
 # ---------------------------------------------------------------------------
 # supports_format - line 41
 # ---------------------------------------------------------------------------
@@ -129,6 +136,12 @@ def test_supports_format_exe():
 def test_supports_format_elf_returns_false():
     analyzer = ImportAnalyzer(adapter=None)
     assert analyzer.supports_format("ELF") is False
+
+
+def test_analyze_normalizes_iterable_imports():
+    analyzer = _IterableImportsAnalyzer(adapter=None)
+    result = analyzer.analyze()
+    assert result["total_imports"] == 1
 
 
 # ---------------------------------------------------------------------------

@@ -74,6 +74,11 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             self._log_info("Starting import analysis")
 
             imports = self.get_imports()
+            if not isinstance(imports, list):
+                try:
+                    imports = list(imports)
+                except TypeError:
+                    imports = []
             dlls = _collect_import_dlls_impl(imports)
 
             result["imports"] = imports
