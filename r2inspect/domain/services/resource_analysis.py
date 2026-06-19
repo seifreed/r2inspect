@@ -100,7 +100,7 @@ def _looks_like_utf16(raw: bytes) -> bool:
 
 def decode_resource_text(raw: bytes) -> str | None:
     """Decode resource bytes as UTF-16LE, UTF-8, or ASCII when printable."""
-    if not raw:
+    if not isinstance(raw, (bytes, bytearray)) or not raw:
         return None
 
     encodings = ["utf-16le", "utf-8", "ascii"] if _looks_like_utf16(raw) else ["utf-8", "ascii"]

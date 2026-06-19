@@ -71,6 +71,10 @@ def test_decode_resource_text_handles_utf16_utf8_and_empty() -> None:
     assert decode_resource_text(b"") is None
 
 
+def test_decode_resource_text_skips_non_bytes_input() -> None:
+    assert decode_resource_text("plain text") is None  # type: ignore[arg-type]
+
+
 def test_build_manifest_info_extracts_flags_and_truncates_content() -> None:
     content = "<requestedExecutionLevel level='requireAdministrator'/> dpiAware highestAvailable"
     result = build_manifest_info(content, 512)
