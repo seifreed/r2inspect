@@ -8,9 +8,17 @@ from .simhash_support import SimHashHost
 
 
 def get_strings_data(host: SimHashHost) -> list[Any]:
+    def _coerce(value: Any) -> list[Any]:
+        if isinstance(value, list):
+            return value
+        try:
+            return list(value)
+        except TypeError:
+            return []
+
     if host.adapter is not None and hasattr(host.adapter, "get_strings"):
-        return host.adapter.get_strings()
-    return host._cmd_list("izzj")
+        return _coerce(host.adapter.get_strings())
+    return _coerce(host._cmd_list("izzj"))
 
 
 def get_functions(host: SimHashHost) -> list[dict[str, Any]]:
@@ -28,9 +36,17 @@ def get_functions(host: SimHashHost) -> list[dict[str, Any]]:
 
 
 def get_sections(host: SimHashHost) -> list[dict[str, Any]]:
+    def _coerce(value: Any) -> list[dict[str, Any]]:
+        if isinstance(value, list):
+            return [section for section in value if isinstance(section, dict)]
+        try:
+            return [section for section in list(value) if isinstance(section, dict)]
+        except TypeError:
+            return []
+
     if host.adapter is not None and hasattr(host.adapter, "get_sections"):
-        return host.adapter.get_sections()
-    return cast(list[dict[str, Any]], host._cmd_list("iSj"))
+        return _coerce(host.adapter.get_sections())
+    return _coerce(host._cmd_list("iSj"))
 
 
 def extract_ops_from_disasm(disasm: Any) -> list[Any]:

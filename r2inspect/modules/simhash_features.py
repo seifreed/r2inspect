@@ -17,6 +17,15 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
+    if isinstance(functions, list):
+        return [func for func in functions if isinstance(func, dict)]
+    try:
+        return [func for func in list(functions) if isinstance(func, dict)]
+    except TypeError:
+        return []
+
+
 def _function_name(func: dict[str, Any], func_addr: int | None = None) -> str:
     name = func.get("name")
     if isinstance(name, str) and name:
@@ -43,10 +52,10 @@ def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> lis
 def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> list[str]:
     opcode_features: list[str] = []
     try:
-        functions = host._get_functions()
+        functions = _coerce_function_list(host._get_functions())
         if not functions:
             logger.debug("No functions found for opcode extraction, trying alternative methods")
-            functions = host._cmd_list("afl")
+            functions = _coerce_function_list(host._cmd_list("afl"))
             if not functions:
                 return []
         for func in functions:

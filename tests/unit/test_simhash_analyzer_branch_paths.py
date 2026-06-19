@@ -59,6 +59,16 @@ class RaisingAdapter(StubAdapter):
         raise RuntimeError("simulated error")
 
 
+class _IterableCmdListAnalyzer(SimHashAnalyzer):
+    def _get_functions(self):  # type: ignore[override]
+        return []
+
+    def _cmd_list(self, command: str):  # type: ignore[override]
+        if command == "afl":
+            return (func for func in [{"offset": 0x1000, "name": "test_func"}])
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Subclass that provides a controlled analyze() result for calculate_similarity
 # ---------------------------------------------------------------------------
@@ -356,6 +366,12 @@ def test_extract_opcodes_features_exception_returns_empty() -> None:
     analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
     result = analyzer._extract_opcodes_features()
     assert result == []
+
+
+def test_extract_opcodes_features_normalizes_iterable_cmd_list_fallback() -> None:
+    analyzer = _IterableCmdListAnalyzer(adapter=StubAdapter(), filepath="/fake/path")
+    result = analyzer._extract_opcodes_features()
+    assert isinstance(result, list)
 
 
 # ---------------------------------------------------------------------------
