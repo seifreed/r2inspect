@@ -102,6 +102,14 @@ def test_list_yara_rules_with_yara_extension_files(tmp_path: Path):
     assert exit_code == 0
 
 
+def test_list_yara_rules_with_single_file(tmp_path: Path):
+    cmd = make_command()
+    rule_file = tmp_path / "single_rule.yar"
+    rule_file.write_text("rule single { condition: true }")
+    exit_code = cmd._list_yara_rules(yara_path=str(rule_file))
+    assert exit_code == 0
+
+
 # ---------------------------------------------------------------------------
 # _find_yara_rules (lines 122, 124-125, 127)
 # ---------------------------------------------------------------------------

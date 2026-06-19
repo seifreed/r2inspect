@@ -35,7 +35,7 @@ class ConfigCommand(Command):
             self.context.console.print(f"[red]YARA rules directory not found: {rules_path}[/red]")
             return 1
 
-        available_rules = self._find_yara_rules(rules_path)
+        available_rules = [rules_path] if rules_path.is_file() else self._find_yara_rules(rules_path)
 
         if not available_rules:
             self.context.console.print(f"[yellow]No YARA rules found in: {rules_path}[/yellow]")
