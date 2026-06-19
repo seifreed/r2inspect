@@ -50,8 +50,16 @@ def get_sections(host: SimHashHost) -> list[dict[str, Any]]:
 
 
 def extract_ops_from_disasm(disasm: Any) -> list[Any]:
-    if isinstance(disasm, dict) and isinstance(disasm.get("ops"), list):
-        return cast(list[Any], disasm["ops"])
+    if isinstance(disasm, dict):
+        ops = disasm.get("ops")
+        if isinstance(ops, list):
+            return cast(list[Any], ops)
+        if isinstance(ops, (dict, str, bytes)):
+            return []
+        try:
+            return list(ops)
+        except TypeError:
+            return []
     if isinstance(disasm, list):
         return disasm
     if isinstance(disasm, (dict, str, bytes)):

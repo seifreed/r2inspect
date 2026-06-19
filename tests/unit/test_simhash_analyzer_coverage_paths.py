@@ -711,6 +711,13 @@ def test_simhash_analyzer_extract_ops_from_disasm_dict() -> None:
     assert len(result) == 1
 
 
+def test_simhash_analyzer_extract_ops_from_disasm_dict_iterable() -> None:
+    analyzer = _make_analyzer()
+    disasm = {"ops": (op for op in [{"mnemonic": "mov"}, {"mnemonic": "ret"}])}
+    result = analyzer._extract_ops_from_disasm(disasm)
+    assert len(result) == 2
+
+
 def test_simhash_analyzer_extract_ops_from_disasm_list() -> None:
     analyzer = _make_analyzer()
     disasm = [{"mnemonic": "mov"}]
