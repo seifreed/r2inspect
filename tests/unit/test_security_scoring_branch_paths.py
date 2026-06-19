@@ -165,6 +165,12 @@ def test_extract_strings_from_entries_skips_missing_string_key() -> None:
     assert len(result) == 1
 
 
+def test_extract_strings_from_entries_skips_non_string_values() -> None:
+    entries = [{"string": b"abcd"}, {"string": 1234}, {"string": "valid"}]
+    result = extract_strings_from_entries(entries, 4)
+    assert result == ["valid"]
+
+
 def test_extract_ascii_from_bytes_basic() -> None:
     data = [ord(c) for c in "hello world"] + [0x00]
     result = extract_ascii_from_bytes(data, min_length=4)

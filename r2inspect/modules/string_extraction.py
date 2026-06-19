@@ -18,7 +18,7 @@ def extract_strings_from_entries(
         if not isinstance(entry, dict):
             continue
         string_val = entry.get("string", "")
-        if string_val and len(string_val) >= min_length:
+        if isinstance(string_val, str) and len(string_val) >= min_length:
             strings.append(string_val)
     return strings
 
