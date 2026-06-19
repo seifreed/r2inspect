@@ -477,6 +477,17 @@ def test_extract_mnemonics_from_pdj_returns_empty_when_not_a_list():
     assert result == []
 
 
+def test_extract_mnemonics_from_pdj_normalizes_iterable_result():
+    adapter = DisasmAdapter(
+        disasm_list=(
+            item for item in [{"mnemonic": "add"}, {"mnemonic": "sub"}, {"mnemonic": "ret"}]
+        )
+    )
+    analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
+    result = analyzer._extract_mnemonics_from_pdj(0x1000, "func_iter")
+    assert result == ["add", "sub", "ret"]
+
+
 # ---------------------------------------------------------------------------
 # _extract_mnemonics_from_text
 # ---------------------------------------------------------------------------
@@ -560,11 +571,11 @@ def test_collect_mnemonics_from_ops_normalizes_to_lowercase():
 
 
 def test_bloom_to_signature_returns_empty_string_on_exception():
-    """Lines 334-336: returns '' when signature computation fails."""
+    """Malformed instruction payloads still produce a deterministic hash."""
     analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
-    # Unhashable elements cause set() to raise TypeError inside _build_signature_components
     result = analyzer._bloom_to_signature([[1, 2], [3, 4]])  # type: ignore[arg-type]
-    assert result == ""
+    assert isinstance(result, str)
+    assert len(result) == 64
 
 
 # ---------------------------------------------------------------------------

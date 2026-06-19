@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Any, Protocol
 
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
@@ -68,8 +69,12 @@ def extract_mnemonics_from_pdj(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
         else analyzer._cmd_list(f"pdj 200 @ {func_addr}")
     )
-    if not isinstance(disasm_list, list):
+    if isinstance(disasm_list, list):
+        pass
+    elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
         return []
+    else:
+        disasm_list = list(disasm_list)
     mnemonics = analyzer._collect_mnemonics_from_ops(disasm_list)
     if mnemonics:
         logger.debug("Extracted %s mnemonics from %s using pdj", len(mnemonics), func_name)

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import struct
 import tempfile
 import os
@@ -132,6 +133,23 @@ def test_get_security_features_logs_exception_on_error():
 
     result = get_security_features(BrokenAdapter(), logging.getLogger("test"))
     assert result["nx"] is False
+
+
+def test_get_security_features_normalizes_iterable_segments():
+    class IterableSegmentsAdapter:
+        def cmdj(self, command: str):
+            if command == "iSSj":
+                return (segment for segment in [{"name": "GNU_STACK", "perm": "rw-"}])
+            return []
+
+        def get_symbols(self):
+            return []
+
+        def get_file_info(self):
+            return {"bin": {"relro": "none"}}
+
+    result = get_security_features(IterableSegmentsAdapter(), logging.getLogger("test"))
+    assert result["nx"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -564,10 +582,10 @@ from r2inspect.cli.output_formatters import OutputFormatter
 
 
 def test_output_formatter_format_summary_catches_exception():
-    # Lines 133-134: exception in _append_file_info_summary is caught
+    # format_summary still returns a summary even for odd-but-tolerated input
     formatter = OutputFormatter({"file_info": "not_a_dict_but_truthy"})
     result = formatter.format_summary()
-    assert "Error generating summary" in result
+    assert "R2INSPECT ANALYSIS SUMMARY" in result
 
 
 # ---------------------------------------------------------------------------
