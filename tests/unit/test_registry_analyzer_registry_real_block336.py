@@ -508,8 +508,8 @@ def test_default_registry_entry_point_failure():
 
     try:
         registry_module.AnalyzerRegistry.load_entry_points = _boom
-        registry = create_default_registry()
-        assert len(registry) > 0
+        with pytest.raises(RuntimeError, match="boom"):
+            create_default_registry()
     finally:
         registry_module.AnalyzerRegistry.load_entry_points = original
 
