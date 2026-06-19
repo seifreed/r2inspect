@@ -839,6 +839,24 @@ def test_populate_import_statistics_normalizes_iterable_suspicious_dlls():
     assert result["statistics"]["risk_level"] == "LOW"
 
 
+def test_populate_import_statistics_counts_string_suspicious_dlls():
+    result = {
+        "api_analysis": {"risk_score": 10},
+        "obfuscation": {"score": 10},
+        "anomalies": {"count": 1},
+        "dll_analysis": {"suspicious_dlls": ["psapi.dll", "dbghelp.dll"]},
+        "statistics": {},
+    }
+
+    populate_import_statistics(
+        result,
+        get_risk_level_fn=lambda _score: "LOW",
+        count_suspicious_indicators_fn=lambda _result: 0,
+    )
+
+    assert result["statistics"]["total_risk_score"] == 10.0
+
+
 def test_populate_import_statistics_coerces_numeric_strings():
     result = {
         "api_analysis": {"risk_score": "10"},

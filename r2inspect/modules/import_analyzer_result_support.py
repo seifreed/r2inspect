@@ -14,6 +14,29 @@ def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
         return []
 
 
+def _coerce_string_list(raw: Any) -> list[str]:
+    if isinstance(raw, list):
+        source = raw
+    else:
+        try:
+            source = list(raw)
+        except TypeError:
+            return []
+    values: list[str] = []
+    for item in source:
+        if isinstance(item, bytes):
+            item = item.decode(errors="ignore")
+        if isinstance(item, str) and item:
+            values.append(item)
+        elif isinstance(item, dict):
+            value = item.get("name")
+            if isinstance(value, bytes):
+                value = value.decode(errors="ignore")
+            if isinstance(value, str) and value:
+                values.append(value)
+    return values
+
+
 def init_import_result(init_result_structure: Any) -> dict[str, Any]:
     return cast(
         dict[str, Any],
@@ -78,7 +101,9 @@ def populate_import_statistics(
         dll_analysis = {}
     suspicious_dlls = dll_analysis.get("suspicious_dlls")
     if not isinstance(suspicious_dlls, list):
-        suspicious_dlls = _coerce_dict_list(suspicious_dlls)
+        suspicious_dlls = _coerce_string_list(suspicious_dlls)
+    else:
+        suspicious_dlls = _coerce_string_list(suspicious_dlls)
 
     total_risk = (
         _coerce_number(api_analysis.get("risk_score", 0)) * 0.4
