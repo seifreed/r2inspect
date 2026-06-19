@@ -997,6 +997,16 @@ class TestSupportFunctionsDirect:
         result = get_security_directory(fake_cmdj)
         assert result is None
 
+    def test_get_security_directory_direct_single_dict(self):
+        """Test get_security_directory preserves singleton dict input."""
+
+        def fake_cmdj(command, default=None):
+            return {"name": "SECURITY", "vaddr": 0x2000, "paddr": 0x1800, "size": 0x400}
+
+        result = get_security_directory(fake_cmdj)
+        assert result is not None
+        assert result["name"] == "SECURITY"
+
     def test_init_authenticode_result_direct(self):
         """Test init_authenticode_result helper directly."""
 
