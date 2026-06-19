@@ -270,7 +270,9 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         # so a crafted oversized section can't force a huge read + decode,
         # matching the section-analyzer read cap.
         read_size = min(size, 1024 * 1024)
-        data = cast(bytes, self.adapter.read_bytes(vaddr, read_size))
+        data = self.adapter.read_bytes(vaddr, read_size)
+        if not isinstance(data, (bytes, bytearray)):
+            return None
         if cmd == "psz":
             return data.split(b"\x00", 1)[0].decode(errors="ignore")
         if cmd == "px":

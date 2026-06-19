@@ -484,6 +484,16 @@ def test_read_section_no_read_bytes_on_adapter_returns_none():
     assert analyzer._read_section(section, "psz") is None
 
 
+def test_read_section_rejects_text_payload():
+    class TextAdapter(ELFAdapterWithoutReadBytes):
+        def read_bytes(self, address: int, size: int) -> str:
+            return "bad"
+
+    analyzer = ELFAnalyzer(TextAdapter())
+    section = {"vaddr": 0x1000, "size": 10}
+    assert analyzer._read_section(section, "psz") is None
+
+
 # ---------------------------------------------------------------------------
 # _parse_* delegation methods (lines 265, 268, 271, 274, 277)
 # ---------------------------------------------------------------------------
