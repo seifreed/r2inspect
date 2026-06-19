@@ -25,9 +25,15 @@ class ResourceVersionMixin:
         if offset <= 0 or size <= 0:
             return None
         data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])
+        if isinstance(data, (dict, str, bytes)):
+            return None
+        try:
+            data = list(data)
+        except TypeError:
+            return None
         if not data or len(data) < 64:
             return None
-        return list(data)
+        return data
 
     def _find_vs_signature(self, data: list[int]) -> int:
         vs_sig = [0xBD, 0x04, 0xEF, 0xFE]

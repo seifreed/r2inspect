@@ -567,6 +567,12 @@ def test_resource_analyzer_read_version_info_data_valid() -> None:
     assert len(result) == 100
 
 
+def test_resource_analyzer_read_version_info_data_rejects_dict() -> None:
+    analyzer = _make_analyzer(cmdj_map={"p8": {"bytes": [0] * 100}})
+    result = analyzer._read_version_info_data(0x1000, 100)
+    assert result is None
+
+
 def test_resource_analyzer_read_version_info_data_coerces_string_args() -> None:
     byte_data = [0] * 100
     hex_str = _bytes_to_hex(byte_data)
