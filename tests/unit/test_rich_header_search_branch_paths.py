@@ -89,6 +89,18 @@ def test_read_manual_search_bytes_with_empty_data_returns_none() -> None:
     assert searcher._read_manual_search_bytes() is None
 
 
+def test_read_manual_search_bytes_rejects_text_payload() -> None:
+    class TextAdapter(FakeAdapter):
+        def __init__(self) -> None:
+            super().__init__(b"")
+
+        def read_bytes(self, offset: int, size: int) -> str | None:
+            return "bad"
+
+    searcher = ConcreteSearcher(adapter=TextAdapter())
+    assert searcher._read_manual_search_bytes() is None
+
+
 def test_read_manual_search_bytes_returns_bytes_for_valid_adapter() -> None:
     buf = b"\x00" * 2048
     searcher = ConcreteSearcher(adapter=FakeAdapter(buf))
@@ -238,6 +250,16 @@ def test_extract_xor_key_returns_none_for_short_buffer() -> None:
     assert searcher._extract_xor_key(0) is None
 
 
+def test_extract_xor_key_rejects_non_int_list_payload() -> None:
+    class BadListAdapter(FakeAdapter):
+        def read_bytes_list(self, offset: int, size: int):
+            return ["bad"] * 4
+
+    buf = b"\x00" * 200
+    searcher = ConcreteSearcher(adapter=BadListAdapter(buf))
+    assert searcher._extract_xor_key(80) is None
+
+
 # ---------------------------------------------------------------------------
 # _extract_encoded_data
 # ---------------------------------------------------------------------------
@@ -260,6 +282,16 @@ def test_extract_encoded_data_returns_bytes_for_valid_data() -> None:
     result = searcher._extract_encoded_data(0, 16)
     assert result is not None
     assert len(result) == 16
+
+
+def test_extract_encoded_data_rejects_non_int_list_payload() -> None:
+    class BadListAdapter(FakeAdapter):
+        def read_bytes_list(self, offset: int, size: int):
+            return ["bad"] * size
+
+    buf = b"\xaa" * 32
+    searcher = ConcreteSearcher(adapter=BadListAdapter(buf))
+    assert searcher._extract_encoded_data(0, 16) is None
 
 
 # ---------------------------------------------------------------------------

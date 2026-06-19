@@ -59,7 +59,7 @@ class RichHeaderSearchMixin:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
         data = self.adapter.read_bytes(0, 2048)
-        return data if data else None
+        return data if isinstance(data, (bytes, bytearray)) and data else None
 
     def _find_signature_offsets(
         self, data: bytes, rich_sig: bytes, dans_sig: bytes
@@ -208,7 +208,11 @@ class RichHeaderSearchMixin:
             return None
         xor_key_bytes = cast(list[int], self.adapter.read_bytes_list(xor_key_offset, 4))
 
-        if not xor_key_bytes or len(xor_key_bytes) < 4:
+        if (
+            not xor_key_bytes
+            or len(xor_key_bytes) < 4
+            or not all(isinstance(value, int) for value in xor_key_bytes)
+        ):
             return None
 
         xor_key = struct.unpack("<I", bytes(xor_key_bytes))[0]
@@ -220,7 +224,11 @@ class RichHeaderSearchMixin:
             return None
         encoded_data = cast(list[int], self.adapter.read_bytes_list(dans_offset, rich_size))
 
-        if not encoded_data or len(encoded_data) < 8:
+        if (
+            not encoded_data
+            or len(encoded_data) < 8
+            or not all(isinstance(value, int) for value in encoded_data)
+        ):
             return None
 
         return bytes(encoded_data)
