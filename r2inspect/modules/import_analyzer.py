@@ -218,7 +218,9 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return detect_api_obfuscation_domain(imports)
         except Exception as exc:
             logger.error(
-                "Error detecting API obfuscation for %s imports: %s", len(imports or []), exc
+                "Error detecting API obfuscation for %s imports: %s",
+                _safe_len_impl(imports),
+                exc,
             )
             return {"detected": False, "indicators": [], "score": 0}
 

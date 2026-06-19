@@ -395,6 +395,24 @@ def test_detect_api_obfuscation_non_list_input_returns_empty_result():
     assert result == {"detected": False, "indicators": [], "score": 0}
 
 
+def test_detect_api_obfuscation_keeps_error_path_safe_for_unsized_input():
+    import r2inspect.modules.import_analyzer as import_module
+
+    class UnsizedImports:
+        def __bool__(self) -> bool:
+            return True
+
+    analyzer = _make_analyzer()
+    original = import_module.detect_api_obfuscation_domain
+    import_module.detect_api_obfuscation_domain = lambda _imports: (_ for _ in ()).throw(RuntimeError("boom"))  # type: ignore[assignment]
+    try:
+        result = analyzer.detect_api_obfuscation(UnsizedImports())  # type: ignore[arg-type]
+    finally:
+        import_module.detect_api_obfuscation_domain = original  # type: ignore[assignment]
+
+    assert result == {"detected": False, "indicators": [], "score": 0}
+
+
 # ---------------------------------------------------------------------------
 # analyze_dll_dependencies
 # ---------------------------------------------------------------------------
