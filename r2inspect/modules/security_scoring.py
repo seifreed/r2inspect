@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from ..domain.services.binary_helpers import clamp_score
@@ -29,8 +30,12 @@ def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(mitigations, dict):
         mitigations = {}
     vulnerabilities = result.get("vulnerabilities")
-    if not isinstance(vulnerabilities, list):
+    if isinstance(vulnerabilities, list):
+        pass
+    elif isinstance(vulnerabilities, (dict, str, bytes)) or not isinstance(vulnerabilities, Iterable):
         vulnerabilities = []
+    else:
+        vulnerabilities = list(vulnerabilities)
 
     for mitigation_name, scoring in MITIGATION_SCORES.items():
         mitigation = mitigations.get(mitigation_name, {})

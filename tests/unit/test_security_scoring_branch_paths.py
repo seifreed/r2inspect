@@ -93,6 +93,18 @@ def test_build_security_score_skips_malformed_entries() -> None:
     assert score["grade"] in {"F", "D", "C", "B", "A", "Unknown"}
 
 
+def test_build_security_score_normalizes_iterable_vulnerabilities() -> None:
+    vulnerabilities = (item for item in [{"severity": "high"}, {"severity": "medium"}])
+    score = build_security_score(
+        {
+            "mitigations": {"ASLR": {"enabled": True, "high_entropy": False}},
+            "vulnerabilities": vulnerabilities,
+        }
+    )
+    assert score["score"] == 0
+    assert score["max_score"] > 0
+
+
 def test_grade_from_percentage_unknown_when_max_zero() -> None:
     assert _grade_from_percentage(0.0, 0) == "Unknown"
 
