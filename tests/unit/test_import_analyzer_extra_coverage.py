@@ -216,6 +216,22 @@ def test_analyze_import_skips_non_string_api_category_entries():
     assert result["category"] == "File I/O"
 
 
+def test_analyze_import_decodes_bytes_fields():
+    analyzer = _make_analyzer()
+    imp = {
+        "name": b"CreateFileA",
+        "plt": b"4096",
+        "libname": b"KERNEL32.DLL",
+        "type": b"FUNC",
+    }
+    result = analyzer._analyze_import(imp)
+
+    assert result["name"] == "CreateFileA"
+    assert result["library"] == "KERNEL32.DLL"
+    assert result["type"] == "FUNC"
+    assert result["address"] == "0x1000"
+
+
 # ---------------------------------------------------------------------------
 # _get_function_description
 # ---------------------------------------------------------------------------

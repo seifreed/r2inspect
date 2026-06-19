@@ -48,19 +48,25 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _text_value(value: Any, default: str) -> str:
+    if isinstance(value, bytes):
+        value = value.decode(errors="ignore")
+    return value if isinstance(value, str) and value else default
+
+
 def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
     if not isinstance(imp, dict):
         imp = {}
     name_value = imp.get("name")
-    name = name_value if isinstance(name_value, str) else "unknown"
+    name = _text_value(name_value, "unknown")
     analysis = {
         "name": name,
         "address": hex(_to_int(imp.get("plt", 0))),
         "ordinal": imp.get("ordinal", 0),
-        "library": imp.get("libname") or imp.get("library", "unknown"),
-        "type": imp.get("type", "unknown"),
+        "library": _text_value(imp.get("libname") or imp.get("library"), "unknown"),
+        "type": _text_value(imp.get("type"), "unknown"),
         "category": "Unknown",
         "risk_score": 0,
         "risk_level": "Low",
