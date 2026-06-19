@@ -78,7 +78,7 @@ def add_string_feature_set(
 
 
 def append_data_section_string(host: SimHashHost, section: Any, data_strings: list[str]) -> None:
-    if not isinstance(section, dict):
+    if not isinstance(section, dict) or not isinstance(data_strings, list):
         return
     section_name = section.get("name", "")
     if not isinstance(section_name, str) or not section_name.startswith(".data"):

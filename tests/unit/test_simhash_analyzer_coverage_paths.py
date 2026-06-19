@@ -482,6 +482,11 @@ def test_simhash_analyzer_append_data_section_string_not_dict() -> None:
     assert data_strings == []
 
 
+def test_simhash_analyzer_append_data_section_string_skips_non_list_output() -> None:
+    analyzer = _make_analyzer()
+    analyzer._append_data_section_string({"name": ".data", "vaddr": 0x1000, "size": 100}, None)  # type: ignore[arg-type]
+
+
 def test_simhash_analyzer_append_data_section_string_not_data() -> None:
     analyzer = _make_analyzer()
     data_strings: list[str] = []
