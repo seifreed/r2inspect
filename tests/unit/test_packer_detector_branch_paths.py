@@ -247,6 +247,16 @@ def test_read_bytes_falls_back_when_adapter_has_no_method():
     assert isinstance(data, bytes)
 
 
+def test_read_bytes_rejects_invalid_hex_fallback_payload():
+    class BadHexAdapter(AdapterWithoutOptionalMethods):
+        def cmd(self, command: str) -> str:
+            return "not-hex"
+
+    detector = PackerDetector(BadHexAdapter(), StubConfig())
+    data = detector._read_bytes(0x1000, 16)
+    assert data == b""
+
+
 # ---------------------------------------------------------------------------
 # _analyze_entropy returns empty dict on exception (lines 148-151)
 # ---------------------------------------------------------------------------

@@ -217,4 +217,9 @@ class PackerDetector(CommandHelperMixin):
                 return cast(bytes, data)
             return b""
         hex_data = self._cmd(f"p8 {size} @ {addr}")
-        return bytes.fromhex(hex_data) if hex_data else b""
+        if not isinstance(hex_data, str) or not hex_data:
+            return b""
+        try:
+            return bytes.fromhex(hex_data)
+        except (TypeError, ValueError):
+            return b""
