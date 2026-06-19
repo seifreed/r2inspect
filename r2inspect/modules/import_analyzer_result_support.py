@@ -46,7 +46,7 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
             dll = dll.decode(errors="ignore")
         if isinstance(dll, str) and dll:
             dlls.add(dll.lower())
-    return list(dlls)
+    return sorted(dlls)
 
 
 def _coerce_number(value: Any) -> float:

@@ -717,6 +717,17 @@ def test_collect_import_dlls_decodes_bytes_names():
     assert dlls == ["kernel32.dll"]
 
 
+def test_collect_import_dlls_returns_sorted_output():
+    dlls = collect_import_dlls(
+        [
+            {"library": "USER32.DLL"},
+            {"library": "KERNEL32.DLL"},
+        ]
+    )
+
+    assert dlls == ["kernel32.dll", "user32.dll"]
+
+
 def test_collect_import_dlls_normalizes_iterable_input():
     dlls = collect_import_dlls(
         (
