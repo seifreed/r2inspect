@@ -244,6 +244,12 @@ def test_get_sections_invalid():
     assert sections == []
 
 
+def test_get_sections_rejects_dict_shape():
+    analyzer = _make_analyzer(cmdj_map={"iSj": {"sections": [{"name": ".text"}]}})
+    sections = analyzer._get_sections()
+    assert sections == []
+
+
 def test_get_sections_mixed():
     # mixed valid dicts and non-dicts; non-dicts are filtered out
     analyzer = _make_analyzer(
