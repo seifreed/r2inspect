@@ -505,6 +505,15 @@ def test_handle_bytes_p8j_no_size_returns_none():
     assert result is None
 
 
+def test_handle_bytes_p8j_rejects_text_payload():
+    class TextBytesListAdapter:
+        def read_bytes_list(self, address: int, size: int):
+            return "bad"
+
+    result = _handle_bytes(TextBytesListAdapter(), "p8j 4", 0x1000)
+    assert result == []
+
+
 def test_handle_bytes_p8_with_size():
     result = _handle_bytes(BytesAdapter(), "p8 4", 0x1000)
     assert isinstance(result, str)
