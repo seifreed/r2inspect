@@ -959,6 +959,23 @@ def test_resource_analyzer_parse_resources_manual_invalid_header() -> None:
     assert result == []
 
 
+def test_resource_analyzer_parse_resources_manual_accepts_iterable_header() -> None:
+    class _IterableHeaderAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command == "iSj":
+                return [{"name": ".rsrc", "paddr": 0x1000}]
+            if command == "pxj 16 @ 4096":
+                return (value for value in [0] * 16)
+            return default if default is not None else []
+
+        def _parse_dir_entries(self, rsrc_offset: int, total_entries: int):
+            return [{"name": "resource"}]
+
+    analyzer = _IterableHeaderAnalyzer(adapter=None)
+    result = analyzer._parse_resources_manual()
+    assert result == [{"name": "resource"}]
+
+
 # ── analyze (entry point) ────────────────────────────────────────────────
 
 

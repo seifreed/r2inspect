@@ -18,6 +18,17 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _coerce_list(raw: Any) -> list[Any]:
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, (dict, str, bytes)):
+        return []
+    try:
+        return list(raw)
+    except TypeError:
+        return []
+
+
 class ResourceParsingMixin:
     """Resource directory discovery and parsing helpers."""
 
@@ -97,7 +108,7 @@ class ResourceParsingMixin:
             if rsrc_offset == 0:
                 return []
 
-            dir_data = self._cmdj(f"pxj 16 @ {rsrc_offset}", [])
+            dir_data = _coerce_list(self._cmdj(f"pxj 16 @ {rsrc_offset}", []))
             if not self._is_valid_dir_header(dir_data):
                 return []
 
@@ -122,9 +133,10 @@ class ResourceParsingMixin:
         return None
 
     def _is_valid_dir_header(self, dir_data: list[int] | None) -> bool:
-        return bool(dir_data and len(dir_data) >= 16)
+        return bool(_coerce_list(dir_data) and len(_coerce_list(dir_data)) >= 16)
 
     def _get_dir_total_entries(self, dir_data: list[int]) -> int:
+        dir_data = _coerce_list(dir_data)
         if len(dir_data) < 16 or not all(isinstance(value, int) for value in dir_data[:16]):
             return 0
         num_named_entries = dir_data[12] | (dir_data[13] << 8)
@@ -145,6 +157,7 @@ class ResourceParsingMixin:
     def _parse_dir_entry(
         self, rsrc_offset: int, entry_data: list[int], index: int
     ) -> dict[str, Any] | None:
+        entry_data = _coerce_list(entry_data)
         if not entry_data or len(entry_data) < 8:
             return None
         if not all(isinstance(value, int) for value in entry_data[:8]):
