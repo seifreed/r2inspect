@@ -87,6 +87,17 @@ class AdapterWithNonListEntryInfo:
         return []
 
 
+class AdapterWithIterableEntryInfo:
+    def get_file_info(self) -> dict[str, Any]:
+        return {"bin": {"arch": "x86", "bits": 32, "endian": "little", "baddr": 0}}
+
+    def get_entry_info(self):
+        return (entry for entry in [{"vaddr": 0x402000}, {"vaddr": 0x403000}])
+
+    def get_headers_json(self) -> list:
+        return []
+
+
 class AdapterWithRaisingEntryInfo:
     def get_file_info(self) -> dict[str, Any]:
         return {"bin": {"arch": "x86", "bits": 32, "endian": "little", "baddr": 0}}
@@ -234,6 +245,13 @@ def test_get_entry_info_returns_none_when_not_list():
     log = StubLogger()
     result = pe_info._get_entry_info(AdapterWithNonListEntryInfo(), log)
     assert result is None
+
+
+def test_get_entry_info_normalizes_iterable_input():
+    log = StubLogger()
+    result = pe_info._get_entry_info(AdapterWithIterableEntryInfo(), log)
+    assert isinstance(result, list)
+    assert result[0]["vaddr"] == 0x402000
 
 
 def test_get_entry_info_returns_none_on_exception():

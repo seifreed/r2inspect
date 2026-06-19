@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from collections.abc import Callable
 from typing import Any
 
@@ -67,6 +68,9 @@ def _get_entry_info(adapter: Any, logger: Any) -> list[dict[str, Any]] | None:
             entry_info = adapter.get_entry_info()
             if isinstance(entry_info, list):
                 return entry_info
+            if isinstance(entry_info, (dict, str, bytes)) or not isinstance(entry_info, Iterable):
+                return None
+            return list(entry_info)
     except Exception as exc:
         logger.debug("Could not get entry point from iej: %s", exc)
     return None
