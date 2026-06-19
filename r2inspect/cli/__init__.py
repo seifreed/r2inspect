@@ -23,7 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Any
 
-from ..infrastructure.proxying import resolve_lazy_attr
+from ..infrastructure.proxying import make_module_getattr
 
 MODULE_BATCH_PROCESSING = "r2inspect.cli.batch_processing"
 MODULE_BATCH_OUTPUT = "r2inspect.cli.batch_output"
@@ -101,8 +101,7 @@ _LAZY_ATTRS: dict[str, tuple[str, str | None]] = {
 }
 
 
-def __getattr__(name: str) -> Any:
-    return resolve_lazy_attr(name, _LAZY_ATTRS, __name__)
+__getattr__ = make_module_getattr(_LAZY_ATTRS, __name__)
 
 
 def __dir__() -> list[str]:

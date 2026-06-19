@@ -25,3 +25,12 @@ def resolve_lazy_attr(
     target_module, attr = mapping[name]
     module = importlib.import_module(target_module)
     return module if attr is None else getattr(module, attr)
+
+
+def make_module_getattr(
+    mapping: dict[str, tuple[str, str | None]], module_name: str
+) -> Callable[[str], Any]:
+    def _getattr(name: str) -> Any:
+        return resolve_lazy_attr(name, mapping, module_name)
+
+    return _getattr
