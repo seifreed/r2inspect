@@ -110,7 +110,13 @@ class StringAnalyzer(BaseAnalyzer):
         return []
 
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
-        if self.adapter is not None and hasattr(self.adapter, "cmdj"):
+        raw_backend = getattr(self.adapter, "r2", None)
+        if raw_backend is not None and hasattr(raw_backend, "cmdj"):
+            try:
+                result = raw_backend.cmdj(cmd)
+            except Exception:
+                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+        elif self.adapter is not None and hasattr(self.adapter, "cmdj"):
             try:
                 result = self.adapter.cmdj(cmd)
             except Exception:
