@@ -207,6 +207,18 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
 def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
     valid_imports = _coerce_import_list(imports)
     if not valid_imports:
+        if isinstance(imports, list):
+            return {
+                "detected": True,
+                "indicators": [
+                    {
+                        "type": "few_imports",
+                        "description": "Very few imports (0) - possible static linking or packing",
+                        "count": 0,
+                    }
+                ],
+                "score": 20,
+            }
         return {"detected": False, "indicators": [], "score": 0}
     indicators = _obfuscation_indicators(valid_imports)
     return {
