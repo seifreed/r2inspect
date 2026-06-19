@@ -15,20 +15,10 @@ from ..interfaces import (
     ConfigLike,
     ResultAggregatorFactoryLike,
 )
+from .results_bucket import _results_bucket
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
-
-
-def _results_bucket(context: dict[str, Any]) -> dict[str, Any]:
-    results = context.get("results")
-    if isinstance(results, dict):
-        return results
-    results = {}
-    context["results"] = results
-    return results
-
-
 def run_registered_analyzer(
     stage: Any,
     context: dict[str, Any],

@@ -8,7 +8,7 @@ from typing import Any
 from rich.console import Console
 from rich.table import Table
 
-from .display_base import create_info_table
+from .display_base import _get_console, create_info_table
 from .presenter import get_section as _get_section
 
 Results = dict[str, Any]
@@ -19,12 +19,6 @@ def _coerce_percent(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
-
-
-def _get_console() -> Console:
-    from .display_base import _get_console as _base_get_console
-
-    return _base_get_console()
 
 
 def _display_file_info(results: Results) -> None:

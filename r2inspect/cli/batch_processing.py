@@ -6,6 +6,7 @@ operations to support and runtime modules with narrower responsibilities.
 """
 
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -64,7 +65,7 @@ from .batch_streaming import (
     make_streaming_create_batch_summary,
 )
 from .output_formatters import OutputFormatter
-from .batch_summary_tables import show_summary_table as _show_summary_table_impl
+from .batch_summary_tables import show_summary_table as _show_summary_table
 
 console = Console()
 logger = get_logger(__name__)
@@ -74,6 +75,7 @@ magic = _batch_discovery_runtime.magic
 # Patchable facade export used by tests and runtime glue.
 _looks_like_batch_result = _support.looks_like_batch_result
 _resolve_magic_module = _batch_discovery_runtime.resolve_magic_module
+_show_summary_table = partial(_show_summary_table, console=console)
 
 
 def _validate_magic_module(candidate: Any) -> Any | None:
@@ -211,10 +213,6 @@ def find_files_to_process(
 
 def find_files_by_extensions(batch_path: Path, extensions: str, recursive: bool) -> list[Path]:
     return _support.find_files_by_extensions(batch_path, extensions, recursive)
-
-
-def _show_summary_table(all_results: dict[str, dict[str, Any]]) -> None:
-    _show_summary_table_impl(all_results, console=console)
 
 
 def _resolve_batch_collaborator_fns(
