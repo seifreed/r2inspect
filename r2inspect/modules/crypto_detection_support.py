@@ -52,9 +52,13 @@ def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> lis
         if not isinstance(analyzer.crypto_constants, dict):
             return found_constants
         for const_name, const_values in analyzer.crypto_constants.items():
-            if not isinstance(const_values, (list, tuple, set)):
+            if isinstance(const_values, (dict, str, bytes)):
                 continue
-            for value in const_values:
+            try:
+                const_source = list(const_values)
+            except TypeError:
+                continue
+            for value in const_source:
                 try:
                     const_value = int(value, 0) if isinstance(value, str) else int(value)
                 except (TypeError, ValueError):

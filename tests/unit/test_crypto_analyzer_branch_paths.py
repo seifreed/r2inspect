@@ -234,6 +234,21 @@ def test_detect_crypto_constants_accepts_hex_string_values():
     ]
 
 
+def test_detect_crypto_constants_accepts_iterable_constant_buckets():
+    analyzer = CryptoAnalyzer(CryptoConstantAdapter())
+    analyzer.crypto_constants = {"aes_sbox": (value for value in ["0x63"])}
+
+    result = analyzer._detect_crypto_constants()
+
+    assert result == [
+        {
+            "type": "aes_sbox",
+            "value": "0x63",
+            "addresses": ["0x00401234"],
+        }
+    ]
+
+
 def test_detect_crypto_constants_ignores_malformed_constant_buckets():
     analyzer = CryptoAnalyzer(CryptoConstantAdapter())
     analyzer.crypto_constants = None  # type: ignore[assignment]
