@@ -5,6 +5,7 @@ import json
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.packer_detector import PackerDetector
+from r2inspect.domain.services.packer_scoring import count_imports
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -96,6 +97,10 @@ def test_packer_low_import_count():
     result = detector.detect()
 
     assert isinstance(result["is_packed"], bool)
+
+
+def test_count_imports_accepts_iterable_imports():
+    assert count_imports(({"name": "a"}, {"name": "b"})) == 2
 
 
 def test_packer_multiple_indicators():

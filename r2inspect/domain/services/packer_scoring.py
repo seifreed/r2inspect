@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from collections.abc import Iterable
 import logging
 from typing import Any
 
@@ -165,7 +166,11 @@ def is_suspicious_section_name(name: str) -> bool:
 
 
 def count_imports(imports: list[dict[str, Any]] | None) -> int:
-    return len(imports) if isinstance(imports, list) else 0
+    if isinstance(imports, list):
+        return len(imports)
+    if isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
+        return 0
+    return sum(1 for imp in imports if isinstance(imp, dict))
 
 
 def overlay_info(
