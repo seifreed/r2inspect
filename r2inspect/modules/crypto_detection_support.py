@@ -49,7 +49,11 @@ def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
 def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     found_constants: list[dict[str, Any]] = []
     try:
+        if not isinstance(analyzer.crypto_constants, dict):
+            return found_constants
         for const_name, const_values in analyzer.crypto_constants.items():
+            if not isinstance(const_values, (list, tuple, set)):
+                continue
             for value in const_values:
                 try:
                     const_value = int(value, 0) if isinstance(value, str) else int(value)
