@@ -541,6 +541,20 @@ def test_read_bytes_hex_empty_bytes_returns_none(tmp_path):
     assert result is None
 
 
+def test_read_bytes_hex_text_payload_returns_none(tmp_path):
+    """Text payloads from read_bytes should be rejected."""
+
+    class TextAdapter(FakeAdapter):
+        def read_bytes(self, vaddr: int, size: int) -> str:
+            return "bad"
+
+    f = tmp_path / "test.bin"
+    f.write_bytes(b"A" * 100)
+    analyzer = TLSHAnalyzer(adapter=TextAdapter(), filename=str(f))
+    result = analyzer._read_bytes_hex(0x1000, 100)
+    assert result is None
+
+
 def test_read_bytes_hex_exception_returns_none(tmp_path, caplog):
     """Lines 272-274: adapter.read_bytes raises -> None returned."""
     f = tmp_path / "test.bin"

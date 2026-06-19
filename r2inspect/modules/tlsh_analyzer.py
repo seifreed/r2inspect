@@ -165,7 +165,9 @@ class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
             try:
                 data = self.adapter.read_bytes(vaddr, size)
-                return data.hex() if data else None
+                if not isinstance(data, (bytes, bytearray)) or not data:
+                    return None
+                return data.hex()
             except Exception as exc:
                 logger.error("Error reading bytes for TLSH at 0x%x: %s", vaddr, exc)
                 return None
