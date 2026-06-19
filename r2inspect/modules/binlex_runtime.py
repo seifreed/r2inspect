@@ -105,10 +105,10 @@ def extract_tokens_from_pdj(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
         else analyzer._cmd_list("pdj 200")
     )
-    if isinstance(disasm_list, list):
+    if isinstance(disasm_list, dict):
+        disasm_list = disasm_list.get("ops", [])
+    elif isinstance(disasm_list, list):
         pass
-    elif isinstance(disasm_list, dict):
-        return []
     elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
         return []
     else:

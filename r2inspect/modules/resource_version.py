@@ -22,7 +22,7 @@ class ResourceVersionMixin:
     def _read_version_info_data(self, offset: int, size: int) -> list[int] | None:
         offset = _to_int(offset)
         size = _to_int(size)
-        if offset <= 0 or size <= 0:
+        if offset < 0 or size <= 0:
             return None
         data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])
         if isinstance(data, (dict, str, bytes)):

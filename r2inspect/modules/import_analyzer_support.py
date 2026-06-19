@@ -54,13 +54,23 @@ def _text_value(value: Any, default: str) -> str:
     return value if isinstance(value, str) and value else default
 
 
+def _import_name_value(imp: dict[str, Any]) -> str:
+    if "name" not in imp:
+        return "unknown"
+    name_value = imp.get("name")
+    if isinstance(name_value, (bytes, bytearray)):
+        name_value = name_value.decode(errors="ignore")
+    if isinstance(name_value, str):
+        return name_value
+    return "unknown"
+
+
 def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
     if not isinstance(imp, dict):
         imp = {}
-    name_value = imp.get("name")
-    name = _text_value(name_value, "")
+    name = _import_name_value(imp)
     analysis = {
         "name": name,
         "address": hex(_to_int(imp.get("plt", 0))),
