@@ -80,7 +80,7 @@ class StringAnalyzer(BaseAnalyzer):
                 strings.extend(unicode_strings)
 
             # Remove duplicates and filter
-            strings = list(set(strings))
+            strings = list(dict.fromkeys(strings))
             strings = filter_strings(strings, self.min_length, self.max_length)
 
             # Limit number of strings

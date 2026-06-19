@@ -75,6 +75,21 @@ def test_extract_strings_limits_to_max_strings():
     assert len(strings) == 1
 
 
+def test_extract_strings_preserves_first_seen_order():
+    adapter = _StringEntriesAdapter(
+        [
+            {"string": "bravo"},
+            {"string": "alpha"},
+            {"string": "bravo"},
+        ]
+    )
+    config = _config_with_overrides({"general": {"max_strings": 10}})
+    analyzer = StringAnalyzer(adapter=adapter, config=config)
+
+    strings = analyzer.extract_strings()
+    assert strings == ["bravo", "alpha"]
+
+
 def test_extract_ascii_strings_exception_returns_empty():
     # A non-dict entry makes extract_strings_from_entries raise inside
     # _extract_ascii_strings, exercising its real except branch.
