@@ -382,6 +382,13 @@ def test_extract_compile_time_file_info():
     assert compile_time == "2024-05-01"
 
 
+def test_collect_yara_matches_accepts_iterable_matches():
+    """Test YARA collection from tuple-backed results."""
+    result_data = {"yara_matches": ({"rule": "RuleA"}, {"rule": "RuleB"})}
+    yara = _collect_yara_matches(result_data)
+    assert yara == "RuleA, RuleB"
+
+
 def test_compiler_name_detected():
     """Test compiler name extraction when detected"""
     result_data = {

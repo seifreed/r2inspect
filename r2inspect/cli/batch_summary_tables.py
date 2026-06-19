@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from typing import Any, cast
 
 from rich.table import Table
@@ -83,10 +84,16 @@ def compiler_name(result: dict[str, Any]) -> str:
 
 def collect_yara_matches(result: dict[str, Any]) -> str:
     matches = result.get("yara_matches", [])
-    if not isinstance(matches, list):
+    if isinstance(matches, list):
+        normalized_matches = matches
+    elif isinstance(matches, (dict, str, bytes)) or not isinstance(matches, Iterable):
+        return "None"
+    else:
+        normalized_matches = list(matches)
+    if not normalized_matches:
         return "None"
     names: list[str] = []
-    for match in matches:
+    for match in normalized_matches:
         if isinstance(match, dict) and "rule" in match:
             names.append(str(match["rule"]))
         elif hasattr(match, "rule"):
