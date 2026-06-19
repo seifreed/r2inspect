@@ -57,3 +57,7 @@ def test_calculate_richpe_hash() -> None:
 
     assert hash_from_entries
     assert hash_from_bytes
+
+
+def test_calculate_richpe_hash_rejects_non_dict_input() -> None:
+    assert calculate_richpe_hash(None) is None  # type: ignore[arg-type]

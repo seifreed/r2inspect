@@ -253,6 +253,8 @@ def build_rich_header_result(decoded_entries: list[dict[str, Any]], xor_key: int
 
 
 def calculate_richpe_hash(rich_data: dict[str, Any]) -> str | None:
+    if not isinstance(rich_data, dict):
+        return None
     clear_data_bytes = rich_data.get("clear_data_bytes")
     if clear_data_bytes:
         return hashlib.md5(clear_data_bytes, usedforsecurity=False).hexdigest()
