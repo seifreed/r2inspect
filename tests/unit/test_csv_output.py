@@ -391,6 +391,25 @@ def test_csv_formatter_rich_header_accepts_non_list_compilers():
     assert csv_data["rich_header_entries"] == 0
 
 
+def test_csv_formatter_rich_header_accepts_iterable_compilers():
+    results = {
+        "file_info": {"name": "test.exe"},
+        "rich_header": {
+            "xor_key": 0x12345678,
+            "compilers": (
+                {"compiler_name": "MSVC", "count": 1},
+                {"compiler_name": "GCC", "count": 2},
+            ),
+        },
+    }
+
+    formatter = CsvOutputFormatter(results)
+    csv_data = formatter._extract_csv_data(results)
+
+    assert csv_data["rich_header_entries"] == 2
+    assert csv_data["rich_header_compilers"] == "MSVC(1), GCC(2)"
+
+
 def test_csv_formatter_all_counts():
     results = {
         "file_info": {"name": "test.exe"},

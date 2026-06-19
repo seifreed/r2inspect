@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 _CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
@@ -114,13 +115,19 @@ def add_telfhash(csv_row: dict[str, Any], data: dict[str, Any]) -> None:
 
 def format_rich_header_compilers(rich_header_info: dict[str, Any]) -> str:
     compilers_list = []
-    if isinstance(rich_header_info.get("compilers"), list):
-        for compiler in rich_header_info["compilers"]:
-            if isinstance(compiler, dict):
-                compiler_name = compiler.get("compiler_name", "")
-                count = compiler.get("count", 0)
-                if compiler_name:
-                    compilers_list.append(f"{compiler_name}({count})")
+    compilers = rich_header_info.get("compilers", [])
+    if isinstance(compilers, list):
+        compiler_source = compilers
+    elif isinstance(compilers, (dict, str, bytes)) or not isinstance(compilers, Iterable):
+        compiler_source = []
+    else:
+        compiler_source = list(compilers)
+    for compiler in compiler_source:
+        if isinstance(compiler, dict):
+            compiler_name = compiler.get("compiler_name", "")
+            count = compiler.get("count", 0)
+            if compiler_name:
+                compilers_list.append(f"{compiler_name}({count})")
     return ", ".join(compilers_list)
 
 
@@ -131,7 +138,12 @@ def add_rich_header(formatter: Any, csv_row: dict[str, Any], data: dict[str, Any
     csv_row["richpe_hash"] = rich.get("richpe_hash", "")
     csv_row["rich_header_compilers"] = formatter._format_rich_header_compilers(rich)
     compilers = rich.get("compilers", [])
-    csv_row["rich_header_entries"] = len(compilers) if isinstance(compilers, list) else 0
+    if isinstance(compilers, list):
+        csv_row["rich_header_entries"] = len(compilers)
+    elif isinstance(compilers, (dict, str, bytes)) or not isinstance(compilers, Iterable):
+        csv_row["rich_header_entries"] = 0
+    else:
+        csv_row["rich_header_entries"] = len(list(compilers))
 
 
 def add_imports_exports_sections(
