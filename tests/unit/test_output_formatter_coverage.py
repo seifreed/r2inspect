@@ -332,6 +332,13 @@ def test_format_summary_with_yara_matches() -> None:
     assert "Malware_Rule_A" in result
 
 
+def test_format_summary_accepts_iterable_yara_matches() -> None:
+    results = {"yara_matches": ({"rule": "Malware_Rule_A"}, {"rule": "Malware_Rule_B"})}
+    result = OutputFormatter(results).format_summary()
+    assert "YARA Matches: 2" in result
+    assert "Malware_Rule_B" in result
+
+
 def test_format_summary_with_more_than_three_yara() -> None:
     results = {"yara_matches": [{"rule": f"Rule_{i}"} for i in range(5)]}
     result = OutputFormatter(results).format_summary()

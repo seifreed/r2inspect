@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
@@ -175,10 +176,16 @@ def append_packer_summary(summary_lines: list[str], results: dict[str, Any]) -> 
 def append_yara_summary(summary_lines: list[str], results: dict[str, Any]) -> None:
     """Append a short YARA summary to the text output."""
     yara_matches = results.get("yara_matches")
-    if not isinstance(yara_matches, list) or not yara_matches:
+    if isinstance(yara_matches, list):
+        match_source = yara_matches
+    elif isinstance(yara_matches, (dict, str, bytes)) or not isinstance(yara_matches, Iterable):
         return
-    summary_lines.append(f"YARA Matches: {len(yara_matches)}")
-    for match in yara_matches[:MAX_SUMMARY_YARA_MATCHES]:
+    else:
+        match_source = list(yara_matches)
+    if not match_source:
+        return
+    summary_lines.append(f"YARA Matches: {len(match_source)}")
+    for match in match_source[:MAX_SUMMARY_YARA_MATCHES]:
         if isinstance(match, dict):
             summary_lines.append(f"  - {match.get('rule', 'Unknown')}")
         else:
