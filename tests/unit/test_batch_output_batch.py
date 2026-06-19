@@ -104,6 +104,14 @@ def test_write_csv_results_multiple_files(tmp_path):
         assert len(rows) == 2
 
 
+def test_write_csv_results_malformed_file_info_raises(tmp_path):
+    csv_file = tmp_path / "results.csv"
+    results = {"file1.exe": {"file_info": object()}}
+
+    with pytest.raises(ValueError, match="file_info must be a dict or None"):
+        write_csv_results(csv_file, results)
+
+
 def test_write_csv_results_empty(tmp_path):
     """Test CSV output with no results"""
     csv_file = tmp_path / "empty.csv"

@@ -23,6 +23,8 @@ def write_csv_results(
         for _, result in all_results.items():
             formatter = output_formatter_cls(result)
             csv_data = formatter._extract_csv_data(result)
+            if csv_data.get("error"):
+                raise ValueError(str(csv_data["error"]))
             writer.writerow(
                 {field: escape_csv_formula(csv_data.get(field, "")) for field in fieldnames}
             )
