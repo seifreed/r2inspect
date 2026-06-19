@@ -192,6 +192,37 @@ def test_anti_analysis_evidence_accepts_library_key() -> None:
     assert timing_evidence[0]["library"] == "kernel32.dll"
 
 
+def test_build_anti_analysis_report_accepts_iterable_evidence() -> None:
+    class _IterableEvidenceDetector:
+        anti_debug_apis = {"IsDebuggerPresent"}
+        vm_artifacts: list[str] = []
+        sandbox_indicators: list[str] = []
+
+        def _detect_anti_debug_detailed(self):
+            return {"detected": True, "evidence": (item for item in [{"kind": "debug"}])}
+
+        def _detect_anti_vm_detailed(self):
+            return {"detected": False, "evidence": []}
+
+        def _detect_anti_sandbox_detailed(self):
+            return {"detected": False, "evidence": []}
+
+        def _detect_evasion_techniques(self):
+            return []
+
+        def _find_suspicious_apis(self):
+            return []
+
+        def _detect_timing_checks_detailed(self):
+            return {"detected": False, "evidence": []}
+
+        def _detect_environment_checks(self):
+            return []
+
+    result = build_anti_analysis_report(_IterableEvidenceDetector())
+    assert result["detection_details"]["anti_debug_evidence"] == [{"kind": "debug"}]
+
+
 def test_timing_checks_with_query_performance_counter():
     detector = _make_detector(
         imports=[{"name": "QueryPerformanceCounter", "plt": 0x2000, "libname": "kernel32.dll"}],

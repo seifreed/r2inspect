@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from ..domain.formats.anti_analysis import (
@@ -40,6 +41,12 @@ def _evidence_list(result: Any) -> list[Any]:
         evidence = result.get("evidence")
         if isinstance(evidence, list):
             return evidence
+        if isinstance(evidence, (dict, str, bytes)) or not isinstance(evidence, Iterable):
+            return []
+        try:
+            return list(evidence)
+        except TypeError:
+            return []
     return []
 
 
