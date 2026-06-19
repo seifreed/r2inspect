@@ -356,6 +356,12 @@ def test_get_section_characteristics_returns_empty_on_characteristic_error():
     assert "code_analysis" not in result
 
 
+def test_get_section_characteristics_rejects_non_dict_analysis():
+    analyzer = _build_analyzer(sections=[])
+    result = analyzer._get_section_characteristics({"name": ".text"}, None)  # type: ignore[arg-type]
+    assert result["purpose"] == "Executable code"
+
+
 # ---------------------------------------------------------------------------
 # _analyze_code_section - size == 0 early return (line 352)
 # ---------------------------------------------------------------------------
@@ -691,6 +697,12 @@ def test_build_section_characteristics_rejects_non_string_name():
     assert result["expected_entropy"] == "Variable"
 
 
+def test_build_section_characteristics_rejects_non_dict_analysis():
+    result = build_section_characteristics(".text", None)  # type: ignore[arg-type]
+    assert result["purpose"] == "Executable code"
+    assert result["expected_entropy"] == "6.0-7.5"
+
+
 def test_update_section_summary_rejects_non_dict_section():
     summary = {
         "executable_sections": 0,
@@ -700,6 +712,12 @@ def test_update_section_summary_rejects_non_dict_section():
     }
     flag_counts: dict[str, int] = {}
     assert update_section_summary(summary, None, flag_counts) == 0.0  # type: ignore[arg-type]
+
+
+def test_mark_entropy_anomaly_rejects_non_dict_analysis():
+    characteristics = {"expected_entropy": "6.0-7.5"}
+    _mark_entropy_anomaly(characteristics, None)  # type: ignore[arg-type]
+    assert "entropy_anomaly" not in characteristics
 
 
 def test_apply_permissions_treats_missing_flags_as_empty():
@@ -723,6 +741,10 @@ def test_build_permission_indicators_handles_missing_flags():
     assert build_permission_indicators({"is_executable": True, "entropy": 0.5}) == [
         "Executable section with very low entropy"
     ]
+
+
+def test_build_permission_indicators_rejects_non_dict_analysis():
+    assert build_permission_indicators(None) == []  # type: ignore[arg-type]
 
 
 def test_get_arch_handles_file_info_errors():

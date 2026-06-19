@@ -79,6 +79,8 @@ def get_section_characteristics(
 ) -> dict[str, Any]:
     try:
         name = str(section.get("name", ""))
+        if not isinstance(analysis, dict):
+            return build_section_characteristics(name, analysis, None)
         code_analysis = (
             analyzer._analyze_code_section(section) if analysis.get("is_executable") else None
         )

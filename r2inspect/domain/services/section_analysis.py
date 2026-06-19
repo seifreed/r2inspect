@@ -69,6 +69,8 @@ def build_section_name_indicators(
 
 def build_permission_indicators(analysis: dict[str, Any]) -> list[str]:
     indicators: list[str] = []
+    if not isinstance(analysis, dict):
+        return indicators
     if analysis.get("is_writable") and analysis.get("is_executable"):
         indicators.append("Writable and executable section")
     if analysis.get("is_executable") and _coerce_entropy(analysis.get("entropy", 0)) < 1.0:
@@ -132,6 +134,8 @@ def build_section_characteristics(
     purpose, expected_entropy = SECTION_MAPPINGS.get(section_name, ("Unknown/Custom", "Variable"))
     characteristics["purpose"] = purpose
     characteristics["expected_entropy"] = expected_entropy
+    if not isinstance(analysis, dict):
+        return characteristics
     _mark_entropy_anomaly(characteristics, analysis)
     if analysis.get("is_executable") and code_analysis:
         characteristics["code_analysis"] = code_analysis
@@ -139,6 +143,8 @@ def build_section_characteristics(
 
 
 def _mark_entropy_anomaly(characteristics: dict[str, Any], analysis: dict[str, Any]) -> None:
+    if not isinstance(analysis, dict):
+        return
     if characteristics["expected_entropy"] == "Variable":
         return
     try:
