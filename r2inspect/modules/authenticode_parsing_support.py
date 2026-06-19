@@ -92,7 +92,7 @@ def read_win_certificate(
         return None
     if not (win_cert_data and len(win_cert_data) >= 8):
         return None
-    if not all(isinstance(value, int) for value in win_cert_data[:8]):
+    if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in win_cert_data[:8]):
         return None
 
     cert_length, cert_revision, cert_type = parse_header_fn(win_cert_data)
@@ -141,7 +141,7 @@ def parse_pkcs7(
             return None
         if not pkcs7_data:
             return None
-        if not all(isinstance(value, int) for value in pkcs7_data):
+        if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in pkcs7_data):
             return None
         result["digest_algorithm"] = detect_digest_algorithm_fn(pkcs7_data)
         result["encryption_algorithm"] = detect_encryption_algorithm_fn(pkcs7_data)

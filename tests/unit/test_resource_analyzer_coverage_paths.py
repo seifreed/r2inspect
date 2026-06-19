@@ -291,6 +291,13 @@ def test_resource_analyzer_get_dir_total_entries_skips_non_int_bytes() -> None:
     assert result == 0
 
 
+def test_resource_analyzer_get_dir_total_entries_rejects_out_of_range_bytes() -> None:
+    analyzer = _make_analyzer()
+    dir_data = [0] * 12 + [2, 0, 300, 0]
+    result = analyzer._get_dir_total_entries(dir_data)
+    assert result == 0
+
+
 # ── _parse_dir_entries ───────────────────────────────────────────────────
 
 
@@ -320,6 +327,20 @@ def test_resource_analyzer_parse_dir_entries_rejects_text_payloads() -> None:
             return f"UNKNOWN_{type_id}"
 
     analyzer = _TextEntryAnalyzer(adapter=None)
+    assert analyzer._parse_dir_entries(0x1000, 1) == []
+
+
+def test_resource_analyzer_parse_dir_entries_rejects_out_of_range_payloads() -> None:
+    class _OutOfRangeEntryAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return [300] * 8
+            return default
+
+        def _get_resource_type_name(self, type_id: int) -> str:
+            return f"UNKNOWN_{type_id}"
+
+    analyzer = _OutOfRangeEntryAnalyzer(adapter=None)
     assert analyzer._parse_dir_entries(0x1000, 1) == []
 
 
@@ -365,6 +386,13 @@ def test_resource_analyzer_parse_dir_entry_is_directory() -> None:
 def test_resource_analyzer_parse_dir_entry_skips_non_int_bytes() -> None:
     analyzer = _make_analyzer()
     entry_data = [3, 0, 0, 0, "bad", 0, 0, 0]
+    result = analyzer._parse_dir_entry(0x1000, entry_data, 0)
+    assert result is None
+
+
+def test_resource_analyzer_parse_dir_entry_skips_out_of_range_bytes() -> None:
+    analyzer = _make_analyzer()
+    entry_data = [3, 0, 0, 0, 300, 0, 0, 0]
     result = analyzer._parse_dir_entry(0x1000, entry_data, 0)
     assert result is None
 
