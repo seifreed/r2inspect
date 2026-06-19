@@ -50,10 +50,14 @@ SUSPICIOUS_OVERLAY_STRINGS: tuple[str, ...] = (
 
 
 def calculate_overlay_entropy(data: list[int]) -> float:
+    if not isinstance(data, list):
+        return 0.0
     return round(entropy_from_ints(data), 4)
 
 
 def has_pattern(data: list[int], pattern: list[int]) -> bool:
+    if not isinstance(data, list) or not isinstance(pattern, list):
+        return False
     pattern_len = len(pattern)
     data_len = len(data)
     for index in range(data_len - pattern_len + 1):
@@ -64,6 +68,8 @@ def has_pattern(data: list[int], pattern: list[int]) -> bool:
 
 def find_all_patterns(data: list[int], pattern: list[int]) -> list[int]:
     positions: list[int] = []
+    if not isinstance(data, list) or not isinstance(pattern, list):
+        return positions
     pattern_len = len(pattern)
     data_len = len(data)
     for index in range(data_len - pattern_len + 1):
@@ -73,6 +79,8 @@ def find_all_patterns(data: list[int], pattern: list[int]) -> list[int]:
 
 
 def looks_encrypted(data: list[int]) -> bool:
+    if not isinstance(data, list):
+        return False
     if len(data) < 256:
         return False
     entropy = calculate_overlay_entropy(data[:256])
@@ -83,6 +91,8 @@ def looks_encrypted(data: list[int]) -> bool:
 
 def detect_overlay_patterns(data: list[int]) -> list[dict[str, Any]]:
     patterns: list[dict[str, Any]] = []
+    if not isinstance(data, list):
+        return patterns
     for signature in INSTALLER_SIGNATURES:
         if has_pattern(data, signature["pattern"]):
             patterns.append({"type": "installer", "name": signature["name"], "confidence": "high"})
@@ -125,6 +135,8 @@ def determine_overlay_type(patterns: list[dict[str, Any]], data: list[int]) -> s
 
 def detect_embedded_files(data: list[int]) -> list[dict[str, Any]]:
     signatures: list[dict[str, Any]] = []
+    if not isinstance(data, list):
+        return signatures
     for signature in FILE_SIGNATURES:
         for position in find_all_patterns(data, signature["magic"]):
             signatures.append(

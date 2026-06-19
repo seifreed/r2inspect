@@ -544,6 +544,10 @@ def test_looks_encrypted_too_short():
     assert looks_encrypted(data) is False
 
 
+def test_looks_encrypted_rejects_non_list_input():
+    assert looks_encrypted(None) is False  # type: ignore[arg-type]
+
+
 # ── _extract_strings ────────────────────────────────────────────────
 
 
@@ -596,6 +600,11 @@ def test_find_all_patterns_none():
     pattern = [0x06, 0x07]
     positions = analyzer._find_all_patterns(data, pattern)
     assert len(positions) == 0
+
+
+def test_find_all_patterns_rejects_non_list_input():
+    analyzer = _make_analyzer()
+    assert analyzer._find_all_patterns(None, [0x01, 0x02]) == []  # type: ignore[arg-type]
 
 
 # ── _check_suspicious_indicators ────────────────────────────────────
