@@ -811,6 +811,20 @@ def test_detect_injection_apis_none_imports():
     assert detect_injection_apis(None, {"VirtualAllocEx"}) == []
 
 
+def test_detect_injection_apis_normalizes_iterable_imports():
+    imports = (
+        imp
+        for imp in [
+            {"name": "WriteProcessMemory"},
+            "skip",
+            {"name": "CreateRemoteThread"},
+        ]
+    )
+    result = detect_injection_apis(imports, {"WriteProcessMemory", "CreateRemoteThread"})
+    assert len(result) == 1
+    assert result[0]["technique"] == "DLL Injection"
+
+
 def test_match_suspicious_api_found():
     imp = {"name": "CreateRemoteThread", "plt": 0x4000}
     categories = {"injection": ["CreateRemoteThread"]}

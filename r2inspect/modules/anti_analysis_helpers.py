@@ -145,7 +145,14 @@ def detect_injection_apis(
     imports: list[dict[str, Any]] | None, injection_apis: set[str]
 ) -> list[dict[str, Any]]:
     injection_found = 0
-    for imp in imports or []:
+    if isinstance(imports, list):
+        import_source = imports
+    else:
+        try:
+            import_source = list(imports or [])
+        except TypeError:
+            import_source = []
+    for imp in import_source:
         if not isinstance(imp, dict):
             continue
         if _string_value(imp.get("name")) in injection_apis:
