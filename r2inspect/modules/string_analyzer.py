@@ -111,19 +111,25 @@ class StringAnalyzer(BaseAnalyzer):
         return []
 
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
-        raw_backend = getattr(self.adapter, "r2", None)
-        if raw_backend is not None and hasattr(raw_backend, "cmdj"):
+        if cmd == "izj" and self.adapter is not None and hasattr(self.adapter, "get_strings_basic"):
             try:
-                result = raw_backend.cmdj(cmd)
-            except Exception:
-                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
-        elif self.adapter is not None and hasattr(self.adapter, "cmdj"):
-            try:
-                result = self.adapter.cmdj(cmd)
+                result = self.adapter.get_strings_basic()
             except Exception:
                 result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         else:
-            result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+            raw_backend = getattr(self.adapter, "r2", None)
+            if raw_backend is not None and hasattr(raw_backend, "cmdj"):
+                try:
+                    result = raw_backend.cmdj(cmd)
+                except Exception:
+                    result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+            elif self.adapter is not None and hasattr(self.adapter, "cmdj"):
+                try:
+                    result = self.adapter.cmdj(cmd)
+                except Exception:
+                    result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+            else:
+                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         if isinstance(result, list):
             return result
         if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
