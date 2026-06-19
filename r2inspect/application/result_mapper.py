@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from collections.abc import Iterable
 from typing import Any
 
 from ..schemas.results_models import AnalysisResult
@@ -24,10 +25,16 @@ from .result_mapper_builders import (
 
 def _build_list(raw_list: Any, builder: Any) -> list[Any]:
     """Safely build a typed list from raw data."""
-    if not raw_list or not isinstance(raw_list, list):
+    if not raw_list:
         return []
+    if isinstance(raw_list, list):
+        items = raw_list
+    elif isinstance(raw_list, (dict, str, bytes)) or not isinstance(raw_list, Iterable):
+        return []
+    else:
+        items = list(raw_list)
     result = []
-    for item in raw_list:
+    for item in items:
         if isinstance(item, dict):
             result.append(builder(item))
         else:

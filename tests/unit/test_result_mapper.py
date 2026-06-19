@@ -91,3 +91,7 @@ def test_build_list_preserves_non_dict_items():
     assert _build_list([sentinel, {"name": "k"}], lambda d: d["name"]) == [sentinel, "k"]
     assert _build_list(None, lambda d: d) == []
     assert _build_list("not a list", lambda d: d) == []
+
+
+def test_build_list_accepts_other_iterables():
+    assert _build_list(({"name": "a"}, {"name": "b"}), lambda d: d["name"]) == ["a", "b"]
