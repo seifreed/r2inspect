@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from collections.abc import Callable
 from typing import Any
 
@@ -60,8 +61,14 @@ def analyze_overlay_content(
         result["extracted_strings"] = extracted_strings[:20]
 
         signatures = check_file_signatures_fn(overlay_data)
-        if isinstance(signatures, list) and signatures:
-            result["embedded_files"] = signatures
+        if isinstance(signatures, list):
+            normalized_signatures = signatures
+        elif isinstance(signatures, (dict, str, bytes)) or not isinstance(signatures, Iterable):
+            normalized_signatures = []
+        else:
+            normalized_signatures = list(signatures)
+        if normalized_signatures:
+            result["embedded_files"] = normalized_signatures
 
     except Exception as exc:
         logger.error("Error analyzing overlay content: %s", exc)
