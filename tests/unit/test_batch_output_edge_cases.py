@@ -267,8 +267,8 @@ def test_build_summary_row_handles_none_nested_sections():
         "yara_matches": None,
     }
 
-    assert _build_small_row("file1", result) == ("file1", "Unknown", "Unknown", "N/A")
-    assert _build_large_row("file1", result) == ("N/A", "Unknown", "Unknown", "N/A", "None")
+    assert _build_small_row("file1", result) == ("file1", "Error", "Error", "Error")
+    assert _build_large_row("file1", result) == ("file1", "Error", "Error", "Error", "Error")
 
 
 def test_build_summary_table_small():

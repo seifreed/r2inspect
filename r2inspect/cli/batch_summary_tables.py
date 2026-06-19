@@ -16,9 +16,9 @@ def render_summary_row(
     *,
     include_md5: bool,
 ) -> tuple[str, ...]:
-    file_info = result.get("file_info", {})
+    file_info = result.get("file_info")
     if not isinstance(file_info, dict):
-        file_info = {}
+        raise TypeError("file_info must be a dict or None")
     shared = (
         simplify_file_type(file_info.get("file_type", "Unknown")),
         compiler_name(result),

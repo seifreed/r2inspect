@@ -478,7 +478,9 @@ def test_build_small_row_error():
     filename, file_type, compiler, compile_time = _build_small_row("test.exe", result_data)
 
     assert filename == "test.exe"
-    assert file_type == "Unknown"
+    assert file_type == "Error"
+    assert compiler == "Error"
+    assert compile_time == "Error"
 
 
 def test_build_large_row_success():
@@ -500,7 +502,11 @@ def test_build_large_row_error():
     result_data = {}
     md5, file_type, compiler, compile_time, yara = _build_large_row("test.exe", result_data)
 
-    assert file_type == "Unknown"
+    assert md5 == "test.exe"
+    assert file_type == "Error"
+    assert compiler == "Error"
+    assert compile_time == "Error"
+    assert yara == "Error"
 
 
 def test_build_summary_table_small():
