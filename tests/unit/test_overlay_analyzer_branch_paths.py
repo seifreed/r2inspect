@@ -167,6 +167,18 @@ def test_analyze_returns_no_overlay_when_sections_not_list():
     assert result["has_overlay"] is False
 
 
+def test_analyze_accepts_iterable_sections():
+    """Generator-backed sections should still be normalized."""
+    adapter = OverlayAdapter(
+        file_info={"core": {"size": 10000}},
+        sections=(section for section in [{"paddr": 0, "size": 4000}, "skip"]),
+        data_dirs=[],
+    )
+    result = OverlayAnalyzer(adapter).analyze()
+    assert result["has_overlay"] is True
+    assert result["pe_end"] == 4000
+
+
 def test_calculate_pe_end_exception_returns_zero():
     """Exception inside _calculate_pe_end returns 0 (lines 137-139 -> 109)."""
     adapter = OverlayAdapter(
@@ -211,6 +223,25 @@ def test_extend_end_with_certificate_data_dirs_not_list():
         file_info={"core": {"size": 10000}},
         sections=[{"paddr": 0, "size": 3000}],
         data_dirs="invalid",
+        overlay_bytes=[0x00] * 7000,
+    )
+    result = OverlayAnalyzer(adapter).analyze()
+    assert result["has_overlay"] is True
+    assert result["pe_end"] == 3000
+
+
+def test_extend_end_with_certificate_iterable_data_dirs():
+    """Generator-backed data directories should still be normalized."""
+    adapter = OverlayAdapter(
+        file_info={"core": {"size": 10000}},
+        sections=[{"paddr": 0, "size": 2000}],
+        data_dirs=(
+            dd
+            for dd in [
+                {"name": "IMPORT", "paddr": 1000, "size": 500},
+                {"name": "SECURITY", "paddr": 2000, "size": 1000},
+            ]
+        ),
         overlay_bytes=[0x00] * 7000,
     )
     result = OverlayAnalyzer(adapter).analyze()
