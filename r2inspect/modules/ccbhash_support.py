@@ -163,10 +163,16 @@ def calculate_function_ccbhash(
             if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_cfg")
             else analyzer._cmd_list("agj")
         )
-        if not cfg_data or len(cfg_data) == 0:
+        if isinstance(cfg_data, list):
+            cfg_source = cfg_data
+        elif isinstance(cfg_data, (dict, str, bytes)) or not isinstance(cfg_data, Iterable):
+            return None
+        else:
+            cfg_source = list(cfg_data)
+        if not cfg_source:
             logger.debug("No CFG data found for function %s", func_name)
             return None
-        cfg = cfg_data[0]
+        cfg = cfg_source[0]
         canonical = analyzer._build_canonical_representation(cfg, func_offset)
         if not canonical:
             return None

@@ -45,6 +45,26 @@ class NoCFGAdapter:
         return []
 
 
+class IterableCFGAdapter:
+    """Adapter whose CFG comes back as a generator."""
+
+    def get_functions(self) -> list[dict[str, Any]]:
+        return [{"name": "iterable_func", "addr": 0x1000, "size": 100}]
+
+    def get_cfg(self, func_offset: int):
+        return (
+            cfg
+            for cfg in [
+                {
+                    "blocks": [
+                        {"offset": func_offset},
+                        {"offset": func_offset + 0x10},
+                    ]
+                }
+            ]
+        )
+
+
 class SingleFunctionAdapter:
     """Adapter with one function and a valid CFG."""
 
@@ -287,6 +307,12 @@ def test_calculate_function_ccbhash_no_cfg_data():
     analyzer = CCBHashAnalyzer(NoCFGAdapter(), "/path/to/binary")
     result = analyzer._calculate_function_ccbhash(0x1000, "test_func")
     assert result is None
+
+
+def test_calculate_function_ccbhash_iterable_cfg():
+    analyzer = CCBHashAnalyzer(IterableCFGAdapter(), "/path/to/binary")
+    result = analyzer._calculate_function_ccbhash(0x1000, "iterable_func")
+    assert result is not None
 
 
 def test_calculate_function_ccbhash_exception_returns_none():
