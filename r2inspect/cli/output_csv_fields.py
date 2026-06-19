@@ -71,7 +71,11 @@ FIELDNAMES = [
 
 
 def add_file_info(formatter: Any, csv_row: dict[str, Any], data: dict[str, Any]) -> None:
-    file_info = _as_dict(data.get("file_info"))
+    file_info = data.get("file_info")
+    if file_info is None:
+        file_info = {}
+    elif not isinstance(file_info, dict):
+        raise TypeError("file_info must be a dict or None")
     csv_row["name"] = file_info.get("name", "")
     csv_row["size"] = formatter._format_file_size(file_info.get("size", 0))
     csv_row["file_type"] = formatter._clean_file_type(file_info.get("file_type", ""))

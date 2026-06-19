@@ -26,6 +26,8 @@ class CsvOutputFormatter:
         output = io.StringIO()
         try:
             csv_data = self._extract_csv_data(self.results)
+            if csv_data.get("error"):
+                raise ValueError(str(csv_data["error"]))
             if csv_data:
                 dict_writer = csv.DictWriter(output, fieldnames=FIELDNAMES)
                 dict_writer.writeheader()

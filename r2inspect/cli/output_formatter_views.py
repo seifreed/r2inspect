@@ -149,7 +149,11 @@ def build_summary(results: dict[str, Any]) -> str:
 def append_file_info_summary(summary_lines: list[str], results: dict[str, Any]) -> None:
     """Append file identity fields to the text summary."""
     file_info = results.get("file_info")
-    if not isinstance(file_info, dict) or not file_info:
+    if file_info is None:
+        return
+    if not isinstance(file_info, dict):
+        raise TypeError("file_info must be a dict or None")
+    if not file_info:
         return
     summary_lines.extend(
         [
