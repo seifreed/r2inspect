@@ -14,9 +14,17 @@ def get_strings_data(host: SimHashHost) -> list[Any]:
 
 
 def get_functions(host: SimHashHost) -> list[dict[str, Any]]:
+    def _coerce(value: Any) -> list[dict[str, Any]]:
+        if isinstance(value, list):
+            return [func for func in value if isinstance(func, dict)]
+        try:
+            return [func for func in list(value) if isinstance(func, dict)]
+        except TypeError:
+            return []
+
     if host.adapter is not None and hasattr(host.adapter, "get_functions"):
-        return host.adapter.get_functions()
-    return cast(list[dict[str, Any]], host._cmd_list("aflj"))
+        return _coerce(host.adapter.get_functions())
+    return _coerce(host._cmd_list("aflj"))
 
 
 def get_sections(host: SimHashHost) -> list[dict[str, Any]]:

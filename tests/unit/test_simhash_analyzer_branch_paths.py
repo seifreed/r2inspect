@@ -632,6 +632,20 @@ def test_extract_data_section_strings_skips_when_no_read_bytes_method() -> None:
     assert result == []
 
 
+def test_extract_opcodes_features_normalizes_iterable_functions() -> None:
+    class IterableFunctionsAdapter(StubAdapter):
+        def get_functions(self):
+            return (func for func in [{"offset": 0x1000, "name": "test_func"}])
+
+    adapter = IterableFunctionsAdapter(
+        functions=[{"offset": 0x1000, "name": "test_func"}],
+        disasm_map={0x1000: {"ops": [{"mnemonic": "nop"}, {"mnemonic": "ret"}]}},
+    )
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    result = analyzer._extract_opcodes_features()
+    assert len(result) > 0
+
+
 # ---------------------------------------------------------------------------
 # _find_similar_functions – similar groups and edge cases
 # ---------------------------------------------------------------------------
