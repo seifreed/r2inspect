@@ -107,6 +107,20 @@ class AnalyzerWithEmptyResources:
         return []
 
 
+class AnalyzerWithIterableResources(AnalyzerWithResources):
+    """Resource directory present and _parse_resources returns a generator."""
+
+    def _parse_resources(self):
+        return (
+            resource
+            for resource in [
+                {"type": "RT_ICON", "size": 48},
+                "skip",
+                {"type": "RT_VERSION", "size": 120},
+            ]
+        )
+
+
 class AnalyzerRaisingOnParse:
     """Raises an exception during _parse_resources to exercise error handler."""
 
@@ -187,6 +201,13 @@ def test_run_resource_analysis_populates_resources_list():
     analyzer = AnalyzerWithResources()
     result = run_resource_analysis(analyzer, SilentLogger())
     assert len(result["resources"]) == 3
+
+
+def test_run_resource_analysis_accepts_iterable_resources():
+    analyzer = AnalyzerWithIterableResources()
+    result = run_resource_analysis(analyzer, SilentLogger())
+    assert result["total_resources"] == 2
+    assert len(result["resources"]) == 2
 
 
 # ---------------------------------------------------------------------------

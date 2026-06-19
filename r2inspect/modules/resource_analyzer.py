@@ -53,9 +53,12 @@ _BASE_RESOURCE_RESULT: dict[str, Any] = {
 
 
 def _normalize_resources(resources: Any) -> list[dict[str, Any]]:
-    if not isinstance(resources, list):
+    if isinstance(resources, list):
+        return [resource for resource in resources if isinstance(resource, dict)]
+    try:
+        return [resource for resource in list(resources) if isinstance(resource, dict)]
+    except TypeError:
         return []
-    return [resource for resource in resources if isinstance(resource, dict)]
 
 
 class ResourceAnalysisHost(Protocol):
