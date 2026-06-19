@@ -24,8 +24,14 @@ def _coerce_int(value: Any) -> int:
 def find_packer_signature(
     search_hex_fn: Callable[[str], str], packer_signatures: dict[str, list[bytes]]
 ) -> dict[str, str] | None:
+    if not isinstance(packer_signatures, dict):
+        return None
     for packer_name, signatures in packer_signatures.items():
+        if not isinstance(signatures, (list, tuple, set)):
+            continue
         for signature in signatures:
+            if not isinstance(signature, (bytes, bytearray)):
+                continue
             if _search_signature_hex(search_hex_fn, signature.hex()):
                 return {
                     "type": packer_name,

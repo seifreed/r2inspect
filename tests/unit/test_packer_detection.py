@@ -275,6 +275,13 @@ def test_search_signature_hex_skips_non_string_search_output():
     assert _search_signature_hex(bad_search, "deadbeef") is False
 
 
+def test_find_packer_signature_skips_malformed_buckets():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    assert find_packer_signature(lambda _sig: "", None) is None  # type: ignore[arg-type]
+    assert find_packer_signature(lambda _sig: "", {"UPX": "bad"}) is None  # type: ignore[arg-type]
+
+
 def test_overlay_info_coerces_malformed_section_offsets():
     from r2inspect.domain.services.packer_scoring import overlay_info
 
