@@ -122,7 +122,11 @@ class InspectorDispatchMixin:
 
     def generate_indicators(self, analysis_results: dict[str, Any]) -> list[dict[str, Any]]:
         result = self._result_aggregator.generate_indicators(analysis_results)
-        return result if isinstance(result, list) else []
+        if isinstance(result, list):
+            return result
+        if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
+            return []
+        return list(result)
 
     def analyze_functions(self) -> dict[str, Any]:
         return self._execute_dict("function_analyzer", "analyze_functions")

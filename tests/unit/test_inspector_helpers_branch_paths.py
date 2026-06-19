@@ -491,6 +491,17 @@ def test_generate_indicators_returns_empty_when_aggregator_returns_non_list():
     assert result == []
 
 
+def test_generate_indicators_accepts_iterable_results():
+
+    class TupleAggregator:
+        def generate_indicators(self, results: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+            return ({"indicator": "test"},)
+
+    helper = ConcreteHelper(aggregator=TupleAggregator())
+    result = helper.generate_indicators({})
+    assert result == [{"indicator": "test"}]
+
+
 # ---------------------------------------------------------------------------
 # generate_executive_summary  (lines 220-221)
 # ---------------------------------------------------------------------------
