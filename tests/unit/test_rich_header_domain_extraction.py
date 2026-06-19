@@ -55,6 +55,10 @@ def test_parse_clear_data_entries_empty_data():
     assert result == []
 
 
+def test_parse_clear_data_entries_non_bytes():
+    assert parse_clear_data_entries(None) == []  # type: ignore[arg-type]
+
+
 def test_parse_clear_data_entries_partial_data():
     clear_data = struct.pack("<I", 0x00930001)
 
@@ -251,6 +255,10 @@ def test_decode_rich_header_empty():
     result = decode_rich_header(b"", 0x12345678)
 
     assert result == []
+
+
+def test_decode_rich_header_non_bytes():
+    assert decode_rich_header(None, 0x12345678) == []  # type: ignore[arg-type]
 
 
 def test_decode_rich_header_too_short():

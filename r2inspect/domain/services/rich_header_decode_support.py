@@ -8,6 +8,8 @@ from typing import Any
 
 def parse_clear_data_entries(clear_data: bytes) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
+    if not isinstance(clear_data, (bytes, bytearray)):
+        return entries
     for i in range(0, len(clear_data), 8):
         if i + 8 > len(clear_data):
             break
@@ -28,7 +30,7 @@ def parse_clear_data_entries(clear_data: bytes) -> list[dict[str, Any]]:
 
 def decode_rich_header(encoded_data: bytes, xor_key: int) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    if not encoded_data:
+    if not isinstance(encoded_data, (bytes, bytearray)) or not encoded_data:
         return entries
     for i in range(4, len(encoded_data) - 4, 8):
         if i + 8 > len(encoded_data):
