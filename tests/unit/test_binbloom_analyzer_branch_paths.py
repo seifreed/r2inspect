@@ -478,6 +478,15 @@ def test_extract_mnemonics_from_pdj_uses_adapter_get_disasm_with_size():
     assert "ret" in result
 
 
+def test_extract_mnemonics_from_pdj_accepts_dict_with_ops():
+    adapter = DisasmAdapter(
+        disasm_list={"ops": [{"mnemonic": "add"}, {"mnemonic": "ret"}]}
+    )
+    analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
+    result = analyzer._extract_mnemonics_from_pdj(0x1000, "func_dict_ops")
+    assert result == ["add", "ret"]
+
+
 def test_extract_mnemonics_from_pdj_returns_empty_when_not_a_list():
     """Lines 265-266: returns [] when result is not a list."""
     adapter = DisasmAdapter(disasm_list={"unexpected": "dict"})

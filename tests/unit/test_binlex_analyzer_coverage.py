@@ -380,6 +380,16 @@ def test_extract_tokens_from_pdj_valid_list():
     assert "pop" in tokens
 
 
+def test_extract_tokens_from_pdj_accepts_dict_with_ops():
+    class AdapterPdjDict:
+        def get_disasm(self, address: int = 0, size: int = 200) -> Any:
+            return {"ops": [{"mnemonic": "push"}, {"mnemonic": "ret"}]}
+
+    analyzer = BinlexAnalyzer(adapter=AdapterPdjDict(), filepath=None)
+    tokens = analyzer._extract_tokens_from_pdj(0x1000, "func")
+    assert tokens == ["push", "ret"]
+
+
 # Test _analyze_function edge case: tokens present but all n too large
 
 

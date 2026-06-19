@@ -80,6 +80,14 @@ def extract_mnemonics_from_pdj(
     )
     if isinstance(disasm_list, list):
         pass
+    elif isinstance(disasm_list, dict):
+        ops = disasm_list.get("ops")
+        if isinstance(ops, list):
+            disasm_list = ops
+        elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
+            return []
+        else:
+            disasm_list = list(ops)
     elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
         return []
     else:
