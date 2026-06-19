@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from collections.abc import Iterable
 from typing import Any, Protocol, cast
 
 from ..domain.services.binary_helpers import clean_function_name
@@ -43,9 +44,13 @@ def build_function_ccbhashes(
     """Hash each function's CFG, returning the hash map and the count hashed."""
     function_hashes: dict[str, dict[str, Any]] = {}
     analyzed_count = 0
-    if not isinstance(functions, list):
+    if isinstance(functions, list):
+        function_source = functions
+    elif isinstance(functions, (dict, str, bytes)) or not isinstance(functions, Iterable):
         return function_hashes, analyzed_count
-    for func in functions:
+    else:
+        function_source = list(functions)
+    for func in function_source:
         if not isinstance(func, dict):
             continue
         func_offset = _to_int(func.get("addr"))

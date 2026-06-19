@@ -114,6 +114,24 @@ def test_ccbhash_build_function_hashes_rejects_non_list_functions():
     assert count == 0
 
 
+def test_ccbhash_build_function_hashes_normalizes_iterable_functions():
+    adapter = MockAdapter(has_functions=True)
+    analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
+    hashes, count = build_function_ccbhashes(
+        analyzer,
+        (
+            func
+            for func in [
+                {"name": "main", "addr": 0x1000, "size": 100},
+                {"name": "sub_2000", "addr": 0x2000, "size": 50},
+            ]
+        ),
+    )
+
+    assert count == 2
+    assert set(hashes) == {"main", "sub_2000"}
+
+
 def test_ccbhash_calculate_function_hash():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
