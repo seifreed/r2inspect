@@ -330,6 +330,13 @@ def test_packer_entropy_logs_read_errors(caplog):
     assert "Error calculating section entropy: read failed" in caplog.text
 
 
+def test_count_imports_non_list_input_returns_zero():
+    from r2inspect.domain.services.packer_scoring import count_imports
+
+    assert count_imports(None) == 0  # type: ignore[arg-type]
+    assert count_imports({"name": "only_one"}) == 0  # type: ignore[arg-type]
+
+
 def test_packer_result_structure():
     detector = _make_detector()
     result = detector.detect()

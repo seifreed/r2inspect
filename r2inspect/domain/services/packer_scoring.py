@@ -165,7 +165,7 @@ def is_suspicious_section_name(name: str) -> bool:
 
 
 def count_imports(imports: list[dict[str, Any]] | None) -> int:
-    return len(imports) if imports else 0
+    return len(imports) if isinstance(imports, list) else 0
 
 
 def overlay_info(
