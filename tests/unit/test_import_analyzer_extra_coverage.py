@@ -259,6 +259,38 @@ def test_get_import_statistics_logs_context_on_error(caplog):
     assert result["total_imports"] == 0
 
 
+def test_get_import_statistics_keeps_exception_path_safe_for_unsized_input():
+    import r2inspect.modules.import_analyzer as import_module
+
+    class UnsizedImports:
+        def __bool__(self) -> bool:
+            return True
+
+    analyzer = _make_analyzer()
+    original_get_imports = analyzer.get_imports
+    original_builder = import_module.build_import_statistics
+
+    def _raise(_imports):
+        raise RuntimeError("boom")
+
+    analyzer.get_imports = lambda: UnsizedImports()  # type: ignore[method-assign]
+    import_module.build_import_statistics = _raise  # type: ignore[assignment]
+    try:
+        result = analyzer.get_import_statistics()
+    finally:
+        analyzer.get_imports = original_get_imports  # type: ignore[method-assign]
+        import_module.build_import_statistics = original_builder  # type: ignore[assignment]
+
+    assert result == {
+        "total_imports": 0,
+        "unique_libraries": 0,
+        "category_distribution": {},
+        "risk_distribution": {},
+        "library_distribution": {},
+        "suspicious_patterns": [],
+    }
+
+
 # ---------------------------------------------------------------------------
 # get_missing_imports
 # ---------------------------------------------------------------------------

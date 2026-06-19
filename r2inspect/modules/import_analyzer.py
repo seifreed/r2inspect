@@ -136,8 +136,19 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             imports = self.get_imports()
             return build_import_statistics(imports)
         except Exception as exc:
-            logger.error("Error getting import statistics for %s imports: %s", len(imports), exc)
-            return build_import_statistics([])
+            logger.error(
+                "Error getting import statistics for %s imports: %s",
+                _safe_len_impl(imports),
+                exc,
+            )
+            return {
+                "total_imports": 0,
+                "unique_libraries": 0,
+                "category_distribution": {},
+                "risk_distribution": {},
+                "library_distribution": {},
+                "suspicious_patterns": [],
+            }
 
     def get_missing_imports(self) -> list[str]:
         missing = []
