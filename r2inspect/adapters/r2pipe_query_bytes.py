@@ -19,7 +19,9 @@ class R2PipeByteQueryMixin:
 
     def read_bytes_list(self, address: int, size: int) -> list[int]:
         data = self.read_bytes(address, size)
-        return list(data) if data else []
+        if not isinstance(data, (bytes, bytearray)) or not data:
+            return []
+        return list(data)
 
     def read_bytes(self, address: int, size: int) -> bytes:
         from . import r2pipe_queries as facade

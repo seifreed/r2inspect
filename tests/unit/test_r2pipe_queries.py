@@ -643,6 +643,12 @@ def test_read_bytes_list_empty():
     assert result == []
 
 
+def test_read_bytes_list_rejects_text_payload():
+    adapter = _make_adapter()
+    adapter.read_bytes = lambda _addr, _size: "bad"  # type: ignore[method-assign]
+    assert adapter.read_bytes_list(0x1000, 4) == []
+
+
 # _safe_query tests
 
 
