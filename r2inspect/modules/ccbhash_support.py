@@ -118,10 +118,14 @@ def extract_functions(analyzer: CcbHashHost, logger: logging.Logger) -> list[dic
 
 
 def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str | None:
+    if not isinstance(cfg, dict):
+        return str(func_offset)
     edges = cfg.get("edges", [])
-    if edges:
+    if isinstance(edges, list) and edges:
         edge_strs = []
         for edge in edges:
+            if not isinstance(edge, dict):
+                continue
             src = edge.get("src")
             dst = edge.get("dst")
             if src is not None and dst is not None:
@@ -132,11 +136,15 @@ def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str
             return None
         return "|".join(edge_strs)
     blocks = cfg.get("blocks", [])
-    if blocks:
+    if isinstance(blocks, list) and blocks:
         # r2 basic blocks (agj/afbj) carry the address as "addr", not "offset",
         # so this read 0 for every block and collapsed edgeless functions to a
         # constant "0" canonical form.
-        block_addrs = sorted(_to_int(block.get("addr") or block.get("offset", 0)) for block in blocks)
+        block_addrs = sorted(
+            _to_int(block.get("addr") or block.get("offset", 0))
+            for block in blocks
+            if isinstance(block, dict)
+        )
         return "|".join(str(addr) for addr in block_addrs)
     return str(func_offset)
 

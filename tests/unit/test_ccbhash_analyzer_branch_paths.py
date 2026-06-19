@@ -349,6 +349,15 @@ def test_build_canonical_representation_fallback_to_func_offset():
     assert result == "20480"
 
 
+def test_build_canonical_representation_ignores_malformed_cfg():
+    """Malformed CFG input falls back to the function offset."""
+    assert CCBHashAnalyzer._build_canonical_representation(None, 0x5000) == "20480"  # type: ignore[arg-type]
+    assert (
+        CCBHashAnalyzer._build_canonical_representation({"edges": "bad", "blocks": "bad"}, 0x5000)
+        == "20480"
+    )
+
+
 # ---------------------------------------------------------------------------
 # _find_similar_functions  (lines 293-297, 300-314, 316-318)
 # ---------------------------------------------------------------------------
