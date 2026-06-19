@@ -666,6 +666,12 @@ def test_simhash_analyzer_get_strings_data_adapter() -> None:
     assert len(result) == 1
 
 
+def test_simhash_analyzer_get_strings_data_rejects_dict() -> None:
+    analyzer = _make_analyzer(cmdj_map={"izzj": {"strings": [{"string": "test"}]}})
+    result = analyzer._get_strings_data()
+    assert result == []
+
+
 def test_simhash_analyzer_get_strings_data_cmdj() -> None:
     # When adapter has no get_strings, falls back to _cmd_list("izzj")
     # With our FakeR2-backed adapter, get_strings always exists.
@@ -681,6 +687,12 @@ def test_simhash_analyzer_get_functions_adapter() -> None:
     assert len(result) == 1
 
 
+def test_simhash_analyzer_get_functions_rejects_dict() -> None:
+    analyzer = _make_analyzer(cmdj_map={"aflj": {"functions": [{"offset": 0x1000}]}})
+    result = analyzer._get_functions()
+    assert result == []
+
+
 def test_simhash_analyzer_get_functions_cmdj() -> None:
     analyzer = _make_analyzer(cmdj_map={"aflj": [{"offset": 0x1000}]})
     result = analyzer._get_functions()
@@ -691,6 +703,12 @@ def test_simhash_analyzer_get_sections_adapter() -> None:
     analyzer = _make_analyzer(cmdj_map={"iSj": [{"name": ".text"}]})
     result = analyzer._get_sections()
     assert len(result) == 1
+
+
+def test_simhash_analyzer_get_sections_rejects_dict() -> None:
+    analyzer = _make_analyzer(cmdj_map={"iSj": {"sections": [{"name": ".text"}]}})
+    result = analyzer._get_sections()
+    assert result == []
 
 
 def test_simhash_analyzer_get_sections_cmdj() -> None:

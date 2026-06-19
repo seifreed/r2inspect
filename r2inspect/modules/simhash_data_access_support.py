@@ -11,6 +11,8 @@ def get_strings_data(host: SimHashHost) -> list[Any]:
     def _coerce(value: Any) -> list[Any]:
         if isinstance(value, list):
             return value
+        if isinstance(value, (dict, str, bytes)):
+            return []
         try:
             return list(value)
         except TypeError:
@@ -25,6 +27,8 @@ def get_functions(host: SimHashHost) -> list[dict[str, Any]]:
     def _coerce(value: Any) -> list[dict[str, Any]]:
         if isinstance(value, list):
             return [func for func in value if isinstance(func, dict)]
+        if isinstance(value, (dict, str, bytes)):
+            return []
         try:
             return [func for func in list(value) if isinstance(func, dict)]
         except TypeError:
@@ -39,6 +43,8 @@ def get_sections(host: SimHashHost) -> list[dict[str, Any]]:
     def _coerce(value: Any) -> list[dict[str, Any]]:
         if isinstance(value, list):
             return [section for section in value if isinstance(section, dict)]
+        if isinstance(value, (dict, str, bytes)):
+            return []
         try:
             return [section for section in list(value) if isinstance(section, dict)]
         except TypeError:
