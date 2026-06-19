@@ -184,9 +184,9 @@ def add_counts(csv_row: dict[str, Any], data: dict[str, Any]) -> None:
     imports = data.get("imports", [])
     exports = data.get("exports", [])
     sections = data.get("sections", [])
-    csv_row["num_imports"] = len(imports) if isinstance(imports, list) else 0
-    csv_row["num_exports"] = len(exports) if isinstance(exports, list) else 0
-    csv_row["num_sections"] = len(sections) if isinstance(sections, list) else 0
+    csv_row["num_imports"] = len(imports) if isinstance(imports, list) else len(list(imports)) if isinstance(imports, Iterable) and not isinstance(imports, (dict, str, bytes)) else 0
+    csv_row["num_exports"] = len(exports) if isinstance(exports, list) else len(list(exports)) if isinstance(exports, Iterable) and not isinstance(exports, (dict, str, bytes)) else 0
+    csv_row["num_sections"] = len(sections) if isinstance(sections, list) else len(list(sections)) if isinstance(sections, Iterable) and not isinstance(sections, (dict, str, bytes)) else 0
     csv_row["ssdeep_available"] = bool(_as_dict(data.get("ssdeep")).get("available"))
     csv_row["tlsh_available"] = bool(_as_dict(data.get("tlsh")).get("available"))
     csv_row["telfhash_available"] = bool(_as_dict(data.get("telfhash")).get("available"))

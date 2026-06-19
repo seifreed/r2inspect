@@ -442,6 +442,22 @@ def test_csv_formatter_counts_not_lists():
     assert csv_data["num_sections"] == 0
 
 
+def test_csv_formatter_counts_accept_iterables():
+    results = {
+        "file_info": {"name": "test.exe"},
+        "imports": ("a", "b", "c"),
+        "exports": ("x", "y"),
+        "sections": (".text",),
+    }
+
+    formatter = CsvOutputFormatter(results)
+    csv_data = formatter._extract_csv_data(results)
+
+    assert csv_data["num_imports"] == 3
+    assert csv_data["num_exports"] == 2
+    assert csv_data["num_sections"] == 1
+
+
 def test_csv_formatter_file_size_edge():
     results = {
         "file_info": {
