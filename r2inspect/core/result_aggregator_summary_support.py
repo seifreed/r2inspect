@@ -125,8 +125,9 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
         "md5": file_info.get("md5", "Unknown"),
         "sha256": file_info.get("sha256", "Unknown"),
     }
-    if "compilation_timestamp" in pe_info:
-        overview["compiled"] = pe_info["compilation_timestamp"]
+    compiled = pe_info.get("compile_time", pe_info.get("compilation_timestamp"))
+    if compiled:
+        overview["compiled"] = compiled
     rich_header = _dict_bucket(analysis_results, "rich_header")
     if rich_header.get("available") and rich_header.get("compilers"):
         compilers = rich_header.get("compilers", [])

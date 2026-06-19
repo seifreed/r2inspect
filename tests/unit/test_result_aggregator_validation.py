@@ -109,6 +109,17 @@ def test_build_file_overview_with_timestamp():
     assert overview["compiled"] == "2024-01-01 12:00:00"
 
 
+def test_build_file_overview_prefers_typed_compile_time():
+    results = {
+        "file_info": {"name": "sample.exe", "file_type": "PE"},
+        "pe_info": {"compile_time": "2024-02-01", "compilation_timestamp": "legacy"},
+        "rich_header": {},
+    }
+
+    overview = _build_file_overview(results)
+    assert overview["compiled"] == "2024-02-01"
+
+
 def test_build_file_overview_with_rich_header():
     results = {
         "file_info": {
