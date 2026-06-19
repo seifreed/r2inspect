@@ -8,6 +8,8 @@ from ..infrastructure.command_helpers import cmdj as cmdj_helper
 
 
 def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
+    if isinstance(imports, dict):
+        return [imports]
     if isinstance(imports, list):
         return [imp for imp in imports if isinstance(imp, dict)]
     try:
@@ -19,6 +21,8 @@ def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
 def fetch_imports(adapter: Any) -> list[dict[str, Any]]:
     if adapter is not None and hasattr(adapter, "get_imports"):
         imports = adapter.get_imports()
+        if not imports and hasattr(adapter, "cmdj"):
+            imports = adapter.cmdj("iij")
     else:
         imports = cmdj_helper(adapter, None, "iij", [])
     return _coerce_import_list(imports)
@@ -37,6 +41,8 @@ def group_imports_by_library(
             continue
 
         funcname = imp.get("name", "")
+        if isinstance(funcname, bytearray):
+            funcname = funcname.decode(errors="ignore")
         if not isinstance(funcname, (str, bytes)) or not funcname.strip():
             continue
 
@@ -46,6 +52,8 @@ def group_imports_by_library(
 
 
 def has_known_library_name(lib_name: str | bytes | None) -> bool:
+    if isinstance(lib_name, bytearray):
+        lib_name = lib_name.decode(errors="ignore")
     if isinstance(lib_name, bytes):
         lib_name = lib_name.decode(errors="ignore")
     return (
@@ -56,6 +64,8 @@ def has_known_library_name(lib_name: str | bytes | None) -> bool:
 
 
 def normalize_library_name(lib_name: str | bytes, extensions: list[str]) -> str:
+    if isinstance(lib_name, bytearray):
+        lib_name = lib_name.decode(errors="ignore")
     if isinstance(lib_name, bytes):
         lib_name = lib_name.decode(errors="ignore")
 
@@ -81,6 +91,8 @@ def _library_import_strings(normalized_lib: str, functions: Any) -> list[str]:
     for funcname in functions:
         if not funcname:
             continue
+        if isinstance(funcname, bytearray):
+            funcname = funcname.decode(errors="ignore")
         if isinstance(funcname, bytes):
             funcname = funcname.decode(errors="ignore")
         if not isinstance(funcname, str):

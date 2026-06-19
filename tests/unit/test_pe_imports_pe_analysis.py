@@ -104,6 +104,14 @@ def test_fetch_imports_returns_empty_list():
     assert result == []
 
 
+def test_fetch_imports_preserves_single_dict():
+    adapter = _adapter(cmdj_map={"iij": {"name": "CreateFileA", "libname": "kernel32.dll"}})
+
+    result = pe_imports.fetch_imports(adapter)
+
+    assert result == [{"name": "CreateFileA", "libname": "kernel32.dll"}]
+
+
 def test_fetch_imports_large_list():
     imports = [{"name": f"Function{i}", "libname": "lib.dll"} for i in range(100)]
     adapter = _adapter(cmdj_map={"iij": imports})
@@ -489,6 +497,22 @@ def test_calculate_imphash_bytes_function_name():
             "iij": [
                 {"libname": "kernel32.dll", "name": b"CreateFileA"},
                 {"libname": "kernel32.dll", "name": b"ReadFile"},
+            ],
+        }
+    )
+    log = _logger()
+
+    result = pe_imports.calculate_imphash(adapter, log)
+
+    assert len(result) == 32
+
+
+def test_calculate_imphash_bytearray_function_name():
+    adapter = _adapter(
+        cmdj_map={
+            "iij": [
+                {"libname": "kernel32.dll", "name": bytearray(b"CreateFileA")},
+                {"libname": "kernel32.dll", "name": bytearray(b"ReadFile")},
             ],
         }
     )

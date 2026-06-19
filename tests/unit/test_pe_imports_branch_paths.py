@@ -28,6 +28,12 @@ def test_build_import_strings_skips_non_string_function_entries() -> None:
     assert result == ["kernel32.createfilew"]
 
 
+def test_build_import_strings_accepts_bytearray_function_entries() -> None:
+    imports_by_lib = {"kernel32.dll": [bytearray(b"CreateFileW")]}
+    result = _build_import_strings(imports_by_lib, ["ocx", "sys", "dll"])
+    assert result == ["kernel32.createfilew"]
+
+
 def test_build_import_strings_rejects_non_dict_input() -> None:
     assert _build_import_strings(None, ["dll"]) == []  # type: ignore[arg-type]
 
@@ -66,13 +72,13 @@ def test_fetch_imports_fallback_without_method() -> None:
     assert isinstance(result, list)
 
 
-def test_fetch_imports_rejects_dict_response() -> None:
+def test_fetch_imports_preserves_dict_response() -> None:
     class _BadImportsAdapter:
         def get_imports(self) -> dict:
             return {"name": "CreateFileA"}
 
     result = fetch_imports(_BadImportsAdapter())
-    assert result == []
+    assert result == [{"name": "CreateFileA"}]
 
 
 def test_fetch_imports_none_adapter_returns_empty() -> None:
@@ -137,6 +143,11 @@ def test_group_imports_skips_non_string_name_values() -> None:
 
 def test_normalize_library_name_bytes_input() -> None:
     result = normalize_library_name(b"KERNEL32.DLL", ["dll", "ocx", "sys"])
+    assert result == "kernel32"
+
+
+def test_normalize_library_name_bytearray_input() -> None:
+    result = normalize_library_name(bytearray(b"KERNEL32.DLL"), ["dll", "ocx", "sys"])
     assert result == "kernel32"
 
 
