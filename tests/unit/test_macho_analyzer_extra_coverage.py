@@ -87,6 +87,21 @@ def test_get_macho_headers_error():
     assert result == {}
 
 
+def test_get_macho_headers_normalizes_iterable_provider():
+    def _provider(_adapter):
+        return (
+            header
+            for header in [
+                {"bin": {"arch": "arm", "bits": 64, "machine": "ARM64"}},
+                "skip",
+            ]
+        )
+
+    analyzer = MachOAnalyzer(_make_adapter(), config=None, headers_provider=_provider)
+    result = analyzer._macho_headers()
+    assert result == [{"bin": {"arch": "arm", "bits": 64, "machine": "ARM64"}}]
+
+
 def test_extract_build_version():
     """_extract_build_version with no headers returns empty dict."""
     # No iHj data -> get_macho_headers returns []

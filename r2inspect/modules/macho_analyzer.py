@@ -21,6 +21,15 @@ from .macho_security import get_security_features as _get_security_features
 logger = get_logger(__name__)
 
 
+def _coerce_header_list(headers: Any) -> list[dict[str, Any]]:
+    if isinstance(headers, list):
+        return [header for header in headers if isinstance(header, dict)]
+    try:
+        return [header for header in list(headers) if isinstance(header, dict)]
+    except TypeError:
+        return []
+
+
 class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Mach-O file analysis using radare2"""
 
@@ -37,9 +46,7 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Resolve Mach-O load-command headers via the injected provider or r2."""
         provider = self._headers_provider or get_macho_headers
         headers = provider(self.adapter) or []
-        if not isinstance(headers, list):
-            return []
-        return [header for header in headers if isinstance(header, dict)]
+        return _coerce_header_list(headers)
 
     def get_category(self) -> str:
         return "format"
