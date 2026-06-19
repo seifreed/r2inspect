@@ -1180,6 +1180,15 @@ class TestSupportFunctionsDirect:
 
         assert cert_info is None
 
+    def test_parse_win_cert_header_direct_rejects_out_of_range_values(self):
+        """Test parse_win_cert_header rejects values outside byte range."""
+        analyzer = _make_analyzer()
+        try:
+            analyzer._parse_win_cert_header([300] * 8)
+            assert False, "expected ValueError"
+        except ValueError:
+            pass
+
     def test_parse_pkcs7_direct_invalid_offset(self):
         """Test parse_pkcs7 with negative offset."""
         result = parse_pkcs7(

@@ -123,7 +123,9 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         )
 
     def _parse_win_cert_header(self, data: list[int]) -> tuple[int, int, int]:
-        if len(data) < 8:
+        if len(data) < 8 or not all(
+            isinstance(value, int) and 0 <= value <= 0xFF for value in data[:8]
+        ):
             raise ValueError(f"WIN_CERTIFICATE header requires 8 bytes, got {len(data)}")
         cert_length = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)
         cert_revision = data[4] | (data[5] << 8)
