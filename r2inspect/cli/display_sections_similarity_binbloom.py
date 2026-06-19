@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
@@ -106,16 +107,24 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
 
 def _add_binbloom_similar_groups(table: Table, binbloom_info: dict[str, Any]) -> None:
     similar_functions = binbloom_info.get("similar_functions", [])
-    if not isinstance(similar_functions, list) or not similar_functions:
+    if isinstance(similar_functions, list):
+        group_source = similar_functions
+    elif isinstance(similar_functions, (dict, str, bytes)) or not isinstance(
+        similar_functions, Iterable
+    ):
+        group_source = []
+    else:
+        group_source = list(similar_functions)
+    if not group_source:
         table.add_row(SIMILAR_GROUPS_LABEL, "0 (all functions unique)")
         return
 
-    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similar_functions)))
-    for i, group in enumerate(similar_functions[:3]):
+    table.add_row(SIMILAR_GROUPS_LABEL, str(len(group_source)))
+    for i, group in enumerate(group_source[:3]):
         _add_binbloom_group(table, i + 1, group)
 
-    if len(similar_functions) > 3:
-        table.add_row("Additional Groups", f"... and {len(similar_functions) - 3} more groups")
+    if len(group_source) > 3:
+        table.add_row("Additional Groups", f"... and {len(group_source) - 3} more groups")
 
 
 def _add_binbloom_group(table: Table, index: int, group: dict[str, Any]) -> None:

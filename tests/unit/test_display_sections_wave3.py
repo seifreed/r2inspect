@@ -325,6 +325,20 @@ def test_add_binbloom_similar_groups_skips_non_list_groups():
     assert len(table.rows) == 1
 
 
+def test_add_binbloom_similar_groups_accepts_iterable_groups():
+    table = _make_table()
+    _add_binbloom_similar_groups(
+        table,
+        {
+            "similar_functions": (
+                {"count": 2, "signature": "sig1", "functions": ["f1"]},
+                {"count": 1, "signature": "sig2", "functions": ["f2"]},
+            )
+        },
+    )
+    assert len(table.rows) > 1
+
+
 def test_display_impfuzzy_skips_non_dict_section():
     console = _make_console()
     with _console_scope(console):
