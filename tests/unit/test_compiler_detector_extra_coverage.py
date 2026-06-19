@@ -38,6 +38,11 @@ class FakeAdapter:
         return default
 
 
+class IterableStringsAdapter(FakeAdapter):
+    def get_strings(self):
+        return (entry for entry in [{"string": "test1"}, "skip", {"string": "test2"}])
+
+
 class _Logger:
     def debug(self, *args, **kwargs):
         pass
@@ -120,6 +125,14 @@ def test_get_strings_with_adapter():
     """Test _get_strings uses adapter when available"""
     strings = [{"string": "test1"}, {"string": "test2"}, {"other": "skip"}]
     adapter = FakeAdapter(strings=strings)
+    detector = CompilerDetector(adapter)
+
+    result = detector._get_strings()
+    assert result == ["test1", "test2"]
+
+
+def test_get_strings_normalizes_iterable_adapter_result():
+    adapter = IterableStringsAdapter()
     detector = CompilerDetector(adapter)
 
     result = detector._get_strings()

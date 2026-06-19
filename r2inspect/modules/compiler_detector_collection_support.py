@@ -26,7 +26,10 @@ def get_strings(detector: Any, logger: Any) -> list[str]:
         if detector.adapter is not None and hasattr(detector.adapter, "get_strings"):
             entries = detector.adapter.get_strings()
             if not isinstance(entries, list):
-                return []
+                try:
+                    entries = list(entries)
+                except TypeError:
+                    return []
             return [
                 string_value
                 for entry in entries
