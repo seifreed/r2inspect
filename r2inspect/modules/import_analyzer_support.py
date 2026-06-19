@@ -60,7 +60,7 @@ def analyze_import(
     if not isinstance(imp, dict):
         imp = {}
     name_value = imp.get("name")
-    name = _text_value(name_value, "unknown")
+    name = _text_value(name_value, "")
     analysis = {
         "name": name,
         "address": hex(_to_int(imp.get("plt", 0))),
