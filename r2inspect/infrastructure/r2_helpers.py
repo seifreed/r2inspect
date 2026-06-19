@@ -2,6 +2,7 @@
 """Facade for r2 command execution and header parsing helpers."""
 
 import os
+from functools import partial
 from typing import Any
 
 from ..adapters.validation import (
@@ -56,9 +57,7 @@ def get_elf_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
 def get_macho_headers(r2_instance: Any) -> list[dict[str, Any]] | None:
     return _get_macho_headers(r2_instance, safe_cmdj, safe_cmd)
 
-
-def _get_headers_json(r2_instance: Any) -> list[dict[str, Any]] | None:
-    return _resolve_headers_json(r2_instance, safe_cmdj)
+_get_headers_json = partial(_resolve_headers_json, safe_cmdj_func=safe_cmdj)
 
 
 __all__ = [

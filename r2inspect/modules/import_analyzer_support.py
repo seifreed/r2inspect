@@ -10,8 +10,7 @@ import logging
 import re
 from typing import Any, Protocol
 
-from ..abstractions.coercion_support import coerce_int
-from ..domain.services.import_analysis_helpers import _text_value
+from ..abstractions.coercion_support import coerce_int, coerce_text
 from ..domain.analysis.import_risk import (
     count_suspicious_indicators,
     get_function_description,
@@ -62,8 +61,8 @@ def analyze_import(
         "name": name,
         "address": hex(coerce_int(imp.get("plt", 0))),
         "ordinal": imp.get("ordinal", 0),
-        "library": _text_value(imp.get("libname") or imp.get("library"), "unknown"),
-        "type": _text_value(imp.get("type"), "unknown"),
+        "library": coerce_text(imp.get("libname") or imp.get("library"), "unknown"),
+        "type": coerce_text(imp.get("type"), "unknown"),
         "category": "Unknown",
         "risk_score": 0,
         "risk_level": "Low",

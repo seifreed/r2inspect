@@ -6,7 +6,7 @@ from collections import Counter
 from collections.abc import Callable, Iterable
 from typing import Any
 
-from ...abstractions.coercion_support import coerce_dict_list
+from ...abstractions.coercion_support import coerce_dict_list, coerce_text
 from ..formats.import_analysis import NETWORK_CATEGORY
 from .import_analysis_anomalies import (
     COMMON_SYSTEM_DLLS,
@@ -14,14 +14,6 @@ from .import_analysis_anomalies import (
     analyze_dll_dependencies,
     detect_import_anomalies,
 )
-
-
-def _text_value(value: Any, default: str) -> str:
-    if isinstance(value, (bytes, bytearray)):
-        value = value.decode(errors="ignore")
-    return value if isinstance(value, str) and value else default
-
-
 def _library_value(imp: dict[str, Any]) -> str:
     for key in ("library", "dll", "libname"):
         value = imp.get(key)
@@ -135,8 +127,8 @@ def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, An
     if not valid_imports:
         return []
     patterns: list[dict[str, Any]] = []
-    import_names = [_text_value(imp.get("name"), "") for imp in valid_imports]
-    categories = [_text_value(imp.get("category"), "").strip().lower() for imp in valid_imports]
+    import_names = [coerce_text(imp.get("name")) for imp in valid_imports]
+    categories = [coerce_text(imp.get("category")).strip().lower() for imp in valid_imports]
     _append_injection_patterns(patterns, import_names)
     _append_behavior_patterns(patterns, import_names, categories)
     return patterns
@@ -157,8 +149,8 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
     valid_imports = coerce_dict_list(imports)
     if not valid_imports:
         return stats
-    categories = [_text_value(imp.get("category"), "unknown") for imp in valid_imports]
-    risks = [_text_value(imp.get("risk_level"), "unknown") for imp in valid_imports]
+    categories = [coerce_text(imp.get("category"), "unknown") for imp in valid_imports]
+    risks = [coerce_text(imp.get("risk_level"), "unknown") for imp in valid_imports]
     libraries = [_library_value(imp) for imp in valid_imports]
     stats["total_imports"] = len(valid_imports)
     stats["category_distribution"] = dict(Counter(categories))
