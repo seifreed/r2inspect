@@ -125,9 +125,15 @@ def _cfg_feature(cfg: Any) -> dict[str, Any] | None:
         cfg_data = cfg_items[0] if cfg_items else {}
     if not isinstance(cfg_data, dict) or not cfg_data:
         return None
+    blocks = cfg_data.get("blocks", [])
+    edges = cfg_data.get("edges", [])
+    if not isinstance(blocks, list):
+        blocks = []
+    if not isinstance(edges, list):
+        edges = []
     return {
-        "nodes": len(cfg_data.get("blocks", [])),
-        "edges": len(cfg_data.get("edges", [])),
+        "nodes": len(blocks),
+        "edges": len(edges),
         "complexity": calculate_cyclomatic_complexity(cfg_data),
     }
 

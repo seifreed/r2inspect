@@ -254,6 +254,15 @@ def test_cfg_feature_rejects_malformed_cfg_entries():
     }
 
 
+def test_cfg_feature_ignores_non_list_blocks_and_edges():
+    """CFG counters should not trust scalar nested fields."""
+    assert _cfg_feature({"blocks": 1, "edges": "bad"}) == {
+        "nodes": 0,
+        "edges": 0,
+        "complexity": 0,
+    }
+
+
 def test_extract_structural_features_empty():
     """Test _extract_structural_features with empty data."""
     cmdj_map = {"ij": {}, "iSj": [], "iij": [], "iEj": []}
