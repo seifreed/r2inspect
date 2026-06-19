@@ -329,6 +329,16 @@ def test_analyze_api_usage_error():
     assert isinstance(result.get("risk_score", 0), (int, float))
 
 
+def test_analyze_api_usage_keeps_error_path_safe_for_unsized_input():
+    class UnsizedImports:
+        def __bool__(self) -> bool:
+            return True
+
+    analyzer = _make_analyzer()
+    result = analyzer.analyze_api_usage(UnsizedImports(), categorize_fn=lambda *_: (_ for _ in ()).throw(RuntimeError("boom")))  # type: ignore[arg-type]
+    assert result == {"categories": {}, "suspicious_apis": [], "risk_score": 0}
+
+
 # ---------------------------------------------------------------------------
 # detect_api_obfuscation
 # ---------------------------------------------------------------------------

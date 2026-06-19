@@ -197,7 +197,9 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             }
 
         except Exception as exc:
-            logger.error("Error analyzing API usage for %s imports: %s", len(imports), exc)
+            logger.error(
+                "Error analyzing API usage for %s imports: %s", _safe_len_impl(imports), exc
+            )
             return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
 
     def detect_api_obfuscation(self, imports: list[dict]) -> dict[str, Any]:
