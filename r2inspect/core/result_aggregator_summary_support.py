@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from .result_aggregator_recommendation_support import (
@@ -32,7 +33,11 @@ def _dict_bucket(analysis_results: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _list_bucket(analysis_results: dict[str, Any], key: str) -> list[Any]:
     value = analysis_results.get(key)
-    return value if isinstance(value, list) else []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, (dict, str, bytes)) or not isinstance(value, Iterable):
+        return []
+    return list(value)
 
 
 def _coerce_float(value: Any) -> float | None:

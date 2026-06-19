@@ -289,6 +289,22 @@ def test_build_threat_indicators_non_list_buckets_are_skipped():
     assert indicators["crypto_indicators"] == 0
 
 
+def test_build_threat_indicators_accepts_iterable_buckets():
+    results = {
+        "imports": ({"name": "VirtualAlloc"},),
+        "yara_matches": ("match",),
+        "sections": ({"entropy": 7.5},),
+        "crypto": {"matches": ("AES",)},
+    }
+
+    indicators = _build_threat_indicators(results)
+    assert indicators["suspicious_imports"] == 1
+    assert indicators["yara_matches"] == 1
+    assert indicators["entropy_warnings"] == 1
+    assert indicators["suspicious_sections"] == 0
+    assert indicators["crypto_indicators"] == 1
+
+
 def test_build_threat_indicators_suspicious():
     results = {
         "imports": [
