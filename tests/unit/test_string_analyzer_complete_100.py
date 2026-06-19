@@ -54,6 +54,13 @@ class StringTestAdapter:
         return []
 
 
+class IterableStringTestAdapter(StringTestAdapter):
+    def cmdj(self, command: str) -> list:
+        if command == "izuj":
+            return (entry for entry in self._strings_unicode)
+        return super().cmdj(command)
+
+
 def _make_analyzer(
     *,
     strings_basic: list | None = None,
@@ -131,6 +138,15 @@ def test_extract_strings_unicode_only():
     analyzer = _make_analyzer(strings_unicode=entries, extract_ascii=False)
     strings = analyzer.extract_strings()
     assert isinstance(strings, list)
+
+
+def test_extract_unicode_strings_accepts_iterable_adapter_output():
+    entries = [
+        {"string": "wide_string", "vaddr": 200, "size": 11, "type": "wide"},
+    ]
+    analyzer = StringAnalyzer(adapter=IterableStringTestAdapter(strings_unicode=entries), config=DummyConfig())
+    strings = analyzer._extract_unicode_strings()
+    assert strings == ["wide_string"]
 
 
 def test_extract_strings_both():
