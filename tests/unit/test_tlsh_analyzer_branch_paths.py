@@ -489,6 +489,18 @@ def test_get_functions_with_adapter_returns_data(tmp_path):
     assert result == functions
 
 
+def test_get_sections_rejects_dict_shape(tmp_path):
+    f = tmp_path / "test.bin"
+    f.write_bytes(b"A" * 100)
+
+    class DictSectionsAdapter(FakeAdapter):
+        def get_sections(self):
+            return {"sections": [{"name": ".text", "vaddr": 0, "size": 100}]}
+
+    analyzer = TLSHAnalyzer(adapter=DictSectionsAdapter(), filename=str(f))
+    assert analyzer._get_sections() == []
+
+
 def test_get_functions_normalizes_iterable_adapter_result(tmp_path):
     """Generator-backed function collections should still reach TLSH hashing."""
     if not TLSH_AVAILABLE:

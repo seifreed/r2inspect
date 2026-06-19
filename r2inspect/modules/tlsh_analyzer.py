@@ -28,6 +28,8 @@ logger = get_logger(__name__)
 def _coerce_any_list(raw: Any) -> list[Any]:
     if isinstance(raw, list):
         return raw
+    if isinstance(raw, (dict, str, bytes)):
+        return []
     try:
         return list(raw)
     except TypeError:
