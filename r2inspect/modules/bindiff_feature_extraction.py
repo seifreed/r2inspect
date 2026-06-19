@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from collections.abc import Iterable
 from typing import Any
 
 from ..adapters.file_system import default_file_system
@@ -113,12 +114,15 @@ def _structural_exports(exports: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _cfg_feature(cfg: Any) -> dict[str, Any] | None:
-    if cfg and isinstance(cfg, list) and cfg:
-        cfg_data = cfg[0]
-    elif isinstance(cfg, dict):
+    if isinstance(cfg, dict):
         cfg_data = cfg
-    else:
+    elif isinstance(cfg, list):
+        cfg_data = cfg[0] if cfg else {}
+    elif isinstance(cfg, (str, bytes)) or not isinstance(cfg, Iterable):
         cfg_data = {}
+    else:
+        cfg_items = list(cfg)
+        cfg_data = cfg_items[0] if cfg_items else {}
     if not cfg_data:
         return None
     return {

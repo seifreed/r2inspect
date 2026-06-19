@@ -7,6 +7,7 @@ Domain functions are tested directly with real data.
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.bindiff_analyzer import BinDiffAnalyzer
@@ -363,6 +364,34 @@ def test_extract_function_features_cfg_dict():
     result = analyzer._extract_function_features()
 
     assert "cfg_features" in result
+
+
+def test_extract_function_features_cfg_iterable():
+    """Test _extract_function_features with CFG returned as an iterable."""
+
+    class IterableCfgAdapter:
+        def analyze_all(self) -> None:
+            pass
+
+        def get_functions(self) -> list[dict[str, Any]]:
+            return [{"name": "main", "size": 200, "addr": 0x1000}]
+
+        def get_cfg(self, func_addr: int):
+            return (
+                item
+                for item in [
+                    {
+                        "blocks": [{"addr": func_addr}, {"addr": func_addr + 0x10}],
+                        "edges": [{"from": func_addr, "to": func_addr + 0x10}],
+                    }
+                ]
+            )
+
+    analyzer = BinDiffAnalyzer(IterableCfgAdapter(), "/test/file.exe")
+    result = analyzer._extract_function_features()
+
+    assert "cfg_features" in result
+    assert result["cfg_features"][0]["nodes"] == 2
 
 
 def test_extract_function_features_exception():
