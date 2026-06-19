@@ -453,3 +453,33 @@ def test_build_anti_analysis_report_ignores_non_list_evidence():
     assert result["detection_details"]["anti_vm_evidence"] == []
     assert result["detection_details"]["anti_sandbox_evidence"] == []
     assert result["detection_details"]["timing_evidence"] == []
+
+
+def test_build_anti_analysis_report_ignores_non_dict_detector_results():
+    class _BadDetailedDetector:
+        def _detect_anti_debug_detailed(self):
+            return None
+
+        def _detect_anti_vm_detailed(self):
+            return []
+
+        def _detect_anti_sandbox_detailed(self):
+            return "bad"
+
+        def _detect_evasion_techniques(self):
+            return []
+
+        def _find_suspicious_apis(self):
+            return []
+
+        def _detect_timing_checks_detailed(self):
+            return {"detected": True, "evidence": []}
+
+        def _detect_environment_checks(self):
+            return []
+
+    result = build_anti_analysis_report(_BadDetailedDetector())
+    assert result["anti_debug"] is False
+    assert result["anti_vm"] is False
+    assert result["anti_sandbox"] is False
+    assert result["timing_checks"] is True
