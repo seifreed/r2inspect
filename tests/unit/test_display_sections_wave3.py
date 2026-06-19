@@ -147,6 +147,13 @@ def test_add_binlex_similarity_groups_one_group():
     assert len(table.rows) == 2
 
 
+def test_add_binlex_similarity_groups_accepts_iterable_groups():
+    table = _make_table()
+    similar_functions = {2: ({"count": 3, "signature": "s"},)}
+    _add_binlex_similarity_groups(table, [2], similar_functions)
+    assert len(table.rows) == 2
+
+
 def test_add_binlex_binary_signatures_no_match():
     table = _make_table()
     _add_binlex_binary_signatures(table, [4], {2: "abc"})

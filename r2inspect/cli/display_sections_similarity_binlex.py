@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import re
 from typing import Any, cast
 
@@ -87,15 +88,21 @@ def _add_binlex_similarity_groups(
 ) -> None:
     for n in ngram_sizes:
         groups = _lookup_ngram_value(similar_functions, n)
-        if not isinstance(groups, list) or not groups:
+        if isinstance(groups, list):
+            group_source = groups
+        elif isinstance(groups, (dict, str, bytes)) or not isinstance(groups, Iterable):
             continue
-        largest_group = groups[0]
+        else:
+            group_source = list(groups)
+        if not group_source:
+            continue
+        largest_group = group_source[0]
         if not isinstance(largest_group, dict):
             continue
         count = largest_group.get("count")
         if count is None:
             continue
-        table.add_row(f"Similar {n}-gram Groups", str(len(groups)))
+        table.add_row(f"Similar {n}-gram Groups", str(len(group_source)))
         table.add_row(f"Largest {n}-gram Group", f"{count} functions")
 
 
