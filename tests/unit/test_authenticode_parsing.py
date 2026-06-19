@@ -220,6 +220,21 @@ class TestSecurityDirectoryParsing:
 
         assert result is None
 
+    def test_get_security_directory_iterable_input(self):
+        """Test when data directories arrive as a generator."""
+        result = get_security_directory(
+            lambda _cmd, _default=None: (
+                entry
+                for entry in [
+                    {"name": "EXPORT", "vaddr": 0x1000},
+                    {"name": "SECURITY", "vaddr": 0x2000, "paddr": 0x1800, "size": 0x400},
+                ]
+            )
+        )
+
+        assert result is not None
+        assert result["name"] == "SECURITY"
+
     def test_read_win_certificate_invalid_offset(self):
         """Test reading certificate with invalid offset (zero)."""
         analyzer = _make_analyzer()

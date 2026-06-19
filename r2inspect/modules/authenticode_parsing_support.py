@@ -12,10 +12,17 @@ def _to_int(value: Any) -> int | None:
         return None
 
 
+def _coerce_list(raw: Any) -> list[Any]:
+    if isinstance(raw, list):
+        return raw
+    try:
+        return list(raw)
+    except TypeError:
+        return []
+
+
 def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
-    data_dirs = cmdj("iDj", [])
-    if not isinstance(data_dirs, list):
-        return None
+    data_dirs = _coerce_list(cmdj("iDj", []))
     for dd in data_dirs:
         if isinstance(dd, dict) and dd.get("name") == "SECURITY":
             return dd
