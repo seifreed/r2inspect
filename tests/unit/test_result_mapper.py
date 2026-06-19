@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from r2inspect.application.result_mapper import _build_list, build_analysis_result
 from r2inspect.application.result_mapper_builders import (
+    build_crypto_result,
     build_section_info,
     build_security_features,
+    build_yara_match,
 )
 from r2inspect.schemas.results_models import AnalysisResult
 
@@ -61,6 +63,21 @@ def test_build_analysis_result_accepts_iterable_strings():
     result = build_analysis_result(raw)
 
     assert result.strings == ["hello", "world"]
+
+
+def test_build_yara_match_normalizes_iterables():
+    match = build_yara_match({"tags": ("packed", "obfuscated"), "strings": ("a", "b")})
+    assert match.tags == ["packed", "obfuscated"]
+    assert match.strings == ["a", "b"]
+
+
+def test_build_crypto_result_normalizes_iterables():
+    crypto = build_crypto_result(
+        {"algorithms": ("aes", "rsa"), "constants": ("key",), "functions": ("enc",)}
+    )
+    assert crypto.algorithms == ["aes", "rsa"]
+    assert crypto.constants == ["key"]
+    assert crypto.functions == ["enc"]
 
 
 def test_build_analysis_result_is_idempotent():

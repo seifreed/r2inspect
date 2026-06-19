@@ -5,6 +5,7 @@ Orchestrated by result_mapper.build_analysis_result; split for size budget.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from ..domain.entities import (
@@ -23,6 +24,14 @@ from ..domain.format_types import SectionInfo, SecurityFeatures
 from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _coerce_list(raw: Any) -> list[Any]:
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, (dict, str, bytes)) or not isinstance(raw, Iterable):
+        return []
+    return list(raw)
 
 
 def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
@@ -77,7 +86,7 @@ def build_import_info(raw: dict[str, Any]) -> ImportInfo:
         category=raw.get("category", ""),
         risk_score=raw.get("risk_score", 0),
         risk_level=raw.get("risk_level", "Low"),
-        risk_tags=raw.get("risk_tags", []),
+        risk_tags=_coerce_list(raw.get("risk_tags", [])),
     )
 
 
@@ -109,7 +118,7 @@ def build_section_info(raw: dict[str, Any]) -> SectionInfo:
             is_writable=raw.get("is_writable", False),
             is_readable=raw.get("is_readable", False),
             flags=flags_val,
-            suspicious_indicators=raw.get("suspicious_indicators", []),
+            suspicious_indicators=_coerce_list(raw.get("suspicious_indicators", [])),
         )
     except Exception as exc:
         logger.debug("SectionInfo construction failed for '%s': %s", raw.get("name"), exc)
@@ -120,9 +129,9 @@ def build_yara_match(raw: dict[str, Any]) -> YaraMatch:
     return YaraMatch(
         rule=raw.get("rule", ""),
         namespace=raw.get("namespace", ""),
-        tags=raw.get("tags", []),
+        tags=_coerce_list(raw.get("tags", [])),
         meta=raw.get("meta", {}),
-        strings=raw.get("strings", []),
+        strings=_coerce_list(raw.get("strings", [])),
     )
 
 
@@ -146,7 +155,7 @@ def build_anti_analysis(raw: dict[str, Any] | None) -> AntiAnalysisResult:
         anti_vm=raw.get("anti_vm", False),
         anti_sandbox=raw.get("anti_sandbox", False),
         timing_checks=raw.get("timing_checks", False),
-        techniques=raw.get("techniques", []),
+        techniques=_coerce_list(raw.get("techniques", [])),
     )
 
 
@@ -157,7 +166,7 @@ def build_packer_result(raw: dict[str, Any] | None) -> PackerResult:
         is_packed=raw.get("is_packed", False),
         packer_type=raw.get("packer_type", ""),
         confidence=raw.get("confidence", 0),
-        indicators=raw.get("indicators", []),
+        indicators=_coerce_list(raw.get("indicators", [])),
     )
 
 
@@ -165,9 +174,9 @@ def build_crypto_result(raw: dict[str, Any] | None) -> CryptoResult:
     if not raw or not isinstance(raw, dict):
         return CryptoResult()
     return CryptoResult(
-        algorithms=raw.get("algorithms", []),
-        constants=raw.get("constants", []),
-        functions=raw.get("functions", []),
+        algorithms=_coerce_list(raw.get("algorithms", [])),
+        constants=_coerce_list(raw.get("constants", [])),
+        functions=_coerce_list(raw.get("functions", [])),
     )
 
 
