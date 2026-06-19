@@ -163,10 +163,15 @@ def build_technical_details(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the technical-detail section of the executive summary."""
     functions = _dict_bucket(analysis_results, "functions")
     crypto = _dict_bucket(analysis_results, "crypto")
+    function_count = functions.get("count", 0)
+    if not function_count:
+        raw_functions = analysis_results.get("functions")
+        if isinstance(raw_functions, list):
+            function_count = len(raw_functions)
     return {
         "imports": len(_list_bucket(analysis_results, "imports")),
         "sections": len(_list_bucket(analysis_results, "sections")),
-        "functions": functions.get("count", 0),
+        "functions": function_count,
         "crypto_matches": len(crypto.get("matches", [])),
     }
 

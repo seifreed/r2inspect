@@ -369,6 +369,19 @@ def test_build_technical_details():
     assert details["crypto_matches"] == 1
 
 
+def test_build_technical_details_accepts_function_lists():
+    details = _build_technical_details(
+        {
+            "imports": [],
+            "sections": [],
+            "functions": [{"name": "a"}, {"name": "b"}, {"name": "c"}],
+            "crypto": {},
+        }
+    )
+
+    assert details["functions"] == 3
+
+
 def test_build_technical_details_empty():
     results = {
         "imports": [],
