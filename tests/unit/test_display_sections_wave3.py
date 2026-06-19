@@ -134,6 +134,13 @@ def test_add_binlex_top_ngrams_html_entities():
     assert len(table.rows) == 1
 
 
+def test_add_binlex_top_ngrams_accepts_iterable_entries():
+    table = _make_table()
+    top_ngrams = {2: (("hello&nbsp;world&amp;test", 7),)}
+    _add_binlex_top_ngrams(table, [2], top_ngrams)
+    assert len(table.rows) == 1
+
+
 def test_add_binlex_top_ngrams_no_matching_size():
     table = _make_table()
     _add_binlex_top_ngrams(table, [3], {2: [("x", 1)]})
@@ -166,6 +173,21 @@ def test_add_binlex_entries_full_data():
         "total_functions": 100,
         "analyzed_functions": 90,
         "ngram_sizes": [2, 3],
+        "unique_signatures": {2: 50, 3: 60},
+        "similar_functions": {2: [{"count": 5, "signature": "s"}], 3: []},
+        "binary_signature": {2: "sig2", 3: "x" * 70},
+        "top_ngrams": {2: [("op1", 10), ("op2", 5)], 3: []},
+    }
+    _add_binlex_entries(table, binlex_info)
+    assert len(table.rows) > 0
+
+
+def test_add_binlex_entries_accepts_iterable_ngram_sizes():
+    table = _make_table()
+    binlex_info = {
+        "total_functions": 100,
+        "analyzed_functions": 90,
+        "ngram_sizes": (2, 3),
         "unique_signatures": {2: 50, 3: 60},
         "similar_functions": {2: [{"count": 5, "signature": "s"}], 3: []},
         "binary_signature": {2: "sig2", 3: "x" * 70},

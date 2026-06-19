@@ -68,8 +68,13 @@ def _add_binlex_basic_stats(table: Table, binlex_info: dict[str, Any]) -> list[A
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(analyzed_functions))
 
     ngram_sizes = binlex_info.get("ngram_sizes", [])
-    if not isinstance(ngram_sizes, list):
-        ngram_sizes = []
+    if isinstance(ngram_sizes, list):
+        ngram_source = ngram_sizes
+    elif isinstance(ngram_sizes, (dict, str, bytes)) or not isinstance(ngram_sizes, Iterable):
+        ngram_source = []
+    else:
+        ngram_source = list(ngram_sizes)
+    ngram_sizes = ngram_source
     table.add_row("N-gram Sizes", ", ".join(map(str, ngram_sizes)))
     return ngram_sizes
 
@@ -120,8 +125,14 @@ def _add_binlex_top_ngrams(
 ) -> None:
     for n in ngram_sizes:
         ngram_entries = _lookup_ngram_value(top_ngrams, n)
-        if isinstance(ngram_entries, list) and ngram_entries:
-            top_3 = ngram_entries[:3]
+        if isinstance(ngram_entries, list):
+            entry_source = ngram_entries
+        elif isinstance(ngram_entries, (dict, str, bytes)) or not isinstance(ngram_entries, Iterable):
+            continue
+        else:
+            entry_source = list(ngram_entries)
+        if entry_source:
+            top_3 = entry_source[:3]
             ngram_strs = []
             for item in top_3:
                 if not isinstance(item, (list, tuple)) or len(item) < 2:
