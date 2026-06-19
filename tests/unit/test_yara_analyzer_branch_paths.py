@@ -678,6 +678,16 @@ def test_list_available_rules_single_file(tmp_path):
     assert "modified" in result[0]
 
 
+def test_list_available_rules_rejects_non_yara_single_file(tmp_path):
+    non_rule = tmp_path / "readme.txt"
+    non_rule.write_text("not a yara rule")
+
+    analyzer = make_analyzer(str(tmp_path / "rules"))
+    result = analyzer.list_available_rules(str(non_rule))
+
+    assert result == []
+
+
 def test_list_available_rules_directory(tmp_path):
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()

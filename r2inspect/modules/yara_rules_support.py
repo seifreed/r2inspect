@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 
 
+_YARA_RULE_SUFFIXES = {".yar", ".yara", ".rule", ".rules"}
+
+
 def _coerce_extensions(yara_extensions: Any) -> list[str]:
     if isinstance(yara_extensions, list):
         return [ext for ext in yara_extensions if isinstance(ext, str) and ext]
@@ -18,6 +21,10 @@ def _coerce_extensions(yara_extensions: Any) -> list[str]:
         return [ext for ext in list(yara_extensions) if isinstance(ext, str) and ext]
     except TypeError:
         return []
+
+
+def _is_yara_rule_file(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in _YARA_RULE_SUFFIXES
 
 
 def discover_rule_files(rules_dir: Path, yara_extensions: list[str]) -> list[Path]:
@@ -136,6 +143,8 @@ def list_available_rules(
         logger.warning("YARA rules path not found: %s", rules_path)
         return available_rules
     if stat_module.S_ISREG(path_stat.st_mode):
+        if not _is_yara_rule_file(path):
+            return available_rules
         available_rules.append(
             {
                 "name": path.name,
