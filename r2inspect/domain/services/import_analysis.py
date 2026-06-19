@@ -48,8 +48,10 @@ def _text_value(value: Any, default: str) -> str:
 def _library_value(imp: dict[str, Any]) -> str:
     for key in ("library", "dll", "libname"):
         value = imp.get(key)
+        if isinstance(value, bytes):
+            value = value.decode(errors="ignore")
         if isinstance(value, str) and value:
-            return value
+            return value.lower()
     return "unknown"
 
 
@@ -360,9 +362,15 @@ def _duplicate_imports(imports: list[Any]) -> list[str]:
         if not isinstance(imp, dict):
             continue
         name = imp.get("name", "")
-        if not name:
+        if isinstance(name, bytes):
+            name = name.decode(errors="ignore")
+        if not isinstance(name, str) or not name:
             continue
         library = imp.get("library", imp.get("dll", ""))
+        if isinstance(library, bytes):
+            library = library.decode(errors="ignore")
+        if isinstance(library, str):
+            library = library.lower()
         import_keys.append(f"{library}!{name}" if library else name)
     return [name for name, count in Counter(import_keys).items() if count > 1]
 

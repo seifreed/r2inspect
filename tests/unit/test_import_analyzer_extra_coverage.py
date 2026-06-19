@@ -556,6 +556,17 @@ def test_build_import_statistics_accepts_libname_key_for_library_distribution():
     assert stats["library_distribution"] == {"kernel32.dll": 1}
 
 
+def test_build_import_statistics_normalizes_library_case():
+    stats = build_import_statistics(
+        [
+            {"name": "CreateFileA", "category": "File", "risk_level": "LOW", "library": "KERNEL32.DLL"},
+            {"name": "ReadFile", "category": "File", "risk_level": "LOW", "library": "kernel32.dll"},
+        ]
+    )
+    assert stats["unique_libraries"] == 1
+    assert stats["library_distribution"] == {"kernel32.dll": 2}
+
+
 def test_build_import_statistics_coerces_malformed_fields():
     stats = build_import_statistics(
         [
