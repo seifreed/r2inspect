@@ -194,6 +194,14 @@ def test_analyze_import_skips_non_list_api_category_buckets():
     assert result["category"] == "Unknown"
 
 
+def test_analyze_import_skips_non_string_api_category_entries():
+    analyzer = _make_analyzer()
+    analyzer.api_categories = {"File I/O": ["CreateFile", 123]}  # type: ignore[assignment]
+    imp = {"name": "CreateFileA", "plt": 0x1000, "libname": "kernel32.dll"}
+    result = analyzer._analyze_import(imp)
+    assert result["category"] == "File I/O"
+
+
 # ---------------------------------------------------------------------------
 # _get_function_description
 # ---------------------------------------------------------------------------
