@@ -123,7 +123,7 @@ def _cfg_feature(cfg: Any) -> dict[str, Any] | None:
     else:
         cfg_items = list(cfg)
         cfg_data = cfg_items[0] if cfg_items else {}
-    if not cfg_data:
+    if not isinstance(cfg_data, dict) or not cfg_data:
         return None
     return {
         "nodes": len(cfg_data.get("blocks", [])),

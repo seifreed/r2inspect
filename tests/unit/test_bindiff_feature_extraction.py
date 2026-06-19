@@ -32,6 +32,7 @@ from r2inspect.modules.string_classification import (
     is_registry_string,
     is_url_string,
 )
+from r2inspect.modules.bindiff_feature_extraction import _cfg_feature
 
 SAMPLES_DIR = Path(__file__).parent.parent.parent / "samples" / "fixtures"
 
@@ -240,6 +241,17 @@ def test_extract_structural_features_accepts_library_key():
 
     assert result["imported_dlls"] == ["kernel32.dll"]
     assert result["imported_functions"] == ["CreateFileA"]
+
+
+def test_cfg_feature_rejects_malformed_cfg_entries():
+    """Malformed CFG payloads should not crash feature extraction."""
+    assert _cfg_feature(["bad"]) is None
+    assert _cfg_feature([]) is None
+    assert _cfg_feature({"blocks": [], "edges": []}) == {
+        "nodes": 0,
+        "edges": 0,
+        "complexity": 0,
+    }
 
 
 def test_extract_structural_features_empty():
