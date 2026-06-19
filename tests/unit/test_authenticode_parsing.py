@@ -220,6 +220,17 @@ class TestSecurityDirectoryParsing:
 
         assert result is None
 
+    def test_get_security_directory_rejects_dict_shape(self):
+        analyzer = _make_analyzer(
+            cmdj_map={
+                "iDj": {"directories": [{"name": "SECURITY", "vaddr": 0x2000}]},
+            }
+        )
+
+        result = analyzer._get_security_directory()
+
+        assert result is None
+
     def test_get_security_directory_iterable_input(self):
         """Test when data directories arrive as a generator."""
         result = get_security_directory(
