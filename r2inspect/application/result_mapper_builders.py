@@ -20,10 +20,6 @@ from ..abstractions.coercion_support import coerce_list
 
 logger = get_logger(__name__)
 
-
-def _coerce_list(raw: Any) -> list[Any]:
-    return coerce_list(raw)
-
 def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
     if not raw or not isinstance(raw, dict):
         return FileInfo()

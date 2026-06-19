@@ -9,10 +9,6 @@ from ..domain.services.function_analysis import build_function_stats
 from .function_analyzer_extraction_support import coerce_positive_int
 
 
-def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
-    return coerce_dict_iterable(functions)
-
-
 def generate_function_stats(functions: list[dict[str, Any]], logger: Any) -> dict[str, Any]:
     try:
         return build_function_stats(functions)
@@ -36,7 +32,7 @@ def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int
     with_size = 0
     with_blocks = 0
     sizes: list[int] = []
-    for func in _coerce_function_list(functions):
+    for func in coerce_dict_iterable(functions):
         if not isinstance(func, dict):
             continue
         size = coerce_positive_int(func.get("size"))
@@ -57,7 +53,7 @@ def _build_function_coverage(functions: Any) -> dict[str, Any]:
             "total_code_coverage": 0,
             "avg_function_size": 0,
         }
-    normalized = _coerce_function_list(functions)
+    normalized = coerce_dict_iterable(functions)
     if not normalized:
         if isinstance(functions, (str, bytes, dict)) or functions is None:
             return {}

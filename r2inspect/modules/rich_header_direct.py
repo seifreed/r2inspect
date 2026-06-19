@@ -17,10 +17,6 @@ from .rich_header_defaults import DANS_PATTERNS, RICH_PATTERNS
 logger = get_logger(__name__)
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 class RichHeaderDirectMixin:
     """File probing and direct extraction helpers for Rich Header analysis."""
 
@@ -127,8 +123,8 @@ class RichHeaderDirectMixin:
     def _extract_offsets(
         rich_result: dict[str, Any], dans_result: dict[str, Any]
     ) -> tuple[int, int] | None:
-        rich_offset = _to_int(rich_result.get("offset"))
-        dans_offset = _to_int(dans_result.get("offset"))
+        rich_offset = coerce_int(rich_result.get("offset"))
+        dans_offset = coerce_int(dans_result.get("offset"))
         if rich_offset <= 0 or dans_offset <= 0:
             return None
         return dans_offset, rich_offset

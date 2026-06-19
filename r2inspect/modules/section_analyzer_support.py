@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.services.section_analysis import build_section_characteristics
 
 
@@ -28,23 +29,14 @@ class SectionHost(Protocol):
     def _count_nops_in_section(self, vaddr: int, size: int) -> tuple[int, int]: ...
 
 
-def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
-
-
 def analyze_single_section(
     analyzer: SectionHost, section: dict[str, Any], *, logger: logging.Logger
 ) -> dict[str, Any]:
     analysis = {
         "name": str(section.get("name", "unknown")),
-        "virtual_address": _to_int(section.get("vaddr", 0)),
-        "virtual_size": _to_int(section.get("vsize", 0)),
-        "raw_size": _to_int(section.get("size", 0)),
+        "virtual_address": coerce_int(section.get("vaddr", 0)),
+        "virtual_size": coerce_int(section.get("vsize", 0)),
+        "raw_size": coerce_int(section.get("size", 0)),
         "flags": section.get("flags", ""),
         "entropy": 0.0,
         "is_executable": False,
@@ -95,18 +87,18 @@ def analyze_code_section(
 ) -> dict[str, Any]:
     code_info: dict[str, Any] = {}
     try:
-        vaddr = _to_int(section.get("vaddr", 0))
-        size = _to_int(section.get("size", 0))
+        vaddr = coerce_int(section.get("vaddr", 0))
+        size = coerce_int(section.get("size", 0))
         if size == 0:
             return code_info
         functions = analyzer._get_functions_in_section(vaddr, size)
         code_info["function_count"] = len(functions)
         if functions:
             sizes = [
-                _to_int(size)
+                coerce_int(size)
                 for f in functions
                 if isinstance(f, dict)
-                and (size := _to_int(f.get("size", 0)))
+                and (size := coerce_int(f.get("size", 0)))
                 and size > 0
             ]
             if sizes:

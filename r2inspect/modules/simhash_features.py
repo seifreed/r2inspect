@@ -10,14 +10,6 @@ from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
 from .simhash_support import SimHashHost
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
-def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
-    return coerce_dict_iterable(functions)
-
-
 def _function_name(func: dict[str, Any], func_addr: int | None = None) -> str:
     name = func.get("name")
     if isinstance(name, str) and name:
@@ -56,16 +48,16 @@ def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> lis
 def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> list[str]:
     opcode_features: list[str] = []
     try:
-        functions = _coerce_function_list(host._get_functions())
+        functions = coerce_dict_iterable(host._get_functions())
         if not functions:
             logger.debug("No functions found for opcode extraction, trying alternative methods")
-            functions = _coerce_function_list(host._cmd_list("afl"))
+            functions = coerce_dict_iterable(host._cmd_list("afl"))
             if not functions:
                 return []
         for func in functions:
             if not isinstance(func, dict):
                 continue
-            func_addr = _to_int(func.get("offset") or func.get("addr"))
+            func_addr = coerce_int(func.get("offset") or func.get("addr"))
             if func_addr <= 0:
                 continue
             func_name = _function_name(func, func_addr)
@@ -104,11 +96,11 @@ def extract_function_features(
         for func in function_source:
             if not isinstance(func, dict):
                 continue
-            func_addr = _to_int(func.get("offset") or func.get("addr"))
+            func_addr = coerce_int(func.get("offset") or func.get("addr"))
             if func_addr <= 0:
                 continue
             func_name = _function_name(func, func_addr)
-            func_size = _to_int(func.get("size", 0))
+            func_size = coerce_int(func.get("size", 0))
             func_opcodes = host._extract_function_opcodes(func_addr, func_name)
             if not func_opcodes:
                 continue

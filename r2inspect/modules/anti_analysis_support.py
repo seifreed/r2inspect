@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.formats.anti_analysis import (
     ENVIRONMENT_CHECK_COMMANDS,
     INJECTION_APIS,
@@ -21,15 +22,6 @@ from .anti_analysis_helpers import (
     detect_self_modifying,
     match_suspicious_api,
 )
-
-
-def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _string_value(value: Any) -> str:
@@ -107,7 +99,7 @@ def _anti_debug_import_evidence(detector: Any) -> list[dict[str, Any]]:
                 {
                     "type": "API Call",
                     "detail": f"Anti-debug API: {func_name}",
-                    "address": hex(_to_int(imp.get("plt", 0))),
+                    "address": hex(coerce_int(imp.get("plt", 0))),
                     "library": imp.get("libname") or imp.get("library", "unknown"),
                 }
             )
@@ -274,7 +266,7 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
                     {
                         "function": func_name,
                         "description": TIMING_APIS[func_name],
-                        "address": hex(_to_int(imp.get("plt", 0))),
+                        "address": hex(coerce_int(imp.get("plt", 0))),
                         "library": imp.get("libname") or imp.get("library", "unknown"),
                     }
                 )

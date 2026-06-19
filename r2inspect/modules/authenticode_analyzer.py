@@ -1,5 +1,6 @@
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
@@ -14,15 +15,6 @@ from .authenticode_result_support import (
 )
 
 logger = get_logger(__name__)
-
-
-def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _list_bucket(result: dict[str, Any], key: str) -> list[Any]:
@@ -49,7 +41,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 return result
 
             security_dir = self._get_security_directory()
-            if not security_dir or _to_int(security_dir.get("vaddr", 0)) == 0:
+            if not security_dir or coerce_int(security_dir.get("vaddr", 0)) == 0:
                 result["has_signature"] = False
                 return result
 
@@ -215,7 +207,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             core = file_info.get("core", {})
             if not isinstance(core, dict):
                 return None
-            file_size = _to_int(core.get("size", 0))
+            file_size = coerce_int(core.get("size", 0))
             if file_size == 0:
                 return None
             pe_header = self._cmdj("ihj", {})
@@ -243,7 +235,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             if signature_info.get("errors"):
                 return False
             sec_dir = signature_info.get("security_directory")
-            return not (not sec_dir or _to_int(sec_dir.get("size", 0)) == 0)
+            return not (not sec_dir or coerce_int(sec_dir.get("size", 0)) == 0)
         except Exception as exc:
             logger.error("Error verifying signature: %s", exc)
             return False

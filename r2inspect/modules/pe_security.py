@@ -9,10 +9,6 @@ from ..abstractions.coercion_support import coerce_int
 from ..infrastructure.r2_helpers import get_pe_headers
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 def _parse_dll_characteristics(value: Any) -> int | None:
     try:
         if isinstance(value, str):
@@ -108,6 +104,6 @@ def _apply_authenticode_feature(
     security_dir = data_dir.get("security", {})
     if not isinstance(security_dir, dict):
         return
-    security_size = _to_int(security_dir.get("size", 0))
+    security_size = coerce_int(security_dir.get("size", 0))
     if security_size > 0:
         features["authenticode"] = True

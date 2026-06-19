@@ -9,10 +9,6 @@ from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
-def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
-    return coerce_dict_iterable(functions)
-
-
 def _to_int(value: Any) -> int:
     return coerce_int(value)
 
@@ -46,7 +42,7 @@ def generate_machoc_hashes(
 ) -> dict[str, str]:
     machoc_hashes: dict[str, str] = {}
     failed_functions = 0
-    normalized = _coerce_function_list(functions)
+    normalized = coerce_dict_iterable(functions)
     if not normalized:
         return machoc_hashes
     logger.debug("Starting MACHOC hash generation for %s functions", len(normalized))

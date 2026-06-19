@@ -37,14 +37,6 @@ from ..domain.services.binary_helpers import (
 logger = get_logger(__name__)
 
 
-def _coerce_function_list(functions: Any) -> list[Any]:
-    return coerce_dict_iterable(functions)
-
-
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Section analysis using backend data."""
 
@@ -103,7 +95,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
             analysis["is_readable"] = analysis["is_readable"] or "r" in pe_flags
 
     def _apply_pe_characteristics(self, section: dict[str, Any], analysis: dict[str, Any]) -> None:
-        characteristics_value = _to_int(section.get("characteristics", 0))
+        characteristics_value = coerce_int(section.get("characteristics", 0))
         if characteristics_value <= 0:
             return
         analysis["pe_characteristics"] = self._decode_pe_characteristics(characteristics_value)
@@ -132,8 +124,8 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
         try:
             name = str(section.get("name", ""))
-            vsize = _to_int(section.get("vsize", 0))
-            raw_size = _to_int(section.get("size", 0))
+            vsize = coerce_int(section.get("vsize", 0))
+            raw_size = coerce_int(section.get("size", 0))
             entropy = analysis.get("entropy", 0)
 
             indicators.extend(self._check_section_name_indicators(name))
@@ -189,7 +181,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         if size <= 0:
             return []
         if self._functions_cache is None:
-            self._functions_cache = _coerce_function_list(self._cmd_list("aflj"))
+            self._functions_cache = coerce_dict_iterable(self._cmd_list("aflj"))
         functions = self._functions_cache or []
         end = vaddr + size
         filtered: list[dict[str, Any]] = []

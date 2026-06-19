@@ -17,10 +17,6 @@ def _to_int(value: Any) -> int | None:
         return None
 
 
-def _coerce_list(raw: Any) -> list[Any]:
-    return coerce_list(raw)
-
-
 def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:
     file_info = cmdj("ij", {})
     if not isinstance(file_info, dict):
@@ -66,7 +62,7 @@ def calculate_pe_end(
 
 
 def get_sections(cmdj: Callable[[str, Any], Any]) -> list[dict[str, Any]]:
-    sections = _coerce_list(cmdj("iSj", []))
+    sections = coerce_list(cmdj("iSj", []))
     return [section for section in sections if isinstance(section, dict)]
 
 
@@ -84,7 +80,7 @@ def get_max_section_end(sections: list[dict[str, Any]]) -> int:
 
 
 def extend_end_with_certificate(cmdj: Callable[[str, Any], Any], max_end: int) -> int:
-    for dd in _coerce_list(cmdj("iDj", [])):
+    for dd in coerce_list(cmdj("iDj", [])):
         if not isinstance(dd, dict) or dd.get("name") != "SECURITY":
             continue
         cert_offset = _to_int(dd.get("paddr", 0))

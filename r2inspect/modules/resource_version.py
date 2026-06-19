@@ -7,18 +7,14 @@ from typing import Any
 from ..abstractions.coercion_support import coerce_int
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 class ResourceVersionMixin:
     """VERSION_INFO parsing helpers kept separate from resource orchestration."""
 
     _cmdj: Any  # provided by host class
 
     def _read_version_info_data(self, offset: int, size: int) -> list[int] | None:
-        offset = _to_int(offset)
-        size = _to_int(size)
+        offset = coerce_int(offset)
+        size = coerce_int(size)
         if offset < 0 or size <= 0:
             return None
         data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])

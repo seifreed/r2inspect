@@ -16,6 +16,7 @@ from pathlib import Path
 from collections.abc import Iterable
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
 from ..adapters.file_system import default_file_system
 from ..domain.formats.bindiff import (
     build_behavioral_signature,
@@ -44,13 +45,6 @@ from .string_classification import (
 logger = get_logger(__name__)
 
 
-def _to_int(value: Any) -> int:
-    try:
-        return int(value, 0) if isinstance(value, str) else int(value)
-    except (TypeError, ValueError):
-        return 0
-
-
 def _string_value(value: Any) -> str:
     return value if isinstance(value, str) else ""
 
@@ -65,9 +59,9 @@ def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
     return {
         "file_type": _string_value(core_info.get("format", "")),
         "architecture": _string_value(bin_info.get("arch", "")),
-        "bits": _to_int(bin_info.get("bits", 0)),
+        "bits": coerce_int(bin_info.get("bits", 0)),
         "endian": _string_value(bin_info.get("endian", "")),
-        "file_size": _to_int(core_info.get("size", 0)),
+        "file_size": coerce_int(core_info.get("size", 0)),
     }
 
 
@@ -78,7 +72,7 @@ def _structural_sections(sections: list[dict[str, Any]]) -> dict[str, Any]:
         "section_names": sorted(
             [name for s in valid_sections if (name := _string_value(s.get("name")))]
         ),
-        "section_sizes": [_to_int(s.get("size", 0)) for s in valid_sections],
+        "section_sizes": [coerce_int(s.get("size", 0)) for s in valid_sections],
         "executable_sections": len(
             [s for s in valid_sections if "x" in _string_value(s.get("perm"))]
         ),
@@ -208,7 +202,7 @@ class BinDiffFeatureExtractor:
                 continue
             # r2's aflj emits the function address as "addr" (not "offset"), so
             # this was always 0 and the CFG features were never collected.
-            func_addr = _to_int(func.get("addr") or func.get("offset", 0))
+            func_addr = coerce_int(func.get("addr") or func.get("offset", 0))
             if func_addr:
                 cfg = self.adapter.get_cfg(func_addr) if self.adapter else {}
                 feature = _cfg_feature(cfg)
@@ -227,7 +221,7 @@ class BinDiffFeatureExtractor:
             valid_functions = [func for func in functions if isinstance(func, dict)]
             if valid_functions:
                 features["function_count"] = len(valid_functions)
-                features["function_sizes"] = [_to_int(f.get("size", 0)) for f in valid_functions]
+                features["function_sizes"] = [coerce_int(f.get("size", 0)) for f in valid_functions]
                 features["function_names"] = [
                     name for f in valid_functions if isinstance(name := f.get("name"), str) and name
                 ]
