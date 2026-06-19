@@ -20,7 +20,9 @@ def safe_len(value: Any) -> int:
 
 def normalize_import_entries(imports: Any) -> list[dict[str, Any]]:
     """Normalize import entries to a list of dicts."""
-    if isinstance(imports, list):
+    if isinstance(imports, dict):
+        source = [imports]
+    elif isinstance(imports, list):
         source = imports
     elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
         return []

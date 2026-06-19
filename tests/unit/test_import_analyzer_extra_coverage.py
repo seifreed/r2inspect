@@ -775,6 +775,11 @@ def test_normalize_import_entries_accepts_iterable_input():
     assert entries == [{"name": "CreateFileA"}, {"name": "WriteFile"}]
 
 
+def test_normalize_import_entries_accepts_single_dict_input():
+    entries = normalize_import_entries({"name": "CreateFileA"})
+    assert entries == [{"name": "CreateFileA"}]
+
+
 def test_populate_import_statistics_skips_non_dict_buckets():
     result = {
         "api_analysis": None,
