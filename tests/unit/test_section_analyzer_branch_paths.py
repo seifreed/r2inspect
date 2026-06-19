@@ -174,6 +174,18 @@ def test_calculate_entropy_returns_zero_on_read_exception():
     assert entropy == 0.0
 
 
+def test_calculate_entropy_returns_zero_for_text_payload():
+    class TextAdapter:
+        def read_bytes(self, addr: int, size: int) -> str:
+            return "bad"
+
+    section = {"name": ".text", "vaddr": 0x1000, "size": 0x100}
+    analyzer = _build_analyzer(sections=[])
+    analyzer.adapter = TextAdapter()
+    entropy = analyzer._calculate_entropy(section)
+    assert entropy == 0.0
+
+
 def test_calculate_entropy_nonzero_with_real_data():
     section = {"name": ".text", "vaddr": 0x1000, "size": 256}
     hex_data = "".join(f"{b:02x}" for b in range(256))
@@ -543,6 +555,18 @@ def test_count_nops_in_section_counts_nops_for_x86():
 def test_count_nops_in_section_returns_zero_when_read_bytes_empty():
     # No p8 command registered -> empty bytes
     analyzer = _build_analyzer(sections=[], arch="x86")
+    nop_count, sample_size = analyzer._count_nops_in_section(0x1000, 256)
+    assert nop_count == 0
+    assert sample_size == 0
+
+
+def test_count_nops_in_section_returns_zero_for_text_payload():
+    class TextAdapter:
+        def read_bytes(self, addr: int, size: int) -> str:
+            return "bad"
+
+    analyzer = _build_analyzer(sections=[], arch="x86")
+    analyzer.adapter = TextAdapter()
     nop_count, sample_size = analyzer._count_nops_in_section(0x1000, 256)
     assert nop_count == 0
     assert sample_size == 0

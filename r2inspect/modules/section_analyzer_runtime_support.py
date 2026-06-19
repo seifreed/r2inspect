@@ -72,7 +72,7 @@ def calculate_entropy(
         read_size = min(size, 1048576)
         data = analyzer.adapter.read_bytes(vaddr, read_size)
 
-        if len(data) == 0:
+        if not isinstance(data, (bytes, bytearray)) or len(data) == 0:
             return 0.0
         return shannon_entropy(data)
 
@@ -92,7 +92,7 @@ def count_nops_in_section(analyzer: SectionRuntimeHost, vaddr: int, size: int) -
 
     read_size = min(size, 1024 * 1024)
     data = analyzer.adapter.read_bytes(vaddr, read_size)
-    if not data:
+    if not isinstance(data, (bytes, bytearray)) or not data:
         return 0, 0
     return data.count(b"\x90"), len(data)
 
