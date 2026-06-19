@@ -31,9 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_function_list(functions: Any) -> list[dict[str, Any]]:
-    if not isinstance(functions, list):
+    if isinstance(functions, list):
+        return [func for func in functions if isinstance(func, dict)]
+    try:
+        return [func for func in list(functions) if isinstance(func, dict)]
+    except TypeError:
         return []
-    return [func for func in functions if isinstance(func, dict)]
 
 
 class FunctionAnalyzer(CommandHelperMixin):

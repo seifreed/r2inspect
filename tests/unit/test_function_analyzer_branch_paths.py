@@ -164,6 +164,18 @@ def test_get_functions_runs_aa_when_full_analysis_disabled():
     assert result == []
 
 
+def test_get_functions_normalizes_iterable_cmd_list_result():
+    class _IterableCmdListAnalyzer(FunctionAnalyzer):
+        def _cmd_list(self, command: str):
+            if command == "aflj":
+                return (func for func in [{"name": "main", "addr": 0x1000}, "skip"])
+            return []
+
+    analyzer = _IterableCmdListAnalyzer(_NoFunctionsAdapter())
+    result = analyzer._get_functions()
+    assert result == [{"name": "main", "addr": 0x1000}]
+
+
 # ---------------------------------------------------------------------------
 # _get_functions - cache returned directly
 # ---------------------------------------------------------------------------
