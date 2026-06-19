@@ -196,7 +196,15 @@ class PackerDetector(CommandHelperMixin):
         return cast(list[dict[str, Any]], self._get_via_adapter("get_imports", "iij"))
 
     def _get_sections(self) -> list[dict[str, Any]]:
-        return cast(list[dict[str, Any]], self._get_via_adapter("get_sections", "iSj"))
+        sections = self._get_via_adapter("get_sections", "iSj")
+        if isinstance(sections, list):
+            return [section for section in sections if isinstance(section, dict)]
+        if isinstance(sections, (dict, str, bytes)) or sections is None:
+            return []
+        try:
+            return [section for section in list(sections) if isinstance(section, dict)]
+        except TypeError:
+            return []
 
     def _get_strings(self) -> list[dict[str, Any]]:
         return cast(list[dict[str, Any]], self._get_via_adapter("get_strings", "izj"))

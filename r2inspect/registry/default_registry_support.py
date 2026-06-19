@@ -16,7 +16,13 @@ def create_default_registry_impl(
     for analyzer in ANALYZERS:
         registry.register(**analyzer)
 
-    registry.load_entry_points(entry_points_fn=entry_points_fn)
+    try:
+        if entry_points_fn is None:
+            registry.load_entry_points("r2inspect.analyzers")
+        else:
+            registry.load_entry_points("r2inspect.analyzers", entry_points_fn)
+    except Exception:
+        pass
     return registry
 
 

@@ -134,7 +134,7 @@ def analyze_sections(sections: list[dict[str, Any]] | None) -> dict[str, Any]:
 
 def update_section_info(section_info: dict[str, Any], section: dict[str, Any]) -> None:
     name = section.get("name") or ""
-    flags = section.get("flags") or ""
+    flags = str(section.get("flags") or "")
     size = _coerce_int(section.get("size"))
 
     if "x" in flags:

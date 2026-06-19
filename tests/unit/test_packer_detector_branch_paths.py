@@ -112,6 +112,20 @@ class AdapterReturningEmptyBytes:
         return b""
 
 
+class AdapterWithBadSections:
+    def get_imports(self) -> list[dict[str, Any]]:
+        return []
+
+    def get_sections(self) -> int:
+        return 7
+
+    def get_strings(self) -> list[dict[str, Any]]:
+        return []
+
+    def get_file_info(self) -> dict[str, Any]:
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # Basic construction
 # ---------------------------------------------------------------------------
@@ -184,6 +198,11 @@ def test_get_sections_falls_back_when_adapter_has_no_method():
     detector = PackerDetector(AdapterWithoutOptionalMethods(), StubConfig())
     sections = detector._get_sections()
     assert isinstance(sections, list)
+
+
+def test_get_sections_rejects_scalar_adapter_response():
+    detector = PackerDetector(AdapterWithBadSections(), StubConfig())
+    assert detector._get_sections() == []
 
 
 # ---------------------------------------------------------------------------

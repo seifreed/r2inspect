@@ -258,6 +258,15 @@ def test_packer_scoring_skips_malformed_strings_and_sections():
     assert sections["suspicious_sections"][0]["size"] == 0
 
 
+def test_packer_scoring_ignores_non_string_flags():
+    from r2inspect.domain.services.packer_scoring import analyze_sections
+
+    sections = analyze_sections([{"name": ".text", "flags": 1, "size": "big"}])
+
+    assert sections["section_count"] == 1
+    assert sections["executable_sections"] == 0
+
+
 def test_packer_scoring_replaces_missing_section_names():
     from r2inspect.domain.services.packer_scoring import analyze_entropy, analyze_sections
 
