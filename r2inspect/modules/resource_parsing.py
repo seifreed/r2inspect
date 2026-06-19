@@ -6,7 +6,7 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_list
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,7 @@ def _to_int(value: Any) -> int:
 
 
 def _coerce_list(raw: Any) -> list[Any]:
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, (dict, str, bytes)):
-        return []
-    try:
-        return list(raw)
-    except TypeError:
-        return []
+    return coerce_list(raw)
 
 
 class ResourceParsingMixin:

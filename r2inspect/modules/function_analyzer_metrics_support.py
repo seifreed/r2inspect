@@ -4,19 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_dict_iterable
 from ..domain.services.function_analysis import build_function_stats
 from .function_analyzer_extraction_support import coerce_positive_int
 
 
 def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
-    if isinstance(functions, list):
-        return [func for func in functions if isinstance(func, dict)]
-    if isinstance(functions, (dict, str, bytes)):
-        return []
-    try:
-        return [func for func in list(functions) if isinstance(func, dict)]
-    except TypeError:
-        return []
+    return coerce_dict_iterable(functions)
 
 
 def generate_function_stats(functions: list[dict[str, Any]], logger: Any) -> dict[str, Any]:

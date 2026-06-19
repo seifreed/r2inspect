@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
 from ..domain.entities import (
@@ -17,14 +16,13 @@ from ..domain.entities import (
 )
 from ..domain.format_types import SectionInfo, SecurityFeatures
 from ..infrastructure.logging import get_logger
+from ..abstractions.coercion_support import coerce_list
 
 logger = get_logger(__name__)
+
+
 def _coerce_list(raw: Any) -> list[Any]:
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, (dict, str, bytes)) or not isinstance(raw, Iterable):
-        return []
-    return list(raw)
+    return coerce_list(raw)
 
 def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
     if not raw or not isinstance(raw, dict):

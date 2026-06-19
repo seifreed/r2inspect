@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_list
+
 
 def _to_int(value: Any) -> int | None:
     try:
@@ -16,14 +18,7 @@ def _to_int(value: Any) -> int | None:
 
 
 def _coerce_list(raw: Any) -> list[Any]:
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, (dict, str, bytes)):
-        return []
-    try:
-        return list(raw)
-    except TypeError:
-        return []
+    return coerce_list(raw)
 
 
 def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:

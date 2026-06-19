@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_list
 from ..domain.services.binary_helpers import shannon_entropy
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
@@ -27,14 +27,7 @@ def _to_int(value: Any) -> int:
 
 
 def _coerce_list(raw: Any) -> list[Any]:
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, (dict, str, bytes)):
-        return []
-    try:
-        return list(raw)
-    except TypeError:
-        return []
+    return coerce_list(raw)
 
 
 def analyze_sections(analyzer: SectionRuntimeHost, logger: logging.Logger) -> list[dict[str, Any]]:

@@ -5,17 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
 def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
-    if isinstance(functions, list):
-        return [func for func in functions if isinstance(func, dict)]
-    try:
-        return [func for func in list(functions) if isinstance(func, dict)]
-    except TypeError:
-        return []
+    return coerce_dict_iterable(functions)
 
 
 def _to_int(value: Any) -> int:

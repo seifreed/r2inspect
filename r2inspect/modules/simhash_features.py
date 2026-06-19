@@ -6,7 +6,7 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
 from .simhash_support import SimHashHost
 
 
@@ -15,12 +15,7 @@ def _to_int(value: Any) -> int:
 
 
 def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
-    if isinstance(functions, list):
-        return [func for func in functions if isinstance(func, dict)]
-    try:
-        return [func for func in list(functions) if isinstance(func, dict)]
-    except TypeError:
-        return []
+    return coerce_dict_iterable(functions)
 
 
 def _function_name(func: dict[str, Any], func_addr: int | None = None) -> str:

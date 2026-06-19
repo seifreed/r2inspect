@@ -8,14 +8,22 @@ from typing import Any
 def coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, dict):
         return [raw]
+    return coerce_dict_iterable(raw)
+
+
+def coerce_list(raw: Any) -> list[Any]:
     if isinstance(raw, list):
-        return [item for item in raw if isinstance(item, dict)]
-    if isinstance(raw, (str, bytes, bytearray)) or raw is None:
+        return raw
+    if isinstance(raw, (dict, str, bytes)) or raw is None:
         return []
     try:
-        return [item for item in list(raw) if isinstance(item, dict)]
+        return list(raw)
     except TypeError:
         return []
+
+
+def coerce_dict_iterable(raw: Any) -> list[dict[str, Any]]:
+    return [item for item in coerce_list(raw) if isinstance(item, dict)]
 
 
 def coerce_number(value: Any, default: float = 0.0) -> float:

@@ -3,7 +3,7 @@
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.services.section_analysis import (
@@ -38,12 +38,7 @@ logger = get_logger(__name__)
 
 
 def _coerce_function_list(functions: Any) -> list[Any]:
-    if isinstance(functions, list):
-        return functions
-    try:
-        return list(functions)
-    except TypeError:
-        return []
+    return coerce_dict_iterable(functions)
 
 
 def _to_int(value: Any) -> int:
