@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 from .simhash_support import SimHashHost
@@ -89,9 +90,15 @@ def extract_function_features(
     function_features: dict[str, dict[str, Any]] = {}
     try:
         functions = host._get_functions()
-        if not functions:
+        if isinstance(functions, list):
+            function_source = functions
+        elif isinstance(functions, (dict, str, bytes)) or not isinstance(functions, Iterable):
             return {}
-        for func in functions:
+        else:
+            function_source = list(functions)
+        if not function_source:
+            return {}
+        for func in function_source:
             if not isinstance(func, dict):
                 continue
             func_addr = _to_int(func.get("offset") or func.get("addr"))

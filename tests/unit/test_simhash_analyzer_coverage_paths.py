@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pytest
@@ -7,7 +8,10 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.simhash import classify_opcode_type, previous_mnemonic
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
+from r2inspect.modules.simhash_features import extract_function_features as _extract_function_features_impl
 from r2inspect.testing.fake_r2 import FakeR2
+
+_logger = logging.getLogger(__name__)
 
 
 def _make_adapter(
@@ -326,6 +330,28 @@ def test_simhash_analyzer_extract_function_features_exception() -> None:
     analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
     result = analyzer._extract_function_features()
     assert result == {}
+
+
+def test_simhash_extract_function_features_normalizes_iterables() -> None:
+    class _IterableHost:
+        def __init__(self) -> None:
+            self._functions = (
+                {"offset": 0x1000, "name": "test_func", "size": 100},
+            )
+
+        def _get_functions(self):
+            return (func for func in self._functions)
+
+        def _extract_function_opcodes(self, func_addr: int, func_name: str) -> list[str]:
+            return [func_name, "mov"]
+
+    class _FakeSimhash:
+        def __init__(self, features: list[str]) -> None:
+            self.value = len(features)
+
+    result = _extract_function_features_impl(_IterableHost(), _FakeSimhash, logger=_logger)
+    assert "test_func" in result
+    assert result["test_func"]["feature_count"] == 2
 
 
 # ---------------------------------------------------------------------------
