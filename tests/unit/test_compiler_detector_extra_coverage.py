@@ -485,6 +485,18 @@ def test_score_compilers_skips_non_dict_input():
     assert scores == {}
 
 
+def test_score_compilers_accepts_iterable_signatures():
+    scores = score_compilers(
+        {"MSVC": ("sig1", "sig2")},
+        [],
+        [],
+        [],
+        [],
+        calculate_score=lambda signatures, *_: float(len(signatures)),
+    )
+    assert scores == {"MSVC": 2.0}
+
+
 def test_detect_compiler_version_skips_non_dict_detectors():
     from r2inspect.modules.compiler_detector_support import detect_compiler_version
 

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 from collections.abc import Callable
 
@@ -72,16 +73,22 @@ def score_compilers(
 ) -> dict[str, float]:
     if not isinstance(compiler_signatures, dict):
         return {}
-    return {
-        compiler_name: calculate_score(
-            signatures,
+    scores: dict[str, float] = {}
+    for compiler_name, signatures in compiler_signatures.items():
+        if isinstance(signatures, list):
+            normalized_signatures = signatures
+        elif isinstance(signatures, (dict, str, bytes)) or not isinstance(signatures, Iterable):
+            continue
+        else:
+            normalized_signatures = list(signatures)
+        scores[compiler_name] = calculate_score(
+            normalized_signatures,
             strings_data,
             imports_data,
             sections_data,
             symbols_data,
         )
-        for compiler_name, signatures in compiler_signatures.items()
-    }
+    return scores
 
 
 def apply_best_compiler(
