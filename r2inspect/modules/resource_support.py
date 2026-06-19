@@ -64,6 +64,8 @@ def analyze_resource_data(
     calculate_hashes_for_bytes: Any,
 ) -> None:
     try:
+        if not isinstance(resource, dict):
+            return
         resource.setdefault("entropy", 0.0)
         resource.setdefault("hashes", {})
         offset = _coerce_resource_int(resource, "offset")
@@ -117,6 +119,8 @@ def extract_version_info(
     logger: logging.Logger,
 ) -> None:
     for res in resources:
+        if not isinstance(res, dict):
+            continue
         if res.get("type_name") == "RT_VERSION":
             try:
                 offset = _coerce_resource_int(res, "offset")
@@ -179,6 +183,8 @@ def extract_manifest(
     logger: logging.Logger,
 ) -> None:
     for res in resources:
+        if not isinstance(res, dict):
+            continue
         if res.get("type_name") == "RT_MANIFEST":
             try:
                 offset = _coerce_resource_int(res, "offset")
@@ -213,6 +219,8 @@ def extract_strings(
 ) -> None:
     strings: list[str] = []
     for res in resources:
+        if not isinstance(res, dict):
+            continue
         if res.get("type_name") == "RT_STRING":
             try:
                 offset = _coerce_resource_int(res, "offset")
