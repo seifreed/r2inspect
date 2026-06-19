@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-
+from collections.abc import Iterable
 from collections import Counter, defaultdict
 from typing import Any
 
@@ -105,11 +105,12 @@ def extract_tokens_from_pdj(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
         else analyzer._cmd_list("pdj 200")
     )
-    if not isinstance(disasm_list, list):
-        try:
-            disasm_list = list(disasm_list)
-        except TypeError:
-            return []
+    if isinstance(disasm_list, list):
+        pass
+    elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
+        return []
+    else:
+        disasm_list = list(disasm_list)
     tokens = extract_tokens_from_ops(disasm_list)
     if tokens:
         logger.debug("Extracted %s tokens from %s using pdj", len(tokens), func_name)

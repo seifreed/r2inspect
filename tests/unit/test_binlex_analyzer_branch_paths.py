@@ -337,6 +337,16 @@ def test_extract_tokens_from_pdj_normalizes_iterable_disasm() -> None:
     assert tokens == ["push", "ret"]
 
 
+def test_extract_tokens_from_pdj_rejects_dict_disasm() -> None:
+    class DictPdjAdapter:
+        def get_disasm(self, address: int = 0, size: int = 0) -> dict[str, Any]:
+            return {"ops": [{"mnemonic": "push"}]}
+
+    analyzer = BinlexAnalyzer(adapter=DictPdjAdapter(), filepath=None)
+    tokens = extract_tokens_from_pdj(analyzer, 0x5000, "func_dict", logger=logging.getLogger(__name__))
+    assert tokens == []
+
+
 # ---------------------------------------------------------------------------
 # _calculate_binary_signature (lines 228-229, 240-242, 475-476)
 # ---------------------------------------------------------------------------
