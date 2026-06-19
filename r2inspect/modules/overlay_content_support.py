@@ -46,8 +46,7 @@ def analyze_overlay_content(
             return
         if (
             not overlay_data
-            or not all(isinstance(value, int) for value in overlay_data)
-            or not all(0 <= value <= 0xFF for value in overlay_data)
+            or not all(isinstance(value, int) and 0 <= value <= 0xFF for value in overlay_data)
         ):
             return
 
