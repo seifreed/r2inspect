@@ -2,75 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
+from ..abstractions.coercion_support import coerce_dict_iterable, coerce_list
 from .simhash_support import SimHashHost
 
 
 def get_strings_data(host: SimHashHost) -> list[Any]:
-    def _coerce(value: Any) -> list[Any]:
-        if isinstance(value, list):
-            return value
-        if isinstance(value, (dict, str, bytes)):
-            return []
-        try:
-            return list(value)
-        except TypeError:
-            return []
-
     if host.adapter is not None and hasattr(host.adapter, "get_strings"):
-        return _coerce(host.adapter.get_strings())
-    return _coerce(host._cmd_list("izzj"))
+        return coerce_list(host.adapter.get_strings())
+    return coerce_list(host._cmd_list("izzj"))
 
 
 def get_functions(host: SimHashHost) -> list[dict[str, Any]]:
-    def _coerce(value: Any) -> list[dict[str, Any]]:
-        if isinstance(value, list):
-            return [func for func in value if isinstance(func, dict)]
-        if isinstance(value, (dict, str, bytes)):
-            return []
-        try:
-            return [func for func in list(value) if isinstance(func, dict)]
-        except TypeError:
-            return []
-
     if host.adapter is not None and hasattr(host.adapter, "get_functions"):
-        return _coerce(host.adapter.get_functions())
-    return _coerce(host._cmd_list("aflj"))
+        return coerce_dict_iterable(host.adapter.get_functions())
+    return coerce_dict_iterable(host._cmd_list("aflj"))
 
 
 def get_sections(host: SimHashHost) -> list[dict[str, Any]]:
-    def _coerce(value: Any) -> list[dict[str, Any]]:
-        if isinstance(value, list):
-            return [section for section in value if isinstance(section, dict)]
-        if isinstance(value, (dict, str, bytes)):
-            return []
-        try:
-            return [section for section in list(value) if isinstance(section, dict)]
-        except TypeError:
-            return []
-
     if host.adapter is not None and hasattr(host.adapter, "get_sections"):
-        return _coerce(host.adapter.get_sections())
-    return _coerce(host._cmd_list("iSj"))
+        return coerce_dict_iterable(host.adapter.get_sections())
+    return coerce_dict_iterable(host._cmd_list("iSj"))
 
 
 def extract_ops_from_disasm(disasm: Any) -> list[Any]:
     if isinstance(disasm, dict):
         ops = disasm.get("ops")
-        if isinstance(ops, list):
-            return cast(list[Any], ops)
-        if isinstance(ops, (dict, str, bytes)):
-            return []
-        try:
-            return list(ops)
-        except TypeError:
-            return []
-    if isinstance(disasm, list):
-        return disasm
-    if isinstance(disasm, (dict, str, bytes)):
-        return []
-    try:
-        return list(disasm)
-    except TypeError:
-        return []
+        return coerce_list(ops)
+    return coerce_list(disasm)
