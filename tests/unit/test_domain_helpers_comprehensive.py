@@ -433,6 +433,10 @@ def test_entropy_from_ints_skips_non_byte_values():
     assert result == shannon_entropy(b"AB")
 
 
+def test_extract_printable_strings_rejects_non_int_min_length():
+    assert extract_printable_strings(b"hello", min_length="3") == []  # type: ignore[arg-type]
+
+
 def test_suspicious_section_name_with_common_section():
     """Test that common sections are not flagged."""
     suspicious = ["upx", "packed"]
