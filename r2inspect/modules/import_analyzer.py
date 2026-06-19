@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Import analysis module."""
-
 import re
 from typing import Any
 
@@ -46,8 +44,6 @@ logger = get_logger(__name__)
 
 
 class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
-    """Import table analysis using backend data."""
-
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         super().__init__(adapter=adapter, config=config)
         self._setup_api_categories()
@@ -63,11 +59,9 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return file_format.upper() in {"PE", "PE32", "PE32+", "DLL", "EXE"}
 
     def _setup_api_categories(self) -> None:
-        """Initialize API categorization data"""
         self.api_categories = get_api_categories()
 
     def analyze(self) -> dict[str, Any]:
-        """Run complete import analysis"""
         result = _init_import_result_impl(self._init_result_structure)
 
         with self._analysis_context(result, error_message="Import analysis failed"):
@@ -108,7 +102,6 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return _count_suspicious_indicators_impl(result)
 
     def get_imports(self) -> list[dict[str, Any]]:
-        """Get all imported functions with analysis"""
         return _collect_imports_impl(
             cmdj=self._cmdj,
             analyze_import_fn=self._analyze_import,
@@ -116,11 +109,9 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         )
 
     def _analyze_import(self, imp: dict[str, Any]) -> dict[str, Any]:
-        """Analyze a single import"""
         return _analyze_import_impl(imp, self, logger=logger)
 
     def _calculate_risk_score(self, func_name: str) -> dict[str, Any]:
-        """Calculate detailed risk score (0-100) with specific tags"""
         max_score, tags = find_max_risk_score(func_name, self._risk_categories)
         risk_level = risk_level_from_score(max_score)
 
@@ -131,11 +122,9 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         }
 
     def _get_function_description(self, func_name: str) -> str:
-        """Get description for common functions"""
         return _get_function_description_impl(func_name)
 
     def get_import_statistics(self) -> dict[str, Any]:
-        """Get statistics about imports"""
         imports: list[dict[str, Any]] = []
         try:
             imports = self.get_imports()
@@ -244,7 +233,6 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
     def detect_import_anomalies(self, imports: list[dict[str, Any]]) -> dict[str, Any]:
-        """Detect anomalies in import table"""
         try:
             return detect_import_anomalies_domain(imports)
         except Exception as exc:
@@ -254,7 +242,6 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return {"anomalies": [], "count": 0}
 
     def check_import_forwarding(self) -> dict[str, Any]:
-        """Check for import forwarding"""
         try:
             strings = self._cmdj("izj", [])
             return _check_import_forwarding_impl(strings, logger=logger)
