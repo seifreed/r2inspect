@@ -670,6 +670,19 @@ def test_check_import_forwarding_accepts_ordinal_forwards():
     assert result["forwards"][0]["forward"] == "KERNEL32.#123"
 
 
+def test_check_import_forwarding_accepts_bytes_strings():
+    class _BytesStringsAnalyzer(ImportAnalyzer):
+        def _cmdj(self, command: str, default: Any = None) -> Any:
+            if command == "izj":
+                return [{"string": b"KERNEL32.CreateFileA", "vaddr": 0x3000}]
+            return default if default is not None else []
+
+    analyzer = _BytesStringsAnalyzer(adapter=None)
+    result = analyzer.check_import_forwarding()
+    assert result["detected"] is True
+    assert result["forwards"][0]["forward"] == "KERNEL32.CreateFileA"
+
+
 # ---------------------------------------------------------------------------
 # check_import_forwarding - lines 527-529: exception handler
 # ---------------------------------------------------------------------------
