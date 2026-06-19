@@ -9,6 +9,7 @@ import pytest
 
 import r2inspect.modules.simhash_analyzer as _mod
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
+from r2inspect.modules.simhash_support import append_data_section_string
 from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 
 
@@ -67,6 +68,14 @@ class _IterableCmdListAnalyzer(SimHashAnalyzer):
         if command == "afl":
             return (func for func in [{"offset": 0x1000, "name": "test_func"}])
         return []
+
+
+class _AppendSink:
+    def __init__(self) -> None:
+        self.items: list[str] = []
+
+    def append(self, item: str) -> None:
+        self.items.append(item)
 
 
 # ---------------------------------------------------------------------------
@@ -646,6 +655,22 @@ def test_extract_data_section_strings_skips_when_no_read_bytes_method() -> None:
     analyzer = SimHashAnalyzer(adapter=adapter2, filepath="/fake/path")
     result = analyzer._extract_data_section_strings()
     assert result == []
+
+
+def test_append_data_section_string_accepts_appendable_sink() -> None:
+    class Host:
+        def __init__(self) -> None:
+            self.adapter = StubAdapter(
+                sections=[{"name": ".data", "vaddr": 0x4000, "size": 32}],
+                bytes_map={0x4000: b"alpha\x00beta\x00"},
+            )
+
+        def _extract_printable_strings(self, data: bytes) -> list[str]:
+            return ["alpha", "beta"]
+
+    sink = _AppendSink()
+    append_data_section_string(Host(), {"name": ".data", "vaddr": 0x4000, "size": 32}, sink)  # type: ignore[arg-type]
+    assert sink.items == ["DATASTR:alpha", "DATASTR:beta"]
 
 
 def test_extract_opcodes_features_normalizes_iterable_functions() -> None:
