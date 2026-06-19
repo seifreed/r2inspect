@@ -452,6 +452,15 @@ def test_extract_mnemonics_from_pdfj_returns_empty_when_ops_not_list():
     assert result == []
 
 
+def test_extract_mnemonics_from_pdfj_normalizes_iterable_ops():
+    adapter = DisasmAdapter(
+        disasm_data={"ops": (item for item in [{"mnemonic": "xor"}, {"mnemonic": "ret"}])}
+    )
+    analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
+    result = analyzer._extract_mnemonics_from_pdfj(0x1000, "func_iter")
+    assert result == ["xor", "ret"]
+
+
 # ---------------------------------------------------------------------------
 # _extract_mnemonics_from_pdj
 # ---------------------------------------------------------------------------

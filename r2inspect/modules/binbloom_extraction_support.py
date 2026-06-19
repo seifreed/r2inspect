@@ -53,9 +53,18 @@ def extract_mnemonics_from_pdfj(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
         else analyzer._cmdj(f"pdfj @ {func_addr}", {})
     )
-    if not isinstance(disasm, dict) or not isinstance(disasm.get("ops"), list):
+    if not isinstance(disasm, dict):
         return []
-    mnemonics = analyzer._collect_mnemonics_from_ops(disasm["ops"])
+    ops = disasm.get("ops")
+    if isinstance(ops, list):
+        ops_source = ops
+    elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
+        return []
+    else:
+        ops_source = list(ops)
+    if not ops_source:
+        return []
+    mnemonics = analyzer._collect_mnemonics_from_ops(ops_source)
     if mnemonics:
         logger.debug("Extracted %s mnemonics from %s using pdfj", len(mnemonics), func_name)
     return mnemonics
