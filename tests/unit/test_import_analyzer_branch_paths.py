@@ -311,6 +311,20 @@ def test_get_missing_imports_skips_malformed_import_entries():
     assert "CreateFileA" in result
 
 
+def test_get_missing_imports_preserves_first_seen_order():
+    adapter = _StringsAdapter(
+        strings=[{"string": "CreateFileA"}, {"string": "WriteProcessMemory"}]
+    )
+
+    class _NoImportsAnalyzer(ImportAnalyzer):
+        def get_imports(self) -> list:
+            return []
+
+    analyzer = _NoImportsAnalyzer(adapter=adapter)
+    result = analyzer.get_missing_imports()
+    assert result == ["CreateFileA", "WriteProcessMemory"]
+
+
 # ---------------------------------------------------------------------------
 # get_missing_imports - lines 263-264: exception handler
 # ---------------------------------------------------------------------------

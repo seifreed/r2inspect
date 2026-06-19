@@ -189,7 +189,7 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         except Exception as exc:
             logger.error("Error detecting missing imports: %s", exc)
 
-        return list(set(missing))  # Remove duplicates
+        return list(dict.fromkeys(missing))  # Remove duplicates while preserving order
 
     def _is_candidate_api_string(self, string_val: str, imported_apis: list[str]) -> bool:
         return _is_candidate_api_string_impl(string_val, imported_apis)
