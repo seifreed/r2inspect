@@ -43,6 +43,11 @@ class _IterableStringAnalyzer(StringAnalyzer):
         return (s for s in ["alpha", "beta"])
 
 
+class _StringReturnAnalyzer(StringAnalyzer):
+    def extract_strings(self):  # type: ignore[override]
+        return "bad"
+
+
 def _config_with_overrides(overrides: dict[str, Any]) -> Config:
     cfg = Config()
     cfg.apply_overrides(overrides)
@@ -133,3 +138,10 @@ def test_analyze_normalizes_non_list_string_iterables():
     result = analyzer.analyze()
     assert result["total_strings"] == 2
     assert result["strings"] == ["alpha", "beta"]
+
+
+def test_analyze_rejects_string_return_values():
+    analyzer = _StringReturnAnalyzer(adapter=_StringEntriesAdapter([]), config=Config())
+    result = analyzer.analyze()
+    assert result["total_strings"] == 0
+    assert result["strings"] == []
