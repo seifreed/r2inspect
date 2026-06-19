@@ -95,6 +95,12 @@ def test_format_sections_accepts_non_list_sections() -> None:
     assert isinstance(result, Table)
 
 
+def test_format_sections_accepts_iterable_sections() -> None:
+    sections = ({"name": ".text", "raw_size": 1, "flags": "r-x", "entropy": 7.5},)
+    result = OutputFormatter({}).format_sections(sections)
+    assert isinstance(result, Table)
+
+
 def test_format_sections_skips_non_dict_entries() -> None:
     result = OutputFormatter({}).format_sections([None, {"name": ".text"}])
     assert isinstance(result, Table)
@@ -142,6 +148,21 @@ def test_format_imports_all_risk_levels() -> None:
         ]
         result = OutputFormatter({}).format_imports(imports)
         assert isinstance(result, Table)
+
+
+def test_format_imports_accepts_iterable_imports() -> None:
+    imports = (
+        {
+            "name": "CreateRemoteThread",
+            "library": "kernel32.dll",
+            "category": "Injection",
+            "risk_score": 95,
+            "risk_level": "Critical",
+            "risk_tags": ["Remote Thread Injection"],
+        },
+    )
+    result = OutputFormatter({}).format_imports(imports)
+    assert isinstance(result, Table)
 
 
 def test_format_imports_accepts_string_risk_scores() -> None:

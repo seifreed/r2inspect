@@ -65,9 +65,13 @@ def format_sections(sections: list[dict[str, Any]]) -> Table:
     table.add_column("Flags", style="magenta")
     table.add_column("Entropy", style="green")
     table.add_column("Suspicious", style="red")
-    if not isinstance(sections, list):
-        sections = []
-    for section in sections:
+    if isinstance(sections, list):
+        section_source = sections
+    elif isinstance(sections, (dict, str, bytes)) or not isinstance(sections, Iterable):
+        section_source = []
+    else:
+        section_source = list(sections)
+    for section in section_source:
         if not isinstance(section, dict):
             continue
         suspicious = "Yes" if section.get("suspicious_indicators") else "No"
@@ -94,7 +98,13 @@ def format_imports(imports: list[dict[str, Any]]) -> Table:
     table.add_column("Category", style="magenta", width=20)
     table.add_column("Risk Score", style="red", width=10)
     table.add_column("Risk Tags", style="bright_red", width=30)
-    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    if isinstance(imports, list):
+        import_source = imports
+    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
+        import_source = []
+    else:
+        import_source = list(imports)
+    valid_imports = [imp for imp in import_source if isinstance(imp, dict)]
     for imp in sorted(valid_imports, key=lambda item: _coerce_float(item.get("risk_score")), reverse=True):
         risk_score = imp.get("risk_score", 0)
         risk_level = imp.get("risk_level", "Minimal")
