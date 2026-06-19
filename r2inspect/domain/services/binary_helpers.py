@@ -42,12 +42,9 @@ def clamp_score(score: int, minimum: int = 0, maximum: int = 100) -> int:
 
 
 def count_suspicious_imports(imports: list[dict[str, Any]], suspicious: set[str]) -> int:
-    if not isinstance(imports, list):
+    if not isinstance(imports, list) or not isinstance(suspicious, set):
         return 0
-    try:
-        suspicious_names = {name for name in suspicious if isinstance(name, str)}
-    except TypeError:
-        return 0
+    suspicious_names = {name for name in suspicious if isinstance(name, str)}
     return sum(
         1 for imp in imports if isinstance(imp, dict) and imp.get("name") in suspicious_names
     )

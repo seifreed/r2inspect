@@ -211,6 +211,7 @@ def test_count_suspicious_imports_skips_malformed_entries():
 def test_count_suspicious_imports_non_list_or_non_set_inputs():
     assert count_suspicious_imports(None, {"VirtualAlloc"}) == 0
     assert count_suspicious_imports([{"name": "VirtualAlloc"}], None) == 0
+    assert count_suspicious_imports([{"name": "VirtualAlloc"}], "VirtualAlloc") == 0  # type: ignore[arg-type]
 
 
 def test_normalize_section_name_valid():
