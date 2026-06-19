@@ -594,6 +594,19 @@ def test_simhash_analyzer_append_data_section_string_no_read_bytes() -> None:
     assert data_strings == []
 
 
+def test_simhash_analyzer_append_data_section_string_rejects_text_data() -> None:
+    class TextAdapter:
+        def read_bytes(self, address: int, size: int) -> str:
+            return "bad"
+
+    analyzer = SimHashAnalyzer(adapter=TextAdapter(), filepath="/fake/path")
+    data_strings: list[str] = []
+    analyzer._append_data_section_string(
+        {"name": ".data", "vaddr": 0x1000, "size": 100}, data_strings
+    )
+    assert data_strings == []
+
+
 def test_simhash_analyzer_append_data_section_string_valid() -> None:
     # p8 100 @ 4096 -> hex-encoded "test_string_here\x00"
     hex_data = b"test_string_here\x00".hex()
