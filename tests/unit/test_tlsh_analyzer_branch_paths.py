@@ -65,6 +65,13 @@ class ErrorFunctionsAdapter(FakeAdapter):
         raise RuntimeError("get_functions failed intentionally")
 
 
+class IterableFunctionsAdapter(FakeAdapter):
+    """Adapter whose get_functions returns a generator."""
+
+    def get_functions(self):
+        return (func for func in [{"name": "main", "addr": 0x1000, "size": 100}])
+
+
 class SentinelTLSHAnalyzer(TLSHAnalyzer):
     """TLSH analyzer that returns a sentinel hash when hashing is reached."""
 
@@ -470,6 +477,20 @@ def test_get_functions_with_adapter_returns_data(tmp_path):
     analyzer = TLSHAnalyzer(adapter=FakeAdapter(functions=functions), filename=str(f))
     result = analyzer._get_functions()
     assert result == functions
+
+
+def test_get_functions_normalizes_iterable_adapter_result(tmp_path):
+    """Generator-backed function collections should still reach TLSH hashing."""
+    if not TLSH_AVAILABLE:
+        pytest.skip("TLSH not available")
+    f = tmp_path / "binary.bin"
+    f.write_bytes(bytes(range(256)) * 10)
+    analyzer = SentinelTLSHAnalyzer(
+        adapter=IterableFunctionsAdapter(bytes_data={0x1000: bytes(range(100))}),
+        filename=str(f),
+    )
+    result = analyzer._calculate_function_tlsh()
+    assert result["main"] == "hash"
 
 
 # ---------------------------------------------------------------------------

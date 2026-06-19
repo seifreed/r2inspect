@@ -25,6 +25,15 @@ from .tlsh_support import (
 logger = get_logger(__name__)
 
 
+def _coerce_any_list(raw: Any) -> list[Any]:
+    if isinstance(raw, list):
+        return raw
+    try:
+        return list(raw)
+    except TypeError:
+        return []
+
+
 class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
     """TLSH (Trend Micro Locality Sensitive Hash) analyzer for sections and functions"""
 
@@ -145,10 +154,10 @@ class TLSHAnalyzer(CommandHelperMixin, R2HashingStrategy):
         return calculate_function_tlsh(self, logger)
 
     def _get_sections(self) -> list[Any]:
-        return cast(list[Any], self._get_via_adapter("get_sections"))
+        return _coerce_any_list(self._get_via_adapter("get_sections"))
 
     def _get_functions(self) -> list[Any]:
-        return cast(list[Any], self._get_via_adapter("get_functions"))
+        return _coerce_any_list(self._get_via_adapter("get_functions"))
 
     def _read_bytes_hex(self, vaddr: int, size: int) -> str | None:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
