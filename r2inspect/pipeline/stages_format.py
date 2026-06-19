@@ -109,9 +109,14 @@ class FileInfoStage(AnalysisStage):
             return {"mime_type": None, "file_type": None}
         mime_magic, desc_magic = detectors
         resolved_path = _resolved_path(self.filename)
+        try:
+            mime_type = mime_magic.from_file(resolved_path)
+            file_type = desc_magic.from_file(resolved_path)
+        except FileNotFoundError:
+            return {"mime_type": None, "file_type": None}
         return {
-            "mime_type": mime_magic.from_file(resolved_path),
-            "file_type": desc_magic.from_file(resolved_path),
+            "mime_type": mime_type,
+            "file_type": file_type,
         }
 
     @staticmethod
@@ -267,7 +272,10 @@ class FormatDetectionStage(AnalysisStage):
         if detectors is None:
             return _detect_via_header_bytes(self.filename)
         _, desc_magic = detectors
-        file_type = desc_magic.from_file(_resolved_path(self.filename)).lower()
+        try:
+            file_type = desc_magic.from_file(_resolved_path(self.filename)).lower()
+        except FileNotFoundError:
+            return None
 
         if "pe32" in file_type or "ms-dos" in file_type:
             return "PE"
