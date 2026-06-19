@@ -259,6 +259,18 @@ class TestSecurityDirectoryParsing:
         assert cert_info is None
         assert result_dict["errors"] == ["Invalid security directory"]
 
+    def test_read_win_certificate_normalizes_iterable_errors_bucket(self):
+        """Test reading certificate converts iterable errors into a list."""
+        analyzer = _make_analyzer()
+
+        security_dir = {"paddr": 0, "size": 0x200}
+        result_dict = {"errors": ("preexisting",)}
+
+        cert_info = analyzer._read_win_certificate(security_dir, result_dict)
+
+        assert cert_info is None
+        assert result_dict["errors"] == ["preexisting", "Invalid security directory"]
+
     def test_read_win_certificate_invalid_size(self):
         """Test reading certificate with invalid size (zero)."""
         analyzer = _make_analyzer()

@@ -33,8 +33,13 @@ def _validate_security_dir(
     security_dir: dict[str, Any], result: dict[str, Any]
 ) -> tuple[int, int] | None:
     errors = result.get("errors")
-    if not isinstance(errors, list):
-        errors = []
+    if isinstance(errors, list):
+        result["errors"] = errors
+    else:
+        try:
+            errors = list(errors)
+        except TypeError:
+            errors = []
         result["errors"] = errors
     cert_offset = _to_int(security_dir.get("paddr", 0))
     cert_size = _to_int(security_dir.get("size", 0))
