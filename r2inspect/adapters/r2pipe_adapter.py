@@ -2,6 +2,7 @@
 """R2Pipe adapter implementation."""
 
 import threading
+from collections.abc import Iterable
 from typing import Any, Literal, cast
 
 from ..interfaces import BinaryAnalyzerInterface
@@ -74,7 +75,11 @@ class R2PipeAdapter(R2PipeQueryMixin):
             result = self.cmdj(cmd_text)
             list_commands = {"iSj", "iij", "iEj", "isj", "aflj", "izj", "izzj", "iDj", "agj"}
             if base in list_commands:
-                return result if isinstance(result, list) else []
+                if isinstance(result, list):
+                    return result
+                if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
+                    return []
+                return list(result)
             return result if isinstance(result, dict | list) else {}
 
         text = self.cmd(cmd_text)

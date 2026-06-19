@@ -38,3 +38,9 @@ def test_execute_command_json_and_text():
     adapter = R2PipeAdapter(r2)
     assert adapter.execute_command("ij") == {"a": 1}
     assert adapter.execute_command("pd 1") == "nop"
+
+
+def test_execute_command_json_list_accepts_iterable():
+    r2 = FakeR2(cmdj_map={"iSj": ({"name": ".text"},)})
+    adapter = R2PipeAdapter(r2)
+    assert adapter.execute_command("iSj") == [{"name": ".text"}]

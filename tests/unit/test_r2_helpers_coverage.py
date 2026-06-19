@@ -745,6 +745,15 @@ def test_cmd_list_returns_empty_on_non_list():
     assert result == []
 
 
+def test_cmd_list_accepts_iterable_results():
+    class TupleAdapter(FakeSimpleAdapter):
+        def get_functions(self) -> tuple[dict[str, Any], ...]:
+            return ({"name": "main"},)
+
+    adapter = TupleAdapter()
+    assert cmd_list(adapter, None, "aflj") == [{"name": "main"}]
+
+
 # ---------------------------------------------------------------------------
 # _cmd_fallback / _cmdj_fallback
 # ---------------------------------------------------------------------------

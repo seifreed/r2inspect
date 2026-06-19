@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from collections.abc import Iterable
 from typing import Any, cast
 
 from ..adapters.validation import validate_r2_data
@@ -250,7 +251,11 @@ def cmdj(adapter: Any, r2_fallback: Any, command: str, default: Any) -> Any:
 def cmd_list(adapter: Any, r2_fallback: Any, command: str) -> list[Any]:
     """Execute a JSON command and return the result as a list."""
     result = cmdj(adapter, r2_fallback, command, [])
-    return result if isinstance(result, list) else []
+    if isinstance(result, list):
+        return result
+    if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
+        return []
+    return list(result)
 
 
 def _select_json_policy(command: str, default: Any) -> Any:
