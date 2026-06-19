@@ -51,6 +51,11 @@ class StringAnalyzer(BaseAnalyzer):
         with self._analysis_context(result, error_message="String analysis failed"):
             self._log_info("Starting string analysis")
             strings = self.extract_strings()
+            if not isinstance(strings, list):
+                try:
+                    strings = list(strings)
+                except TypeError:
+                    strings = []
             result["strings"] = strings
             result["total_strings"] = len(strings)
             self._log_info(f"Extracted {len(strings)} strings")

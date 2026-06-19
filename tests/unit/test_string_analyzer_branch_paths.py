@@ -38,6 +38,11 @@ class _MalformedStringAnalyzer(StringAnalyzer):
         return ["ascii", None, 123, "ábc"]  # type: ignore[list-item]
 
 
+class _IterableStringAnalyzer(StringAnalyzer):
+    def extract_strings(self):  # type: ignore[override]
+        return (s for s in ["alpha", "beta"])
+
+
 def _config_with_overrides(overrides: dict[str, Any]) -> Config:
     cfg = Config()
     cfg.apply_overrides(overrides)
@@ -121,3 +126,10 @@ def test_extract_strings_exception_path_returns_partial_result():
     analyzer = _RaisingUnicodeStringAnalyzer(adapter=_StringEntriesAdapter([]), config=Config())
     strings = analyzer.extract_strings()
     assert isinstance(strings, list)
+
+
+def test_analyze_normalizes_non_list_string_iterables():
+    analyzer = _IterableStringAnalyzer(adapter=_StringEntriesAdapter([]), config=Config())
+    result = analyzer.analyze()
+    assert result["total_strings"] == 2
+    assert result["strings"] == ["alpha", "beta"]
