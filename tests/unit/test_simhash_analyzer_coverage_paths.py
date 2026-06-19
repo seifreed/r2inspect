@@ -495,6 +495,19 @@ def test_simhash_analyzer_extract_data_section_strings_not_list() -> None:
     assert result == []
 
 
+def test_simhash_analyzer_extract_data_section_strings_iterable() -> None:
+    class _IterableSectionsAnalyzer(SimHashAnalyzer):
+        def _get_sections(self):  # type: ignore[override]
+            return (section for section in [{"name": ".text"}, {"name": ".data", "vaddr": 1, "size": 1}])
+
+        def _append_data_section_string(self, section, data_strings):  # type: ignore[override]
+            if isinstance(section, dict) and section.get("name") == ".data":
+                data_strings.append("ok")
+
+    analyzer = _IterableSectionsAnalyzer(_make_adapter(), filepath="/fake/path")
+    assert analyzer._extract_data_section_strings() == ["ok"]
+
+
 def test_simhash_analyzer_extract_data_section_strings_exception() -> None:
     analyzer = _make_analyzer(cmdj_map={"iSj": Exception("Test error")})
     result = analyzer._extract_data_section_strings()
