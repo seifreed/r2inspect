@@ -124,6 +124,13 @@ def test_build_resource_statistics_tolerates_partial_entries() -> None:
     assert result["unique_types"] == 2
 
 
+def test_build_resource_statistics_coerces_string_entropy_values() -> None:
+    result = build_resource_statistics([{"entropy": "7.5", "type_name": "RT_DATA"}])
+
+    assert result["average_entropy"] == 7.5
+    assert result["max_entropy"] == 7.5
+
+
 def test_individual_suspicious_checks_cover_main_cases() -> None:
     high_entropy = {"name": "res", "type_name": "RT_RCDATA", "size": 1000, "entropy": 7.9}
     large = {"name": "big", "type_name": "RT_STRING", "size": 2 * 1024 * 1024, "entropy": 1.0}

@@ -31,6 +31,17 @@ def _coerce_int(value: Any) -> int:
         return 0
 
 
+def _coerce_float(value: Any) -> float | None:
+    try:
+        if isinstance(value, str):
+            return float(value)
+        if isinstance(value, (int, float)):
+            return float(value)
+    except (TypeError, ValueError):
+        return None
+    return None
+
+
 def _resource_size(resource: dict[str, Any]) -> int:
     return _coerce_int(resource.get("size", 0))
 
@@ -125,13 +136,13 @@ def build_manifest_info(manifest_data: str, size: int) -> dict[str, Any]:
 
 def _positive_entropy(resource: dict[str, Any]) -> float | None:
     """Return a resource's entropy when it is a positive number, else None."""
-    value = resource.get("entropy", 0)
-    return float(value) if isinstance(value, int | float) and value > 0 else None
+    value = _coerce_float(resource.get("entropy", 0))
+    return value if value is not None and value > 0 else None
 
 
 def _resource_entropy(resource: dict[str, Any]) -> float:
-    value = resource.get("entropy", 0.0)
-    return float(value) if isinstance(value, int | float) else 0.0
+    value = _coerce_float(resource.get("entropy", 0.0))
+    return value if value is not None else 0.0
 
 
 def _size_statistics(sizes: list[int]) -> dict[str, Any]:
