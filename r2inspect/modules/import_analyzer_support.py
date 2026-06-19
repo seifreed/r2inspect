@@ -72,6 +72,8 @@ def analyze_import(
         if not isinstance(api_categories, dict):
             api_categories = {}
         for category, functions in api_categories.items():
+            if not isinstance(functions, (list, tuple, set)):
+                continue
             if any(api in name for api in functions):
                 analysis["category"] = category
                 analysis["description"] = analyzer._get_function_description(name)
