@@ -585,6 +585,18 @@ def test_build_import_statistics_non_list_input_returns_empty_stats():
     assert stats["suspicious_patterns"] == []
 
 
+def test_build_import_statistics_accepts_iterable_input():
+    stats = build_import_statistics(
+        (
+            {"name": "CreateFileA", "category": "File", "risk_level": "LOW", "library": "kernel32.dll"},
+            "skip",
+            {"name": "MessageBoxA", "category": "UI", "risk_level": "LOW", "dll": "user32.dll"},
+        )
+    )
+    assert stats["total_imports"] == 2
+    assert stats["unique_libraries"] == 2
+
+
 def test_detect_import_anomalies_skips_non_dict_entries_in_dll_scan():
     analyzer = _make_analyzer()
     imports = [{"library": f"unknown{i}.dll"} for i in range(6)] + ["bad"]
@@ -599,6 +611,23 @@ def test_detect_import_anomalies_non_list_input_returns_no_imports():
     result = detect_import_anomalies(1)  # type: ignore[arg-type]
     assert result["count"] == 1
     assert result["anomalies"][0]["type"] == "no_imports"
+
+
+def test_detect_import_anomalies_accepts_iterable_input():
+    from r2inspect.domain.services.import_analysis import detect_import_anomalies
+
+    result = detect_import_anomalies(
+        (
+            {"library": "unknown0.dll"},
+            {"library": "unknown1.dll"},
+            {"library": "unknown2.dll"},
+            {"library": "unknown3.dll"},
+            {"library": "unknown4.dll"},
+            {"library": "unknown5.dll"},
+        )
+    )
+    types = {item["type"] for item in result["anomalies"]}
+    assert "many_unusual_dlls" in types
 
 
 def test_find_suspicious_patterns_skips_malformed_entries():

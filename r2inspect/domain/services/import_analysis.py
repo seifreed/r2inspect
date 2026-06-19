@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from collections.abc import Callable
 from typing import Any
 
@@ -70,11 +71,21 @@ def _pattern_entry(pattern: str, description: str, severity: str, count: int) ->
     }
 
 
+def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
+    if isinstance(imports, list):
+        source = imports
+    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
+        return []
+    else:
+        source = list(imports)
+    return [imp for imp in source if isinstance(imp, dict)]
+
+
 def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not isinstance(imports, list):
+    valid_imports = _coerce_import_list(imports)
+    if not valid_imports:
         return []
     patterns: list[dict[str, Any]] = []
-    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     import_names = [_text_value(imp.get("name"), "") for imp in valid_imports]
     categories = [_text_value(imp.get("category"), "").strip().lower() for imp in valid_imports]
     _append_injection_patterns(patterns, import_names)
@@ -173,10 +184,10 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
         "library_distribution": {},
         "suspicious_patterns": [],
     }
-    if not isinstance(imports, list) or not imports:
+    if not imports:
         return stats
 
-    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    valid_imports = _coerce_import_list(imports)
     if not valid_imports:
         return stats
     categories = [_text_value(imp.get("category"), "unknown") for imp in valid_imports]
@@ -192,9 +203,9 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    if not isinstance(imports, list):
+    valid_imports = _coerce_import_list(imports)
+    if not valid_imports:
         return {"detected": False, "indicators": [], "score": 0}
-    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     indicators = _obfuscation_indicators(valid_imports)
     return {
         "detected": len(indicators) > 0,
@@ -256,10 +267,16 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
 
 
 def analyze_dll_dependencies(dlls: list[str]) -> dict[str, Any]:
-    if not isinstance(dlls, list) or not dlls:
+    if isinstance(dlls, list):
+        source = dlls
+    elif isinstance(dlls, (dict, str, bytes)) or not isinstance(dlls, Iterable):
+        return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
+    else:
+        source = list(dlls)
+    if not source:
         return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
-    valid_dlls = [dll for dll in dlls if isinstance(dll, str)]
+    valid_dlls = [dll for dll in source if isinstance(dll, str)]
     if not valid_dlls:
         return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
@@ -326,10 +343,7 @@ def _append_excessive_imports(anomalies: list[dict[str, Any]], imports: list[dic
 
 
 def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    if not isinstance(imports, list) or not imports:
-        return _anomaly_result([_no_imports_anomaly()])
-
-    valid_imports = [imp for imp in imports if isinstance(imp, dict)]
+    valid_imports = _coerce_import_list(imports)
     if not valid_imports:
         return _anomaly_result([_no_imports_anomaly()])
 
