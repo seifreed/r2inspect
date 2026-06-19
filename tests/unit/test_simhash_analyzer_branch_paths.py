@@ -279,6 +279,14 @@ def test_add_string_feature_set_with_very_long_string() -> None:
     assert any("STRLEN:very_long" in f for f in features)
 
 
+def test_add_string_feature_set_skips_non_string_input() -> None:
+    adapter = StubAdapter()
+    analyzer = SimHashAnalyzer(adapter=adapter, filepath="/fake/path")
+    features: list[str] = []
+    analyzer._add_string_feature_set(features, None)  # type: ignore[arg-type]
+    assert features == []
+
+
 # ---------------------------------------------------------------------------
 # _extract_opcodes_features – various branches
 # ---------------------------------------------------------------------------

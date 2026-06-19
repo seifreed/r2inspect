@@ -67,6 +67,8 @@ def collect_string_features(
 def add_string_feature_set(
     host: SimHashHost, string_features: list[str], string_value: str
 ) -> None:
+    if not isinstance(string_value, str) or not string_value:
+        return
     string_features.append(f"STR:{string_value}")
     length_category = host._get_length_category(len(string_value))
     string_features.append(f"STRLEN:{length_category}")
