@@ -349,6 +349,38 @@ def test_analyze_overlay_content_hash_bytes_conversion_error():
     assert result["overlay_hashes"] == {}
 
 
+def test_analyze_overlay_content_rejects_dict_payload():
+    """Malformed pxj output should be ignored before overlay processing."""
+
+    class _DictPayloadOverlayAnalyzer(OverlayAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return {"bytes": [0x41, 0x42, 0x43, 0x44]}
+            return default
+
+        def _calculate_entropy(self, data: list[int]) -> float:
+            raise AssertionError("dict payload should be rejected early")
+
+        def _check_patterns(self, data: list[int]) -> list[dict[str, Any]]:
+            raise AssertionError("dict payload should be rejected early")
+
+        def _determine_overlay_type(self, patterns: list[dict[str, Any]], data: list[int]) -> str:
+            raise AssertionError("dict payload should be rejected early")
+
+        def _extract_strings(self, data: list[int], min_length: int = 4) -> list[str]:
+            raise AssertionError("dict payload should be rejected early")
+
+        def _check_file_signatures(self, data: list[int]) -> list[dict[str, Any]]:
+            raise AssertionError("dict payload should be rejected early")
+
+    analyzer = _DictPayloadOverlayAnalyzer(None)
+    result = analyzer._default_result()
+    analyzer._analyze_overlay_content(result, offset=0, size=4)
+    assert result["overlay_entropy"] == 0.0
+    assert result["overlay_hashes"] == {}
+    assert result["embedded_files"] == []
+
+
 def test_analyze_overlay_content_skips_malformed_pattern_and_string_results():
     class _MalformedResultsOverlayAnalyzer(OverlayAnalyzer):
         def _cmdj(self, command: str, default: Any | None = None) -> Any:

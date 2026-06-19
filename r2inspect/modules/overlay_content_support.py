@@ -38,6 +38,12 @@ def analyze_overlay_content(
         read_size = min(size, 65536)
         overlay_data = cmdj(f"pxj {read_size} @ {offset}", [])
 
+        if isinstance(overlay_data, (dict, str, bytes)):
+            return
+        try:
+            overlay_data = list(overlay_data)
+        except TypeError:
+            return
         if not overlay_data:
             return
 

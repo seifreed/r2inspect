@@ -88,6 +88,8 @@ def read_win_certificate(
     result["signature_offset"] = cert_offset
     result["signature_size"] = cert_size
     win_cert_data = cmdj(f"pxj 8 @ {cert_offset}", [])
+    if isinstance(win_cert_data, (dict, str, bytes)):
+        return None
     if not (win_cert_data and len(win_cert_data) >= 8):
         return None
 
@@ -133,6 +135,8 @@ def parse_pkcs7(
             return None
         read_size = min(size_int, 1024)
         pkcs7_data = cmdj(f"pxj {read_size} @ {offset_int}", [])
+        if isinstance(pkcs7_data, (dict, str, bytes)):
+            return None
         if not pkcs7_data:
             return None
         result["digest_algorithm"] = detect_digest_algorithm_fn(pkcs7_data)
