@@ -514,6 +514,15 @@ def test_handle_bytes_p8j_rejects_text_payload():
     assert result == []
 
 
+def test_handle_bytes_pxj_rejects_out_of_range_values():
+    class BadBytesListAdapter:
+        def read_bytes_list(self, address: int, size: int):
+            return [300, 301]
+
+    result = _handle_bytes(BadBytesListAdapter(), "pxj 2", 0x1000)
+    assert result == []
+
+
 def test_handle_bytes_p8_with_size():
     result = _handle_bytes(BytesAdapter(), "p8 4", 0x1000)
     assert isinstance(result, str)

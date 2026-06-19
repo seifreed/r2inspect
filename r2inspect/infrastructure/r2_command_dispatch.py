@@ -192,7 +192,9 @@ def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
         if size is None:
             return None
         data = adapter.read_bytes_list(address, size)
-        if not isinstance(data, list) or not all(isinstance(value, int) for value in data):
+        if not isinstance(data, list) or not all(
+            isinstance(value, int) and 0 <= value <= 0xFF for value in data
+        ):
             return []
         return data
     if base.startswith("p8") and hasattr(adapter, "read_bytes"):
