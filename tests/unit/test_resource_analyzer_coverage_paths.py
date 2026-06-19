@@ -268,6 +268,12 @@ def test_resource_analyzer_is_valid_dir_header_valid() -> None:
     assert analyzer._is_valid_dir_header([0] * 16) is True
 
 
+def test_resource_analyzer_is_valid_dir_header_accepts_iterable() -> None:
+    analyzer = _make_analyzer()
+    header = (value for value in [0] * 16)
+    assert analyzer._is_valid_dir_header(header) is True
+
+
 # ── _get_dir_total_entries ───────────────────────────────────────────────
 
 

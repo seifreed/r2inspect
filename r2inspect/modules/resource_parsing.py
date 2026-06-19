@@ -133,7 +133,8 @@ class ResourceParsingMixin:
         return None
 
     def _is_valid_dir_header(self, dir_data: list[int] | None) -> bool:
-        return bool(_coerce_list(dir_data) and len(_coerce_list(dir_data)) >= 16)
+        dir_data = _coerce_list(dir_data)
+        return bool(dir_data and len(dir_data) >= 16)
 
     def _get_dir_total_entries(self, dir_data: list[int]) -> int:
         dir_data = _coerce_list(dir_data)
