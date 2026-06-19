@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
@@ -18,12 +19,7 @@ def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def _function_name(func: Any, func_offset: int | None = None) -> str:

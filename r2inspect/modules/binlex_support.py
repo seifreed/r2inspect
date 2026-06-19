@@ -6,18 +6,14 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.formats.similarity import jaccard_similarity
 from ..domain.services.binbloom import build_similar_groups as _build_similar_groups
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 class BinlexHost(Protocol):

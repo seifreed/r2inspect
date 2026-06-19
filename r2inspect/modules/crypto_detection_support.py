@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
+
 
 class CryptoHost(Protocol):
     """Overridable collaboration contract the crypto-detection helpers depend on."""
@@ -24,12 +26,7 @@ class CryptoHost(Protocol):
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:

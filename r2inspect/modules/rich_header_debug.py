@@ -6,16 +6,14 @@ from __future__ import annotations
 import struct
 from typing import Any, cast
 
+from ..abstractions.coercion_support import coerce_int
 from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 def _to_int(value: Any) -> int:
-    try:
-        return int(value, 0) if isinstance(value, str) else int(value)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 class RichHeaderDebugMixin:

@@ -3,6 +3,7 @@
 
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
@@ -11,12 +12,7 @@ logger = get_logger(__name__)
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):

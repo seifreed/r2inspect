@@ -6,16 +6,13 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
+
 logger = logging.getLogger(__name__)
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def _coerce_list(raw: Any) -> list[Any]:

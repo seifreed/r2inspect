@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.services.binary_helpers import shannon_entropy
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
@@ -22,12 +23,7 @@ class SectionRuntimeHost(Protocol):
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def _coerce_list(raw: Any) -> list[Any]:

@@ -3,6 +3,7 @@
 
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.services.section_analysis import (
@@ -46,10 +47,7 @@ def _coerce_function_list(functions: Any) -> list[Any]:
 
 
 def _to_int(value: Any) -> int:
-    try:
-        return int(value, 0) if isinstance(value, str) else int(value)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):

@@ -10,6 +10,7 @@ import logging
 import re
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.analysis.import_risk import (
     count_suspicious_indicators,
     get_function_description,
@@ -40,12 +41,7 @@ __all__ = [
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def _text_value(value: Any, default: str) -> str:

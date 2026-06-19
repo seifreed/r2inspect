@@ -7,16 +7,14 @@ import logging
 from collections.abc import Iterable
 from typing import Any, Protocol, cast
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.services.binary_helpers import clean_function_name
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 from .function_extraction import collect_valid_functions
 
 
 def _to_int(value: Any) -> int:
-    try:
-        return int(value, 0) if isinstance(value, str) else int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 class CcbHashHost(Protocol):

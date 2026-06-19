@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int
 from ..domain.services.resource_analysis import (
     build_icon_entries,
     build_manifest_info,
@@ -28,12 +29,7 @@ class ResourceHost(Protocol):
 
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def _coerce_resource_int(resource: dict[str, Any], field: str) -> int | None:

@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_int
+
 SDK_VERSION_MAP = {
     "10.15": "2019",
     "11.0": "2020",
@@ -18,10 +20,7 @@ SDK_VERSION_MAP = {
 
 
 def _to_int(value: Any) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def estimate_from_sdk_version(sdk_version: str) -> str | None:

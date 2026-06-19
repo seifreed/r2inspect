@@ -4,14 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_int
+
 
 def _to_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_int(value)
 
 
 def init_authenticode_result(init_result_structure: Any) -> dict[str, Any]:

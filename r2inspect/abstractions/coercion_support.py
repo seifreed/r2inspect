@@ -23,3 +23,12 @@ def coerce_number(value: Any, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def coerce_int(value: Any, default: int = 0) -> int:
+    try:
+        if isinstance(value, str):
+            return int(value, 0)
+        return int(value if value is not None else default)
+    except (TypeError, ValueError):
+        return default
