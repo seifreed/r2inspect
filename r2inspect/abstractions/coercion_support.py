@@ -16,3 +16,10 @@ def coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
         return [item for item in list(raw) if isinstance(item, dict)]
     except TypeError:
         return []
+
+
+def coerce_number(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default

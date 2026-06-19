@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_number
+
 from .binary_helpers import entropy_from_ints
 
 INSTALLER_SIGNATURES: tuple[dict[str, Any], ...] = (
@@ -177,19 +179,12 @@ def _matching_suspicious_strings(strings: list[str]) -> list[str]:
     return matches
 
 
-def _coerce_number(value: Any, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(result, dict):
         return []
     suspicious: list[dict[str, Any]] = []
-    overlay_size = _coerce_number(result.get("overlay_size"))
-    overlay_entropy = _coerce_number(result.get("overlay_entropy"))
+    overlay_size = coerce_number(result.get("overlay_size"))
+    overlay_entropy = coerce_number(result.get("overlay_entropy"))
     if overlay_size > 1024 * 1024:
         suspicious.append(
             _indicator("Large overlay", f"Overlay size: {overlay_size:g} bytes", "medium")

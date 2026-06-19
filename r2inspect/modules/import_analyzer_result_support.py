@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from ..abstractions.coercion_support import coerce_dict_list
+from ..abstractions.coercion_support import coerce_dict_list, coerce_number
 
 
 def _coerce_string_list(raw: Any) -> list[str]:
@@ -65,13 +65,6 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
     return sorted(dlls)
 
 
-def _coerce_number(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
 def populate_import_statistics(
     result: dict[str, Any],
     *,
@@ -99,9 +92,9 @@ def populate_import_statistics(
         suspicious_dlls = _coerce_string_list(suspicious_dlls)
 
     total_risk = (
-        _coerce_number(api_analysis.get("risk_score", 0)) * 0.4
-        + _coerce_number(obfuscation.get("score", 0)) * 0.3
-        + (_coerce_number(anomalies.get("count", 0)) * 10) * 0.2
+        coerce_number(api_analysis.get("risk_score", 0)) * 0.4
+        + coerce_number(obfuscation.get("score", 0)) * 0.3
+        + (coerce_number(anomalies.get("count", 0)) * 10) * 0.2
         + (len(suspicious_dlls) * 5) * 0.1
     )
 
