@@ -38,6 +38,14 @@ def test_extract_names_from_list_non_list_value_returns_empty():
     assert result == ""
 
 
+def test_extract_names_from_list_accepts_iterable_value():
+    formatter = CsvOutputFormatter({})
+    data = {"imports": ("kernel32.dll", "ntdll.dll")}
+    result = formatter._extract_names_from_list(data, "imports")
+    assert "kernel32.dll" in result
+    assert "ntdll.dll" in result
+
+
 def test_extract_names_from_list_non_dict_items_are_stringified():
     formatter = CsvOutputFormatter({})
     data = {"imports": ["kernel32.dll", "ntdll.dll"]}

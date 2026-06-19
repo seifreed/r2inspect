@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+from collections.abc import Iterable
 from typing import Any
 
 from . import output_csv_fields as _csv_fields
@@ -42,10 +43,14 @@ class CsvOutputFormatter:
         self, data: dict[str, Any], key: str, name_field: str = "name", separator: str = ", "
     ) -> str:
         items = data.get(key, [])
-        if not isinstance(items, list):
+        if isinstance(items, list):
+            normalized = items
+        elif isinstance(items, (dict, str, bytes)) or not isinstance(items, Iterable):
             return ""
+        else:
+            normalized = list(items)
         names = []
-        for item in items:
+        for item in normalized:
             if isinstance(item, dict):
                 name = item.get(name_field, "")
                 if name:
