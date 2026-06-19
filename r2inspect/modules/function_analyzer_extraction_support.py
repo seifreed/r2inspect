@@ -87,11 +87,19 @@ def try_pdfj_extraction(
             if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
             else analyzer._cmdj(f"pdfj @ {func_addr}", {})
         )
-        if isinstance(disasm, dict) and isinstance(disasm.get("ops"), list):
-            logger.debug(
-                "pdfj succeeded for %s, got %s instructions", func_name, len(disasm["ops"])
-            )
-            return analyzer._extract_mnemonics_from_ops(disasm["ops"])
+        if isinstance(disasm, dict):
+            ops = disasm.get("ops")
+            if isinstance(ops, list):
+                ops_source = ops
+            elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
+                return []
+            else:
+                ops_source = list(ops)
+            if ops_source:
+                logger.debug(
+                    "pdfj succeeded for %s, got %s instructions", func_name, len(ops_source)
+                )
+                return analyzer._extract_mnemonics_from_ops(ops_source)
     except Exception as exc:
         logger.debug("pdfj failed for %s: %s", func_name, str(exc))
     return []

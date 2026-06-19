@@ -514,6 +514,23 @@ def test_try_pdfj_extraction_returns_empty_when_ops_not_list():
     assert result == []
 
 
+def test_try_pdfj_extraction_accepts_iterable_ops():
+    ops = [{"opcode": "call printf"}, {"opcode": "ret"}]
+    class _IterablePdfjAdapter:
+        def get_functions(self) -> list:
+            return []
+
+        def get_disasm(self, address=None, size=None):
+            if size is None:
+                return {"ops": (op for op in ops)}
+            return None
+
+    analyzer = FunctionAnalyzer(_IterablePdfjAdapter())
+    result = analyzer._try_pdfj_extraction("fn", 0x1000)
+    assert "call" in result
+    assert "ret" in result
+
+
 # ---------------------------------------------------------------------------
 # _try_pdj_extraction (lines 238-248)
 # ---------------------------------------------------------------------------
