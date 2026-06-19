@@ -259,6 +259,21 @@ def test_execute_list_returns_empty_list_when_non_list_returned():
     assert result == []
 
 
+def test_execute_list_accepts_iterable_returned():
+
+    class TupleAnalyzer:
+        def __init__(self, adapter: Any = None, **kwargs: Any) -> None:
+            pass
+
+        def analyze(self) -> tuple[str, str]:
+            return ("a", "b")
+
+    registry = SingleAnalyzerRegistry("tuple_analyzer", TupleAnalyzer)
+    helper = ConcreteHelper(registry=registry)
+    result = helper._execute_list("tuple_analyzer")
+    assert result == ["a", "b"]
+
+
 # ---------------------------------------------------------------------------
 # _execute_dict  (line 106)
 # ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ query methods to callers.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any, cast
 
 from ..interfaces import (
@@ -102,7 +103,11 @@ class InspectorDispatchMixin:
         **kwargs: Any,
     ) -> list[Any]:
         result = self._execute_analyzer(analyzer_name, method_name, *args, **kwargs)
-        return result if isinstance(result, list) else []
+        if isinstance(result, list):
+            return result
+        if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
+            return []
+        return list(result)
 
     def _execute_dict(
         self,
