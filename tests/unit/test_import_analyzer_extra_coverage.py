@@ -17,6 +17,7 @@ from r2inspect.modules.import_analyzer_result_support import (
     collect_import_dlls,
     populate_import_statistics,
 )
+from r2inspect.modules.import_analyzer_collection_support import collect_imports
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -787,6 +788,29 @@ def test_normalize_import_entries_accepts_iterable_input():
 def test_normalize_import_entries_accepts_single_dict_input():
     entries = normalize_import_entries({"name": "CreateFileA"})
     assert entries == [{"name": "CreateFileA"}]
+
+
+def test_collect_imports_continues_after_bad_entry():
+    class _Logger:
+        def __init__(self):
+            self.errors = []
+
+        def debug(self, *args, **kwargs):
+            return None
+
+        def error(self, *args, **kwargs):
+            self.errors.append(args)
+
+    def _cmdj(_command, _default):
+        return [{"name": "ok"}, {"name": "boom"}]
+
+    def _analyze_import(imp):
+        if imp.get("name") == "boom":
+            raise RuntimeError("bad import")
+        return {"name": imp["name"]}
+
+    result = collect_imports(cmdj=_cmdj, analyze_import_fn=_analyze_import, logger=_Logger())
+    assert result == [{"name": "ok"}]
 
 
 def test_populate_import_statistics_skips_non_dict_buckets():

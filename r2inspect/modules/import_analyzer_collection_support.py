@@ -34,7 +34,10 @@ def collect_imports(
 
         if imports:
             for imp in imports:
-                imports_info.append(analyze_import_fn(imp))
+                try:
+                    imports_info.append(analyze_import_fn(imp))
+                except Exception as exc:
+                    logger.error("Error analyzing import entry: %s", exc)
         else:
             logger.debug("No valid import entries returned by iij")
 
