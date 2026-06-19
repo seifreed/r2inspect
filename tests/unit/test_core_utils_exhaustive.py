@@ -121,10 +121,9 @@ def test_result_aggregator_indicators_and_summary() -> None:
     assert "file_overview" in normalized_summary
     assert "error" not in normalized_summary
 
-    # A non-normalizable bucket value (kept as-is, not None) still reaches the
-    # generate_executive_summary except-handler error branch.
+    # A non-normalizable file_info bucket is rejected by the facade and returned as an error.
     error_summary = aggregator.generate_executive_summary({"file_info": 123})
-    assert "error" in error_summary
+    assert error_summary["error"] == "file_info must be a dict or None"
 
 
 def test_hashing_utils(tmp_path: Path) -> None:
