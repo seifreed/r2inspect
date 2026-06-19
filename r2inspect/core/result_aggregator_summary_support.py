@@ -141,9 +141,9 @@ def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any
         "security_features": {
             "aslr": security.get("aslr", False),
             "dep": security.get("dep", False),
-            "cfg": security.get("cfg", False),
+            "cfg": security.get("guard_cf", security.get("cfg", False)),
             "stack_canary": security.get("stack_canary", False),
-            "safe_seh": security.get("safe_seh", False),
+            "safe_seh": security.get("seh", security.get("safe_seh", False)),
         },
     }
 

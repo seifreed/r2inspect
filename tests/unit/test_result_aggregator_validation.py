@@ -219,9 +219,9 @@ def test_build_security_assessment_all_features():
             "authenticode": True,
             "aslr": True,
             "dep": True,
-            "cfg": True,
+            "guard_cf": True,
             "stack_canary": True,
-            "safe_seh": True,
+            "seh": True,
         },
         "packer": {"is_packed": False},
     }
@@ -234,6 +234,17 @@ def test_build_security_assessment_all_features():
     assert assessment["security_features"]["dep"] is True
     assert assessment["security_features"]["cfg"] is True
     assert assessment["security_features"]["stack_canary"] is True
+    assert assessment["security_features"]["safe_seh"] is True
+
+
+def test_build_security_assessment_supports_legacy_aliases():
+    results = {
+        "security": {"cfg": True, "safe_seh": True},
+        "packer": {"is_packed": False},
+    }
+
+    assessment = _build_security_assessment(results)
+    assert assessment["security_features"]["cfg"] is True
     assert assessment["security_features"]["safe_seh"] is True
 
 
