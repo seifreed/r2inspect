@@ -247,6 +247,16 @@ def test_get_entry_info_returns_none_when_not_list():
     assert result is None
 
 
+def test_get_entry_info_rejects_dict_shape():
+    class AdapterWithDictEntryInfo:
+        def get_entry_info(self) -> dict[str, Any]:
+            return {"entries": [{"vaddr": 0x402000}]}
+
+    log = StubLogger()
+    result = pe_info._get_entry_info(AdapterWithDictEntryInfo(), log)
+    assert result is None
+
+
 def test_get_entry_info_normalizes_iterable_input():
     log = StubLogger()
     result = pe_info._get_entry_info(AdapterWithIterableEntryInfo(), log)

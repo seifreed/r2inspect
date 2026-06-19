@@ -68,6 +68,8 @@ def _get_entry_info(adapter: Any, logger: Any) -> list[dict[str, Any]] | None:
             entry_info = adapter.get_entry_info()
             if isinstance(entry_info, list):
                 return entry_info
+            if isinstance(entry_info, (dict, str, bytes)):
+                return None
             if isinstance(entry_info, (dict, str, bytes)) or not isinstance(entry_info, Iterable):
                 return None
             return list(entry_info)
