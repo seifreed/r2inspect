@@ -8,8 +8,12 @@ from typing import Any
 
 def build_feature_stats(strings_features: list[Any] | None, opcodes_features: list[Any] | None) -> dict[str, Any]:
     """Build aggregate feature statistics for SimHash analysis."""
-    strings_features = [feature for feature in strings_features or [] if isinstance(feature, str)]
-    opcodes_features = [feature for feature in opcodes_features or [] if isinstance(feature, str)]
+    if not isinstance(strings_features, list):
+        strings_features = []
+    if not isinstance(opcodes_features, list):
+        opcodes_features = []
+    strings_features = [feature for feature in strings_features if isinstance(feature, str)]
+    opcodes_features = [feature for feature in opcodes_features if isinstance(feature, str)]
     combined_features = strings_features + opcodes_features
     feature_stats: dict[str, Any] = {
         "total_strings": len(strings_features),

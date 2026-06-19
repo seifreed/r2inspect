@@ -28,6 +28,14 @@ def test_build_feature_stats_skips_malformed_entries() -> None:
     assert stats["unique_opcodes"] == 1
 
 
+def test_build_feature_stats_rejects_non_list_inputs() -> None:
+    stats = build_feature_stats("STR:a", "OP:mov")  # type: ignore[arg-type]
+
+    assert stats["total_strings"] == 0
+    assert stats["total_opcodes"] == 0
+    assert stats["total_features"] == 0
+
+
 def test_build_similarity_groups() -> None:
     function_features = {
         "a": {"simhash": 10},
