@@ -36,6 +36,15 @@ from ..domain.services.binary_helpers import (
 logger = get_logger(__name__)
 
 
+def _coerce_function_list(functions: Any) -> list[Any]:
+    if isinstance(functions, list):
+        return functions
+    try:
+        return list(functions)
+    except TypeError:
+        return []
+
+
 def _to_int(value: Any) -> int:
     try:
         return int(value, 0) if isinstance(value, str) else int(value)
@@ -187,7 +196,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         if size <= 0:
             return []
         if self._functions_cache is None:
-            self._functions_cache = self._cmd_list("aflj")
+            self._functions_cache = _coerce_function_list(self._cmd_list("aflj"))
         functions = self._functions_cache or []
         end = vaddr + size
         filtered: list[dict[str, Any]] = []

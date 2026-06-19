@@ -7,6 +7,8 @@ production adapter stack.
 
 from __future__ import annotations
 
+from typing import Any
+
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.section_analysis import (
     _mark_entropy_anomaly,
@@ -73,6 +75,20 @@ def _build_analyzer(
     return SectionAnalyzer(adapter, None)
 
 
+class IterableCmdListSectionAnalyzer(SectionAnalyzer):
+    def __init__(self, *args, sections: list[dict[str, Any]] | None = None, functions: list[dict[str, Any]] | None = None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._iterable_sections = sections or []
+        self._iterable_functions = functions or []
+
+    def _cmd_list(self, command: str):  # type: ignore[override]
+        if command == "iSj":
+            return (section for section in self._iterable_sections)
+        if command == "aflj":
+            return (func for func in self._iterable_functions)
+        return []
+
+
 # ---------------------------------------------------------------------------
 # analyze_sections - non-dict section triggers warning (line 64)
 # ---------------------------------------------------------------------------
@@ -97,6 +113,16 @@ def test_analyze_sections_handles_empty_sections():
     analyzer = _build_analyzer(sections=[])
     sections = analyzer.analyze_sections()
     assert sections == []
+
+
+def test_analyze_sections_accepts_iterable_cmd_list_sections():
+    analyzer = IterableCmdListSectionAnalyzer(
+        adapter=R2PipeAdapter(FakeR2()),
+        sections=[{"name": ".text", "vaddr": 0, "vsize": 0, "size": 0, "flags": "r-x"}],
+    )
+    result = analyzer.analyze_sections()
+    assert len(result) == 1
+    assert result[0]["name"] == ".text"
 
 
 # ---------------------------------------------------------------------------
@@ -427,6 +453,20 @@ def test_get_functions_in_section_coerces_string_addresses():
     result = analyzer._get_functions_in_section(0x1000, 0x1000)
     assert any(f.get("offset") == "4096" for f in result)
     assert any(f.get("addr") == "5376" for f in result)
+
+
+def test_get_functions_in_section_reuses_iterable_cache():
+    analyzer = IterableCmdListSectionAnalyzer(
+        adapter=R2PipeAdapter(FakeR2()),
+        functions=[
+            {"offset": 0x1000},
+            {"offset": 0x2000},
+        ],
+    )
+    first = analyzer._get_functions_in_section(0x1000, 0x1000)
+    second = analyzer._get_functions_in_section(0x1000, 0x1000)
+    assert [f.get("offset") for f in first] == [0x1000]
+    assert [f.get("offset") for f in second] == [0x1000]
 
 
 # ---------------------------------------------------------------------------

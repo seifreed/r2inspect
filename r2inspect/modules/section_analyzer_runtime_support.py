@@ -30,18 +30,26 @@ def _to_int(value: Any) -> int:
         return 0
 
 
+def _coerce_list(raw: Any) -> list[Any]:
+    if isinstance(raw, list):
+        return raw
+    try:
+        return list(raw)
+    except TypeError:
+        return []
+
+
 def analyze_sections(analyzer: SectionRuntimeHost, logger: logging.Logger) -> list[dict[str, Any]]:
     sections_info = []
 
     try:
-        sections = analyzer._cmd_list("iSj")
+        sections = _coerce_list(analyzer._cmd_list("iSj"))
 
-        if sections and isinstance(sections, list):
-            for section in sections:
-                if isinstance(section, dict):
-                    sections_info.append(analyzer._analyze_single_section(section))
-                else:
-                    logger.warning("Unexpected section type: %s", type(section))
+        for section in sections:
+            if isinstance(section, dict):
+                sections_info.append(analyzer._analyze_single_section(section))
+            else:
+                logger.warning("Unexpected section type: %s", type(section))
 
     except (RuntimeError, TypeError, ValueError, AttributeError, OSError) as exc:
         logger.error("Error analyzing sections from iSj: %s", exc)
