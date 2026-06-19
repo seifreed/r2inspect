@@ -4,14 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_list
+from ..abstractions.coercion_support import coerce_int_or_none, coerce_list
 
 
 def _to_int(value: Any) -> int | None:
-    try:
-        return int(value, 0) if isinstance(value, str) else int(value or 0)
-    except (TypeError, ValueError):
-        return None
+    return coerce_int_or_none(value)
 
 
 def _coerce_list(raw: Any) -> list[Any]:

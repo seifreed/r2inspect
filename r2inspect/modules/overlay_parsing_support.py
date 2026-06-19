@@ -5,16 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_list
+from ..abstractions.coercion_support import coerce_int_or_none, coerce_list
 
 
 def _to_int(value: Any) -> int | None:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return None
+    return coerce_int_or_none(value)
 
 
 def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:

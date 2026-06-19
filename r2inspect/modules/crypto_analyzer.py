@@ -3,6 +3,7 @@
 
 from typing import Any, cast
 
+from ..abstractions.coercion_support import coerce_int_or_none
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
 from .crypto_detection_support import (
@@ -23,12 +24,7 @@ logger = get_logger(__name__)
 
 
 def _to_int(value: Any) -> int | None:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return None
+    return coerce_int_or_none(value)
 
 
 class CryptoAnalyzer(CommandHelperMixin):

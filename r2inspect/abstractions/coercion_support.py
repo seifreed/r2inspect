@@ -40,3 +40,12 @@ def coerce_int(value: Any, default: int = 0) -> int:
         return int(value if value is not None else default)
     except (TypeError, ValueError):
         return default
+
+
+def coerce_int_or_none(value: Any) -> int | None:
+    try:
+        if isinstance(value, str):
+            return int(value, 0)
+        return int(value if value is not None else 0)
+    except (TypeError, ValueError):
+        return None
