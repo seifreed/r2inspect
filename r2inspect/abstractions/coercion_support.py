@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 
@@ -49,3 +50,35 @@ def coerce_int_or_none(value: Any) -> int | None:
         return int(value if value is not None else 0)
     except (TypeError, ValueError):
         return None
+
+
+def get_dict_bucket(mapping: dict[str, Any], key: str) -> dict[str, Any]:
+    value = mapping.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def get_list_bucket(mapping: dict[str, Any], key: str) -> list[Any]:
+    value = mapping.get(key)
+    if isinstance(value, list):
+        return value
+    if isinstance(value, (dict, str, bytes)) or not isinstance(value, Iterable):
+        return []
+    return list(value)
+
+
+def ensure_dict_bucket(mapping: dict[str, Any], key: str) -> dict[str, Any]:
+    value = mapping.get(key)
+    if isinstance(value, dict):
+        return value
+    value = {}
+    mapping[key] = value
+    return value
+
+
+def ensure_list_bucket(mapping: dict[str, Any], key: str) -> list[Any]:
+    value = mapping.get(key)
+    if isinstance(value, list):
+        return value
+    value = []
+    mapping[key] = value
+    return value

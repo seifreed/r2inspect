@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from ..abstractions.coercion_support import get_dict_bucket, get_list_bucket
 from .result_aggregator_recommendation_support import (
     RECOMMENDATION_RULES,
     generate_recommendations,
@@ -24,21 +25,6 @@ SUMMARY_BUILDERS = {
     "threat_indicators": "build_threat_indicators",
     "technical_details": "build_technical_details",
 }
-
-
-def _dict_bucket(analysis_results: dict[str, Any], key: str) -> dict[str, Any]:
-    value = analysis_results.get(key)
-    return value if isinstance(value, dict) else {}
-
-
-def _list_bucket(analysis_results: dict[str, Any], key: str) -> list[Any]:
-    value = analysis_results.get(key)
-    if isinstance(value, list):
-        return value
-    if isinstance(value, (dict, str, bytes)) or not isinstance(value, Iterable):
-        return []
-    return list(value)
-
 
 def _coerce_float(value: Any) -> float | None:
     try:
@@ -120,7 +106,7 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
         file_info = {}
     elif not isinstance(file_info, dict):
         raise TypeError("file_info must be a dict or None")
-    pe_info = _dict_bucket(analysis_results, "pe_info")
+    pe_info = get_dict_bucket(analysis_results, "pe_info")
     overview = {
         "filename": file_info.get("name", "Unknown"),
         "file_type": file_info.get("file_type", "Unknown"),
@@ -132,7 +118,7 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     compiled = pe_info.get("compile_time", pe_info.get("compilation_timestamp"))
     if compiled:
         overview["compiled"] = compiled
-    rich_header = _dict_bucket(analysis_results, "rich_header")
+    rich_header = get_dict_bucket(analysis_results, "rich_header")
     if rich_header.get("available") and rich_header.get("compilers"):
         compilers = rich_header.get("compilers", [])
         if isinstance(compilers, list):
@@ -153,8 +139,8 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
 
 def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the security posture section for the executive summary."""
-    security = _dict_bucket(analysis_results, "security")
-    packer = _dict_bucket(analysis_results, "packer")
+    security = get_dict_bucket(analysis_results, "security")
+    packer = get_dict_bucket(analysis_results, "packer")
     return {
         "is_signed": security.get("authenticode", False),
         "is_packed": packer.get("is_packed", False),
@@ -172,26 +158,26 @@ def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any
 def build_threat_indicators(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the threat-indicator section from imports, sections, YARA and crypto."""
     return {
-        "suspicious_imports": _count_suspicious_imports(_list_bucket(analysis_results, "imports")),
-        "yara_matches": len(_list_bucket(analysis_results, "yara_matches")),
-        "entropy_warnings": _count_high_entropy_sections(_list_bucket(analysis_results, "sections")),
-        "suspicious_sections": _count_suspicious_sections(_list_bucket(analysis_results, "sections")),
-        "crypto_indicators": _count_crypto_indicators(_dict_bucket(analysis_results, "crypto")),
+        "suspicious_imports": _count_suspicious_imports(get_list_bucket(analysis_results, "imports")),
+        "yara_matches": len(get_list_bucket(analysis_results, "yara_matches")),
+        "entropy_warnings": _count_high_entropy_sections(get_list_bucket(analysis_results, "sections")),
+        "suspicious_sections": _count_suspicious_sections(get_list_bucket(analysis_results, "sections")),
+        "crypto_indicators": _count_crypto_indicators(get_dict_bucket(analysis_results, "crypto")),
     }
 
 
 def build_technical_details(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the technical-detail section of the executive summary."""
-    functions = _dict_bucket(analysis_results, "functions")
-    crypto = _dict_bucket(analysis_results, "crypto")
+    functions = get_dict_bucket(analysis_results, "functions")
+    crypto = get_dict_bucket(analysis_results, "crypto")
     function_count = functions.get("count", 0)
     if not function_count:
         raw_functions = analysis_results.get("functions")
         if isinstance(raw_functions, list):
             function_count = len(raw_functions)
     return {
-        "imports": len(_list_bucket(analysis_results, "imports")),
-        "sections": len(_list_bucket(analysis_results, "sections")),
+        "imports": len(get_list_bucket(analysis_results, "imports")),
+        "sections": len(get_list_bucket(analysis_results, "sections")),
         "functions": function_count,
         "crypto_matches": _count_crypto_indicators(crypto),
     }

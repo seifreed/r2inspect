@@ -6,32 +6,28 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from ..abstractions.coercion_support import get_dict_bucket
+
 RecommendationPredicate = Callable[[dict[str, Any]], Any]
-
-
-def _bucket(results: dict[str, Any], key: str) -> dict[str, Any]:
-    value = results.get(key)
-    return value if isinstance(value, dict) else {}
-
 
 RECOMMENDATION_RULES: list[tuple[RecommendationPredicate, str]] = [
     (
-        lambda results: _bucket(results, "packer").get("is_packed"),
+        lambda results: get_dict_bucket(results, "packer").get("is_packed"),
         "File appears packed; consider unpacking before deeper analysis.",
     ),
     (
-        lambda results: _bucket(results, "security").get("authenticode") is False,
+        lambda results: get_dict_bucket(results, "security").get("authenticode") is False,
         "File is unsigned; verify source and integrity.",
     ),
     (
         lambda results: any(
-            _bucket(results, "crypto").get(key)
+            get_dict_bucket(results, "crypto").get(key)
             for key in ("matches", "algorithms", "constants", "functions")
         ),
         "Cryptographic routines detected; check for encryption or obfuscation.",
     ),
     (
-        lambda results: _bucket(results, "anti_analysis").get("anti_debug"),
+        lambda results: get_dict_bucket(results, "anti_analysis").get("anti_debug"),
         "Anti-debugging detected; use anti-anti-debug techniques.",
     ),
 ]

@@ -1,6 +1,6 @@
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, ensure_list_bucket
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
@@ -15,15 +15,6 @@ from .authenticode_result_support import (
 )
 
 logger = get_logger(__name__)
-
-
-def _list_bucket(result: dict[str, Any], key: str) -> list[Any]:
-    value = result.get(key)
-    if isinstance(value, list):
-        return value
-    value = []
-    result[key] = value
-    return value
 
 
 class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
@@ -48,7 +39,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             cert_info = self._read_win_certificate(security_dir, result)
             if cert_info:
                 _apply_security_directory_impl(result, security_dir)
-                _list_bucket(result, "certificates").append(cert_info)
+                ensure_list_bucket(result, "certificates").append(cert_info)
             else:
                 result["has_signature"] = False
                 result["signature_valid"] = False
