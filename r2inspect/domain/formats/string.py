@@ -63,6 +63,8 @@ def build_xor_matches(
 ) -> list[dict[str, Any]]:
     if not isinstance(search_string, str):
         return []
+    if any(ord(char) > 0xFF for char in search_string):
+        return []
     matches: list[dict[str, Any]] = []
     for key in range(1, 256):
         xor_result = xor_string(search_string, key)

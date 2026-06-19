@@ -117,6 +117,13 @@ def test_build_xor_matches_non_string_search_string_returns_empty():
     assert build_xor_matches(None, search_hex) == []  # type: ignore[arg-type]
 
 
+def test_build_xor_matches_rejects_unicode_search_string():
+    def search_hex(pattern: str) -> str:
+        raise AssertionError("search_hex should not be called")
+
+    assert build_xor_matches("你好", search_hex) == []
+
+
 # ---------------------------------------------------------------------------
 # find_suspicious() - lines 75, 80-89
 # ---------------------------------------------------------------------------
