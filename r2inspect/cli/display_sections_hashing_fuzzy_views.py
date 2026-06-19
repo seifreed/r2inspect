@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from typing import Any, cast
 
 from rich.table import Table
@@ -72,10 +73,18 @@ def add_impfuzzy_entries(table: Table, impfuzzy_info: dict[str, Any]) -> None:
     table.add_row("Total Imports", str(impfuzzy_info.get("import_count", 0)))
     table.add_row("DLL Count", str(impfuzzy_info.get("dll_count", 0)))
     imports_processed = impfuzzy_info.get("imports_processed", [])
-    if isinstance(imports_processed, list) and imports_processed:
-        sample_imports = list(imports_processed[:10])
-        if len(imports_processed) > 10:
-            sample_imports.append(f"... and {len(imports_processed) - 10} more")
+    if isinstance(imports_processed, list):
+        normalized_imports = imports_processed
+    elif isinstance(imports_processed, (dict, str, bytes)) or not isinstance(
+        imports_processed, Iterable
+    ):
+        normalized_imports = []
+    else:
+        normalized_imports = list(imports_processed)
+    if normalized_imports:
+        sample_imports = list(normalized_imports[:10])
+        if len(normalized_imports) > 10:
+            sample_imports.append(f"... and {len(normalized_imports) - 10} more")
         table.add_row("Sample Imports", "\n".join(map(str, sample_imports)))
 
 
@@ -120,12 +129,16 @@ def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
         return
     table.add_row("Largest Similar Group", f"{count} functions")
     functions = largest_group.get("functions", [])
-    if not isinstance(functions, list):
+    if isinstance(functions, list):
+        normalized_functions = functions
+    elif isinstance(functions, (dict, str, bytes)) or not isinstance(functions, Iterable):
         return
-    sample_funcs = list(functions[:3])
+    else:
+        normalized_functions = list(functions)
+    sample_funcs = list(normalized_functions[:3])
     clean_sample_funcs = [
         re.sub(r"&nbsp;?", " ", str(func)).replace(HTML_AMP, "&") for func in sample_funcs
     ]
-    if len(functions) > 3:
-        clean_sample_funcs.append(f"... and {len(functions) - 3} more")
+    if len(normalized_functions) > 3:
+        clean_sample_funcs.append(f"... and {len(normalized_functions) - 3} more")
     table.add_row("Sample Functions", ", ".join(clean_sample_funcs))
