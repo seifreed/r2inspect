@@ -687,6 +687,21 @@ def test_collect_import_dlls_decodes_bytes_names():
     assert dlls == ["kernel32.dll"]
 
 
+def test_collect_import_dlls_normalizes_iterable_input():
+    dlls = collect_import_dlls(
+        (
+            imp
+            for imp in [
+                {"library": "KERNEL32.DLL"},
+                "skip",
+                {"libname": "USER32.DLL"},
+            ]
+        )
+    )
+
+    assert sorted(dlls) == ["kernel32.dll", "user32.dll"]
+
+
 def test_populate_import_statistics_skips_non_dict_buckets():
     result = {
         "api_analysis": None,
@@ -719,6 +734,26 @@ def test_populate_import_statistics_skips_non_list_suspicious_dlls():
         "obfuscation": {"score": 10},
         "anomalies": {"count": 1},
         "dll_analysis": {"suspicious_dlls": None},
+        "statistics": {},
+    }
+
+    populate_import_statistics(
+        result,
+        get_risk_level_fn=lambda _score: "LOW",
+        count_suspicious_indicators_fn=lambda _result: 0,
+    )
+
+    assert result["statistics"]["risk_level"] == "LOW"
+
+
+def test_populate_import_statistics_normalizes_iterable_suspicious_dlls():
+    result = {
+        "api_analysis": {"risk_score": 10},
+        "obfuscation": {"score": 10},
+        "anomalies": {"count": 1},
+        "dll_analysis": {
+            "suspicious_dlls": (item for item in [{"name": "psapi.dll"}, "skip"])
+        },
         "statistics": {},
     }
 

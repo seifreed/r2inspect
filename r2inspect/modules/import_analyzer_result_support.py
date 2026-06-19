@@ -5,6 +5,15 @@ from __future__ import annotations
 from typing import Any, cast
 
 
+def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    try:
+        return [item for item in list(raw) if isinstance(item, dict)]
+    except TypeError:
+        return []
+
+
 def init_import_result(init_result_structure: Any) -> dict[str, Any]:
     return cast(
         dict[str, Any],
@@ -29,9 +38,7 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
     # Normalize DLL names to lowercase for case-insensitive deduplication (Windows)
     # Also check 'libname' field which some r2 versions use instead of 'library'
     dlls = set()
-    if not isinstance(imports, list):
-        return []
-    for imp in imports:
+    for imp in _coerce_dict_list(imports):
         if not isinstance(imp, dict):
             continue
         dll = imp.get("library") or imp.get("libname")
@@ -71,7 +78,7 @@ def populate_import_statistics(
         dll_analysis = {}
     suspicious_dlls = dll_analysis.get("suspicious_dlls")
     if not isinstance(suspicious_dlls, list):
-        suspicious_dlls = []
+        suspicious_dlls = _coerce_dict_list(suspicious_dlls)
 
     total_risk = (
         _coerce_number(api_analysis.get("risk_score", 0)) * 0.4
