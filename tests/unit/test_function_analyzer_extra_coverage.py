@@ -7,6 +7,7 @@ No the stdlib mock library, no mock objects, no patch. Real Config, real objects
 
 from r2inspect.config import Config
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
+from r2inspect.modules.function_analyzer_metrics_support import _accumulate_function_stats
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 
 
@@ -360,3 +361,7 @@ def test_analyze_function_coverage_error():
 
     result = analyze_function_coverage(None)
     assert result == {}
+
+
+def test_accumulate_function_stats_non_list_input_returns_zeros():
+    assert _accumulate_function_stats(None) == (0, 0, [])  # type: ignore[arg-type]

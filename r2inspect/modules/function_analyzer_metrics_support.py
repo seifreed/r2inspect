@@ -31,6 +31,8 @@ def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int
     with_size = 0
     with_blocks = 0
     sizes: list[int] = []
+    if not isinstance(functions, list):
+        return with_size, with_blocks, sizes
     for func in functions:
         if not isinstance(func, dict):
             continue
