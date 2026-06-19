@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+from collections.abc import Iterable
 from typing import Any, Protocol
 
 
@@ -100,15 +101,19 @@ def deserialize_bloom(
         if not (0 <= count <= capacity):
             logger.error("Deserialization failed: invalid count %s", count)
             return None
-        if not isinstance(bitarray_list, list):
-            logger.error("Deserialization failed: bitarray is not a list")
+        if isinstance(bitarray_list, list):
+            bitarray_source = bitarray_list
+        elif isinstance(bitarray_list, (dict, str, bytes)) or not isinstance(bitarray_list, Iterable):
+            logger.error("Deserialization failed: bitarray is not iterable")
             return None
+        else:
+            bitarray_source = list(bitarray_list)
 
         bloom_filter = bloom_filter_class(capacity=capacity, error_rate=error_rate)
 
         from bitarray import bitarray
 
-        bloom_filter.bitarray = bitarray(bitarray_list)
+        bloom_filter.bitarray = bitarray(bitarray_source)
         bloom_filter.count = count
         logger.debug(
             "Successfully deserialized Bloom filter (capacity=%s, count=%s)",

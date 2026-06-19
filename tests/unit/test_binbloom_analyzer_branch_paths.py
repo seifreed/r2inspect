@@ -979,6 +979,25 @@ def test_deserialize_bloom_bitarray_not_a_list():
     assert result is None
 
 
+def test_deserialize_bloom_accepts_iterable_bitarray():
+    """Iterable bitarray payloads should reconstruct successfully."""
+    import r2inspect.modules.binbloom_similarity_support as support
+
+    original_loads = support.json.loads
+    try:
+        support.json.loads = lambda _payload: {
+            "version": 1,
+            "error_rate": 0.001,
+            "capacity": 64,
+            "count": 0,
+            "bitarray": (bit for bit in [0, 1, 0, 1]),
+        }
+        result = BinbloomAnalyzer.deserialize_bloom(_make_b64({"version": 1}))
+        assert result is not None
+    finally:
+        support.json.loads = original_loads
+
+
 def test_deserialize_bloom_invalid_json_returns_none():
     """Lines 669-671: invalid JSON returns None."""
     b64 = base64.b64encode(b"not valid json!!!").decode()
