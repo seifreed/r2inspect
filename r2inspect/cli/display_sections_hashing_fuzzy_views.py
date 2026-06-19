@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from typing import Any, cast
+from typing import Any
 
 from rich.table import Table
 
@@ -115,11 +115,19 @@ def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
     table.add_row(TOTAL_FUNCTIONS_LABEL, str(ccbhash_info.get("total_functions", 0)))
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(ccbhash_info.get("analyzed_functions", 0)))
     table.add_row("Unique CCBHashes", str(ccbhash_info.get("unique_hashes", 0)))
-    similar_functions = cast(list[dict[str, Any]], ccbhash_info.get("similar_functions", []))
-    if not similar_functions:
+    similar_functions = ccbhash_info.get("similar_functions", [])
+    if isinstance(similar_functions, list):
+        similar_source = similar_functions
+    elif isinstance(similar_functions, (dict, str, bytes)) or not isinstance(
+        similar_functions, Iterable
+    ):
         return
-    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similar_functions)))
-    largest_group = similar_functions[0] if similar_functions else None
+    else:
+        similar_source = list(similar_functions)
+    if not similar_source:
+        return
+    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similar_source)))
+    largest_group = similar_source[0] if similar_source else None
     if not largest_group:
         return
     if not isinstance(largest_group, dict):

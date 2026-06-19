@@ -781,3 +781,20 @@ def test_add_ccbhash_entries_skips_non_list_functions():
         },
     )
     assert len(table.rows) >= 4
+
+
+def test_add_ccbhash_entries_accepts_iterable_functions():
+    table = _make_table()
+    add_ccbhash_entries(
+        table,
+        {
+            "binary_ccbhash": "abc",
+            "total_functions": 1,
+            "analyzed_functions": 1,
+            "unique_hashes": 1,
+            "similar_functions": (
+                {"count": 2, "functions": ("f1", "f2")},
+            ),
+        },
+    )
+    assert len(table.rows) >= 5
