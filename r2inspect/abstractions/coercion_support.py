@@ -43,6 +43,11 @@ def coerce_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def coerce_positive_int(value: Any, default: int = 0) -> int:
+    result = coerce_int(value, default)
+    return result if result > 0 else 0
+
+
 def coerce_int_or_none(value: Any) -> int | None:
     try:
         if isinstance(value, str):

@@ -5,14 +5,11 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_positive_int
+
 
 def _coerce_function_size(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
+    return coerce_positive_int(value)
 
 
 def _coerce_function_type(value: Any) -> str:

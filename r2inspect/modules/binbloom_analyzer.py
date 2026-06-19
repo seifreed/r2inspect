@@ -7,6 +7,7 @@ from typing import Any, TypedDict
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
+from ..abstractions.coercion_support import coerce_positive_int
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..domain.services.binary_helpers import clean_function_name
 from ..infrastructure.logging import get_logger
@@ -127,11 +128,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
     @staticmethod
     def _coerce_function_size(value: Any) -> int:
-        try:
-            size = int(value, 0) if isinstance(value, str) else int(value or 0)
-        except (TypeError, ValueError):
-            return 0
-        return size if size > 0 else 0
+        return coerce_positive_int(value)
 
     def _add_binary_bloom(
         self,
