@@ -181,7 +181,10 @@ class CryptoAnalyzer(CommandHelperMixin):
 
     def _read_bytes(self, vaddr: int, size: int) -> bytes:
         if self.adapter is not None and hasattr(self.adapter, "read_bytes"):
-            return cast(bytes, self.adapter.read_bytes(vaddr, size))
+            data = self.adapter.read_bytes(vaddr, size)
+            if isinstance(data, (bytes, bytearray)):
+                return cast(bytes, data)
+            return b""
         return b""
 
     def detect_crypto_libraries(self) -> list[dict[str, Any]]:

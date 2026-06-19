@@ -384,6 +384,16 @@ def test_calculate_section_entropy_no_hex_data():
     assert result == 0.0
 
 
+def test_calculate_section_entropy_rejects_text_payload():
+    class TextAdapter(EmptyAdapter):
+        def read_bytes(self, vaddr: int, size: int) -> str:
+            return "bad"
+
+    analyzer = CryptoAnalyzer(TextAdapter())
+    result = analyzer._calculate_section_entropy({"vaddr": 0x1000, "size": 64})
+    assert result == 0.0
+
+
 def test_calculate_section_entropy_with_data():
     """_calculate_section_entropy returns float entropy for real bytes (line 262)."""
     analyzer = CryptoAnalyzer(CryptoSectionsAdapter())
