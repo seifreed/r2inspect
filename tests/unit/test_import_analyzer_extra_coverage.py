@@ -9,6 +9,7 @@ from r2inspect.domain.formats.import_analysis import (
     categorize_apis,
     find_max_risk_score,
 )
+from r2inspect.domain.analysis.import_collection import normalize_import_entries
 from r2inspect.domain.services.import_analysis import build_import_statistics, find_suspicious_patterns
 from r2inspect.modules.import_analyzer import ImportAnalyzer
 from r2inspect.modules.import_categories import get_api_categories
@@ -700,6 +701,11 @@ def test_collect_import_dlls_normalizes_iterable_input():
     )
 
     assert sorted(dlls) == ["kernel32.dll", "user32.dll"]
+
+
+def test_normalize_import_entries_accepts_iterable_input():
+    entries = normalize_import_entries(({"name": "CreateFileA"}, "skip", {"name": "WriteFile"}))
+    assert entries == [{"name": "CreateFileA"}, {"name": "WriteFile"}]
 
 
 def test_populate_import_statistics_skips_non_dict_buckets():
