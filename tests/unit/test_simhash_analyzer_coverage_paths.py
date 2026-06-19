@@ -219,6 +219,35 @@ def test_extract_string_features_skips_non_list_data_section_strings() -> None:
     assert result == ["STR:valid_string"]
 
 
+def test_extract_string_features_accepts_iterable_data_section_strings() -> None:
+    class _Host:
+        min_string_length = 4
+
+        def _get_strings_data(self):
+            return []
+
+        def _collect_string_features(self, strings_data, string_features):
+            return None
+
+        def _extract_data_section_strings(self):
+            return ("DATASTR:ok",)
+
+        def _is_useful_string(self, string_value):
+            return True
+
+        def _add_string_feature_set(self, string_features, string_value):
+            string_features.append(f"STR:{string_value}")
+
+        def _get_length_category(self, length):
+            return "short"
+
+        def _classify_string_type(self, string_value):
+            return None
+
+    result = _extract_string_features_impl(_Host(), logger=_logger)
+    assert result == ["DATASTR:ok"]
+
+
 def test_simhash_analyzer_extract_string_features_exception() -> None:
     # When the adapter raises, _extract_string_features should return []
     analyzer = _make_analyzer(cmdj_map={"izzj": Exception("Test error")})
