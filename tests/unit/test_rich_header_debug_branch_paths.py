@@ -177,6 +177,16 @@ def test_debug_read_bytes_returns_none_for_empty_response():
     assert result is None
 
 
+def test_debug_read_bytes_rejects_text_response():
+    class _TextAdapter(_ByteAdapter):
+        def read_bytes(self, offset: int, size: int) -> str:
+            return "bad"
+
+    dbg = _ConcreteDebug(adapter=_TextAdapter(data=b""))
+    result = dbg._debug_read_bytes(512)
+    assert result is None
+
+
 # ---------------------------------------------------------------------------
 # _debug_has_mz_header - lines 54-56 (True path), 57 (False path)
 # ---------------------------------------------------------------------------
@@ -363,6 +373,16 @@ def test_read_bytes_returns_data_from_adapter():
     dbg = _ConcreteDebug(adapter=adapter)
     result = dbg._read_bytes(0, 5)
     assert result == b"HELLO"
+
+
+def test_read_bytes_rejects_text_response():
+    class _TextAdapter(_ByteAdapter):
+        def read_bytes(self, offset: int, size: int) -> str:
+            return "bad"
+
+    dbg = _ConcreteDebug(adapter=_TextAdapter(data=b""))
+    result = dbg._read_bytes(0, 5)
+    assert result == b""
 
 
 # ---------------------------------------------------------------------------

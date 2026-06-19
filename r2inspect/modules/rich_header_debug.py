@@ -60,7 +60,7 @@ class RichHeaderDebugMixin:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
         data = self.adapter.read_bytes(0, size)
-        return data if data else None
+        return data if isinstance(data, (bytes, bytearray)) and data else None
 
     @staticmethod
     def _debug_has_mz_header(data: bytes) -> bool:
@@ -145,7 +145,8 @@ class RichHeaderDebugMixin:
     def _read_bytes(self, address: int, size: int) -> bytes:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return b""
-        return cast(bytes, self.adapter.read_bytes(address, size))
+        data = self.adapter.read_bytes(address, size)
+        return cast(bytes, data) if isinstance(data, (bytes, bytearray)) else b""
 
     def _get_file_info(self) -> dict[str, Any]:
         if self.adapter is None or not hasattr(self.adapter, "get_file_info"):
