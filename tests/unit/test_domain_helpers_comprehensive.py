@@ -438,6 +438,10 @@ def test_extract_printable_strings_rejects_non_int_min_length():
     assert extract_printable_strings(b"hello", min_length="3") == []  # type: ignore[arg-type]
 
 
+def test_extract_printable_strings_skips_out_of_range_values():
+    assert extract_printable_strings([65, 300, 66], min_length=1) == ["AB"]
+
+
 def test_suspicious_section_name_with_common_section():
     """Test that common sections are not flagged."""
     suspicious = ["upx", "packed"]

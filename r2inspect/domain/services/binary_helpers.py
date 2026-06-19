@@ -74,6 +74,8 @@ def extract_printable_strings(
             byte_val = int(byte) if not isinstance(byte, int) else byte
         except (ValueError, TypeError):
             continue
+        if byte_val < 0 or byte_val > 0xFF:
+            continue
         if 32 <= byte_val <= 126:
             current.append(chr(byte_val))
             continue
