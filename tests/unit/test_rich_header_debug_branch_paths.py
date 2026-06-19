@@ -286,6 +286,15 @@ def test_debug_log_extended_patterns_returns_early_for_empty_data():
     dbg._debug_log_extended_patterns()  # should not raise
 
 
+def test_debug_log_extended_patterns_returns_early_for_text_data():
+    class _TextAdapter(_ByteAdapter):
+        def read_bytes(self, offset: int, size: int) -> str:
+            return "bad"
+
+    dbg = _ConcreteDebug(adapter=_TextAdapter(data=b""))
+    dbg._debug_log_extended_patterns()  # should not raise
+
+
 # ---------------------------------------------------------------------------
 # _debug_log_extended_patterns - full path with Rich/DanS data
 # ---------------------------------------------------------------------------

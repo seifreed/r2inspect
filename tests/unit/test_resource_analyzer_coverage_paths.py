@@ -309,6 +309,20 @@ def test_resource_analyzer_parse_dir_entries_limit() -> None:
     assert len(result) <= 20
 
 
+def test_resource_analyzer_parse_dir_entries_rejects_text_payloads() -> None:
+    class _TextEntryAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return "bad"
+            return default
+
+        def _get_resource_type_name(self, type_id: int) -> str:
+            return f"UNKNOWN_{type_id}"
+
+    analyzer = _TextEntryAnalyzer(adapter=None)
+    assert analyzer._parse_dir_entries(0x1000, 1) == []
+
+
 # ── _parse_dir_entry ─────────────────────────────────────────────────────
 
 
@@ -992,6 +1006,19 @@ def test_resource_analyzer_parse_resources_manual_accepts_iterable_header() -> N
     analyzer = _IterableHeaderAnalyzer(adapter=None)
     result = analyzer._parse_resources_manual()
     assert result == [{"name": "resource"}]
+
+
+def test_resource_analyzer_parse_resources_manual_rejects_text_entry_payload() -> None:
+    class _TextEntryAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command == "iSj":
+                return [{"name": ".rsrc", "paddr": 0x1000}]
+            if command == "pxj 16 @ 4096":
+                return "bad"
+            return default if default is not None else []
+
+    analyzer = _TextEntryAnalyzer(adapter=None)
+    assert analyzer._parse_resources_manual() == []
 
 
 # ── analyze (entry point) ────────────────────────────────────────────────

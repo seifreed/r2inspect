@@ -105,7 +105,7 @@ class RichHeaderDebugMixin:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return
         extended_bytes = self.adapter.read_bytes(0, 2048)
-        if not extended_bytes:
+        if not isinstance(extended_bytes, (bytes, bytearray)) or not extended_bytes:
             return
         rich_positions, dans_positions = self._find_rich_dans_positions(extended_bytes)
 

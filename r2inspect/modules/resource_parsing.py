@@ -149,6 +149,14 @@ class ResourceParsingMixin:
         entry_offset = _to_int(rsrc_offset) + 16
         for i in range(min(total_entries, 20)):
             entry_data = self._cmdj(f"pxj 8 @ {entry_offset}", [])
+            if isinstance(entry_data, (dict, str, bytes)):
+                entry_offset += 8
+                continue
+            try:
+                entry_data = list(entry_data)
+            except TypeError:
+                entry_offset += 8
+                continue
             resource = self._parse_dir_entry(rsrc_offset, entry_data, i)
             if resource:
                 resources.append(resource)
