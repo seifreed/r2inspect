@@ -54,6 +54,18 @@ def _logger():
     return logging.getLogger("test_pe_imports_pe_analysis")
 
 
+class IterableImportsAdapter:
+    def get_imports(self):
+        return (
+            imp
+            for imp in [
+                {"name": "CreateFileA", "libname": "kernel32.dll"},
+                "skip",
+                {"name": "ReadFile", "libname": "kernel32.dll"},
+            ]
+        )
+
+
 # ---------------------------------------------------------------------------
 # fetch_imports  –  via adapter.get_imports() (uses iij under the hood)
 # ---------------------------------------------------------------------------
@@ -109,6 +121,14 @@ def test_fetch_imports_error_handling():
     result = pe_imports.fetch_imports(adapter)
 
     assert result == []
+
+
+def test_fetch_imports_normalizes_iterable_adapter_result():
+    result = pe_imports.fetch_imports(IterableImportsAdapter())
+    assert result == [
+        {"name": "CreateFileA", "libname": "kernel32.dll"},
+        {"name": "ReadFile", "libname": "kernel32.dll"},
+    ]
 
 
 # ---------------------------------------------------------------------------

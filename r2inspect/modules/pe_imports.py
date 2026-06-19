@@ -7,22 +7,28 @@ from typing import Any
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
 
 
+def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
+    if isinstance(imports, list):
+        return [imp for imp in imports if isinstance(imp, dict)]
+    try:
+        return [imp for imp in list(imports) if isinstance(imp, dict)]
+    except TypeError:
+        return []
+
+
 def fetch_imports(adapter: Any) -> list[dict[str, Any]]:
     if adapter is not None and hasattr(adapter, "get_imports"):
         imports = adapter.get_imports()
     else:
         imports = cmdj_helper(adapter, None, "iij", [])
-    return imports if isinstance(imports, list) and imports else []
+    return _coerce_import_list(imports)
 
 
 def group_imports_by_library(
     imports: list[dict[str, Any]],
 ) -> dict[str, list[str | bytes]]:
     imports_by_lib: dict[str, list[str | bytes]] = {}
-    if not isinstance(imports, list):
-        return imports_by_lib
-
-    for imp in imports:
+    for imp in _coerce_import_list(imports):
         if not isinstance(imp, dict) or "name" not in imp:
             continue
 
