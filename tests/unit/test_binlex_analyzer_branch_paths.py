@@ -15,7 +15,7 @@ from r2inspect.domain.services.binlex import (
     extract_tokens_from_ops,
 )
 from r2inspect.modules.binlex_analyzer import BinlexAnalyzer
-from r2inspect.modules.binlex_runtime import calculate_binary_signature_safe
+from r2inspect.modules.binlex_runtime import calculate_binary_signature_safe, extract_tokens_from_pdj
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +183,24 @@ class AdapterPdfjAndPdj:
         return ""
 
 
+class AdapterIterablePdj:
+    def analyze_all(self) -> None:
+        pass
+
+    def get_disasm(self, address: int = 0, size: int = 0):
+        if size == 200:
+            return (op for op in [{"mnemonic": "push"}, {"mnemonic": "ret"}])
+        return {}
+
+    def cmdj(self, command: str, default: Any = None) -> Any:
+        if command == "aflj":
+            return [{"name": "func_iter", "addr": 0x5000, "size": 70}]
+        return default if default is not None else {}
+
+    def cmd(self, command: str) -> str:
+        return ""
+
+
 class AdapterFunctionsNoSize:
     """Adapter with functions that have addr=0 and size=0 (filtered out)."""
 
@@ -311,6 +329,12 @@ def test_accumulate_ngrams_skips_when_n_missing() -> None:
     func_sigs: dict[int, dict[str, Any]] = {3: {"ngrams": ["a b c"]}}
     analyzer._accumulate_ngrams(all_ngrams, func_sigs, [2])
     assert len(all_ngrams) == 0
+
+
+def test_extract_tokens_from_pdj_normalizes_iterable_disasm() -> None:
+    analyzer = BinlexAnalyzer(adapter=AdapterIterablePdj(), filepath=None)
+    tokens = extract_tokens_from_pdj(analyzer, 0x5000, "func_iter", logger=logging.getLogger(__name__))
+    assert tokens == ["push", "ret"]
 
 
 # ---------------------------------------------------------------------------

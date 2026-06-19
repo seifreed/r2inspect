@@ -106,7 +106,10 @@ def extract_tokens_from_pdj(
         else analyzer._cmd_list("pdj 200")
     )
     if not isinstance(disasm_list, list):
-        return []
+        try:
+            disasm_list = list(disasm_list)
+        except TypeError:
+            return []
     tokens = extract_tokens_from_ops(disasm_list)
     if tokens:
         logger.debug("Extracted %s tokens from %s using pdj", len(tokens), func_name)
