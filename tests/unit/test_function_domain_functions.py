@@ -59,6 +59,11 @@ def test_extract_mnemonics_from_ops_empty_list():
     assert result == []
 
 
+def test_extract_mnemonics_from_ops_non_list_input():
+    """Test extracting mnemonics rejects non-list input."""
+    assert extract_mnemonics_from_ops(None) == []  # type: ignore[arg-type]
+
+
 def test_extract_mnemonics_from_ops_non_dict_items():
     """Test extracting mnemonics with non-dict items."""
     ops = [

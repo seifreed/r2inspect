@@ -22,6 +22,8 @@ def _coerce_function_type(value: Any) -> str:
 def extract_mnemonics_from_ops(ops: list[Any]) -> list[str]:
     """Extract instruction mnemonics from radare2 op dictionaries."""
     mnemonics: list[str] = []
+    if not isinstance(ops, list):
+        return mnemonics
     for op in ops:
         if not isinstance(op, dict):
             continue
