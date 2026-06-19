@@ -1,8 +1,3 @@
-"""Per-entity builders converting raw pipeline dicts to typed entities.
-
-Orchestrated by result_mapper.build_analysis_result; split for size budget.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -24,15 +19,12 @@ from ..domain.format_types import SectionInfo, SecurityFeatures
 from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
-
-
 def _coerce_list(raw: Any) -> list[Any]:
     if isinstance(raw, list):
         return raw
     if isinstance(raw, (dict, str, bytes)) or not isinstance(raw, Iterable):
         return []
     return list(raw)
-
 
 def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
     if not raw or not isinstance(raw, dict):
@@ -51,7 +43,6 @@ def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
         mime_type=raw.get("mime_type", ""),
     )
 
-
 def build_hashing_result(raw: dict[str, Any] | None) -> HashingResult:
     if not raw or not isinstance(raw, dict):
         return HashingResult()
@@ -67,15 +58,11 @@ def build_hashing_result(raw: dict[str, Any] | None) -> HashingResult:
         machoc_hash=raw.get("machoc_hash", ""),
     )
 
-
 def build_security_features(raw: dict[str, Any] | None) -> SecurityFeatures:
-    """Unknown keys are dropped (known names derived from the type) so a
-    raw dict carrying extra fields cannot break construction."""
     if not raw or not isinstance(raw, dict):
         return SecurityFeatures()
     known = set(SecurityFeatures().to_dict())
     return SecurityFeatures(**{k: v for k, v in raw.items() if k in known})
-
 
 def build_import_info(raw: dict[str, Any]) -> ImportInfo:
     return ImportInfo(
@@ -88,7 +75,6 @@ def build_import_info(raw: dict[str, Any]) -> ImportInfo:
         risk_level=raw.get("risk_level", "Low"),
         risk_tags=_coerce_list(raw.get("risk_tags", [])),
     )
-
 
 def build_export_info(raw: dict[str, Any]) -> ExportInfo:
     return ExportInfo(

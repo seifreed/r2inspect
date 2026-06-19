@@ -35,7 +35,6 @@ def build_similarity_groups(
     max_distance: int,
     distance_fn: Any,
 ) -> list[dict[str, Any]]:
-    """Find groups of similar functions based on a distance function."""
     similar_groups: list[dict[str, Any]] = []
     processed_functions = set()
     if not isinstance(function_features, dict):
@@ -46,7 +45,6 @@ def build_similarity_groups(
         if isinstance(data, dict) and isinstance(data.get("simhash"), int)
     }
     func_names = list(valid_features.keys())
-
     for i, func1_name in enumerate(func_names):
         if func1_name in processed_functions:
             continue

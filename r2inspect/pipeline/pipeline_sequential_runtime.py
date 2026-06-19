@@ -30,16 +30,12 @@ def execute_sequential_pipeline(
         len(pipeline.stages),
     )
     context = build_context(options, execution_id)
-
     executed_count = 0
     skipped_count = 0
     failed_count = 0
     completed: set[str] = set()
     failed_stages: set[str] = set()
     total_stages = len(pipeline.stages)
-
-    # Resolve the effective callback: explicit argument takes priority,
-    # then fall back to any callback stored on the pipeline itself.
     effective_callback = progress_callback or getattr(pipeline, "_progress_callback", None)
 
     for idx, stage in enumerate(pipeline.stages, 1):
@@ -54,8 +50,6 @@ def execute_sequential_pipeline(
                     total_stages,
                     exc,
                 )
-
-        # Check dependencies before executing
         if not stage.can_execute(completed, failed_stages):
             logger.warning("Skipping stage '%s': unsatisfied dependencies", stage.name)
             error_result = {
@@ -77,7 +71,6 @@ def execute_sequential_pipeline(
             else:
                 skipped_count += 1
             continue
-
         if stage_result:
             merge_into_plain_context(context, stage_result)
             if (
@@ -90,7 +83,6 @@ def execute_sequential_pipeline(
                 executed_count += 1
         else:
             skipped_count += 1
-
     logger.info(
         "Sequential pipeline execution #%s complete: %s succeeded, %s failed, %s skipped",
         execution_id,
