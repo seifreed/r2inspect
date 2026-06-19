@@ -570,6 +570,18 @@ def test_add_simhash_function_analysis_with_similarity_groups():
     assert len(table.rows) >= 3
 
 
+def test_add_simhash_function_analysis_accepts_iterable_groups():
+    table = _make_table()
+    simhash_info = {
+        "function_simhashes": {"f1": "h1"},
+        "total_functions": 5,
+        "analyzed_functions": 5,
+        "similarity_groups": ({"count": 2, "representative_hash": "rh", "functions": ["f1"]},),
+    }
+    _add_simhash_function_analysis(table, simhash_info)
+    assert len(table.rows) >= 3
+
+
 def test_add_simhash_function_analysis_no_groups():
     table = _make_table()
     simhash_info = {
@@ -633,6 +645,12 @@ def test_add_simhash_top_features_ignores_non_list_features():
     table = _make_table()
     _add_simhash_top_features(table, {"most_common_features": {"feature": 1}})
     assert len(table.rows) == 0
+
+
+def test_add_simhash_top_features_accepts_iterable_features():
+    table = _make_table()
+    _add_simhash_top_features(table, {"most_common_features": (("STR:foo", 3),)})
+    assert len(table.rows) == 1
 
 
 def test_add_bindiff_structural_seven_sections_exactly():

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
@@ -72,22 +73,37 @@ def _add_simhash_function_analysis(table: Table, simhash_info: dict[str, Any]) -
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(analyzed_functions))
 
     similarity_groups = simhash_info.get("similarity_groups", [])
-    if not isinstance(similarity_groups, list) or not similarity_groups:
+    if isinstance(similarity_groups, list):
+        group_source = similarity_groups
+    elif isinstance(similarity_groups, (dict, str, bytes)) or not isinstance(
+        similarity_groups, Iterable
+    ):
+        table.add_row(SIMILAR_GROUPS_LABEL, "0 (all functions unique)")
+        return
+    else:
+        group_source = list(similarity_groups)
+    if not group_source:
         table.add_row(SIMILAR_GROUPS_LABEL, "0 (all functions unique)")
         return
 
-    _add_simhash_similarity_groups(table, similarity_groups)
+    _add_simhash_similarity_groups(table, group_source)
 
 
 def _add_simhash_similarity_groups(table: Table, similarity_groups: list[dict[str, Any]]) -> None:
-    if not isinstance(similarity_groups, list):
+    if isinstance(similarity_groups, list):
+        group_source = similarity_groups
+    elif isinstance(similarity_groups, (dict, str, bytes)) or not isinstance(
+        similarity_groups, Iterable
+    ):
         return
-    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similarity_groups)))
-    for i, group in enumerate(similarity_groups[:3]):
+    else:
+        group_source = list(similarity_groups)
+    table.add_row(SIMILAR_GROUPS_LABEL, str(len(group_source)))
+    for i, group in enumerate(group_source[:3]):
         _add_simhash_similarity_group(table, i + 1, group)
 
-    if len(similarity_groups) > 3:
-        table.add_row("Additional Groups", f"... and {len(similarity_groups) - 3} more groups")
+    if len(group_source) > 3:
+        table.add_row("Additional Groups", f"... and {len(group_source) - 3} more groups")
 
 
 def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any]) -> None:
@@ -105,11 +121,17 @@ def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any
 
 def _add_simhash_top_features(table: Table, feature_stats: dict[str, Any]) -> None:
     most_common = feature_stats.get("most_common_features", [])
-    if not isinstance(most_common, list) or not most_common:
+    if isinstance(most_common, list):
+        feature_source = most_common
+    elif isinstance(most_common, (dict, str, bytes)) or not isinstance(most_common, Iterable):
+        return
+    else:
+        feature_source = list(most_common)
+    if not feature_source:
         return
 
     top_features = []
-    for item in most_common[:5]:
+    for item in feature_source[:5]:
         if not isinstance(item, (list, tuple)) or len(item) < 2:
             continue
         feature, count = item[0], item[1]
