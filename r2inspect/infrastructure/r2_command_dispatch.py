@@ -184,27 +184,30 @@ def _handle_disasm(adapter: Any, base: str, address: int | None) -> Any | None:
     return None
 
 
+def _coerce_byte_list(data: Any) -> list[int]:
+    if not isinstance(data, list):
+        return []
+    if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in data):
+        return []
+    return data
+
+
+def _coerce_hex_bytes(data: Any) -> str:
+    if not isinstance(data, (bytes, bytearray)) or not data:
+        return ""
+    return data.hex()
+
+
 def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
     if address is None:
         return None
+    size = _parse_size(base)
+    if size is None:
+        return None
     if base.startswith(("p8j", "pxj")) and hasattr(adapter, "read_bytes_list"):
-        size = _parse_size(base)
-        if size is None:
-            return None
-        data = adapter.read_bytes_list(address, size)
-        if not isinstance(data, list) or not all(
-            isinstance(value, int) and 0 <= value <= 0xFF for value in data
-        ):
-            return []
-        return data
+        return _coerce_byte_list(adapter.read_bytes_list(address, size))
     if base.startswith("p8") and hasattr(adapter, "read_bytes"):
-        size = _parse_size(base)
-        if size is None:
-            return None
-        data = adapter.read_bytes(address, size)
-        if not isinstance(data, (bytes, bytearray)) or not data:
-            return ""
-        return data.hex()
+        return _coerce_hex_bytes(adapter.read_bytes(address, size))
     return None
 
 

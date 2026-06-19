@@ -54,39 +54,43 @@ def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int
     return with_size, with_blocks, sizes
 
 
+def _build_function_coverage(functions: Any) -> dict[str, Any]:
+    if isinstance(functions, list) and not functions:
+        return {
+            "total_functions": 0,
+            "functions_with_size": 0,
+            "functions_with_blocks": 0,
+            "total_code_coverage": 0,
+            "avg_function_size": 0,
+        }
+    normalized = _coerce_function_list(functions)
+    if not normalized:
+        if isinstance(functions, (str, bytes, dict)) or functions is None:
+            return {}
+        return {
+            "total_functions": 0,
+            "functions_with_size": 0,
+            "functions_with_blocks": 0,
+            "total_code_coverage": 0,
+            "avg_function_size": 0,
+        }
+    total = len(normalized)
+    with_size, with_blocks, sizes = _accumulate_function_stats(normalized)
+    coverage: dict[str, Any] = {
+        "total_functions": total,
+        "functions_with_size": with_size,
+        "functions_with_blocks": with_blocks,
+        "total_code_coverage": sum(sizes) if sizes else 0,
+        "avg_function_size": (sum(sizes) / len(sizes)) if sizes else 0,
+    }
+    if total > 0:
+        coverage["size_coverage_percent"] = with_size / total * 100
+        coverage["block_coverage_percent"] = with_blocks / total * 100
+    return coverage
+
+
 def analyze_function_coverage(functions: Any) -> dict[str, Any]:
     try:
-        if isinstance(functions, list) and not functions:
-            return {
-                "total_functions": 0,
-                "functions_with_size": 0,
-                "functions_with_blocks": 0,
-                "total_code_coverage": 0,
-                "avg_function_size": 0,
-            }
-        normalized = _coerce_function_list(functions)
-        if not normalized:
-            if isinstance(functions, (str, bytes, dict)) or functions is None:
-                return {}
-            return {
-                "total_functions": 0,
-                "functions_with_size": 0,
-                "functions_with_blocks": 0,
-                "total_code_coverage": 0,
-                "avg_function_size": 0,
-            }
-        total = len(normalized)
-        with_size, with_blocks, sizes = _accumulate_function_stats(normalized)
-        coverage: dict[str, Any] = {
-            "total_functions": total,
-            "functions_with_size": with_size,
-            "functions_with_blocks": with_blocks,
-            "total_code_coverage": sum(sizes) if sizes else 0,
-            "avg_function_size": (sum(sizes) / len(sizes)) if sizes else 0,
-        }
-        if total > 0:
-            coverage["size_coverage_percent"] = with_size / total * 100
-            coverage["block_coverage_percent"] = with_blocks / total * 100
-        return coverage
+        return _build_function_coverage(functions)
     except (TypeError, ValueError, AttributeError):
         return {}

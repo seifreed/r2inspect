@@ -28,6 +28,14 @@ def _to_int(value: Any) -> int | None:
         return None
 
 
+def _format_section_bytes(data: bytes, cmd: str) -> str:
+    if cmd == "psz":
+        return data.split(b"\x00", 1)[0].decode(errors="ignore")
+    if cmd == "px":
+        return " ".join(f"{byte:02x}" for byte in data)
+    return data.decode(errors="ignore")
+
+
 class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """ELF file analysis using radare2"""
 
@@ -273,11 +281,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         data = self.adapter.read_bytes(vaddr, read_size)
         if not isinstance(data, (bytes, bytearray)):
             return None
-        if cmd == "psz":
-            return data.split(b"\x00", 1)[0].decode(errors="ignore")
-        if cmd == "px":
-            return " ".join(f"{byte:02x}" for byte in data)
-        return data.decode(errors="ignore")
+        return _format_section_bytes(data, cmd)
 
     def _parse_comment_compiler_info(self, comment_data: str) -> dict[str, Any]:
         return parse_comment_compiler_info(comment_data)
