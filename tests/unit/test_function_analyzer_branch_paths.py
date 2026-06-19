@@ -59,6 +59,19 @@ class _ListDisasmAdapter:
         return self._ops
 
 
+class _IterableDisasmAdapter:
+    """get_disasm returns a generator of instruction dicts."""
+
+    def __init__(self, ops: list) -> None:
+        self._ops = ops
+
+    def get_functions(self) -> list:
+        return []
+
+    def get_disasm(self, address=None, size=None):
+        return (op for op in self._ops)
+
+
 class _TextDisasmAdapter:
     """Provides get_disasm_text for pi-based extraction."""
 
@@ -537,6 +550,14 @@ def test_try_pdj_extraction_returns_empty_list_for_empty_ops():
     assert result == []
 
 
+def test_try_pdj_extraction_accepts_iterable_disasm():
+    ops = [{"opcode": "sub esp, 8"}, {"opcode": "ret"}]
+    analyzer = FunctionAnalyzer(_IterableDisasmAdapter(ops))
+    result = analyzer._try_pdj_extraction("fn", 40, 0x1000)
+    assert "sub" in result
+    assert "ret" in result
+
+
 # ---------------------------------------------------------------------------
 # _try_basic_pdj_extraction (lines 253-260)
 # ---------------------------------------------------------------------------
@@ -565,6 +586,14 @@ def test_try_basic_pdj_extraction_returns_empty_when_not_list():
     analyzer = FunctionAnalyzer(_StrAdapter())
     result = analyzer._try_basic_pdj_extraction("fn", 0x1000)
     assert result == []
+
+
+def test_try_basic_pdj_extraction_accepts_iterable_disasm():
+    ops = [{"opcode": "xor eax, eax"}, {"opcode": "ret"}]
+    analyzer = FunctionAnalyzer(_IterableDisasmAdapter(ops))
+    result = analyzer._try_basic_pdj_extraction("fn", 0x1000)
+    assert "xor" in result
+    assert "ret" in result
 
 
 # ---------------------------------------------------------------------------

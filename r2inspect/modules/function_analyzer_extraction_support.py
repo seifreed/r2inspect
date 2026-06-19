@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from collections.abc import Iterable
 from typing import Any, Protocol
 
 from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
@@ -111,8 +112,16 @@ def try_pdj_extraction(
             else analyzer._cmd_list(f"pdj {max_instructions} @ {func_addr}")
         )
         if isinstance(disasm_list, list):
-            logger.debug("pdj succeeded for %s, got %s instructions", func_name, len(disasm_list))
-            return analyzer._extract_mnemonics_from_ops(disasm_list)
+            disasm_source = disasm_list
+        elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
+            return []
+        else:
+            disasm_source = list(disasm_list)
+        if disasm_source:
+            logger.debug(
+                "pdj succeeded for %s, got %s instructions", func_name, len(disasm_source)
+            )
+            return analyzer._extract_mnemonics_from_ops(disasm_source)
     except Exception as exc:
         logger.debug("pdj failed for %s: %s", func_name, str(exc))
     return []
@@ -128,12 +137,18 @@ def try_basic_pdj_extraction(
             else analyzer._cmd_list(f"pdj 50 @ {func_addr}")
         )
         if isinstance(disasm_list, list):
+            disasm_source = disasm_list
+        elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
+            return []
+        else:
+            disasm_source = list(disasm_list)
+        if disasm_source:
             logger.debug(
                 "Basic pdj succeeded for %s, got %s instructions",
                 func_name,
-                len(disasm_list),
+                len(disasm_source),
             )
-            return analyzer._extract_mnemonics_from_ops(disasm_list)
+            return analyzer._extract_mnemonics_from_ops(disasm_source)
     except Exception as exc:
         logger.debug("Basic pdj failed for %s: %s", func_name, str(exc))
     return []
