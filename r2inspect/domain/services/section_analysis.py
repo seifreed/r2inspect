@@ -128,7 +128,8 @@ def build_section_characteristics(
     code_analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     characteristics: dict[str, Any] = {}
-    purpose, expected_entropy = SECTION_MAPPINGS.get(name, ("Unknown/Custom", "Variable"))
+    section_name = name if isinstance(name, str) else ""
+    purpose, expected_entropy = SECTION_MAPPINGS.get(section_name, ("Unknown/Custom", "Variable"))
     characteristics["purpose"] = purpose
     characteristics["expected_entropy"] = expected_entropy
     _mark_entropy_anomaly(characteristics, analysis)

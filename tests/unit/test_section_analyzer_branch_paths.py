@@ -10,6 +10,7 @@ from __future__ import annotations
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.section_analysis import (
     _mark_entropy_anomaly,
+    build_section_characteristics,
     decode_pe_characteristics,
     build_size_indicators,
     build_permission_indicators,
@@ -682,6 +683,12 @@ def test_decode_pe_characteristics_skips_non_int_input():
 def test_build_size_indicators_skips_non_int_input():
     assert build_size_indicators("bad", 100) == []  # type: ignore[arg-type]
     assert build_size_indicators(100, None) == []  # type: ignore[arg-type]
+
+
+def test_build_section_characteristics_rejects_non_string_name():
+    result = build_section_characteristics(None, {"entropy": 8.0, "is_executable": True})  # type: ignore[arg-type]
+    assert result["purpose"] == "Unknown/Custom"
+    assert result["expected_entropy"] == "Variable"
 
 
 def test_apply_permissions_treats_missing_flags_as_empty():
