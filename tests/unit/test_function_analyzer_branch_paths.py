@@ -278,6 +278,17 @@ def test_generate_machoc_hashes_counts_failed_when_process_returns_none():
     assert result == {}
 
 
+def test_generate_machoc_hashes_normalizes_iterable_functions():
+    class _IterableMachocAnalyzer(FunctionAnalyzer):
+        def _process_single_function_hash(self, func, index, total):
+            return func.get("name", f"func_{index}"), f"hash_{index}"
+
+    analyzer = _IterableMachocAnalyzer(_NoFunctionsAdapter())
+    funcs = (func for func in [{"name": "a"}, "skip", {"name": "b"}])
+    result = analyzer._generate_machoc_hashes(funcs)
+    assert result == {"a": "hash_0", "b": "hash_1"}
+
+
 # ---------------------------------------------------------------------------
 # _generate_machoc_hashes - exception per function (lines 141-146)
 # ---------------------------------------------------------------------------

@@ -8,6 +8,15 @@ from typing import Any, Protocol
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
+def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
+    if isinstance(functions, list):
+        return [func for func in functions if isinstance(func, dict)]
+    try:
+        return [func for func in list(functions) if isinstance(func, dict)]
+    except TypeError:
+        return []
+
+
 def _to_int(value: Any) -> int:
     try:
         if isinstance(value, str):
@@ -46,12 +55,13 @@ def generate_machoc_hashes(
 ) -> dict[str, str]:
     machoc_hashes: dict[str, str] = {}
     failed_functions = 0
-    if not isinstance(functions, list):
+    normalized = _coerce_function_list(functions)
+    if not normalized:
         return machoc_hashes
-    logger.debug("Starting MACHOC hash generation for %s functions", len(functions))
-    for i, func in enumerate(functions):
+    logger.debug("Starting MACHOC hash generation for %s functions", len(normalized))
+    for i, func in enumerate(normalized):
         try:
-            result = analyzer._process_single_function_hash(func, i, len(functions))
+            result = analyzer._process_single_function_hash(func, i, len(normalized))
             if result:
                 func_name, machoc_hash = result
                 machoc_hashes[func_name] = machoc_hash
@@ -67,7 +77,7 @@ def generate_machoc_hashes(
     logger.debug(
         "Generated MACHOC hashes for %s/%s functions (%s failed)",
         len(machoc_hashes),
-        len(functions),
+        len(normalized),
         failed_functions,
     )
     return machoc_hashes
