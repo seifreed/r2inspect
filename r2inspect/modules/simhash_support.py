@@ -15,9 +15,6 @@ from ..abstractions.coercion_support import coerce_int_or_none
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
-def _to_int(value: Any) -> int | None:
-    return coerce_int_or_none(value)
-
 
 class SimHashHost(Protocol):
     """Overridable collaboration contract the SimHash helpers depend on."""
@@ -79,8 +76,8 @@ def append_data_section_string(host: SimHashHost, section: Any, data_strings: li
     section_name = section.get("name", "")
     if not isinstance(section_name, str) or not section_name.startswith(".data"):
         return
-    section_addr = _to_int(section.get("vaddr", 0))
-    section_size = _to_int(section.get("size", 0))
+    section_addr = coerce_int_or_none(section.get("vaddr", 0))
+    section_size = coerce_int_or_none(section.get("size", 0))
     if section_addr is None or section_size is None:
         return
     if not (section_addr and section_size):

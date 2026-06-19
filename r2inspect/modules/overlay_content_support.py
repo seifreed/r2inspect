@@ -9,9 +9,6 @@ from typing import Any
 from ..abstractions.coercion_support import coerce_int_or_none
 
 
-def _to_int(value: Any) -> int | None:
-    return coerce_int_or_none(value)
-
 
 def analyze_overlay_content(
     *,
@@ -28,8 +25,8 @@ def analyze_overlay_content(
     check_file_signatures_fn: Callable[[list[int]], list[dict[str, Any]]],
 ) -> None:
     try:
-        offset = _to_int(offset)
-        size = _to_int(size)
+        offset = coerce_int_or_none(offset)
+        size = coerce_int_or_none(size)
         if offset is None or size is None:
             return
         read_size = min(size, 65536)

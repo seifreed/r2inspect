@@ -5,14 +5,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_int_or_none
+
 PE32_PLUS = "PE32+"
-
-
-def _to_int(value: Any) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def determine_pe_file_type(
@@ -43,7 +38,7 @@ def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | No
     if format_name and format_name != "Unknown":
         return format_name
 
-    bits = _to_int(bin_info.get("bits", 0))
+    bits = coerce_int_or_none(bin_info.get("bits", 0))
     if bits == 32:
         return "PE32"
     if bits == 64:
@@ -74,15 +69,15 @@ def normalize_pe_format(format_name: str) -> str:
 def compute_entry_point(bin_info: dict[str, Any], entry_info: list[dict[str, Any]] | None) -> int:
     entry_point = 0
     if "baddr" in bin_info and "boffset" in bin_info:
-        base = _to_int(bin_info.get("baddr", 0))
-        offset = _to_int(bin_info.get("boffset", 0))
+        base = coerce_int_or_none(bin_info.get("baddr", 0))
+        offset = coerce_int_or_none(bin_info.get("boffset", 0))
         if base is not None and offset is not None:
             entry_point = base + offset
 
     if entry_info:
         first_entry = entry_info[0]
         if isinstance(first_entry, dict):
-            entry_vaddr = _to_int(first_entry.get("vaddr", entry_point))
+            entry_vaddr = coerce_int_or_none(first_entry.get("vaddr", entry_point))
             if entry_vaddr is not None:
                 entry_point = entry_vaddr
 
@@ -99,11 +94,11 @@ def apply_optional_header_info(
     opt_header = pe_header.get("optional_header", {})
     if not isinstance(opt_header, dict):
         return updated
-    image_base = _to_int(opt_header.get("ImageBase", updated.get("image_base", 0)))
+    image_base = coerce_int_or_none(opt_header.get("ImageBase", updated.get("image_base", 0)))
     if image_base is not None and image_base > 0:
         updated["image_base"] = image_base
-    entry_rva = _to_int(opt_header.get("AddressOfEntryPoint", 0))
-    current_image_base = _to_int(updated.get("image_base", 0)) or 0
+    entry_rva = coerce_int_or_none(opt_header.get("AddressOfEntryPoint", 0))
+    current_image_base = coerce_int_or_none(updated.get("image_base", 0)) or 0
     if entry_rva is not None and entry_rva > 0:
         updated["entry_point"] = entry_rva + current_image_base
 

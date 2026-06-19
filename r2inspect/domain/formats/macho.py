@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from ...abstractions.coercion_support import coerce_int
+from ...abstractions.coercion_support import coerce_int_or_none
 
 SDK_VERSION_MAP = {
     "10.15": "2019",
@@ -18,9 +18,6 @@ SDK_VERSION_MAP = {
     "15.0": "2024",
 }
 
-
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
 
 
 def estimate_from_sdk_version(sdk_version: str) -> str | None:
@@ -58,8 +55,8 @@ def build_load_commands(headers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
             "type": header.get("type", "Unknown"),
-            "size": _to_int(header.get("size", 0)),
-            "offset": _to_int(header.get("offset", 0)),
+            "size": coerce_int_or_none(header.get("size", 0)),
+            "offset": coerce_int_or_none(header.get("offset", 0)),
             "data": header,
         }
         for header in headers
@@ -73,9 +70,9 @@ def build_sections(sections_info: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "segment": section.get("segment", "Unknown"),
             "type": section.get("type", "Unknown"),
             "flags": section.get("flags", ""),
-            "size": _to_int(section.get("size", 0)),
-            "vaddr": _to_int(section.get("vaddr", 0)),
-            "paddr": _to_int(section.get("paddr", 0)),
+            "size": coerce_int_or_none(section.get("size", 0)),
+            "vaddr": coerce_int_or_none(section.get("vaddr", 0)),
+            "paddr": coerce_int_or_none(section.get("paddr", 0)),
         }
         for section in sections_info
     ]

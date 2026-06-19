@@ -18,9 +18,6 @@ from .elf_security import get_security_features as _get_security_features
 logger = get_logger(__name__)
 
 
-def _to_int(value: Any) -> int | None:
-    return coerce_int_or_none(value)
-
 
 def _format_section_bytes(data: bytes, cmd: str) -> str:
     if cmd == "psz":
@@ -78,11 +75,11 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
                 info["architecture"] = bin_info.get("arch", "Unknown")
                 info["machine"] = bin_info.get("machine", "Unknown")
-                info["bits"] = _to_int(bin_info.get("bits", 0)) or 0
+                info["bits"] = coerce_int_or_none(bin_info.get("bits", 0)) or 0
                 info["endian"] = bin_info.get("endian", "Unknown")
                 info["type"] = bin_info.get("class", "Unknown")
                 info["format"] = bin_info.get("format", "Unknown")
-                info["entry_point"] = _to_int(bin_info.get("baddr", 0)) or 0
+                info["entry_point"] = coerce_int_or_none(bin_info.get("baddr", 0)) or 0
 
         except Exception as e:
             logger.error("Error getting ELF headers: %s", e)
@@ -186,9 +183,9 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
                             "name": section.get("name", "Unknown"),
                             "type": section.get("type", "Unknown"),
                             "flags": section.get("flags", ""),
-                            "size": _to_int(section.get("size", 0)),
-                            "vaddr": _to_int(section.get("vaddr", 0)),
-                            "paddr": _to_int(section.get("paddr", 0)),
+                            "size": coerce_int_or_none(section.get("size", 0)),
+                            "vaddr": coerce_int_or_none(section.get("vaddr", 0)),
+                            "paddr": coerce_int_or_none(section.get("paddr", 0)),
                         }
                     )
             else:
@@ -240,8 +237,8 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return None
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
-        vaddr = _to_int(section.get("vaddr", 0))
-        size = _to_int(section.get("size", 0))
+        vaddr = coerce_int_or_none(section.get("vaddr", 0))
+        size = coerce_int_or_none(section.get("size", 0))
         if not vaddr or not size:
             return None
         # An ELF section-header size is attacker-controlled, and these callers

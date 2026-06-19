@@ -23,9 +23,6 @@ from ..domain.formats.string import parse_search_results
 logger = get_logger(__name__)
 
 
-def _to_int(value: Any) -> int | None:
-    return coerce_int_or_none(value)
-
 
 class CryptoAnalyzer(CommandHelperMixin):
     """Cryptographic patterns detection using a backend interface."""
@@ -129,8 +126,8 @@ class CryptoAnalyzer(CommandHelperMixin):
         return build_entropy_analysis(self, logger)
 
     def _do_calculate_section_entropy(self, section: dict[str, Any]) -> float:
-        vaddr = _to_int(section.get("vaddr", 0))
-        size = _to_int(section.get("size", 0))
+        vaddr = coerce_int_or_none(section.get("vaddr", 0))
+        size = coerce_int_or_none(section.get("size", 0))
         if vaddr is None or size is None or size == 0:
             return 0.0
         # The section size is attacker-controlled; cap the read so a crafted

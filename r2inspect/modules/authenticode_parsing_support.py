@@ -7,10 +7,6 @@ from typing import Any
 from ..abstractions.coercion_support import coerce_int_or_none, coerce_list
 
 
-def _to_int(value: Any) -> int | None:
-    return coerce_int_or_none(value)
-
-
 def _coerce_list(raw: Any) -> list[Any]:
     if isinstance(raw, dict):
         return [raw]
@@ -37,8 +33,8 @@ def _validate_security_dir(
         except TypeError:
             errors = []
         result["errors"] = errors
-    cert_offset = _to_int(security_dir.get("paddr", 0))
-    cert_size = _to_int(security_dir.get("size", 0))
+    cert_offset = coerce_int_or_none(security_dir.get("paddr", 0))
+    cert_size = coerce_int_or_none(security_dir.get("size", 0))
     if cert_offset is None or cert_size is None:
         errors.append("Invalid security directory types")
         return None
@@ -125,8 +121,8 @@ def parse_pkcs7(
             "encryption_algorithm": None,
             "has_timestamp": False,
         }
-        offset_int = _to_int(offset)
-        size_int = _to_int(size)
+        offset_int = coerce_int_or_none(offset)
+        size_int = coerce_int_or_none(size)
         if offset_int is None or size_int is None or size_int <= 0 or offset_int < 0:
             return None
         read_size = min(size_int, 1024)
