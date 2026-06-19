@@ -256,6 +256,16 @@ def test_analyze_sections_function_stats_computed(tmp_path):
     assert result["stats"]["functions_analyzed"] == 1
 
 
+def test_analyze_sections_normalizes_iterable_functions(tmp_path):
+    if not TLSH_AVAILABLE:
+        pytest.skip("TLSH not available")
+    f = tmp_path / "binary.bin"
+    f.write_bytes(bytes(range(256)) * 10)
+    analyzer = TLSHAnalyzer(adapter=IterableFunctionsAdapter(), filename=str(f))
+    result = analyzer.analyze_sections()
+    assert result["stats"]["functions_analyzed"] == 1
+
+
 def test_analyze_sections_text_section_tlsh_extracted(tmp_path):
     """Lines 170-172: text_section_tlsh extracted from section_tlsh dict."""
     if not TLSH_AVAILABLE:

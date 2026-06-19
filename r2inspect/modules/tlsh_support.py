@@ -9,6 +9,7 @@ The helpers are Template-Methods over the host analyzer's overridable steps
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Any, Protocol, cast
 
 
@@ -103,9 +104,15 @@ def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str,
     function_hashes: dict[str, str | None] = {}
     try:
         functions = host._get_functions()
-        if not isinstance(functions, list) or not functions:
+        if isinstance(functions, list):
+            function_source = functions
+        elif isinstance(functions, (dict, str, bytes)) or not isinstance(functions, Iterable):
             return function_hashes
-        for func in functions[:50]:
+        else:
+            function_source = list(functions)
+        if not function_source:
+            return function_hashes
+        for func in function_source[:50]:
             if not isinstance(func, dict):
                 logger.debug("Skipping malformed function data: %s - %s", type(func), func)
                 continue
