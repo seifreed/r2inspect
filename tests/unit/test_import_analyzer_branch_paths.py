@@ -556,6 +556,17 @@ def test_detect_import_anomalies_same_name_different_libraries_not_duplicate():
     assert "duplicate_imports" not in types
 
 
+def test_detect_import_anomalies_ignores_non_string_names():
+    analyzer = ImportAnalyzer(adapter=None)
+    imports = [
+        {"name": ["CreateFileA"], "library": "kernel32.dll"},
+        {"name": ["CreateFileA"], "library": "kernel32.dll"},
+    ]
+    result = analyzer.detect_import_anomalies(imports)  # type: ignore[arg-type]
+    types = [a["type"] for a in result["anomalies"]]
+    assert "duplicate_imports" not in types
+
+
 # ---------------------------------------------------------------------------
 # detect_import_anomalies - line 472: unusual_dlls.append
 # ---------------------------------------------------------------------------
