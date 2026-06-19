@@ -85,7 +85,11 @@ def analyze_resource_data(
             data = list(data)
         except TypeError:
             return
-        if not data or not all(isinstance(value, int) for value in data):
+        if (
+            not data
+            or not all(isinstance(value, int) for value in data)
+            or not all(0 <= value <= 0xFF for value in data)
+        ):
             return
         resource["entropy"] = analyzer._calculate_entropy(data)
         try:
@@ -115,7 +119,11 @@ def read_resource_as_string(
             data = list(data)
         except TypeError:
             return None
-        if not data or not all(isinstance(value, int) for value in data):
+        if (
+            not data
+            or not all(isinstance(value, int) for value in data)
+            or not all(0 <= value <= 0xFF for value in data)
+        ):
             return None
         return decode_resource_text(bytes(data))
     except Exception as exc:

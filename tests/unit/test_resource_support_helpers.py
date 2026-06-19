@@ -101,3 +101,18 @@ def test_resource_support_helpers_reject_non_int_list_payloads() -> None:
     assert resource["entropy"] == 0.0
     assert resource["hashes"] == {}
     assert read_resource_as_string(host, 0x1000, 8, logger=host) is None
+
+
+def test_resource_support_helpers_reject_out_of_range_byte_payloads() -> None:
+    class _OutOfRangePayloadHost(_Host):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return [300, 301, 302, 303]
+            return default
+
+    host = _OutOfRangePayloadHost()
+    resource: dict[str, Any] = {"offset": 0x1000, "size": 4}
+    analyze_resource_data(host, resource, logger=host, calculate_hashes_for_bytes=lambda _: {})
+    assert resource["entropy"] == 0.0
+    assert resource["hashes"] == {}
+    assert read_resource_as_string(host, 0x1000, 4, logger=host) is None

@@ -260,6 +260,16 @@ def test_extract_xor_key_rejects_non_int_list_payload() -> None:
     assert searcher._extract_xor_key(80) is None
 
 
+def test_extract_xor_key_rejects_out_of_range_list_payload() -> None:
+    class BadListAdapter(FakeAdapter):
+        def read_bytes_list(self, offset: int, size: int):
+            return [300, 301, 302, 303]
+
+    buf = b"\x00" * 200
+    searcher = ConcreteSearcher(adapter=BadListAdapter(buf))
+    assert searcher._extract_xor_key(80) is None
+
+
 # ---------------------------------------------------------------------------
 # _extract_encoded_data
 # ---------------------------------------------------------------------------
@@ -288,6 +298,16 @@ def test_extract_encoded_data_rejects_non_int_list_payload() -> None:
     class BadListAdapter(FakeAdapter):
         def read_bytes_list(self, offset: int, size: int):
             return ["bad"] * size
+
+    buf = b"\xaa" * 32
+    searcher = ConcreteSearcher(adapter=BadListAdapter(buf))
+    assert searcher._extract_encoded_data(0, 16) is None
+
+
+def test_extract_encoded_data_rejects_out_of_range_list_payload() -> None:
+    class BadListAdapter(FakeAdapter):
+        def read_bytes_list(self, offset: int, size: int):
+            return [300, 301, 302, 303, 304, 305, 306, 307]
 
     buf = b"\xaa" * 32
     searcher = ConcreteSearcher(adapter=BadListAdapter(buf))

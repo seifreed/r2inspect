@@ -188,6 +188,8 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return None
         cn_bytes = pkcs7_data[start : start + length]
         try:
+            if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in cn_bytes):
+                return None
             cn_str = bytes(cn_bytes).decode("utf-8", errors="ignore")
             if cn_str and cn_str.isprintable():
                 return {"common_name": cn_str, "offset": offset + pos}

@@ -31,7 +31,11 @@ class ResourceVersionMixin:
             data = list(data)
         except TypeError:
             return None
-        if not data or len(data) < 64 or not all(isinstance(value, int) for value in data):
+        if (
+            not data
+            or len(data) < 64
+            or not all(isinstance(value, int) and 0 <= value <= 0xFF for value in data)
+        ):
             return None
         return data
 
@@ -99,6 +103,8 @@ class ResourceVersionMixin:
         if not value_bytes:
             return ""
         try:
+            if not all(0 <= value <= 0xFF for value in value_bytes):
+                return ""
             value = bytes(value_bytes).decode("utf-16le", errors="ignore")
             return value if value and value.isprintable() else ""
         except UnicodeDecodeError:

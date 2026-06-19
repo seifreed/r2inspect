@@ -593,6 +593,18 @@ def test_resource_analyzer_read_version_info_data_rejects_non_int_list() -> None
     assert result is None
 
 
+def test_resource_analyzer_read_version_info_data_rejects_out_of_range_list() -> None:
+    class _OutOfRangeAnalyzer(ResourceAnalyzer):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return [300] * 100
+            return default
+
+    analyzer = _OutOfRangeAnalyzer(adapter=None)
+    result = analyzer._read_version_info_data(0x1000, 100)
+    assert result is None
+
+
 def test_resource_analyzer_read_version_info_data_coerces_string_args() -> None:
     byte_data = [0] * 100
     hex_str = _bytes_to_hex(byte_data)

@@ -43,6 +43,19 @@ def test_resource_version_parsing_and_strings() -> None:
     assert strings.get("CompanyName") == "ACME"
 
 
+def test_resource_version_rejects_out_of_range_bytes() -> None:
+    analyzer = ResourceAnalyzer(None)
+    data = [0] * 80
+    data[0:4] = [0xBD, 0x04, 0xEF, 0xFE]
+    data[8:12] = [2, 0, 1, 0]
+    data[12:16] = [4, 0, 3, 0]
+    data[20:24] = [0x43, 0x00, 0x61, 0x00]
+    data[24:28] = [0x6D, 0x00, 0x65, 0x00]
+    data[28:32] = [0x00, 0x00, 300, 0]
+
+    assert analyzer._read_version_string_value(data, "CompanyName") == ""
+
+
 def test_resource_statistics_and_suspicion_checks() -> None:
     analyzer = ResourceAnalyzer(None)
 
@@ -108,6 +121,9 @@ def test_authenticode_helpers_and_signature_integrity() -> None:
 
     cn_data = [0x55, 0x04, 0x03, 0x00, 0x04] + list(b"Test") + [0x00, 0x00]
     assert analyzer._extract_common_names(cn_data, 100)[0]["common_name"] == "Test"
+
+    bad_cn_data = [0x55, 0x04, 0x03, 0x00, 0x04, 300, 301, 302, 303, 0x00, 0x00]
+    assert analyzer._extract_common_names(bad_cn_data, 100) == []
 
     assert analyzer._verify_signature_integrity({"has_signature": False}) is False
     assert (

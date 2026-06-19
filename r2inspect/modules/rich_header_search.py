@@ -211,7 +211,7 @@ class RichHeaderSearchMixin:
         if (
             not xor_key_bytes
             or len(xor_key_bytes) < 4
-            or not all(isinstance(value, int) for value in xor_key_bytes)
+            or not all(isinstance(value, int) and 0 <= value <= 0xFF for value in xor_key_bytes)
         ):
             return None
 
@@ -227,7 +227,7 @@ class RichHeaderSearchMixin:
         if (
             not encoded_data
             or len(encoded_data) < 8
-            or not all(isinstance(value, int) for value in encoded_data)
+            or not all(isinstance(value, int) and 0 <= value <= 0xFF for value in encoded_data)
         ):
             return None
 
