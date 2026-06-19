@@ -16,7 +16,7 @@ from pathlib import Path
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_text
 from ..adapters.file_system import default_file_system
 from ..domain.formats.bindiff import (
     build_behavioral_signature,
@@ -43,12 +43,6 @@ from .string_classification import (
 )
 
 logger = get_logger(__name__)
-
-
-def _string_value(value: Any) -> str:
-    return value if isinstance(value, str) else ""
-
-
 def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
     core_info = file_info.get("core", {}) if isinstance(file_info, dict) else {}
     bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
@@ -57,10 +51,10 @@ def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(bin_info, dict):
         bin_info = {}
     return {
-        "file_type": _string_value(core_info.get("format", "")),
-        "architecture": _string_value(bin_info.get("arch", "")),
+        "file_type": coerce_text(core_info.get("format", "")),
+        "architecture": coerce_text(bin_info.get("arch", "")),
         "bits": coerce_int(bin_info.get("bits", 0)),
-        "endian": _string_value(bin_info.get("endian", "")),
+        "endian": coerce_text(bin_info.get("endian", "")),
         "file_size": coerce_int(core_info.get("size", 0)),
     }
 
@@ -70,13 +64,13 @@ def _structural_sections(sections: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "section_count": len(valid_sections),
         "section_names": sorted(
-            [name for s in valid_sections if (name := _string_value(s.get("name")))]
+            [name for s in valid_sections if (name := coerce_text(s.get("name")))]
         ),
         "section_sizes": [coerce_int(s.get("size", 0)) for s in valid_sections],
         "executable_sections": len(
-            [s for s in valid_sections if "x" in _string_value(s.get("perm"))]
+            [s for s in valid_sections if "x" in coerce_text(s.get("perm"))]
         ),
-        "writable_sections": len([s for s in valid_sections if "w" in _string_value(s.get("perm"))]),
+        "writable_sections": len([s for s in valid_sections if "w" in coerce_text(s.get("perm"))]),
     }
 
 
@@ -88,11 +82,11 @@ def _structural_imports(imports: list[dict[str, Any]]) -> dict[str, Any]:
             {
                 dll
                 for imp in valid_imports
-                if (dll := _string_value(imp.get("libname") or imp.get("library")))
+                if (dll := coerce_text(imp.get("libname") or imp.get("library")))
             }
         ),
         "imported_functions": [
-            name for imp in valid_imports if (name := _string_value(imp.get("name")))
+            name for imp in valid_imports if (name := coerce_text(imp.get("name")))
         ],
     }
 
@@ -102,7 +96,7 @@ def _structural_exports(exports: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "export_count": len(valid_exports),
         "exported_functions": [
-            name for exp in valid_exports if (name := _string_value(exp.get("name")))
+            name for exp in valid_exports if (name := coerce_text(exp.get("name")))
         ],
     }
 
@@ -239,7 +233,7 @@ class BinDiffFeatureExtractor:
                     string_value
                     for s in strings
                     if isinstance(s, dict)
-                    and (string_value := _string_value(s.get("string")))
+                    and (string_value := coerce_text(s.get("string")))
                 ]
                 features["total_strings"] = len(string_values)
                 features["unique_strings"] = len(set(string_values))
@@ -279,14 +273,14 @@ class BinDiffFeatureExtractor:
                     string_value
                     for s in strings
                     if isinstance(s, dict)
-                    and (string_value := _string_value(s.get("string")))
+                    and (string_value := coerce_text(s.get("string")))
                 ]
                 features.update(_behavioral_string_indicators(string_values))
             if imports:
                 import_names = [
                     name
                     for imp in imports
-                    if isinstance(imp, dict) and (name := _string_value(imp.get("name")))
+                    if isinstance(imp, dict) and (name := coerce_text(imp.get("name")))
                 ]
                 features.update(_behavioral_import_indicators(import_names))
         except Exception as exc:

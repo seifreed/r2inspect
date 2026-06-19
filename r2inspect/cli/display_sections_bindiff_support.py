@@ -8,12 +8,7 @@ from typing import Any
 
 from rich.table import Table
 
-
-def _coerce_int(value: Any) -> int:
-    try:
-        return int(value, 0) if isinstance(value, str) else int(value)
-    except (TypeError, ValueError):
-        return 0
+from ..abstractions.coercion_support import coerce_int
 
 
 def _add_bindiff_entries(table: Table, bindiff_info: dict[str, Any]) -> None:
@@ -35,7 +30,7 @@ def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
     if not isinstance(file_type, str) or not file_type:
         file_type = "Unknown"
     table.add_row("File Type", file_type)
-    table.add_row("File Size", f"{_coerce_int(structural.get('file_size', 0)):,} bytes")
+    table.add_row("File Size", f"{coerce_int(structural.get('file_size', 0)):,} bytes")
     table.add_row("Sections", str(structural.get("section_count", 0)))
     section_names = structural.get("section_names")
     if isinstance(section_names, list):

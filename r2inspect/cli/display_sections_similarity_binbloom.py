@@ -9,6 +9,7 @@ from typing import Any
 
 from rich.table import Table
 
+from ..abstractions.coercion_support import coerce_number, coerce_text
 from .display_base import (
     ANALYZED_FUNCTIONS_LABEL,
     HTML_AMP,
@@ -21,19 +22,6 @@ from .display_base import (
 )
 from .display_sections_common import Results, _get_console, add_group_functions_row
 from .presenter import get_section as _get_section
-
-
-def _coerce_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _coerce_text(value: Any) -> str:
-    return value if isinstance(value, str) else str(value if value is not None else "")
-
-
 def _display_binbloom(results: Results) -> None:
     binbloom_info, present = _get_section(results, "binbloom", {})
     if not present:
@@ -69,14 +57,14 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
     table.add_row(ANALYZED_FUNCTIONS_LABEL, str(analyzed_functions))
 
     capacity = binbloom_info.get("capacity", 0)
-    error_rate = _coerce_float(binbloom_info.get("error_rate", 0.0))
+    error_rate = coerce_number(binbloom_info.get("error_rate", 0.0))
     table.add_row("Bloom Filter Capacity", str(capacity))
     table.add_row("False Positive Rate", f"{error_rate:.4f} ({error_rate * 100:.2f}%)")
 
     unique_signatures = binbloom_info.get("unique_signatures", 0)
-    analyzed_functions_value = _coerce_float(analyzed_functions)
+    analyzed_functions_value = coerce_number(analyzed_functions)
     diversity_ratio = (
-        (_coerce_float(unique_signatures) / analyzed_functions_value) * 100
+        (coerce_number(unique_signatures) / analyzed_functions_value) * 100
         if analyzed_functions_value > 0
         else 0
     )
@@ -91,12 +79,12 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
 
     valid_signatures = [sig for sig in function_signatures.values() if isinstance(sig, dict)]
     total_instructions = sum(
-        _coerce_float(sig.get("instruction_count", 0))
+        coerce_number(sig.get("instruction_count", 0))
         for sig in valid_signatures
     )
     avg_instructions = total_instructions / len(valid_signatures) if valid_signatures else 0
     unique_instructions = sum(
-        _coerce_float(sig.get("unique_instructions", 0))
+        coerce_number(sig.get("unique_instructions", 0))
         for sig in valid_signatures
     )
     avg_unique = unique_instructions / len(valid_signatures) if valid_signatures else 0
@@ -131,7 +119,7 @@ def _add_binbloom_group(table: Table, index: int, group: dict[str, Any]) -> None
     if not isinstance(group, dict):
         return
     group_size = group.get("count", 0)
-    group_signature = _coerce_text(group.get("signature", ""))
+    group_signature = coerce_text(group.get("signature", ""))
     group_sig = group_signature[:32] + "..." if len(group_signature) > 32 else group_signature
 
     table.add_row(f"Group {index} Size", f"{group_size} functions")
@@ -153,7 +141,7 @@ def _add_binbloom_bloom_stats(table: Table, binbloom_info: dict[str, Any]) -> No
     if not bloom_stats:
         return
 
-    avg_fill_rate = _coerce_float(bloom_stats.get("average_fill_rate", 0.0))
+    avg_fill_rate = coerce_number(bloom_stats.get("average_fill_rate", 0.0))
     table.add_row("Average Fill Rate", f"{avg_fill_rate:.4f} ({avg_fill_rate * 100:.2f}%)")
 
     total_filters = bloom_stats.get("total_filters", 0)
@@ -163,7 +151,7 @@ def _add_binbloom_bloom_stats(table: Table, binbloom_info: dict[str, Any]) -> No
 def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     if not binbloom_info.get("available"):
         return
-    if _coerce_float(binbloom_info.get("unique_signatures", 0)) <= 1:
+    if coerce_number(binbloom_info.get("unique_signatures", 0)) <= 1:
         return
 
     function_signatures = binbloom_info.get("function_signatures", {})
@@ -173,7 +161,7 @@ def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     for func_name, sig_data in function_signatures.items():
         if not isinstance(sig_data, dict):
             continue
-        sig_hash = _coerce_text(sig_data.get("signature", ""))
+        sig_hash = coerce_text(sig_data.get("signature", ""))
         signatures_by_hash.setdefault(sig_hash, []).append(func_name)
 
     sig_table = Table(

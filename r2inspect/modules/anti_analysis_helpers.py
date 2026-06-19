@@ -6,11 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
-
-
-def _string_value(value: Any) -> str:
-    return value if isinstance(value, str) else ""
+from ..abstractions.coercion_support import coerce_int, coerce_text
 
 
 def collect_artifact_strings(
@@ -30,7 +26,7 @@ def collect_artifact_strings(
     for string_info in strings_result:
         if not isinstance(string_info, dict):
             continue
-        string_val = _string_value(string_info.get("string"))
+        string_val = coerce_text(string_info.get("string"))
         if not string_val:
             continue
         for artifact, pattern in patterns.items():
@@ -148,7 +144,7 @@ def detect_injection_apis(
     for imp in import_source:
         if not isinstance(imp, dict):
             continue
-        if _string_value(imp.get("name")) in injection_apis:
+        if coerce_text(imp.get("name")) in injection_apis:
             injection_found += 1
     # Two or more injection-related APIs together are the established
     # detection threshold. Commit 8f3da63 silently raised this to 3 under a
@@ -170,7 +166,7 @@ def match_suspicious_api(
 ) -> dict[str, Any] | None:
     if not isinstance(imp, dict):
         return None
-    imp_name = _string_value(imp.get("name"))
+    imp_name = coerce_text(imp.get("name"))
     for category, apis in suspicious_api_categories.items():
         for api in apis:
             if api in imp_name:

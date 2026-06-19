@@ -8,18 +8,10 @@ from collections.abc import Iterable
 import logging
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_int
 from .binary_helpers import shannon_entropy
 
 logger = logging.getLogger(__name__)
-
-
-def _coerce_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
 
 
 def find_packer_signature(
@@ -79,7 +71,7 @@ def analyze_entropy(
 
         entropy_info[section_name] = {
             "entropy": entropy,
-            "size": _coerce_int(section.get("size")),
+            "size": coerce_int(section.get("size")),
             "high_entropy": entropy > entropy_threshold,
         }
 
@@ -98,8 +90,8 @@ def calculate_section_entropy(
     read_bytes_fn: Callable[[int, int], bytes], section: dict[str, Any]
 ) -> float:
     try:
-        vaddr = _coerce_int(section.get("vaddr"))
-        size = _coerce_int(section.get("size"))
+        vaddr = coerce_int(section.get("vaddr"))
+        size = coerce_int(section.get("size"))
 
         if size == 0 or size > 50000000:
             return 0.0
@@ -135,7 +127,7 @@ def analyze_sections(sections: list[dict[str, Any]] | None) -> dict[str, Any]:
 def update_section_info(section_info: dict[str, Any], section: dict[str, Any]) -> None:
     name = section.get("name") or ""
     flags = str(section.get("flags") or "")
-    size = _coerce_int(section.get("size"))
+    size = coerce_int(section.get("size"))
 
     if "x" in flags:
         section_info["executable_sections"] += 1
@@ -184,7 +176,7 @@ def overlay_info(
     # (its file offset), not vaddr + size (a virtual address far larger than
     # the file, which made overlay_size always negative).
     core_info = file_info.get("core", {})
-    file_size = _coerce_int(core_info.get("size") if isinstance(core_info, dict) else 0)
+    file_size = coerce_int(core_info.get("size") if isinstance(core_info, dict) else 0)
     if not sections or not file_size:
         return {}
 
@@ -192,7 +184,7 @@ def overlay_info(
     for section in sections:
         if not isinstance(section, dict):
             continue
-        section_end = _coerce_int(section.get("paddr")) + _coerce_int(section.get("size"))
+        section_end = coerce_int(section.get("paddr")) + coerce_int(section.get("size"))
         last_section_end = max(last_section_end, section_end)
 
     overlay_size = file_size - last_section_end

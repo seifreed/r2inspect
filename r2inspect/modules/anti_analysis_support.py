@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_text
 from ..domain.formats.anti_analysis import (
     ENVIRONMENT_CHECK_COMMANDS,
     INJECTION_APIS,
@@ -22,12 +22,6 @@ from .anti_analysis_helpers import (
     detect_self_modifying,
     match_suspicious_api,
 )
-
-
-def _string_value(value: Any) -> str:
-    return value if isinstance(value, str) else ""
-
-
 def _evidence_list(result: Any) -> list[Any]:
     if isinstance(result, dict):
         evidence = result.get("evidence")
@@ -93,7 +87,7 @@ def _anti_debug_import_evidence(detector: Any) -> list[dict[str, Any]]:
     for imp in imports:
         if not isinstance(imp, dict):
             continue
-        func_name = _string_value(imp.get("name"))
+        func_name = coerce_text(imp.get("name"))
         if func_name in detector.anti_debug_apis:
             evidence.append(
                 {
@@ -260,7 +254,7 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
         for imp in imports:
             if not isinstance(imp, dict):
                 continue
-            func_name = _string_value(imp.get("name"))
+            func_name = coerce_text(imp.get("name"))
             if func_name in TIMING_APIS:
                 timing_imports.append(
                     {

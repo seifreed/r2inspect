@@ -9,6 +9,8 @@ from typing import Any
 
 from rich.table import Table
 
+from ..abstractions.coercion_support import coerce_number
+
 SUMMARY_HEADER = "=== R2INSPECT ANALYSIS SUMMARY ===\n"
 MAX_SUMMARY_INDICATORS = 5
 MAX_SUMMARY_YARA_MATCHES = 3
@@ -19,13 +21,6 @@ IMPORT_RISK_STYLES = {
     "Low": ("green", "green"),
     "Minimal": ("dim", "dim"),
 }
-
-
-def _coerce_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
 
 
 def flatten_results(data: Any, prefix: str = "") -> list[dict[str, str]]:
@@ -112,7 +107,7 @@ def format_imports(imports: list[dict[str, Any]]) -> Table:
     else:
         import_source = list(imports)
     valid_imports = [imp for imp in import_source if isinstance(imp, dict)]
-    for imp in sorted(valid_imports, key=lambda item: _coerce_float(item.get("risk_score")), reverse=True):
+    for imp in sorted(valid_imports, key=lambda item: coerce_number(item.get("risk_score")), reverse=True):
         risk_score = imp.get("risk_score", 0)
         risk_level = imp.get("risk_level", "Minimal")
         risk_tags = imp.get("risk_tags", [])
@@ -190,7 +185,7 @@ def append_packer_summary(summary_lines: list[str], results: dict[str, Any]) -> 
     if not isinstance(packer, dict) or not packer.get("is_packed"):
         return
     summary_lines.append(f"Packer Detected: {packer.get('packer_type', 'Unknown')}")
-    summary_lines.append(f"Confidence: {_coerce_float(packer.get('confidence')):.2f}")
+    summary_lines.append(f"Confidence: {coerce_number(packer.get('confidence')):.2f}")
     summary_lines.append("")
 
 
@@ -219,10 +214,3 @@ def _stringify_table_value(value: Any) -> str:
     if isinstance(value, dict | list):
         return json.dumps(value, indent=2, default=str)
     return str(value)
-
-
-def _coerce_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0

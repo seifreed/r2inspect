@@ -8,19 +8,9 @@ from typing import Any
 
 from rich.table import Table
 
+from ..abstractions.coercion_support import coerce_number, coerce_text
 from .display_base import ANALYZED_FUNCTIONS_LABEL, SIMILAR_GROUPS_LABEL, TOTAL_FUNCTIONS_LABEL
 from .display_sections_common import add_group_functions_row
-
-
-def _coerce_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _coerce_text(value: Any) -> str:
-    return value if isinstance(value, str) else str(value if value is not None else "")
 
 
 def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> None:
@@ -35,7 +25,7 @@ def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> N
     table.add_row("Opcode Features", str(total_opcodes))
 
     feature_diversity = feature_stats.get("feature_diversity", 0.0)
-    table.add_row("Feature Diversity", f"{_coerce_float(feature_diversity):.3f}")
+    table.add_row("Feature Diversity", f"{coerce_number(feature_diversity):.3f}")
 
 
 def _format_simhash_hex(hash_hex: str) -> str:
@@ -110,7 +100,7 @@ def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any
     if not isinstance(group, dict):
         return
     group_size = group.get("count", 0)
-    group_hash = _coerce_text(group.get("representative_hash", ""))
+    group_hash = coerce_text(group.get("representative_hash", ""))
     hash_display = f"{group_hash[:24]}...{group_hash[-8:]}" if len(group_hash) > 24 else group_hash
 
     table.add_row(f"Group {index} Size", f"{group_size} functions")

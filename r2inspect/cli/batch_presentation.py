@@ -6,20 +6,15 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-
-def _coerce_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+from ..abstractions.coercion_support import coerce_number
 
 
 def display_rate_limiter_stats(console: Any, rate_stats: dict[str, Any]) -> None:
     """Display rate limiter statistics."""
     console.print("[dim]Rate limiter stats:[/dim]")
-    console.print(f"[dim]  Success rate: {_coerce_float(rate_stats.get('success_rate')):.1%}[/dim]")
-    console.print(f"[dim]  Avg wait time: {_coerce_float(rate_stats.get('avg_wait_time')):.2f}s[/dim]")
-    console.print(f"[dim]  Final rate: {_coerce_float(rate_stats.get('current_rate')):.1f} files/sec[/dim]")
+    console.print(f"[dim]  Success rate: {coerce_number(rate_stats.get('success_rate')):.1%}[/dim]")
+    console.print(f"[dim]  Avg wait time: {coerce_number(rate_stats.get('avg_wait_time')):.2f}s[/dim]")
+    console.print(f"[dim]  Final rate: {coerce_number(rate_stats.get('current_rate')):.1f} files/sec[/dim]")
 
 
 def display_memory_stats(console: Any) -> None:
@@ -29,8 +24,8 @@ def display_memory_stats(console: Any) -> None:
     memory_stats = get_memory_stats()
     if memory_stats.get("status") != "error":
         console.print("[dim]Memory stats:[/dim]")
-        peak_memory_mb = _coerce_float(memory_stats.get("peak_memory_mb", 0))
-        process_memory_mb = _coerce_float(memory_stats.get("process_memory_mb", 0))
+        peak_memory_mb = coerce_number(memory_stats.get("peak_memory_mb", 0))
+        process_memory_mb = coerce_number(memory_stats.get("process_memory_mb", 0))
         console.print(f"[dim]  Peak usage: {peak_memory_mb:.1f}MB[/dim]")
         console.print(
             f"[dim]  Current usage: {process_memory_mb:.1f}MB[/dim]"
@@ -71,7 +66,7 @@ def display_batch_results(
     rate_stats = rate_limiter.get_stats()
     success_count = len(all_results)
     total_count = len(files_to_process)
-    elapsed_time = _coerce_float(elapsed_time)
+    elapsed_time = coerce_number(elapsed_time)
 
     console.print("\n[bold green]Analysis Complete![/bold green]")
     console.print(f"[green]Processed: {success_count}/{total_count} files[/green]")

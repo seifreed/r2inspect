@@ -7,14 +7,8 @@ from typing import Any
 
 from rich.table import Table
 
+from ..abstractions.coercion_support import coerce_number
 from .display_base import _get_console
-
-
-def _coerce_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
 
 
 def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
@@ -22,7 +16,7 @@ def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     if not isinstance(retry_stats, dict):
         return
 
-    if _coerce_float(retry_stats.get("total_retries", 0)) <= 0:
+    if coerce_number(retry_stats.get("total_retries", 0)) <= 0:
         return
 
     retry_table = Table(title="Retry Statistics", show_header=True)
@@ -37,7 +31,7 @@ def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     retry_table.add_row("Total Retries", str(total_retries))
     retry_table.add_row("Successful Retries", str(successful_retries))
     retry_table.add_row("Failed After Retries", str(failed_after_retries))
-    success_rate_text = f"{_coerce_float(success_rate):.1f}%"
+    success_rate_text = f"{coerce_number(success_rate):.1f}%"
     retry_table.add_row("Success Rate", success_rate_text)
 
     _get_console().print(retry_table)
@@ -59,7 +53,7 @@ def _display_most_retried_commands(retry_stats: dict[str, Any]) -> None:
 
     sorted_commands = sorted(
         commands_retried.items(),
-        key=lambda x: _coerce_float(x[1]),
+        key=lambda x: coerce_number(x[1]),
         reverse=True,
     )[:5]
 
@@ -76,7 +70,7 @@ def _display_circuit_breaker_statistics(circuit_stats: dict[str, Any]) -> None:
 
     cb_entries = []
     for metric, value in circuit_stats.items():
-        coerced_value = _coerce_float(value)
+        coerced_value = coerce_number(value)
         if coerced_value > 0:
             cb_entries.append((metric, coerced_value))
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_int, coerce_number_or_none
+
 
 def _resource_name(resource: dict[str, Any]) -> str:
     value = resource.get("name")
@@ -22,32 +24,12 @@ def _resource_type_name(resource: dict[str, Any]) -> str:
     return "UNKNOWN"
 
 
-def _coerce_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _coerce_float(value: Any) -> float | None:
-    try:
-        if isinstance(value, str):
-            return float(value)
-        if isinstance(value, (int, float)):
-            return float(value)
-    except (TypeError, ValueError):
-        return None
-    return None
-
-
 def _resource_size(resource: dict[str, Any]) -> int:
-    return _coerce_int(resource.get("size", 0))
+    return coerce_int(resource.get("size", 0))
 
 
 def _resource_offset(resource: dict[str, Any]) -> int:
-    return _coerce_int(resource.get("offset", 0))
+    return coerce_int(resource.get("offset", 0))
 
 
 def summarize_resource_types(resources: list[Any]) -> tuple[list[dict[str, Any]], int]:
@@ -136,12 +118,12 @@ def build_manifest_info(manifest_data: str, size: int) -> dict[str, Any]:
 
 def _positive_entropy(resource: dict[str, Any]) -> float | None:
     """Return a resource's entropy when it is a positive number, else None."""
-    value = _coerce_float(resource.get("entropy", 0))
+    value = coerce_number_or_none(resource.get("entropy", 0))
     return value if value is not None and value > 0 else None
 
 
 def _resource_entropy(resource: dict[str, Any]) -> float:
-    value = _coerce_float(resource.get("entropy", 0.0))
+    value = coerce_number_or_none(resource.get("entropy", 0.0))
     return value if value is not None else 0.0
 
 

@@ -6,6 +6,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_int
+
 CRYPTO_PATTERNS = {
     "AES": [
         r"\baes\b",
@@ -44,15 +46,6 @@ NOISE_PATTERNS = [
     r"\?",
     r"vtable",
 ]
-
-
-def _coerce_int(value: Any) -> int:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return 0
 
 
 def detect_algorithms_from_strings(
@@ -103,7 +96,7 @@ def _add_detection(
     string_info: dict[str, Any],
     string_val: str,
 ) -> None:
-    vaddr = _coerce_int(string_info.get("vaddr", 0))
+    vaddr = coerce_int(string_info.get("vaddr", 0))
     detected_algos.setdefault(algo_name, []).append(
         {
             "evidence_type": "String Reference",

@@ -52,6 +52,19 @@ def coerce_int_or_none(value: Any) -> int | None:
         return None
 
 
+def coerce_text(value: Any, default: str = "") -> str:
+    return value if isinstance(value, str) else default
+
+
+def coerce_number_or_none(value: Any) -> float | None:
+    try:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def get_dict_bucket(mapping: dict[str, Any], key: str) -> dict[str, Any]:
     value = mapping.get(key)
     return value if isinstance(value, dict) else {}

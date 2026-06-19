@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import get_dict_bucket, get_list_bucket
+from ..abstractions.coercion_support import coerce_number_or_none, get_dict_bucket, get_list_bucket
 from .result_aggregator_recommendation_support import (
     RECOMMENDATION_RULES,
     generate_recommendations,
@@ -25,15 +25,6 @@ SUMMARY_BUILDERS = {
     "threat_indicators": "build_threat_indicators",
     "technical_details": "build_technical_details",
 }
-
-def _coerce_float(value: Any) -> float | None:
-    try:
-        if isinstance(value, str) and not value.strip():
-            return None
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
 
 def _count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
     """Count imported APIs commonly associated with suspicious execution flows.
@@ -57,7 +48,7 @@ def _count_high_entropy_sections(sections: list[dict[str, Any]]) -> int:
         1
         for section in sections
         if isinstance(section, dict)
-        and (entropy := _coerce_float(section.get("entropy"))) is not None
+        and (entropy := coerce_number_or_none(section.get("entropy"))) is not None
         and entropy > 7.0
     )
 

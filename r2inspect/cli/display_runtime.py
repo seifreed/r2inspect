@@ -8,6 +8,8 @@ from typing import Any
 
 from rich.table import Table
 
+from ..abstractions.coercion_support import coerce_text
+
 
 def print_banner(*, get_console: Any, pyfiglet: Any) -> None:
     try:
@@ -30,9 +32,6 @@ def display_yara_rules_table(
     *,
     get_console: Any,
 ) -> None:
-    def _coerce_text(value: Any, default: str) -> str:
-        return value if isinstance(value, str) and value else default
-
     table = Table(title=f"Available YARA Rules in: {rules_path}")
     table.add_column("Rule File", style="cyan")
     table.add_column("Size", style="yellow")
@@ -46,8 +45,8 @@ def display_yara_rules_table(
             size_kb = float(size) / 1024
         except (TypeError, ValueError):
             size_kb = 0.0
-        rule_name = _coerce_text(rule.get("name"), "unknown")
-        path = _coerce_text(rule.get("relative_path"), _coerce_text(rule.get("path"), rule_name))
+        rule_name = coerce_text(rule.get("name"), "unknown")
+        path = coerce_text(rule.get("relative_path"), coerce_text(rule.get("path"), rule_name))
         table.add_row(
             rule_name,
             f"{size_kb:.1f} KB",
