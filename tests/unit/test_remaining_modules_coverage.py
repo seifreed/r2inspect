@@ -89,6 +89,11 @@ def test_generate_recommendations_ignores_malformed_pe_info():
     assert isinstance(recs, list)
 
 
+def test_generate_recommendations_rejects_non_dict_pe_info():
+    recs = generate_recommendations({"mitigations": {}, "pe_info": []})  # type: ignore[arg-type]
+    assert isinstance(recs, list)
+
+
 def test_generate_recommendations_skips_none_nested_buckets():
     recs = generate_recommendations(
         {"mitigations": None, "security": None, "crypto": None, "anti_analysis": None}
