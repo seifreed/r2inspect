@@ -11,6 +11,7 @@ import re
 from typing import Any, Protocol
 
 from ..abstractions.coercion_support import coerce_int
+from ..domain.services.import_analysis_helpers import _text_value
 from ..domain.analysis.import_risk import (
     count_suspicious_indicators,
     get_function_description,
@@ -38,12 +39,6 @@ __all__ = [
     "matches_known_api",
     "check_import_forwarding",
 ]
-
-
-def _text_value(value: Any, default: str) -> str:
-    if isinstance(value, (bytes, bytearray)):
-        value = value.decode(errors="ignore")
-    return value if isinstance(value, str) and value else default
 
 
 def _import_name_value(imp: dict[str, Any]) -> str:

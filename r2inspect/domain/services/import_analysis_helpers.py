@@ -16,6 +16,8 @@ from .import_analysis_anomalies import (
 
 
 def _text_value(value: Any, default: str) -> str:
+    if isinstance(value, (bytes, bytearray)):
+        value = value.decode(errors="ignore")
     return value if isinstance(value, str) and value else default
 
 
