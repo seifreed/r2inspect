@@ -113,9 +113,16 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
         overview["compiled"] = pe_info["compilation_timestamp"]
     rich_header = _dict_bucket(analysis_results, "rich_header")
     if rich_header.get("available") and rich_header.get("compilers"):
+        compilers = rich_header.get("compilers", [])
+        if isinstance(compilers, list):
+            normalized_compilers = compilers
+        elif isinstance(compilers, (dict, str, bytes)) or not isinstance(compilers, Iterable):
+            normalized_compilers = []
+        else:
+            normalized_compilers = list(compilers)
         toolset = [
             f"{c.get('compiler_name', 'Unknown')} (Build {c.get('build_number', 0)})"
-            for c in rich_header["compilers"][:3]
+            for c in normalized_compilers[:3]
             if isinstance(c, dict)
         ]
         if toolset:

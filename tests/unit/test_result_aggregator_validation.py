@@ -138,6 +138,23 @@ def test_build_file_overview_with_rich_header():
     assert "MASM (Build 11111)" in overview["toolset"]
 
 
+def test_build_file_overview_accepts_iterable_compilers():
+    overview = _build_file_overview(
+        {
+            "file_info": {"name": "sample.exe", "file_type": "PE"},
+            "rich_header": {
+                "available": True,
+                "compilers": (
+                    {"compiler_name": "MSVC 19.0", "build_number": 12345},
+                    {"compiler_name": "MSVC 18.0", "build_number": 67890},
+                ),
+            },
+        }
+    )
+
+    assert overview["toolset"] == ["MSVC 19.0 (Build 12345)", "MSVC 18.0 (Build 67890)"]
+
+
 def test_build_file_overview_rich_header_not_available():
     results = {
         "file_info": {
