@@ -115,7 +115,11 @@ def _count_crypto_indicators(crypto: dict[str, Any]) -> int:
 
 def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the high-level file identity section of the executive summary."""
-    file_info = _dict_bucket(analysis_results, "file_info")
+    file_info = analysis_results.get("file_info")
+    if file_info is None:
+        file_info = {}
+    elif not isinstance(file_info, dict):
+        raise TypeError("file_info must be a dict or None")
     pe_info = _dict_bucket(analysis_results, "pe_info")
     overview = {
         "filename": file_info.get("name", "Unknown"),
