@@ -6,6 +6,13 @@ from typing import Any
 
 
 def analysis_result_to_dict(result: Any) -> dict[str, Any]:
+    strings = result.strings
+    if isinstance(strings, list):
+        normalized_strings = [
+            item.to_dict() if hasattr(item, "to_dict") else item for item in strings
+        ]
+    else:
+        normalized_strings = strings
     return {
         "file_info": result.file_info.to_dict(),
         "hashing": result.hashing.to_dict(),
@@ -13,7 +20,7 @@ def analysis_result_to_dict(result: Any) -> dict[str, Any]:
         "imports": [imp.to_dict() for imp in result.imports],
         "exports": [exp.to_dict() for exp in result.exports],
         "sections": [sec.to_dict() for sec in result.sections],
-        "strings": result.strings,
+        "strings": normalized_strings,
         "yara_matches": [match.to_dict() for match in result.yara_matches],
         "functions": [func.to_dict() for func in result.functions],
         "anti_analysis": result.anti_analysis.to_dict(),

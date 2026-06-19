@@ -103,6 +103,7 @@ def test_results_dataclasses_and_helpers() -> None:
 
     analysis_dict = analysis.to_dict()
     assert analysis_dict["file_info"]["name"] == "sample.bin"
+    assert analysis_dict["strings"] == ["abc"]
     assert analysis.has_error() is True
     assert analysis.is_suspicious() is True
     assert analysis.get_high_severity_indicators()[0].severity == "High"
@@ -149,6 +150,23 @@ def test_results_from_dict_full_load() -> None:
     assert result.imports[0].name == "CreateFileA"
     assert result.sections[0].permissions == "r-x"
     assert result.indicators[0].severity == "High"
+
+
+def test_analysis_result_to_dict_serializes_string_objects() -> None:
+    analysis = results_schema.AnalysisResult()
+    analysis.strings = [results_schema.StringInfo(value="abc", address="0x1000")]
+
+    data = analysis.to_dict()
+
+    assert data["strings"] == [
+        {
+            "value": "abc",
+            "address": "0x1000",
+            "length": 0,
+            "encoding": "",
+            "is_suspicious": False,
+        }
+    ]
 
 
 def test_results_from_dict_empty_and_timestamp_edges() -> None:
