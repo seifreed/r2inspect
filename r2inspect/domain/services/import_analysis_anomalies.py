@@ -6,6 +6,8 @@ from collections import Counter
 from collections.abc import Iterable
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_dict_list
+
 COMMON_SYSTEM_DLLS = {
     "kernel32.dll",
     "user32.dll",
@@ -35,16 +37,6 @@ SUSPICIOUS_DLLS = {
     "setupapi.dll",
     "cfgmgr32.dll",
 }
-
-
-def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
-    if isinstance(imports, list):
-        source = imports
-    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
-        return []
-    else:
-        source = list(imports)
-    return [imp for imp in source if isinstance(imp, dict)]
 
 
 def analyze_dll_dependencies(dlls: list[str]) -> dict[str, Any]:
@@ -165,7 +157,7 @@ def _append_excessive_imports(anomalies: list[dict[str, Any]], imports: list[dic
 
 
 def detect_import_anomalies(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    valid_imports = _coerce_import_list(imports)
+    valid_imports = coerce_dict_list(imports)
     if not valid_imports:
         return _anomaly_result([_no_imports_anomaly()])
 

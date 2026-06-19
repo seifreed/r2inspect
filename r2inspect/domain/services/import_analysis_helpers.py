@@ -6,6 +6,7 @@ from collections import Counter
 from collections.abc import Callable, Iterable
 from typing import Any
 
+from ...abstractions.coercion_support import coerce_dict_list
 from ..formats.import_analysis import NETWORK_CATEGORY
 from .import_analysis_anomalies import (
     COMMON_SYSTEM_DLLS,
@@ -47,18 +48,6 @@ def _pattern_entry(pattern: str, description: str, severity: str, count: int) ->
         "severity": severity,
         "count": count,
     }
-
-
-def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
-    if isinstance(imports, list):
-        source = imports
-    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
-        return []
-    else:
-        source = list(imports)
-    return [imp for imp in source if isinstance(imp, dict)]
-
-
 def _append_injection_patterns(patterns: list[dict[str, Any]], import_names: list[str]) -> None:
     injection_count = _count_matching_apis(
         import_names, ["VirtualAllocEx", "WriteProcessMemory", "CreateRemoteThread"]
@@ -142,7 +131,7 @@ def _append_behavior_patterns(
 
 
 def find_suspicious_patterns(imports: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    valid_imports = _coerce_import_list(imports)
+    valid_imports = coerce_dict_list(imports)
     if not valid_imports:
         return []
     patterns: list[dict[str, Any]] = []
@@ -165,7 +154,7 @@ def build_import_statistics(imports: list[dict[str, Any]]) -> dict[str, Any]:
     if not imports:
         return stats
 
-    valid_imports = _coerce_import_list(imports)
+    valid_imports = coerce_dict_list(imports)
     if not valid_imports:
         return stats
     categories = [_text_value(imp.get("category"), "unknown") for imp in valid_imports]
@@ -233,7 +222,7 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
 
 
 def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
-    valid_imports = _coerce_import_list(imports)
+    valid_imports = coerce_dict_list(imports)
     if not valid_imports:
         if isinstance(imports, list):
             return {

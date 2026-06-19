@@ -14,6 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Protocol, cast
 
+from ..abstractions.coercion_support import coerce_dict_list
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
@@ -29,18 +30,6 @@ class ImpfuzzyHost(Protocol):
     def _process_imports(self, imports_data: list[dict[str, Any]]) -> list[str]: ...
 
 
-def _coerce_import_list(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list):
-        return [imp for imp in raw if isinstance(imp, dict)]
-    if isinstance(raw, dict):
-        return [raw]
-    try:
-        return [imp for imp in list(raw) if isinstance(imp, dict)]
-    except TypeError:
-        return []
-    return []
-
-
 def extract_imports(host: ImpfuzzyHost, *, logger: logging.Logger) -> list[dict[str, Any]]:
     try:
         raw_imports: Any
@@ -48,11 +37,11 @@ def extract_imports(host: ImpfuzzyHost, *, logger: logging.Logger) -> list[dict[
             raw_imports = host.adapter.get_imports()
         else:
             raw_imports = host._cmdj("iij", [])
-        imports = _coerce_import_list(raw_imports)
+        imports = coerce_dict_list(raw_imports)
 
         if not imports:
             logger.debug("No imports found with 'iij' command")
-            imports = _coerce_import_list(host._cmdj("ii", []))
+            imports = coerce_dict_list(host._cmdj("ii", []))
 
         if not imports:
             logger.debug("No imports found with any method")

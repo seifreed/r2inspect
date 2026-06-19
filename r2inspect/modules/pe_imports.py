@@ -4,18 +4,8 @@
 import hashlib
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_dict_list
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
-
-
-def _coerce_import_list(imports: Any) -> list[dict[str, Any]]:
-    if isinstance(imports, dict):
-        return [imports]
-    if isinstance(imports, list):
-        return [imp for imp in imports if isinstance(imp, dict)]
-    try:
-        return [imp for imp in list(imports) if isinstance(imp, dict)]
-    except TypeError:
-        return []
 
 
 def fetch_imports(adapter: Any) -> list[dict[str, Any]]:
@@ -25,14 +15,14 @@ def fetch_imports(adapter: Any) -> list[dict[str, Any]]:
             imports = adapter.cmdj("iij")
     else:
         imports = cmdj_helper(adapter, None, "iij", [])
-    return _coerce_import_list(imports)
+    return coerce_dict_list(imports)
 
 
 def group_imports_by_library(
     imports: list[dict[str, Any]],
 ) -> dict[str, list[str | bytes]]:
     imports_by_lib: dict[str, list[str | bytes]] = {}
-    for imp in _coerce_import_list(imports):
+    for imp in coerce_dict_list(imports):
         if not isinstance(imp, dict) or "name" not in imp:
             continue
 
