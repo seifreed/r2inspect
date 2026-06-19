@@ -13,6 +13,9 @@ import pytest
 
 from r2inspect.modules.function_analyzer import FunctionAnalyzer
 from r2inspect.modules.function_analyzer_extraction_support import coerce_positive_int
+from r2inspect.modules.function_analyzer_metrics_support import (
+    analyze_function_coverage as analyze_function_coverage_metrics,
+)
 from r2inspect.modules.function_analyzer_machoc_support import generate_machoc_summary
 from r2inspect.modules.function_analyzer_support import analyze_function_coverage, calculate_std_dev
 import r2inspect.modules.function_analyzer as fa_module
@@ -146,6 +149,18 @@ def test_analyze_functions_exception_yields_error_key():
     assert result["total_functions"] == 0
     assert "error" in result
     assert "injected failure" in result["error"]
+
+
+def test_analyze_function_coverage_empty_iterable_matches_empty_list() -> None:
+    empty_iterable = (func for func in [])
+    result = analyze_function_coverage_metrics(empty_iterable)
+    assert result == {
+        "total_functions": 0,
+        "functions_with_size": 0,
+        "functions_with_blocks": 0,
+        "total_code_coverage": 0,
+        "avg_function_size": 0,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -64,7 +64,15 @@ def analyze_function_coverage(functions: Any) -> dict[str, Any]:
             }
         normalized = _coerce_function_list(functions)
         if not normalized:
-            return {}
+            if isinstance(functions, (str, bytes, dict)) or functions is None:
+                return {}
+            return {
+                "total_functions": 0,
+                "functions_with_size": 0,
+                "functions_with_blocks": 0,
+                "total_code_coverage": 0,
+                "avg_function_size": 0,
+            }
         total = len(normalized)
         with_size, with_blocks, sizes = _accumulate_function_stats(normalized)
         coverage: dict[str, Any] = {
