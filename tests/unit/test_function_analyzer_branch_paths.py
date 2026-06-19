@@ -560,14 +560,15 @@ def test_try_pdj_extraction_returns_mnemonics_from_list():
     assert "ret" in result
 
 
-def test_try_pdj_extraction_returns_empty_when_disasm_not_list():
+def test_try_pdj_extraction_accepts_dict_with_ops():
     class _DictAdapter:
         def get_disasm(self, address=None, size=None):
-            return {"ops": [{"opcode": "nop"}]}  # dict, not list
+            return {"ops": [{"opcode": "sub esp, 8"}, {"opcode": "ret"}]}
 
     analyzer = FunctionAnalyzer(_DictAdapter())
     result = analyzer._try_pdj_extraction("fn", 40, 0x1000)
-    assert result == []
+    assert "sub" in result
+    assert "ret" in result
 
 
 def test_try_pdj_extraction_returns_empty_on_exception():
@@ -618,6 +619,17 @@ def test_try_basic_pdj_extraction_returns_empty_when_not_list():
     analyzer = FunctionAnalyzer(_StrAdapter())
     result = analyzer._try_basic_pdj_extraction("fn", 0x1000)
     assert result == []
+
+
+def test_try_basic_pdj_extraction_accepts_dict_with_ops():
+    class _DictAdapter:
+        def get_disasm(self, address=None, size=None):
+            return {"ops": [{"opcode": "xor eax, eax"}, {"opcode": "ret"}]}
+
+    analyzer = FunctionAnalyzer(_DictAdapter())
+    result = analyzer._try_basic_pdj_extraction("fn", 0x1000)
+    assert "xor" in result
+    assert "ret" in result
 
 
 def test_try_basic_pdj_extraction_accepts_iterable_disasm():

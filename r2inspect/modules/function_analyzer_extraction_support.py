@@ -121,6 +121,14 @@ def try_pdj_extraction(
         )
         if isinstance(disasm_list, list):
             disasm_source = disasm_list
+        elif isinstance(disasm_list, dict):
+            ops = disasm_list.get("ops")
+            if isinstance(ops, list):
+                disasm_source = ops
+            elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
+                return []
+            else:
+                disasm_source = list(ops)
         elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
             return []
         else:
@@ -146,6 +154,14 @@ def try_basic_pdj_extraction(
         )
         if isinstance(disasm_list, list):
             disasm_source = disasm_list
+        elif isinstance(disasm_list, dict):
+            ops = disasm_list.get("ops")
+            if isinstance(ops, list):
+                disasm_source = ops
+            elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
+                return []
+            else:
+                disasm_source = list(ops)
         elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
             return []
         else:
