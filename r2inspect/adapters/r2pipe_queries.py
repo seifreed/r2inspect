@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any, Literal, TypeVar, cast
 
@@ -26,12 +27,14 @@ T = TypeVar("T")
 
 
 class R2PipeQueryMixin(
+    ABC,
     R2PipeCachedQueryMixin, R2PipeTextQueryMixin, R2PipeByteQueryMixin, R2CommandInterface
 ):
     """Query helpers for r2pipe-backed adapters."""
 
     _cache: dict[str, Any]
 
+    @abstractmethod
     def _cached_query(
         self,
         cmd: str,
@@ -41,10 +44,11 @@ class R2PipeQueryMixin(
         *,
         cache: bool = True,
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def _maybe_force_error(self, method: str) -> None:
-        raise NotImplementedError
+        ...
 
     def _safe_query(self, action: Callable[[], T], default: T, error_message: str) -> T:
         try:

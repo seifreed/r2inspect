@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import copy
 import logging
 import threading
@@ -20,7 +21,7 @@ def _results_bucket(context: dict[str, Any]) -> dict[str, Any]:
 logger = logging.getLogger(__name__)
 
 
-class AnalysisStage:
+class AnalysisStage(ABC):
     """Represents a single stage in the analysis pipeline."""
 
     def __init__(
@@ -62,9 +63,10 @@ class AnalysisStage:
             logger.warning("Condition check failed for stage '%s': %s", self.name, e)
             return False
 
+    @abstractmethod
     def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
         """Default execution for stages; override in subclass."""
-        raise NotImplementedError
+        ...
 
     def execute(self, context: dict[str, Any]) -> dict[str, Any]:
         if not self.should_execute(context):
