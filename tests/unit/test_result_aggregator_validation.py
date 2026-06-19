@@ -696,6 +696,18 @@ def test_result_aggregator_generate_indicators_suspicious_api():
     assert len(suspicious_apis) == 2
 
 
+def test_result_aggregator_generate_indicators_accepts_iterables():
+    agg = ResultAggregator()
+    results = {
+        "imports": ({"name": "VirtualAlloc"},),
+        "yara_matches": ({"rule": "malware_rule"},),
+    }
+
+    indicators = agg.generate_indicators(results)
+    assert any(i["type"] == "Suspicious API" for i in indicators)
+    assert any(i["type"] == "YARA Match" for i in indicators)
+
+
 def test_result_aggregator_generate_indicators_yara():
     agg = ResultAggregator()
     results = {

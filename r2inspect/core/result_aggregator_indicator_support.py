@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 
@@ -53,7 +54,14 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
         "CreateRemoteThread",
         "SetThreadContext",
     }
-    for imp in results.get("imports") if isinstance(results.get("imports"), list) else []:
+    imports = results.get("imports", [])
+    if isinstance(imports, list):
+        normalized_imports = imports
+    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
+        normalized_imports = []
+    else:
+        normalized_imports = list(imports)
+    for imp in normalized_imports:
         if not isinstance(imp, dict):
             continue
         name = imp.get("name") or ""
@@ -65,9 +73,14 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
                     "severity": "Medium",
                 }
             )
-    for match in (
-        results.get("yara_matches") if isinstance(results.get("yara_matches"), list) else []
-    ):
+    yara_matches = results.get("yara_matches", [])
+    if isinstance(yara_matches, list):
+        normalized_yara_matches = yara_matches
+    elif isinstance(yara_matches, (dict, str, bytes)) or not isinstance(yara_matches, Iterable):
+        normalized_yara_matches = []
+    else:
+        normalized_yara_matches = list(yara_matches)
+    for match in normalized_yara_matches:
         if not isinstance(match, dict):
             continue
         indicators.append(
