@@ -40,10 +40,6 @@ __all__ = [
 ]
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 def _text_value(value: Any, default: str) -> str:
     if isinstance(value, (bytes, bytearray)):
         value = value.decode(errors="ignore")
@@ -69,7 +65,7 @@ def analyze_import(
     name = _import_name_value(imp)
     analysis = {
         "name": name,
-        "address": hex(_to_int(imp.get("plt", 0))),
+        "address": hex(coerce_int(imp.get("plt", 0))),
         "ordinal": imp.get("ordinal", 0),
         "library": _text_value(imp.get("libname") or imp.get("library"), "unknown"),
         "type": _text_value(imp.get("type"), "unknown"),

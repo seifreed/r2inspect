@@ -5,17 +5,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_int_or_none
 from ..infrastructure.r2_helpers import get_pe_headers
 
 
 def _parse_dll_characteristics(value: Any) -> int | None:
-    try:
-        if isinstance(value, str):
-            return int(value, 0)
-        return int(value or 0)
-    except (TypeError, ValueError):
-        return None
+    return coerce_int_or_none(value)
 
 
 def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:

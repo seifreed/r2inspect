@@ -11,10 +11,6 @@ from ..abstractions.coercion_support import coerce_int, coerce_list
 logger = logging.getLogger(__name__)
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 class ResourceParsingMixin:
     """Resource directory discovery and parsing helpers."""
 
@@ -36,12 +32,12 @@ class ResourceParsingMixin:
                 if (
                     isinstance(dd, dict)
                     and dd.get("name") == "RESOURCE"
-                    and _to_int(dd.get("vaddr", 0)) != 0
+                    and coerce_int(dd.get("vaddr", 0)) != 0
                 ):
                     return {
-                        "offset": _to_int(dd.get("paddr", 0)),
-                        "size": _to_int(dd.get("size", 0)),
-                        "virtual_address": _to_int(dd.get("vaddr", 0)),
+                        "offset": coerce_int(dd.get("paddr", 0)),
+                        "size": coerce_int(dd.get("size", 0)),
+                        "virtual_address": coerce_int(dd.get("vaddr", 0)),
                     }
             return None
         except Exception as exc:
@@ -59,10 +55,10 @@ class ResourceParsingMixin:
                 if not isinstance(res, dict):
                     continue
 
-                type_id = _to_int(res.get("type_id", 0))
-                offset = _to_int(res.get("paddr", 0))
-                size = _to_int(res.get("size", 0))
-                virtual_address = _to_int(res.get("vaddr", 0))
+                type_id = coerce_int(res.get("type_id", 0))
+                offset = coerce_int(res.get("paddr", 0))
+                size = coerce_int(res.get("size", 0))
+                virtual_address = coerce_int(res.get("vaddr", 0))
                 resource_info = {
                     "name": res.get("name", ""),
                     "type": res.get("type", ""),
@@ -90,7 +86,7 @@ class ResourceParsingMixin:
             if not rsrc_section:
                 return []
 
-            rsrc_offset = _to_int(rsrc_section.get("paddr", 0))
+            rsrc_offset = coerce_int(rsrc_section.get("paddr", 0))
             if rsrc_offset == 0:
                 return []
 
@@ -134,7 +130,7 @@ class ResourceParsingMixin:
 
     def _parse_dir_entries(self, rsrc_offset: int, total_entries: int) -> list[dict[str, Any]]:
         resources: list[dict[str, Any]] = []
-        entry_offset = _to_int(rsrc_offset) + 16
+        entry_offset = coerce_int(rsrc_offset) + 16
         for i in range(min(total_entries, 20)):
             entry_data = self._cmdj(f"pxj 8 @ {entry_offset}", [])
             if isinstance(entry_data, (dict, str, bytes)):
@@ -162,7 +158,7 @@ class ResourceParsingMixin:
             return None
         if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in entry_data[:8]):
             return None
-        rsrc_base = _to_int(rsrc_offset)
+        rsrc_base = coerce_int(rsrc_offset)
         name_or_id = (
             entry_data[0] | (entry_data[1] << 8) | (entry_data[2] << 16) | (entry_data[3] << 24)
         )

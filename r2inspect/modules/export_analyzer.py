@@ -11,10 +11,6 @@ from ..infrastructure.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
     """Export table analysis using radare2"""
 
@@ -75,13 +71,13 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         """Analyze a single export"""
         name_value = exp.get("name")
         name = name_value if isinstance(name_value, str) and name_value else "unknown"
-        vaddr = _to_int(exp.get("vaddr", 0))
+        vaddr = coerce_int(exp.get("vaddr", 0))
         analysis = {
             "name": name,
             "address": hex(vaddr),
             "ordinal": exp.get("ordinal", 0),
             "type": exp.get("type", "unknown"),
-            "size": _to_int(exp.get("size", 0)),
+            "size": coerce_int(exp.get("size", 0)),
             "is_forwarded": exp.get("forwarded", False),
             "forwarder": exp.get("forwarder", ""),
             "characteristics": {},
@@ -104,7 +100,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         try:
             name_value = exp.get("name", "")
             name = name_value if isinstance(name_value, str) else ""
-            vaddr = _to_int(exp.get("vaddr", 0))
+            vaddr = coerce_int(exp.get("vaddr", 0))
 
             # Check if export is a common DLL export
             if name.startswith("Dll"):
@@ -138,7 +134,7 @@ class ExportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                     func = func_info[0]
                     # Validate that func is a dictionary before using .get()
                     if isinstance(func, dict):
-                        characteristics["function_size"] = _to_int(func.get("size", 0))
+                        characteristics["function_size"] = coerce_int(func.get("size", 0))
                         characteristics["complexity"] = func.get("cc", 0)  # Cyclomatic complexity
                         characteristics["is_function"] = True
                     else:

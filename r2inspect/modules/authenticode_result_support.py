@@ -7,10 +7,6 @@ from typing import Any
 from ..abstractions.coercion_support import coerce_int
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 def init_authenticode_result(init_result_structure: Any) -> dict[str, Any]:
     result: dict[str, Any] = init_result_structure(
         {
@@ -31,7 +27,7 @@ def init_authenticode_result(init_result_structure: Any) -> dict[str, Any]:
 def apply_security_directory(result: dict[str, Any], security_dir: dict[str, Any]) -> None:
     result["has_signature"] = True
     result["security_directory"] = {
-        "offset": _to_int(security_dir.get("paddr", 0)),
-        "size": _to_int(security_dir.get("size", 0)),
-        "virtual_address": _to_int(security_dir.get("vaddr", 0)),
+        "offset": coerce_int(security_dir.get("paddr", 0)),
+        "size": coerce_int(security_dir.get("size", 0)),
+        "virtual_address": coerce_int(security_dir.get("vaddr", 0)),
     }

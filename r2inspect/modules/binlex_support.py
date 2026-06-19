@@ -12,10 +12,6 @@ from ..domain.services.binbloom import build_similar_groups as _build_similar_gr
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 class BinlexHost(Protocol):
     """Overridable collaboration contract the Binlex helpers depend on.
 
@@ -61,7 +57,7 @@ def collect_function_signatures(
     for func in functions:
         if not isinstance(func, dict):
             continue
-        func_addr = _to_int(func.get("addr"))
+        func_addr = coerce_int(func.get("addr"))
         func_name_value = func.get("name")
         func_name = (
             func_name_value

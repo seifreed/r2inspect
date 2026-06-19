@@ -25,9 +25,6 @@ class CryptoHost(Protocol):
     def _search_hex(self, hex_pattern: str) -> str: ...
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
 
 def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
     crypto_info: dict[str, Any] = {
@@ -118,7 +115,7 @@ def detect_crypto_apis(analyzer: CryptoHost, logger: logging.Logger) -> list[dic
                             "function": func_name,
                             "algorithm": algo_type,
                             "library": imp.get("libname") or imp.get("library", "unknown"),
-                            "address": hex(_to_int(imp.get("plt", 0))),
+                            "address": hex(coerce_int(imp.get("plt", 0))),
                         }
                     )
     except Exception as exc:
@@ -136,7 +133,7 @@ def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, A
                     continue
                 section_name_value = section.get("name", "unknown")
                 section_name = section_name_value if isinstance(section_name_value, str) else "unknown"
-                section_size = _to_int(section.get("size", 0))
+                section_size = coerce_int(section.get("size", 0))
                 if section_size > 0:
                     entropy = analyzer._calculate_section_entropy(section)
                     entropy_info[section_name] = {
@@ -228,7 +225,7 @@ def detect_crypto_libraries(analyzer: CryptoHost, logger: logging.Logger) -> lis
                         {
                             "library": lib_name,
                             "api_function": imp_name,
-                            "address": hex(_to_int(imp.get("plt", 0))),
+                            "address": hex(coerce_int(imp.get("plt", 0))),
                         }
                     )
     except Exception as exc:

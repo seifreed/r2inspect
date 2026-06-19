@@ -9,10 +9,6 @@ from typing import Any
 from ..abstractions.coercion_support import coerce_int
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 def _string_value(value: Any) -> str:
     return value if isinstance(value, str) else ""
 
@@ -43,7 +39,7 @@ def collect_artifact_strings(
                     {
                         "artifact": artifact,
                         "string": string_val,
-                        "address": hex(_to_int(string_info.get("vaddr", 0))),
+                        "address": hex(coerce_int(string_info.get("vaddr", 0))),
                     }
                 )
     return matches
@@ -181,7 +177,7 @@ def match_suspicious_api(
                 return {
                     "api": imp_name,
                     "category": category,
-                    "address": hex(_to_int(imp.get("plt", 0))),
+                    "address": hex(coerce_int(imp.get("plt", 0))),
                 }
     return None
 

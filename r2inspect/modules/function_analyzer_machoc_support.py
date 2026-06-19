@@ -9,10 +9,6 @@ from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
 from ..domain.services.function_analysis import group_functions_by_machoc_hash
 
 
-def _to_int(value: Any) -> int:
-    return coerce_int(value)
-
-
 def _function_name(func: Any, func_offset: int | None = None) -> str:
     if not isinstance(func, dict):
         if func_offset is not None and func_offset > 0:
@@ -79,8 +75,8 @@ def process_single_function_hash(
     *,
     machoc_hash_fn: Any,
 ) -> tuple[str, str] | None:
-    func_offset = _to_int(func.get("addr"))
-    func_size = _to_int(func.get("size", 0))
+    func_offset = coerce_int(func.get("addr"))
+    func_size = coerce_int(func.get("size", 0))
     func_name = _function_name(func, func_offset)
     if func_offset <= 0:
         logger.warning("No address found for function %s", func_name)
