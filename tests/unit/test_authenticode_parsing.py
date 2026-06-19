@@ -1136,6 +1136,28 @@ class TestSupportFunctionsDirect:
 
         assert cert_info is None
 
+    def test_read_win_certificate_direct_rejects_non_int_list_payload(self):
+        """Test read_win_certificate rejects list payloads with non-int items."""
+
+        def fake_cmdj(command, default=None):
+            if command == "pxj 8 @ 2048":
+                return ["bad"] * 8
+            return None
+
+        security_dir = {"paddr": 2048, "size": 512}
+        result_dict = {"errors": []}
+
+        cert_info = read_win_certificate(
+            cmdj=fake_cmdj,
+            security_dir=security_dir,
+            result=result_dict,
+            parse_header_fn=lambda d: (512, 0x0200, 0x0002),
+            get_cert_type_name_fn=lambda t: "PKCS#7",
+            parse_pkcs7_fn=lambda o, s: {"digest_algorithm": "sha256"},
+        )
+
+        assert cert_info is None
+
     def test_parse_pkcs7_direct_invalid_offset(self):
         """Test parse_pkcs7 with negative offset."""
         result = parse_pkcs7(
@@ -1201,6 +1223,27 @@ class TestSupportFunctionsDirect:
         def fake_cmdj(command, default=None):
             if command == "pxj 8 @ 4096":
                 return {"bytes": [1] * 8}
+            return None
+
+        result = parse_pkcs7(
+            cmdj=fake_cmdj,
+            offset=4096,
+            size=8,
+            logger=logging.getLogger("test"),
+            detect_digest_algorithm_fn=lambda d: None,
+            detect_encryption_algorithm_fn=lambda d: None,
+            extract_common_names_fn=lambda d, o: [],
+            has_timestamp_fn=lambda d: False,
+        )
+
+        assert result is None
+
+    def test_parse_pkcs7_direct_rejects_non_int_list_payload(self):
+        """Test parse_pkcs7 rejects list payloads with non-int items."""
+
+        def fake_cmdj(command, default=None):
+            if command == "pxj 8 @ 4096":
+                return ["bad"] * 8
             return None
 
         result = parse_pkcs7(

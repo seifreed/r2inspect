@@ -44,7 +44,7 @@ def analyze_overlay_content(
             overlay_data = list(overlay_data)
         except TypeError:
             return
-        if not overlay_data:
+        if not overlay_data or not all(isinstance(value, int) for value in overlay_data):
             return
 
         result["overlay_entropy"] = calculate_entropy_fn(overlay_data)

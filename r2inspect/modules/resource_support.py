@@ -85,7 +85,7 @@ def analyze_resource_data(
             data = list(data)
         except TypeError:
             return
-        if not data:
+        if not data or not all(isinstance(value, int) for value in data):
             return
         resource["entropy"] = analyzer._calculate_entropy(data)
         try:
@@ -115,7 +115,7 @@ def read_resource_as_string(
             data = list(data)
         except TypeError:
             return None
-        if not data:
+        if not data or not all(isinstance(value, int) for value in data):
             return None
         return decode_resource_text(bytes(data))
     except Exception as exc:
@@ -261,19 +261,17 @@ def calculate_statistics(result: dict[str, Any], resources: list[dict[str, Any]]
 def check_suspicious_resources(
     analyzer: ResourceHost, result: dict[str, Any], resources: list[dict[str, Any]]
 ) -> None:
+    def _read_header(resource: dict[str, Any]) -> list[int] | None:
+        data = analyzer._cmdj(f"pxj 2 @ {_coerce_resource_int(resource, 'offset') or 0}", [])
+        if isinstance(data, (dict, str, bytes)):
+            return None
+        try:
+            data = list(data)
+        except TypeError:
+            return None
+        return data if data and all(isinstance(value, int) for value in data) else None
+
     result["suspicious_resources"] = build_suspicious_resources(
         resources,
-        lambda resource: (
-            None
-            if isinstance(
-                data := analyzer._cmdj(
-                    f"pxj 2 @ {_coerce_resource_int(resource, 'offset') or 0}",
-                    [],
-                ),
-                (dict, str, bytes),
-            )
-            else list(data)
-            if hasattr(data, "__iter__")
-            else None
-        ),
+        _read_header,
     )

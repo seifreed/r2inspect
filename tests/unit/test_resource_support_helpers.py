@@ -86,3 +86,18 @@ def test_resource_support_helpers_reject_dict_payloads() -> None:
     result: dict[str, Any] = {}
     check_suspicious_resources(host, result, [resource])
     assert result["suspicious_resources"] == []
+
+
+def test_resource_support_helpers_reject_non_int_list_payloads() -> None:
+    class _NonIntListPayloadHost(_Host):
+        def _cmdj(self, command: str, default: Any | None = None) -> Any:
+            if command.startswith("pxj "):
+                return ["bad"] * 8
+            return default
+
+    host = _NonIntListPayloadHost()
+    resource: dict[str, Any] = {"offset": 0x1000, "size": 8}
+    analyze_resource_data(host, resource, logger=host, calculate_hashes_for_bytes=lambda _: {})
+    assert resource["entropy"] == 0.0
+    assert resource["hashes"] == {}
+    assert read_resource_as_string(host, 0x1000, 8, logger=host) is None

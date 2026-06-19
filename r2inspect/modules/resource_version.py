@@ -31,7 +31,7 @@ class ResourceVersionMixin:
             data = list(data)
         except TypeError:
             return None
-        if not data or len(data) < 64:
+        if not data or len(data) < 64 or not all(isinstance(value, int) for value in data):
             return None
         return data
 
