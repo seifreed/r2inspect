@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from .logging import get_logger
+from .proxying import LazyProxy
 
 if TYPE_CHECKING:
     from .memory import MemoryMonitor
@@ -28,17 +29,7 @@ def get_global_memory_monitor() -> MemoryMonitor:
     return _global_memory_monitor
 
 
-class _MemoryMonitorProxy:
-    """Lazy module-level proxy: forwards attribute access to the singleton."""
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(get_global_memory_monitor(), name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        setattr(get_global_memory_monitor(), name, value)
-
-
-global_memory_monitor: MemoryMonitor = cast("MemoryMonitor", _MemoryMonitorProxy())
+global_memory_monitor: MemoryMonitor = cast("MemoryMonitor", LazyProxy(get_global_memory_monitor))
 
 
 def get_memory_stats() -> dict[str, Any]:

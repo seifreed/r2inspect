@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from ..interfaces import AnalysisRuntimePort, ResultValidationPort
+from ..infrastructure.proxying import LazyProxy
 from .runtime_support import (
     create_default_analysis_runtime,
     create_default_result_validator,
@@ -89,14 +90,6 @@ def get_default_analysis_service() -> AnalysisService:
     return _default_analysis_service
 
 
-class _AnalysisServiceProxy:
-    """Thin proxy so that ``default_analysis_service.xxx`` still works."""
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(get_default_analysis_service(), name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        setattr(get_default_analysis_service(), name, value)
-
-
-default_analysis_service: AnalysisService = cast(AnalysisService, _AnalysisServiceProxy())
+default_analysis_service: AnalysisService = cast(
+    AnalysisService, LazyProxy(get_default_analysis_service)
+)

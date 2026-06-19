@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..domain.analysis_runtime import BatchRunResult
+from ..infrastructure.proxying import LazyProxy
 from .batch_models import BatchDependencies
 from .use_cases.run_batch_analysis import RunBatchAnalysisUseCase, RunBatchRequest
 
@@ -69,14 +70,6 @@ def get_default_batch_service() -> BatchAnalysisService:
     return _default_batch_service
 
 
-class _BatchServiceProxy:
-    """Thin proxy so that ``default_batch_service.xxx`` still works."""
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(get_default_batch_service(), name)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        setattr(get_default_batch_service(), name, value)
-
-
-default_batch_service: BatchAnalysisService = cast(BatchAnalysisService, _BatchServiceProxy())
+default_batch_service: BatchAnalysisService = cast(
+    BatchAnalysisService, LazyProxy(get_default_batch_service)
+)
