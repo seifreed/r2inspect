@@ -11,6 +11,8 @@ from typing import Any
 
 def discover_rule_files(rules_dir: Path, yara_extensions: list[str]) -> list[Path]:
     rules_found: list[Path] = []
+    if not isinstance(yara_extensions, list):
+        return rules_found
     for extension in yara_extensions:
         rules_found.extend(rules_dir.glob(extension))
     for extension in yara_extensions:

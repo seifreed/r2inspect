@@ -14,7 +14,11 @@ from pathlib import Path
 
 from r2inspect.infrastructure.logging import get_logger
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
-from r2inspect.modules.yara_rules_support import list_available_rules, process_matches
+from r2inspect.modules.yara_rules_support import (
+    discover_rule_files,
+    list_available_rules,
+    process_matches,
+)
 
 # ---------------------------------------------------------------------------
 # rich_header_analyzer.py – _extract_rich_header_pefile on a real PE
@@ -128,3 +132,8 @@ def test_list_available_rules_outer_exception_returns_empty(tmp_path: Path) -> N
 def test_process_matches_non_list_returns_empty() -> None:
     """Non-list YARA match input is ignored instead of raising."""
     assert process_matches(None, get_logger(__name__)) == []
+
+
+def test_discover_rule_files_non_list_patterns_returns_empty(tmp_path: Path) -> None:
+    """Invalid YARA glob input is ignored instead of raising."""
+    assert discover_rule_files(tmp_path, None) == []
