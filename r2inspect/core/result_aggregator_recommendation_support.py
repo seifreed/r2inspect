@@ -24,7 +24,10 @@ RECOMMENDATION_RULES: list[tuple[RecommendationPredicate, str]] = [
         "File is unsigned; verify source and integrity.",
     ),
     (
-        lambda results: _bucket(results, "crypto").get("matches"),
+        lambda results: any(
+            _bucket(results, "crypto").get(key)
+            for key in ("matches", "algorithms", "constants", "functions")
+        ),
         "Cryptographic routines detected; check for encryption or obfuscation.",
     ),
     (

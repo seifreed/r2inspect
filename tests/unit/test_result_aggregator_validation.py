@@ -585,6 +585,22 @@ def test_generate_recommendations_crypto():
     assert any("crypto" in r.lower() for r in recommendations)
 
 
+def test_generate_recommendations_crypto_typed_payload():
+    results = {
+        "packer": {},
+        "security": {},
+        "crypto": {
+            "algorithms": [{"name": "AES"}],
+            "constants": [{"name": "SBOX"}],
+            "functions": ["encrypt"],
+        },
+        "anti_analysis": {},
+    }
+
+    recommendations = _generate_recommendations(results)
+    assert any("crypto" in r.lower() for r in recommendations)
+
+
 def test_generate_recommendations_anti_debug():
     results = {
         "packer": {},
