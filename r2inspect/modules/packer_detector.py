@@ -43,9 +43,12 @@ class PackerEvidenceScorer:
     def add_signature(self, signature: dict[str, str] | None) -> None:
         """Register a packer-signature hit (40 points)."""
         if signature:
+            signature_type = signature.get("type")
+            if not isinstance(signature_type, str) or not signature_type:
+                return
             self._score += 40
-            self._reasons.append(f"Packer signature: {signature['type']}")
-            self._packer_type = signature["type"]
+            self._reasons.append(f"Packer signature: {signature_type}")
+            self._packer_type = signature_type
 
     def add_entropy_results(self, entropy_results: dict[str, Any]) -> None:
         """Register high-entropy sections (up to 30 points)."""

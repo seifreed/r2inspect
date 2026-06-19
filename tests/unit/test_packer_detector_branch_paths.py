@@ -134,6 +134,14 @@ def test_entropy_results_ignores_non_dict_summary():
     assert result["is_packed"] is False
 
 
+def test_add_signature_ignores_incomplete_signature():
+    scorer = PackerEvidenceScorer()
+    scorer.add_signature({"signature": "UPX!"})
+    result = scorer.verdict()
+    assert result["packer_type"] is None
+    assert result["is_packed"] is False
+
+
 # ---------------------------------------------------------------------------
 # _get_imports branches (line 221 uses adapter.get_imports; 222 uses _cmd_list)
 # ---------------------------------------------------------------------------
