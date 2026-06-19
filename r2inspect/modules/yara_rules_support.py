@@ -12,6 +12,7 @@ from typing import Any
 
 
 _YARA_RULE_SUFFIXES = {".yar", ".yara", ".rule", ".rules"}
+YARA_RULE_PATTERNS = ("*.yar", "*.yara", "*.rule", "*.rules")
 
 
 def _coerce_extensions(yara_extensions: Any) -> list[str]:

@@ -7,9 +7,7 @@ from typing import Any
 from rich.table import Table
 
 from .base import Command
-
-
-_YARA_RULE_PATTERNS = ("*.yar", "*.yara", "*.rule", "*.rules")
+from ...modules.yara_rules_support import YARA_RULE_PATTERNS
 
 
 class ConfigCommand(Command):
@@ -49,7 +47,7 @@ class ConfigCommand(Command):
 
     def _find_yara_rules(self, rules_path: Path) -> list[Path]:
         available_rules: list[Path] = []
-        for pattern in _YARA_RULE_PATTERNS:
+        for pattern in YARA_RULE_PATTERNS:
             available_rules.extend(rules_path.rglob(pattern))
         return sorted(available_rules)
 

@@ -21,13 +21,12 @@ from .yara_rules_support import (
     discover_rule_files,
     list_available_rules as collect_available_rules,
     process_matches,
+    YARA_RULE_PATTERNS,
 )
 from .yara_defaults import DEFAULT_YARA_RULES
 
 logger = get_logger(__name__)
 
-YARA_EXT = "*.yar"
-YARA_YARA_EXT = "*.yara"
 YARA_COMPILE_TIMEOUT = 30  # seconds
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
 class TimeoutException(Exception):
@@ -178,7 +177,7 @@ class YaraAnalyzer(CommandHelperMixin):
         return rules_dict
 
     def _discover_rule_files(self, rules_dir: Path) -> list[Path]:
-        return discover_rule_files(rules_dir, [YARA_EXT, YARA_YARA_EXT, "*.rule", "*.rules"])
+        return discover_rule_files(rules_dir, list(YARA_RULE_PATTERNS))
 
     def _read_rule_content(self, validator: FileValidator, rule_file: Path) -> str | None:
         try:
@@ -293,6 +292,6 @@ class YaraAnalyzer(CommandHelperMixin):
         rules_path = rules_path or self.rules_path
         return collect_available_rules(
             rules_path,
-            [YARA_EXT, YARA_YARA_EXT, "*.rule", "*.rules"],
+            list(YARA_RULE_PATTERNS),
             logger,
         )

@@ -15,6 +15,7 @@ from ..domain.formats.string import (
     filter_strings,
     find_suspicious,
 )
+from ..abstractions.coercion_support import coerce_dict_list
 from .string_extraction import extract_strings_from_entries
 
 logger = get_logger(__name__)
@@ -116,8 +117,8 @@ class StringAnalyzer(BaseAnalyzer):
                 result = self.adapter.get_strings_basic()
             except Exception:
                 result = None
-            if isinstance(result, list) and result:
-                return result
+            if result:
+                return coerce_dict_list(result)
         raw_backend = getattr(self.adapter, "r2", None)
         if raw_backend is not None and hasattr(raw_backend, "cmdj"):
             try:
@@ -132,11 +133,11 @@ class StringAnalyzer(BaseAnalyzer):
         else:
             result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         if isinstance(result, list):
-            return result
-        if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
+            return [item for item in result if isinstance(item, dict)]
+        if isinstance(result, (dict, str, bytes, bytearray)) or not isinstance(result, Iterable):
             return []
         try:
-            return list(result)
+            return [item for item in list(result) if isinstance(item, dict)]
         except TypeError:
             return []
 

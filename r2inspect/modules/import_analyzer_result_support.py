@@ -4,18 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-
-def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, dict):
-        return [raw]
-    if isinstance(raw, list):
-        return [item for item in raw if isinstance(item, dict)]
-    if isinstance(raw, (str, bytes, bytearray)) or raw is None:
-        return []
-    try:
-        return [item for item in list(raw) if isinstance(item, dict)]
-    except TypeError:
-        return []
+from ..abstractions.coercion_support import coerce_dict_list
 
 
 def _coerce_string_list(raw: Any) -> list[str]:
@@ -67,9 +56,7 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
     # Normalize DLL names to lowercase for case-insensitive deduplication (Windows)
     # Also check 'libname' field which some r2 versions use instead of 'library'
     dlls = set()
-    for imp in _coerce_dict_list(imports):
-        if not isinstance(imp, dict):
-            continue
+    for imp in coerce_dict_list(imports):
         dll = imp.get("library") or imp.get("libname")
         if isinstance(dll, (bytes, bytearray)):
             dll = dll.decode(errors="ignore")

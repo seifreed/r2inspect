@@ -10,6 +10,7 @@ from typing import Any, TypeVar, cast
 from ..infrastructure.command_helpers import cmd as cmd_helper
 from ..infrastructure.command_helpers import cmd_list as cmd_list_helper
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
+from .coercion_support import coerce_dict_list
 
 _log = logging.getLogger(__name__)
 
@@ -34,12 +35,7 @@ class CommandHelperMixin:
 
     @staticmethod
     def _coerce_dict_list(value: Any) -> list[dict[str, Any]]:
-        """Coerce a value to a list of dicts, returning [] for non-list inputs."""
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-        if isinstance(value, dict):
-            return [value]
-        return []
+        return coerce_dict_list(value)
 
     def _get_via_adapter(
         self,
