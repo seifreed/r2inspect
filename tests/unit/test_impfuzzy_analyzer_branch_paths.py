@@ -27,6 +27,13 @@ class DictImportsAdapter:
         return {"name": "CreateFileA", "libname": "kernel32.dll"}
 
 
+class IterableImportsAdapter:
+    """Adapter whose get_imports() returns a generator."""
+
+    def get_imports(self):
+        return (imp for imp in [{"name": "CreateFileA", "libname": "kernel32.dll"}])
+
+
 class ListImportsAdapter:
     """Adapter whose get_imports() returns a valid list."""
 
@@ -212,6 +219,13 @@ def test_extract_imports_adapter_without_get_imports():
 def test_extract_imports_adapter_returns_dict():
     """Adapter.get_imports() returns a dict; covers line 204-205."""
     analyzer = _make_analyzer(DictImportsAdapter())
+    imports = analyzer._extract_imports()
+    assert isinstance(imports, list)
+    assert len(imports) == 1
+
+
+def test_extract_imports_adapter_returns_iterable():
+    analyzer = _make_analyzer(IterableImportsAdapter())
     imports = analyzer._extract_imports()
     assert isinstance(imports, list)
     assert len(imports) == 1

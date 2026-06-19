@@ -34,6 +34,10 @@ def _coerce_import_list(raw: Any) -> list[dict[str, Any]]:
         return [imp for imp in raw if isinstance(imp, dict)]
     if isinstance(raw, dict):
         return [raw]
+    try:
+        return [imp for imp in list(raw) if isinstance(imp, dict)]
+    except TypeError:
+        return []
     return []
 
 
