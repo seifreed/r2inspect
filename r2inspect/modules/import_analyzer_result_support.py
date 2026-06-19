@@ -29,6 +29,8 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
     # Normalize DLL names to lowercase for case-insensitive deduplication (Windows)
     # Also check 'libname' field which some r2 versions use instead of 'library'
     dlls = set()
+    if not isinstance(imports, list):
+        return []
     for imp in imports:
         if not isinstance(imp, dict):
             continue

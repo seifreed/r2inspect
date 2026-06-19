@@ -585,6 +585,10 @@ def test_collect_import_dlls_skips_malformed_entries():
     assert dlls == ["kernel32.dll"]
 
 
+def test_collect_import_dlls_skips_non_list_input():
+    assert collect_import_dlls(None) == []  # type: ignore[arg-type]
+
+
 def test_collect_import_dlls_decodes_bytes_names():
     dlls = collect_import_dlls([{"library": b"KERNEL32.DLL"}])
     assert dlls == ["kernel32.dll"]
