@@ -137,3 +137,25 @@ def test_process_matches_non_list_returns_empty() -> None:
 def test_discover_rule_files_non_list_patterns_returns_empty(tmp_path: Path) -> None:
     """Invalid YARA glob input is ignored instead of raising."""
     assert discover_rule_files(tmp_path, None) == []
+
+
+def test_discover_rule_files_normalizes_iterable_patterns(tmp_path: Path) -> None:
+    (tmp_path / "one.yar").write_text("rule a { condition: true }")
+    (tmp_path / "two.yara").write_text("rule b { condition: true }")
+
+    patterns = (pattern for pattern in ["*.yar", "*.yara", ""])
+
+    result = discover_rule_files(tmp_path, patterns)
+    assert {path.name for path in result} == {"one.yar", "two.yara"}
+
+
+def test_list_available_rules_normalizes_iterable_patterns(tmp_path: Path) -> None:
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    (rules_dir / "one.yar").write_text("rule a { condition: true }")
+    logger = get_logger(__name__)
+
+    patterns = (pattern for pattern in ["*.yar", "*.yara"])
+    result = list_available_rules(str(rules_dir), patterns, logger)
+
+    assert [item["name"] for item in result] == ["one.yar"]

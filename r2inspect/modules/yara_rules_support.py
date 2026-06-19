@@ -9,13 +9,20 @@ from pathlib import Path
 from typing import Any
 
 
+def _coerce_extensions(yara_extensions: Any) -> list[str]:
+    if isinstance(yara_extensions, list):
+        return [ext for ext in yara_extensions if isinstance(ext, str) and ext]
+    try:
+        return [ext for ext in list(yara_extensions) if isinstance(ext, str) and ext]
+    except TypeError:
+        return []
+
+
 def discover_rule_files(rules_dir: Path, yara_extensions: list[str]) -> list[Path]:
     rules_found: list[Path] = []
-    if not isinstance(yara_extensions, list):
-        return rules_found
-    for extension in yara_extensions:
+    for extension in _coerce_extensions(yara_extensions):
         rules_found.extend(rules_dir.glob(extension))
-    for extension in yara_extensions:
+    for extension in _coerce_extensions(yara_extensions):
         for rule_file in rules_dir.rglob(extension):
             if rule_file not in rules_found:
                 rules_found.append(rule_file)
@@ -123,7 +130,7 @@ def list_available_rules(
             )
             return available_rules
         if os.path.isdir(rules_path):
-            for extension in yara_extensions:
+            for extension in _coerce_extensions(yara_extensions):
                 for rule_file in Path(rules_path).rglob(extension):
                     try:
                         stat = rule_file.stat()
