@@ -9,6 +9,9 @@ from rich.table import Table
 from .base import Command
 
 
+_YARA_RULE_PATTERNS = ("*.yar", "*.yara", "*.rule", "*.rules")
+
+
 class ConfigCommand(Command):
     """Configuration management command."""
 
@@ -35,7 +38,7 @@ class ConfigCommand(Command):
             self.context.console.print(f"[red]YARA rules directory not found: {rules_path}[/red]")
             return 1
 
-        available_rules = [rules_path] if rules_path.is_file() else self._find_yara_rules(rules_path)
+        available_rules = [rules_path] if self._is_yara_rule_file(rules_path) else self._find_yara_rules(rules_path)
 
         if not available_rules:
             self.context.console.print(f"[yellow]No YARA rules found in: {rules_path}[/yellow]")
@@ -46,9 +49,12 @@ class ConfigCommand(Command):
 
     def _find_yara_rules(self, rules_path: Path) -> list[Path]:
         available_rules: list[Path] = []
-        for pattern in ["*.yar", "*.yara"]:
+        for pattern in _YARA_RULE_PATTERNS:
             available_rules.extend(rules_path.rglob(pattern))
         return sorted(available_rules)
+
+    def _is_yara_rule_file(self, rules_path: Path) -> bool:
+        return rules_path.is_file() and rules_path.suffix.lower() in {".yar", ".yara", ".rule", ".rules"}
 
     def _display_yara_rules_table(
         self,
