@@ -51,6 +51,8 @@ def _to_int(value: Any) -> int:
 def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
+    if not isinstance(imp, dict):
+        imp = {}
     name_value = imp.get("name")
     name = name_value if isinstance(name_value, str) else "unknown"
     analysis = {
