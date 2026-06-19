@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
@@ -37,8 +38,14 @@ def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
     table.add_row("File Size", f"{_coerce_int(structural.get('file_size', 0)):,} bytes")
     table.add_row("Sections", str(structural.get("section_count", 0)))
     section_names = structural.get("section_names")
-    if isinstance(section_names, list) and section_names:
-        section_names = [str(name) for name in section_names]
+    if isinstance(section_names, list):
+        section_source = section_names
+    elif isinstance(section_names, (dict, str, bytes)) or not isinstance(section_names, Iterable):
+        section_source = []
+    else:
+        section_source = list(section_names)
+    if section_source:
+        section_names = [str(name) for name in section_source]
         if len(section_names) <= 7:
             table.add_row("Section Names", ", ".join(section_names))
         else:

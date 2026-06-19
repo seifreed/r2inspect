@@ -635,6 +635,16 @@ def test_add_bindiff_structural_skips_non_list_section_names():
     assert len(table.rows) == 5
 
 
+def test_add_bindiff_structural_accepts_iterable_section_names():
+    table = _make_table()
+    structural = {"file_type": "ELF", "section_names": (".text", ".data")}
+    _add_bindiff_structural(table, structural)
+    console = _make_console()
+    console.print(table)
+    text = _get_text(console)
+    assert ".text, .data" in text
+
+
 def test_add_bindiff_structural_skips_non_dict_input():
     table = _make_table()
     _add_bindiff_structural(table, "bad")  # type: ignore[arg-type]
