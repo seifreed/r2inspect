@@ -49,7 +49,7 @@ def _to_int(value: Any) -> int:
 
 
 def _text_value(value: Any, default: str) -> str:
-    if isinstance(value, bytes):
+    if isinstance(value, (bytes, bytearray)):
         value = value.decode(errors="ignore")
     return value if isinstance(value, str) and value else default
 
@@ -106,7 +106,7 @@ def check_import_forwarding(strings: list[Any], *, logger: logging.Logger) -> di
         for string_entry in strings:
             if isinstance(string_entry, dict) and "string" in string_entry:
                 string_value = string_entry["string"]
-                if isinstance(string_value, bytes):
+                if isinstance(string_value, (bytes, bytearray)):
                     string_value = string_value.decode(errors="ignore")
                 if not isinstance(string_value, str):
                     continue

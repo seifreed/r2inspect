@@ -233,6 +233,22 @@ def test_analyze_import_decodes_bytes_fields():
     assert result["address"] == "0x1000"
 
 
+def test_analyze_import_decodes_bytearray_fields():
+    analyzer = _make_analyzer()
+    imp = {
+        "name": bytearray(b"CreateFileA"),
+        "plt": bytearray(b"4096"),
+        "libname": bytearray(b"KERNEL32.DLL"),
+        "type": bytearray(b"FUNC"),
+    }
+    result = analyzer._analyze_import(imp)
+
+    assert result["name"] == "CreateFileA"
+    assert result["library"] == "KERNEL32.DLL"
+    assert result["type"] == "FUNC"
+    assert result["address"] == "0x1000"
+
+
 # ---------------------------------------------------------------------------
 # _get_function_description
 # ---------------------------------------------------------------------------
@@ -778,6 +794,11 @@ def test_collect_import_dlls_accepts_single_dict_input():
 
 def test_collect_import_dlls_rejects_scalar_bytes_input():
     assert collect_import_dlls(b"KERNEL32.DLL") == []  # type: ignore[arg-type]
+
+
+def test_collect_import_dlls_decodes_bytearray_names():
+    dlls = collect_import_dlls([{"library": bytearray(b"KERNEL32.DLL")}])
+    assert dlls == ["kernel32.dll"]
 
 
 def test_normalize_import_entries_accepts_iterable_input():

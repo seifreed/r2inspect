@@ -10,7 +10,7 @@ def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
         return [raw]
     if isinstance(raw, list):
         return [item for item in raw if isinstance(item, dict)]
-    if isinstance(raw, (str, bytes)) or raw is None:
+    if isinstance(raw, (str, bytes, bytearray)) or raw is None:
         return []
     try:
         return [item for item in list(raw) if isinstance(item, dict)]
@@ -21,7 +21,7 @@ def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
 def _coerce_string_list(raw: Any) -> list[str]:
     if isinstance(raw, list):
         source = raw
-    elif isinstance(raw, (dict, str, bytes)):
+    elif isinstance(raw, (dict, str, bytes, bytearray)):
         return []
     else:
         try:
@@ -30,7 +30,7 @@ def _coerce_string_list(raw: Any) -> list[str]:
             return []
     values: list[str] = []
     for item in source:
-        if isinstance(item, bytes):
+        if isinstance(item, (bytes, bytearray)):
             item = item.decode(errors="ignore")
         if isinstance(item, str) and item:
             values.append(item)
@@ -71,7 +71,7 @@ def collect_import_dlls(imports: list[dict[str, Any]]) -> list[str]:
         if not isinstance(imp, dict):
             continue
         dll = imp.get("library") or imp.get("libname")
-        if isinstance(dll, bytes):
+        if isinstance(dll, (bytes, bytearray)):
             dll = dll.decode(errors="ignore")
         if isinstance(dll, str) and dll:
             dlls.add(dll.lower())
