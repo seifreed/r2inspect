@@ -2,6 +2,7 @@
 """String analysis module."""
 
 from typing import Any
+from collections.abc import Iterable
 
 from ..abstractions import BaseAnalyzer
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
@@ -109,9 +110,17 @@ class StringAnalyzer(BaseAnalyzer):
         return []
 
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
-        result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+        if self.adapter is not None and hasattr(self.adapter, "cmdj"):
+            try:
+                result = self.adapter.cmdj(cmd)
+            except Exception:
+                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+        else:
+            result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         if isinstance(result, list):
             return result
+        if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
+            return []
         try:
             return list(result)
         except TypeError:

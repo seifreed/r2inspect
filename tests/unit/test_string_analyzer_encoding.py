@@ -459,6 +459,16 @@ class TestFetchStringEntries:
 
         assert result == []
 
+    def test_fetch_string_entries_accepts_iterable_result(self, tmp_path):
+        """Test fetching entries with an iterable result preserves entries."""
+        adapter = _make_adapter(cmdj_map={"izj": ({"string": "alpha"}, {"string": "beta"})})
+        config = _make_config(tmp_path)
+        analyzer = StringAnalyzer(adapter, config)
+
+        result = analyzer._fetch_string_entries("izj")
+
+        assert result == [{"string": "alpha"}, {"string": "beta"}]
+
 
 class TestXORSearch:
     """Test XOR string search."""
