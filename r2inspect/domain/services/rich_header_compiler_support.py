@@ -6,6 +6,8 @@ from typing import Any
 
 
 def get_compiler_description(compiler_name: str, build_number: int) -> str:
+    if not isinstance(compiler_name, str):
+        compiler_name = ""
     descriptions = {
         "Utc": "Microsoft C/C++ Compiler",
         "Linker": "Microsoft Linker",
