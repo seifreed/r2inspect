@@ -115,21 +115,22 @@ class StringAnalyzer(BaseAnalyzer):
             try:
                 result = self.adapter.get_strings_basic()
             except Exception:
+                result = None
+            if isinstance(result, list) and result:
+                return result
+        raw_backend = getattr(self.adapter, "r2", None)
+        if raw_backend is not None and hasattr(raw_backend, "cmdj"):
+            try:
+                result = raw_backend.cmdj(cmd)
+            except Exception:
+                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+        elif self.adapter is not None and hasattr(self.adapter, "cmdj"):
+            try:
+                result = self.adapter.cmdj(cmd)
+            except Exception:
                 result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         else:
-            raw_backend = getattr(self.adapter, "r2", None)
-            if raw_backend is not None and hasattr(raw_backend, "cmdj"):
-                try:
-                    result = raw_backend.cmdj(cmd)
-                except Exception:
-                    result = cmdj_helper(self.adapter, self.adapter, cmd, [])
-            elif self.adapter is not None and hasattr(self.adapter, "cmdj"):
-                try:
-                    result = self.adapter.cmdj(cmd)
-                except Exception:
-                    result = cmdj_helper(self.adapter, self.adapter, cmd, [])
-            else:
-                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
+            result = cmdj_helper(self.adapter, self.adapter, cmd, [])
         if isinstance(result, list):
             return result
         if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
