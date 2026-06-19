@@ -55,6 +55,10 @@ def parse_search_results(result: str) -> list[str]:
 
 
 def xor_string(text: str, key: int) -> str:
+    try:
+        key = int(key) & 0xFF
+    except (TypeError, ValueError):
+        return ""
     return "".join(chr(ord(c) ^ key) for c in text)
 
 

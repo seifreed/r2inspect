@@ -45,6 +45,11 @@ def test_xor_string_key_one():
     assert ord(result) == ord("A") ^ 1
 
 
+def test_xor_string_masks_large_integer_key():
+    """xor_string treats oversized keys as byte values."""
+    assert xor_string("A", 257) == xor_string("A", 1)
+
+
 # ---------------------------------------------------------------------------
 # build_xor_matches() - lines 52-58, 66
 # ---------------------------------------------------------------------------
