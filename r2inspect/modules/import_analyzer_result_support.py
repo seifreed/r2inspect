@@ -17,6 +17,8 @@ def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
 def _coerce_string_list(raw: Any) -> list[str]:
     if isinstance(raw, list):
         source = raw
+    elif isinstance(raw, (dict, str, bytes)):
+        return []
     else:
         try:
             source = list(raw)
