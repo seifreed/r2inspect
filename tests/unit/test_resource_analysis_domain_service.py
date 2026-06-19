@@ -145,6 +145,13 @@ def test_individual_suspicious_checks_cover_main_cases() -> None:
     )
 
 
+def test_individual_suspicious_checks_reject_non_dict_inputs() -> None:
+    assert check_resource_entropy(None) == []  # type: ignore[arg-type]
+    assert check_resource_size(None) == []  # type: ignore[arg-type]
+    assert check_resource_rcdata(None) == []  # type: ignore[arg-type]
+    assert check_resource_embedded_pe(None, None) == []  # type: ignore[arg-type]
+
+
 def test_embedded_pe_detection_uses_header_bytes() -> None:
     resource = {"name": "payload", "type_name": "RT_RCDATA", "size": 5000, "offset": 100}
 
