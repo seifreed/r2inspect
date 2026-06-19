@@ -691,6 +691,17 @@ def test_build_section_characteristics_rejects_non_string_name():
     assert result["expected_entropy"] == "Variable"
 
 
+def test_update_section_summary_rejects_non_dict_section():
+    summary = {
+        "executable_sections": 0,
+        "writable_sections": 0,
+        "suspicious_sections": 0,
+        "high_entropy_sections": 0,
+    }
+    flag_counts: dict[str, int] = {}
+    assert update_section_summary(summary, None, flag_counts) == 0.0  # type: ignore[arg-type]
+
+
 def test_apply_permissions_treats_missing_flags_as_empty():
     analyzer = _build_analyzer(sections=[])
     analysis = {"is_executable": False, "is_writable": False, "is_readable": False}

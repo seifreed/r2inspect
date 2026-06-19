@@ -155,6 +155,8 @@ def update_section_summary(
     section: dict[str, Any],
     flag_counts: dict[str, int],
 ) -> float:
+    if not isinstance(section, dict):
+        return 0.0
     if section.get("is_executable"):
         summary["executable_sections"] += 1
     if section.get("is_writable"):
