@@ -7,16 +7,8 @@ from collections.abc import Iterable
 from typing import Any
 
 from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
+from .function_analyzer_machoc_support import _function_name
 from .simhash_support import SimHashHost
-
-
-def _function_name(func: dict[str, Any], func_addr: int | None = None) -> str:
-    name = func.get("name")
-    if isinstance(name, str) and name:
-        return name
-    if func_addr is not None and func_addr > 0:
-        return f"func_{func_addr}"
-    return "unknown"
 
 
 def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> list[str]:

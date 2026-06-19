@@ -8,6 +8,8 @@ import logging
 from collections.abc import Iterable
 from typing import Any, Protocol
 
+from ..domain.services.binbloom import _jaccard_similarity
+
 
 class BloomStatsHost(Protocol):
     def _accumulate_bloom_bits(self, function_blooms: Any) -> tuple[int, int]: ...
@@ -42,15 +44,6 @@ def calculate_bloom_stats(
 
 def _bloom_bit_set(bits_raw: Any) -> set[int]:
     return {i for i, bit in enumerate(bits_raw) if bit}
-
-
-def _jaccard_similarity(bits1: set[int], bits2: set[int]) -> float:
-    if not bits1 and not bits2:
-        return 1.0
-    if not bits1 or not bits2:
-        return 0.0
-    union = len(bits1.union(bits2))
-    return len(bits1.intersection(bits2)) / union if union > 0 else 0.0
 
 
 def compare_bloom_filters(
