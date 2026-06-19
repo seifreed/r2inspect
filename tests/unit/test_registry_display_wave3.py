@@ -442,6 +442,25 @@ def test_add_rich_header_entries_skips_non_dict_compilers():
     assert "MSVC" in text
 
 
+def test_add_rich_header_entries_accepts_iterable_compilers():
+    t = _make_table()
+    _add_rich_header_entries(
+        t,
+        {
+            "xor_key": 0x1,
+            "checksum": 0x2,
+            "compilers": (
+                {"compiler_name": "MSVC", "count": 2, "build_number": 1900},
+            ),
+        },
+    )
+    console = Console(file=io.StringIO(), record=True, width=200)
+    console.print(t)
+    text = console.export_text()
+    assert "Compiler Entries" in text
+    assert "MSVC" in text
+
+
 def test_add_rich_header_entries_accepts_string_hex_values():
     t = _make_table()
     _add_rich_header_entries(

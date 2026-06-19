@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
@@ -56,13 +57,17 @@ def _add_rich_header_entries(table: Table, rich_header_info: dict[str, Any]) -> 
         table.add_row("RichPE Hash", richpe_hash)
 
     compilers = rich_header_info.get("compilers", [])
-    if not isinstance(compilers, list):
-        compilers = []
-    table.add_row("Compiler Entries", str(len(compilers)))
+    if isinstance(compilers, list):
+        normalized_compilers = compilers
+    elif isinstance(compilers, (dict, str, bytes)) or not isinstance(compilers, Iterable):
+        normalized_compilers = []
+    else:
+        normalized_compilers = list(compilers)
+    table.add_row("Compiler Entries", str(len(normalized_compilers)))
 
-    if compilers:
+    if normalized_compilers:
         compiler_summary = []
-        for compiler in compilers[:5]:
+        for compiler in normalized_compilers[:5]:
             if not isinstance(compiler, dict):
                 continue
             name = compiler.get("compiler_name", "Unknown")
@@ -70,7 +75,7 @@ def _add_rich_header_entries(table: Table, rich_header_info: dict[str, Any]) -> 
             build = compiler.get("build_number", 0)
             compiler_summary.append(f"{name} (Build {build}): {count}")
 
-        if len(compilers) > 5:
-            compiler_summary.append(f"... and {len(compilers) - 5} more")
+        if len(normalized_compilers) > 5:
+            compiler_summary.append(f"... and {len(normalized_compilers) - 5} more")
 
         table.add_row("Compilers Used", "\n".join(compiler_summary))
