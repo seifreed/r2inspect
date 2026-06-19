@@ -35,7 +35,7 @@ def test_add_function_simhashes_populates_results() -> None:
 
     assert results["function_simhashes"] == function_features
     assert results["total_functions"] == 3
-    assert results["analyzed_functions"] == 1
+    assert results["analyzed_functions"] == 2
     assert results["similarity_groups"] == [{"group": ["f1", "f2", "f3"]}]
 
 

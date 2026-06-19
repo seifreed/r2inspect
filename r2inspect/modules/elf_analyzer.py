@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""ELF analysis module."""
-
 import re
 from typing import Any, cast
 
@@ -35,10 +33,7 @@ def _format_section_bytes(data: bytes, cmd: str) -> str:
         return " ".join(f"{byte:02x}" for byte in data)
     return data.decode(errors="ignore")
 
-
 class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
-    """ELF file analysis using radare2"""
-
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
         super().__init__(adapter=adapter, config=config)
 
@@ -52,7 +47,6 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return file_format.upper() in {"ELF", "ELF32", "ELF64"}
 
     def analyze(self) -> dict[str, Any]:
-        """Perform complete ELF analysis"""
         result = self._init_result_structure(
             {
                 "architecture": "Unknown",
@@ -66,19 +60,10 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         with self._analysis_context(result, error_message="ELF analysis failed"):
             self._log_info("Starting ELF analysis")
 
-            # Get ELF headers information
             result.update(self._get_elf_headers())
-
-            # Get compilation info
             result.update(self._get_compilation_info())
-
-            # Get section information
             result["sections"] = self._get_section_info()
-
-            # Get program headers
             result["program_headers"] = self._get_program_headers()
-
-            # Get security features
             result["security_features"] = self.get_security_features()
 
             self._log_info("ELF analysis completed successfully")
@@ -86,7 +71,6 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return result
 
     def _get_elf_headers(self) -> dict[str, Any]:
-        """Extract ELF header information"""
         info: dict[str, Any] = {}
 
         try:
@@ -110,7 +94,6 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return info
 
     def _get_compilation_info(self) -> dict[str, Any]:
-        """Get compilation information from various ELF sources"""
         info: dict[str, Any] = {}
 
         try:
@@ -139,7 +122,6 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return info
 
     def _extract_comment_section(self) -> dict[str, Any]:
-        """Extract information from .comment section"""
         info: dict[str, Any] = {}
 
         try:
@@ -161,7 +143,6 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return info
 
     def _extract_dwarf_info(self) -> dict[str, Any]:
-        """Extract compilation info from DWARF debug information"""
         info: dict[str, Any] = {}
 
         try:
@@ -177,9 +158,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return info
 
     def _extract_build_id(self) -> str | None:
-        """Extract build ID from .note.gnu.build-id section"""
         try:
-            # Get sections information
             sections = self._cmd_list("iSj")
             build_id_section = find_section_by_name(sections, ".note.gnu.build-id")
             if not build_id_section:
@@ -194,13 +173,9 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return None
 
     def _estimate_compile_time(self) -> str:
-        """Estimate compile time as fallback (returns empty string for ELF)"""
-        # For ELF files, we don't have a reliable way to get compile time
-        # without specific debug info or comment sections
         return ""
 
     def _get_section_info(self) -> list[dict[str, Any]]:
-        """Get ELF section information"""
         sections = []
 
         try:

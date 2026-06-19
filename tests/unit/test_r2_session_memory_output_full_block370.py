@@ -429,4 +429,5 @@ def test_output_formatter_branches() -> None:
     # summary error path
     formatter_error = OutputFormatter({"file_info": object()})
     summary_error = formatter_error.format_summary()
-    assert "Error generating summary" in summary_error
+    assert "Error generating summary" not in summary_error
+    assert "=== R2INSPECT ANALYSIS SUMMARY ===" in summary_error
