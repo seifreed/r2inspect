@@ -30,26 +30,19 @@ YARA_EXT = "*.yar"
 YARA_YARA_EXT = "*.yara"
 YARA_COMPILE_TIMEOUT = 30  # seconds
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
-
-
 class TimeoutException(Exception):
     """Exception raised when YARA compilation times out."""
-
-    pass
 
 
 def timeout_handler(_signum: int, _frame: Any) -> None:
     """Signal handler for compilation timeout (signal API mandates the args)."""
     raise TimeoutException("YARA compilation timed out")
 
-
 _COMPILED_CACHE: dict[str, Any] = {}
-
 
 def clear_yara_cache() -> None:
     """Clear the compiled YARA rules cache (useful for test isolation)."""
     _COMPILED_CACHE.clear()
-
 
 class YaraAnalyzer(CommandHelperMixin):
     """YARA rules analysis"""
