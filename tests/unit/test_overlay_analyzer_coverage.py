@@ -638,6 +638,18 @@ def test_build_overlay_suspicious_indicators_skips_malformed_items():
     assert any(item["indicator"] == "Suspicious strings" for item in indicators)
 
 
+def test_build_overlay_suspicious_indicators_handles_missing_embedded_offset():
+    result = {
+        "overlay_size": 0,
+        "overlay_entropy": 0.0,
+        "embedded_files": [{"type": "PE"}],
+        "patterns_found": [],
+        "extracted_strings": [],
+    }
+    indicators = build_overlay_suspicious_indicators(result)
+    assert any(item["indicator"] == "Embedded executable" for item in indicators)
+
+
 def test_build_overlay_suspicious_indicators_coerces_scalar_fields():
     result = {
         "overlay_size": "2097152",

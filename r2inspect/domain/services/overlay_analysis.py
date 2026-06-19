@@ -200,7 +200,7 @@ def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str
             suspicious.append(
                 _indicator(
                     "Embedded executable",
-                    f"{embedded['type']} at offset {embedded['offset']}",
+                    f"{embedded.get('type', 'unknown')} at offset {embedded.get('offset', 'unknown')}",
                     "high",
                 )
             )
