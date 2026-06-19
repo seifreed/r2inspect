@@ -3,6 +3,7 @@ from __future__ import annotations
 from r2inspect.domain.services.simhash import (
     build_feature_stats,
     build_similarity_groups,
+    extract_opcodes_from_ops,
     classify_opcode_type,
     get_length_category,
     interpret_similarity_distance,
@@ -96,3 +97,7 @@ def test_classify_opcode_type_and_length_category_skip_malformed_inputs() -> Non
     assert classify_opcode_type(123) == "other"
     assert get_length_category("12") == "medium"
     assert get_length_category("bad") == "short"
+
+
+def test_extract_opcodes_from_ops_rejects_non_list_input() -> None:
+    assert extract_opcodes_from_ops(None, max_instructions=10) == []  # type: ignore[arg-type]

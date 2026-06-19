@@ -126,6 +126,8 @@ def classify_opcode_type(mnemonic: str | Any) -> str:
 
 def extract_opcodes_from_ops(ops: list[Any], *, max_instructions: int) -> list[str]:
     opcodes: list[str] = []
+    if not isinstance(ops, list):
+        return opcodes
     for i, op in enumerate(ops):
         if i >= max_instructions:
             break
@@ -155,7 +157,7 @@ def _resolve_mnemonic(op: dict[str, Any]) -> str | None:
 
 
 def previous_mnemonic(ops: list[Any], index: int) -> str | None:
-    if index <= 0 or index >= len(ops):
+    if not isinstance(ops, list) or index <= 0 or index >= len(ops):
         return None
     prev_op = ops[index - 1]
     if isinstance(prev_op, dict):
