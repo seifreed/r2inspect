@@ -44,6 +44,17 @@ def test_build_analysis_result_maps_known_keys_to_typed_fields():
     assert result.execution_time == 1.5
 
 
+def test_build_analysis_result_accepts_iterable_functions():
+    raw = {
+        "file_info": {"name": "evil.exe"},
+        "functions": ({"name": "sub_1000", "size": 12}, {"name": "sub_2000", "size": 24}),
+    }
+
+    result = build_analysis_result(raw)
+
+    assert [func.name for func in result.functions] == ["sub_1000", "sub_2000"]
+
+
 def test_build_analysis_result_is_idempotent():
     raw = {"file_info": {"name": "x"}, "execution_time": 0.0}
     once = build_analysis_result(raw)

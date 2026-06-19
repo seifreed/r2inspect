@@ -54,12 +54,6 @@ def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
     if isinstance(raw, AnalysisResult):
         return raw
 
-    # Build functions list only when the raw value is a list of dicts
-    raw_functions = raw.get("functions")
-    functions_list: list[Any] = []
-    if isinstance(raw_functions, list):
-        functions_list = _build_list(raw_functions, build_function_info)
-
     return AnalysisResult(
         file_info=build_file_info(raw.get("file_info")),
         hashing=build_hashing_result(raw.get("hashing")),
@@ -69,7 +63,7 @@ def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
         sections=_build_list(raw.get("sections"), build_section_info),
         strings=raw.get("strings", []),
         yara_matches=_build_list(raw.get("yara_matches", raw.get("yara")), build_yara_match),
-        functions=functions_list,
+        functions=_build_list(raw.get("functions"), build_function_info),
         anti_analysis=build_anti_analysis(raw.get("anti_analysis")),
         packer=build_packer_result(raw.get("packer")),
         crypto=build_crypto_result(raw.get("crypto")),
