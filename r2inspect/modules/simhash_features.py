@@ -41,7 +41,13 @@ def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> lis
     try:
         strings_data = host._get_strings_data()
         if isinstance(strings_data, list):
-            host._collect_string_features(strings_data, string_features)
+            string_source = strings_data
+        elif isinstance(strings_data, (dict, str, bytes)) or not isinstance(strings_data, Iterable):
+            string_source = []
+        else:
+            string_source = list(strings_data)
+        if string_source:
+            host._collect_string_features(string_source, string_features)
         string_features.extend(host._extract_data_section_strings())
         logger.debug("Extracted %s string features", len(string_features))
         return string_features

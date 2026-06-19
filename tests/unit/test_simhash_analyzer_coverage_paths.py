@@ -8,7 +8,10 @@ import pytest
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.simhash import classify_opcode_type, previous_mnemonic
 from r2inspect.modules.simhash_analyzer import SIMHASH_AVAILABLE, SimHashAnalyzer
-from r2inspect.modules.simhash_features import extract_function_features as _extract_function_features_impl
+from r2inspect.modules.simhash_features import (
+    extract_function_features as _extract_function_features_impl,
+    extract_string_features as _extract_string_features_impl,
+)
 from r2inspect.testing.fake_r2 import FakeR2
 
 _logger = logging.getLogger(__name__)
@@ -145,6 +148,21 @@ def test_simhash_analyzer_extract_string_features_not_list() -> None:
     analyzer = _make_analyzer(cmdj_map={"izzj": {"not": "a list"}})
     result = analyzer._extract_string_features()
     assert result == []
+
+
+def test_simhash_analyzer_extract_string_features_accepts_iterable() -> None:
+    class _IterableStringsHost:
+        def _get_strings_data(self):
+            return ({"string": "valid_string"},)
+
+        def _collect_string_features(self, strings, out):
+            out.extend(["STR:valid_string"])
+
+        def _extract_data_section_strings(self):
+            return []
+
+    result = _extract_string_features_impl(_IterableStringsHost(), logger=_logger)
+    assert result == ["STR:valid_string"]
 
 
 def test_simhash_analyzer_extract_string_features_no_string_field() -> None:
