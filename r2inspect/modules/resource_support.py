@@ -277,7 +277,11 @@ def check_suspicious_resources(
             data = list(data)
         except TypeError:
             return None
-        return data if data and all(isinstance(value, int) for value in data) else None
+        return (
+            data
+            if data and all(isinstance(value, int) and 0 <= value <= 0xFF for value in data)
+            else None
+        )
 
     result["suspicious_resources"] = build_suspicious_resources(
         resources,

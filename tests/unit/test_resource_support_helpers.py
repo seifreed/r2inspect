@@ -102,6 +102,10 @@ def test_resource_support_helpers_reject_non_int_list_payloads() -> None:
     assert resource["hashes"] == {}
     assert read_resource_as_string(host, 0x1000, 8, logger=host) is None
 
+    result = {}
+    check_suspicious_resources(host, result, [resource])
+    assert result["suspicious_resources"] == []
+
 
 def test_resource_support_helpers_reject_out_of_range_byte_payloads() -> None:
     class _OutOfRangePayloadHost(_Host):
@@ -116,3 +120,7 @@ def test_resource_support_helpers_reject_out_of_range_byte_payloads() -> None:
     assert resource["entropy"] == 0.0
     assert resource["hashes"] == {}
     assert read_resource_as_string(host, 0x1000, 4, logger=host) is None
+
+    result = {}
+    check_suspicious_resources(host, result, [resource])
+    assert result["suspicious_resources"] == []
