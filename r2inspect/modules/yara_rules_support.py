@@ -52,9 +52,14 @@ def compile_sources_with_timeout(
 def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
     try:
-        if not isinstance(yara_matches, list):
-            return matches
-        for match in yara_matches:
+        if isinstance(yara_matches, list):
+            match_source = yara_matches
+        else:
+            try:
+                match_source = list(yara_matches)
+            except TypeError:
+                return matches
+        for match in match_source:
             if not hasattr(match, "rule") or not hasattr(match, "strings"):
                 continue
             tags = getattr(match, "tags", [])

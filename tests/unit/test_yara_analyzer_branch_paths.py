@@ -534,6 +534,23 @@ def test_process_matches_contains_string_instances(tmp_path):
     assert "length" in instances[0]
 
 
+def test_process_matches_normalizes_iterable_matches(tmp_path):
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"hello world content")
+
+    analyzer = make_analyzer(str(tmp_path / "rules"))
+
+    import yara as _yara
+
+    compiled = _yara.compile(source=SIMPLE_RULE)
+    raw_matches = compiled.match(str(sample))
+
+    result = analyzer._process_matches((match for match in raw_matches))
+
+    assert isinstance(result, list)
+    assert len(result) >= 1
+
+
 # ---------------------------------------------------------------------------
 # YaraAnalyzer.create_default_rules
 # ---------------------------------------------------------------------------
