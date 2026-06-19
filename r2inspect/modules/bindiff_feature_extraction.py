@@ -90,7 +90,7 @@ def _structural_imports(imports: list[dict[str, Any]]) -> dict[str, Any]:
     valid_imports = [imp for imp in imports if isinstance(imp, dict)]
     return {
         "import_count": len(valid_imports),
-        "imported_dlls": list(
+        "imported_dlls": sorted(
             {
                 dll
                 for imp in valid_imports

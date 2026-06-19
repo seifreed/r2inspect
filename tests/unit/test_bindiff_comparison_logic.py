@@ -500,6 +500,24 @@ def test_extract_structural_features_imported_dlls_unique():
     assert "user32.dll" in result["imported_dlls"]
 
 
+def test_extract_structural_features_imported_dlls_sorted():
+    """Test _extract_structural_features returns DLLs in deterministic order."""
+    cmdj_map = {
+        "ij": {},
+        "iSj": [],
+        "iij": [
+            {"libname": "user32.dll", "name": "MessageBoxA"},
+            {"libname": "kernel32.dll", "name": "CreateFileA"},
+        ],
+        "iEj": [],
+    }
+    analyzer = _make_analyzer(cmdj_map=cmdj_map)
+
+    result = analyzer._extract_structural_features()
+
+    assert result["imported_dlls"] == ["kernel32.dll", "user32.dll"]
+
+
 # ---- Full integration ----
 
 
