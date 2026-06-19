@@ -1,14 +1,8 @@
-"""Authenticode signature analyzer."""
-
-import hashlib
-import struct
-from datetime import datetime
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
-from ..infrastructure.r2_suppress import silent_cmdj
 from .authenticode_parsing_support import (
     get_security_directory as _get_security_directory_impl,
     parse_pkcs7 as _parse_pkcs7_impl,
@@ -41,25 +35,11 @@ def _list_bucket(result: dict[str, Any], key: str) -> list[Any]:
 
 
 class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
-    """Analyzes and verifies Authenticode signatures in PE files."""
-
     def __init__(self, adapter: Any) -> None:
-        """
-        Initialize the Authenticode analyzer.
-
-        Args:
-            r2: Radare2 instance
-        """
         super().__init__(adapter=adapter)
         self.pe_info = None
 
     def analyze(self) -> dict[str, Any]:
-        """
-        Analyze Authenticode signature in the PE file.
-
-        Returns:
-            Dictionary containing signature information
-        """
         result: dict[str, Any] = {}
         try:
             result = _init_authenticode_result_impl(self._init_result_structure)
@@ -133,7 +113,6 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return cert_length, cert_revision, cert_type
 
     def _get_cert_type_name(self, cert_type: int) -> str:
-        """Get certificate type name."""
         types = {
             0x0001: "X.509",
             0x0002: "PKCS#7",
@@ -143,7 +122,6 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return types.get(cert_type, f"UNKNOWN ({hex(cert_type)})")
 
     def _parse_pkcs7(self, offset: int, size: int) -> dict[str, Any] | None:
-        """Parse PKCS#7 signature data."""
         return _parse_pkcs7_impl(
             cmdj=self._cmdj,
             offset=offset,
@@ -216,13 +194,11 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return self._find_pattern(pkcs7_data, timestamp_oid)
 
     def _find_pattern(self, data: list[int], pattern: list[int]) -> bool:
-        """Find a byte pattern in data."""
         pattern_len = len(pattern)
         data_len = len(data)
         return any(data[i : i + pattern_len] == pattern for i in range(data_len - pattern_len + 1))
 
     def _find_all_patterns(self, data: list[int], pattern: list[int]) -> list[int]:
-        """Find all occurrences of a byte pattern in data."""
         positions = []
         pattern_len = len(pattern)
         data_len = len(data)
@@ -232,7 +208,6 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return positions
 
     def _compute_authenticode_hash(self) -> dict[str, Any] | None:
-        """Compute the Authenticode hash of the PE file."""
         try:
             file_info = self._cmdj("ij", {})
             if not file_info:
@@ -260,7 +235,6 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return None
 
     def _verify_signature_integrity(self, signature_info: dict[str, Any]) -> bool:
-        """Verify the integrity of the signature."""
         try:
             if not signature_info.get("has_signature"):
                 return False
@@ -273,11 +247,3 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         except Exception as exc:
             logger.error("Error verifying signature: %s", exc)
             return False
-
-
-__all__ = [
-    "datetime",
-    "hashlib",
-    "silent_cmdj",
-    "struct",
-]
