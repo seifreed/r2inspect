@@ -33,6 +33,8 @@ def _to_int(value: Any) -> int:
 def _coerce_list(raw: Any) -> list[Any]:
     if isinstance(raw, list):
         return raw
+    if isinstance(raw, (dict, str, bytes)):
+        return []
     try:
         return list(raw)
     except TypeError:

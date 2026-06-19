@@ -115,6 +115,17 @@ def test_analyze_sections_handles_empty_sections():
     assert sections == []
 
 
+def test_analyze_sections_rejects_dict_sections():
+    class _DictSectionsAnalyzer(SectionAnalyzer):
+        def _cmd_list(self, command: str):  # type: ignore[override]
+            if command == "iSj":
+                return {"sections": [{"name": ".text", "vaddr": 0, "vsize": 100, "size": 100, "flags": "r-x"}]}
+            return []
+
+    analyzer = _DictSectionsAnalyzer(adapter=R2PipeAdapter(FakeR2()), config=None)
+    assert analyzer.analyze_sections() == []
+
+
 def test_analyze_sections_accepts_iterable_cmd_list_sections():
     analyzer = IterableCmdListSectionAnalyzer(
         adapter=R2PipeAdapter(FakeR2()),
