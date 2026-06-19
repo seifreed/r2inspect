@@ -439,7 +439,11 @@ def test_extract_printable_strings_rejects_non_int_min_length():
 
 
 def test_extract_printable_strings_skips_out_of_range_values():
-    assert extract_printable_strings([65, 300, 66], min_length=1) == ["AB"]
+    assert extract_printable_strings([65, 300, 66], min_length=1) == ["A", "B"]
+
+
+def test_extract_printable_strings_breaks_on_non_int_values():
+    assert extract_printable_strings([65, "66", 67], min_length=1) == ["A", "C"]
 
 
 def test_suspicious_section_name_with_common_section():

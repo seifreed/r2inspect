@@ -70,18 +70,18 @@ def extract_printable_strings(
     strings: list[str] = []
     current: list[str] = []
     for byte in data:
-        try:
-            byte_val = int(byte) if not isinstance(byte, int) else byte
-        except (ValueError, TypeError):
+        if not isinstance(byte, int) or byte < 0 or byte > 0xFF:
+            if len(current) >= min_length:
+                strings.append("".join(current))
+            current = []
             continue
-        if byte_val < 0 or byte_val > 0xFF:
+        byte_val = byte
+        if byte_val < 32 or byte_val > 126:
+            if len(current) >= min_length:
+                strings.append("".join(current))
+            current = []
             continue
-        if 32 <= byte_val <= 126:
-            current.append(chr(byte_val))
-            continue
-        if len(current) >= min_length:
-            strings.append("".join(current))
-        current = []
+        current.append(chr(byte_val))
     if len(current) >= min_length:
         strings.append("".join(current))
     return strings if limit is None else strings[:limit]
