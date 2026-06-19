@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,12 @@ class ResourceParsingMixin:
     def _get_resource_directory(self) -> dict[str, Any] | None:
         try:
             data_dirs = self._cmdj("iDj", [])
-            if not data_dirs or not isinstance(data_dirs, list):
+            if not data_dirs or isinstance(data_dirs, (dict, str, bytes)):
                 return None
+            if not isinstance(data_dirs, list):
+                if not isinstance(data_dirs, Iterable):
+                    return None
+                data_dirs = list(data_dirs)
 
             for dd in data_dirs:
                 if (
@@ -104,8 +109,12 @@ class ResourceParsingMixin:
 
     def _get_rsrc_section(self) -> dict[str, Any] | None:
         sections = self._cmdj("iSj", [])
-        if not sections or not isinstance(sections, list):
+        if not sections or isinstance(sections, (dict, str, bytes)):
             return None
+        if not isinstance(sections, list):
+            if not isinstance(sections, Iterable):
+                return None
+            sections = list(sections)
         for section in sections:
             name = section.get("name") if isinstance(section, dict) else None
             if isinstance(name, str) and ".rsrc" in name:

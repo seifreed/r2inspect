@@ -82,6 +82,18 @@ def test_get_resource_directory_skips_non_resource_entries_then_finds_resource()
     assert result["virtual_address"] == 0x3000
 
 
+def test_get_resource_directory_normalizes_iterable_input():
+    analyzer = make_analyzer(
+        data_directories=(
+            {"name": "IMPORT", "vaddr": 0x2000, "paddr": 0x1500, "size": 100},
+            {"name": "RESOURCE", "vaddr": 0x3000, "paddr": 0x2000, "size": 200},
+        )
+    )
+    result = analyzer._get_resource_directory()
+    assert result is not None
+    assert result["virtual_address"] == 0x3000
+
+
 def test_get_resource_directory_returns_none_when_vaddr_is_zero():
     analyzer = make_analyzer(
         data_directories=[{"name": "RESOURCE", "vaddr": 0, "paddr": 0x800, "size": 200}]
@@ -245,6 +257,18 @@ def test_get_rsrc_section_returns_none_when_not_found():
 def test_get_rsrc_section_returns_none_when_sections_not_list():
     analyzer = make_analyzer(sections={"not": "a list"})
     assert analyzer._get_rsrc_section() is None
+
+
+def test_get_rsrc_section_normalizes_iterable_input():
+    analyzer = make_analyzer(
+        sections=(
+            {"name": ".text", "paddr": 0x400},
+            {"name": ".rsrc", "paddr": 0x2000, "size": 512},
+        )
+    )
+    result = analyzer._get_rsrc_section()
+    assert result is not None
+    assert result["paddr"] == 0x2000
 
 
 # ---------------------------------------------------------------------------
