@@ -16,6 +16,7 @@ from r2inspect.core.result_aggregator import (
 )
 from r2inspect.core.result_aggregator_indicator_support import generate_indicators
 from r2inspect.core.result_aggregator_recommendation_support import generate_recommendations
+from r2inspect.schemas import results as results_schema
 
 
 def test_normalize_results_with_full_data():
@@ -534,6 +535,18 @@ def test_count_crypto_indicators_no_matches():
     crypto = {"matches": []}
     count = _count_crypto_indicators(crypto)
     assert count == 0
+
+
+def test_count_crypto_indicators_accepts_typed_crypto_result():
+    analysis = results_schema.AnalysisResult(
+        crypto=results_schema.CryptoResult(
+            algorithms=[{"name": "AES"}],
+            constants=[{"name": "SBOX"}],
+            functions=["encrypt"],
+        )
+    )
+
+    assert _count_crypto_indicators(analysis.to_dict()["crypto"]) == 3
 
 
 def test_generate_recommendations_packed():

@@ -94,7 +94,23 @@ def _count_suspicious_sections(sections: list[dict[str, Any]]) -> int:
 
 def _count_crypto_indicators(crypto: dict[str, Any]) -> int:
     """Count crypto-related matches present in the analysis payload."""
-    return len(crypto.get("matches", []))
+    matches = crypto.get("matches", [])
+    if isinstance(matches, list):
+        match_count = len(matches)
+    elif isinstance(matches, (dict, str, bytes)) or not isinstance(matches, Iterable):
+        match_count = 0
+    else:
+        match_count = sum(1 for _ in matches)
+    if match_count:
+        return match_count
+    total = 0
+    for key in ("algorithms", "constants", "functions"):
+        value = crypto.get(key, [])
+        if isinstance(value, list):
+            total += len(value)
+        elif not isinstance(value, (dict, str, bytes)) and isinstance(value, Iterable):
+            total += sum(1 for _ in value)
+    return total
 
 
 def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
