@@ -139,6 +139,11 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         imports: list[dict[str, Any]] = []
         try:
             imports = self.get_imports()
+            if not isinstance(imports, list):
+                try:
+                    imports = list(imports)
+                except TypeError:
+                    imports = []
             return build_import_statistics(imports)
         except Exception as exc:
             logger.error(

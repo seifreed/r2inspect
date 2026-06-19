@@ -250,6 +250,12 @@ def test_get_import_statistics_exception_returns_default_stats():
     assert result["suspicious_patterns"] == []
 
 
+def test_get_import_statistics_normalizes_iterable_imports():
+    analyzer = _IterableImportsAnalyzer(adapter=None)
+    result = analyzer.get_import_statistics()
+    assert result["total_imports"] == 1
+
+
 # ---------------------------------------------------------------------------
 # get_missing_imports - line 252: else branch (no adapter.get_strings)
 # ---------------------------------------------------------------------------
