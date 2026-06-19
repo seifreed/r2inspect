@@ -84,7 +84,11 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
             match_info = {
                 "rule": str(getattr(match, "rule", "")),
                 "namespace": str(getattr(match, "namespace", "")),
-                "tags": list(tags) if isinstance(tags, (list, tuple, set)) else [],
+                "tags": list(tags)
+                if isinstance(tags, list)
+                else []
+                if isinstance(tags, (dict, str, bytes)) or not isinstance(tags, Iterable)
+                else list(tags),
                 "meta": dict(meta) if isinstance(meta, dict) else {},
                 "strings": [],
             }

@@ -155,6 +155,7 @@ def test_process_matches_accepts_iterable_nested_fields() -> None:
             self.strings = (StringMatch(),)
 
     result = process_matches([Match()], get_logger(__name__))
+    assert result[0]["tags"] == ["tag1"]
     assert result[0]["strings"][0]["instances"][0]["matched_data"] == "abc"
 
 
