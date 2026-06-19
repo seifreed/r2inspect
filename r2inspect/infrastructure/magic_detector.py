@@ -24,8 +24,6 @@ logger = get_logger(__name__)
 
 
 class MagicByteDetector:
-    """Enhanced file type detection with precise magic byte patterns."""
-
     MAGIC_PATTERNS: dict[str, dict[str, Any]] = _MAGIC_PATTERNS
     _EXEC_EXTRA = ("SWF", "JAVA_CLASS", "DEX")
     # Bound the cache: ``global_detector`` is process-global and gets one entry
