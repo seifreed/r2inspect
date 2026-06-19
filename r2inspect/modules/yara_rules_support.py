@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import signal
 import threading
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,8 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
     try:
         if isinstance(yara_matches, list):
             match_source = yara_matches
+        elif isinstance(yara_matches, (dict, str, bytes)) or not isinstance(yara_matches, Iterable):
+            return matches
         else:
             try:
                 match_source = list(yara_matches)
@@ -72,8 +75,12 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
             tags = getattr(match, "tags", [])
             meta = getattr(match, "meta", {})
             strings = getattr(match, "strings", [])
-            if not isinstance(strings, (list, tuple)):
+            if isinstance(strings, list):
+                string_source = strings
+            elif isinstance(strings, (dict, str, bytes)) or not isinstance(strings, Iterable):
                 continue
+            else:
+                string_source = list(strings)
             match_info = {
                 "rule": str(getattr(match, "rule", "")),
                 "namespace": str(getattr(match, "namespace", "")),
@@ -81,14 +88,18 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
                 "meta": dict(meta) if isinstance(meta, dict) else {},
                 "strings": [],
             }
-            for string_match in strings:
+            for string_match in string_source:
                 if not hasattr(string_match, "identifier") or not hasattr(string_match, "instances"):
                     continue
                 instances = getattr(string_match, "instances", [])
-                if not isinstance(instances, (list, tuple)):
+                if isinstance(instances, list):
+                    instance_source = instances
+                elif isinstance(instances, (dict, str, bytes)) or not isinstance(instances, Iterable):
                     continue
+                else:
+                    instance_source = list(instances)
                 string_info = {"identifier": string_match.identifier, "instances": []}
-                for instance in instances:
+                for instance in instance_source:
                     if not hasattr(instance, "offset") or not hasattr(instance, "matched_data"):
                         continue
                     matched_data_raw = instance.matched_data

@@ -134,6 +134,30 @@ def test_process_matches_non_list_returns_empty() -> None:
     assert process_matches(None, get_logger(__name__)) == []
 
 
+def test_process_matches_accepts_iterable_nested_fields() -> None:
+    class Instance:
+        def __init__(self) -> None:
+            self.offset = 7
+            self.matched_data = b"abc"
+            self.length = 3
+
+    class StringMatch:
+        def __init__(self) -> None:
+            self.identifier = "$a"
+            self.instances = (Instance(),)
+
+    class Match:
+        def __init__(self) -> None:
+            self.rule = "Demo"
+            self.namespace = "default"
+            self.tags = ("tag1",)
+            self.meta = {"key": "value"}
+            self.strings = (StringMatch(),)
+
+    result = process_matches([Match()], get_logger(__name__))
+    assert result[0]["strings"][0]["instances"][0]["matched_data"] == "abc"
+
+
 def test_discover_rule_files_non_list_patterns_returns_empty(tmp_path: Path) -> None:
     """Invalid YARA glob input is ignored instead of raising."""
     assert discover_rule_files(tmp_path, None) == []
