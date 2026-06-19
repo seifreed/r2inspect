@@ -79,6 +79,12 @@ def analyze_resource_data(
         if offset == 0 or size == 0:
             return
         data = analyzer._cmdj(f"pxj {size} @ {offset}", [])
+        if isinstance(data, (dict, str, bytes)):
+            return
+        try:
+            data = list(data)
+        except TypeError:
+            return
         if not data:
             return
         resource["entropy"] = analyzer._calculate_entropy(data)
@@ -103,6 +109,12 @@ def read_resource_as_string(
             return None
         read_size = min(size, 8192)
         data = analyzer._cmdj(f"pxj {read_size} @ {offset}", [])
+        if isinstance(data, (dict, str, bytes)):
+            return None
+        try:
+            data = list(data)
+        except TypeError:
+            return None
         if not data:
             return None
         return decode_resource_text(bytes(data))
@@ -251,8 +263,17 @@ def check_suspicious_resources(
 ) -> None:
     result["suspicious_resources"] = build_suspicious_resources(
         resources,
-        lambda resource: analyzer._cmdj(
-            f"pxj 2 @ {_coerce_resource_int(resource, 'offset') or 0}",
-            [],
+        lambda resource: (
+            None
+            if isinstance(
+                data := analyzer._cmdj(
+                    f"pxj 2 @ {_coerce_resource_int(resource, 'offset') or 0}",
+                    [],
+                ),
+                (dict, str, bytes),
+            )
+            else list(data)
+            if hasattr(data, "__iter__")
+            else None
         ),
     )
