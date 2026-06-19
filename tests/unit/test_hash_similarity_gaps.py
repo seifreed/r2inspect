@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from r2inspect.infrastructure.logging import get_logger
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.yara_rules_support import (
@@ -122,11 +124,11 @@ def test_extract_rich_header_returns_data_via_r2pipe_path() -> None:
 
 
 def test_list_available_rules_outer_exception_returns_empty(tmp_path: Path) -> None:
-    """The outer except returns an empty list when rule discovery raises."""
+    """Invalid glob patterns should surface instead of being swallowed."""
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
-    result = list_available_rules(str(rules_dir), ["/abs"], get_logger(__name__))
-    assert result == []
+    with pytest.raises(NotImplementedError):
+        list_available_rules(str(rules_dir), ["/abs"], get_logger(__name__))
 
 
 def test_process_matches_non_list_returns_empty() -> None:

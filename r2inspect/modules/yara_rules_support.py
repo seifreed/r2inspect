@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import signal
 import threading
+import stat as stat_module
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -128,42 +129,41 @@ def list_available_rules(
     rules_path: str, yara_extensions: list[str], logger: Any
 ) -> list[dict[str, Any]]:
     available_rules: list[dict[str, Any]] = []
+    path = Path(rules_path)
     try:
-        if not os.path.exists(rules_path):
-            logger.warning("YARA rules path not found: %s", rules_path)
-            return available_rules
-        if os.path.isfile(rules_path):
-            stat = os.stat(rules_path)
-            available_rules.append(
-                {
-                    "name": Path(rules_path).name,
-                    "path": rules_path,
-                    "size": stat.st_size,
-                    "modified": stat.st_mtime,
-                    "type": "single_file",
-                }
-            )
-            return available_rules
-        if os.path.isdir(rules_path):
-            for extension in _coerce_extensions(yara_extensions):
-                for rule_file in Path(rules_path).rglob(extension):
-                    try:
-                        stat = rule_file.stat()
-                        relative_path = rule_file.relative_to(Path(rules_path))
-                        available_rules.append(
-                            {
-                                "name": rule_file.name,
-                                "path": str(rule_file),
-                                "relative_path": str(relative_path),
-                                "size": stat.st_size,
-                                "modified": stat.st_mtime,
-                                "type": "directory_file",
-                            }
-                        )
-                    except Exception as exc:
-                        logger.warning("Error reading file info for %s: %s", rule_file, exc)
-                        continue
-        logger.info("Found %s YARA rule files total", len(available_rules))
-    except Exception as exc:
-        logger.error("Error listing YARA rules: %s", exc)
+        path_stat = path.stat()
+    except (FileNotFoundError, ValueError):
+        logger.warning("YARA rules path not found: %s", rules_path)
+        return available_rules
+    if stat_module.S_ISREG(path_stat.st_mode):
+        available_rules.append(
+            {
+                "name": path.name,
+                "path": rules_path,
+                "size": path_stat.st_size,
+                "modified": path_stat.st_mtime,
+                "type": "single_file",
+            }
+        )
+        return available_rules
+    if stat_module.S_ISDIR(path_stat.st_mode):
+        for extension in _coerce_extensions(yara_extensions):
+            for rule_file in path.rglob(extension):
+                try:
+                    file_stat = rule_file.stat()
+                    relative_path = rule_file.relative_to(path)
+                    available_rules.append(
+                        {
+                            "name": rule_file.name,
+                            "path": str(rule_file),
+                            "relative_path": str(relative_path),
+                            "size": file_stat.st_size,
+                            "modified": file_stat.st_mtime,
+                            "type": "directory_file",
+                        }
+                    )
+                except Exception as exc:
+                    logger.warning("Error reading file info for %s: %s", rule_file, exc)
+                    continue
+    logger.info("Found %s YARA rule files total", len(available_rules))
     return available_rules

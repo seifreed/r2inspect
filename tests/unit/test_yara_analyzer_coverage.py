@@ -1053,24 +1053,22 @@ def test_list_available_rules_exception_handler():
 
 
 def test_list_available_rules_outer_exception_from_stat(tmp_path):
-    """Cover lines 415-416: outer exception when os.stat raises for single file."""
-    import os
-
+    """Cover the single-file os.stat error path in list_available_rules."""
     rule_file = tmp_path / "test.yar"
     rule_file.write_text(SIMPLE_YARA_RULE)
 
-    original_stat = os.stat
+    original_stat = Path.stat
 
-    def stat_that_raises(path, **kwargs):
-        if str(path) == str(rule_file):
+    def stat_that_raises(self, **kwargs):
+        if self == rule_file:
             raise OSError("simulated stat error")
-        return original_stat(path, **kwargs)
+        return original_stat(self, **kwargs)
 
-    os.stat = stat_that_raises
+    Path.stat = stat_that_raises
     try:
         config = FakeConfig(str(tmp_path))
         analyzer = YaraAnalyzer(FakeAdapter(), config=config)
-        result = analyzer.list_available_rules(str(rule_file))
-        assert isinstance(result, list)
+        with pytest.raises(OSError, match="simulated stat error"):
+            analyzer.list_available_rules(str(rule_file))
     finally:
-        os.stat = original_stat
+        Path.stat = original_stat
