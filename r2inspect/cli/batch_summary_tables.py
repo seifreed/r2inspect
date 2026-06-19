@@ -60,7 +60,7 @@ def simplify_file_type(file_type: str) -> str:
 
 
 def extract_compile_time(result: dict[str, Any]) -> str:
-    for key in ("pe_info", "elf_info", "macho_info"):
+    for key in ("pe_info", "elf_info", "macho_info", "file_info"):
         info = result.get(key)
         if not isinstance(info, dict):
             continue

@@ -375,6 +375,13 @@ def test_extract_compile_time_missing():
     assert compile_time == "N/A"
 
 
+def test_extract_compile_time_file_info():
+    """Test compile time extraction from file info."""
+    result_data = {"file_info": {"compile_time": "2024-05-01"}}
+    compile_time = _extract_compile_time(result_data)
+    assert compile_time == "2024-05-01"
+
+
 def test_compiler_name_detected():
     """Test compiler name extraction when detected"""
     result_data = {
