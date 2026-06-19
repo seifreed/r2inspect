@@ -383,6 +383,23 @@ def test_build_technical_details_accepts_function_lists():
     assert details["functions"] == 3
 
 
+def test_build_technical_details_counts_typed_crypto_payload():
+    details = _build_technical_details(
+        {
+            "imports": [],
+            "sections": [],
+            "functions": {},
+            "crypto": {
+                "algorithms": [{"name": "AES"}],
+                "constants": [{"name": "SBOX"}],
+                "functions": ["encrypt"],
+            },
+        }
+    )
+
+    assert details["crypto_matches"] == 3
+
+
 def test_build_technical_details_empty():
     results = {
         "imports": [],

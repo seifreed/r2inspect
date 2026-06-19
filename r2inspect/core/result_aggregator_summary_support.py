@@ -188,7 +188,7 @@ def build_technical_details(analysis_results: dict[str, Any]) -> dict[str, Any]:
         "imports": len(_list_bucket(analysis_results, "imports")),
         "sections": len(_list_bucket(analysis_results, "sections")),
         "functions": function_count,
-        "crypto_matches": len(crypto.get("matches", [])),
+        "crypto_matches": _count_crypto_indicators(crypto),
     }
 
 
