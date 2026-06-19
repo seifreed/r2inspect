@@ -195,7 +195,9 @@ def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
         if size is None:
             return None
         data = adapter.read_bytes(address, size)
-        return data.hex() if data else ""
+        if not isinstance(data, (bytes, bytearray)) or not data:
+            return ""
+        return data.hex()
     return None
 
 

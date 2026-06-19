@@ -524,6 +524,15 @@ def test_handle_bytes_p8_empty_data_returns_empty_string():
     assert result == ""
 
 
+def test_handle_bytes_p8_rejects_text_payload():
+    class TextBytesAdapter:
+        def read_bytes(self, addr, size):
+            return "bad"
+
+    result = _handle_bytes(TextBytesAdapter(), "p8 4", 0x1000)
+    assert result == ""
+
+
 def test_handle_bytes_pxj_with_size():
     result = _handle_bytes(BytesAdapter(), "pxj 3", 0x2000)
     assert result == [0, 1, 2]
