@@ -37,7 +37,14 @@ def flatten_results(data: Any, prefix: str = "") -> list[dict[str, str]]:
             rows.extend(flatten_results(value, next_prefix))
         return rows
     if isinstance(data, list):
-        for idx, value in enumerate(data):
+        sequence = data
+    elif isinstance(data, (dict, str, bytes)) or not isinstance(data, Iterable):
+        rows.append({"field": prefix, "value": str(data)})
+        return rows
+    else:
+        sequence = list(data)
+    if sequence:
+        for idx, value in enumerate(sequence):
             next_prefix = f"{prefix}[{idx}]"
             rows.extend(flatten_results(value, next_prefix))
         return rows

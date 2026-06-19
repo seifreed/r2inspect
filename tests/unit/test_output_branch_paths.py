@@ -405,6 +405,14 @@ def test_flatten_results_flattens_dict_and_list() -> None:
     assert {"field": "outer[1].inner", "value": "1"} in rows
 
 
+def test_flatten_results_flattens_iterable_values() -> None:
+    formatter = _make_formatter()
+    nested = {"outer": ("leaf", {"inner": 1})}
+    rows = formatter._flatten_results(nested)
+    assert {"field": "outer[0]", "value": "leaf"} in rows
+    assert {"field": "outer[1].inner", "value": "1"} in rows
+
+
 def test_flatten_results_flattens_scalar_value() -> None:
     formatter = _make_formatter()
     rows = formatter._flatten_results(123, prefix="value")
