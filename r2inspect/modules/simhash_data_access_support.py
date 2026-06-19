@@ -54,4 +54,9 @@ def extract_ops_from_disasm(disasm: Any) -> list[Any]:
         return cast(list[Any], disasm["ops"])
     if isinstance(disasm, list):
         return disasm
-    return []
+    if isinstance(disasm, (dict, str, bytes)):
+        return []
+    try:
+        return list(disasm)
+    except TypeError:
+        return []

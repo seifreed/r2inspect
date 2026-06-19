@@ -700,6 +700,13 @@ def test_simhash_analyzer_extract_ops_from_disasm_list() -> None:
     assert len(result) == 1
 
 
+def test_simhash_analyzer_extract_ops_from_disasm_iterable() -> None:
+    analyzer = _make_analyzer()
+    disasm = (op for op in [{"mnemonic": "mov"}, {"mnemonic": "ret"}])
+    result = analyzer._extract_ops_from_disasm(disasm)
+    assert len(result) == 2
+
+
 def test_simhash_analyzer_extract_ops_from_disasm_invalid() -> None:
     analyzer = _make_analyzer()
     disasm = {"not": "ops"}
