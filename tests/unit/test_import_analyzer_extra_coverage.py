@@ -624,6 +624,14 @@ def test_populate_import_statistics_skips_non_dict_buckets():
     assert result["statistics"]["risk_level"] == "LOW"
 
 
+def test_populate_import_statistics_rejects_non_dict_result():
+    populate_import_statistics(
+        None,  # type: ignore[arg-type]
+        get_risk_level_fn=lambda _score: "LOW",
+        count_suspicious_indicators_fn=lambda _result: 0,
+    )
+
+
 def test_populate_import_statistics_skips_non_list_suspicious_dlls():
     result = {
         "api_analysis": {"risk_score": 10},
