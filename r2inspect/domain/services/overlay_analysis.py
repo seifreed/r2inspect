@@ -122,11 +122,17 @@ def determine_overlay_type(patterns: list[dict[str, Any]], data: list[int]) -> s
             return "padding"
         return "data"
     for pattern in patterns:
-        if pattern["type"] == "installer":
-            return f"installer ({pattern['name']})"
+        if not isinstance(pattern, dict):
+            continue
+        if pattern.get("type") == "installer":
+            return f"installer ({pattern.get('name', 'unknown')})"
     type_counts: dict[str, int] = {}
     for pattern in patterns:
-        pattern_type = pattern["type"]
+        if not isinstance(pattern, dict):
+            continue
+        pattern_type = pattern.get("type")
+        if not isinstance(pattern_type, str):
+            continue
         type_counts[pattern_type] = type_counts.get(pattern_type, 0) + 1
     if type_counts:
         return max(type_counts, key=lambda k: type_counts[k])

@@ -679,6 +679,13 @@ def test_build_overlay_suspicious_indicators_non_dict_returns_empty():
     assert build_overlay_suspicious_indicators(None) == []  # type: ignore[arg-type]
 
 
+def test_determine_overlay_type_ignores_malformed_pattern_entries():
+    from r2inspect.domain.services.overlay_analysis import determine_overlay_type
+
+    assert determine_overlay_type([{"type": "installer"}], [0x00]) == "installer (unknown)"
+    assert determine_overlay_type([{"name": "missing type"}, "bad"], [0x00]) == "unknown"
+
+
 # ── _default_result ─────────────────────────────────────────────────
 
 
