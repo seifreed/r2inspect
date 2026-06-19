@@ -4,7 +4,11 @@
 import logging
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.domain.formats.import_analysis import assess_api_risk, categorize_apis
+from r2inspect.domain.formats.import_analysis import (
+    assess_api_risk,
+    categorize_apis,
+    find_max_risk_score,
+)
 from r2inspect.domain.services.import_analysis import build_import_statistics, find_suspicious_patterns
 from r2inspect.modules.import_analyzer import ImportAnalyzer
 from r2inspect.modules.import_categories import get_api_categories
@@ -654,3 +658,9 @@ def test_populate_import_statistics_coerces_numeric_strings():
     )
 
     assert result["statistics"]["total_risk_score"] == 9.5
+
+
+def test_find_max_risk_score_skips_non_string_api_names():
+    score, tags = find_max_risk_score("CreateFileA", {"File I/O": {123: (50, "Tag")}})
+    assert score == 0
+    assert tags == []

@@ -171,6 +171,8 @@ def find_max_risk_score(
         if not isinstance(api_dict, dict):
             continue
         for api_name, api_data in api_dict.items():
+            if not isinstance(api_name, str):
+                continue
             if not isinstance(api_data, tuple) or len(api_data) < 2:
                 continue
             score, tag = api_data[:2]
