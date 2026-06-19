@@ -848,6 +848,21 @@ def test_analyze_function_coverage_accepts_string_sizes_and_blocks():
     assert result["avg_function_size"] == pytest.approx(140.0)
 
 
+def test_analyze_function_coverage_accepts_iterable_input():
+    funcs = (
+        func
+        for func in [
+            {"name": "f1", "size": 200, "nbbs": 4},
+            "skip",
+            {"name": "f2", "size": 80, "nbbs": 0},
+        ]
+    )
+    result = analyze_function_coverage(funcs)
+    assert result["total_functions"] == 2
+    assert result["functions_with_size"] == 2
+    assert result["functions_with_blocks"] == 1
+
+
 def test_analyze_function_coverage_percentages_are_calculated():
     funcs = [{"name": "f1", "size": 100, "nbbs": 1}]
     result = analyze_function_coverage(funcs)

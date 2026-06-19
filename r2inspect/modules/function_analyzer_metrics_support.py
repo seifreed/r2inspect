@@ -8,6 +8,15 @@ from ..domain.services.function_analysis import build_function_stats
 from .function_analyzer_extraction_support import coerce_positive_int
 
 
+def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
+    if isinstance(functions, list):
+        return [func for func in functions if isinstance(func, dict)]
+    try:
+        return [func for func in list(functions) if isinstance(func, dict)]
+    except TypeError:
+        return []
+
+
 def generate_function_stats(functions: list[dict[str, Any]], logger: Any) -> dict[str, Any]:
     try:
         return build_function_stats(functions)
@@ -31,9 +40,7 @@ def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int
     with_size = 0
     with_blocks = 0
     sizes: list[int] = []
-    if not isinstance(functions, list):
-        return with_size, with_blocks, sizes
-    for func in functions:
+    for func in _coerce_function_list(functions):
         if not isinstance(func, dict):
             continue
         size = coerce_positive_int(func.get("size"))
@@ -47,10 +54,19 @@ def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int
 
 def analyze_function_coverage(functions: Any) -> dict[str, Any]:
     try:
-        if not isinstance(functions, list):
+        if isinstance(functions, list) and not functions:
+            return {
+                "total_functions": 0,
+                "functions_with_size": 0,
+                "functions_with_blocks": 0,
+                "total_code_coverage": 0,
+                "avg_function_size": 0,
+            }
+        normalized = _coerce_function_list(functions)
+        if not normalized:
             return {}
-        total = len(functions)
-        with_size, with_blocks, sizes = _accumulate_function_stats(functions)
+        total = len(normalized)
+        with_size, with_blocks, sizes = _accumulate_function_stats(normalized)
         coverage: dict[str, Any] = {
             "total_functions": total,
             "functions_with_size": with_size,
