@@ -61,7 +61,7 @@ def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
         imports=_build_list(raw.get("imports"), build_import_info),
         exports=_build_list(raw.get("exports"), build_export_info),
         sections=_build_list(raw.get("sections"), build_section_info),
-        strings=raw.get("strings", []),
+        strings=_build_list(raw.get("strings"), lambda value: value),
         yara_matches=_build_list(raw.get("yara_matches", raw.get("yara")), build_yara_match),
         functions=_build_list(raw.get("functions"), build_function_info),
         anti_analysis=build_anti_analysis(raw.get("anti_analysis")),
