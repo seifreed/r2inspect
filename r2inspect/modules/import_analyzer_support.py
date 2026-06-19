@@ -69,7 +69,8 @@ def analyze_import(
     }
     try:
         risk_analysis = analyzer._calculate_risk_score(name)
-        analysis.update(risk_analysis)
+        if isinstance(risk_analysis, dict):
+            analysis.update(risk_analysis)
         api_categories = analyzer.api_categories
         if not isinstance(api_categories, dict):
             api_categories = {}

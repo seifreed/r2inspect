@@ -183,6 +183,13 @@ def test_analyze_import_rejects_non_dict_input():
     assert result["name"] == "unknown"
 
 
+def test_analyze_import_skips_non_dict_risk_result():
+    analyzer = _make_analyzer()
+    analyzer._calculate_risk_score = lambda _func_name: None  # type: ignore[method-assign]
+    result = analyzer._analyze_import({"name": "CreateFileA", "plt": 0x1000, "libname": "kernel32.dll"})
+    assert result["name"] == "CreateFileA"
+
+
 def test_analyze_import_skips_non_dict_api_categories():
     analyzer = _make_analyzer()
     analyzer.api_categories = "bad"  # type: ignore[assignment]
