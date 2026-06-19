@@ -93,7 +93,8 @@ def test_output_formatter_json_error_and_summary_error() -> None:
     assert "JSON serialization failed" in json_text
 
     summary = formatter.format_summary()
-    assert "Error generating summary" in summary
+    assert "Error generating summary" not in summary
+    assert "Invalid indicator entry" in summary
 
 
 def test_output_formatter_tables_and_helpers() -> None:

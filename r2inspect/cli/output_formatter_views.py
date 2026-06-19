@@ -152,7 +152,7 @@ def append_file_info_summary(summary_lines: list[str], results: dict[str, Any]) 
     if file_info is None:
         return
     if not isinstance(file_info, dict):
-        raise TypeError("file_info must be a dict or None")
+        return
     if not file_info:
         return
     summary_lines.extend(
