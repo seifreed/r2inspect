@@ -21,8 +21,9 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import importlib
 from typing import Any
+
+from ..infrastructure.proxying import resolve_lazy_attr
 
 MODULE_BATCH_PROCESSING = "r2inspect.cli.batch_processing"
 MODULE_BATCH_OUTPUT = "r2inspect.cli.batch_output"
@@ -101,11 +102,7 @@ _LAZY_ATTRS: dict[str, tuple[str, str | None]] = {
 
 
 def __getattr__(name: str) -> Any:
-    if name not in _LAZY_ATTRS:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    module_name, attr = _LAZY_ATTRS[name]
-    module = importlib.import_module(module_name)
-    return module if attr is None else getattr(module, attr)
+    return resolve_lazy_attr(name, _LAZY_ATTRS, __name__)
 
 
 def __dir__() -> list[str]:

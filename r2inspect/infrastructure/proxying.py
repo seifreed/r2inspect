@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import Any, Callable
 
 
@@ -14,3 +15,13 @@ class LazyProxy:
 
     def __setattr__(self, name: str, value: Any) -> None:
         setattr(object.__getattribute__(self, "_getter")(), name, value)
+
+
+def resolve_lazy_attr(
+    name: str, mapping: dict[str, tuple[str, str | None]], module_name: str
+) -> Any:
+    if name not in mapping:
+        raise AttributeError(f"module {module_name!r} has no attribute {name!r}")
+    target_module, attr = mapping[name]
+    module = importlib.import_module(target_module)
+    return module if attr is None else getattr(module, attr)

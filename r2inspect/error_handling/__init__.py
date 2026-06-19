@@ -23,6 +23,7 @@ Author: Marc Rivero Lopez
 
 from typing import Any
 
+from ..infrastructure.proxying import resolve_lazy_attr
 from .classifier import (
     ErrorCategory,
     ErrorClassifier,
@@ -57,10 +58,10 @@ __all__ = [
     "safe_execute",
 ]
 
+_LAZY_ATTRS: dict[str, tuple[str, str | None]] = {
+    "handle_errors": ("r2inspect.error_handling.unified_handler", "handle_errors"),
+}
+
 
 def __getattr__(name: str) -> Any:
-    if name == "handle_errors":
-        from .unified_handler import handle_errors
-
-        return handle_errors
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return resolve_lazy_attr(name, _LAZY_ATTRS, __name__)
