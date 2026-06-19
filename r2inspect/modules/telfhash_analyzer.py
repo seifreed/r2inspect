@@ -23,6 +23,15 @@ from .telfhash_guard import TELFHASH_AVAILABLE, _safe_telfhash
 logger = get_logger(__name__)
 
 
+def _coerce_symbol_list(symbols: Any) -> list[dict[str, Any]]:
+    if isinstance(symbols, list):
+        return [symbol for symbol in symbols if isinstance(symbol, dict)]
+    try:
+        return [symbol for symbol in list(symbols) if isinstance(symbol, dict)]
+    except TypeError:
+        return []
+
+
 class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
     """Telfhash analyzer for ELF files."""
 
@@ -123,7 +132,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         """Return all symbols from the ELF file (empty list on failure)."""
         try:
             logger.debug("Extracting symbols from ELF file")
-            symbols = self._cmd_list("isj")
+            symbols = _coerce_symbol_list(self._cmd_list("isj"))
             if not symbols:
                 logger.warning("No symbols found in ELF file")
                 return []
@@ -137,12 +146,14 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
 
     def _filter_symbols_for_telfhash(self, symbols: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Keep named, non-LOCAL FUNC/OBJECT symbols telfhash uses."""
+        symbols = _coerce_symbol_list(symbols)
         filtered = _filter_symbols_for_telfhash_impl(symbols)
         logger.debug("Filtered %s symbols from %s total", len(filtered), len(symbols))
         return filtered
 
     def _extract_symbol_names(self, symbols: list[dict[str, Any]]) -> list[str]:
         """Return sorted symbol names for telfhash calculation."""
+        symbols = _coerce_symbol_list(symbols)
         names = _extract_symbol_names_impl(symbols)
         logger.debug("Extracted %s symbol names for telfhash", len(names))
         return names

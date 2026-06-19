@@ -51,6 +51,13 @@ class DirectFakeAdapter:
         return self._cmdj_map.get(command)
 
 
+class _IterableSymbolsAnalyzer(TelfhashAnalyzer):
+    def _cmd_list(self, command):  # type: ignore[override]
+        if command == "isj":
+            return (sym for sym in [{"name": "printf", "type": "FUNC", "bind": "GLOBAL"}])
+        return []
+
+
 def make_adapter(cmd_map=None, cmdj_map=None):
     return R2PipeAdapter(FakeR2(cmd_map=cmd_map, cmdj_map=cmdj_map))
 
@@ -293,6 +300,12 @@ def test_get_elf_symbols_exception_returns_empty():
     analyzer = TelfhashAnalyzer(ExplodingAdapter(), filepath="/tmp/test.elf")
     result = analyzer._get_elf_symbols()
     assert result == []
+
+
+def test_get_elf_symbols_normalizes_iterable_input():
+    analyzer = _IterableSymbolsAnalyzer(DirectFakeAdapter(), filepath="/tmp/test.elf")
+    result = analyzer._get_elf_symbols()
+    assert result == [{"name": "printf", "type": "FUNC", "bind": "GLOBAL"}]
 
 
 # ---------------------------------------------------------------------------
