@@ -163,6 +163,11 @@ def test_analyze_function_coverage_empty_iterable_matches_empty_list() -> None:
     }
 
 
+def test_analyze_function_coverage_rejects_dict_shape() -> None:
+    result = analyze_function_coverage_metrics({"functions": [{"size": 10}]})
+    assert result == {}
+
+
 # ---------------------------------------------------------------------------
 # _get_functions - full analysis path (lines 82-83)
 # ---------------------------------------------------------------------------

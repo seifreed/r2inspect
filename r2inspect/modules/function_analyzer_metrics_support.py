@@ -11,6 +11,8 @@ from .function_analyzer_extraction_support import coerce_positive_int
 def _coerce_function_list(functions: Any) -> list[dict[str, Any]]:
     if isinstance(functions, list):
         return [func for func in functions if isinstance(func, dict)]
+    if isinstance(functions, (dict, str, bytes)):
+        return []
     try:
         return [func for func in list(functions) if isinstance(func, dict)]
     except TypeError:
