@@ -6,8 +6,12 @@ from typing import Any, cast
 
 
 def _coerce_dict_list(raw: Any) -> list[dict[str, Any]]:
+    if isinstance(raw, dict):
+        return [raw]
     if isinstance(raw, list):
         return [item for item in raw if isinstance(item, dict)]
+    if isinstance(raw, (str, bytes)) or raw is None:
+        return []
     try:
         return [item for item in list(raw) if isinstance(item, dict)]
     except TypeError:

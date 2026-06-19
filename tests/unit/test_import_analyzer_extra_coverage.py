@@ -770,6 +770,11 @@ def test_collect_import_dlls_normalizes_iterable_input():
     assert sorted(dlls) == ["kernel32.dll", "user32.dll"]
 
 
+def test_collect_import_dlls_accepts_single_dict_input():
+    dlls = collect_import_dlls({"library": "KERNEL32.DLL"})
+    assert dlls == ["kernel32.dll"]
+
+
 def test_normalize_import_entries_accepts_iterable_input():
     entries = normalize_import_entries(({"name": "CreateFileA"}, "skip", {"name": "WriteFile"}))
     assert entries == [{"name": "CreateFileA"}, {"name": "WriteFile"}]
