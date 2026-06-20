@@ -9,6 +9,7 @@ from typing import Any, Protocol
 
 from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import extract_mnemonics_from_text
+from ..domain.text_helpers import has_text
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 logger = logging.getLogger(__name__)
@@ -183,7 +184,7 @@ def try_pi_extraction(
 ) -> list[str]:
     try:
         instructions_text = analyzer._cmd(f"pi 100 @ {func_addr}")
-        if isinstance(instructions_text, str) and instructions_text.strip():
+        if has_text(instructions_text):
             logger.debug(
                 "pi succeeded for %s, got %s instruction lines",
                 func_name,

@@ -9,6 +9,8 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from ..text_helpers import has_text
+
 _OCTET = r"(?:25[0-5]|2[0-4][0-9]|1?[0-9]?[0-9])"
 
 SUSPICIOUS_PATTERNS = {
@@ -74,7 +76,7 @@ def build_xor_matches(
         xor_result = xor_string(search_string, key)
         hex_pattern = bytes(ord(char) ^ key for char in search_string).hex()
         result = search_hex_fn(hex_pattern)
-        if isinstance(result, str) and result.strip():
+        if has_text(result):
             matches.append(
                 {
                     "original_string": search_string,

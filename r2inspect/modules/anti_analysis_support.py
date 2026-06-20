@@ -12,6 +12,7 @@ from ..domain.formats.anti_analysis import (
     SUSPICIOUS_API_CATEGORIES,
     TIMING_APIS,
 )
+from ..domain.text_helpers import has_text
 from .anti_analysis_helpers import (
     add_simple_evidence,
     collect_artifact_strings,
@@ -274,7 +275,7 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
                 }
             )
     rdtsc_usage = detector._search_opcode("rdtsc")
-    if isinstance(rdtsc_usage, str) and rdtsc_usage.strip():
+    if has_text(rdtsc_usage):
         result["detected"] = True
         addresses = rdtsc_usage.strip().split("\n")
         result["evidence"].append(

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..abstractions.coercion_support import coerce_int, coerce_text
+from ..domain.text_helpers import has_text
 
 
 def collect_artifact_strings(
@@ -106,7 +107,7 @@ def detect_obfuscation(
 
 def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
     modify_patterns = cmd_fn("/c mov.*cs:|/c mov.*ds:")
-    if isinstance(modify_patterns, str) and modify_patterns.strip():
+    if has_text(modify_patterns):
         return [
             {
                 "technique": "Self-Modifying Code",
@@ -119,7 +120,7 @@ def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
 
 def detect_api_hashing(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
     hash_patterns = cmd_fn("iz~hash|iz~crc32|iz~fnv")
-    if isinstance(hash_patterns, str) and hash_patterns.strip():
+    if has_text(hash_patterns):
         return [
             {
                 "technique": "API Hashing",
@@ -184,6 +185,6 @@ def detect_environment_checks(
     checks: list[dict[str, Any]] = []
     for command, check_type, description in env_commands:
         output = cmd_fn(command)
-        if isinstance(output, str) and output.strip():
+        if has_text(output):
             checks.append({"type": check_type, "description": description})
     return checks

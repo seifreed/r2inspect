@@ -6,6 +6,7 @@ import logging
 from typing import Any, Protocol
 
 from ..abstractions.coercion_support import coerce_int
+from ..domain.text_helpers import has_text
 
 
 class CryptoHost(Protocol):
@@ -58,7 +59,7 @@ def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> lis
                 except (TypeError, ValueError):
                     continue
                 result = analyzer._search_hex(f"{const_value:08x}")
-                if isinstance(result, str) and result.strip():
+                if has_text(result):
                     found_constants.append(
                         {
                             "type": const_name,
@@ -150,7 +151,7 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
     patterns: list[dict[str, Any]] = []
     try:
         xor_patterns = analyzer._search_text("xor")
-        if isinstance(xor_patterns, str) and xor_patterns.strip():
+        if has_text(xor_patterns):
             patterns.append(
                 {
                     "type": "XOR Operations",
@@ -159,7 +160,7 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
                 }
         )
         rot_patterns = analyzer._search_text("rol,ror")
-        if isinstance(rot_patterns, str) and rot_patterns.strip():
+        if has_text(rot_patterns):
             patterns.append(
                 {
                     "type": "Bit Rotation",
@@ -168,7 +169,7 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
                 }
         )
         mov_patterns = analyzer._search_text("mov.*\\[.*\\\\+.*\\]")
-        if isinstance(mov_patterns, str) and mov_patterns.strip():
+        if has_text(mov_patterns):
             count = len(mov_patterns.strip().split("\n"))
             if count > 10:
                 patterns.append(

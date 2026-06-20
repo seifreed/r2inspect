@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from ..text_helpers import has_text
+
 
 def build_feature_stats(strings_features: list[Any] | None, opcodes_features: list[Any] | None) -> dict[str, Any]:
     """Build aggregate feature statistics for SimHash analysis."""
@@ -144,9 +146,9 @@ def extract_opcodes_from_ops(ops: list[Any], *, max_instructions: int) -> list[s
 
 def _resolve_mnemonic(op: dict[str, Any]) -> str | None:
     mnemonic_value = op.get("mnemonic")
-    if not isinstance(mnemonic_value, str) or not mnemonic_value.strip():
+    if not has_text(mnemonic_value):
         opcode_value = op.get("opcode")
-        if isinstance(opcode_value, str) and opcode_value.strip():
+        if has_text(opcode_value):
             mnemonic_value = opcode_value.split()[0]
         else:
             return None
@@ -160,6 +162,6 @@ def previous_mnemonic(ops: list[Any], index: int) -> str | None:
     prev_op = ops[index - 1]
     if isinstance(prev_op, dict):
         mnemonic = prev_op.get("mnemonic")
-        if isinstance(mnemonic, str) and mnemonic.strip():
+        if has_text(mnemonic):
             return mnemonic.strip().lower()
     return None

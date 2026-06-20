@@ -6,6 +6,7 @@ import hashlib
 from typing import Any
 
 from ...abstractions.coercion_support import coerce_positive_int
+from ..text_helpers import has_text
 
 
 def _coerce_function_size(value: Any) -> int:
@@ -25,11 +26,11 @@ def extract_mnemonics_from_ops(ops: list[Any]) -> list[str]:
         if not isinstance(op, dict):
             continue
         mnemonic_value = op.get("mnemonic")
-        if isinstance(mnemonic_value, str) and mnemonic_value.strip():
+        if has_text(mnemonic_value):
             mnemonics.append(mnemonic_value.strip())
             continue
         opcode = op.get("opcode")
-        if isinstance(opcode, str) and opcode.strip():
+        if has_text(opcode):
             mnemonic = opcode.strip().split()[0]
             if mnemonic:
                 mnemonics.append(mnemonic)

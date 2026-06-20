@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeGuard
 
 
-def has_text(value: Any) -> bool:
+def has_text(value: Any) -> TypeGuard[str]:
     return isinstance(value, str) and bool(value.strip())
