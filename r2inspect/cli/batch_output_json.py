@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,7 +41,7 @@ def build_batch_summary_payload(
             "total_files": len(all_results) + len(failed_files),
             "successful_analyses": len(all_results),
             "failed_analyses": len(failed_files),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "processed_files": list(all_results.keys()),
         },
         "results": all_results,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -152,6 +153,10 @@ def test_build_streaming_json_payload_omits_embedded_results():
     assert payload["batch_summary"]["total_files"] == 2
     assert payload["failed_files"] == [{"file": "bad", "error": "boom"}]
     assert payload["statistics"]["packers_detected"] == [{"file": "f1", "packer": "UPX"}]
+    # The report timestamp must be UTC-aware (matches the schema's UTC
+    # timestamps and stays reproducible) rather than a naive local-time string.
+    ts = datetime.fromisoformat(payload["batch_summary"]["timestamp"])
+    assert ts.utcoffset() == timedelta(0)
 
 
 # --- make_streaming_create_batch_summary ------------------------------------

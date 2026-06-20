@@ -19,7 +19,7 @@ from __future__ import annotations
 import csv
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -111,7 +111,7 @@ def build_streaming_json_payload(
             "total_files": len(processed_keys) + len(failed_files),
             "successful_analyses": len(processed_keys),
             "failed_analyses": len(failed_files),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "processed_files": processed_keys,
             "results_location": "per-file <relative-path>_analysis.json (not embedded in low-memory mode)",
         },
