@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .symbol_features import any_symbol_name
+
 
 def has_nx(segments: list[dict[str, Any]] | None) -> bool:
     if not segments:
@@ -25,15 +27,9 @@ def has_nx(segments: list[dict[str, Any]] | None) -> bool:
 
 
 def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
-    for symbol in symbols or []:
-        if not isinstance(symbol, dict):
-            continue
-        name = symbol.get("name", "")
-        if not isinstance(name, str):
-            continue
-        if "__stack_chk_fail" in name or "__stack_chk_guard" in name:
-            return True
-    return False
+    return any_symbol_name(
+        symbols, lambda name: "__stack_chk_fail" in name or "__stack_chk_guard" in name
+    )
 
 
 def has_relro(relro_value: str | None) -> bool:

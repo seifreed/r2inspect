@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .symbol_features import any_symbol_name
+
 
 def is_pie(macho_info: dict[str, Any] | None) -> bool:
     if not macho_info or "bin" not in macho_info:
@@ -23,27 +25,15 @@ def is_pie(macho_info: dict[str, Any] | None) -> bool:
 
 
 def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
-    for symbol in symbols or []:
-        if not isinstance(symbol, dict):
-            continue
-        name = symbol.get("name", "")
-        if not isinstance(name, str):
-            continue
-        if "___stack_chk_fail" in name or "___stack_chk_guard" in name:
-            return True
-    return False
+    return any_symbol_name(
+        symbols, lambda name: "___stack_chk_fail" in name or "___stack_chk_guard" in name
+    )
 
 
 def has_arc(symbols: list[dict[str, Any]] | None) -> bool:
-    for symbol in symbols or []:
-        if not isinstance(symbol, dict):
-            continue
-        name = symbol.get("name", "")
-        if not isinstance(name, str):
-            continue
-        if "_objc_" in name and ("retain" in name or "release" in name):
-            return True
-    return False
+    return any_symbol_name(
+        symbols, lambda name: "_objc_" in name and ("retain" in name or "release" in name)
+    )
 
 
 def is_encrypted(bin_info: dict[str, Any] | None) -> bool:
