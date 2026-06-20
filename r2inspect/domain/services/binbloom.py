@@ -54,8 +54,8 @@ def build_signature_components(instructions: list[str]) -> list[str]:
         instructions = []
     instructions = [instr for instr in instructions if isinstance(instr, str) and instr]
     unique_instructions = sorted(set(instructions))
-    freq_patterns = _build_frequency_patterns(instructions, unique_instructions)
-    unique_bigrams = _build_unique_bigrams(instructions)
+    freq_patterns = build_frequency_patterns(instructions, unique_instructions)
+    unique_bigrams = build_unique_bigrams(instructions)
     return [
         "UNIQ:" + "|".join(unique_instructions),
         "FREQ:" + "|".join(freq_patterns),
@@ -63,12 +63,12 @@ def build_signature_components(instructions: list[str]) -> list[str]:
     ]
 
 
-def _build_frequency_patterns(instructions: list[str], unique_instructions: list[str]) -> list[str]:
+def build_frequency_patterns(instructions: list[str], unique_instructions: list[str]) -> list[str]:
     freq_counter = Counter(instructions)
     return [f"{instr}:{freq_counter[instr]}" for instr in unique_instructions]
 
 
-def _build_unique_bigrams(instructions: list[str]) -> list[str]:
+def build_unique_bigrams(instructions: list[str]) -> list[str]:
     if not isinstance(instructions, list):
         return []
     bigrams = [f"{instructions[i]}→{instructions[i + 1]}" for i in range(len(instructions) - 1)]

@@ -7,7 +7,9 @@ from typing import Any, TypedDict
 
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..abstractions.coercion_support import coerce_positive_int
+from ..domain.services.function_analysis import (
+    _coerce_function_size as _coerce_function_size_impl,
+)
 from ..adapters.analyzer_runner import run_analyzer_on_file
 from ..domain.services.binary_helpers import clean_function_name
 from ..infrastructure.logging import get_logger
@@ -128,7 +130,7 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
     @staticmethod
     def _coerce_function_size(value: Any) -> int:
-        return coerce_positive_int(value)
+        return _coerce_function_size_impl(value)
 
     def _add_binary_bloom(
         self,
@@ -161,7 +163,11 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
 
         def _build() -> tuple[BloomFilterType, list[str], str] | None:
             instructions = self._extract_instruction_mnemonics(func_addr, func_name)
-            instructions = [instruction for instruction in instructions if isinstance(instruction, str) and instruction]
+            instructions = [
+                instruction
+                for instruction in instructions
+                if isinstance(instruction, str) and instruction
+            ]
             if not instructions:
                 logger.debug("No instructions found for function %s", func_name)
                 return None

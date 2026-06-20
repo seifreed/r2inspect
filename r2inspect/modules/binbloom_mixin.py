@@ -108,20 +108,6 @@ class BinbloomMixin:
     def _build_signature_components(self, instructions: list[str]) -> list[str]:
         return build_signature_components(instructions)
 
-    def _build_frequency_patterns(
-        self, instructions: list[str], unique_instructions: list[str]
-    ) -> list[str]:
-        from collections import Counter
-
-        freq_counter = Counter(instructions)
-        return [f"{instr}:{freq_counter[instr]}" for instr in unique_instructions]
-
-    def _build_unique_bigrams(self, instructions: list[str]) -> list[str]:
-        bigrams: list[str] = []
-        for i in range(len(instructions) - 1):
-            bigrams.append(f"{instructions[i]}→{instructions[i + 1]}")
-        return sorted(set(bigrams))
-
     def _create_binary_bloom(
         self, all_instructions: set[str], capacity: int, error_rate: float
     ) -> BloomFilter | None:
@@ -194,13 +180,13 @@ class BinbloomMixin:
     def _calculate_bloom_stats(
         self, function_blooms: dict[str, BloomFilter], capacity: int, error_rate: float
     ) -> dict[str, Any]:
-        return _calculate_bloom_stats_impl(self, function_blooms, capacity, error_rate, logger)
+        return _calculate_bloom_stats_impl(function_blooms, capacity, error_rate, logger)
 
     def _accumulate_bloom_bits(self, function_blooms: dict[str, BloomFilter]) -> tuple[int, int]:
         return accumulate_bloom_bits(function_blooms)
 
     def compare_bloom_filters(self, bloom1: BloomFilter, bloom2: BloomFilter) -> float:
-        return _compare_bloom_filters_impl(self, bloom1, bloom2, logger)
+        return _compare_bloom_filters_impl(bloom1, bloom2, logger)
 
     @staticmethod
     def _get_bloom_bits(bloom_filter: BloomFilter) -> Any | None:

@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from r2inspect.domain.services.binbloom import build_frequency_patterns, build_unique_bigrams
 from r2inspect.modules.binbloom_analyzer import BinbloomAnalyzer
 
 
@@ -273,20 +274,16 @@ def test_binbloom_empty_instructions():
 
 
 def test_binbloom_build_frequency_patterns():
-    adapter = MockAdapter()
-    analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
     instructions = ["mov", "push", "mov", "call", "mov"]
     unique = sorted(set(instructions))
-    patterns = analyzer._build_frequency_patterns(instructions, unique)
+    patterns = build_frequency_patterns(instructions, unique)
     assert len(patterns) == len(unique)
     assert any("mov:3" in p for p in patterns)
 
 
 def test_binbloom_build_unique_bigrams():
-    adapter = MockAdapter()
-    analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
     instructions = ["mov", "push", "call", "pop", "ret"]
-    bigrams = analyzer._build_unique_bigrams(instructions)
+    bigrams = build_unique_bigrams(instructions)
     assert len(bigrams) == 4
     assert "mov→push" in bigrams
 

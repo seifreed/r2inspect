@@ -6,21 +6,15 @@ import base64
 import json
 import logging
 from collections.abc import Iterable
-from typing import Any, Protocol
+from typing import Any
 
-from ..domain.services.binbloom import _jaccard_similarity
-
-
-class BloomStatsHost(Protocol):
-    def _accumulate_bloom_bits(self, function_blooms: Any) -> tuple[int, int]: ...
-
-
-class BloomCompareHost(Protocol):
-    def _get_bloom_bits(self, bloom_filter: Any) -> Any | None: ...
+from ..domain.services.binbloom import (
+    calculate_bloom_similarity,
+    calculate_bloom_stats as _calculate_bloom_stats_domain,
+)
 
 
 def calculate_bloom_stats(
-    analyzer: BloomStatsHost,
     function_blooms: dict[str, Any],
     capacity: int,
     error_rate: float,
@@ -30,31 +24,17 @@ def calculate_bloom_stats(
         if not function_blooms:
             return {}
 
-        total_bits_set, total_capacity = analyzer._accumulate_bloom_bits(function_blooms)
-        return {
-            "total_filters": len(function_blooms),
-            "configured_capacity": capacity,
-            "configured_error_rate": error_rate,
-            "average_fill_rate": ((total_bits_set / total_capacity) if total_capacity > 0 else 0.0),
-        }
+        return _calculate_bloom_stats_domain(
+            function_blooms, capacity=capacity, error_rate=error_rate
+        )
     except Exception as exc:
         logger.error("Error calculating Bloom stats: %s", exc)
         return {}
 
 
-def _bloom_bit_set(bits_raw: Any) -> set[int]:
-    return {i for i, bit in enumerate(bits_raw) if bit}
-
-
-def compare_bloom_filters(
-    analyzer: BloomCompareHost, bloom1: Any, bloom2: Any, logger: logging.Logger
-) -> float:
+def compare_bloom_filters(bloom1: Any, bloom2: Any, logger: logging.Logger) -> float:
     try:
-        bits_1_raw = analyzer._get_bloom_bits(bloom1)
-        bits_2_raw = analyzer._get_bloom_bits(bloom2)
-        if bits_1_raw is None or bits_2_raw is None:
-            return 0.0
-        return _jaccard_similarity(_bloom_bit_set(bits_1_raw), _bloom_bit_set(bits_2_raw))
+        return calculate_bloom_similarity(bloom1, bloom2)
     except Exception as exc:
         logger.error("Error comparing Bloom filters: %s", exc)
         return 0.0
@@ -96,7 +76,9 @@ def deserialize_bloom(
             return None
         if isinstance(bitarray_list, list):
             bitarray_source = bitarray_list
-        elif isinstance(bitarray_list, (dict, str, bytes)) or not isinstance(bitarray_list, Iterable):
+        elif isinstance(bitarray_list, (dict, str, bytes)) or not isinstance(
+            bitarray_list, Iterable
+        ):
             logger.error("Deserialization failed: bitarray is not iterable")
             return None
         else:

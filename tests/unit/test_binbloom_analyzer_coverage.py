@@ -6,6 +6,7 @@ import base64
 import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
+from r2inspect.domain.services.binbloom import build_frequency_patterns, build_unique_bigrams
 from r2inspect.modules.binbloom_analyzer import BLOOM_AVAILABLE, BinbloomAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -193,10 +194,9 @@ def test_build_signature_components_structure():
 
 
 def test_build_frequency_patterns():
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     instructions = ["mov", "mov", "push", "pop"]
     unique = sorted(set(instructions))
-    patterns = analyzer._build_frequency_patterns(instructions, unique)
+    patterns = build_frequency_patterns(instructions, unique)
     assert any("mov:2" in p for p in patterns)
     assert any("push:1" in p for p in patterns)
 
@@ -205,28 +205,24 @@ def test_build_frequency_patterns():
 
 
 def test_build_unique_bigrams_basic():
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     instructions = ["mov", "push", "pop", "ret"]
-    bigrams = analyzer._build_unique_bigrams(instructions)
+    bigrams = build_unique_bigrams(instructions)
     assert "mov→push" in bigrams
     assert "push→pop" in bigrams
     assert "pop→ret" in bigrams
 
 
 def test_build_unique_bigrams_empty():
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
-    assert analyzer._build_unique_bigrams([]) == []
+    assert build_unique_bigrams([]) == []
 
 
 def test_build_unique_bigrams_single():
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
-    assert analyzer._build_unique_bigrams(["mov"]) == []
+    assert build_unique_bigrams(["mov"]) == []
 
 
 def test_build_unique_bigrams_deduplication():
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
     instructions = ["mov", "push", "mov", "push"]
-    bigrams = analyzer._build_unique_bigrams(instructions)
+    bigrams = build_unique_bigrams(instructions)
     # "mov→push" should appear only once
     assert bigrams.count("mov→push") == 1
 
@@ -1014,15 +1010,13 @@ def test_calculate_bloom_stats_exception():
     """Test exception handler in _calculate_bloom_stats."""
     if not BLOOM_AVAILABLE:
         pytest.skip("pybloom-live not available")
-    from pybloom_live import BloomFilter
 
-    class BrokenAnalyzer(BinbloomAnalyzer):
-        def _accumulate_bloom_bits(self, function_blooms):
+    class ExplodingBlooms(dict):
+        def values(self):
             raise RuntimeError("intentional error")
 
-    analyzer = BrokenAnalyzer(make_adapter(), filepath="/tmp/test.bin")
-    bf = BloomFilter(capacity=100, error_rate=0.01)
-    result = analyzer._calculate_bloom_stats({"func": bf}, 100, 0.01)
+    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
+    result = analyzer._calculate_bloom_stats(ExplodingBlooms(func=object()), 100, 0.01)
     assert result == {}
 
 
