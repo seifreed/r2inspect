@@ -42,7 +42,12 @@ def coerce_number(value: Any, default: float = 0.0) -> float:
 def coerce_int(value: Any, default: int = 0) -> int:
     try:
         if isinstance(value, str):
-            return int(value, 0)
+            # base 0 auto-detects 0x/0b prefixes but rejects zero-padded decimals
+            # ("010", "08"); fall back to base 10 so those keep their real value.
+            try:
+                return int(value, 0)
+            except ValueError:
+                return int(value, 10)
         return int(value if value is not None else default)
     except (TypeError, ValueError):
         return default
