@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_dict, coerce_int
 
 
 class TlshHost(Protocol):
@@ -49,16 +49,16 @@ def build_detailed_analysis(host: TlshHost, available: bool) -> dict[str, Any]:
     }
     result["binary_tlsh"] = host._calculate_binary_tlsh()
     section_hashes_raw = host._calculate_section_tlsh()
-    section_hashes = section_hashes_raw if isinstance(section_hashes_raw, dict) else {}
+    section_hashes = coerce_dict(section_hashes_raw)
     result["section_tlsh"] = section_hashes
     stats_raw = result.get("stats", {})
-    stats = stats_raw if isinstance(stats_raw, dict) else {}
+    stats = coerce_dict(stats_raw)
     result["stats"] = stats
     stats["sections_analyzed"] = len(section_hashes)
     stats["sections_with_tlsh"] = sum(1 for value in section_hashes.values() if value)
     result["text_section_tlsh"] = section_hashes.get(".text")
     function_hashes_raw = host._calculate_function_tlsh()
-    function_hashes = function_hashes_raw if isinstance(function_hashes_raw, dict) else {}
+    function_hashes = coerce_dict(function_hashes_raw)
     result["function_tlsh"] = function_hashes
     stats["functions_analyzed"] = len(function_hashes)
     stats["functions_with_tlsh"] = sum(1 for value in function_hashes.values() if value)

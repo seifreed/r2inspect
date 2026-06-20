@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_dict
 from ..domain.formats.elf_security import has_nx, has_relro, has_stack_canary, is_pie, path_features
 
 
@@ -23,7 +24,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         features["nx"] = has_nx(_get_elf_segments(adapter))
         features["stack_canary"] = has_stack_canary(adapter.get_symbols())
         file_info = adapter.get_file_info()
-        bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
+        bin_info = coerce_dict(file_info).get("bin", {})
         features["relro"] = has_relro(bin_info.get("relro"))
         features["pie"] = is_pie(file_info)
         features.update(path_features(_get_dynamic_info_text(adapter)))

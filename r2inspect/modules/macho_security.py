@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_dict
 from ..domain.formats.macho_security import (
     has_arc,
     has_stack_canary,
@@ -30,7 +31,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         symbols = adapter.get_symbols()
         features["stack_canary"] = has_stack_canary(symbols)
         features["arc"] = has_arc(symbols)
-        bin_info = info.get("bin", {}) if isinstance(info, dict) else {}
+        bin_info = coerce_dict(info).get("bin", {})
         features["encrypted"] = is_encrypted(bin_info)
         features["signed"] = is_signed(_get_load_commands_text(adapter))
         features["nx"] = True

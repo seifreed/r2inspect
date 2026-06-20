@@ -16,7 +16,7 @@ from pathlib import Path
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int, coerce_text
+from ..abstractions.coercion_support import coerce_dict, coerce_int, coerce_text
 from ..adapters.file_system import default_file_system
 from ..domain.formats.bindiff import (
     build_behavioral_signature,
@@ -44,8 +44,8 @@ from .string_classification import (
 
 logger = get_logger(__name__)
 def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
-    core_info = file_info.get("core", {}) if isinstance(file_info, dict) else {}
-    bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
+    core_info = coerce_dict(file_info).get("core", {})
+    bin_info = coerce_dict(file_info).get("bin", {})
     if not isinstance(core_info, dict):
         core_info = {}
     if not isinstance(bin_info, dict):
