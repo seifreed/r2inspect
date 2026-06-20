@@ -26,7 +26,6 @@ class CryptoHost(Protocol):
     def _search_hex(self, hex_pattern: str) -> str: ...
 
 
-
 def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
     crypto_info: dict[str, Any] = {
         "algorithms": [],
@@ -133,7 +132,9 @@ def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, A
                 if not isinstance(section, dict):
                     continue
                 section_name_value = section.get("name", "unknown")
-                section_name = section_name_value if isinstance(section_name_value, str) else "unknown"
+                section_name = (
+                    section_name_value if isinstance(section_name_value, str) else "unknown"
+                )
                 section_size = coerce_int(section.get("size", 0))
                 if section_size > 0:
                     entropy = analyzer._calculate_section_entropy(section)
@@ -158,8 +159,11 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
                     "description": "Multiple XOR operations found",
                     "evidence": "XOR instructions detected",
                 }
-        )
-        rot_patterns = analyzer._search_text("rol,ror")
+            )
+        # search_text runs r2's /aa (case-insensitive substring match on the
+        # disassembly), so a comma-joined "rol,ror" matches no instruction; the
+        # two mnemonics must be searched separately.
+        rot_patterns = analyzer._search_text("rol") or analyzer._search_text("ror")
         if has_text(rot_patterns):
             patterns.append(
                 {
@@ -167,7 +171,7 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
                     "description": "Bit rotation operations found",
                     "evidence": "ROL/ROR instructions detected",
                 }
-        )
+            )
         mov_patterns = analyzer._search_text("mov.*\\[.*\\\\+.*\\]")
         if has_text(mov_patterns):
             count = len(mov_patterns.strip().split("\n"))

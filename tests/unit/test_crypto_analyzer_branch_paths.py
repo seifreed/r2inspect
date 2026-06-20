@@ -93,7 +93,8 @@ class XorPatternAdapter(EmptyAdapter):
     def search_text(self, pattern: str) -> str:
         if pattern == "xor":
             return "0x00401000 xor eax,eax\n0x00401002 xor ecx,ecx\n"
-        if pattern == "rol,ror":
+        # real /aa matches a single mnemonic as a disasm substring
+        if pattern in ("rol", "ror"):
             return "0x00401010 rol eax,4\n"
         return ""
 
@@ -441,6 +442,34 @@ def test_find_suspicious_patterns_rotation_found():
     result = analyzer._find_suspicious_patterns()
     types = [p["type"] for p in result]
     assert "Bit Rotation" in types
+
+
+class RorOnlyAdapter(EmptyAdapter):
+    """Real /aa matches a single mnemonic; this binary only has ror, not rol."""
+
+    def __init__(self) -> None:
+        self.queries: list[str] = []
+
+    def search_text(self, pattern: str) -> str:
+        self.queries.append(pattern)
+        if pattern == "ror":
+            return "0x00401010 ror eax,4\n"
+        return ""
+
+    def search_hex(self, pattern: str) -> str:
+        return ""
+
+
+def test_find_suspicious_patterns_rotation_or_fallback():
+    # rol and ror must be searched separately (never as "rol,ror"); a binary
+    # with only ror must still report Bit Rotation.
+    adapter = RorOnlyAdapter()
+    analyzer = CryptoAnalyzer(adapter)
+    result = analyzer._find_suspicious_patterns()
+
+    assert "Bit Rotation" in [p["type"] for p in result]
+    assert "rol,ror" not in adapter.queries
+    assert "rol" in adapter.queries and "ror" in adapter.queries
 
 
 def test_find_suspicious_patterns_table_lookups_found():
