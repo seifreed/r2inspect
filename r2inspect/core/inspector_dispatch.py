@@ -17,6 +17,7 @@ from ..interfaces import (
     ConfigLike,
     ResultAggregatorLike,
 )
+from ..abstractions.coercion_support import coerce_dict, coerce_text
 from .analyzer_factory import create_analyzer, run_analysis_method
 from ..error_handling.classifier import ErrorCategory, ErrorSeverity, error_handler
 from ..infrastructure.hashing import calculate_hashes
@@ -45,7 +46,7 @@ class InspectorDispatchMixin:
 
     @staticmethod
     def _as_dict(value: Any) -> dict[str, Any]:
-        return value if isinstance(value, dict) else {}
+        return coerce_dict(value)
 
     @staticmethod
     def _as_bool_dict(value: Any) -> dict[str, bool]:
@@ -55,7 +56,7 @@ class InspectorDispatchMixin:
 
     @staticmethod
     def _as_str(value: Any, default: str = "") -> str:
-        return value if isinstance(value, str) else default
+        return coerce_text(value, default)
 
     # -- core executor -------------------------------------------------------
 

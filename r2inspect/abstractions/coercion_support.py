@@ -61,6 +61,10 @@ def coerce_text(value: Any, default: str = "") -> str:
     return value if isinstance(value, str) else default
 
 
+def coerce_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def coerce_number_or_none(value: Any) -> float | None:
     try:
         if isinstance(value, str) and not value.strip():

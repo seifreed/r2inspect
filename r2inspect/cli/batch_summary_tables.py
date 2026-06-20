@@ -9,6 +9,8 @@ from typing import Any, cast
 
 from rich.table import Table
 
+from . import output_csv_fields as _csv_fields
+
 
 def render_summary_row(
     file_key: str,
@@ -61,14 +63,7 @@ def simplify_file_type(file_type: str) -> str:
 
 
 def extract_compile_time(result: dict[str, Any]) -> str:
-    for key in ("pe_info", "elf_info", "macho_info", "file_info"):
-        info = result.get(key)
-        if not isinstance(info, dict):
-            continue
-        compile_time = info.get("compile_time")
-        if compile_time:
-            return str(compile_time)
-    return "N/A"
+    return _csv_fields.extract_compile_time(result) or "N/A"
 
 
 def compiler_name(result: dict[str, Any]) -> str:
