@@ -4,6 +4,27 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from ..abstractions.validation_support import (
+    validate_minimum,
+    validate_non_negative,
+    validate_positive,
+)
+
+
+def _validate_timeout(timeout: int) -> None:
+    validate_positive(timeout, name="timeout")
+
+
+def _validate_min_max(
+    min_value: int,
+    max_value: int,
+    *,
+    min_name: str,
+    max_name: str,
+) -> None:
+    validate_positive(min_value, name=min_name)
+    validate_minimum(max_value, name=max_name, minimum=min_value)
+
 
 @dataclass(frozen=True)
 class GeneralConfig:
@@ -16,12 +37,13 @@ class GeneralConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration values."""
-        if self.max_strings < 0:
-            raise ValueError("max_strings must be non-negative")
-        if self.min_string_length < 1:
-            raise ValueError("min_string_length must be at least 1")
-        if self.max_string_length < self.min_string_length:
-            raise ValueError("max_string_length must be >= min_string_length")
+        validate_non_negative(self.max_strings, name="max_strings")
+        _validate_min_max(
+            self.min_string_length,
+            self.max_string_length,
+            min_name="min_string_length",
+            max_name="max_string_length",
+        )
 
 
 @dataclass(frozen=True)
@@ -34,8 +56,7 @@ class YaraConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration values."""
-        if self.timeout < 1:
-            raise ValueError("timeout must be at least 1 second")
+        _validate_timeout(self.timeout)
 
 
 @dataclass(frozen=True)
@@ -72,10 +93,12 @@ class StringsConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration values."""
-        if self.min_length < 1:
-            raise ValueError("min_length must be at least 1")
-        if self.max_length < self.min_length:
-            raise ValueError("max_length must be >= min_length")
+        _validate_min_max(
+            self.min_length,
+            self.max_length,
+            min_name="min_length",
+            max_name="max_length",
+        )
 
 
 @dataclass(frozen=True)
@@ -88,8 +111,7 @@ class OutputConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration values."""
-        if self.json_indent < 0:
-            raise ValueError("json_indent must be non-negative")
+        validate_non_negative(self.json_indent, name="json_indent")
         if len(self.csv_delimiter) != 1:
             raise ValueError("csv_delimiter must be a single character")
 
@@ -104,8 +126,7 @@ class VirusTotalConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration values."""
-        if self.timeout < 1:
-            raise ValueError("timeout must be at least 1 second")
+        _validate_timeout(self.timeout)
 
     @property
     def is_configured(self) -> bool:

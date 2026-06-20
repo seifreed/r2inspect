@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
+from ..abstractions.validation_support import validate_non_negative
+
 
 class AnalysisResultBase(BaseModel):
     """
@@ -56,8 +58,8 @@ class AnalysisResultBase(BaseModel):
     @classmethod
     def validate_execution_time(cls, v: float | None) -> float | None:
         """Validate that execution time is non-negative"""
-        if v is not None and v < 0:
-            raise ValueError("execution_time must be non-negative")
+        if v is not None:
+            validate_non_negative(v, name="execution_time")
         return v
 
     @field_validator("analyzer_name")

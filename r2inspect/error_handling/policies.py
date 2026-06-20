@@ -18,6 +18,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from ..abstractions.validation_support import (
+    validate_minimum,
+    validate_non_negative,
+    validate_positive,
+)
+
 
 class ErrorHandlingStrategy(Enum):
     """Error handling strategies for different scenarios"""
@@ -62,20 +68,15 @@ class ErrorPolicy:
 
     def __post_init__(self) -> None:
         """Validate policy configuration"""
-        if self.max_retries < 0:
-            raise ValueError("max_retries must be non-negative")
+        validate_non_negative(self.max_retries, name="max_retries")
 
-        if self.retry_delay < 0:
-            raise ValueError("retry_delay must be non-negative")
+        validate_non_negative(self.retry_delay, name="retry_delay")
 
-        if self.retry_backoff < 1.0:
-            raise ValueError("retry_backoff must be >= 1.0")
+        validate_minimum(self.retry_backoff, name="retry_backoff", minimum=1.0)
 
-        if self.circuit_threshold < 1:
-            raise ValueError("circuit_threshold must be positive")
+        validate_positive(self.circuit_threshold, name="circuit_threshold")
 
-        if self.circuit_timeout < 0:
-            raise ValueError("circuit_timeout must be non-negative")
+        validate_non_negative(self.circuit_timeout, name="circuit_timeout")
 
     def is_retryable(self, exception: BaseException) -> bool:
         """

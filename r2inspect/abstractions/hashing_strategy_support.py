@@ -8,14 +8,18 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .validation_support import validate_non_negative, validate_positive
 from ..domain.results import HashResult
 
 
 def validate_strategy_init(filepath: str, max_file_size: int, min_file_size: int) -> Path:
     if not filepath:
         raise ValueError("filepath cannot be empty")
-    if max_file_size <= 0 or min_file_size < 0:
-        raise ValueError("File size limits must be positive")
+    try:
+        validate_positive(max_file_size, name="max_file_size")
+        validate_non_negative(min_file_size, name="min_file_size")
+    except ValueError as exc:
+        raise ValueError("File size limits must be positive") from exc
     if min_file_size > max_file_size:
         raise ValueError("min_file_size cannot exceed max_file_size")
     return Path(filepath)
