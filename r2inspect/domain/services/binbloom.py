@@ -104,11 +104,13 @@ def build_similar_groups(signature_groups: dict[str, Any]) -> list[dict[str, Any
     return similar_groups
 
 
-def build_similar_function_groups(
+def group_function_names_by_signature(
     function_signatures: dict[str, dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Group functions that share the same signature."""
+) -> dict[str, list[str]]:
+    """Bucket cleaned function names by their shared signature string."""
     signature_groups: dict[str, list[str]] = defaultdict(list)
+    if not isinstance(function_signatures, dict):
+        return signature_groups
     for func_name, func_data in function_signatures.items():
         if not isinstance(func_data, dict):
             continue
@@ -116,7 +118,14 @@ def build_similar_function_groups(
         if not isinstance(signature, str) or not signature:
             continue
         signature_groups[signature].append(clean_function_name(func_name))
+    return signature_groups
 
+
+def build_similar_function_groups(
+    function_signatures: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Group functions that share the same signature."""
+    signature_groups = group_function_names_by_signature(function_signatures)
     similar_groups = build_similar_groups(signature_groups)
     similar_groups.sort(key=lambda item: item["count"], reverse=True)
     return similar_groups
@@ -128,7 +137,9 @@ def accumulate_bloom_bits(function_blooms: dict[str, Any]) -> tuple[int, int]:
     total_capacity = 0
     for bloom_filter in function_blooms.values():
         bit_sequence = get_bloom_bits(bloom_filter)
-        if isinstance(bit_sequence, (str, bytes, bytearray)) or not isinstance(bit_sequence, Iterable):
+        if isinstance(bit_sequence, (str, bytes, bytearray)) or not isinstance(
+            bit_sequence, Iterable
+        ):
             continue
         bits = list(bit_sequence)
         if not all(isinstance(bit, (bool, int)) for bit in bits):

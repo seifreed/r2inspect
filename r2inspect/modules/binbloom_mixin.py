@@ -8,12 +8,12 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any, cast
 
-from ..domain.services.binary_helpers import clean_function_name
 from ..domain.services.binbloom import (
     accumulate_bloom_bits,
     build_signature_components,
     build_similar_groups,
     get_bloom_bits,
+    group_function_names_by_signature,
 )
 from ..infrastructure.logging import get_logger
 from .binbloom_extraction_support import (
@@ -159,19 +159,7 @@ class BinbloomMixin:
     def _group_functions_by_signature(
         self, function_signatures: dict[str, dict[str, Any]]
     ) -> dict[str, list[str]]:
-        from collections import defaultdict
-
-        signature_groups: dict[str, list[str]] = defaultdict(list)
-        if not isinstance(function_signatures, dict):
-            return signature_groups
-        for func_name, func_data in function_signatures.items():
-            if not isinstance(func_data, dict):
-                continue
-            signature = func_data.get("signature")
-            if not isinstance(signature, str) or not signature:
-                continue
-            signature_groups[signature].append(clean_function_name(func_name))
-        return signature_groups
+        return group_function_names_by_signature(function_signatures)
 
     @staticmethod
     def _build_similar_groups(signature_groups: dict[str, list[str]]) -> list[dict[str, Any]]:
