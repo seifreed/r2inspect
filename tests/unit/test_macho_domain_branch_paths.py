@@ -121,6 +121,15 @@ def test_dylib_timestamp_to_string_recent_timestamp():
     assert ts == ts_2020
 
 
+def test_dylib_timestamp_to_string_is_utc_not_local():
+    # 1577836800 is exactly 2020-01-01 00:00:00 UTC. Rendering it in local
+    # time would land on 2019-12-31 west of UTC, so a forensic build date must
+    # be pinned to UTC to stay reproducible across machines. The exact string
+    # below holds in every timezone only because the conversion is UTC-fixed.
+    date_str, _ts = dylib_timestamp_to_string(1577836800)
+    assert date_str == "Wed Jan 01 00:00:00 2020 UTC"
+
+
 # ---------------------------------------------------------------------------
 # build_load_commands (lines 52-60)
 # ---------------------------------------------------------------------------

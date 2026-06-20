@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from ...abstractions.coercion_support import coerce_int_or_none
@@ -17,7 +17,6 @@ SDK_VERSION_MAP = {
     "14.0": "2023",
     "15.0": "2024",
 }
-
 
 
 def estimate_from_sdk_version(sdk_version: str) -> str | None:
@@ -45,8 +44,13 @@ def dylib_timestamp_to_string(timestamp: int) -> tuple[str | None, int | None]:
     if not timestamp or timestamp <= 0:
         return None, None
     try:
-        compile_date = datetime.fromtimestamp(timestamp)
-        return compile_date.strftime("%a %b %d %H:%M:%S %Y"), timestamp
+        # Forensic build timestamps must be timezone-independent: a naive
+        # fromtimestamp() renders in the analyst's local zone, so the same
+        # dylib yields a different date on different machines (and lands on the
+        # wrong calendar day west of UTC). Pin to UTC like the rest of the
+        # codebase's timestamps.
+        compile_date = datetime.fromtimestamp(timestamp, UTC)
+        return compile_date.strftime("%a %b %d %H:%M:%S %Y UTC"), timestamp
     except (OSError, OverflowError, ValueError):
         return None, timestamp
 
