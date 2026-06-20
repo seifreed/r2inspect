@@ -13,8 +13,12 @@ def display_rate_limiter_stats(console: Any, rate_stats: dict[str, Any]) -> None
     """Display rate limiter statistics."""
     console.print("[dim]Rate limiter stats:[/dim]")
     console.print(f"[dim]  Success rate: {coerce_number(rate_stats.get('success_rate')):.1%}[/dim]")
-    console.print(f"[dim]  Avg wait time: {coerce_number(rate_stats.get('avg_wait_time')):.2f}s[/dim]")
-    console.print(f"[dim]  Final rate: {coerce_number(rate_stats.get('current_rate')):.1f} files/sec[/dim]")
+    console.print(
+        f"[dim]  Avg wait time: {coerce_number(rate_stats.get('avg_wait_time')):.2f}s[/dim]"
+    )
+    console.print(
+        f"[dim]  Final rate: {coerce_number(rate_stats.get('current_rate')):.1f} files/sec[/dim]"
+    )
 
 
 def display_memory_stats(console: Any) -> None:
@@ -27,9 +31,7 @@ def display_memory_stats(console: Any) -> None:
         peak_memory_mb = coerce_number(memory_stats.get("peak_memory_mb", 0))
         process_memory_mb = coerce_number(memory_stats.get("process_memory_mb", 0))
         console.print(f"[dim]  Peak usage: {peak_memory_mb:.1f}MB[/dim]")
-        console.print(
-            f"[dim]  Current usage: {process_memory_mb:.1f}MB[/dim]"
-        )
+        console.print(f"[dim]  Current usage: {process_memory_mb:.1f}MB[/dim]")
         console.print(f"[dim]  GC cycles: {memory_stats.get('gc_count', 0)}[/dim]")
 
 
@@ -50,6 +52,18 @@ def display_failed_files(console: Any, failed_files: list[tuple[str, str]], verb
             console.print(f"[dim]... and {len(failed_files) - 10} more[/dim]")
     else:
         console.print("[dim]Use --verbose to see error details[/dim]")
+
+
+def _no_files_message(auto_detect: bool, extensions: str | None) -> list[str]:
+    if auto_detect:
+        return [
+            "[yellow]No executable files detected in the directory[/yellow]",
+            "[dim]Tip: Files might not be executable format or may be corrupted[/dim]",
+        ]
+    return [
+        f"[yellow]No files found with extensions: {extensions}[/yellow]",
+        "[dim]Tip: Use without --extensions for auto-detection[/dim]",
+    ]
 
 
 def display_batch_results(
@@ -87,12 +101,8 @@ def display_batch_results(
 
 def display_no_files_message(console: Any, auto_detect: bool, extensions: str | None) -> None:
     """Display appropriate message when no files are found."""
-    if auto_detect:
-        console.print("[yellow]No executable files detected in the directory[/yellow]")
-        console.print("[dim]Tip: Files might not be executable format or may be corrupted[/dim]")
-    else:
-        console.print(f"[yellow]No files found with extensions: {extensions}[/yellow]")
-        console.print("[dim]Tip: Use without --extensions for auto-detection[/dim]")
+    for line in _no_files_message(auto_detect, extensions):
+        console.print(line)
 
 
 def handle_main_error(console: Any, error: Exception, verbose: bool) -> None:

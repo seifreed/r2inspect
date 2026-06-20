@@ -84,7 +84,7 @@ class LazyAnalyzerLoader:
         return len(self._registry)
 
     def __contains__(self, name: str) -> bool:
-        return name in self._registry
+        return self.is_registered(name)
 
     def __repr__(self) -> str:
         return f"LazyAnalyzerLoader(registered={len(self._registry)}, loaded={len(self._cache)})"

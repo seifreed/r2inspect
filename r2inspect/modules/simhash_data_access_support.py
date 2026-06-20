@@ -8,22 +8,22 @@ from ..abstractions.coercion_support import coerce_dict_iterable, coerce_list
 from .simhash_support import SimHashHost
 
 
+def _get_adapter_or_cmd_list(host: SimHashHost, attr: str, command: str) -> list[Any]:
+    if host.adapter is not None and hasattr(host.adapter, attr):
+        return coerce_list(getattr(host.adapter, attr)())
+    return coerce_list(host._cmd_list(command))
+
+
 def get_strings_data(host: SimHashHost) -> list[Any]:
-    if host.adapter is not None and hasattr(host.adapter, "get_strings"):
-        return coerce_list(host.adapter.get_strings())
-    return coerce_list(host._cmd_list("izzj"))
+    return _get_adapter_or_cmd_list(host, "get_strings", "izzj")
 
 
 def get_functions(host: SimHashHost) -> list[dict[str, Any]]:
-    if host.adapter is not None and hasattr(host.adapter, "get_functions"):
-        return coerce_dict_iterable(host.adapter.get_functions())
-    return coerce_dict_iterable(host._cmd_list("aflj"))
+    return coerce_dict_iterable(_get_adapter_or_cmd_list(host, "get_functions", "aflj"))
 
 
 def get_sections(host: SimHashHost) -> list[dict[str, Any]]:
-    if host.adapter is not None and hasattr(host.adapter, "get_sections"):
-        return coerce_dict_iterable(host.adapter.get_sections())
-    return coerce_dict_iterable(host._cmd_list("iSj"))
+    return coerce_dict_iterable(_get_adapter_or_cmd_list(host, "get_sections", "iSj"))
 
 
 def extract_ops_from_disasm(disasm: Any) -> list[Any]:

@@ -15,10 +15,13 @@ from ..interfaces import (
     ConfigLike,
     ResultAggregatorFactoryLike,
 )
+from ..core.analyzer_factory import run_analysis_method
 from .results_bucket import _results_bucket
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
+
+
 def run_registered_analyzer(
     stage: Any,
     context: dict[str, Any],
@@ -167,19 +170,11 @@ class AnalyzerStage(AnalysisStage):
                 config=self.config,
                 filename=self.filename,
             )
-            result = self._run_analysis_method(analyzer, ("analyze", "detect", "scan"))
+            result = run_analysis_method(analyzer, ("analyze", "detect", "scan"))
             return {self.result_key: result}
         except Exception as e:
             logger.warning("Analyzer %s failed: %s", self.analyzer_class.__name__, e)
             return {self.result_key: {"error": str(e), "success": False}}
-
-    @staticmethod
-    def _run_analysis_method(analyzer: object, method_names: tuple[str, ...]) -> Any:
-        for method_name in method_names:
-            method = getattr(analyzer, method_name, None)
-            if callable(method):
-                return method()
-        return {"error": "No suitable analysis method found"}
 
 
 class IndicatorStage(AnalysisStage):

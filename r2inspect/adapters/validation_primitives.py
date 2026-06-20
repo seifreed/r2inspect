@@ -84,45 +84,45 @@ def validate_bytes_data(data: Any, logger: Any) -> bytes:
     return b""
 
 
-def validate_address(address: Any) -> int:
-    if isinstance(address, int):
-        if address < 0:
-            raise ValueError(f"Address cannot be negative: {address}")
-        return address
-    if isinstance(address, str):
-        address = address.strip()
+def _parse_int_value(value: Any, *, label: str, allow_zero: bool) -> int:
+    if isinstance(value, int):
+        parsed = value
+        from_string = False
+    elif isinstance(value, str):
+        value = value.strip()
         try:
-            result = int(address, 16) if address.startswith(("0x", "0X")) else int(address)
-            if result < 0:
-                raise ValueError(f"Address cannot be negative: {result}")
-            return result
+            parsed = int(value, 16) if value.startswith(("0x", "0X")) else int(value)
         except ValueError as exc:
-            raise ValueError(f"Invalid address format: {address}") from exc
-    raise ValueError(f"Address must be int or str, got {type(address).__name__}")
+            raise ValueError(f"Invalid {label} format: {value}") from exc
+        from_string = True
+    else:
+        raise ValueError(f"{label.capitalize()} must be int or str, got {type(value).__name__}")
+
+    if parsed < 0 or (not allow_zero and parsed == 0):
+        if from_string:
+            raise ValueError(f"Invalid {label} format: {value}")
+        comparator = "cannot be negative" if allow_zero else "must be positive"
+        raise ValueError(f"{label.capitalize()} {comparator}: {parsed}")
+    return parsed
+
+
+def validate_address(address: Any) -> int:
+    return _parse_int_value(address, label="address", allow_zero=True)
 
 
 def validate_size(size: Any) -> int:
-    if isinstance(size, int):
-        if size <= 0:
-            raise ValueError(f"Size must be positive: {size}")
-        return size
-    if isinstance(size, str):
-        size = size.strip()
-        try:
-            result = int(size, 16) if size.startswith(("0x", "0X")) else int(size)
-            if result <= 0:
-                raise ValueError(f"Size must be positive: {result}")
-            return result
-        except ValueError as exc:
-            raise ValueError(f"Invalid size format: {size}") from exc
-    raise ValueError(f"Size must be int or str, got {type(size).__name__}")
+    return _parse_int_value(size, label="size", allow_zero=False)
+
+
+def _has_payload(response: Any) -> bool:
+    return bool(response)
 
 
 def is_valid_response(response: Any) -> bool:
     if response is None:
         return False
     if isinstance(response, dict | list):
-        return len(response) > 0
+        return _has_payload(response)
     if isinstance(response, str):
         if not response or response.strip() == "":
             return False
@@ -135,5 +135,5 @@ def is_valid_response(response: Any) -> bool:
         ]
         return not any(pattern in response for pattern in error_patterns)
     if isinstance(response, bytes):
-        return len(response) > 0
+        return _has_payload(response)
     return True
