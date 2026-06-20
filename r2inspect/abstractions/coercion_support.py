@@ -27,6 +27,11 @@ def coerce_dict_iterable(raw: Any) -> list[dict[str, Any]]:
     return [item for item in coerce_list(raw) if isinstance(item, dict)]
 
 
+def is_byte_list(values: Iterable[Any]) -> bool:
+    """True when every element is an int within the 0-255 byte range."""
+    return all(isinstance(value, int) and 0 <= value <= 0xFF for value in values)
+
+
 def coerce_number(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)

@@ -6,8 +6,7 @@ from collections.abc import Iterable
 from collections.abc import Callable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int_or_none
-
+from ..abstractions.coercion_support import coerce_int_or_none, is_byte_list
 
 
 def analyze_overlay_content(
@@ -38,10 +37,7 @@ def analyze_overlay_content(
             overlay_data = list(overlay_data)
         except TypeError:
             return
-        if (
-            not overlay_data
-            or not all(isinstance(value, int) and 0 <= value <= 0xFF for value in overlay_data)
-        ):
+        if not overlay_data or not is_byte_list(overlay_data):
             return
 
         result["overlay_entropy"] = calculate_entropy_fn(overlay_data)

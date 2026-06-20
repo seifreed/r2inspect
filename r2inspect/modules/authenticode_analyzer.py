@@ -1,6 +1,6 @@
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int, ensure_list_bucket
+from ..abstractions.coercion_support import coerce_int, ensure_list_bucket, is_byte_list
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
@@ -86,9 +86,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
         )
 
     def _parse_win_cert_header(self, data: list[int]) -> tuple[int, int, int]:
-        if len(data) < 8 or not all(
-            isinstance(value, int) and 0 <= value <= 0xFF for value in data[:8]
-        ):
+        if len(data) < 8 or not is_byte_list(data[:8]):
             raise ValueError(f"WIN_CERTIFICATE header requires 8 bytes, got {len(data)}")
         cert_length = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)
         cert_revision = data[4] | (data[5] << 8)
@@ -151,7 +149,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return None
         cn_bytes = pkcs7_data[start : start + length]
         try:
-            if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in cn_bytes):
+            if not is_byte_list(cn_bytes):
                 return None
             cn_str = bytes(cn_bytes).decode("utf-8", errors="ignore")
             if cn_str and cn_str.isprintable():

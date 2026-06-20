@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int, coerce_list
+from ..abstractions.coercion_support import coerce_int, coerce_list, is_byte_list
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +104,7 @@ class ResourceParsingMixin:
 
     def _get_dir_total_entries(self, dir_data: list[int]) -> int:
         dir_data = coerce_list(dir_data)
-        if len(dir_data) < 16 or not all(
-            isinstance(value, int) and 0 <= value <= 0xFF for value in dir_data[:16]
-        ):
+        if len(dir_data) < 16 or not is_byte_list(dir_data[:16]):
             return 0
         num_named_entries = dir_data[12] | (dir_data[13] << 8)
         num_id_entries = dir_data[14] | (dir_data[15] << 8)
@@ -125,7 +123,7 @@ class ResourceParsingMixin:
             except TypeError:
                 entry_offset += 8
                 continue
-            if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in entry_data[:8]):
+            if not is_byte_list(entry_data[:8]):
                 entry_offset += 8
                 continue
             resource = self._parse_dir_entry(rsrc_offset, entry_data, i)
@@ -140,7 +138,7 @@ class ResourceParsingMixin:
         entry_data = coerce_list(entry_data)
         if not entry_data or len(entry_data) < 8:
             return None
-        if not all(isinstance(value, int) and 0 <= value <= 0xFF for value in entry_data[:8]):
+        if not is_byte_list(entry_data[:8]):
             return None
         rsrc_base = coerce_int(rsrc_offset)
         name_or_id = (

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, is_byte_list
 
 
 class ResourceVersionMixin:
@@ -24,11 +24,7 @@ class ResourceVersionMixin:
             data = list(data)
         except TypeError:
             return None
-        if (
-            not data
-            or len(data) < 64
-            or not all(isinstance(value, int) and 0 <= value <= 0xFF for value in data)
-        ):
+        if not data or len(data) < 64 or not is_byte_list(data):
             return None
         return data
 
