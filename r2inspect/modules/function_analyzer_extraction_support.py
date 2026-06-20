@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from collections.abc import Iterable
 from typing import Any, Protocol
 
 from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import extract_mnemonics_from_text
 from ..domain.text_helpers import has_text
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
-from .disasm_ops_support import extract_pdfj_ops
+from .disasm_ops_support import extract_pdfj_ops, normalize_pdj_disasm
 
 logger = logging.getLogger(__name__)
 
@@ -107,20 +106,7 @@ def try_pdj_extraction(
             if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
             else analyzer._cmd_list(f"pdj {max_instructions} @ {func_addr}")
         )
-        if isinstance(disasm_list, list):
-            disasm_source = disasm_list
-        elif isinstance(disasm_list, dict):
-            ops = disasm_list.get("ops")
-            if isinstance(ops, list):
-                disasm_source = ops
-            elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
-                return []
-            else:
-                disasm_source = list(ops)
-        elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
-            return []
-        else:
-            disasm_source = list(disasm_list)
+        disasm_source = normalize_pdj_disasm(disasm_list)
         if disasm_source:
             logger.debug("pdj succeeded for %s, got %s instructions", func_name, len(disasm_source))
             return analyzer._extract_mnemonics_from_ops(disasm_source)
@@ -138,20 +124,7 @@ def try_basic_pdj_extraction(
             if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
             else analyzer._cmd_list(f"pdj 50 @ {func_addr}")
         )
-        if isinstance(disasm_list, list):
-            disasm_source = disasm_list
-        elif isinstance(disasm_list, dict):
-            ops = disasm_list.get("ops")
-            if isinstance(ops, list):
-                disasm_source = ops
-            elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
-                return []
-            else:
-                disasm_source = list(ops)
-        elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
-            return []
-        else:
-            disasm_source = list(disasm_list)
+        disasm_source = normalize_pdj_disasm(disasm_list)
         if disasm_source:
             logger.debug(
                 "Basic pdj succeeded for %s, got %s instructions",

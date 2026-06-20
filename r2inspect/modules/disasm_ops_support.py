@@ -29,7 +29,24 @@ def extract_pdfj_ops(analyzer: PdfjHost, func_addr: int) -> list[Any]:
     )
     if not isinstance(disasm, dict):
         return []
-    ops = disasm.get("ops")
+    return _coerce_ops(disasm.get("ops"))
+
+
+def normalize_pdj_disasm(disasm_list: Any) -> list[Any]:
+    """Normalize a ``pdj`` result into an ops list ([] when unusable).
+
+    ``pdj`` may return either a bare list of instruction records or a dict
+    wrapping them under ``ops``; both forms (and anything malformed) collapse
+    to a single list here.
+    """
+    if isinstance(disasm_list, list):
+        return disasm_list
+    if isinstance(disasm_list, dict):
+        return _coerce_ops(disasm_list.get("ops"))
+    return _coerce_ops(disasm_list)
+
+
+def _coerce_ops(ops: Any) -> list[Any]:
     if isinstance(ops, list):
         return ops
     if isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):

@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
 from typing import Any, Protocol
 
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
-from .disasm_ops_support import extract_pdfj_ops
+from .disasm_ops_support import extract_pdfj_ops, normalize_pdj_disasm
 
 
 class MnemonicHost(Protocol):
@@ -66,21 +65,7 @@ def extract_mnemonics_from_pdj(
         if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
         else analyzer._cmd_list(f"pdj 200 @ {func_addr}")
     )
-    if isinstance(disasm_list, list):
-        pass
-    elif isinstance(disasm_list, dict):
-        ops = disasm_list.get("ops")
-        if isinstance(ops, list):
-            disasm_list = ops
-        elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
-            return []
-        else:
-            disasm_list = list(ops)
-    elif isinstance(disasm_list, (dict, str, bytes)) or not isinstance(disasm_list, Iterable):
-        return []
-    else:
-        disasm_list = list(disasm_list)
-    mnemonics = analyzer._collect_mnemonics_from_ops(disasm_list)
+    mnemonics = analyzer._collect_mnemonics_from_ops(normalize_pdj_disasm(disasm_list))
     if mnemonics:
         logger.debug("Extracted %s mnemonics from %s using pdj", len(mnemonics), func_name)
     return mnemonics
