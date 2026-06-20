@@ -26,6 +26,7 @@ SUMMARY_BUILDERS = {
     "technical_details": "build_technical_details",
 }
 
+
 def _count_suspicious_imports(imports: list[dict[str, Any]]) -> int:
     """Count imported APIs commonly associated with suspicious execution flows.
 
@@ -61,10 +62,7 @@ def _count_suspicious_sections(sections: list[dict[str, Any]]) -> int:
         if isinstance(section, dict)
         and (
             section.get("suspicious_indicators")
-            or (
-                isinstance(name := section.get("name"), str)
-                and name in SUSPICIOUS_SECTION_NAMES
-            )
+            or (isinstance(name := section.get("name"), str) and name in SUSPICIOUS_SECTION_NAMES)
         )
     )
 
@@ -149,10 +147,16 @@ def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any
 def build_threat_indicators(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the threat-indicator section from imports, sections, YARA and crypto."""
     return {
-        "suspicious_imports": _count_suspicious_imports(get_list_bucket(analysis_results, "imports")),
+        "suspicious_imports": _count_suspicious_imports(
+            get_list_bucket(analysis_results, "imports")
+        ),
         "yara_matches": len(get_list_bucket(analysis_results, "yara_matches")),
-        "entropy_warnings": _count_high_entropy_sections(get_list_bucket(analysis_results, "sections")),
-        "suspicious_sections": _count_suspicious_sections(get_list_bucket(analysis_results, "sections")),
+        "entropy_warnings": _count_high_entropy_sections(
+            get_list_bucket(analysis_results, "sections")
+        ),
+        "suspicious_sections": _count_suspicious_sections(
+            get_list_bucket(analysis_results, "sections")
+        ),
         "crypto_indicators": _count_crypto_indicators(get_dict_bucket(analysis_results, "crypto")),
     }
 
@@ -161,7 +165,9 @@ def build_technical_details(analysis_results: dict[str, Any]) -> dict[str, Any]:
     """Build the technical-detail section of the executive summary."""
     functions = get_dict_bucket(analysis_results, "functions")
     crypto = get_dict_bucket(analysis_results, "crypto")
-    function_count = functions.get("count", 0)
+    # function_analyzer emits the count under "total_functions"; "count" is kept
+    # as a fallback for hand-built result dicts.
+    function_count = functions.get("total_functions") or functions.get("count", 0)
     if not function_count:
         raw_functions = analysis_results.get("functions")
         if isinstance(raw_functions, list):

@@ -370,7 +370,7 @@ def test_build_technical_details():
     results = {
         "imports": [{"name": "a"}, {"name": "b"}],
         "sections": [{"name": ".text"}, {"name": ".data"}],
-        "functions": {"count": 42},
+        "functions": {"total_functions": 42},
         "crypto": {"matches": ["AES"]},
     }
 
@@ -379,6 +379,34 @@ def test_build_technical_details():
     assert details["sections"] == 2
     assert details["functions"] == 42
     assert details["crypto_matches"] == 1
+
+
+def test_build_technical_details_reads_total_functions_field():
+    # function_analyzer emits the count under "total_functions" inside a dict
+    # bucket; a "count"-only reader reported 0 for every real binary.
+    details = _build_technical_details(
+        {
+            "imports": [],
+            "sections": [],
+            "functions": {"total_functions": 250, "machoc_hashes": {}},
+            "crypto": {},
+        }
+    )
+
+    assert details["functions"] == 250
+
+
+def test_build_technical_details_falls_back_to_count_field():
+    details = _build_technical_details(
+        {
+            "imports": [],
+            "sections": [],
+            "functions": {"count": 7},
+            "crypto": {},
+        }
+    )
+
+    assert details["functions"] == 7
 
 
 def test_build_technical_details_accepts_function_lists():
