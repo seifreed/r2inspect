@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from ..abstractions.coercion_support import coerce_int, is_byte_list
@@ -91,23 +92,44 @@ def analyze_resource_data(
         )
 
 
+def read_pxj_byte_list(
+    cmdj: Callable[[str, Any], Any],
+    offset: int,
+    size: int,
+    *,
+    read_limit: int,
+    min_length: int = 0,
+    allow_zero_offset: bool = False,
+) -> list[int] | None:
+    """Read ``pxj`` bytes at ``offset`` and return them as a validated byte list.
+
+    Returns None when offset/size are out of range, the command yields a
+    non-iterable, the data is shorter than ``min_length``, or any element is
+    outside the 0-255 byte range. ``allow_zero_offset`` permits offset 0
+    (the default rejects it).
+    """
+    offset = coerce_int(offset)
+    size = coerce_int(size)
+    if (offset < 0 if allow_zero_offset else offset <= 0) or size <= 0:
+        return None
+    data = cmdj(f"pxj {min(size, read_limit)} @ {offset}", [])
+    if isinstance(data, (dict, str, bytes)):
+        return None
+    try:
+        data_list = list(data)
+    except TypeError:
+        return None
+    if not data_list or len(data_list) < min_length or not is_byte_list(data_list):
+        return None
+    return data_list
+
+
 def read_resource_as_string(
     analyzer: ResourceHost, offset: int, size: int, *, logger: logging.Logger
 ) -> str | None:
     try:
-        offset = coerce_int(offset)
-        size = coerce_int(size)
-        if offset <= 0 or size <= 0:
-            return None
-        read_size = min(size, 8192)
-        data = analyzer._cmdj(f"pxj {read_size} @ {offset}", [])
-        if isinstance(data, (dict, str, bytes)):
-            return None
-        try:
-            data = list(data)
-        except TypeError:
-            return None
-        if not data or not is_byte_list(data):
+        data = read_pxj_byte_list(analyzer._cmdj, offset, size, read_limit=8192)
+        if data is None:
             return None
         return decode_resource_text(bytes(data))
     except Exception as exc:

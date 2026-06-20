@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int, is_byte_list
+from .resource_support import read_pxj_byte_list
 
 
 class ResourceVersionMixin:
@@ -13,20 +13,9 @@ class ResourceVersionMixin:
     _cmdj: Any  # provided by host class
 
     def _read_version_info_data(self, offset: int, size: int) -> list[int] | None:
-        offset = coerce_int(offset)
-        size = coerce_int(size)
-        if offset < 0 or size <= 0:
-            return None
-        data = self._cmdj(f"pxj {min(size, 1024)} @ {offset}", [])
-        if isinstance(data, (dict, str, bytes)):
-            return None
-        try:
-            data = list(data)
-        except TypeError:
-            return None
-        if not data or len(data) < 64 or not is_byte_list(data):
-            return None
-        return data
+        return read_pxj_byte_list(
+            self._cmdj, offset, size, read_limit=1024, min_length=64, allow_zero_offset=True
+        )
 
     def _find_vs_signature(self, data: list[int]) -> int:
         vs_sig = [0xBD, 0x04, 0xEF, 0xFE]
