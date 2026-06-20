@@ -11,16 +11,21 @@ from pydantic import BaseModel, Field, field_validator
 
 from .base import AnalysisResultBase
 
-from ..domain.format_types import SectionInfo as _SectionInfo
-from ..domain.format_types import SecurityFeatures as _SecurityFeatures
 from ..domain.format_types import (
-    enabled_security_features,
-    section_has_permission,
-    security_feature_score,
+    SectionInfo as _SectionInfo,
+    SecurityFeatures as _SecurityFeatures,
+    _SectionMixin,
+    _SecurityFeaturesMixin,
 )
 
 
-class SectionInfo(BaseModel):
+class _ToDictModelMixin:
+    def to_dict(self) -> dict[str, object]:
+        """Convert to dictionary representation."""
+        return self.model_dump()
+
+
+class SectionInfo(_ToDictModelMixin, _SectionMixin, BaseModel):
     """Pydantic-validated section information (wraps domain entity)."""
 
     name: str = Field(..., description="Section name")
@@ -53,23 +58,6 @@ class SectionInfo(BaseModel):
             raise ValueError("Entropy must be between 0.0 and 8.0")
         return v
 
-    def is_suspicious(self) -> bool:
-        """Check if section has any suspicious indicators"""
-        return len(self.suspicious_indicators) > 0
-
-    def has_permission(self, permission: str) -> bool:
-        """Check if section has a specific permission."""
-        return section_has_permission(
-            permission,
-            is_readable=self.is_readable,
-            is_writable=self.is_writable,
-            is_executable=self.is_executable,
-        )
-
-    def to_dict(self) -> dict[str, object]:
-        """Convert to dictionary representation."""
-        return self.model_dump()
-
     def to_domain(self) -> _SectionInfo:
         """Convert to domain entity."""
         return _SectionInfo(
@@ -87,7 +75,7 @@ class SectionInfo(BaseModel):
         )
 
 
-class SecurityFeatures(BaseModel):
+class SecurityFeatures(_ToDictModelMixin, _SecurityFeaturesMixin, BaseModel):
     """Pydantic-validated security features (wraps domain entity)."""
 
     aslr: bool = Field(False, description="ASLR enabled")
@@ -104,18 +92,6 @@ class SecurityFeatures(BaseModel):
     runpath: bool = Field(False, description="RUNPATH present (ELF)")
     fortify: bool = Field(False, description="Fortify source enabled (ELF)")
     high_entropy_va: bool = Field(False, description="High entropy VA enabled")
-
-    def get_enabled_features(self) -> list[str]:
-        """Get list of enabled security features"""
-        return enabled_security_features(self.model_dump())
-
-    def security_score(self) -> int:
-        """Calculate a basic security score (0-100)."""
-        return security_feature_score(self.model_dump())
-
-    def to_dict(self) -> dict[str, object]:
-        """Convert to dictionary representation."""
-        return self.model_dump()
 
     def to_domain(self) -> _SecurityFeatures:
         """Convert to domain entity."""

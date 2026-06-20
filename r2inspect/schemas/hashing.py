@@ -3,7 +3,9 @@
 
 from pydantic import Field, field_validator
 
+from ..abstractions.validation_support import validate_non_negative
 from .base import AnalysisResultBase
+from ..domain.text_helpers import has_text
 
 
 class HashAnalysisResult(AnalysisResultBase):
@@ -76,8 +78,7 @@ class HashAnalysisResult(AnalysisResultBase):
     def validate_file_size(cls, v: int | None) -> int | None:
         """Validate file size is reasonable"""
         if v is not None:
-            if v < 0:
-                raise ValueError("file_size must be non-negative")
+            validate_non_negative(v, name="file_size")
             if v > 10 * 1024 * 1024 * 1024:  # 10GB
                 raise ValueError("file_size exceeds maximum (10GB)")
         return v
@@ -89,4 +90,4 @@ class HashAnalysisResult(AnalysisResultBase):
         Returns:
             True if hash_value is present and non-empty
         """
-        return self.hash_value is not None and len(self.hash_value.strip()) > 0
+        return has_text(self.hash_value)

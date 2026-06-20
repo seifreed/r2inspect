@@ -9,6 +9,7 @@ import logging
 from typing import Any
 
 from ...abstractions.coercion_support import coerce_int
+from ..text_helpers import has_text
 from .binary_helpers import shannon_entropy
 
 logger = logging.getLogger(__name__)
@@ -197,4 +198,4 @@ def overlay_info(
 
 def _search_signature_hex(search_hex_fn: Callable[[str], str], hex_sig: str) -> bool:
     result = search_hex_fn(hex_sig)
-    return bool(isinstance(result, str) and result.strip())
+    return has_text(result)

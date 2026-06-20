@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from typing import Any
+from dataclasses import dataclass
+
+from .entities import _ToDictMixin
 
 
 @dataclass
-class AnalyzerResult:
+class AnalyzerResult(_ToDictMixin):
     """Base result model for analyzer outputs."""
 
     available: bool = False
     error: str | None = None
     execution_time: float = 0.0
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 @dataclass

@@ -12,9 +12,16 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from .text_helpers import has_text
+
+
+class _ToDictMixin:
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
 
 @dataclass
-class FileInfo:
+class FileInfo(_ToDictMixin):
     """Basic file metadata."""
 
     name: str = ""
@@ -29,12 +36,9 @@ class FileInfo:
     endian: str = ""
     mime_type: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class HashingResult:
+class HashingResult(_ToDictMixin):
     """Hash values from various algorithms."""
 
     ssdeep: str = ""
@@ -47,16 +51,13 @@ class HashingResult:
     rich_hash: str = ""
     machoc_hash: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
     def has_hash(self, hash_type: str) -> bool:
         value = getattr(self, hash_type, "")
-        return bool(isinstance(value, str) and value.strip())
+        return has_text(value)
 
 
 @dataclass
-class ImportInfo:
+class ImportInfo(_ToDictMixin):
     """Imported function information."""
 
     name: str = ""
@@ -68,12 +69,9 @@ class ImportInfo:
     risk_level: str = "Low"
     risk_tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class ExportInfo:
+class ExportInfo(_ToDictMixin):
     """Exported function information."""
 
     name: str = ""
@@ -81,12 +79,9 @@ class ExportInfo:
     ordinal: int = 0
     size: int = 0
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class YaraMatch:
+class YaraMatch(_ToDictMixin):
     """YARA rule match result."""
 
     rule: str = ""
@@ -95,12 +90,9 @@ class YaraMatch:
     meta: dict[str, Any] = field(default_factory=dict)
     strings: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class StringInfo:
+class StringInfo(_ToDictMixin):
     """Extracted string information."""
 
     value: str = ""
@@ -109,12 +101,9 @@ class StringInfo:
     encoding: str = ""
     is_suspicious: bool = False
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class FunctionInfo:
+class FunctionInfo(_ToDictMixin):
     """Function analysis result."""
 
     name: str = ""
@@ -125,12 +114,9 @@ class FunctionInfo:
     call_refs: int = 0
     data_refs: int = 0
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class AntiAnalysisResult:
+class AntiAnalysisResult(_ToDictMixin):
     """Anti-analysis detection results."""
 
     anti_debug: bool = False
@@ -139,15 +125,12 @@ class AntiAnalysisResult:
     timing_checks: bool = False
     techniques: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
     def has_evasion(self) -> bool:
         return self.anti_debug or self.anti_vm or self.anti_sandbox or self.timing_checks
 
 
 @dataclass
-class PackerResult:
+class PackerResult(_ToDictMixin):
     """Packer detection result."""
 
     is_packed: bool = False
@@ -155,35 +138,26 @@ class PackerResult:
     confidence: int = 0
     indicators: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
 
 @dataclass
-class CryptoResult:
+class CryptoResult(_ToDictMixin):
     """Cryptographic detection result."""
 
     algorithms: list[dict[str, Any]] = field(default_factory=list)
     constants: list[dict[str, Any]] = field(default_factory=list)
     functions: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
     def has_crypto(self) -> bool:
         return bool(self.algorithms or self.constants)
 
 
 @dataclass
-class Indicator:
+class Indicator(_ToDictMixin):
     """Security indicator."""
 
     type: str = ""
     description: str = ""
     severity: str = "Low"
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 __all__ = [

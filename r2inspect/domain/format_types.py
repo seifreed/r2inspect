@@ -6,8 +6,10 @@ They use only stdlib imports to maintain domain isolation.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any
+
+from .entities import _ToDictMixin
 
 _SECURITY_WEIGHTS = {
     "nx": 15,
@@ -58,8 +60,35 @@ def section_has_permission(
     return perm_map.get(permission.lower(), False)
 
 
+class _PermissionMixin:
+    def has_permission(self, permission: str) -> bool:
+        """Check if section has a specific permission."""
+        return section_has_permission(
+            permission,
+            is_readable=self.is_readable,
+            is_writable=self.is_writable,
+            is_executable=self.is_executable,
+        )
+
+
+class _SectionMixin(_PermissionMixin):
+    def is_suspicious(self) -> bool:
+        """Check if section has any suspicious indicators."""
+        return len(self.suspicious_indicators) > 0
+
+
+class _SecurityFeaturesMixin:
+    def get_enabled_features(self) -> list[str]:
+        """Get list of enabled security features."""
+        return enabled_security_features(self.to_dict())
+
+    def security_score(self) -> int:
+        """Calculate a basic security score (0-100)."""
+        return security_feature_score(self.to_dict())
+
+
 @dataclass
-class SectionInfo:
+class SectionInfo(_ToDictMixin, _SectionMixin):
     """Information about a binary section."""
 
     name: str = ""
@@ -74,25 +103,9 @@ class SectionInfo:
     flags: str | None = None
     suspicious_indicators: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-    def is_suspicious(self) -> bool:
-        """Check if section has any suspicious indicators."""
-        return len(self.suspicious_indicators) > 0
-
-    def has_permission(self, permission: str) -> bool:
-        """Check if section has a specific permission."""
-        return section_has_permission(
-            permission,
-            is_readable=self.is_readable,
-            is_writable=self.is_writable,
-            is_executable=self.is_executable,
-        )
-
 
 @dataclass
-class SecurityFeatures:
+class SecurityFeatures(_ToDictMixin, _SecurityFeaturesMixin):
     """Security features detected in a binary."""
 
     aslr: bool = False
@@ -109,17 +122,6 @@ class SecurityFeatures:
     runpath: bool = False
     fortify: bool = False
     high_entropy_va: bool = False
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-    def get_enabled_features(self) -> list[str]:
-        """Get list of enabled security features."""
-        return enabled_security_features(asdict(self))
-
-    def security_score(self) -> int:
-        """Calculate a basic security score (0-100)."""
-        return security_feature_score(asdict(self))
 
 
 __all__ = [
