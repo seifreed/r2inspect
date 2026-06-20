@@ -32,6 +32,7 @@ MAGIC_PATTERNS: dict[str, dict[str, Any]] = {
     },
     "MACHO_UNIVERSAL": {
         "signatures": [(0, b"\xca\xfe\xba\xbe"), (0, b"\xbe\xba\xfe\xca")],
+        "macho_fat_check": True,
         "description": "macOS Universal Binary",
         "extensions": [],
     },
@@ -83,6 +84,7 @@ MAGIC_PATTERNS: dict[str, dict[str, Any]] = {
     },
     "JAVA_CLASS": {
         "signatures": [(0, b"\xca\xfe\xba\xbe")],
+        "class_check": True,
         "description": "Java Class File",
         "extensions": [".class"],
     },

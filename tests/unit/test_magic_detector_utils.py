@@ -92,7 +92,10 @@ def test_detect_file_type_macho64(tmp_path: Path):
 
 def test_detect_file_type_macho_universal(tmp_path: Path):
     macho_file = tmp_path / "test.macho"
-    macho_header = b"\xca\xfe\xba\xbe"
+    # Valid fat header: magic + nfat_arch=1. A bare 0xCAFEBABE blob with no real
+    # architecture count is ambiguous with a Java class file and is no longer
+    # classified as a universal binary, so the count must be present.
+    macho_header = b"\xca\xfe\xba\xbe" + b"\x00\x00\x00\x01"
     macho_header += b"\x00" * 100
     macho_file.write_bytes(macho_header)
 

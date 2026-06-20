@@ -139,8 +139,9 @@ def test_detect_macho_universal_big_endian():
 
 def test_detect_macho_universal_little_endian():
     magic = struct.pack("<I", 0xCAFEBABE)
+    nfat_arch = struct.pack("<I", 1)  # fat header carries the arch count at offset 4
     cpu_type = struct.pack("<I", 0x01000012)  # PowerPC64
-    data = magic + cpu_type + b"\x00" * 200
+    data = magic + nfat_arch + cpu_type + b"\x00" * 200
     path = _write_tmp(data)
     try:
         result = detect_file_type(path)

@@ -74,6 +74,34 @@ def validate_docx_format(file_handle: BinaryIO, logger: Any) -> float:
         return 0.0
 
 
+_MAX_FAT_ARCH = 30
+_MIN_JAVA_MAJOR = 45
+
+
+def validate_macho_fat(header: bytes) -> float:
+    # Mach-O fat (universal) binaries and Java class files share the 0xCAFEBABE
+    # magic. Disambiguate on the dword at offset 4: a fat binary's nfat_arch is a
+    # small architecture count, while a Java class file holds a major version
+    # (>= 45) in bytes 6-7, making that dword far larger than any arch count.
+    if len(header) < 8:
+        return 0.0
+    for byte_order in (">I", "<I"):
+        nfat_arch = struct.unpack(byte_order, header[4:8])[0]
+        if 1 <= nfat_arch <= _MAX_FAT_ARCH:
+            return 0.8
+    return 0.0
+
+
+def validate_java_class(header: bytes) -> float:
+    # Shares 0xCAFEBABE with Mach-O fat binaries; a real class file carries a
+    # major version >= 45 (JDK 1.1) in bytes 6-7, which a fat binary's tiny
+    # nfat_arch count never reaches.
+    if len(header) < 8:
+        return 0.0
+    major_version = struct.unpack(">H", header[6:8])[0]
+    return 0.8 if major_version >= _MIN_JAVA_MAJOR else 0.0
+
+
 def analyze_elf_details(header: bytes) -> dict[str, Any]:
     unknown = {"architecture": "Unknown", "bits": "Unknown", "endianness": "Unknown"}
     if len(header) < 8:

@@ -454,8 +454,9 @@ def test_macho_universal_big_endian():
 
 
 def test_macho_universal_little_endian():
-    # Rare little-endian fat (FAT_CIGAM) header on disk: BE BA FE CA.
-    path = _write_tmp(b"\xbe\xba\xfe\xca" + struct.pack("<I", 0x01000012) + b"\x00" * 50)
+    # Rare little-endian fat (FAT_CIGAM) header on disk: BE BA FE CA, followed by
+    # the little-endian nfat_arch count (offset 4) so it is a valid fat header.
+    path = _write_tmp(b"\xbe\xba\xfe\xca" + struct.pack("<I", 18) + b"\x00" * 50)
     try:
         result = detect_file_type(path)
         assert result["bits"] == "Universal"

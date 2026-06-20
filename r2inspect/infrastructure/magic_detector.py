@@ -16,6 +16,8 @@ from .magic_detector_support import (
     fallback_detection as _fallback_detection_impl,
     read_at_offset as _read_at_offset_impl,
     validate_docx_format as _validate_docx_format_impl,
+    validate_java_class as _validate_java_class_impl,
+    validate_macho_fat as _validate_macho_fat_impl,
     validate_pe_format as _validate_pe_format_impl,
 )
 from .magic_patterns import MAGIC_PATTERNS as _MAGIC_PATTERNS
@@ -124,6 +126,10 @@ class MagicByteDetector:
                 confidence = self._validate_pe_format(header, file_handle)
             elif format_info.get("docx_check"):
                 confidence = self._validate_docx_format(file_handle)
+            elif format_info.get("macho_fat_check"):
+                confidence = _validate_macho_fat_impl(header)
+            elif format_info.get("class_check"):
+                confidence = _validate_java_class_impl(header)
             if confidence > 0:
                 return confidence
         return 0.0
