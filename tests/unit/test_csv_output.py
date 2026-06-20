@@ -290,6 +290,16 @@ def test_csv_formatter_count_duplicate_machoc_no_duplicates():
     assert result == 0
 
 
+def test_csv_formatter_count_duplicate_machoc_ignores_absent_hashes():
+    # Functions without a machoc (None / empty) must not be bucketed together as
+    # bogus duplicates; consistent with num_unique_machoc which skips them.
+    formatter = CsvOutputFormatter({})
+
+    machoc = {"f1": None, "f2": None, "f3": "", "f4": "h1", "f5": "h1"}
+    result = formatter._count_duplicate_machoc(machoc)
+    assert result == 1
+
+
 def test_csv_formatter_compile_time_from_elf_info():
     results = {
         "file_info": {"name": "test.elf"},
