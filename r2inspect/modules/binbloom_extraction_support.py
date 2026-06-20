@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from typing import Any, Protocol
 
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+from .disasm_ops_support import extract_pdfj_ops
 
 
 class MnemonicHost(Protocol):
@@ -48,20 +49,7 @@ def extract_instruction_mnemonics(
 def extract_mnemonics_from_pdfj(
     analyzer: MnemonicHost, func_addr: int, func_name: str, logger: logging.Logger
 ) -> list[str]:
-    disasm = (
-        analyzer.adapter.get_disasm(address=func_addr)
-        if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
-        else analyzer._cmdj(f"pdfj @ {func_addr}", {})
-    )
-    if not isinstance(disasm, dict):
-        return []
-    ops = disasm.get("ops")
-    if isinstance(ops, list):
-        ops_source = ops
-    elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
-        return []
-    else:
-        ops_source = list(ops)
+    ops_source = extract_pdfj_ops(analyzer, func_addr)
     if not ops_source:
         return []
     mnemonics = analyzer._collect_mnemonics_from_ops(ops_source)

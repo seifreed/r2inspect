@@ -11,6 +11,7 @@ from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import extract_mnemonics_from_text
 from ..domain.text_helpers import has_text
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+from .disasm_ops_support import extract_pdfj_ops
 
 logger = logging.getLogger(__name__)
 
@@ -83,24 +84,10 @@ def try_pdfj_extraction(
     analyzer: FunctionExtractionHost, func_name: str, func_addr: int, logger: logging.Logger
 ) -> list[str]:
     try:
-        disasm = (
-            analyzer.adapter.get_disasm(address=func_addr)
-            if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
-            else analyzer._cmdj(f"pdfj @ {func_addr}", {})
-        )
-        if isinstance(disasm, dict):
-            ops = disasm.get("ops")
-            if isinstance(ops, list):
-                ops_source = ops
-            elif isinstance(ops, (dict, str, bytes)) or not isinstance(ops, Iterable):
-                return []
-            else:
-                ops_source = list(ops)
-            if ops_source:
-                logger.debug(
-                    "pdfj succeeded for %s, got %s instructions", func_name, len(ops_source)
-                )
-                return analyzer._extract_mnemonics_from_ops(ops_source)
+        ops_source = extract_pdfj_ops(analyzer, func_addr)
+        if ops_source:
+            logger.debug("pdfj succeeded for %s, got %s instructions", func_name, len(ops_source))
+            return analyzer._extract_mnemonics_from_ops(ops_source)
     except Exception as exc:
         logger.debug("pdfj failed for %s: %s", func_name, str(exc))
     return []
@@ -135,9 +122,7 @@ def try_pdj_extraction(
         else:
             disasm_source = list(disasm_list)
         if disasm_source:
-            logger.debug(
-                "pdj succeeded for %s, got %s instructions", func_name, len(disasm_source)
-            )
+            logger.debug("pdj succeeded for %s, got %s instructions", func_name, len(disasm_source))
             return analyzer._extract_mnemonics_from_ops(disasm_source)
     except Exception as exc:
         logger.debug("pdj failed for %s: %s", func_name, str(exc))
