@@ -5,7 +5,6 @@ from collections.abc import Callable
 from typing import Any
 
 from ...application.use_cases import AnalyzeBinaryUseCase
-from ...factory import create_inspector
 from . import interactive_runtime as _interactive_runtime
 from .base import Command
 
@@ -21,15 +20,9 @@ class InteractiveCommand(Command):
 
         try:
             self.context.console.print(f"[blue]Initializing analysis for: {filename}[/blue]")
-            analysis_options = self._setup_analysis_options(
-                yara=args.get("yara"),
-                xor=args.get("xor"),
-            )
-            with create_inspector(
-                filename=filename,
-                config=config,
-                verbose=verbose,
-            ) as inspector:
+            with self._analysis_session(
+                filename, config, verbose, yara=args.get("yara"), xor=args.get("xor")
+            ) as (inspector, analysis_options):
                 self._run_interactive_mode(inspector, analysis_options)
 
             return 0

@@ -150,11 +150,11 @@ def test_analyze_command_error_and_outputs(tmp_path: Path) -> None:
     result = missing.execute({"filename": "does-not-exist.bin", "verbose": True})
     assert result == 1
 
-    import r2inspect.cli.commands.analyze_command as analyze_module
+    import r2inspect.cli.commands.base as base_module
 
-    original_create = analyze_module.create_inspector
+    original_create = base_module.create_inspector
     try:
-        analyze_module.create_inspector = lambda **_kwargs: _DummyInspectorContext(  # type: ignore[assignment]
+        base_module.create_inspector = lambda **_kwargs: _DummyInspectorContext(  # type: ignore[assignment]
             _DummyInspector()
         )
         success = AnalyzeCommand(context=context)
@@ -174,7 +174,7 @@ def test_analyze_command_error_and_outputs(tmp_path: Path) -> None:
             == 0
         )
 
-        analyze_module.create_inspector = lambda **_kwargs: (_ for _ in ()).throw(  # type: ignore[assignment]
+        base_module.create_inspector = lambda **_kwargs: (_ for _ in ()).throw(  # type: ignore[assignment]
             KeyboardInterrupt()
         )
         assert (
@@ -184,7 +184,7 @@ def test_analyze_command_error_and_outputs(tmp_path: Path) -> None:
             == 1
         )
     finally:
-        analyze_module.create_inspector = original_create  # type: ignore[assignment]
+        base_module.create_inspector = original_create  # type: ignore[assignment]
 
 
 def test_batch_command_error_and_logging(tmp_path: Path) -> None:

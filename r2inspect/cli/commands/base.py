@@ -2,12 +2,15 @@
 """Base abstractions for CLI commands."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 
 from rich.console import Console
 
 from ...config import Config
+from ...factory import create_inspector
 from .context_runtime import create_command_context as _create_command_context
 from .context_runtime import resolve_config as _resolve_config
 from ..command_runtime import (
@@ -91,6 +94,21 @@ class Command(ABC):
     ) -> dict[str, Any]:
         """Build the standardized analysis-options dictionary."""
         return _build_analysis_options(yara, xor)
+
+    @contextmanager
+    def _analysis_session(
+        self,
+        filename: str,
+        config: Config,
+        verbose: bool,
+        *,
+        yara: str | None,
+        xor: str | None,
+    ) -> Iterator[tuple[Any, dict[str, Any]]]:
+        """Open an inspector alongside the standard analysis options."""
+        options = self._setup_analysis_options(yara=yara, xor=xor)
+        with create_inspector(filename=filename, config=config, verbose=verbose) as inspector:
+            yield inspector, options
 
     def _handle_error(
         self, error: Exception, verbose: bool, context_label: str = "Analysis"

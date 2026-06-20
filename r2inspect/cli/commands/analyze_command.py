@@ -6,7 +6,6 @@ from typing import Any
 
 from ...application.analysis_service import default_analysis_service
 from ...application.use_cases import AnalyzeBinaryUseCase
-from ...factory import create_inspector
 from . import analysis_output
 from .base import Command, apply_thread_settings
 
@@ -30,15 +29,9 @@ class AnalyzeCommand(Command):
                 output_csv=args.get("output_csv", False),
                 output_file=args.get("output"),
             )
-            analysis_options = self._setup_analysis_options(
-                yara=args.get("yara"),
-                xor=args.get("xor"),
-            )
-            with create_inspector(
-                filename=filename,
-                config=config,
-                verbose=verbose,
-            ) as inspector:
+            with self._analysis_session(
+                filename, config, verbose, yara=args.get("yara"), xor=args.get("xor")
+            ) as (inspector, analysis_options):
                 self._run_analysis(
                     inspector=inspector,
                     options=analysis_options,
