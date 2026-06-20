@@ -198,6 +198,22 @@ def test_streaming_summary_json_only(tmp_path: Path):
     assert written["batch_summary"]["successful_analyses"] == 1
 
 
+def test_streaming_summary_json_only_with_file_target(tmp_path: Path):
+    # -o report.json gives a file path; the summary must land in its parent dir
+    # rather than crashing trying to write under a non-directory.
+    agg = StreamingBatchAggregator(
+        output_csv=False, output_formatter_cls=OutputFormatter, fieldnames=get_csv_fieldnames()
+    )
+    agg.on_result("f1", _result())
+    summary = _make_summary(agg, [])
+
+    target = tmp_path / "report.json"
+    name = summary({"f1": {}}, [], target, True, False)
+    assert name is not None and name.endswith(".json")
+    assert (tmp_path / name).is_file()
+    assert not target.is_dir()
+
+
 def test_streaming_summary_csv_and_json(tmp_path: Path):
     agg = StreamingBatchAggregator(
         output_csv=True, output_formatter_cls=OutputFormatter, fieldnames=get_csv_fieldnames()

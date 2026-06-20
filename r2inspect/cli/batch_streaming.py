@@ -149,7 +149,10 @@ def make_streaming_create_batch_summary(
             write_streaming_csv(csv_file, aggregator.csv_rows, aggregator._fieldnames)
             output_filename = csv_name
         if output_json:
-            summary_file = output_path / f"r2inspect_batch_{timestamp}.json"
+            json_output_path = (
+                output_path.parent if output_path.suffix in (".csv", ".json") else output_path
+            )
+            summary_file = json_output_path / f"r2inspect_batch_{timestamp}.json"
             payload = build_streaming_json_payload(
                 aggregator, list(all_results.keys()), failed_files
             )
