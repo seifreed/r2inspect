@@ -5,42 +5,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..interfaces import (
-    AnalyzerBackend,
-    AnalyzerFactoryLike,
-    AnalyzerRegistryLike,
-    ConfigLike,
-)
 from .stages_common import (
-    RegistryStage,
-    default_analyzer_factory,
+    OptionsRegistryStage,
     run_registered_analyzer,
 )
 
 
-class DetectionStage(RegistryStage):
+class DetectionStage(OptionsRegistryStage):
     """Execute detection analyzers for patterns and signatures."""
 
-    def __init__(
-        self,
-        registry: AnalyzerRegistryLike,
-        adapter: AnalyzerBackend,
-        config: ConfigLike,
-        filename: str,
-        options: dict[str, Any],
-        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
-    ) -> None:
-        super().__init__(
-            name="detection",
-            description="Pattern and signature detection",
-            dependencies=["format_detection"],
-            registry=registry,
-            adapter=adapter,
-            config=config,
-            filename=filename,
-            analyzer_factory=analyzer_factory,
-        )
-        self.options = options
+    stage_name = "detection"
+    stage_description = "Pattern and signature detection"
+    stage_dependencies = ["format_detection"]
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         results: dict[str, Any] = {}

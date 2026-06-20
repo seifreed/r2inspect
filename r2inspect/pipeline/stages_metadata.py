@@ -5,42 +5,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..interfaces import (
-    AnalyzerBackend,
-    AnalyzerFactoryLike,
-    AnalyzerRegistryLike,
-    ConfigLike,
-)
 from .stages_common import (
-    RegistryStage,
-    default_analyzer_factory,
+    OptionsRegistryStage,
     run_registered_analyzer,
 )
 
 
-class MetadataStage(RegistryStage):
+class MetadataStage(OptionsRegistryStage):
     """Extract structural metadata from binaries."""
 
-    def __init__(
-        self,
-        registry: AnalyzerRegistryLike,
-        adapter: AnalyzerBackend,
-        config: ConfigLike,
-        filename: str,
-        options: dict[str, Any],
-        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
-    ) -> None:
-        super().__init__(
-            name="metadata",
-            description="Structural metadata extraction",
-            dependencies=["file_info", "format_detection"],
-            registry=registry,
-            adapter=adapter,
-            config=config,
-            filename=filename,
-            analyzer_factory=analyzer_factory,
-        )
-        self.options = options
+    stage_name = "metadata"
+    stage_description = "Structural metadata extraction"
+    stage_dependencies = ["file_info", "format_detection"]
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         results: dict[str, Any] = {}

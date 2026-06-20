@@ -11,14 +11,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..interfaces import (
-    AnalyzerBackend,
-    AnalyzerFactoryLike,
-    AnalyzerRegistryLike,
-    ConfigLike,
-)
+from collections.abc import Callable
+
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import RegistryStage, default_analyzer_factory, _results_bucket
+from .stages_common import ConfiguredRegistryStage, _results_bucket
 
 logger = logging.getLogger(__name__)
 
@@ -35,28 +31,16 @@ FORMAT_HANDLERS = {
 }
 
 
-class FormatAnalysisStage(RegistryStage):
+class FormatAnalysisStage(ConfiguredRegistryStage):
     """Perform format-specific deep analysis."""
 
-    def __init__(
-        self,
-        registry: AnalyzerRegistryLike,
-        adapter: AnalyzerBackend,
-        config: ConfigLike,
-        filename: str,
-        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
-    ) -> None:
-        super().__init__(
-            name="format_analysis",
-            description="Format-specific deep analysis",
-            dependencies=["format_detection"],
-            registry=registry,
-            adapter=adapter,
-            config=config,
-            filename=filename,
-            analyzer_factory=analyzer_factory,
-            condition=lambda ctx: detected_file_format(ctx) in {"PE", "ELF", "Mach-O"},
-        )
+    stage_name = "format_analysis"
+    stage_description = "Format-specific deep analysis"
+    stage_dependencies = ["format_detection"]
+
+    @staticmethod
+    def _stage_condition() -> Callable[[dict[str, Any]], bool] | None:
+        return lambda ctx: detected_file_format(ctx) in {"PE", "ELF", "Mach-O"}
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         file_format = detected_file_format(context)

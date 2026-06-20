@@ -6,41 +6,20 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..interfaces import (
-    AnalyzerBackend,
-    AnalyzerFactoryLike,
-    AnalyzerRegistryLike,
-    ConfigLike,
-    HashingAnalyzerInterface,
-)
+from ..interfaces import HashingAnalyzerInterface
 from ..registry.analyzer_registry import AnalyzerCategory
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import RegistryStage, default_analyzer_factory, _results_bucket
+from .stages_common import ConfiguredRegistryStage, _results_bucket
 
 logger = logging.getLogger(__name__)
 
 
-class HashingStage(RegistryStage):
+class HashingStage(ConfiguredRegistryStage):
     """Execute hashing analyzers for similarity detection."""
 
-    def __init__(
-        self,
-        registry: AnalyzerRegistryLike,
-        adapter: AnalyzerBackend,
-        config: ConfigLike,
-        filename: str,
-        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
-    ) -> None:
-        super().__init__(
-            name="hashing",
-            description="Execute fuzzy and similarity hashing",
-            dependencies=["file_info"],
-            registry=registry,
-            adapter=adapter,
-            config=config,
-            filename=filename,
-            analyzer_factory=analyzer_factory,
-        )
+    stage_name = "hashing"
+    stage_description = "Execute fuzzy and similarity hashing"
+    stage_dependencies = ["file_info"]
 
     def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         file_format = detected_file_format(context)

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Any, ClassVar
 
 from ..infrastructure.logging import get_logger
 from ..interfaces import (
@@ -130,6 +130,57 @@ class RegistryStage(AnalysisStage):
         self.config = config
         self.filename = filename
         self.analyzer_factory = analyzer_factory
+
+
+class ConfiguredRegistryStage(RegistryStage):
+    """RegistryStage whose name/description/dependencies (and optional run
+    condition) come from class attributes, removing per-stage constructor
+    boilerplate."""
+
+    stage_name: ClassVar[str]
+    stage_description: ClassVar[str]
+    stage_dependencies: ClassVar[list[str]]
+
+    @staticmethod
+    def _stage_condition() -> Callable[[dict[str, Any]], bool] | None:
+        """Optional run condition; None means the stage always runs."""
+        return None
+
+    def __init__(
+        self,
+        registry: AnalyzerRegistryLike,
+        adapter: AnalyzerBackend,
+        config: ConfigLike,
+        filename: str,
+        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
+    ) -> None:
+        super().__init__(
+            name=self.stage_name,
+            description=self.stage_description,
+            dependencies=self.stage_dependencies,
+            registry=registry,
+            adapter=adapter,
+            config=config,
+            filename=filename,
+            analyzer_factory=analyzer_factory,
+            condition=self._stage_condition(),
+        )
+
+
+class OptionsRegistryStage(ConfiguredRegistryStage):
+    """ConfiguredRegistryStage that also captures per-run options."""
+
+    def __init__(
+        self,
+        registry: AnalyzerRegistryLike,
+        adapter: AnalyzerBackend,
+        config: ConfigLike,
+        filename: str,
+        options: dict[str, Any],
+        analyzer_factory: AnalyzerFactoryLike = default_analyzer_factory,
+    ) -> None:
+        super().__init__(registry, adapter, config, filename, analyzer_factory)
+        self.options = options
 
 
 class AnalyzerStage(AnalysisStage):
