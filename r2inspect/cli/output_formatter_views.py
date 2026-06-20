@@ -9,7 +9,7 @@ from typing import Any
 
 from rich.table import Table
 
-from ..abstractions.coercion_support import coerce_number
+from ..abstractions.coercion_support import coerce_list, coerce_number
 
 SUMMARY_HEADER = "=== R2INSPECT ANALYSIS SUMMARY ===\n"
 MAX_SUMMARY_INDICATORS = 5
@@ -67,13 +67,7 @@ def format_sections(sections: list[dict[str, Any]]) -> Table:
     table.add_column("Flags", style="magenta")
     table.add_column("Entropy", style="green")
     table.add_column("Suspicious", style="red")
-    if isinstance(sections, list):
-        section_source = sections
-    elif isinstance(sections, (dict, str, bytes)) or not isinstance(sections, Iterable):
-        section_source = []
-    else:
-        section_source = list(sections)
-    for section in section_source:
+    for section in coerce_list(sections):
         if not isinstance(section, dict):
             continue
         suspicious = "Yes" if section.get("suspicious_indicators") else "No"
@@ -100,14 +94,10 @@ def format_imports(imports: list[dict[str, Any]]) -> Table:
     table.add_column("Category", style="magenta", width=20)
     table.add_column("Risk Score", style="red", width=10)
     table.add_column("Risk Tags", style="bright_red", width=30)
-    if isinstance(imports, list):
-        import_source = imports
-    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
-        import_source = []
-    else:
-        import_source = list(imports)
-    valid_imports = [imp for imp in import_source if isinstance(imp, dict)]
-    for imp in sorted(valid_imports, key=lambda item: coerce_number(item.get("risk_score")), reverse=True):
+    valid_imports = [imp for imp in coerce_list(imports) if isinstance(imp, dict)]
+    for imp in sorted(
+        valid_imports, key=lambda item: coerce_number(item.get("risk_score")), reverse=True
+    ):
         risk_score = imp.get("risk_score", 0)
         risk_level = imp.get("risk_level", "Minimal")
         risk_tags = imp.get("risk_tags", [])
@@ -191,13 +181,7 @@ def append_packer_summary(summary_lines: list[str], results: dict[str, Any]) -> 
 
 def append_yara_summary(summary_lines: list[str], results: dict[str, Any]) -> None:
     """Append a short YARA summary to the text output."""
-    yara_matches = results.get("yara_matches")
-    if isinstance(yara_matches, list):
-        match_source = yara_matches
-    elif isinstance(yara_matches, (dict, str, bytes)) or not isinstance(yara_matches, Iterable):
-        return
-    else:
-        match_source = list(yara_matches)
+    match_source = coerce_list(results.get("yara_matches"))
     if not match_source:
         return
     summary_lines.append(f"YARA Matches: {len(match_source)}")

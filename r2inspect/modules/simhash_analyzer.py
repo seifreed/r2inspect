@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """SimHash-based binary similarity analysis."""
 
-from collections.abc import Iterable
 from typing import Any, cast
 
+from ..abstractions.coercion_support import coerce_list
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy, availability_result
 from ..abstractions.result_builder import init_result, mark_unavailable
@@ -146,13 +146,7 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
 
         try:
             sections = self._get_sections()
-            if isinstance(sections, list):
-                section_source = sections
-            elif isinstance(sections, (dict, str, bytes)) or not isinstance(sections, Iterable):
-                section_source = []
-            else:
-                section_source = list(sections)
-            for section in section_source:
+            for section in coerce_list(sections):
                 self._append_data_section_string(section, data_strings)
 
         except Exception as e:
