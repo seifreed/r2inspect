@@ -14,6 +14,7 @@ from .rich_header_decode_support import (
     build_rich_header_result as _build_rich_header_result_impl,
     decode_rich_header as _decode_rich_header_impl,
     parse_clear_data_entries as _parse_clear_data_entries_impl,
+    parse_rich_entry,
     validate_decoded_entries as _validate_decoded_entries_impl,
 )
 
@@ -272,12 +273,10 @@ def calculate_richpe_hash(rich_data: dict[str, Any]) -> str | None:
     clear_bytes.extend(b"\x00" * 12)
     packed_entries = 0
     for entry in entries:
-        if not isinstance(entry, dict):
+        parsed = parse_rich_entry(entry)
+        if parsed is None:
             continue
-        prodid = entry.get("prodid", 0)
-        count = entry.get("count", 0)
-        if not isinstance(prodid, int) or not isinstance(count, int):
-            continue
+        prodid, count = parsed
         clear_bytes.extend(struct.pack("<I", prodid))
         clear_bytes.extend(struct.pack("<I", count))
         packed_entries += 1

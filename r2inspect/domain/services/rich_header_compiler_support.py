@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .rich_header_decode_support import parse_rich_entry
+
 
 def get_compiler_description(compiler_name: str, build_number: int) -> str:
     if not isinstance(compiler_name, str):
@@ -33,12 +35,10 @@ def parse_compiler_entries(
     if not isinstance(entries, list):
         return compilers
     for entry in entries:
-        if not isinstance(entry, dict):
+        parsed = parse_rich_entry(entry)
+        if parsed is None:
             continue
-        prodid = entry.get("prodid", 0)
-        count = entry.get("count", 0)
-        if not isinstance(prodid, int) or not isinstance(count, int):
-            continue
+        prodid, count = parsed
         product_id = prodid & 0xFFFF
         build_number = (prodid >> 16) & 0xFFFF
         compiler_name = compiler_products.get(product_id, f"Unknown_0x{product_id:04X}")

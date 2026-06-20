@@ -6,6 +6,18 @@ import struct
 from typing import Any
 
 
+def parse_rich_entry(entry: Any) -> tuple[int, int] | None:
+    """Return ``(prodid, count)`` for a Rich header entry dict with integer
+    fields, else None."""
+    if not isinstance(entry, dict):
+        return None
+    prodid = entry.get("prodid", 0)
+    count = entry.get("count", 0)
+    if not isinstance(prodid, int) or not isinstance(count, int):
+        return None
+    return prodid, count
+
+
 def parse_clear_data_entries(clear_data: bytes) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     if not isinstance(clear_data, (bytes, bytearray)):
@@ -66,12 +78,10 @@ def validate_decoded_entries(decoded_entries: list[dict[str, Any]]) -> bool:
         return False
     valid_entries = 0
     for entry in decoded_entries:
-        if not isinstance(entry, dict):
+        parsed = parse_rich_entry(entry)
+        if parsed is None:
             continue
-        prodid = entry.get("prodid", 0)
-        count = entry.get("count", 0)
-        if not isinstance(prodid, int) or not isinstance(count, int):
-            continue
+        prodid, count = parsed
         product_id = prodid & 0xFFFF
         if 0 < count < 10000 and 0 <= prodid <= 0xFFFFFFFF and 0 <= product_id <= 0xFFFF:
             valid_entries += 1
