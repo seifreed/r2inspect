@@ -524,3 +524,21 @@ def test_batch_rate_limiter_adaptive_error_propagation():
     # Error should be recorded in adaptive limiter
     assert isinstance(limiter.rate_limiter, AdaptiveRateLimiter)
     assert len(limiter.rate_limiter.error_window) == 1
+
+
+def test_batch_rate_limiter_zero_timeout_fails_fast():
+    # timeout=0 means "try once, do not wait". A falsy-timeout check used to
+    # leave the bucket timeout at None, so the call blocked forever on an
+    # exhausted bucket instead of failing immediately.
+    exhausted = TokenBucket(capacity=0, refill_rate=0.0)
+    limiter = BatchRateLimiter(max_concurrent=1, rate_limiter=exhausted)
+
+    result: list[bool] = []
+    worker = threading.Thread(target=lambda: result.append(limiter.acquire(timeout=0)))
+    worker.start()
+    worker.join(timeout=5.0)
+
+    assert not worker.is_alive(), "acquire(timeout=0) must not block on an exhausted bucket"
+    assert result == [False]
+    # The semaphore must have been released back after the failed acquire.
+    assert limiter.semaphore.acquire(blocking=False) is True

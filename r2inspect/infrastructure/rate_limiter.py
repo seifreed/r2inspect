@@ -196,7 +196,7 @@ class BatchRateLimiter:
             return False
         try:
             remaining_timeout = None
-            if timeout:
+            if timeout is not None:
                 remaining_timeout = max(0, timeout - (time.time() - start_time))
             if isinstance(self.rate_limiter, AdaptiveRateLimiter):
                 success = self.rate_limiter.acquire_permit(timeout=remaining_timeout)
