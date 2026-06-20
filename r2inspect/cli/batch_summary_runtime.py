@@ -34,8 +34,11 @@ def create_batch_summary_output(
         )
         output_filename = f"{csv_filename} + {json_filename}" if json_filename else csv_filename
     elif output_json and not output_csv:
+        json_output_path = (
+            output_path.parent if output_path.suffix in (".csv", ".json") else output_path
+        )
         output_filename = create_json_batch_summary(
-            all_results, failed_files, output_path, timestamp
+            all_results, failed_files, json_output_path, timestamp
         )
 
     return output_filename
