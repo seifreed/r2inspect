@@ -32,11 +32,11 @@ def test_analyze_complete_workflow():
             "bits": 64,
             "endian": "little",
             "class": "MACH064",
-            "format": "mach0",
             "baddr": 0x100000000,
             "cpu": "X86_64",
-            "filetype": "EXECUTE",
-        }
+        },
+        # radare2 reports format/file-type in ij.core, not ij.bin.
+        "core": {"format": "mach064", "type": "EXECUTE"},
     }
     # ihj returns headers (used by get_macho_headers, _extract_*)
     headers = [
@@ -185,11 +185,11 @@ def test_get_macho_headers_complete():
             "bits": 64,
             "endian": "little",
             "class": "MACH064",
-            "format": "mach0",
             "baddr": 0x100000000,
             "cpu": "ARM_64",
-            "filetype": "EXECUTE",
-        }
+        },
+        # radare2 reports format/file-type in ij.core, not ij.bin.
+        "core": {"format": "mach064", "type": "EXECUTE"},
     }
     analyzer = _make_analyzer(cmdj_map={"ij": macho_info})
     result = analyzer._get_macho_headers()
@@ -198,6 +198,7 @@ def test_get_macho_headers_complete():
     assert result["bits"] == 64
     assert result["cpu_type"] == "ARM_64"
     assert result["file_type"] == "EXECUTE"
+    assert result["format"] == "mach064"
 
 
 def test_get_macho_headers_missing_bin():

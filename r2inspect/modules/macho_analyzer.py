@@ -100,16 +100,23 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
             if not (isinstance(macho_info, dict) and isinstance(macho_info.get("bin"), dict)):
                 return {}
             bin_info = macho_info["bin"]
+            core_info = macho_info.get("core")
+            if not isinstance(core_info, dict):
+                core_info = {}
             return {
                 "architecture": bin_info.get("arch", "Unknown"),
                 "machine": bin_info.get("machine", "Unknown"),
                 "bits": bin_info.get("bits", 0),
                 "endian": bin_info.get("endian", "Unknown"),
                 "type": bin_info.get("class", "Unknown"),
-                "format": bin_info.get("format", "Unknown"),
+                # radare2 reports the Mach-O format and file type in ij.core, not
+                # ij.bin; and ij.bin has no "cpu" field, so the CPU type is the
+                # architecture. The old ij.bin "format"/"cpu"/"filetype" reads
+                # were always absent and defaulted to "Unknown".
+                "format": core_info.get("format", bin_info.get("bintype", "Unknown")),
                 "entry_point": bin_info.get("baddr", 0),
-                "cpu_type": bin_info.get("cpu", "Unknown"),
-                "file_type": bin_info.get("filetype", "Unknown"),
+                "cpu_type": bin_info.get("cpu", bin_info.get("arch", "Unknown")),
+                "file_type": core_info.get("type", "Unknown"),
             }
 
         return self._safe_call(_load, default={}, error_msg="Error getting Mach-O headers")

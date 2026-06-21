@@ -32,6 +32,7 @@ class FullInfoAdapter:
     """Adapter returning complete Mach-O header data."""
 
     def get_file_info(self) -> dict[str, Any]:
+        # radare2 reports format/file-type in ij.core, not ij.bin.
         return {
             "bin": {
                 "arch": "arm64",
@@ -39,11 +40,10 @@ class FullInfoAdapter:
                 "bits": 64,
                 "endian": "little",
                 "class": "MACH064",
-                "format": "mach0",
                 "baddr": 0x100000000,
                 "cpu": "ARM_64",
-                "filetype": "EXECUTE",
-            }
+            },
+            "core": {"format": "mach064", "type": "EXECUTE"},
         }
 
     def get_headers_json(self) -> list[dict[str, Any]]:
