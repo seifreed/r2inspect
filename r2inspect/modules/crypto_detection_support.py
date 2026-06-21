@@ -172,17 +172,6 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
                     "evidence": "ROL/ROR instructions detected",
                 }
             )
-        mov_patterns = analyzer._search_text("mov.*\\[.*\\\\+.*\\]")
-        if has_text(mov_patterns):
-            count = len(mov_patterns.strip().split("\n"))
-            if count > 10:
-                patterns.append(
-                    {
-                        "type": "Table Lookups",
-                        "description": f"Multiple table lookup patterns found ({count})",
-                        "evidence": "Array/table access patterns",
-                    }
-                )
     except Exception as exc:
         logger.error("Error finding suspicious patterns: %s", exc)
     return patterns

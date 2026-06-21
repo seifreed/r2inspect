@@ -18,7 +18,6 @@ from r2inspect.domain.services.binary_helpers import shannon_entropy
 from r2inspect.domain.formats.string import parse_search_results
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe-like backend driven by command maps
 # ---------------------------------------------------------------------------
@@ -119,10 +118,8 @@ def _crypto_cmd_map(*, has_crypto: bool = True) -> dict[str, str]:
     m: dict[str, str] = {}
     if has_crypto:
         m["/aa xor"] = "0x1000\n0x1005\n0x100a\n"
-        m["/aa rol,ror"] = "0x2000\n"
-        # mov table lookup pattern -- produce >10 hits to trigger Table Lookups
-        mov_hits = "\n".join([f"0x{i:04x}" for i in range(3000, 3020)])
-        m["/aa mov.*\\[.*\\\\+.*\\]"] = mov_hits
+        # rol/ror are searched separately (real /aa is a disasm substring match)
+        m["/aa rol"] = "0x2000\n"
         # AES S-box constant search
         m["/x 00000063"] = "0x5000\n"
         m["/x 67e6096a"] = "0x5000\n"
@@ -459,14 +456,6 @@ class TestSuspiciousPatterns:
 
         rot_patterns = [p for p in patterns if p["type"] == "Bit Rotation"]
         assert len(rot_patterns) >= 1
-
-    def test_table_lookup_detected(self):
-        adapter = _make_crypto_adapter(has_crypto=True)
-        analyzer = CryptoAnalyzer(adapter)
-        patterns = analyzer._find_suspicious_patterns()
-
-        table_patterns = [p for p in patterns if p["type"] == "Table Lookups"]
-        assert len(table_patterns) >= 1
 
     def test_no_patterns_when_empty(self):
         adapter = _make_adapter()

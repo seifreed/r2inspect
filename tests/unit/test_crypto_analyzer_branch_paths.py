@@ -102,19 +102,6 @@ class XorPatternAdapter(EmptyAdapter):
         return ""
 
 
-class TableLookupAdapter(EmptyAdapter):
-    """Adapter with many table lookup patterns."""
-
-    def search_text(self, pattern: str) -> str:
-        if "mov" in pattern:
-            lines = "\n".join(f"0x0040{i:04x} mov eax,[ebx+ecx]" for i in range(15))
-            return lines
-        return ""
-
-    def search_hex(self, pattern: str) -> str:
-        return ""
-
-
 class CryptoConstantAdapter(EmptyAdapter):
     """Adapter returning hex search results for crypto constants."""
 
@@ -470,14 +457,6 @@ def test_find_suspicious_patterns_rotation_or_fallback():
     assert "Bit Rotation" in [p["type"] for p in result]
     assert "rol,ror" not in adapter.queries
     assert "rol" in adapter.queries and "ror" in adapter.queries
-
-
-def test_find_suspicious_patterns_table_lookups_found():
-    """_find_suspicious_patterns appends Table Lookups when count > 10 (lines 300-307)."""
-    analyzer = CryptoAnalyzer(TableLookupAdapter())
-    result = analyzer._find_suspicious_patterns()
-    types = [p["type"] for p in result]
-    assert "Table Lookups" in types
 
 
 def test_find_suspicious_patterns_exception_path():
