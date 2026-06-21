@@ -14,7 +14,10 @@ def parse_pe_header_text(
 ) -> dict[str, Any] | None:
     @handle_errors(ErrorPolicy(ErrorHandlingStrategy.FALLBACK, fallback_value=None))
     def _parse() -> dict[str, Any] | None:
-        text_output = safe_cmd_func(r2_instance, "ih")
+        # iHH emits the IMAGE_NT_HEADERS / "Key : Value" section layout this
+        # parser reads; plain ih is a columnar table with no section markers or
+        # colons, so parsing it always yielded empty header dicts.
+        text_output = safe_cmd_func(r2_instance, "iHH")
         if not isinstance(text_output, str) or not text_output:
             return None
 

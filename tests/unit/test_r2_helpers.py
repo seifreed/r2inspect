@@ -16,19 +16,25 @@ def test_clean_list_items_html_entities():
 
 
 def test_parse_pe_header_text():
-    text = """
-    IMAGE_NT_HEADERS
-    Signature: 0x4550
-    IMAGE_FILE_HEADERS
-    NumberOfSections: 5
-    IMAGE_OPTIONAL_HEADERS
-    ImageBase: 0x400000
-    """
-    r2 = FakeR2(cmd_map={"ih": text})
+    # Real r2 `iHH` emits the IMAGE_* section layout this parser reads; plain
+    # `ih` is a columnar table with no section markers or colons. The parser
+    # must issue iHH and ignore ih, otherwise every header dict comes back empty.
+    ihh = (
+        "PE file header:\n"
+        "IMAGE_NT_HEADERS\n"
+        "  Signature : 0x4550\n"
+        "IMAGE_FILE_HEADERS\n"
+        "  NumberOfSections : 0x12\n"
+        "IMAGE_OPTIONAL_HEADERS\n"
+        "  ImageBase : 0x140000000\n"
+    )
+    ih = "0x00000080 0x00000080 0x00004550 Signature\n0x00000086 0x00000086 0x12 NumberOfSections\n"
+    r2 = FakeR2(cmd_map={"iHH": ihh, "ih": ih})
     parsed = r2_helpers.parse_pe_header_text(r2)
     assert parsed is not None
-    assert parsed["file_header"]["NumberOfSections"] == "5"
-    assert parsed["optional_header"]["ImageBase"] == 0x400000
+    assert parsed["nt_headers"]["Signature"] == 0x4550
+    assert parsed["file_header"]["NumberOfSections"] == 0x12
+    assert parsed["optional_header"]["ImageBase"] == 0x140000000
 
 
 def test_get_pe_headers_from_json():
