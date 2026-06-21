@@ -13,7 +13,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.section_analyzer import SectionAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2 -- deterministic stand-in for r2pipe
 # ---------------------------------------------------------------------------
@@ -222,6 +221,29 @@ def test_section_analyzer_pe_characteristics():
 
     section = result["sections"][0]
     assert "IMAGE_SCN_CNT_CODE" in section["pe_characteristics"]
+    assert section["is_executable"] is True
+
+
+def test_section_analyzer_pe_characteristics_from_flags_field():
+    # Real radare2 iSj reports IMAGE_SCN_* bits in the integer ``flags`` field and
+    # has no ``characteristics`` key. pe_characteristics must still be populated.
+    real_shape_section = {
+        "name": ".text",
+        "vaddr": 0x1000,
+        "vsize": 1000,
+        "size": 1000,
+        "flags": 0x60000020,  # CODE | EXECUTE | READ, as r2 returns it
+        "perm": "-r-x",
+    }
+    analyzer = _build_analyzer(
+        sections=[real_shape_section],
+        byte_hex=_hex_bytes(0xCC, 1000),
+    )
+    result = analyzer.analyze()
+
+    section = result["sections"][0]
+    assert "IMAGE_SCN_CNT_CODE" in section["pe_characteristics"]
+    assert "IMAGE_SCN_MEM_EXECUTE" in section["pe_characteristics"]
     assert section["is_executable"] is True
 
 

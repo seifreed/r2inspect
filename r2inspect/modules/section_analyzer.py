@@ -95,7 +95,10 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
             analysis["is_readable"] = analysis["is_readable"] or "r" in pe_flags
 
     def _apply_pe_characteristics(self, section: dict[str, Any], analysis: dict[str, Any]) -> None:
-        characteristics_value = coerce_int(section.get("characteristics", 0))
+        # radare2's iSj reports the IMAGE_SCN_* characteristic bits in the integer
+        # ``flags`` field; there is no ``characteristics`` key. Reading the latter
+        # left pe_characteristics empty for every real section.
+        characteristics_value = coerce_int(section.get("characteristics", section.get("flags", 0)))
         if characteristics_value <= 0:
             return
         analysis["pe_characteristics"] = self._decode_pe_characteristics(characteristics_value)
