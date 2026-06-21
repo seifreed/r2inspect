@@ -5,9 +5,46 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...abstractions.coercion_support import coerce_int_or_none
+from ...abstractions.coercion_support import coerce_int_or_none, coerce_list
 
 PE32_PLUS = "PE32+"
+
+
+def find_pe_data_directory(ihj: Any, name: str) -> dict[str, Any] | None:
+    """Locate a PE data directory in radare2's structured ``ihj`` field list.
+
+    radare2's ``iDj`` is NOT a data-directory command (it returns ``{}``); the
+    directories are exposed in ``ihj`` as two field entries per directory:
+    ``IMAGE_DIRECTORY_ENTRY_<NAME>`` (the address) and
+    ``SIZE_IMAGE_DIRECTORY_ENTRY_<NAME>`` (the size). ``name`` is the bare
+    suffix, e.g. ``"SECURITY"`` or ``"LOAD_CONFIG"``.
+
+    Returns ``{"name", "vaddr", "paddr", "size"}`` or ``None`` when absent. The
+    address is kept under both ``vaddr`` and ``paddr``: the SECURITY directory's
+    stored address is already a file offset (PE spec), and r2 loads PE images at
+    base 0 so RVAs equal the read offset used elsewhere in the codebase.
+    """
+    addr_key = f"IMAGE_DIRECTORY_ENTRY_{name}"
+    size_key = f"SIZE_IMAGE_DIRECTORY_ENTRY_{name}"
+    addr: Any = None
+    size: Any = None
+    for item in coerce_list(ihj):
+        if not isinstance(item, dict):
+            continue
+        field = item.get("name")
+        if field == addr_key:
+            addr = item.get("value")
+        elif field == size_key:
+            size = item.get("value")
+    address = coerce_int_or_none(addr)
+    if address is None or address == 0:
+        return None
+    return {
+        "name": name,
+        "vaddr": address,
+        "paddr": address,
+        "size": coerce_int_or_none(size) or 0,
+    }
 
 
 def determine_pe_file_type(
@@ -171,7 +208,11 @@ def characteristics_from_bin(bin_info: dict[str, Any], filepath: str | None) -> 
 
 
 def build_subsystem_info(subsystem: str) -> dict[str, Any]:
-    subsystem_text = subsystem if isinstance(subsystem, str) else ("Unknown" if subsystem is None else str(subsystem))
+    subsystem_text = (
+        subsystem
+        if isinstance(subsystem, str)
+        else ("Unknown" if subsystem is None else str(subsystem))
+    )
     info: dict[str, Any] = {"subsystem": subsystem_text}
     lower = subsystem_text.lower()
     if "console" in lower:

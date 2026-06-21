@@ -24,9 +24,33 @@ def _bytes_to_hex(byte_list):
     return bytes(byte_list).hex()
 
 
+def _merge_data_dirs_into_ihj(cmdj_map):
+    """Fold legacy iDj data-directory fakes into ihj field entries.
+
+    Real radare2 exposes PE data directories inside ihj as
+    IMAGE_DIRECTORY_ENTRY_<NAME> / SIZE_IMAGE_DIRECTORY_ENTRY_<NAME> entries
+    (iDj returns {}), which is the shape production now reads.
+    """
+    if not cmdj_map or not isinstance(cmdj_map.get("iDj"), list) or not cmdj_map["iDj"]:
+        return cmdj_map
+    merged = dict(cmdj_map)
+    base = merged.get("ihj")
+    entries = list(base) if isinstance(base, list) else []
+    for dd in cmdj_map["iDj"]:
+        if not isinstance(dd, dict) or "name" not in dd:
+            continue
+        address = dd.get("paddr") or dd.get("vaddr") or 0
+        entries.append({"name": f"IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": address})
+        entries.append(
+            {"name": f"SIZE_IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": dd.get("size", 0)}
+        )
+    merged["ihj"] = entries
+    return merged
+
+
 def _make_analyzer(cmdj_map=None, cmd_map=None):
     """Create an AuthenticodeAnalyzer backed by FakeR2 + R2PipeAdapter."""
-    fake_r2 = FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    fake_r2 = FakeR2(cmdj_map=_merge_data_dirs_into_ihj(cmdj_map), cmd_map=cmd_map)
     adapter = R2PipeAdapter(fake_r2)
     return AuthenticodeAnalyzer(adapter=adapter)
 
@@ -191,7 +215,9 @@ class TestSecurityDirectoryParsing:
 
         assert result is not None
         assert result["name"] == "SECURITY"
-        assert result["vaddr"] == 0x2000
+        # The SECURITY directory address is the certificate-table file offset.
+        assert result["vaddr"] == 0x1800
+        assert result["size"] == 0x400
 
     def test_get_security_directory_not_found(self):
         """Test when security directory not found."""
@@ -232,19 +258,21 @@ class TestSecurityDirectoryParsing:
         assert result is None
 
     def test_get_security_directory_iterable_input(self):
-        """Test when data directories arrive as a generator."""
+        """ihj field entries may arrive as a generator from cmdj."""
         result = get_security_directory(
             lambda _cmd, _default=None: (
                 entry
                 for entry in [
-                    {"name": "EXPORT", "vaddr": 0x1000},
-                    {"name": "SECURITY", "vaddr": 0x2000, "paddr": 0x1800, "size": 0x400},
+                    {"name": "IMAGE_DIRECTORY_ENTRY_IMPORT", "value": 0x1000},
+                    {"name": "IMAGE_DIRECTORY_ENTRY_SECURITY", "value": 0x1800},
+                    {"name": "SIZE_IMAGE_DIRECTORY_ENTRY_SECURITY", "value": 0x400},
                 ]
             )
         )
 
         assert result is not None
         assert result["name"] == "SECURITY"
+        assert result["size"] == 0x400
 
     def test_read_win_certificate_invalid_offset(self):
         """Test reading certificate with invalid offset (zero)."""
@@ -965,19 +993,21 @@ class TestSupportFunctionsDirect:
     """Test authenticode_parsing_support and authenticode_result_support directly."""
 
     def test_get_security_directory_direct(self):
-        """Test get_security_directory helper directly."""
+        """Test get_security_directory helper directly against ihj entries."""
 
         def fake_cmdj(command, default=None):
-            if command == "iDj":
+            if command == "ihj":
                 return [
-                    {"name": "IMPORT", "vaddr": 0x100},
-                    {"name": "SECURITY", "vaddr": 0x2000, "paddr": 0x1800, "size": 0x400},
+                    {"name": "IMAGE_DIRECTORY_ENTRY_IMPORT", "value": 0x100},
+                    {"name": "IMAGE_DIRECTORY_ENTRY_SECURITY", "value": 0x1800},
+                    {"name": "SIZE_IMAGE_DIRECTORY_ENTRY_SECURITY", "value": 0x400},
                 ]
             return default
 
         result = get_security_directory(fake_cmdj)
         assert result is not None
         assert result["name"] == "SECURITY"
+        assert result["paddr"] == 0x1800
 
     def test_get_security_directory_direct_none(self):
         """Test get_security_directory when no SECURITY entry."""
@@ -997,15 +1027,18 @@ class TestSupportFunctionsDirect:
         result = get_security_directory(fake_cmdj)
         assert result is None
 
-    def test_get_security_directory_direct_single_dict(self):
-        """Test get_security_directory preserves singleton dict input."""
+    def test_get_security_directory_direct_missing_size_entry(self):
+        """A SECURITY address with no SIZE entry still yields the directory."""
 
         def fake_cmdj(command, default=None):
-            return {"name": "SECURITY", "vaddr": 0x2000, "paddr": 0x1800, "size": 0x400}
+            if command == "ihj":
+                return [{"name": "IMAGE_DIRECTORY_ENTRY_SECURITY", "value": 0x1800}]
+            return default
 
         result = get_security_directory(fake_cmdj)
         assert result is not None
         assert result["name"] == "SECURITY"
+        assert result["size"] == 0
 
     def test_init_authenticode_result_direct(self):
         """Test init_authenticode_result helper directly."""

@@ -4,21 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_int_or_none, coerce_list, is_byte_list
-
-
-def _coerce_list(raw: Any) -> list[Any]:
-    if isinstance(raw, dict):
-        return [raw]
-    return coerce_list(raw)
+from ..abstractions.coercion_support import coerce_int_or_none, is_byte_list
+from ..domain.formats.pe_info import find_pe_data_directory
 
 
 def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
-    data_dirs = _coerce_list(cmdj("iDj", []))
-    for dd in data_dirs:
-        if isinstance(dd, dict) and dd.get("name") == "SECURITY":
-            return dd
-    return None
+    # The certificate table lives in the SECURITY data directory, exposed via the
+    # structured ``ihj`` field list — radare2's ``iDj`` returns {} and never had it.
+    return find_pe_data_directory(cmdj("ihj", []), "SECURITY")
 
 
 def _validate_security_dir(

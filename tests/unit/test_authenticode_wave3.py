@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Stub adapters – lightweight objects that return configurable data so that
 # the real analyzer code runs end-to-end without unittest.mock.
@@ -15,7 +14,20 @@ class _BaseAdapter:
     """Returns sensible defaults for every adapter method used by the analyzer."""
 
     def get_headers_json(self):
-        return [{"name": "Machine", "value": 0x8664}]
+        # Real radare2 exposes PE data directories inside ihj as
+        # IMAGE_DIRECTORY_ENTRY_<NAME> / SIZE_IMAGE_DIRECTORY_ENTRY_<NAME> field
+        # entries (iDj returns {}). Fold the subclass's directories in so the
+        # stub matches the shape production now reads.
+        entries = [{"name": "Machine", "value": 0x8664}]
+        for dd in self.get_data_directories():
+            if not isinstance(dd, dict) or "name" not in dd:
+                continue
+            address = dd.get("paddr") or dd.get("vaddr") or 0
+            entries.append({"name": f"IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": address})
+            entries.append(
+                {"name": f"SIZE_IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": dd.get("size", 0)}
+            )
+        return entries
 
     def get_pe_optional_header(self):
         return {"subsystem": 2}
@@ -34,9 +46,11 @@ class _SignedAdapter(_BaseAdapter):
     """Simulates a signed PE with a SECURITY data directory and PKCS7 cert."""
 
     def get_data_directories(self):
+        # The SECURITY directory address is the certificate-table file offset;
+        # radare2 reports a single value for it (no separate RVA).
         return [
             {"name": "EXPORT", "vaddr": 0x1000, "paddr": 0x800, "size": 100},
-            {"name": "SECURITY", "vaddr": 0x5000, "paddr": 0x4000, "size": 400},
+            {"name": "SECURITY", "vaddr": 0x4000, "paddr": 0x4000, "size": 400},
         ]
 
     def read_bytes_list(self, address, size):
@@ -160,7 +174,7 @@ def test_analyze_signed_pe_sets_has_signature_and_security_directory():
     assert result["security_directory"] is not None
     assert result["security_directory"]["offset"] == 0x4000
     assert result["security_directory"]["size"] == 400
-    assert result["security_directory"]["virtual_address"] == 0x5000
+    assert result["security_directory"]["virtual_address"] == 0x4000
 
 
 def test_analyze_signed_pe_appends_certificate_info():
@@ -214,7 +228,7 @@ def test_get_security_directory_returns_security_entry():
     sd = analyzer._get_security_directory()
     assert sd is not None
     assert sd["name"] == "SECURITY"
-    assert sd["vaddr"] == 0x5000
+    assert sd["vaddr"] == 0x4000
 
 
 def test_get_security_directory_empty_list_returns_none():

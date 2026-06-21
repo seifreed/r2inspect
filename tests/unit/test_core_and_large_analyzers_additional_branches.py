@@ -259,7 +259,23 @@ class AuthAdapter:
         self._command_map = command_map
 
     def get_headers_json(self) -> object:
-        return self._command_map.get("ihj", {})
+        # Real radare2 exposes PE data directories inside ihj as
+        # IMAGE_DIRECTORY_ENTRY_<NAME> / SIZE_IMAGE_DIRECTORY_ENTRY_<NAME> field
+        # entries (iDj returns {}). Fold them in to match production's read.
+        base = self._command_map.get("ihj", {})
+        dirs = self._command_map.get("iDj", [])
+        if not isinstance(dirs, list) or not dirs:
+            return base
+        entries = list(base) if isinstance(base, list) else []
+        for dd in dirs:
+            if not isinstance(dd, dict) or "name" not in dd:
+                continue
+            address = dd.get("paddr") or dd.get("vaddr") or 0
+            entries.append({"name": f"IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": address})
+            entries.append(
+                {"name": f"SIZE_IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": dd.get("size", 0)}
+            )
+        return entries
 
     def get_pe_optional_header(self) -> object:
         return self._command_map.get("iHj", {})

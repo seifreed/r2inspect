@@ -13,7 +13,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.authenticode_analyzer import AuthenticodeAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2 - deterministic r2pipe stand-in
 # ---------------------------------------------------------------------------
@@ -66,12 +65,36 @@ def _build_pkcs7_data_with_sha256_rsa_cn_ts() -> list[int]:
     return data
 
 
+def _merge_data_dirs_into_ihj(cmdj_map):
+    """Fold legacy iDj data-directory fakes into ihj field entries.
+
+    Real radare2 exposes PE data directories inside ihj as
+    IMAGE_DIRECTORY_ENTRY_<NAME> / SIZE_IMAGE_DIRECTORY_ENTRY_<NAME> entries
+    (iDj returns {}), which is the shape production now reads.
+    """
+    if not cmdj_map or not isinstance(cmdj_map.get("iDj"), list) or not cmdj_map["iDj"]:
+        return cmdj_map
+    merged = dict(cmdj_map)
+    base = merged.get("ihj")
+    entries = list(base) if isinstance(base, list) else []
+    for dd in cmdj_map["iDj"]:
+        if not isinstance(dd, dict) or "name" not in dd:
+            continue
+        address = dd.get("paddr") or dd.get("vaddr") or 0
+        entries.append({"name": f"IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": address})
+        entries.append(
+            {"name": f"SIZE_IMAGE_DIRECTORY_ENTRY_{dd['name']}", "value": dd.get("size", 0)}
+        )
+    merged["ihj"] = entries
+    return merged
+
+
 def _make_analyzer(
     cmdj_map: dict[str, Any] | None = None,
     cmd_map: dict[str, str] | None = None,
 ) -> AuthenticodeAnalyzer:
     """Create an AuthenticodeAnalyzer backed by FakeR2 + R2PipeAdapter."""
-    fake_r2 = FakeR2(cmdj_map=cmdj_map, cmd_map=cmd_map)
+    fake_r2 = FakeR2(cmdj_map=_merge_data_dirs_into_ihj(cmdj_map), cmd_map=cmd_map)
     adapter = R2PipeAdapter(fake_r2)
     return AuthenticodeAnalyzer(adapter=adapter)
 
@@ -120,7 +143,9 @@ def test_analyze_success():
 
 def test_analyze_initializes_missing_certificates_bucket():
     class _BadInit(AuthenticodeAnalyzer):
-        def _init_result_structure(self, additional_fields: dict[str, Any] | None = None) -> dict[str, Any]:
+        def _init_result_structure(
+            self, additional_fields: dict[str, Any] | None = None
+        ) -> dict[str, Any]:
             result = super()._init_result_structure(additional_fields)
             result["certificates"] = None
             return result
