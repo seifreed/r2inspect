@@ -13,7 +13,8 @@ from ..domain.formats.macho import (
     build_load_commands,
     build_sections,
     dylib_timestamp_to_string,
-    estimate_from_sdk_version,
+    extract_build_version,
+    extract_uuid,
     platform_from_version_min,
 )
 from .macho_security import get_security_features as _get_security_features
@@ -149,25 +150,11 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _extract_build_version(self) -> dict[str, Any]:
         """Extract build version information from LC_BUILD_VERSION."""
-
-        def _load() -> dict[str, Any]:
-            info: dict[str, Any] = {}
-            for header in self._macho_headers():
-                if header.get("type") != "LC_BUILD_VERSION":
-                    continue
-                info["platform"] = header.get("platform", "Unknown")
-                info["min_os_version"] = header.get("minos", "Unknown")
-                info["sdk_version"] = header.get("sdk", "Unknown")
-                sdk_version = header.get("sdk", "")
-                if sdk_version:
-                    info["sdk_version_info"] = sdk_version
-                    estimate = estimate_from_sdk_version(sdk_version)
-                    if estimate:
-                        info["compile_time"] = estimate
-                break
-            return info
-
-        return self._safe_call(_load, default={}, error_msg="Error extracting build version")
+        return self._safe_call(
+            lambda: extract_build_version(self._macho_headers()),
+            default={},
+            error_msg="Error extracting build version",
+        )
 
     def _extract_version_min(self) -> dict[str, Any]:
         """Extract version minimum information from LC_VERSION_MIN_* commands."""
@@ -213,15 +200,11 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _extract_uuid(self) -> str | None:
         """Extract UUID from LC_UUID command."""
-
-        def _load() -> str | None:
-            for header in self._macho_headers():
-                if header.get("type") == "LC_UUID":
-                    uuid = header.get("uuid", "")
-                    return str(uuid) if uuid else None
-            return None
-
-        return self._safe_call(_load, default=None, error_msg="Error extracting UUID")
+        return self._safe_call(
+            lambda: extract_uuid(self._macho_headers()),
+            default=None,
+            error_msg="Error extracting UUID",
+        )
 
     def _estimate_compile_time(self) -> str:
         """Estimate compile time as fallback"""

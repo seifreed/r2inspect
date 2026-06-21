@@ -50,6 +50,10 @@ from r2inspect.domain.formats.macho import (
     build_sections,
     dylib_timestamp_to_string,
     estimate_from_sdk_version,
+    extract_build_version,
+    extract_uuid,
+    format_macho_uuid,
+    format_macho_version,
     platform_from_version_min,
 )
 
@@ -590,6 +594,57 @@ def test_build_load_commands_normal() -> None:
     assert result[0]["size"] == 56
     assert result[1]["type"] == "LC_UUID"
     assert result[1]["offset"] == 200
+
+
+def test_format_macho_version_decodes_packed() -> None:
+    assert format_macho_version((10 << 16) | (15 << 8)) == "10.15.0"
+    assert format_macho_version(11 << 16) == "11.0.0"
+    assert format_macho_version(None) == "Unknown"
+    assert format_macho_version("not-a-number") == "Unknown"
+
+
+def test_format_macho_uuid_formats_and_rejects() -> None:
+    assert format_macho_uuid(list(range(16))) == "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    assert format_macho_uuid([1, 2, 3]) is None  # wrong length
+    assert format_macho_uuid("nope") is None  # not a list
+    assert format_macho_uuid(["x"] * 16) is None  # non-int byte -> ValueError path
+
+
+def test_extract_uuid_and_build_version_from_pf() -> None:
+    headers = [
+        {
+            "name": "load_command_0_LC_UUID",
+            "pf": [
+                {"name": "cmd", "label": "LC_UUID"},
+                {"name": "uuid", "values": list(range(16))},
+            ],
+        },
+        {
+            "name": "load_command_1_LC_BUILD_VERSION",
+            "pf": [
+                {"name": "cmd", "label": "LC_BUILD_VERSION"},
+                {"name": "platform", "label": "MACOS"},
+                {"name": "minos", "value": 11 << 16},
+                {"name": "sdk", "value": 11 << 16},
+            ],
+        },
+    ]
+    assert extract_uuid(headers) == "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    bv = extract_build_version(headers)
+    assert bv["platform"] == "MACOS"
+    assert bv["min_os_version"] == "11.0.0"
+
+
+def test_extract_uuid_and_build_version_absent() -> None:
+    headers = [{"name": "load_command_0_LC_SEGMENT_64", "pf": []}]
+    assert extract_uuid(headers) is None
+    assert extract_build_version(headers) == {}
+
+
+def test_extract_uuid_missing_pf_entry_returns_none() -> None:
+    # LC_UUID present but no "uuid" pf field.
+    headers = [{"name": "load_command_0_LC_UUID", "pf": [{"name": "cmd", "label": "LC_UUID"}]}]
+    assert extract_uuid(headers) is None
 
 
 def test_build_load_commands_empty() -> None:

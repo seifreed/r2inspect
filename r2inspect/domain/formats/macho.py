@@ -55,15 +55,74 @@ def dylib_timestamp_to_string(timestamp: int) -> tuple[str | None, int | None]:
         return None, timestamp
 
 
-def _pf_field(header: dict[str, Any], field_name: str) -> Any:
-    """Return the value of a named parsed-field (``pf``) entry of an r2 ihj item."""
+def _pf_entry(header: dict[str, Any], field_name: str) -> dict[str, Any] | None:
+    """Return the named parsed-field (``pf``) entry of an r2 ihj item."""
     pf = header.get("pf")
     if not isinstance(pf, list):
         return None
     for entry in pf:
         if isinstance(entry, dict) and entry.get("name") == field_name:
-            return entry.get("value")
+            return entry
     return None
+
+
+def _pf_field(header: dict[str, Any], field_name: str) -> Any:
+    """Return the value of a named parsed-field (``pf``) entry of an r2 ihj item."""
+    entry = _pf_entry(header, field_name)
+    return entry.get("value") if entry is not None else None
+
+
+def format_macho_version(value: Any) -> str:
+    """Decode a Mach-O version field (X.Y.Z packed as ``0xXXXXYYZZ``)."""
+    if value is None:
+        return "Unknown"
+    packed = coerce_int_or_none(value)
+    if packed is None:
+        return "Unknown"
+    return f"{(packed >> 16) & 0xFFFF}.{(packed >> 8) & 0xFF}.{packed & 0xFF}"
+
+
+def format_macho_uuid(values: Any) -> str | None:
+    """Format the 16 raw bytes of an LC_UUID ``pf`` field as a canonical UUID."""
+    if not isinstance(values, list) or len(values) != 16:
+        return None
+    try:
+        raw = bytes(int(v) & 0xFF for v in values)
+    except (TypeError, ValueError):
+        return None
+    digits = raw.hex()
+    return f"{digits[0:8]}-{digits[8:12]}-{digits[12:16]}-{digits[16:20]}-{digits[20:32]}"
+
+
+def extract_uuid(headers: list[dict[str, Any]]) -> str | None:
+    """Return the canonical LC_UUID from r2 ihj load-command items."""
+    for header in headers:
+        if load_command_type(header) == "LC_UUID":
+            entry = _pf_entry(header, "uuid")
+            if entry is not None:
+                return format_macho_uuid(entry.get("values"))
+    return None
+
+
+def extract_build_version(headers: list[dict[str, Any]]) -> dict[str, Any]:
+    """Extract LC_BUILD_VERSION platform / min-OS / SDK from r2 ihj load commands."""
+    for header in headers:
+        if load_command_type(header) != "LC_BUILD_VERSION":
+            continue
+        platform_entry = _pf_entry(header, "platform")
+        platform = platform_entry.get("label") if platform_entry else None
+        info: dict[str, Any] = {
+            "platform": platform or "Unknown",
+            "min_os_version": format_macho_version(_pf_field(header, "minos")),
+            "sdk_version": format_macho_version(_pf_field(header, "sdk")),
+        }
+        if info["sdk_version"] != "Unknown":
+            info["sdk_version_info"] = info["sdk_version"]
+            estimate = estimate_from_sdk_version(info["sdk_version"])
+            if estimate:
+                info["compile_time"] = estimate
+        return info
+    return {}
 
 
 def load_command_type(header: dict[str, Any]) -> str:

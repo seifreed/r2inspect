@@ -4,6 +4,8 @@
 Rewritten to use real objects (FakeR2 + R2PipeAdapter) instead of mocks.
 """
 
+from typing import Any
+
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
@@ -38,8 +40,22 @@ def test_analyze_complete_workflow():
     }
     # ihj returns headers (used by get_macho_headers, _extract_*)
     headers = [
-        {"type": "LC_BUILD_VERSION", "platform": "macOS", "minos": "10.15", "sdk": "11.0"},
-        {"type": "LC_UUID", "uuid": "ABC-DEF-123"},
+        {
+            "name": "load_command_0_LC_BUILD_VERSION",
+            "pf": [
+                {"name": "cmd", "label": "LC_BUILD_VERSION"},
+                {"name": "platform", "label": "MACOS"},
+                {"name": "minos", "value": (10 << 16) | (15 << 8)},
+                {"name": "sdk", "value": 11 << 16},
+            ],
+        },
+        {
+            "name": "load_command_1_LC_UUID",
+            "pf": [
+                {"name": "cmd", "label": "LC_UUID"},
+                {"name": "uuid", "values": list(range(16))},
+            ],
+        },
     ]
     # iSj returns sections
     sections = [
@@ -69,8 +85,8 @@ def test_analyze_complete_workflow():
     assert result["bits"] == 64
     assert result["cpu_type"] == "X86_64"
     assert result["file_type"] == "EXECUTE"
-    assert result["platform"] == "macOS"
-    assert result["uuid"] == "ABC-DEF-123"
+    assert result["platform"] == "MACOS"
+    assert result["uuid"] == "00010203-0405-0607-0809-0a0b0c0d0e0f"
     assert isinstance(result["load_commands"], list)
     assert isinstance(result["sections"], list)
 
@@ -111,15 +127,29 @@ def test_get_compilation_info_exception_line_130():
 def test_get_compilation_info_complete():
     """_get_compilation_info combines all sources."""
     headers = [
-        {"type": "LC_BUILD_VERSION", "platform": "macOS", "minos": "10.15", "sdk": "11.0"},
-        {"type": "LC_UUID", "uuid": "ABC-123"},
+        {
+            "name": "load_command_0_LC_BUILD_VERSION",
+            "pf": [
+                {"name": "cmd", "label": "LC_BUILD_VERSION"},
+                {"name": "platform", "label": "MACOS"},
+                {"name": "minos", "value": (10 << 16) | (15 << 8)},
+                {"name": "sdk", "value": 11 << 16},
+            ],
+        },
+        {
+            "name": "load_command_1_LC_UUID",
+            "pf": [
+                {"name": "cmd", "label": "LC_UUID"},
+                {"name": "uuid", "values": list(range(16))},
+            ],
+        },
     ]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
 
     result = analyzer._get_compilation_info()
-    assert result["platform"] == "macOS"
-    assert result["sdk_version"] == "11.0"
-    assert result["uuid"] == "ABC-123"
+    assert result["platform"] == "MACOS"
+    assert result["sdk_version"] == "11.0.0"
+    assert result["uuid"] == "00010203-0405-0607-0809-0a0b0c0d0e0f"
 
 
 def test_get_compilation_info_with_estimate():
@@ -221,30 +251,41 @@ def test_get_macho_headers_with_defaults():
 # ---------------------------------------------------------------------------
 
 
+def _lc_build_version(platform: str, minos: int, sdk: int | None) -> dict[str, Any]:
+    pf: list[dict[str, Any]] = [
+        {"name": "cmd", "label": "LC_BUILD_VERSION"},
+        {"name": "platform", "label": platform},
+        {"name": "minos", "value": minos},
+    ]
+    if sdk is not None:
+        pf.append({"name": "sdk", "value": sdk})
+    return {"name": "load_command_0_LC_BUILD_VERSION", "pf": pf}
+
+
 def test_extract_build_version_with_lc_build_version():
     """_extract_build_version extracts build version from LC_BUILD_VERSION."""
-    headers = [{"type": "LC_BUILD_VERSION", "platform": "macOS", "minos": "10.15", "sdk": "11.0"}]
+    headers = [_lc_build_version("MACOS", (10 << 16) | (15 << 8), 11 << 16)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_build_version()
-    assert result["platform"] == "macOS"
-    assert result["min_os_version"] == "10.15"
-    assert result["sdk_version"] == "11.0"
+    assert result["platform"] == "MACOS"
+    assert result["min_os_version"] == "10.15.0"
+    assert result["sdk_version"] == "11.0.0"
     # SDK 11.0 maps to ~2020 estimate
     assert "2020" in result["compile_time"]
 
 
 def test_extract_build_version_no_sdk_estimate():
     """_extract_build_version without SDK version does not produce compile_time."""
-    headers = [{"type": "LC_BUILD_VERSION", "platform": "iOS", "minos": "14.0", "sdk": ""}]
+    headers = [_lc_build_version("IOS", 14 << 16, None)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_build_version()
-    assert result["platform"] == "iOS"
+    assert result["platform"] == "IOS"
     assert "compile_time" not in result
 
 
 def test_extract_build_version_no_headers():
     """_extract_build_version with no LC_BUILD_VERSION returns empty."""
-    headers = [{"type": "LC_LOAD_DYLIB", "name": "test.dylib"}]
+    headers = [{"name": "load_command_0_LC_LOAD_DYLIB", "pf": []}]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_build_version()
     assert result == {}
@@ -268,10 +309,10 @@ def test_extract_build_version_exception():
 
 def test_extract_build_version_with_sdk_version_info():
     """_extract_build_version stores sdk_version_info."""
-    headers = [{"type": "LC_BUILD_VERSION", "platform": "macOS", "minos": "10.15", "sdk": "11.0"}]
+    headers = [_lc_build_version("MACOS", (10 << 16) | (15 << 8), 11 << 16)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_build_version()
-    assert result["sdk_version_info"] == "11.0"
+    assert result["sdk_version_info"] == "11.0.0"
 
 
 # ---------------------------------------------------------------------------
@@ -388,11 +429,19 @@ def test_extract_dylib_info_with_missing_fields():
 
 
 def test_extract_uuid_with_lc_uuid():
-    """_extract_uuid extracts UUID."""
-    headers = [{"type": "LC_UUID", "uuid": "ABC-DEF-123-456"}]
+    """_extract_uuid extracts and formats the UUID from the LC_UUID pf bytes."""
+    headers = [
+        {
+            "name": "load_command_0_LC_UUID",
+            "pf": [
+                {"name": "cmd", "label": "LC_UUID"},
+                {"name": "uuid", "values": list(range(16))},
+            ],
+        }
+    ]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_uuid()
-    assert result == "ABC-DEF-123-456"
+    assert result == "00010203-0405-0607-0809-0a0b0c0d0e0f"
 
 
 def test_extract_uuid_no_uuid():

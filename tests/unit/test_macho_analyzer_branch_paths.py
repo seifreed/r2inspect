@@ -7,7 +7,6 @@ from typing import Any
 
 from r2inspect.modules.macho_analyzer import MachOAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Real adapter classes - no mocks
 # ---------------------------------------------------------------------------
@@ -50,14 +49,40 @@ class FullInfoAdapter:
     def get_headers_json(self) -> list[dict[str, Any]]:
         return [
             {
-                "type": "LC_BUILD_VERSION",
-                "platform": "macOS",
-                "minos": "10.15.0",
-                "sdk": "11.0",
+                "name": "load_command_0_LC_BUILD_VERSION",
+                "pf": [
+                    {"name": "cmd", "label": "LC_BUILD_VERSION"},
+                    {"name": "platform", "label": "MACOS"},
+                    {"name": "minos", "value": (10 << 16) | (15 << 8)},  # 10.15.0
+                    {"name": "sdk", "value": 11 << 16},  # 11.0.0
+                ],
             },
             {
-                "type": "LC_UUID",
-                "uuid": "AABBCCDD-1122-3344-5566-778899AABBCC",
+                "name": "load_command_1_LC_UUID",
+                "pf": [
+                    {"name": "cmd", "label": "LC_UUID"},
+                    {
+                        "name": "uuid",
+                        "values": [
+                            0xAA,
+                            0xBB,
+                            0xCC,
+                            0xDD,
+                            0x11,
+                            0x22,
+                            0x33,
+                            0x44,
+                            0x55,
+                            0x66,
+                            0x77,
+                            0x88,
+                            0x99,
+                            0xAA,
+                            0xBB,
+                            0xCC,
+                        ],
+                    },
+                ],
             },
             {
                 "type": "LC_LOAD_DYLIB",
@@ -158,10 +183,13 @@ class SDKVersionNoEstimateAdapter:
     def get_headers_json(self) -> list[dict[str, Any]]:
         return [
             {
-                "type": "LC_BUILD_VERSION",
-                "platform": "iOS",
-                "minos": "14.0",
-                "sdk": "",  # Empty SDK - no estimate
+                "name": "load_command_0_LC_BUILD_VERSION",
+                "pf": [
+                    {"name": "cmd", "label": "LC_BUILD_VERSION"},
+                    {"name": "platform", "label": "IOS"},
+                    {"name": "minos", "value": 14 << 16},  # 14.0.0
+                    # no sdk pf field -> sdk_version "Unknown" -> no estimate
+                ],
             }
         ]
 
@@ -283,13 +311,21 @@ def test_extract_build_version_skips_non_dict_headers():
         MinimalAdapter(),
         headers_provider=lambda _: [
             "bad",
-            {"type": "LC_BUILD_VERSION", "platform": "macOS", "minos": "14.0", "sdk": "14.1"},
+            {
+                "name": "load_command_0_LC_BUILD_VERSION",
+                "pf": [
+                    {"name": "cmd", "label": "LC_BUILD_VERSION"},
+                    {"name": "platform", "label": "MACOS"},
+                    {"name": "minos", "value": 14 << 16},  # 14.0.0
+                    {"name": "sdk", "value": (14 << 16) | (1 << 8)},  # 14.1.0
+                ],
+            },
         ],
     )
     result = analyzer._extract_build_version()
-    assert result["platform"] == "macOS"
-    assert result["min_os_version"] == "14.0"
-    assert result["sdk_version"] == "14.1"
+    assert result["platform"] == "MACOS"
+    assert result["min_os_version"] == "14.0.0"
+    assert result["sdk_version"] == "14.1.0"
 
 
 # ---------------------------------------------------------------------------
@@ -300,17 +336,17 @@ def test_extract_build_version_skips_non_dict_headers():
 def test_extract_build_version_with_lc_build_version():
     analyzer = MachOAnalyzer(FullInfoAdapter())
     result = analyzer._extract_build_version()
-    assert result["platform"] == "macOS"
+    assert result["platform"] == "MACOS"
     assert result["min_os_version"] == "10.15.0"
-    assert result["sdk_version"] == "11.0"
-    assert result["sdk_version_info"] == "11.0"
+    assert result["sdk_version"] == "11.0.0"
+    assert result["sdk_version_info"] == "11.0.0"
     assert "compile_time" in result  # estimate from sdk 11.0 -> 2020
 
 
 def test_extract_build_version_empty_sdk_no_estimate():
     analyzer = MachOAnalyzer(SDKVersionNoEstimateAdapter())
     result = analyzer._extract_build_version()
-    assert result["platform"] == "iOS"
+    assert result["platform"] == "IOS"
     assert "compile_time" not in result
 
 
@@ -412,7 +448,7 @@ def test_extract_dylib_info_empty_headers():
 def test_extract_uuid_with_lc_uuid():
     analyzer = MachOAnalyzer(FullInfoAdapter())
     result = analyzer._extract_uuid()
-    assert result == "AABBCCDD-1122-3344-5566-778899AABBCC"
+    assert result == "aabbccdd-1122-3344-5566-778899aabbcc"
 
 
 def test_extract_uuid_empty_headers_returns_none():
@@ -423,7 +459,12 @@ def test_extract_uuid_empty_headers_returns_none():
 
 class EmptyUuidAdapter(MinimalAdapter):
     def get_headers_json(self):
-        return [{"type": "LC_UUID", "uuid": ""}]
+        return [
+            {
+                "name": "load_command_0_LC_UUID",
+                "pf": [{"name": "cmd", "label": "LC_UUID"}, {"name": "uuid", "values": []}],
+            }
+        ]
 
 
 def test_extract_uuid_empty_string_returns_none():
@@ -502,8 +543,8 @@ def test_get_section_info_non_list_get_sections():
 def test_get_compilation_info_with_build_version():
     analyzer = MachOAnalyzer(FullInfoAdapter())
     result = analyzer._get_compilation_info()
-    assert result["platform"] == "macOS"
-    assert result["uuid"] == "AABBCCDD-1122-3344-5566-778899AABBCC"
+    assert result["platform"] == "MACOS"
+    assert result["uuid"] == "aabbccdd-1122-3344-5566-778899aabbcc"
     assert "compile_time" in result
 
 
@@ -574,4 +615,4 @@ def test_analyze_full_adapter_populates_sections():
 def test_analyze_populates_uuid():
     analyzer = MachOAnalyzer(FullInfoAdapter())
     result = analyzer.analyze()
-    assert result.get("uuid") == "AABBCCDD-1122-3344-5566-778899AABBCC"
+    assert result.get("uuid") == "aabbccdd-1122-3344-5566-778899aabbcc"
