@@ -68,6 +68,10 @@ def coerce_int_or_none(value: Any) -> int | None:
 
 
 def coerce_text(value: Any, default: str = "") -> str:
+    # r2pipe can hand back text fields (libname, type, ...) as bytes; decode
+    # them like the rest of the codebase rather than dropping to the default.
+    if isinstance(value, (bytes, bytearray)):
+        value = value.decode(errors="ignore")
     return value if isinstance(value, str) else default
 
 
