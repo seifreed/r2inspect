@@ -2,6 +2,7 @@
 """Branch-path tests for r2inspect/infrastructure/r2_session.py."""
 from __future__ import annotations
 
+import logging
 import os
 import struct
 import time
@@ -79,18 +80,20 @@ def test_get_huge_file_threshold_production_returns_constant():
 # ---------------------------------------------------------------------------
 
 
-def test_open_returns_safe_mode_when_basic_info_check_fails():
+def test_open_returns_safe_mode_when_basic_info_check_fails(caplog):
     """Lines 126-127: _run_basic_info_check returns False -> _reopen_safe_mode called."""
     safe_r2 = FakeR2()
     session = R2Session("/tmp/test")
     session._open_with_timeout = lambda flags, timeout: FakeR2()
     session._run_basic_info_check = lambda: False
     session._reopen_safe_mode = lambda: safe_r2
-    result = session.open(0.1)
+    with caplog.at_level(logging.WARNING, logger="r2inspect.infrastructure.r2_session"):
+        result = session.open(0.1)
     assert result is safe_r2
+    assert any("Basic r2 info check timed out" in r.getMessage() for r in caplog.records)
 
 
-def test_open_returns_safe_mode_when_initial_analysis_fails():
+def test_open_returns_safe_mode_when_initial_analysis_fails(caplog):
     """Lines 130-131: _perform_initial_analysis returns False -> _reopen_safe_mode called."""
     safe_r2 = FakeR2()
     session = R2Session("/tmp/test")
@@ -98,20 +101,28 @@ def test_open_returns_safe_mode_when_initial_analysis_fails():
     session._run_basic_info_check = lambda: True
     session._perform_initial_analysis = lambda size: False
     session._reopen_safe_mode = lambda: safe_r2
-    result = session.open(0.1)
+    with caplog.at_level(logging.WARNING, logger="r2inspect.infrastructure.r2_session"):
+        result = session.open(0.1)
     assert result is safe_r2
+    assert any("Initial r2 analysis timed out" in r.getMessage() for r in caplog.records)
 
 
-def test_open_exception_during_open_re_raises():
-    """Lines 135-139: exception in open() -> re-raised by error_handler (CRITICAL)."""
+def test_open_exception_during_open_re_raises(caplog):
+    """Lines 135-139: exception in open() -> re-raised by error_handler (CRITICAL),
+    and the failure is logged so a critical r2 init failure is diagnosable."""
     session = R2Session("/tmp/test")
 
     def raise_error(flags, timeout):
         raise RuntimeError("r2pipe cannot open file")
 
     session._open_with_timeout = raise_error
-    with pytest.raises(RuntimeError, match="r2pipe cannot open file"):
+    with caplog.at_level(
+        logging.ERROR, logger="r2inspect.infrastructure.r2_session"
+    ), pytest.raises(RuntimeError, match="r2pipe cannot open file"):
         session.open(0.1)
+    assert any(
+        "Failed to initialize r2pipe" in record.getMessage() for record in caplog.records
+    )
 
 
 def test_open_exception_closes_r2_if_already_set():
