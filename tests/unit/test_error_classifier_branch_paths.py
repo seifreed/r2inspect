@@ -121,6 +121,19 @@ def test_classify_uses_direct_mapping_for_permission_error():
     assert info.category == ErrorCategory.FILE_ACCESS
 
 
+def test_classify_subclass_matches_most_specific_type():
+    """Regression: a FileNotFoundError subclass (not an exact mapping key) must
+    classify HIGH via FileNotFoundError, not MEDIUM via its OSError base which
+    dict-insertion order lists first."""
+
+    class _CustomNotFound(FileNotFoundError):
+        pass
+
+    info = ErrorClassifier.classify(_CustomNotFound("missing"))
+    assert info.category == ErrorCategory.FILE_ACCESS
+    assert info.severity == ErrorSeverity.HIGH
+
+
 def test_classify_uses_direct_mapping_for_os_error():
     info = ErrorClassifier.classify(OSError("os issue"))
     assert info.category == ErrorCategory.FILE_ACCESS

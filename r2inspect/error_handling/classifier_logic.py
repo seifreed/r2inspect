@@ -13,7 +13,11 @@ def classify_by_inheritance(
     exception: Exception,
     exception_mapping: dict[type[Exception], tuple[ErrorCategory, ErrorSeverity]],
 ) -> tuple[ErrorCategory, ErrorSeverity]:
-    for exc_type, (category, severity) in exception_mapping.items():
+    # Scan most-derived types first (longer MRO = more specific), so e.g. a
+    # FileNotFoundError subclass is classified by FileNotFoundError (HIGH) rather
+    # than by its OSError base (MEDIUM), which dict-insertion order lists first.
+    ordered = sorted(exception_mapping.items(), key=lambda item: len(item[0].__mro__), reverse=True)
+    for exc_type, (category, severity) in ordered:
         if isinstance(exception, exc_type):
             return category, severity
     if "r2pipe" in str(type(exception)).lower() or "r2pipe" in str(exception).lower():
