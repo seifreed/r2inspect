@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -62,6 +63,33 @@ def test_analyzer_stage_error_path(samples_dir: Path) -> None:
     )
     result = stage._execute(ctx)
     assert "error" in result["pe"]
+
+
+def test_analyzer_stage_logs_raising_analyzer(caplog) -> None:
+    """A raising analyzer must name itself in the log, not silently become an
+    error result in the report."""
+
+    class _RaisingAnalyzer:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def analyze(self) -> dict:
+            raise RuntimeError("boom")
+
+    stage = AnalyzerStage(
+        name="pe",
+        analyzer_class=_RaisingAnalyzer,
+        adapter=None,  # type: ignore[arg-type]
+        config=Config(),
+        filename="x.bin",
+    )
+    with caplog.at_level(logging.WARNING, logger="r2inspect.pipeline.stages_common"):
+        result = stage._execute({"results": {}})
+
+    assert result["pe"]["success"] is False
+    assert any(
+        "_RaisingAnalyzer failed" in record.getMessage() for record in caplog.records
+    )
 
 
 def test_indicator_stage_generation() -> None:
