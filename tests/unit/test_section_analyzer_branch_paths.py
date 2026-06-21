@@ -423,6 +423,19 @@ def test_analyze_code_section_returns_empty_when_size_zero():
     assert result == {}
 
 
+def test_analyze_code_section_counts_functions_in_virtual_tail():
+    """Regression: the function window must use vsize, not the raw file size.
+    A function past the on-disk size but within the section's virtual span was
+    dropped from function_count when the window used `size`."""
+    section = {"name": ".text", "vaddr": 0x1000, "size": 0x100, "vsize": 0x200, "flags": "r-x"}
+    analyzer = _build_analyzer(
+        sections=[section],
+        functions=[{"offset": 0x1150, "name": "fcn.tail", "size": 0x20}],
+    )
+    result = analyzer._analyze_code_section(section)
+    assert result["function_count"] == 1
+
+
 def test_analyze_code_section_coerces_numeric_string_size():
     section = {"name": ".text", "vaddr": "4096", "size": "4"}
     analyzer = _build_analyzer(

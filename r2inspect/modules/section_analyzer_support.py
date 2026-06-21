@@ -91,7 +91,12 @@ def analyze_code_section(
         size = coerce_int(section.get("size", 0))
         if size == 0:
             return code_info
-        functions = analyzer._get_functions_in_section(vaddr, size)
+        # Functions carry virtual addresses and the section spans vsize bytes in
+        # memory, so the address window must use the virtual size, not the raw
+        # file size — a section whose vsize exceeds its on-disk size (alignment
+        # padding) otherwise drops every function past the raw-size boundary.
+        vsize = coerce_int(section.get("vsize", 0))
+        functions = analyzer._get_functions_in_section(vaddr, vsize or size)
         code_info["function_count"] = len(functions)
         if functions:
             sizes = [
