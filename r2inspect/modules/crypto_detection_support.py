@@ -40,6 +40,28 @@ def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
     return crypto_info
 
 
+def _crypto_search_patterns(values: list[int]) -> list[tuple[str, str]]:
+    """Build (hex-pattern, value-repr) pairs to feed r2's /x for a constant set.
+
+    Two real-binary layouts, neither of which the old per-value 4-byte
+    big-endian search could match:
+    - S-box tables (AES/DES) are contiguous bytes, so the whole sequence is one
+      pattern, not each entry zero-padded to 8 hex digits.
+    - 32-bit word constants (hash init vectors / round constants) are stored
+      little-endian in memory, so each word is searched little-endian.
+    """
+    if values and all(0 <= value < 0x100 for value in values):
+        pattern = "".join(f"{value:02x}" for value in values)
+        return [(pattern, "0x" + pattern)]
+    patterns: list[tuple[str, str]] = []
+    for value in values:
+        if value < 0:
+            continue
+        width = max(4, (value.bit_length() + 7) // 8)
+        patterns.append((value.to_bytes(width, "little").hex(), hex(value)))
+    return patterns
+
+
 def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     found_constants: list[dict[str, Any]] = []
     try:
@@ -52,17 +74,19 @@ def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> lis
                 const_source = list(const_values)
             except TypeError:
                 continue
+            values: list[int] = []
             for value in const_source:
                 try:
-                    const_value = int(value, 0) if isinstance(value, str) else int(value)
+                    values.append(int(value, 0) if isinstance(value, str) else int(value))
                 except (TypeError, ValueError):
                     continue
-                result = analyzer._search_hex(f"{const_value:08x}")
+            for pattern, value_repr in _crypto_search_patterns(values):
+                result = analyzer._search_hex(pattern)
                 if has_text(result):
                     found_constants.append(
                         {
                             "type": const_name,
-                            "value": hex(const_value),
+                            "value": value_repr,
                             "addresses": analyzer._parse_search_results(result),
                         }
                     )

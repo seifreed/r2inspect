@@ -246,6 +246,52 @@ def test_detect_crypto_constants_ignores_malformed_constant_buckets():
     analyzer.crypto_constants = {"aes_sbox": "0x63"}
     assert analyzer._detect_crypto_constants() == []
 
+    # Non-iterable bucket -> list() raises TypeError -> skipped.
+    analyzer.crypto_constants = {"aes_sbox": 5}
+    assert analyzer._detect_crypto_constants() == []
+
+    # Non-coercible entry in a real list -> int() raises -> value dropped.
+    analyzer.crypto_constants = {"aes_sbox": [object()]}
+    assert analyzer._detect_crypto_constants() == []
+
+
+def test_detect_crypto_constants_searches_contiguous_sbox_and_le_words():
+    """Regression: S-box tables are searched as one contiguous byte sequence and
+    32-bit init constants little-endian. The old per-value 4-byte big-endian
+    search (00000063 / 67452301) never matched real binaries."""
+
+    class _RecordingAdapter(EmptyAdapter):
+        def __init__(self) -> None:
+            self.patterns: list[str] = []
+
+        def search_hex(self, pattern: str) -> str:
+            self.patterns.append(pattern)
+            return "0x00401234 hit"
+
+    adapter = _RecordingAdapter()
+    analyzer = CryptoAnalyzer(adapter)
+    analyzer.crypto_constants = {
+        "aes_sbox": [0x63, 0x7C, 0x77, 0x7B],
+        "md5_h": [0x67452301, 0xEFCDAB89],
+    }
+
+    analyzer._detect_crypto_constants()
+
+    assert "637c777b" in adapter.patterns  # contiguous S-box bytes
+    assert "01234567" in adapter.patterns  # MD5 h0 little-endian
+    assert "89abcdef" in adapter.patterns  # MD5 h1 little-endian
+    assert "00000063" not in adapter.patterns  # old zero-padded big-endian byte
+    assert "67452301" not in adapter.patterns  # old big-endian word
+
+
+def test_crypto_search_patterns_branches():
+    from r2inspect.modules.crypto_detection_support import _crypto_search_patterns
+
+    assert _crypto_search_patterns([]) == []
+    assert _crypto_search_patterns([0x63, 0x7C]) == [("637c", "0x637c")]
+    # A value >= 0x100 forces the word branch; negatives are skipped, not crashed.
+    assert _crypto_search_patterns([0x10000, -5]) == [("00000100", "0x10000")]
+
 
 # ---------------------------------------------------------------------------
 # _detect_via_api_calls() - lines 147-150

@@ -105,7 +105,7 @@ def test_compiler_detector_gcc_detection():
 def test_crypto_analyzer_detects_api_and_constants():
     r2 = FakeR2(
         cmd_map={
-            "/x 67452301": "0x1000",
+            "/x 01234567": "0x1000",  # md5_h[0] 0x67452301 stored little-endian
             "/aa xor": "0x2000",
             "p8 4 @ 4096": "00010203",
         },

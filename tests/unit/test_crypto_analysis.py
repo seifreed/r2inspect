@@ -120,9 +120,9 @@ def _crypto_cmd_map(*, has_crypto: bool = True) -> dict[str, str]:
         m["/aa xor"] = "0x1000\n0x1005\n0x100a\n"
         # rol/ror are searched separately (real /aa is a disasm substring match)
         m["/aa rol"] = "0x2000\n"
-        # AES S-box constant search
-        m["/x 00000063"] = "0x5000\n"
-        m["/x 67e6096a"] = "0x5000\n"
+        # AES S-box (contiguous bytes) + MD5 h0 (little-endian word) searches
+        m["/x 637c777bf26b6fc53001672bfed7ab76"] = "0x5000\n"
+        m["/x 01234567"] = "0x5000\n"
     return m
 
 
