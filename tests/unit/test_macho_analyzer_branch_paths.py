@@ -113,9 +113,12 @@ class VersionMinAdapter:
     def get_headers_json(self) -> list[dict[str, Any]]:
         return [
             {
-                "type": "LC_VERSION_MIN_MACOSX",
-                "version": "10.14.0",
-                "sdk": "10.15.0",
+                "name": "load_command_0_LC_VERSION_MIN_MACOSX",
+                "pf": [
+                    {"name": "cmd", "label": "LC_VERSION_MIN_MACOSX"},
+                    {"name": "version", "value": (10 << 16) | (14 << 8)},  # 10.14.0
+                    {"name": "reserved", "value": (10 << 16) | (15 << 8)},  # sdk 10.15.0
+                ],
             }
         ]
 
@@ -135,11 +138,19 @@ class DylibTimestampAdapter:
     def get_headers_json(self) -> list[dict[str, Any]]:
         return [
             {
-                "type": "LC_ID_DYLIB",
-                "timestamp": 1609459200,  # 2021-01-01 00:00:00 UTC
-                "name": "libFoo.dylib",
-                "version": "1.0.0",
-                "compatibility": "1.0.0",
+                "name": "load_command_0_LC_ID_DYLIB",
+                "pf": [
+                    {"name": "cmd", "label": "LC_ID_DYLIB"},
+                    {
+                        "name": "dylib",
+                        "value": [
+                            {"name": "timestamp", "value": 1609459200},  # 2021-01-01 UTC
+                            {"name": "current_version", "value": 1 << 16},  # 1.0.0
+                            {"name": "compatibility_version", "value": 1 << 16},  # 1.0.0
+                            {"name": "name", "value": "libFoo.dylib"},
+                        ],
+                    },
+                ],
             }
         ]
 
@@ -159,11 +170,19 @@ class ZeroTimestampDylibAdapter:
     def get_headers_json(self) -> list[dict[str, Any]]:
         return [
             {
-                "type": "LC_ID_DYLIB",
-                "timestamp": 0,
-                "name": "libFoo.dylib",
-                "version": "1.0.0",
-                "compatibility": "1.0.0",
+                "name": "load_command_0_LC_ID_DYLIB",
+                "pf": [
+                    {"name": "cmd", "label": "LC_ID_DYLIB"},
+                    {
+                        "name": "dylib",
+                        "value": [
+                            {"name": "timestamp", "value": 0},
+                            {"name": "current_version", "value": 1 << 16},  # 1.0.0
+                            {"name": "compatibility_version", "value": 1 << 16},  # 1.0.0
+                            {"name": "name", "value": "libFoo.dylib"},
+                        ],
+                    },
+                ],
             }
         ]
 
@@ -391,7 +410,16 @@ def test_extract_version_min_no_matching_type():
 
 class IphoneVersionMinAdapter(MinimalAdapter):
     def get_headers_json(self):
-        return [{"type": "LC_VERSION_MIN_IPHONEOS", "version": "14.0", "sdk": "14.5"}]
+        return [
+            {
+                "name": "load_command_0_LC_VERSION_MIN_IPHONEOS",
+                "pf": [
+                    {"name": "cmd", "label": "LC_VERSION_MIN_IPHONEOS"},
+                    {"name": "version", "value": 14 << 16},  # 14.0.0
+                    {"name": "reserved", "value": (14 << 16) | (5 << 8)},  # sdk 14.5.0
+                ],
+            }
+        ]
 
 
 def test_extract_version_min_iphoneos_platform():
@@ -402,7 +430,16 @@ def test_extract_version_min_iphoneos_platform():
 
 class UnknownVersionMinAdapter(MinimalAdapter):
     def get_headers_json(self):
-        return [{"type": "LC_VERSION_MIN_UNKNOWN_OS", "version": "1.0", "sdk": "1.0"}]
+        return [
+            {
+                "name": "load_command_0_LC_VERSION_MIN_UNKNOWN_OS",
+                "pf": [
+                    {"name": "cmd", "label": "LC_VERSION_MIN_UNKNOWN_OS"},
+                    {"name": "version", "value": 1 << 16},  # 1.0.0
+                    {"name": "reserved", "value": 1 << 16},
+                ],
+            }
+        ]
 
 
 def test_extract_version_min_unknown_platform_not_in_result():

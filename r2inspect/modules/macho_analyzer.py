@@ -12,10 +12,10 @@ from ..infrastructure.r2_helpers import get_macho_headers
 from ..domain.formats.macho import (
     build_load_commands,
     build_sections,
-    dylib_timestamp_to_string,
     extract_build_version,
+    extract_dylib_info,
     extract_uuid,
-    platform_from_version_min,
+    extract_version_min,
 )
 from .macho_security import get_security_features as _get_security_features
 
@@ -158,45 +158,19 @@ class MachOAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _extract_version_min(self) -> dict[str, Any]:
         """Extract version minimum information from LC_VERSION_MIN_* commands."""
-
-        def _load() -> dict[str, Any]:
-            info: dict[str, Any] = {}
-            for header in self._macho_headers():
-                header_type = header.get("type", "")
-                if "LC_VERSION_MIN" not in header_type:
-                    continue
-                info["version_min_type"] = header_type
-                info["min_version"] = header.get("version", "Unknown")
-                info["sdk_version"] = header.get("sdk", "Unknown")
-                platform = platform_from_version_min(header_type)
-                if platform:
-                    info["platform"] = platform
-                break
-            return info
-
-        return self._safe_call(_load, default={}, error_msg="Error extracting version min")
+        return self._safe_call(
+            lambda: extract_version_min(self._macho_headers()),
+            default={},
+            error_msg="Error extracting version min",
+        )
 
     def _extract_dylib_info(self) -> dict[str, Any]:
         """Extract dylib compilation information."""
-
-        def _load() -> dict[str, Any]:
-            info: dict[str, Any] = {}
-            for header in self._macho_headers():
-                if header.get("type") != "LC_ID_DYLIB":
-                    continue
-                timestamp = header.get("timestamp", 0)
-                compile_time, raw_timestamp = dylib_timestamp_to_string(timestamp)
-                if compile_time:
-                    info["compile_time"] = compile_time
-                if raw_timestamp:
-                    info["dylib_timestamp"] = str(raw_timestamp)
-                info["dylib_name"] = header.get("name", "Unknown")
-                info["dylib_version"] = header.get("version", "Unknown")
-                info["dylib_compatibility"] = header.get("compatibility", "Unknown")
-                break
-            return info
-
-        return self._safe_call(_load, default={}, error_msg="Error extracting dylib info")
+        return self._safe_call(
+            lambda: extract_dylib_info(self._macho_headers()),
+            default={},
+            error_msg="Error extracting dylib info",
+        )
 
     def _extract_uuid(self) -> str | None:
         """Extract UUID from LC_UUID command."""

@@ -86,11 +86,19 @@ def test_export_analyzer_reports_suspicious_exports_and_statistics() -> None:
 
 def test_macho_analyzer_collects_dylib_compilation_info_and_tolerates_bad_headers() -> None:
     dylib_header = {
-        "type": "LC_ID_DYLIB",
-        "name": "libfoo.dylib",
-        "version": "1.0",
-        "compatibility": "1.0",
-        "timestamp": 1234567890,
+        "name": "load_command_0_LC_ID_DYLIB",
+        "pf": [
+            {"name": "cmd", "label": "LC_ID_DYLIB"},
+            {
+                "name": "dylib",
+                "value": [
+                    {"name": "timestamp", "value": 1234567890},
+                    {"name": "current_version", "value": 1 << 16},
+                    {"name": "compatibility_version", "value": 1 << 16},
+                    {"name": "name", "value": "libfoo.dylib"},
+                ],
+            },
+        ],
     }
     with_dylib = MachOAnalyzer(MinimalAdapter(), headers_provider=lambda _adapter: [dylib_header])
     info = with_dylib._get_compilation_info()

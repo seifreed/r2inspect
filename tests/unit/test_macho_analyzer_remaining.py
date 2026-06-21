@@ -105,7 +105,7 @@ def test_get_description_text():
 def test_get_compilation_info_with_version_min_update():
     """_get_compilation_info merges version_min info."""
     headers = [
-        {"type": "LC_VERSION_MIN_MACOSX", "version": "10.14", "sdk": "10.15"},
+        _lc_version_min("LC_VERSION_MIN_MACOSX", (10 << 16) | (14 << 8), (10 << 16) | (15 << 8))
     ]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._get_compilation_info()
@@ -162,15 +162,7 @@ def test_get_compilation_info_with_estimate():
 
 def test_get_compilation_info_with_dylib_info_update():
     """_get_compilation_info updates result with non-empty dylib info."""
-    headers = [
-        {
-            "type": "LC_ID_DYLIB",
-            "timestamp": 1609459200,
-            "name": "test.dylib",
-            "version": "1.0.0",
-            "compatibility": "1.0.0",
-        },
-    ]
+    headers = [_lc_id_dylib("test.dylib", 1 << 16, 1 << 16, 1609459200)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._get_compilation_info()
 
@@ -262,6 +254,33 @@ def _lc_build_version(platform: str, minos: int, sdk: int | None) -> dict[str, A
     return {"name": "load_command_0_LC_BUILD_VERSION", "pf": pf}
 
 
+def _lc_version_min(lc_type: str, version: int, sdk: int) -> dict[str, Any]:
+    return {
+        "name": f"load_command_0_{lc_type}",
+        "pf": [
+            {"name": "cmd", "label": lc_type},
+            {"name": "version", "value": version},
+            {"name": "reserved", "value": sdk},  # r2 labels the sdk field "reserved"
+        ],
+    }
+
+
+def _lc_id_dylib(
+    name: str | None, version: int | None, compat: int | None, timestamp: int
+) -> dict[str, Any]:
+    dylib: list[dict[str, Any]] = [{"name": "timestamp", "value": timestamp}]
+    if version is not None:
+        dylib.append({"name": "current_version", "value": version})
+    if compat is not None:
+        dylib.append({"name": "compatibility_version", "value": compat})
+    if name is not None:
+        dylib.append({"name": "name", "value": name})
+    return {
+        "name": "load_command_0_LC_ID_DYLIB",
+        "pf": [{"name": "cmd", "label": "LC_ID_DYLIB"}, {"name": "dylib", "value": dylib}],
+    }
+
+
 def test_extract_build_version_with_lc_build_version():
     """_extract_build_version extracts build version from LC_BUILD_VERSION."""
     headers = [_lc_build_version("MACOS", (10 << 16) | (15 << 8), 11 << 16)]
@@ -322,18 +341,20 @@ def test_extract_build_version_with_sdk_version_info():
 
 def test_extract_version_min_with_version_min():
     """_extract_version_min extracts version min info."""
-    headers = [{"type": "LC_VERSION_MIN_MACOSX", "version": "10.14", "sdk": "10.15"}]
+    headers = [
+        _lc_version_min("LC_VERSION_MIN_MACOSX", (10 << 16) | (14 << 8), (10 << 16) | (15 << 8))
+    ]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_version_min()
     assert result["version_min_type"] == "LC_VERSION_MIN_MACOSX"
-    assert result["min_version"] == "10.14"
-    assert result["sdk_version"] == "10.15"
+    assert result["min_version"] == "10.14.0"
+    assert result["sdk_version"] == "10.15.0"
     assert result["platform"] == "macOS"
 
 
 def test_extract_version_min_no_platform():
     """_extract_version_min with unknown type does not set platform."""
-    headers = [{"type": "LC_VERSION_MIN_UNKNOWN", "version": "1.0", "sdk": "1.0"}]
+    headers = [_lc_version_min("LC_VERSION_MIN_UNKNOWN", 1 << 16, 1 << 16)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_version_min()
     assert result["version_min_type"] == "LC_VERSION_MIN_UNKNOWN"
@@ -363,15 +384,7 @@ def test_extract_version_min_exception():
 
 def test_extract_dylib_info_with_lc_id_dylib():
     """_extract_dylib_info extracts dylib info."""
-    headers = [
-        {
-            "type": "LC_ID_DYLIB",
-            "timestamp": 1609459200,
-            "name": "test.dylib",
-            "version": "1.0.0",
-            "compatibility": "1.0.0",
-        }
-    ]
+    headers = [_lc_id_dylib("test.dylib", 1 << 16, 1 << 16, 1609459200)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_dylib_info()
     assert "compile_time" in result
@@ -382,15 +395,7 @@ def test_extract_dylib_info_with_lc_id_dylib():
 
 def test_extract_dylib_info_no_timestamp():
     """_extract_dylib_info with no timestamp omits compile_time."""
-    headers = [
-        {
-            "type": "LC_ID_DYLIB",
-            "timestamp": 0,
-            "name": "test.dylib",
-            "version": "1.0.0",
-            "compatibility": "1.0.0",
-        }
-    ]
+    headers = [_lc_id_dylib("test.dylib", 1 << 16, 1 << 16, 0)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_dylib_info()
     assert "compile_time" not in result
@@ -415,7 +420,7 @@ def test_extract_dylib_info_exception():
 
 def test_extract_dylib_info_with_missing_fields():
     """_extract_dylib_info handles missing fields with defaults."""
-    headers = [{"type": "LC_ID_DYLIB", "timestamp": 1609459200}]
+    headers = [_lc_id_dylib(None, None, None, 1609459200)]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._extract_dylib_info()
     assert result["dylib_name"] == "Unknown"

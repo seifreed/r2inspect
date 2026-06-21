@@ -104,6 +104,58 @@ def extract_uuid(headers: list[dict[str, Any]]) -> str | None:
     return None
 
 
+def _dylib_subfields(header: dict[str, Any]) -> dict[str, Any]:
+    """Flatten the nested ``dylib`` pf sub-struct of an LC_*_DYLIB load command."""
+    dylib = _pf_field(header, "dylib")
+    result: dict[str, Any] = {}
+    if isinstance(dylib, list):
+        for entry in dylib:
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str):
+                result[entry["name"]] = entry.get("value")
+    return result
+
+
+def extract_dylib_info(headers: list[dict[str, Any]]) -> dict[str, Any]:
+    """Extract LC_ID_DYLIB name / versions / timestamp from r2 ihj load commands."""
+    for header in headers:
+        if load_command_type(header) != "LC_ID_DYLIB":
+            continue
+        sub = _dylib_subfields(header)
+        info: dict[str, Any] = {}
+        compile_time, raw_timestamp = dylib_timestamp_to_string(
+            coerce_int_or_none(sub.get("timestamp")) or 0
+        )
+        if compile_time:
+            info["compile_time"] = compile_time
+        if raw_timestamp:
+            info["dylib_timestamp"] = str(raw_timestamp)
+        name = sub.get("name")
+        info["dylib_name"] = name if isinstance(name, str) and name else "Unknown"
+        info["dylib_version"] = format_macho_version(sub.get("current_version"))
+        info["dylib_compatibility"] = format_macho_version(sub.get("compatibility_version"))
+        return info
+    return {}
+
+
+def extract_version_min(headers: list[dict[str, Any]]) -> dict[str, Any]:
+    """Extract LC_VERSION_MIN_* min-OS / SDK from r2 ihj load commands."""
+    for header in headers:
+        header_type = load_command_type(header)
+        if "LC_VERSION_MIN" not in header_type:
+            continue
+        info: dict[str, Any] = {
+            "version_min_type": header_type,
+            "min_version": format_macho_version(_pf_field(header, "version")),
+            # r2 labels the SDK field "reserved" in the version_min pf struct.
+            "sdk_version": format_macho_version(_pf_field(header, "reserved")),
+        }
+        platform = platform_from_version_min(header_type)
+        if platform:
+            info["platform"] = platform
+        return info
+    return {}
+
+
 def extract_build_version(headers: list[dict[str, Any]]) -> dict[str, Any]:
     """Extract LC_BUILD_VERSION platform / min-OS / SDK from r2 ihj load commands."""
     for header in headers:
