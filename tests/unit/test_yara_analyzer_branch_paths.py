@@ -10,6 +10,7 @@ import pytest
 
 import r2inspect.modules.yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import (
+    YARA_MATCH_TIMEOUT,
     YARA_MAX_RULE_SIZE,
     YaraAnalyzer,
     _COMPILED_CACHE,
@@ -89,6 +90,36 @@ def test_scan_returns_matches_for_file_with_pattern(tmp_path):
     assert isinstance(matches, list)
     assert len(matches) >= 1
     assert matches[0]["rule"] == "SimpleTest"
+
+
+def test_scan_passes_match_timeout(tmp_path):
+    """Regression: rules.match must be bounded by a timeout so a pathological
+    rule/file cannot hang the scan (and, in batch mode, the whole run)."""
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"hello world binary content")
+
+    class _RecordingRules:
+        def __init__(self) -> None:
+            self.timeout: object = "unset"
+
+        def match(self, file_path: str, timeout: object = None) -> list:
+            self.timeout = timeout
+            return []
+
+    recording = _RecordingRules()
+
+    class _RecordingAnalyzer(YaraAnalyzer):
+        def _resolve_rules_path(self, custom_rules_path=None):
+            return str(tmp_path)
+
+        def _get_cached_rules(self, rules_path):
+            return recording
+
+    analyzer = _RecordingAnalyzer(FakeAdapter(), config=FakeConfig(str(tmp_path)), filepath=str(sample))
+    result = analyzer.scan()
+
+    assert recording.timeout == YARA_MATCH_TIMEOUT
+    assert result == []
 
 
 def test_scan_returns_empty_for_no_match(tmp_path):

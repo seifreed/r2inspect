@@ -28,6 +28,8 @@ from .yara_defaults import DEFAULT_YARA_RULES
 logger = get_logger(__name__)
 
 YARA_COMPILE_TIMEOUT = 30  # seconds
+YARA_MATCH_TIMEOUT = 60  # seconds; bounds a single file's scan so one
+# pathological rule/file cannot hang the whole (batch) run.
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
 class TimeoutException(Exception):
     """Exception raised when YARA compilation times out."""
@@ -83,7 +85,7 @@ class YaraAnalyzer(CommandHelperMixin):
             if not rules:
                 return matches
 
-            yara_matches = rules.match(file_path)
+            yara_matches = rules.match(file_path, timeout=YARA_MATCH_TIMEOUT)
             matches = self._process_matches(yara_matches)
 
         except Exception as e:
