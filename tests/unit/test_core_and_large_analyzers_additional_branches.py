@@ -364,7 +364,6 @@ def _load_config_bytes(size: int, guard_flags: int) -> list[int]:
 
 def test_exploit_mitigation_analyzer_branches() -> None:
     optional_header = {
-        "dll_characteristics": 0x0040 | 0x0100 | 0x4000,
         "entry_point": 0x1200,
         "image_base": 0x1000,
         "subsystem": "Windows GUI",
@@ -382,7 +381,10 @@ def test_exploit_mitigation_analyzer_branches() -> None:
             "iij": [{"name": "__security_cookie"}],
             "izzj": [{"string": "__GSHandlerCheck"}],
             "iSj": [{"vaddr": 0x3000, "vsize": 0x100, "perm": "r--"}],
-            "ihj": {"characteristics": 0x2001},
+            "ihj": [
+                {"name": "DllCharacteristics", "value": 0x0040 | 0x0100 | 0x4000},
+                {"name": "Characteristics", "value": 0x2001},
+            ],
         }
     )
     analyzer = ExploitMitigationAnalyzer(adapter)

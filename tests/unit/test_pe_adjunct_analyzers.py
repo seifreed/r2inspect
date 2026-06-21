@@ -98,7 +98,7 @@ def test_export_characteristics_with_function():
 
 def test_exploit_mitigation_dll_characteristics():
     flags = 0x0040 | 0x0100 | 0x4000
-    r2 = FakeR2(cmdj_map={"iHj": {"dll_characteristics": flags}})
+    r2 = FakeR2(cmdj_map={"ihj": [{"name": "DllCharacteristics", "value": flags}]})
     analyzer = ExploitMitigationAnalyzer(r2)
     result = {"mitigations": {}, "dll_characteristics": {}}
 
