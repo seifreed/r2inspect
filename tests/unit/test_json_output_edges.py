@@ -2,6 +2,7 @@
 """Edge case tests for JsonOutputFormatter - 100% coverage."""
 
 import json
+import logging
 from datetime import datetime
 from decimal import Decimal
 
@@ -81,21 +82,26 @@ def test_non_serializable_object():
     assert parsed == {"obj": "custom_string"}
 
 
-def test_serialization_error_handling():
-    """Test exception handling when serialization fails."""
+def test_serialization_error_handling(caplog):
+    """Test exception handling when serialization fails, including the log."""
 
     class BadObject:
         def __str__(self):
             raise RuntimeError("Cannot convert to string")
 
     formatter = JsonOutputFormatter({"bad": BadObject()})
-    result = formatter.to_json()
+    with caplog.at_level(logging.ERROR, logger="r2inspect.cli.output_json"):
+        result = formatter.to_json()
     parsed = json.loads(result)
 
     # Should have error key and partial_results
     assert "error" in parsed
     assert "JSON serialization failed" in parsed["error"]
     assert "partial_results" in parsed
+    assert any(
+        "JSON serialization of analysis results failed" in record.getMessage()
+        for record in caplog.records
+    )
 
 
 def test_datetime_object():
