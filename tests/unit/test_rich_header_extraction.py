@@ -19,7 +19,6 @@ from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.modules.rich_header_direct import RichHeaderDirectMixin
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # Helpers to build a minimal PE stub with an embedded Rich Header
 # ---------------------------------------------------------------------------
@@ -205,42 +204,35 @@ class TestPEFileDetection:
 class TestPEFileExtraction:
     """Test pefile-based extraction methods."""
 
-    def test_pefile_parse_entry_valid(self):
-        """Test parsing valid pefile entry using a real data class."""
-
-        class RichEntry:
-            def __init__(self, product_id, build_version, count):
-                self.product_id = product_id
-                self.build_version = build_version
-                self.count = count
+    def test_pefile_extract_entries_decodes_flat_values(self):
+        """pefile RICH_HEADER.values is a flat [prodid, count, ...] int list."""
+        from types import SimpleNamespace
 
         fake_r2 = FakeR2()
         adapter = R2PipeAdapter(fake_r2)
         analyzer = RichHeaderAnalyzer(adapter=adapter)
 
-        entry = RichEntry(product_id=261, build_version=30729, count=10)
-        result = analyzer._pefile_parse_entry(entry)
+        # prodid 0x78090105 -> product_id 261 (0x105), build_number 30729 (0x7809)
+        rich = SimpleNamespace(values=[0x78090105, 10])
+        result = analyzer._pefile_extract_entries(SimpleNamespace(RICH_HEADER=rich))
 
-        assert result is not None
-        assert result["product_id"] == 261
-        assert result["build_number"] == 30729
-        assert result["count"] == 10
-        assert result["prodid"] == 261 | (30729 << 16)
+        assert len(result) == 1
+        assert result[0]["product_id"] == 261
+        assert result[0]["build_number"] == 30729
+        assert result[0]["count"] == 10
+        assert result[0]["prodid"] == 261 | (30729 << 16)
 
-    def test_pefile_parse_entry_missing_attrs(self):
-        """Test parsing entry with missing attributes."""
+    def test_pefile_extract_entries_ignores_non_int_pair(self):
+        """Non-integer values are skipped rather than raising."""
+        from types import SimpleNamespace
+
         fake_r2 = FakeR2()
         adapter = R2PipeAdapter(fake_r2)
         analyzer = RichHeaderAnalyzer(adapter=adapter)
 
-        class BareObject:
-            """Object without required attributes."""
-
-            pass
-
-        entry = BareObject()
-        result = analyzer._pefile_parse_entry(entry)
-        assert result is None
+        rich = SimpleNamespace(values=["bad", "data"])
+        result = analyzer._pefile_extract_entries(SimpleNamespace(RICH_HEADER=rich))
+        assert result == []
 
 
 class TestDirectFileRichSearch:

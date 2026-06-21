@@ -12,7 +12,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe stand-in routing cmdj/cmd via lookup maps
 # ---------------------------------------------------------------------------
@@ -316,17 +315,13 @@ def test_pefile_get_xor_key_no_checksum():
 
 
 def test_pefile_extract_entries():
-    """Test _pefile_extract_entries extracts product_id/build/count."""
+    """Test _pefile_extract_entries decodes flat (prodid, count) int pairs."""
     analyzer = _make_analyzer()
-
-    class FakeEntry:
-        product_id = 100
-        build_version = 200
-        count = 5
 
     class FakePE:
         class RICH_HEADER:
-            values = [FakeEntry()]
+            # prodid 0x00C80064 -> product_id 0x64 (100), build_number 0xC8 (200)
+            values = [0x00C80064, 5]
 
     entries = analyzer._pefile_extract_entries(FakePE())
     assert len(entries) == 1
@@ -345,34 +340,6 @@ def test_pefile_extract_entries_no_values():
 
     entries = analyzer._pefile_extract_entries(FakePE())
     assert entries == []
-
-
-def test_pefile_parse_entry_invalid():
-    """Test _pefile_parse_entry with an object missing required attrs."""
-    analyzer = _make_analyzer()
-
-    class BadEntry:
-        pass
-
-    result = analyzer._pefile_parse_entry(BadEntry())
-    assert result is None
-
-
-def test_pefile_parse_entry_valid():
-    """Test _pefile_parse_entry with valid entry."""
-    analyzer = _make_analyzer()
-
-    class GoodEntry:
-        product_id = 0x1E
-        build_version = 0x7809
-        count = 3
-
-    result = analyzer._pefile_parse_entry(GoodEntry())
-    assert result is not None
-    assert result["product_id"] == 0x1E
-    assert result["build_number"] == 0x7809
-    assert result["count"] == 3
-    assert result["prodid"] == (0x1E | (0x7809 << 16))
 
 
 # ---------------------------------------------------------------------------

@@ -7,12 +7,12 @@ from __future__ import annotations
 import struct
 import tempfile
 import os
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer, PEFILE_AVAILABLE
-
 
 # ---------------------------------------------------------------------------
 # Helper: build a minimal PE binary with a Rich Header in its DOS stub
@@ -177,15 +177,14 @@ def test_extract_rich_header_pefile_with_real_pe_no_rich_header() -> None:
 # ---------------------------------------------------------------------------
 
 
-class _FakeEntry:
-    product_id = 2
-    build_version = 30729
-    count = 3
+# pefile RICH_HEADER.values is a flat [prodid, count, ...] int list.
+# prodid 0x78090002 -> product_id 2, build_number 30729 (0x7809).
+_FAKE_VALUES = [0x78090002, 3]
 
 
 class _FakeRichHeader:
     checksum = 0x12345678
-    values = [_FakeEntry()]
+    values = _FAKE_VALUES
     clear_data = b"\x00" * 32
 
 
@@ -244,27 +243,16 @@ def test_pefile_extract_entries_empty_when_no_values() -> None:
     assert result == []
 
 
-def test_pefile_parse_entry_returns_dict_for_valid_entry() -> None:
-    """Lines 182-196: parses a pefile entry into our schema dict."""
+def test_pefile_extract_entries_skips_odd_trailing_value() -> None:
+    """A dangling prodid without a matching count is ignored."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    result = analyzer._pefile_parse_entry(_FakeEntry())
-    assert result is not None
-    assert result["product_id"] == 2
-    assert result["build_number"] == 30729
-    assert result["count"] == 3
-    assert "prodid" in result
 
+    class _OddRich:
+        values = [0x78090002, 3, 0x00010001]
 
-def test_pefile_parse_entry_returns_none_for_missing_attrs() -> None:
-    """Lines 182-189: returns None when entry lacks required attributes."""
-
-    class _IncompleteEntry:
-        product_id = 5
-        # missing build_version and count
-
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    result = analyzer._pefile_parse_entry(_IncompleteEntry())
-    assert result is None
+    entries = analyzer._pefile_extract_entries(SimpleNamespace(RICH_HEADER=_OddRich()))
+    assert len(entries) == 1
+    assert entries[0]["count"] == 3
 
 
 def test_pefile_entries_from_clear_data_with_clear_data() -> None:

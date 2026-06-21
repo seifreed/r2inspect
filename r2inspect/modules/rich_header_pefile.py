@@ -70,38 +70,31 @@ class RichHeaderPefileMixin:
             return None
         return checksum
 
-    def _pefile_extract_entries(self, pe: Any) -> list[dict[str, Any]]:
-        entries: list[dict[str, Any]] = []
-        if not hasattr(pe.RICH_HEADER, "values") or not pe.RICH_HEADER.values:
-            return entries
-        for entry in pe.RICH_HEADER.values:
-            parsed = self._pefile_parse_entry(entry)
-            if parsed:
-                entries.append(parsed)
-        return entries
-
     @staticmethod
-    def _pefile_parse_entry(entry: Any) -> dict[str, Any] | None:
-        if not (
-            hasattr(entry, "product_id")
-            and hasattr(entry, "build_version")
-            and hasattr(entry, "count")
-        ):
-            return None
-        if not (
-            isinstance(entry.product_id, int)
-            and isinstance(entry.build_version, int)
-            and isinstance(entry.count, int)
-            and entry.count > 0
-        ):
-            return None
-        prodid = entry.product_id | (entry.build_version << 16)
-        return {
-            "product_id": entry.product_id,
-            "build_number": entry.build_version,
-            "count": entry.count,
-            "prodid": prodid,
-        }
+    def _pefile_extract_entries(pe: Any) -> list[dict[str, Any]]:
+        # pefile exposes RICH_HEADER.values as a flat list of XOR-decoded ints
+        # laid out as [prodid, count, prodid, count, ...] — NOT objects with
+        # product_id/build_version/count attributes. The previous attribute-based
+        # parsing matched nothing, so this primary path always returned [] and
+        # entries came solely from the clear-data fallback. Decode each
+        # (prodid, count) pair the same way as parse_clear_data_entries.
+        entries: list[dict[str, Any]] = []
+        values = getattr(pe.RICH_HEADER, "values", None)
+        if not isinstance(values, (list, tuple)):
+            return entries
+        for i in range(0, len(values) - 1, 2):
+            prodid, count = values[i], values[i + 1]
+            if not (isinstance(prodid, int) and isinstance(count, int)) or count <= 0:
+                continue
+            entries.append(
+                {
+                    "product_id": prodid & 0xFFFF,
+                    "build_number": (prodid >> 16) & 0xFFFF,
+                    "count": count,
+                    "prodid": prodid,
+                }
+            )
+        return entries
 
     @staticmethod
     def _pefile_entries_from_clear_data(pe: Any) -> list[dict[str, Any]]:

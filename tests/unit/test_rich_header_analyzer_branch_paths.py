@@ -18,7 +18,6 @@ import pytest
 import r2inspect.modules.rich_header_analyzer as rha_module
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer, PEFILE_AVAILABLE
 
-
 # ---------------------------------------------------------------------------
 # PE fixture builders
 # ---------------------------------------------------------------------------
@@ -233,21 +232,20 @@ def test_extract_rich_header_pefile_finally_closes_pe() -> None:
 # ---------------------------------------------------------------------------
 
 
-class _FakeEntry:
-    product_id = 5
-    build_version = 12345
-    count = 7
+# pefile RICH_HEADER.values is a flat [prodid, count, ...] int list.
+# prodid 0x30390005 -> product_id 5, build_number 12345.
+_FAKE_VALUES = [0x30390005, 7]
 
 
 class _FakeRichHeader:
     checksum = 0xDEADBEEF
-    values = [_FakeEntry()]
+    values = _FAKE_VALUES
     clear_data = b"\xab\xcd" * 16
 
 
 class _FakeRichHeaderNoClearData:
     checksum = 0xDEADBEEF
-    values = [_FakeEntry()]
+    values = _FAKE_VALUES
     clear_data = None
 
 
@@ -301,39 +299,27 @@ def test_pefile_get_xor_key_returns_none_for_zero_checksum() -> None:
     assert analyzer._pefile_get_xor_key(_ZeroChecksumPE()) is None
 
 
-def test_pefile_parse_entry_returns_dict() -> None:
-    """Lines 190-191: builds product-id dict from entry attributes."""
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    result = analyzer._pefile_parse_entry(_FakeEntry())
-    assert result is not None
-    assert result["product_id"] == 5
-    assert result["build_number"] == 12345
-    assert result["count"] == 7
-    expected_prodid = 5 | (12345 << 16)
-    assert result["prodid"] == expected_prodid
+def test_pefile_extract_entries_skips_non_positive_count() -> None:
+    """A (prodid, count) pair with count <= 0 is padding and is skipped."""
 
-
-def test_pefile_parse_entry_returns_none_for_incomplete_entry() -> None:
-    """Lines 190-191: returns None when required attributes are missing."""
-
-    class _NoCount:
-        product_id = 1
-        build_version = 2
+    class _PaddedRich:
+        checksum = 0xDEADBEEF
+        values = [0x30390005, 7, 0x00010001, 0]
+        clear_data = None
 
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    assert analyzer._pefile_parse_entry(_NoCount()) is None
+    entries = analyzer._pefile_extract_entries(SimpleNamespace(RICH_HEADER=_PaddedRich()))
+    assert [e["count"] for e in entries] == [7]
 
 
-def test_pefile_parse_entry_returns_none_for_non_positive_count() -> None:
-    """Lines 190-191: returns None when count is not a positive integer."""
+def test_pefile_extract_entries_returns_empty_for_non_list_values() -> None:
+    """A non-list values attribute yields no entries."""
 
-    class _ZeroCount:
-        product_id = 1
-        build_version = 2
-        count = 0
+    class _BadRich:
+        values = None
 
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    assert analyzer._pefile_parse_entry(_ZeroCount()) is None
+    assert analyzer._pefile_extract_entries(SimpleNamespace(RICH_HEADER=_BadRich())) == []
 
 
 def test_pefile_entries_from_clear_data_with_valid_clear_data() -> None:
@@ -353,7 +339,9 @@ def test_pefile_entries_from_clear_data_empty_when_no_attribute() -> None:
 def test_pefile_entries_from_clear_data_empty_when_clear_data_is_none() -> None:
     """Line 201: returns empty list when clear_data is present but invalid."""
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    result = analyzer._pefile_entries_from_clear_data(SimpleNamespace(RICH_HEADER=_FakeRichHeaderNoClearData()))
+    result = analyzer._pefile_entries_from_clear_data(
+        SimpleNamespace(RICH_HEADER=_FakeRichHeaderNoClearData())
+    )
     assert result == []
 
 

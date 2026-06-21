@@ -19,7 +19,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_analyzer import PEFILE_AVAILABLE, RichHeaderAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe stand-in
 # ---------------------------------------------------------------------------
@@ -138,34 +137,27 @@ def test_pefile_extract_entries_empty_values() -> None:
     assert result == []
 
 
-def test_pefile_parse_entry_missing_attrs() -> None:
-    """_pefile_parse_entry returns None when entry missing required attrs."""
+def test_pefile_extract_entries_skips_zero_count_pairs() -> None:
+    """_pefile_extract_entries skips (prodid, count) pairs with count <= 0."""
     analyzer = _make_analyzer(filepath="/tmp/test.exe")
 
-    # Missing product_id
-    entry1 = SimpleNamespace(build_version=0x1234, count=10)
-    assert analyzer._pefile_parse_entry(entry1) is None
-
-    # Missing build_version
-    entry2 = SimpleNamespace(product_id=0x5A, count=10)
-    assert analyzer._pefile_parse_entry(entry2) is None
-
-    # Missing count
-    entry3 = SimpleNamespace(product_id=0x5A, build_version=0x1234)
-    assert analyzer._pefile_parse_entry(entry3) is None
+    rich = SimpleNamespace(values=[0x12340000, 0, 0x5A, 0])
+    pe_obj = SimpleNamespace(RICH_HEADER=rich)
+    assert analyzer._pefile_extract_entries(pe_obj) == []
 
 
-def test_pefile_parse_entry_success() -> None:
-    """_pefile_parse_entry returns correct dict with valid entry."""
+def test_pefile_extract_entries_success() -> None:
+    """_pefile_extract_entries decodes a flat (prodid, count) int pair."""
     analyzer = _make_analyzer(filepath="/tmp/test.exe")
 
-    entry = SimpleNamespace(product_id=0x5A, build_version=0x1234, count=10)
-    result = analyzer._pefile_parse_entry(entry)
-    assert result is not None
-    assert result["product_id"] == 0x5A
-    assert result["build_number"] == 0x1234
-    assert result["count"] == 10
-    assert result["prodid"] == 0x5A | (0x1234 << 16)
+    # prodid 0x1234005A -> product_id 0x5A, build_number 0x1234
+    rich = SimpleNamespace(values=[0x1234005A, 10])
+    result = analyzer._pefile_extract_entries(SimpleNamespace(RICH_HEADER=rich))
+    assert len(result) == 1
+    assert result[0]["product_id"] == 0x5A
+    assert result[0]["build_number"] == 0x1234
+    assert result[0]["count"] == 10
+    assert result[0]["prodid"] == 0x5A | (0x1234 << 16)
 
 
 def test_pefile_entries_from_clear_data_no_attr() -> None:

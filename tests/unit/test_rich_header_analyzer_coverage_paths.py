@@ -16,7 +16,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_analyzer import PEFILE_AVAILABLE, RichHeaderAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2: minimal r2pipe stand-in routing cmdj/cmd via lookup maps
 # ---------------------------------------------------------------------------
@@ -601,27 +600,6 @@ class _FakeRichHeader:
             self.clear_data = clear_data
 
 
-class _FakeRichEntry:
-    """Lightweight stand-in for a pefile Rich Header entry."""
-
-    def __init__(
-        self,
-        *,
-        product_id: int | None = None,
-        build_version: int | None = None,
-        count: int | None = None,
-        has_product_id: bool = True,
-        has_build_version: bool = True,
-        has_count: bool = True,
-    ) -> None:
-        if has_product_id and product_id is not None:
-            self.product_id = product_id
-        if has_build_version and build_version is not None:
-            self.build_version = build_version
-        if has_count and count is not None:
-            self.count = count
-
-
 class _FakePE:
     """Lightweight stand-in for pefile.PE."""
 
@@ -671,23 +649,14 @@ def test_rich_header_pefile_extract_entries_empty() -> None:
 
 @pytest.mark.skipif(not PEFILE_AVAILABLE, reason="pefile not available")
 def test_rich_header_pefile_extract_entries_valid() -> None:
-    entry = _FakeRichEntry(product_id=1, build_version=2, count=5)
-    pe = _FakePE(rich_header=_FakeRichHeader(values=[entry]))
+    # Flat [prodid, count] int list; prodid 0x20001 -> product_id 1, build 2.
+    pe = _FakePE(rich_header=_FakeRichHeader(values=[0x00020001, 5]))
     analyzer = RichHeaderAnalyzer(adapter=None, filepath="/fake/path")
     result = analyzer._pefile_extract_entries(pe)
     assert len(result) == 1
     assert result[0]["product_id"] == 1
     assert result[0]["build_number"] == 2
     assert result[0]["count"] == 5
-
-
-@pytest.mark.skipif(not PEFILE_AVAILABLE, reason="pefile not available")
-def test_rich_header_pefile_parse_entry_none() -> None:
-    # Entry missing required attributes
-    entry = _FakeRichEntry(has_product_id=False)
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath="/fake/path")
-    result = analyzer._pefile_parse_entry(entry)
-    assert result is None
 
 
 @pytest.mark.skipif(not PEFILE_AVAILABLE, reason="pefile not available")

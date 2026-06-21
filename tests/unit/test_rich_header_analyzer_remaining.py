@@ -7,12 +7,10 @@ All mocks replaced with FakeR2 + R2PipeAdapter driving real analyzer code.
 import struct
 import tempfile
 import os
-from typing import Any
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.rich_header_analyzer import RichHeaderAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
-
 
 # ---------------------------------------------------------------------------
 # FakeR2 helper
@@ -584,18 +582,13 @@ def test_pefile_extract_entries_no_values():
 
 
 def test_pefile_extract_entries_with_values():
-    """_pefile_extract_entries parses real entry objects."""
+    """_pefile_extract_entries decodes the flat (prodid, count) int pairs."""
     adapter = _make_adapter()
     analyzer = RichHeaderAnalyzer(adapter=adapter, filepath="/test/file")
 
-    class FakeEntry:
-        def __init__(self, pid, bv, c):
-            self.product_id = pid
-            self.build_version = bv
-            self.count = c
-
     class FakeRichHeader:
-        values = [FakeEntry(100, 200, 5), FakeEntry(150, 300, 3)]
+        # prodid 0x00C80064 -> product_id 100, build 200; 0x012C0096 -> 150, 300.
+        values = [0x00C80064, 5, 0x012C0096, 3]
 
     class FakePE:
         RICH_HEADER = FakeRichHeader()
