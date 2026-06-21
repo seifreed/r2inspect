@@ -139,6 +139,13 @@ class RetryManager:
                 self.retry_stats["failed_after_retries"] += 1
             logger.warning("Operation failed after %s attempts: %s", config.max_attempts, exc)
             raise exc
+        logger.debug(
+            "Retryable error on attempt %s/%s, retrying: %s: %s",
+            attempt,
+            config.max_attempts,
+            type(exc).__name__,
+            exc,
+        )
         self._wait_for_retry(attempt, config)
         return True
 

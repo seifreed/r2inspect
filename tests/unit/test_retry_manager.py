@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
@@ -28,6 +30,32 @@ def test_retry_operation_succeeds_after_retry():
     stats = manager.get_stats()
     assert stats["total_retries"] == 1
     assert stats["successful_retries"] == 1
+
+
+def test_intermediate_retry_is_logged(caplog):
+    manager = RetryManager()
+    attempts = {"count": 0}
+
+    def flaky():
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise TimeoutError("temporary")
+        return "ok"
+
+    config = RetryConfig(
+        max_attempts=2,
+        base_delay=0.0,
+        max_delay=0.0,
+        jitter=False,
+        strategy=RetryStrategy.FIXED_DELAY,
+    )
+
+    with caplog.at_level(logging.DEBUG, logger="r2inspect.infrastructure.retry_manager"):
+        assert manager.retry_operation(flaky, config=config) == "ok"
+
+    retry_logs = [r for r in caplog.records if "retrying" in r.message]
+    assert len(retry_logs) == 1
+    assert retry_logs[0].args[:3] == (1, 2, "TimeoutError")
 
 
 def test_retry_operation_non_retryable_error_propagates():
