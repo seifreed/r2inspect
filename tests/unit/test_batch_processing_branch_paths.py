@@ -3,6 +3,7 @@
 from __future__ import annotations
 from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
+import logging
 import os
 import threading
 import time
@@ -202,6 +203,35 @@ def test_find_executable_files_by_magic_verbose_prints_file_error(tmp_path: Path
         batch_processing.magic = original
     out = capsys.readouterr().out
     assert "Error checking" in out
+
+
+def test_find_executable_files_by_magic_logs_file_error_without_verbose(
+    tmp_path: Path, caplog
+) -> None:
+    """Discovery file errors hit the persistent log even when verbose is off."""
+
+    class _ErrorMagicObj:
+        def from_file(self, path: str) -> str:
+            raise RuntimeError("cannot read")
+
+    class _ErrorMagicModule:
+        @staticmethod
+        def Magic(mime: bool = False) -> _ErrorMagicObj:
+            return _ErrorMagicObj()
+
+    (tmp_path / "sample.bin").write_bytes(b"\x00" * 100)
+    original = batch_processing.magic
+    try:
+        batch_processing.magic = _ErrorMagicModule()
+        with caplog.at_level(logging.WARNING, logger="r2inspect.cli.batch_processing"):
+            find_executable_files_by_magic(tmp_path, recursive=False, verbose=False)
+    finally:
+        batch_processing.magic = original
+
+    assert any(
+        "during discovery" in r.getMessage() and "cannot read" in r.getMessage()
+        for r in caplog.records
+    )
 
 
 def test_find_executable_files_by_magic_skips_malformed_file_errors(

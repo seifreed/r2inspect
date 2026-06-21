@@ -173,10 +173,20 @@ def find_executable_files_by_magic(
 
     for message in init_errors:
         if message.startswith("Error initializing magic:"):
+            logger.error("%s; falling back to file extension detection", message)
             console.print(f"[red]{message}[/red]")
             console.print("[yellow]Falling back to file extension detection[/yellow]")
             return []
+        logger.warning("%s", message)
         console.print(f"[yellow]{message}[/yellow]")
+
+    # Log every discovery error to the persistent log, not only to the console
+    # under --verbose: a file dropped during discovery (unreadable, permissions)
+    # would otherwise leave no trace in a non-verbose batch run.
+    for item in file_errors:
+        if not isinstance(item, tuple) or len(item) < 2:
+            continue
+        logger.warning("Error checking %s during discovery: %s", item[0], item[1])
 
     if verbose:
         console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
