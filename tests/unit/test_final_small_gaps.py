@@ -402,21 +402,11 @@ def test_elf_analyzer_extract_build_id_exception():
     assert result is None
 
 
-def test_elf_analyzer_program_headers_exception():
-    """Lines 239-240: exception in _get_program_headers is caught."""
-    import r2inspect.modules.elf_analyzer as _ea_mod
-
-    def _raising_get_elf_headers(r2_instance: Any) -> None:
-        raise RuntimeError("simulated elf headers failure")
-
-    orig = _ea_mod.get_elf_headers
-    _ea_mod.get_elf_headers = _raising_get_elf_headers
-    try:
-        analyzer = ELFAnalyzer(adapter=None)
-        result = analyzer._get_program_headers()
-        assert result == []
-    finally:
-        _ea_mod.get_elf_headers = orig
+def test_elf_analyzer_program_headers_no_adapter():
+    """_get_program_headers returns [] when no adapter can serve iSSj."""
+    analyzer = ELFAnalyzer(adapter=None)
+    result = analyzer._get_program_headers()
+    assert result == []
 
 
 # ---------------------------------------------------------------------------

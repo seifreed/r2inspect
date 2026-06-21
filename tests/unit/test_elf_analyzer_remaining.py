@@ -8,7 +8,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
-
 # ---------------------------------------------------------------------------
 # FakeR2 helper
 # ---------------------------------------------------------------------------
@@ -307,41 +306,37 @@ def test_get_section_info_no_sections():
 
 
 def test_get_program_headers_with_headers():
-    """Test _get_program_headers extracts headers via ihj."""
-    headers_info = [
+    """Test _get_program_headers maps r2 segments (iSSj) to program headers."""
+    segments = [
         {
-            "type": "LOAD",
-            "flags": "r-x",
-            "offset": 0,
+            "name": "LOAD0",
+            "perm": "-r-x",
+            "paddr": 0,
             "vaddr": 0x400000,
-            "paddr": 0x400000,
-            "filesz": 1000,
-            "memsz": 1000,
+            "size": 1000,
+            "vsize": 1000,
         },
         {
-            "type": "LOAD",
-            "flags": "rw-",
-            "offset": 0x1000,
+            "name": "LOAD1",
+            "perm": "-rw-",
+            "paddr": 0x1000,
             "vaddr": 0x600000,
-            "paddr": 0x600000,
-            "filesz": 500,
-            "memsz": 1000,
+            "size": 500,
+            "vsize": 1000,
         },
     ]
-    adapter = _make_adapter(cmdj_map={"ihj": headers_info})
+    adapter = _make_adapter(cmdj_map={"iSSj": segments})
     analyzer = ELFAnalyzer(adapter)
     result = analyzer._get_program_headers()
     assert len(result) == 2
-    assert result[0]["type"] == "LOAD"
+    assert result[0]["type"] == "LOAD0"
+    assert result[0]["flags"] == "-r-x"
     assert result[1]["memsz"] == 1000
 
 
 def test_get_program_headers_no_headers():
-    """Test _get_program_headers with no headers."""
-    adapter = _make_adapter(
-        cmdj_map={"ihj": []},
-        cmd_map={"ih": ""},
-    )
+    """Test _get_program_headers with no segments."""
+    adapter = _make_adapter(cmdj_map={"iSSj": []})
     analyzer = ELFAnalyzer(adapter)
     result = analyzer._get_program_headers()
     assert result == []
@@ -433,8 +428,6 @@ def test_parse_dwarf_info():
     result = analyzer._parse_dwarf_info(dwarf_lines)
     assert "dwarf_producer" in result
     assert "GNU C17" in result["dwarf_producer"]
-
-
 
 
 def test_parse_build_id_data():
@@ -536,16 +529,16 @@ def test_get_section_info_with_defaults():
 
 
 def test_get_program_headers_with_defaults():
-    """Test _get_program_headers handles missing fields with defaults."""
-    headers_info = [
-        {"type": "LOAD"},
+    """Test _get_program_headers handles missing segment fields with defaults."""
+    segments = [
+        {"name": "LOAD0"},
         {},
     ]
-    adapter = _make_adapter(cmdj_map={"ihj": headers_info})
+    adapter = _make_adapter(cmdj_map={"iSSj": segments})
     analyzer = ELFAnalyzer(adapter)
     result = analyzer._get_program_headers()
     assert len(result) == 2
-    assert result[0]["type"] == "LOAD"
+    assert result[0]["type"] == "LOAD0"
     assert result[0]["flags"] == ""
     assert result[1]["type"] == "Unknown"
 

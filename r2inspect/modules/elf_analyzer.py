@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import re
-from typing import Any, cast
+from typing import Any
 
 from ..abstractions.coercion_support import coerce_int_or_none
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
-from ..infrastructure.r2_helpers import get_elf_headers
 from ..domain.formats.elf import (
     find_section_by_name,
     parse_build_id_data,
@@ -18,13 +17,13 @@ from .elf_security import get_security_features as _get_security_features
 logger = get_logger(__name__)
 
 
-
 def _format_section_bytes(data: bytes, cmd: str) -> str:
     if cmd == "psz":
         return data.split(b"\x00", 1)[0].decode(errors="ignore")
     if cmd == "px":
         return " ".join(f"{byte:02x}" for byte in data)
     return data.decode(errors="ignore")
+
 
 class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -197,35 +196,28 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         return sections
 
     def _get_program_headers(self) -> list[dict[str, Any]]:
-        """Get ELF program headers information"""
-        headers = []
+        """Get ELF program headers (segments) from radare2.
 
-        try:
-            # Get program headers - iHj doesn't exist, use alternative
-            # For ELF, we should use ih command instead
-            ph_info = get_elf_headers(self.adapter)
-
-            if ph_info:
-                for header in ph_info:
-                    if not isinstance(header, dict):
-                        continue
-                    headers.append(
-                        {
-                            "type": header.get("type", "Unknown"),
-                            "flags": header.get("flags", ""),
-                            "offset": header.get("offset", 0),
-                            "vaddr": header.get("vaddr", 0),
-                            "paddr": header.get("paddr", 0),
-                            "filesz": header.get("filesz", 0),
-                            "memsz": header.get("memsz", 0),
-                        }
-                    )
-            else:
-                logger.debug("No program headers found or invalid response from radare2")
-
-        except Exception as e:
-            logger.debug("Error getting program headers: %s", e)
-
+        Program headers are r2 "segments" (iSSj): PHDR, INTERP, LOAD*, DYNAMIC,
+        etc. The previous code read the ELF *file* header (ih/ihj), whose fields
+        (Type, Machine, PhOff, ...) carry none of the program-header keys below,
+        so every entry came back as empty defaults.
+        """
+        headers: list[dict[str, Any]] = []
+        for segment in self._cmd_list("iSSj"):
+            if not isinstance(segment, dict):
+                continue
+            headers.append(
+                {
+                    "type": segment.get("name", "Unknown"),
+                    "flags": segment.get("perm", ""),
+                    "offset": segment.get("paddr", 0),
+                    "vaddr": segment.get("vaddr", 0),
+                    "paddr": segment.get("paddr", 0),
+                    "filesz": segment.get("size", 0),
+                    "memsz": segment.get("vsize", 0),
+                }
+            )
         return headers
 
     def get_security_features(self) -> dict[str, bool]:

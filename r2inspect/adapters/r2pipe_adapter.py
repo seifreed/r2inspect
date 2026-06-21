@@ -73,7 +73,18 @@ class R2PipeAdapter(R2PipeQueryMixin):
         base = cmd_text.split("@", 1)[0].strip()
         if base.endswith("j"):
             result = self.cmdj(cmd_text)
-            list_commands = {"iSj", "iij", "iEj", "isj", "aflj", "izj", "izzj", "iDj", "agj"}
+            list_commands = {
+                "iSj",
+                "iSSj",
+                "iij",
+                "iEj",
+                "isj",
+                "aflj",
+                "izj",
+                "izzj",
+                "iDj",
+                "agj",
+            }
             if base in list_commands:
                 if isinstance(result, list):
                     return result

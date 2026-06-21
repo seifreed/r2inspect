@@ -106,20 +106,21 @@ class ELFAdapterWithDwarfInfo(ELFAdapterWithBinInfo):
 
 
 class ELFAdapterWithProgramHeaders(MinimalELFAdapter):
-    """Adapter returning program headers."""
+    """Adapter returning one LOAD segment (program header) via iSSj."""
 
-    def get_headers_json(self) -> list[dict[str, Any]]:
-        return [
-            {
-                "type": "LOAD",
-                "flags": "r-x",
-                "offset": 0,
-                "vaddr": 0x400000,
-                "paddr": 0x400000,
-                "filesz": 0x1000,
-                "memsz": 0x1000,
-            }
-        ]
+    def cmdj(self, command: str) -> list[dict[str, Any]]:
+        if command == "iSSj":
+            return [
+                {
+                    "name": "LOAD0",
+                    "perm": "-r-x",
+                    "paddr": 0,
+                    "vaddr": 0x400000,
+                    "size": 0x1000,
+                    "vsize": 0x1000,
+                }
+            ]
+        return []
 
 
 class ELFAdapterRaisingFileInfo(MinimalELFAdapter):
@@ -351,9 +352,7 @@ def test_get_section_info_coerces_string_numeric_fields():
     class StringSectionAnalyzer(ELFAnalyzer):
         def _cmd_list(self, cmd: str):
             if cmd == "iSj":
-                return [
-                    {"name": ".text", "size": "4096", "vaddr": "4096", "paddr": "8192"}
-                ]
+                return [{"name": ".text", "size": "4096", "vaddr": "4096", "paddr": "8192"}]
 
             return []
 
@@ -403,7 +402,9 @@ def test_get_program_headers_with_headers():
     analyzer = ELFAnalyzer(adapter)
     headers = analyzer._get_program_headers()
     assert len(headers) == 1
-    assert headers[0]["type"] == "LOAD"
+    assert headers[0]["type"] == "LOAD0"
+    assert headers[0]["flags"] == "-r-x"
+    assert headers[0]["memsz"] == 0x1000
 
 
 def test_get_program_headers_empty():

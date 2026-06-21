@@ -124,9 +124,21 @@ def test_get_section_info_skips_non_dict_entries():
     adapter = FakeAdapter(
         cmdj_responses={
             "iSj": [
-                {"name": ".text", "type": "PROGBITS", "size": 4096, "vaddr": 0x1000, "paddr": 0x1000},
+                {
+                    "name": ".text",
+                    "type": "PROGBITS",
+                    "size": 4096,
+                    "vaddr": 0x1000,
+                    "paddr": 0x1000,
+                },
                 "bad",
-                {"name": ".data", "type": "PROGBITS", "size": 256, "vaddr": 0x2000, "paddr": 0x2000},
+                {
+                    "name": ".data",
+                    "type": "PROGBITS",
+                    "size": 256,
+                    "vaddr": 0x2000,
+                    "paddr": 0x2000,
+                },
             ]
         }
     )
@@ -140,18 +152,32 @@ def test_get_section_info_skips_non_dict_entries():
 def test_get_program_headers_skips_non_dict_entries():
     adapter = FakeAdapter(
         cmdj_responses={
-            "ihj": [
-                {"type": "LOAD", "flags": "R", "offset": 0, "vaddr": 0x1000, "paddr": 0x1000, "filesz": 1, "memsz": 1},
+            "iSSj": [
+                {
+                    "name": "LOAD0",
+                    "perm": "-r-x",
+                    "paddr": 0,
+                    "vaddr": 0x1000,
+                    "size": 1,
+                    "vsize": 1,
+                },
                 "bad",
-                {"type": "NOTE", "flags": "R", "offset": 1, "vaddr": 0x2000, "paddr": 0x2000, "filesz": 2, "memsz": 2},
+                {
+                    "name": "DYNAMIC",
+                    "perm": "-rw-",
+                    "paddr": 1,
+                    "vaddr": 0x2000,
+                    "size": 2,
+                    "vsize": 2,
+                },
             ]
         }
     )
     analyzer = ELFAnalyzer(adapter)
     result = analyzer._get_program_headers()
     assert len(result) == 2
-    assert result[0]["type"] == "LOAD"
-    assert result[1]["type"] == "NOTE"
+    assert result[0]["type"] == "LOAD0"
+    assert result[1]["type"] == "DYNAMIC"
 
 
 def test_get_section_info_error():
