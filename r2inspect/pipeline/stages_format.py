@@ -113,6 +113,10 @@ class FileInfoStage(AnalysisStage):
             mime_type = mime_magic.from_file(resolved_path)
             file_type = desc_magic.from_file(resolved_path)
         except FileNotFoundError:
+            logger.warning(
+                "libmagic could not read %s for file-type detection; reporting unknown type",
+                resolved_path,
+            )
             return {"mime_type": None, "file_type": None}
         return {
             "mime_type": mime_type,

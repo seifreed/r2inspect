@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -77,6 +78,32 @@ def test_stages_format_magic_none_and_macho_branch(tmp_path: Path) -> None:
     stages_format._magic_detectors = (object(), _Desc())
     fd = stages_format.FormatDetectionStage(_Adapter(), str(sample))
     assert fd._detect_via_basic_magic() == "Mach-O"
+
+
+def test_magic_info_logs_warning_on_file_not_found(tmp_path: Path, caplog) -> None:
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"\x00" * 64)
+
+    class _Raising:
+        def from_file(self, _: str) -> str:
+            raise FileNotFoundError("vanished")
+
+    class _Adapter:
+        def get_file_info(self) -> dict[str, object]:
+            return {}
+
+    saved = stages_format._magic_detectors
+    try:
+        stages_format._magic_initialized = True
+        stages_format._magic_detectors = (_Raising(), _Raising())
+        stage = stages_format.FileInfoStage(_Adapter(), str(sample))
+        with caplog.at_level(logging.WARNING, logger="r2inspect.pipeline.stages_format"):
+            info = stage._magic_info()
+    finally:
+        stages_format._magic_detectors = saved
+
+    assert info == {"mime_type": None, "file_type": None}
+    assert any("libmagic could not read" in record.getMessage() for record in caplog.records)
 
 
 def test_impfuzzy_exception_paths() -> None:
