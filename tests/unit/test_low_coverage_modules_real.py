@@ -391,7 +391,9 @@ def test_macho_similarity_security_helpers() -> None:
     assert macho_domain.platform_from_version_min("LC_X") is None
     assert macho_domain.dylib_timestamp_to_string(0) == (None, None)
 
-    load_cmds = macho_domain.build_load_commands([{"type": "LC_ID_DYLIB", "size": 1}])
+    load_cmds = macho_domain.build_load_commands(
+        [{"name": "load_command_5_LC_ID_DYLIB", "pf": [{"name": "cmd", "label": "LC_ID_DYLIB"}]}]
+    )
     assert load_cmds[0]["type"] == "LC_ID_DYLIB"
     sections = macho_domain.build_sections([{"name": "__text", "size": 1}])
     assert sections[0]["name"] == "__text"

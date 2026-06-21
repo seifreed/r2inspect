@@ -570,13 +570,25 @@ def test_dylib_timestamp_to_string_overflow() -> None:
 
 
 def test_build_load_commands_normal() -> None:
+    # Real r2 ihj shape: type comes from the pf "cmd" label, size from cmdsize,
+    # offset from paddr — there is no top-level "type"/"offset" key.
     headers = [
-        {"type": "LC_SEGMENT", "size": 56, "offset": 100},
-        {"type": "LC_DYLIB", "size": 24, "offset": 200},
+        {
+            "name": "load_command_0_LC_SEGMENT_64",
+            "paddr": 100,
+            "pf": [{"name": "cmd", "label": "LC_SEGMENT_64"}, {"name": "cmdsize", "value": 56}],
+        },
+        {
+            "name": "load_command_8_LC_UUID",
+            "paddr": 200,
+            "pf": [{"name": "cmd", "label": "LC_UUID"}, {"name": "cmdsize", "value": 24}],
+        },
     ]
     result = build_load_commands(headers)
     assert len(result) == 2
-    assert result[0]["type"] == "LC_SEGMENT"
+    assert result[0]["type"] == "LC_SEGMENT_64"
+    assert result[0]["size"] == 56
+    assert result[1]["type"] == "LC_UUID"
     assert result[1]["offset"] == 200
 
 

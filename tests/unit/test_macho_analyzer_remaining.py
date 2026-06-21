@@ -427,13 +427,22 @@ def test_extract_uuid_exception_line_233_234():
 def test_get_load_commands_with_headers():
     """_get_load_commands builds commands from headers."""
     headers = [
-        {"type": "LC_LOAD_DYLIB", "name": "test.dylib", "size": 48, "offset": 0x100},
-        {"type": "LC_UUID", "uuid": "ABC-123", "size": 24, "offset": 0x200},
+        {
+            "name": "load_command_0_LC_LOAD_DYLIB",
+            "paddr": 0x100,
+            "pf": [{"name": "cmd", "label": "LC_LOAD_DYLIB"}, {"name": "cmdsize", "value": 48}],
+        },
+        {
+            "name": "load_command_1_LC_UUID",
+            "paddr": 0x200,
+            "pf": [{"name": "cmd", "label": "LC_UUID"}, {"name": "cmdsize", "value": 24}],
+        },
     ]
     analyzer = _make_analyzer(cmdj_map={"ihj": headers})
     result = analyzer._get_load_commands()
     assert len(result) == 2
     assert result[0]["type"] == "LC_LOAD_DYLIB"
+    assert result[0]["size"] == 48
     assert result[1]["type"] == "LC_UUID"
 
 

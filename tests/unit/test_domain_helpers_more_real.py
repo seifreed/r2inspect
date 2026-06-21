@@ -83,7 +83,9 @@ def test_macho_domain_helpers() -> None:
     assert platform_from_version_min("IPHONEOS")
     assert dylib_timestamp_to_string(1)[0] is not None
     assert dylib_timestamp_to_string(0) == (None, None)
-    headers = [{"type": "LC_SEGMENT", "size": 1, "offset": 2}]
+    headers = [
+        {"name": "load_command_0_LC_SEGMENT", "pf": [{"name": "cmd", "label": "LC_SEGMENT"}]}
+    ]
     assert build_load_commands(headers)[0]["type"] == "LC_SEGMENT"
     sections = [{"name": "__text", "segment": "__TEXT", "size": 1}]
     assert build_sections(sections)[0]["name"] == "__text"

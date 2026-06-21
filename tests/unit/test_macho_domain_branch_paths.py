@@ -10,7 +10,6 @@ from r2inspect.domain.formats.macho import (
     platform_from_version_min,
 )
 
-
 # ---------------------------------------------------------------------------
 # estimate_from_sdk_version (lines 21-26)
 # ---------------------------------------------------------------------------
@@ -136,9 +135,20 @@ def test_dylib_timestamp_to_string_is_utc_not_local():
 
 
 def test_build_load_commands_extracts_fields():
+    # Real r2 ihj shape: LC type from the pf "cmd" label, size from cmdsize,
+    # offset from paddr.
     headers = [
-        {"type": "LC_SEGMENT_64", "size": 72, "offset": 0x40, "extra": "ignored"},
-        {"type": "LC_DYLIB", "size": 56, "offset": 0x88},
+        {
+            "name": "load_command_0_LC_SEGMENT_64",
+            "paddr": 0x40,
+            "pf": [{"name": "cmd", "label": "LC_SEGMENT_64"}, {"name": "cmdsize", "value": 72}],
+            "extra": "ignored",
+        },
+        {
+            "name": "load_command_1_LC_LOAD_DYLIB",
+            "paddr": 0x88,
+            "pf": [{"name": "cmd", "label": "LC_LOAD_DYLIB"}, {"name": "cmdsize", "value": 56}],
+        },
     ]
     commands = build_load_commands(headers)
     assert len(commands) == 2
