@@ -86,6 +86,22 @@ def test_calculate_compiler_score_string_only():
     assert score > 0.0
 
 
+def test_calculate_compiler_score_empty_category_does_not_dilute():
+    # A signature dict with empty-list categories (common for string-only
+    # compilers) must not count those categories toward the denominator: a
+    # perfect string match should score 1.0, not be diluted below the
+    # detection threshold.
+    signatures = {
+        "strings": ["Microsoft.*Visual.*C"],
+        "imports": [],
+        "sections": [],
+        "symbols": [],
+    }
+    strings_data = ["Microsoft Visual C++ 2019"]
+    score = calculate_compiler_score(signatures, strings_data, [], [], [])
+    assert score == 1.0
+
+
 def test_calculate_compiler_score_import_only():
     signatures = {"imports": ["msvcr120.dll"]}
     imports_data = ["msvcr120.dll", "kernel32.dll"]

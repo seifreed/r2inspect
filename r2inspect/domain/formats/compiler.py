@@ -181,7 +181,10 @@ def extract_symbol_names(symbols_data: list[dict[str, Any]]) -> list[str]:
 def _check_string_signatures(
     signatures: dict[str, Any], strings_data: list[str]
 ) -> tuple[float, float]:
-    if "strings" not in signatures:
+    # An empty (or absent) signature list contributes nothing — counting its
+    # weight in max_score would dilute the score so that string-only compilers
+    # (and any category left as []) could never reach the detection threshold.
+    if not signatures.get("strings"):
         return 0.0, 0.0
 
     score = 0.0
@@ -203,7 +206,7 @@ def _check_string_signatures(
 def _check_import_signatures(
     signatures: dict[str, Any], imports_data: list[str]
 ) -> tuple[float, float]:
-    if "imports" not in signatures:
+    if not signatures.get("imports"):
         return 0.0, 0.0
 
     score = 0.0
@@ -221,7 +224,7 @@ def _check_import_signatures(
 def _check_section_signatures(
     signatures: dict[str, Any], sections_data: list[str]
 ) -> tuple[float, float]:
-    if "sections" not in signatures:
+    if not signatures.get("sections"):
         return 0.0, 0.0
 
     score = 0.0
@@ -230,7 +233,9 @@ def _check_section_signatures(
     for section_name in signatures["sections"]:
         if not isinstance(section_name, str):
             continue
-        if any(isinstance(sec, str) and section_name.lower() in sec.lower() for sec in sections_data):
+        if any(
+            isinstance(sec, str) and section_name.lower() in sec.lower() for sec in sections_data
+        ):
             score += 1.0 / len(signatures["sections"])
 
     return score, max_score
@@ -239,7 +244,7 @@ def _check_section_signatures(
 def _check_symbol_signatures(
     signatures: dict[str, Any], symbols_data: list[str]
 ) -> tuple[float, float]:
-    if "symbols" not in signatures:
+    if not signatures.get("symbols"):
         return 0.0, 0.0
 
     score = 0.0
