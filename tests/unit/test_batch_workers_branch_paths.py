@@ -14,6 +14,7 @@ Missing lines targeted:
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from pathlib import Path
@@ -265,6 +266,37 @@ def test_process_files_parallel_rate_limit_failure_recorded(tmp_path: Path):
 
     assert dummy.name not in all_results
     assert len(failed_files) == 1
+
+
+def test_process_files_parallel_logs_per_file_failure(tmp_path: Path, caplog):
+    """A failed file must reach the persistent log, not only the summary table."""
+    dummy = tmp_path / "dummy.bin"
+    dummy.write_bytes(b"\x00" * 4)
+
+    all_results: dict = {}
+    failed_files: list = []
+    output_path = tmp_path / "out"
+    output_path.mkdir()
+
+    with caplog.at_level(logging.WARNING, logger="r2inspect.cli.batch_workers"):
+        process_files_parallel(
+            [dummy],
+            all_results,
+            failed_files,
+            output_path,
+            tmp_path,
+            Config(),
+            {},
+            False,
+            1,
+            _RejectingRateLimiter(),
+        )
+
+    assert len(failed_files) == 1
+    assert any(
+        "Analysis failed for" in record.getMessage() and "dummy.bin" in record.getMessage()
+        for record in caplog.records
+    )
 
 
 def test_process_files_parallel_multiple_files(tmp_path: Path):

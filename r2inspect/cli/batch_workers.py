@@ -173,9 +173,13 @@ def process_files_parallel(
 
                 with results_lock:
                     if error:
+                        # Surface every failure in the persistent log, not only
+                        # the ephemeral end-of-run summary table.
+                        logger.warning("Analysis failed for %s: %s", file_path, error)
                         failed_files.append((str(file_path), error))
                     else:
                         if results is None:
+                            logger.warning("Analysis produced no results for %s", file_path)
                             failed_files.append((str(file_path), "Empty results"))
                         else:
                             # Use full path as key to avoid collisions
