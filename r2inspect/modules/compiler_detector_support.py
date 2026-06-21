@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 from collections.abc import Callable
 
@@ -67,22 +66,19 @@ def score_compilers(
     sections_data: list[str],
     symbols_data: list[str],
     *,
-    calculate_score: Callable[
-        [dict[str, list[str]], list[str], list[str], list[str], list[str]], float
-    ],
+    calculate_score: Callable[[dict[str, Any], list[str], list[str], list[str], list[str]], float],
 ) -> dict[str, float]:
     if not isinstance(compiler_signatures, dict):
         return {}
     scores: dict[str, float] = {}
     for compiler_name, signatures in compiler_signatures.items():
-        if isinstance(signatures, list):
-            normalized_signatures = signatures
-        elif isinstance(signatures, (dict, str, bytes)) or not isinstance(signatures, Iterable):
+        # Each compiler maps to a signature dict ({"strings": [...], "imports":
+        # [...], ...}); calculate_score indexes those keys. Skipping dicts here
+        # (as the old normalize-to-list logic did) silently zeroed every score.
+        if not isinstance(signatures, dict):
             continue
-        else:
-            normalized_signatures = list(signatures)
         scores[compiler_name] = calculate_score(
-            normalized_signatures,
+            signatures,
             strings_data,
             imports_data,
             sections_data,

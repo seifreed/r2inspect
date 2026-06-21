@@ -485,16 +485,58 @@ def test_score_compilers_skips_non_dict_input():
     assert scores == {}
 
 
-def test_score_compilers_accepts_iterable_signatures():
+def test_score_compilers_forwards_dict_signatures():
+    """Each compiler's signature dict must reach calculate_score unchanged."""
+    captured = {}
+
+    def fake_score(signatures, *_):
+        captured["sig"] = signatures
+        return 1.0
+
+    sig_dict = {"strings": ["a"], "imports": ["b"]}
     scores = score_compilers(
-        {"MSVC": ("sig1", "sig2")},
+        {"MSVC": sig_dict},
         [],
         [],
         [],
         [],
-        calculate_score=lambda signatures, *_: float(len(signatures)),
+        calculate_score=fake_score,
     )
-    assert scores == {"MSVC": 2.0}
+    assert scores == {"MSVC": 1.0}
+    assert captured["sig"] == sig_dict
+
+
+def test_score_compilers_skips_non_dict_signature_values():
+    scores = score_compilers(
+        {"MSVC": ["sig1", "sig2"]},
+        [],
+        [],
+        [],
+        [],
+        calculate_score=lambda signatures, *_: 1.0,
+    )
+    assert scores == {}
+
+
+def test_score_compilers_scores_real_signatures():
+    """Regression: real COMPILER_SIGNATURES (dict values) must produce scores.
+
+    The old normalize-to-list logic treated each compiler's dict as a non-list
+    iterable and skipped it, so score_compilers always returned {} in
+    production and signature-based compiler detection never fired.
+    """
+    from r2inspect.modules.compiler_signatures import COMPILER_SIGNATURES
+    from r2inspect.domain.formats.compiler import calculate_compiler_score
+
+    scores = score_compilers(
+        COMPILER_SIGNATURES,
+        ["Microsoft Visual C++ runtime", "MSVCR120.dll"],
+        ["MSVCR120.dll", "VCRUNTIME140.dll"],
+        [".rdata", ".idata"],
+        ["__security_cookie"],
+        calculate_score=calculate_compiler_score,
+    )
+    assert scores.get("MSVC", 0.0) > 0.3
 
 
 def test_detect_compiler_version_skips_non_dict_detectors():
