@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import pytest
@@ -279,6 +280,20 @@ def test_run_analysis_method_returns_error_when_none_available():
     analyzer = _AnalyzerNoMethods()
     result = run_analysis_method(analyzer, ["analyze", "detect", "run"])
     assert result == {"error": "No suitable analysis method found"}
+
+
+def test_run_analysis_method_warns_when_no_method(caplog):
+    """A no-method analyzer must be logged (with its class name), not silently
+    folded into the report as an error result."""
+    analyzer = _AnalyzerNoMethods()
+    with caplog.at_level(logging.WARNING, logger="r2inspect.core.analyzer_factory"):
+        result = run_analysis_method(analyzer, ["analyze", "detect", "scan"])
+    assert result == {"error": "No suitable analysis method found"}
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(
+        "exposes none of the analysis methods" in message and "_AnalyzerNoMethods" in message
+        for message in messages
+    )
 
 
 def test_run_analysis_method_uses_first_of_multiple_available():

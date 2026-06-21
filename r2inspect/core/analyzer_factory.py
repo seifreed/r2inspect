@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import inspect
+import logging
 from collections.abc import Iterable
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _R2_NAMES = {"r2", "r2pipe", "r2_instance"}
 _ADAPTER_NAMES = {"adapter", "backend"}
@@ -77,8 +80,17 @@ def create_analyzer(
 
 def run_analysis_method(analyzer: object, method_names: Iterable[str]) -> Any:
     """Run the first available analysis method from a list."""
-    for method_name in method_names:
+    tried = tuple(method_names)
+    for method_name in tried:
         method = getattr(analyzer, method_name, None)
         if callable(method):
             return method()
+    # No analyze/detect/scan method means this analyzer silently contributes an
+    # error result to the report; surface which analyzer so a misconfigured or
+    # newly added one is diagnosable instead of vanishing.
+    logger.warning(
+        "%s exposes none of the analysis methods %s; returning an error result",
+        type(analyzer).__name__,
+        tried,
+    )
     return {"error": "No suitable analysis method found"}
