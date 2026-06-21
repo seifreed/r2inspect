@@ -307,7 +307,7 @@ def test_authenticode_analyzer_branches() -> None:
     ]
 
     auth_map = {
-        "ihj": {"pe": True},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": {"optional": True},
         "iDj": [{"name": "SECURITY", "vaddr": 1, "paddr": 100, "size": 32}],
         "pxj 8 @ 100": [16, 0, 0, 0, 2, 0, 2, 0],

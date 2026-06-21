@@ -15,7 +15,7 @@ class _BaseAdapter:
     """Returns sensible defaults for every adapter method used by the analyzer."""
 
     def get_headers_json(self):
-        return {"class": "PE32"}
+        return [{"name": "Machine", "value": 0x8664}]
 
     def get_pe_optional_header(self):
         return {"subsystem": 2}

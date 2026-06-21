@@ -100,7 +100,7 @@ def test_analyze_success():
         "p8": _bytes_to_hex(pkcs7_data),
     }
     cmdj_map = {
-        "ihj": {"machine": "i386"},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": {"magic": "PE32"},
         "iDj": [
             {"name": "EXPORT", "vaddr": 100},
@@ -131,7 +131,7 @@ def test_analyze_initializes_missing_certificates_bucket():
         "p8": _bytes_to_hex(pkcs7_data),
     }
     cmdj_map = {
-        "ihj": {"machine": "i386"},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": {"magic": "PE32"},
         "iDj": [
             {"name": "SECURITY", "vaddr": 0x1000, "paddr": 0x800, "size": 500},
@@ -172,7 +172,7 @@ def test_analyze_no_optional_header():
 def test_analyze_no_security_directory():
     """No SECURITY data directory -> has_signature=False."""
     cmdj_map = {
-        "ihj": {"machine": "i386"},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": {"magic": "PE32"},
         "iDj": [{"name": "EXPORT", "vaddr": 100}],
     }
@@ -184,7 +184,7 @@ def test_analyze_no_security_directory():
 def test_analyze_security_directory_zero_vaddr():
     """SECURITY directory with vaddr=0 -> has_signature=False."""
     cmdj_map = {
-        "ihj": {"machine": "i386"},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": {"magic": "PE32"},
         "iDj": [{"name": "SECURITY", "vaddr": 0, "paddr": 0, "size": 0}],
     }
@@ -217,7 +217,7 @@ def test_analyze_exception():
 def test_has_required_headers_both_present():
     analyzer = _make_analyzer(
         cmdj_map={
-            "ihj": {"machine": "i386"},
+            "ihj": [{"name": "Machine", "value": 0x8664}],
             "iHj": {"magic": "PE32"},
         }
     )
@@ -626,7 +626,7 @@ def test_find_all_patterns_none():
 def test_compute_authenticode_hash_success():
     cmdj_map = {
         "ij": {"core": {"size": 10000}},
-        "ihj": {"machine": "i386"},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": {"magic": "PE32"},
     }
     analyzer = _make_analyzer(cmdj_map=cmdj_map)
@@ -659,7 +659,7 @@ def test_compute_authenticode_hash_no_pe_header():
 def test_compute_authenticode_hash_no_optional_header():
     cmdj_map = {
         "ij": {"core": {"size": 10000}},
-        "ihj": {"machine": "i386"},
+        "ihj": [{"name": "Machine", "value": 0x8664}],
         "iHj": None,
     }
     analyzer = _make_analyzer(cmdj_map=cmdj_map)

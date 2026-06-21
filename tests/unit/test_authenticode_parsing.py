@@ -58,7 +58,7 @@ class TestAuthenticodeAnalyzerBasics:
         """Test analyze when security directory missing."""
         analyzer = _make_analyzer(
             cmdj_map={
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": {"optional_header": True},
                 "iDj": [],
             }
@@ -73,7 +73,7 @@ class TestAuthenticodeAnalyzerBasics:
         """Test analyze with zero virtual address in security dir."""
         analyzer = _make_analyzer(
             cmdj_map={
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": {"optional_header": True},
                 "iDj": [{"name": "SECURITY", "vaddr": 0, "paddr": 100, "size": 500}],
             }
@@ -100,7 +100,7 @@ class TestAuthenticodeAnalyzerBasics:
 
         analyzer = _make_analyzer(
             cmdj_map={
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": {"optional_header": True},
                 "iDj": [{"name": "SECURITY", "vaddr": 0x1000, "paddr": 0x800, "size": 0x200}],
                 "ij": {"core": {"size": 10000}},
@@ -146,7 +146,7 @@ class TestSecurityDirectoryParsing:
         """Test required headers check success."""
         analyzer = _make_analyzer(
             cmdj_map={
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": {"optional_header": True},
             }
         )
@@ -167,7 +167,7 @@ class TestSecurityDirectoryParsing:
         """Test required headers when optional header missing."""
         analyzer = _make_analyzer(
             cmdj_map={
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": None,
             }
         )
@@ -752,7 +752,7 @@ class TestAuthenticodeHash:
         analyzer = _make_analyzer(
             cmdj_map={
                 "ij": {"core": {"size": 10000}},
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": None,
             }
         )
@@ -766,7 +766,7 @@ class TestAuthenticodeHash:
         analyzer = _make_analyzer(
             cmdj_map={
                 "ij": {"core": {"size": 10000}},
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": {"optional_header": True},
             }
         )
@@ -782,7 +782,7 @@ class TestAuthenticodeHash:
         analyzer = _make_analyzer(
             cmdj_map={
                 "ij": {"core": {"size": "0x2710"}},
-                "ihj": {"format": "pe"},
+                "ihj": [{"name": "Machine", "value": 0x8664}],
                 "iHj": {"optional_header": True},
             }
         )

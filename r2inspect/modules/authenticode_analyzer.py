@@ -64,8 +64,12 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return result
 
     def _has_required_headers(self) -> bool:
-        pe_header = self._cmdj("ihj", {})
-        if not isinstance(pe_header, dict):
+        # ihj is the structured PE header field LIST (one {"name","value"} entry
+        # per field); the old isinstance(dict) check never matched, so on every
+        # real PE this returned False and Authenticode analysis was skipped
+        # entirely (available=False). iHj is a {"header": "<text>"} dict.
+        pe_header = self._cmdj("ihj", [])
+        if not isinstance(pe_header, list) or not pe_header:
             return False
         optional_header = self._cmdj("iHj", {})
         return isinstance(optional_header, dict) and bool(optional_header)
