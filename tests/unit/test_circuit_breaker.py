@@ -1,3 +1,4 @@
+import logging
 import pytest
 import threading
 import time
@@ -91,6 +92,23 @@ def test_circuit_breaker_clears_probe_on_base_exception():
     # The breaker must recover on the next successful call, not stay wedged.
     assert breaker.call(lambda: "ok") == "ok"
     assert breaker.state == CircuitState.CLOSED
+
+
+def test_state_transitions_are_logged(caplog):
+    breaker = CircuitBreaker(failure_threshold=1, recovery_timeout=0.0, name="r2cmd")
+
+    with caplog.at_level(logging.INFO, logger="r2inspect.infrastructure.circuit_breaker"):
+        with pytest.raises(RuntimeError):
+            breaker.call(_raise_runtime)
+        assert breaker.call(lambda: "ok") == "ok"
+
+    records = [r for r in caplog.records if "transition" in r.message]
+    opened = next(r for r in records if r.args[2] == CircuitState.OPEN.value)
+    assert opened.levelno == logging.WARNING
+    assert opened.args[0] == "r2cmd"
+    assert any(
+        r.levelno == logging.INFO and r.args[2] == CircuitState.CLOSED.value for r in records
+    )
 
 
 def _raise_runtime():

@@ -111,6 +111,14 @@ class CircuitBreaker:
 
     def _set_state(self, new_state: CircuitState) -> None:
         if self.state != new_state:
+            level = logging.WARNING if new_state == CircuitState.OPEN else logging.INFO
+            logger.log(
+                level,
+                "Circuit breaker '%s' transition %s -> %s",
+                self.name,
+                self.state.value,
+                new_state.value,
+            )
             self.state = new_state
             self.state_changes += 1
 
