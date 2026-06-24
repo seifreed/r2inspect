@@ -144,17 +144,26 @@ def group_functions_by_machoc_hash(machoc_hashes: dict[str, str] | None) -> dict
     }
 
 
+def _valid_list_similarities(similarities: Any) -> dict[str, Any]:
+    if not isinstance(similarities, dict):
+        return {}
+    return {
+        hash_value: funcs for hash_value, funcs in similarities.items() if isinstance(funcs, list)
+    }
+
+
+def _machoc_pattern_counts(similarities: dict[str, Any]) -> list[tuple[int, str]]:
+    pattern_counts = [(len(funcs), hash_value[:16]) for hash_value, funcs in similarities.items()]
+    pattern_counts.sort(reverse=True)
+    return pattern_counts[:5]
+
+
 def build_machoc_summary(machoc_hashes: dict[str, str] | None) -> dict[str, Any]:
     """Build a high-level MACHOC similarity summary."""
     if not machoc_hashes:
         return {"error": "No MACHOC hashes available"}
 
-    similarities = group_functions_by_machoc_hash(machoc_hashes)
-    if not isinstance(similarities, dict):
-        similarities = {}
-    similarities = {
-        hash_value: funcs for hash_value, funcs in similarities.items() if isinstance(funcs, list)
-    }
+    similarities = _valid_list_similarities(group_functions_by_machoc_hash(machoc_hashes))
     valid_hashes = {value for value in machoc_hashes.values() if isinstance(value, str) and value}
     summary: dict[str, Any] = {
         "total_functions_hashed": len(machoc_hashes),
@@ -165,11 +174,7 @@ def build_machoc_summary(machoc_hashes: dict[str, str] | None) -> dict[str, Any]
 
     if similarities:
         summary["similarities"] = similarities
-        pattern_counts: list[tuple[int, str]] = [
-            (len(funcs), hash_value[:16]) for hash_value, funcs in similarities.items()
-        ]
-        pattern_counts.sort(reverse=True)
-        summary["most_common_patterns"] = pattern_counts[:5]
+        summary["most_common_patterns"] = _machoc_pattern_counts(similarities)
 
     return summary
 
