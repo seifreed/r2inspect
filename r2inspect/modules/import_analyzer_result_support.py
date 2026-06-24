@@ -7,6 +7,20 @@ from typing import Any, cast
 from ..abstractions.coercion_support import coerce_dict_list, coerce_number
 
 
+def _string_from_item(item: Any) -> str | None:
+    if isinstance(item, (bytes, bytearray)):
+        item = item.decode(errors="ignore")
+    if isinstance(item, str) and item:
+        return item
+    if isinstance(item, dict):
+        value = item.get("name")
+        if isinstance(value, bytes):
+            value = value.decode(errors="ignore")
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 def _coerce_string_list(raw: Any) -> list[str]:
     if isinstance(raw, list):
         source = raw
@@ -17,19 +31,7 @@ def _coerce_string_list(raw: Any) -> list[str]:
             source = list(raw)
         except TypeError:
             return []
-    values: list[str] = []
-    for item in source:
-        if isinstance(item, (bytes, bytearray)):
-            item = item.decode(errors="ignore")
-        if isinstance(item, str) and item:
-            values.append(item)
-        elif isinstance(item, dict):
-            value = item.get("name")
-            if isinstance(value, bytes):
-                value = value.decode(errors="ignore")
-            if isinstance(value, str) and value:
-                values.append(value)
-    return values
+    return [value for item in source if (value := _string_from_item(item)) is not None]
 
 
 def init_import_result(init_result_structure: Any) -> dict[str, Any]:

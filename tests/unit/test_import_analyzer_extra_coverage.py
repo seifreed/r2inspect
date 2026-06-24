@@ -10,16 +10,19 @@ from r2inspect.domain.formats.import_analysis import (
     find_max_risk_score,
 )
 from r2inspect.domain.analysis.import_collection import normalize_import_entries
-from r2inspect.domain.services.import_analysis import build_import_statistics, find_suspicious_patterns
+from r2inspect.domain.services.import_analysis import (
+    build_import_statistics,
+    find_suspicious_patterns,
+)
 from r2inspect.modules.import_analyzer import ImportAnalyzer
 from r2inspect.modules.import_categories import get_api_categories
 from r2inspect.modules.import_analyzer_result_support import (
+    _coerce_string_list,
     collect_import_dlls,
     populate_import_statistics,
 )
 from r2inspect.modules.import_analyzer_collection_support import collect_imports
 from r2inspect.testing.fake_r2 import FakeR2
-
 
 # ---------------------------------------------------------------------------
 # Fakes
@@ -188,7 +191,9 @@ def test_analyze_import_rejects_non_dict_input():
 def test_analyze_import_skips_non_dict_risk_result():
     analyzer = _make_analyzer()
     analyzer._calculate_risk_score = lambda _func_name: None  # type: ignore[method-assign]
-    result = analyzer._analyze_import({"name": "CreateFileA", "plt": 0x1000, "libname": "kernel32.dll"})
+    result = analyzer._analyze_import(
+        {"name": "CreateFileA", "plt": 0x1000, "libname": "kernel32.dll"}
+    )
     assert result["name"] == "CreateFileA"
 
 
@@ -592,8 +597,18 @@ def test_build_import_statistics_accepts_libname_key_for_library_distribution():
 def test_build_import_statistics_normalizes_library_case():
     stats = build_import_statistics(
         [
-            {"name": "CreateFileA", "category": "File", "risk_level": "LOW", "library": "KERNEL32.DLL"},
-            {"name": "ReadFile", "category": "File", "risk_level": "LOW", "library": "kernel32.dll"},
+            {
+                "name": "CreateFileA",
+                "category": "File",
+                "risk_level": "LOW",
+                "library": "KERNEL32.DLL",
+            },
+            {
+                "name": "ReadFile",
+                "category": "File",
+                "risk_level": "LOW",
+                "library": "kernel32.dll",
+            },
         ]
     )
     assert stats["unique_libraries"] == 1
@@ -632,7 +647,12 @@ def test_build_import_statistics_non_list_input_returns_empty_stats():
 def test_build_import_statistics_accepts_iterable_input():
     stats = build_import_statistics(
         (
-            {"name": "CreateFileA", "category": "File", "risk_level": "LOW", "library": "kernel32.dll"},
+            {
+                "name": "CreateFileA",
+                "category": "File",
+                "risk_level": "LOW",
+                "library": "kernel32.dll",
+            },
             "skip",
             {"name": "MessageBoxA", "category": "UI", "risk_level": "LOW", "dll": "user32.dll"},
         )
@@ -774,14 +794,12 @@ def test_collect_import_dlls_returns_sorted_output():
 
 def test_collect_import_dlls_normalizes_iterable_input():
     dlls = collect_import_dlls(
-        (
-            imp
-            for imp in [
-                {"library": "KERNEL32.DLL"},
-                "skip",
-                {"libname": "USER32.DLL"},
-            ]
-        )
+        imp
+        for imp in [
+            {"library": "KERNEL32.DLL"},
+            "skip",
+            {"libname": "USER32.DLL"},
+        ]
     )
 
     assert sorted(dlls) == ["kernel32.dll", "user32.dll"]
@@ -883,9 +901,7 @@ def test_populate_import_statistics_normalizes_iterable_suspicious_dlls():
         "api_analysis": {"risk_score": 10},
         "obfuscation": {"score": 10},
         "anomalies": {"count": 1},
-        "dll_analysis": {
-            "suspicious_dlls": (item for item in [{"name": "psapi.dll"}, "skip"])
-        },
+        "dll_analysis": {"suspicious_dlls": (item for item in [{"name": "psapi.dll"}, "skip"])},
         "statistics": {},
     }
 
@@ -956,3 +972,9 @@ def test_find_max_risk_score_skips_non_string_api_names():
     score, tags = find_max_risk_score("CreateFileA", {"File I/O": {123: (50, "Tag")}})
     assert score == 0
     assert tags == []
+
+
+def test_coerce_string_list_mixes_strings_dicts_and_skips_others():
+    """Items yielding no string (ints, empty, name-less dicts) are skipped."""
+    result = _coerce_string_list([123, "valid", {}, {"name": "fromdict"}, "", {"name": ""}])
+    assert result == ["valid", "fromdict"]
