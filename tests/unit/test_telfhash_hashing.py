@@ -24,7 +24,6 @@ from r2inspect.domain.formats.telfhash import (
     should_skip_symbol,
 )
 
-
 # ---------------------------------------------------------------------------
 # FakeR2 -- lightweight stand-in for r2pipe instances
 # ---------------------------------------------------------------------------
@@ -477,9 +476,6 @@ class TestNormalizeTelfhashValue:
 class TestShouldSkipSymbol:
     def test_short_name_skipped(self):
         assert should_skip_symbol("a") is True
-
-    def test_non_string_name_skipped(self):
-        assert should_skip_symbol(None) is True  # type: ignore[arg-type]
 
     def test_double_underscore_prefix(self):
         assert should_skip_symbol("__libc_start_main") is True

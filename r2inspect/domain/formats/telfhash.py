@@ -39,8 +39,6 @@ def parse_telfhash_result(telfhash_result: Any) -> tuple[str | None, str | None]
 
 def should_skip_symbol(symbol_name: str) -> bool:
     """Check if a symbol should be skipped for telfhash."""
-    if not isinstance(symbol_name, str):
-        return True
     if len(symbol_name) < 2:
         return True
     skip_patterns = ["__", "_GLOBAL_", "_DYNAMIC", ".L", "_edata", "_end", "_start"]
@@ -48,8 +46,6 @@ def should_skip_symbol(symbol_name: str) -> bool:
 
 
 def _symbol_passes_telfhash_filter(sym: dict[str, Any]) -> bool:
-    if not isinstance(sym, dict):
-        return False
     type_value = sym.get("type", "")
     bind_value = sym.get("bind", "")
     sym_name = sym.get("name", "")
@@ -75,8 +71,6 @@ def extract_symbol_names(symbols: list[dict[str, Any]]) -> list[str]:
     """Extract sorted symbol names from a list of symbols."""
     names = []
     for sym in symbols:
-        if not isinstance(sym, dict):
-            continue
         name = sym.get("name", "")
         if not isinstance(name, str):
             continue
