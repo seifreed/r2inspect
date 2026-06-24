@@ -6,7 +6,12 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_number_or_none, get_dict_bucket, get_list_bucket
+from ..abstractions.coercion_support import (
+    coerce_list,
+    coerce_number_or_none,
+    get_dict_bucket,
+    get_list_bucket,
+)
 from .result_aggregator_recommendation_support import (
     RECOMMENDATION_RULES,
     generate_recommendations,
@@ -107,23 +112,21 @@ def build_file_overview(analysis_results: dict[str, Any]) -> dict[str, Any]:
     compiled = pe_info.get("compile_time", pe_info.get("compilation_timestamp"))
     if compiled:
         overview["compiled"] = compiled
-    rich_header = get_dict_bucket(analysis_results, "rich_header")
-    if rich_header.get("available") and rich_header.get("compilers"):
-        compilers = rich_header.get("compilers", [])
-        if isinstance(compilers, list):
-            normalized_compilers = compilers
-        elif isinstance(compilers, (dict, str, bytes)) or not isinstance(compilers, Iterable):
-            normalized_compilers = []
-        else:
-            normalized_compilers = list(compilers)
-        toolset = [
-            f"{c.get('compiler_name', 'Unknown')} (Build {c.get('build_number', 0)})"
-            for c in normalized_compilers[:3]
-            if isinstance(c, dict)
-        ]
-        if toolset:
-            overview["toolset"] = toolset
+    toolset = _compiler_toolset(get_dict_bucket(analysis_results, "rich_header"))
+    if toolset:
+        overview["toolset"] = toolset
     return overview
+
+
+def _compiler_toolset(rich_header: dict[str, Any]) -> list[str]:
+    if not (rich_header.get("available") and rich_header.get("compilers")):
+        return []
+    normalized_compilers = coerce_list(rich_header.get("compilers", []))
+    return [
+        f"{c.get('compiler_name', 'Unknown')} (Build {c.get('build_number', 0)})"
+        for c in normalized_compilers[:3]
+        if isinstance(c, dict)
+    ]
 
 
 def build_security_assessment(analysis_results: dict[str, Any]) -> dict[str, Any]:
