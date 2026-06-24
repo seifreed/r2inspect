@@ -6,7 +6,6 @@ from __future__ import annotations
 import hashlib
 import struct
 
-import pytest
 
 from r2inspect.domain.services.rich_header import (
     COMPILER_PRODUCTS,
@@ -53,10 +52,6 @@ def test_parse_clear_data_entries_empty_data():
     result = parse_clear_data_entries(b"")
 
     assert result == []
-
-
-def test_parse_clear_data_entries_non_bytes():
-    assert parse_clear_data_entries(None) == []  # type: ignore[arg-type]
 
 
 def test_parse_clear_data_entries_partial_data():
@@ -371,13 +366,6 @@ def test_build_rich_header_result_checksum():
 
 def test_build_rich_header_result_empty_entries():
     result = build_rich_header_result([], 0x12345678)
-
-    assert result["checksum"] == 0
-    assert result["entries"] == []
-
-
-def test_build_rich_header_result_non_list_entries():
-    result = build_rich_header_result(None, 0x12345678)  # type: ignore[arg-type]
 
     assert result["checksum"] == 0
     assert result["entries"] == []

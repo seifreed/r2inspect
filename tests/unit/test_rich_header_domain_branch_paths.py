@@ -268,13 +268,6 @@ def test_build_rich_header_result_multiple_entries_checksum():
     assert result["checksum"] == expected
 
 
-def test_build_rich_header_result_skips_malformed_entries():
-    entries = [{"prodid": 0x0001, "count": 10}, "bad", {"prodid": 0x0002, "count": 5}]
-    result = build_rich_header_result(entries, 0)
-    expected = 0x0001 ^ 10 ^ 0x0002 ^ 5
-    assert result["checksum"] == expected
-
-
 # ---------------------------------------------------------------------------
 # calculate_richpe_hash - lines 337-349: richpe_hash and entries paths
 # ---------------------------------------------------------------------------

@@ -20,8 +20,6 @@ def parse_rich_entry(entry: Any) -> tuple[int, int] | None:
 
 def parse_clear_data_entries(clear_data: bytes) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    if not isinstance(clear_data, (bytes, bytearray)):
-        return entries
     for i in range(0, len(clear_data), 8):
         if i + 8 > len(clear_data):
             break
@@ -42,12 +40,6 @@ def parse_clear_data_entries(clear_data: bytes) -> list[dict[str, Any]]:
 
 def decode_rich_header(encoded_data: bytes, xor_key: int) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    if encoded_data is None:
-        return entries
-    if not isinstance(encoded_data, (bytes, bytearray)) and not (
-        hasattr(encoded_data, "__len__") and hasattr(encoded_data, "__getitem__")
-    ):
-        return entries
     if not encoded_data:
         return entries
     for i in range(4, len(encoded_data) - 4, 8):
@@ -90,11 +82,7 @@ def validate_decoded_entries(decoded_entries: list[dict[str, Any]]) -> bool:
 
 def build_rich_header_result(decoded_entries: list[dict[str, Any]], xor_key: int) -> dict[str, Any]:
     checksum = 0
-    if not isinstance(decoded_entries, list):
-        return {"xor_key": xor_key, "checksum": checksum, "entries": []}
     for entry in decoded_entries:
-        if not isinstance(entry, dict):
-            continue
         prodid = entry.get("prodid", 0)
         count = entry.get("count", 0)
         if not isinstance(prodid, int) or not isinstance(count, int):
