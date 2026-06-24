@@ -8,7 +8,9 @@ from typing import Any
 from ..text_helpers import has_text
 
 
-def build_feature_stats(strings_features: list[Any] | None, opcodes_features: list[Any] | None) -> dict[str, Any]:
+def build_feature_stats(
+    strings_features: list[Any] | None, opcodes_features: list[Any] | None
+) -> dict[str, Any]:
     """Build aggregate feature statistics for SimHash analysis."""
     if not isinstance(strings_features, list):
         strings_features = []
@@ -29,6 +31,27 @@ def build_feature_stats(strings_features: list[Any] | None, opcodes_features: li
         feature_stats["most_common_features"] = feature_counter.most_common(10)
         feature_stats["feature_diversity"] = len(set(combined_features)) / len(combined_features)
     return feature_stats
+
+
+def _collect_similar_functions(
+    func1_name: str,
+    candidates: list[str],
+    valid_features: dict[str, dict[str, Any]],
+    processed_functions: set[str],
+    *,
+    max_distance: int,
+    distance_fn: Any,
+) -> list[str]:
+    similar_funcs = [func1_name]
+    processed_functions.add(func1_name)
+    base_hash = valid_features[func1_name]["simhash"]
+    for func2_name in candidates:
+        if func2_name in processed_functions:
+            continue
+        if distance_fn(base_hash, valid_features[func2_name]["simhash"]) <= max_distance:
+            similar_funcs.append(func2_name)
+            processed_functions.add(func2_name)
+    return similar_funcs
 
 
 def build_similarity_groups(
@@ -52,17 +75,14 @@ def build_similarity_groups(
             continue
 
         func1_data = valid_features[func1_name]
-        similar_funcs = [func1_name]
-        processed_functions.add(func1_name)
-
-        for func2_name in func_names[i + 1 :]:
-            if func2_name in processed_functions:
-                continue
-            func2_data = valid_features[func2_name]
-            distance = distance_fn(func1_data["simhash"], func2_data["simhash"])
-            if distance <= max_distance:
-                similar_funcs.append(func2_name)
-                processed_functions.add(func2_name)
+        similar_funcs = _collect_similar_functions(
+            func1_name,
+            func_names[i + 1 :],
+            valid_features,
+            processed_functions,
+            max_distance=max_distance,
+            distance_fn=distance_fn,
+        )
 
         if len(similar_funcs) > 1:
             similar_groups.append(
