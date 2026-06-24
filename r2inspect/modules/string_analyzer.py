@@ -21,6 +21,18 @@ from .string_extraction import extract_strings_from_entries
 logger = get_logger(__name__)
 
 
+def _dicts_from_result(result: Any) -> list[dict[str, Any]]:
+    """Filter a raw backend result down to its dict entries."""
+    if isinstance(result, list):
+        return [item for item in result if isinstance(item, dict)]
+    if isinstance(result, (dict, str, bytes, bytearray)) or not isinstance(result, Iterable):
+        return []
+    try:
+        return [item for item in list(result) if isinstance(item, dict)]
+    except TypeError:
+        return []
+
+
 class StringAnalyzer(BaseAnalyzer):
     """String extraction and analysis using backend data."""
 
@@ -111,6 +123,20 @@ class StringAnalyzer(BaseAnalyzer):
             logger.error("Error extracting Unicode strings: %s", e)
         return []
 
+    def _run_cmdj(self, cmd: str) -> Any:
+        raw_backend = getattr(self.adapter, "r2", None)
+        if raw_backend is not None and hasattr(raw_backend, "cmdj"):
+            try:
+                return raw_backend.cmdj(cmd)
+            except Exception:
+                return cmdj_helper(self.adapter, self.adapter, cmd, [])
+        if self.adapter is not None and hasattr(self.adapter, "cmdj"):
+            try:
+                return self.adapter.cmdj(cmd)
+            except Exception:
+                return cmdj_helper(self.adapter, self.adapter, cmd, [])
+        return cmdj_helper(self.adapter, self.adapter, cmd, [])
+
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
         if cmd == "izj" and self.adapter is not None and hasattr(self.adapter, "get_strings_basic"):
             try:
@@ -119,27 +145,7 @@ class StringAnalyzer(BaseAnalyzer):
                 result = None
             if result:
                 return coerce_dict_list(result)
-        raw_backend = getattr(self.adapter, "r2", None)
-        if raw_backend is not None and hasattr(raw_backend, "cmdj"):
-            try:
-                result = raw_backend.cmdj(cmd)
-            except Exception:
-                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
-        elif self.adapter is not None and hasattr(self.adapter, "cmdj"):
-            try:
-                result = self.adapter.cmdj(cmd)
-            except Exception:
-                result = cmdj_helper(self.adapter, self.adapter, cmd, [])
-        else:
-            result = cmdj_helper(self.adapter, self.adapter, cmd, [])
-        if isinstance(result, list):
-            return [item for item in result if isinstance(item, dict)]
-        if isinstance(result, (dict, str, bytes, bytearray)) or not isinstance(result, Iterable):
-            return []
-        try:
-            return [item for item in list(result) if isinstance(item, dict)]
-        except TypeError:
-            return []
+        return _dicts_from_result(self._run_cmdj(cmd))
 
     def search_xor(self, search_string: str) -> list[dict[str, Any]]:
         """Search for XOR'd strings"""
