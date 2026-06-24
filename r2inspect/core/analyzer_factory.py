@@ -35,6 +35,38 @@ def _signature_accepts(sig: inspect.Signature, *args: Any, **kwargs: Any) -> boo
     return True
 
 
+_NO_CANDIDATE = object()
+
+
+def _construct_from_candidates(
+    analyzer_class: type,
+    sig: inspect.Signature | None,
+    backend: Any | None,
+    config: Any | None,
+    filename: str | None,
+) -> Any:
+    candidates = [
+        (backend, config, filename),
+        (backend, config),
+        (backend, filename),
+        (filename, backend),
+        (filename,),
+        (backend,),
+    ]
+    for args in candidates:
+        if any(arg is None for arg in args):
+            continue
+        if sig is not None and not _signature_accepts(sig, *args):
+            continue
+        try:
+            return analyzer_class(*args)
+        except TypeError:
+            if sig is not None:
+                raise
+            continue
+    return _NO_CANDIDATE
+
+
 def create_analyzer(
     analyzer_class: type,
     *,
@@ -56,25 +88,9 @@ def create_analyzer(
         if _signature_accepts(sig, **kwargs):
             return analyzer_class(**kwargs)
 
-    candidates = [
-        (backend, config, filename),
-        (backend, config),
-        (backend, filename),
-        (filename, backend),
-        (filename,),
-        (backend,),
-    ]
-    for args in candidates:
-        if any(arg is None for arg in args):
-            continue
-        if sig is not None and not _signature_accepts(sig, *args):
-            continue
-        try:
-            return analyzer_class(*args)
-        except TypeError:
-            if sig is not None:
-                raise
-            continue
+    result = _construct_from_candidates(analyzer_class, sig, backend, config, filename)
+    if result is not _NO_CANDIDATE:
+        return result
     return analyzer_class()
 
 
