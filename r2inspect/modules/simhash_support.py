@@ -15,7 +15,6 @@ from ..abstractions.coercion_support import coerce_int_or_none
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
 
 
-
 class SimHashHost(Protocol):
     """Overridable collaboration contract the SimHash helpers depend on."""
 
@@ -70,18 +69,26 @@ def add_string_feature_set(
         string_features.append(f"STRTYPE:{string_type}")
 
 
-def append_data_section_string(host: SimHashHost, section: Any, data_strings: list[str]) -> None:
-    if not isinstance(section, dict) or not hasattr(data_strings, "append"):
-        return
+def _data_section_read_params(section: dict[str, Any]) -> tuple[int, int] | None:
     section_name = section.get("name", "")
     if not isinstance(section_name, str) or not section_name.startswith(".data"):
-        return
+        return None
     section_addr = coerce_int_or_none(section.get("vaddr", 0))
     section_size = coerce_int_or_none(section.get("size", 0))
     if section_addr is None or section_size is None:
-        return
+        return None
     if not (section_addr and section_size):
+        return None
+    return section_addr, section_size
+
+
+def append_data_section_string(host: SimHashHost, section: Any, data_strings: list[str]) -> None:
+    if not isinstance(section, dict) or not hasattr(data_strings, "append"):
         return
+    params = _data_section_read_params(section)
+    if params is None:
+        return
+    section_addr, section_size = params
     if host.adapter is None or not hasattr(host.adapter, "read_bytes"):
         return
     data = host.adapter.read_bytes(section_addr, min(section_size, 1024))
