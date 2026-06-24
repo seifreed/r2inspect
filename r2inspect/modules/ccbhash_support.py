@@ -116,35 +116,43 @@ def extract_functions(analyzer: CcbHashHost, logger: logging.Logger) -> list[dic
         return []
 
 
+def _edges_canonical(edges: list[Any]) -> str | None:
+    edge_strs = []
+    for edge in edges:
+        if not isinstance(edge, dict):
+            continue
+        src = edge.get("src")
+        dst = edge.get("dst")
+        if src is not None and dst is not None:
+            edge_strs.append(f"{src}->{dst}")
+    edge_strs.sort()
+    # No valid edges despite a non-empty edges list collapses to None.
+    if not edge_strs:
+        return None
+    return "|".join(edge_strs)
+
+
+def _blocks_canonical(blocks: list[Any]) -> str:
+    # r2 basic blocks (agj/afbj) carry the address as "addr", not "offset",
+    # so reading only "offset" read 0 for every block and collapsed edgeless
+    # functions to a constant "0" canonical form.
+    block_addrs = sorted(
+        coerce_int(block.get("addr") or block.get("offset", 0))
+        for block in blocks
+        if isinstance(block, dict)
+    )
+    return "|".join(str(addr) for addr in block_addrs)
+
+
 def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str | None:
     if not isinstance(cfg, dict):
         return str(func_offset)
     edges = cfg.get("edges", [])
     if isinstance(edges, list) and edges:
-        edge_strs = []
-        for edge in edges:
-            if not isinstance(edge, dict):
-                continue
-            src = edge.get("src")
-            dst = edge.get("dst")
-            if src is not None and dst is not None:
-                edge_strs.append(f"{src}->{dst}")
-        edge_strs.sort()
-        # Return None if no valid edges were found despite edges list existing
-        if not edge_strs:
-            return None
-        return "|".join(edge_strs)
+        return _edges_canonical(edges)
     blocks = cfg.get("blocks", [])
     if isinstance(blocks, list) and blocks:
-        # r2 basic blocks (agj/afbj) carry the address as "addr", not "offset",
-        # so this read 0 for every block and collapsed edgeless functions to a
-        # constant "0" canonical form.
-        block_addrs = sorted(
-            coerce_int(block.get("addr") or block.get("offset", 0))
-            for block in blocks
-            if isinstance(block, dict)
-        )
-        return "|".join(str(addr) for addr in block_addrs)
+        return _blocks_canonical(blocks)
     return str(func_offset)
 
 
