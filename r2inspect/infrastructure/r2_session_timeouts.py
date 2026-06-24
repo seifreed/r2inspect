@@ -60,12 +60,18 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
     return session.r2
 
 
+def _is_forced_timeout(command: str) -> bool:
+    forced = os.environ.get("R2INSPECT_FORCE_CMD_TIMEOUT")
+    if forced is None:
+        return False
+    forced_commands = {item.strip() for item in forced.split(",")}
+    return (not any(forced_commands)) or command in forced_commands
+
+
 def run_cmd_with_timeout(session: Any, command: str, timeout: float, *, logger: Any) -> bool:
     if session.r2 is None:
         return False
-    forced = os.environ.get("R2INSPECT_FORCE_CMD_TIMEOUT")
-    forced_commands = {item.strip() for item in forced.split(",")} if forced is not None else set()
-    if forced is not None and ((not any(forced_commands)) or command in forced_commands):
+    if _is_forced_timeout(command):
         logger.warning("Forcing r2 command timeout: %s", command)
         return False
 
