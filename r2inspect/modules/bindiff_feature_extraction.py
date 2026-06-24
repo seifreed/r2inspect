@@ -43,6 +43,8 @@ from .string_classification import (
 )
 
 logger = get_logger(__name__)
+
+
 def _structural_file_info(file_info: dict[str, Any]) -> dict[str, Any]:
     core_info = coerce_dict(file_info).get("core", {})
     bin_info = coerce_dict(file_info).get("bin", {})
@@ -204,6 +206,16 @@ class BinDiffFeatureExtractor:
                     cfg_features.append(feature)
         return cfg_features
 
+    def _function_features(self, valid_functions: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "function_count": len(valid_functions),
+            "function_sizes": [coerce_int(f.get("size", 0)) for f in valid_functions],
+            "function_names": [
+                name for f in valid_functions if isinstance(name := f.get("name"), str) and name
+            ],
+            "cfg_features": self._collect_cfg_features(valid_functions),
+        }
+
     def extract_functions(self) -> dict[str, Any]:
         features: dict[str, Any] = {}
         try:
@@ -214,27 +226,33 @@ class BinDiffFeatureExtractor:
             functions = self.adapter.get_functions() if self.adapter else []
             valid_functions = [func for func in functions if isinstance(func, dict)]
             if valid_functions:
-                features["function_count"] = len(valid_functions)
-                features["function_sizes"] = [coerce_int(f.get("size", 0)) for f in valid_functions]
-                features["function_names"] = [
-                    name for f in valid_functions if isinstance(name := f.get("name"), str) and name
-                ]
-                features["cfg_features"] = self._collect_cfg_features(valid_functions)
+                features = self._function_features(valid_functions)
         except Exception as exc:
             logger.debug("Error extracting function features: %s", exc)
         return features
+
+    @staticmethod
+    def _string_values(strings: Any) -> list[str]:
+        return [
+            string_value
+            for s in strings
+            if isinstance(s, dict) and (string_value := coerce_text(s.get("string")))
+        ]
+
+    @staticmethod
+    def _import_names(imports: Any) -> list[str]:
+        return [
+            name
+            for imp in imports
+            if isinstance(imp, dict) and (name := coerce_text(imp.get("name")))
+        ]
 
     def extract_strings(self) -> dict[str, Any]:
         features: dict[str, Any] = {}
         try:
             strings = self.adapter.get_strings() if self.adapter else []
             if strings:
-                string_values = [
-                    string_value
-                    for s in strings
-                    if isinstance(s, dict)
-                    and (string_value := coerce_text(s.get("string")))
-                ]
+                string_values = self._string_values(strings)
                 features["total_strings"] = len(string_values)
                 features["unique_strings"] = len(set(string_values))
                 features["string_lengths"] = [len(s) for s in string_values]
@@ -269,20 +287,9 @@ class BinDiffFeatureExtractor:
             strings = self.adapter.get_strings() if self.adapter else []
             imports = self.adapter.get_imports() if self.adapter else []
             if strings:
-                string_values = [
-                    string_value
-                    for s in strings
-                    if isinstance(s, dict)
-                    and (string_value := coerce_text(s.get("string")))
-                ]
-                features.update(_behavioral_string_indicators(string_values))
+                features.update(_behavioral_string_indicators(self._string_values(strings)))
             if imports:
-                import_names = [
-                    name
-                    for imp in imports
-                    if isinstance(imp, dict) and (name := coerce_text(imp.get("name")))
-                ]
-                features.update(_behavioral_import_indicators(import_names))
+                features.update(_behavioral_import_indicators(self._import_names(imports)))
         except Exception as exc:
             logger.debug("Error extracting behavioral features: %s", exc)
         return features
