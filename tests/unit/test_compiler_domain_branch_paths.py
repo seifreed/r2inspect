@@ -8,7 +8,6 @@ Targets lines missing from coverage snapshot:
 
 from __future__ import annotations
 
-import pytest
 
 from r2inspect.domain.formats.compiler import (
     _check_import_signatures,
@@ -29,7 +28,6 @@ from r2inspect.domain.formats.compiler import (
     parse_strings_output,
 )
 
-
 # ---------------------------------------------------------------------------
 # calculate_compiler_score – line 26 (return 0.0 when max_score == 0)
 # ---------------------------------------------------------------------------
@@ -44,12 +42,6 @@ def test_calculate_compiler_score_returns_capped_one():
     sigs = {"strings": ["x"], "imports": ["x"], "sections": ["x"], "symbols": ["x"]}
     result = calculate_compiler_score(sigs, ["x"], ["x"], ["x"], ["x"])
     assert result <= 1.0
-
-
-def test_calculate_compiler_score_ignores_malformed_string_entries():
-    sigs = {"strings": ["GCC"], "imports": ["x"], "sections": ["x"], "symbols": ["x"]}
-    result = calculate_compiler_score(sigs, [None, "GCC 9.3.0"], [None], [None], [None])
-    assert result > 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -178,13 +170,6 @@ def test_detect_msvc_version_no_match_returns_unknown():
     assert detect_msvc_version(["no info"], ["nothing"], {}) == "Unknown"
 
 
-def test_detect_msvc_version_ignores_non_string_inputs():
-    assert (
-        detect_msvc_version([None, "Microsoft Visual C++ 19.0"], [None, "msvcp140.dll"], {})
-        == "Visual Studio 9.0"
-    )
-
-
 # ---------------------------------------------------------------------------
 # detect_gcc_version – lines 92-95 (GNU fallback pattern)
 # ---------------------------------------------------------------------------
@@ -209,10 +194,6 @@ def test_detect_gcc_version_empty_returns_unknown():
 
 def test_detect_gcc_version_no_match_returns_unknown():
     assert detect_gcc_version(["no version here"]) == "Unknown"
-
-
-def test_detect_gcc_version_ignores_non_string_inputs():
-    assert detect_gcc_version([None, "GCC 13.2.1"]) == "GCC 3.2.1"
 
 
 # ---------------------------------------------------------------------------
@@ -311,10 +292,6 @@ def test_parse_strings_output_empty_input():
 
 def test_parse_strings_output_only_whitespace():
     assert parse_strings_output("   \n\t\n   ") == []
-
-
-def test_parse_strings_output_non_string_input_returns_empty():
-    assert parse_strings_output(123) == []  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

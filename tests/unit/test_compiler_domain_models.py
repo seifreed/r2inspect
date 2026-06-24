@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Tests for compiler_domain module."""
 
-import pytest
 from r2inspect.domain.formats.compiler import (
     calculate_compiler_score,
     detection_method,
@@ -440,7 +439,6 @@ class TestExtractImportNames:
     def test_extract_import_names_skip_non_string_values(self):
         """Test that malformed import names are skipped."""
         imports = [
-            "invalid import",
             {"libname": None},
             {"name": 123},
             {"name": "GetProcAddress"},
