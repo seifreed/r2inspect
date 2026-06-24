@@ -190,6 +190,16 @@ def calculate_cyclomatic_complexity_from_blocks(blocks: list[dict[str, Any]] | N
     return max(edges - nodes + 2, 1)
 
 
+def _is_library_name(name: str) -> bool:
+    return name.startswith("lib") or any(
+        token in name for token in ("msvcrt", "kernel32", "ntdll", "user32")
+    )
+
+
+def _is_thunk_name(name: str, func: dict[str, Any]) -> bool:
+    return "thunk" in name or name.startswith("j_") or _coerce_function_size(func.get("size")) < 10
+
+
 def classify_function_type(func_name: str | None, func: dict[str, Any]) -> str:
     """Classify a function using stable naming and size heuristics."""
     if not func_name:
@@ -199,12 +209,10 @@ def classify_function_type(func_name: str | None, func: dict[str, Any]) -> str:
         return "unknown"
 
     name = func_name.lower()
-    if name.startswith("lib") or any(
-        token in name for token in ["msvcrt", "kernel32", "ntdll", "user32"]
-    ):
+    if _is_library_name(name):
         return "library"
-    if "thunk" in name or name.startswith("j_") or _coerce_function_size(func.get("size")) < 10:
+    if _is_thunk_name(name, func):
         return "thunk"
-    if any(keyword in name for keyword in ["main", "sub_", "fcn.", "func_"]):
+    if any(keyword in name for keyword in ("main", "sub_", "fcn.", "func_")):
         return "user"
     return "unknown"
