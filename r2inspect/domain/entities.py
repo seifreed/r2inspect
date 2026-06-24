@@ -10,14 +10,17 @@ This module contains only stdlib imports to ensure domain isolation.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .text_helpers import has_text
+
+if TYPE_CHECKING:
+    from _typeshed import DataclassInstance
 
 
 class _ToDictMixin:
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return asdict(cast("DataclassInstance", self))
 
 
 @dataclass

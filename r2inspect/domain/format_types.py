@@ -61,6 +61,10 @@ def section_has_permission(
 
 
 class _PermissionMixin:
+    is_readable: bool
+    is_writable: bool
+    is_executable: bool
+
     def has_permission(self, permission: str) -> bool:
         """Check if section has a specific permission."""
         return section_has_permission(
@@ -72,12 +76,14 @@ class _PermissionMixin:
 
 
 class _SectionMixin(_PermissionMixin):
+    suspicious_indicators: list[str]
+
     def is_suspicious(self) -> bool:
         """Check if section has any suspicious indicators."""
         return len(self.suspicious_indicators) > 0
 
 
-class _SecurityFeaturesMixin:
+class _SecurityFeaturesMixin(_ToDictMixin):
     def get_enabled_features(self) -> list[str]:
         """Get list of enabled security features."""
         return enabled_security_features(self.to_dict())
@@ -105,7 +111,7 @@ class SectionInfo(_ToDictMixin, _SectionMixin):
 
 
 @dataclass
-class SecurityFeatures(_ToDictMixin, _SecurityFeaturesMixin):
+class SecurityFeatures(_SecurityFeaturesMixin):
     """Security features detected in a binary."""
 
     aslr: bool = False
