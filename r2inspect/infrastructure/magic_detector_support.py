@@ -212,49 +212,68 @@ def analyze_pe_details(header: bytes, file_handle: BinaryIO, logger: Any) -> dic
 
 def fallback_detection(header: bytes, file_path: Path) -> dict[str, Any]:
     suffix = file_path.suffix.lower() if isinstance(file_path, Path) else ""
-    if suffix in {".exe", ".dll"}:
-        return {
-            "file_format": "PE32",
-            "format_category": "Executable",
-            "is_executable": True,
-            "potential_threat": True,
-        }
-    if suffix in {".elf", ".so"} or header[:4] == b"\x7fELF":
-        return {
-            "file_format": "ELF",
-            "format_category": "Executable",
-            "is_executable": True,
-            "potential_threat": True,
-        }
-    if suffix in {".zip", ".jar"}:
-        return {
-            "file_format": "ZIP",
-            "format_category": "Archive",
-            "is_archive": True,
-            "potential_threat": header.startswith(b"MZ"),
-        }
-    if suffix in {".pdf", ".doc", ".docx", ".rtf"}:
-        return {
-            "file_format": suffix[1:].upper(),
-            "format_category": "Document",
-            "is_document": True,
-            "potential_threat": True,
-        }
-    # Windows script-executables are an executable threat class (8f3da63
-    # collapsed these into a script-only branch and dropped is_executable).
-    if suffix in {".ps1", ".bat", ".cmd", ".vbs", ".js", ".com", ".scr"}:
-        return {
-            "file_format": "SCRIPT",
-            "format_category": "Executable",
-            "is_executable": True,
-            "potential_threat": True,
-        }
-    if header.startswith(b"#!") or suffix == ".sh":
-        return {
-            "file_format": "SCRIPT",
-            "format_category": "Script",
-            "potential_threat": True,
-        }
-    if header.startswith(b"MZ"):
-        return {"potential_threat": True}
+    is_mz = header.startswith(b"MZ")
+    # Order is significant: the \x7fELF header check intentionally wins over a
+    # later suffix (e.g. an ELF-headed .zip is reported as ELF), and the Windows
+    # script-executable class must stay distinct from the generic script branch
+    # (8f3da63 collapsed them and dropped is_executable).
+    rules: list[tuple[bool, dict[str, Any]]] = [
+        (
+            suffix in {".exe", ".dll"},
+            {
+                "file_format": "PE32",
+                "format_category": "Executable",
+                "is_executable": True,
+                "potential_threat": True,
+            },
+        ),
+        (
+            suffix in {".elf", ".so"} or header[:4] == b"\x7fELF",
+            {
+                "file_format": "ELF",
+                "format_category": "Executable",
+                "is_executable": True,
+                "potential_threat": True,
+            },
+        ),
+        (
+            suffix in {".zip", ".jar"},
+            {
+                "file_format": "ZIP",
+                "format_category": "Archive",
+                "is_archive": True,
+                "potential_threat": is_mz,
+            },
+        ),
+        (
+            suffix in {".pdf", ".doc", ".docx", ".rtf"},
+            {
+                "file_format": suffix[1:].upper(),
+                "format_category": "Document",
+                "is_document": True,
+                "potential_threat": True,
+            },
+        ),
+        (
+            suffix in {".ps1", ".bat", ".cmd", ".vbs", ".js", ".com", ".scr"},
+            {
+                "file_format": "SCRIPT",
+                "format_category": "Executable",
+                "is_executable": True,
+                "potential_threat": True,
+            },
+        ),
+        (
+            header.startswith(b"#!") or suffix == ".sh",
+            {
+                "file_format": "SCRIPT",
+                "format_category": "Script",
+                "potential_threat": True,
+            },
+        ),
+        (is_mz, {"potential_threat": True}),
+    ]
+    for matches, result in rules:
+        if matches:
+            return result
     return {"file_format": "Unknown", "format_category": "Unknown"}

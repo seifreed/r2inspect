@@ -130,6 +130,14 @@ def test_magic_detector_fallback_accepts_non_path_file_input() -> None:
     assert result["file_format"] == "ELF"
 
 
+def test_magic_detector_fallback_elf_header_wins_over_zip_suffix(tmp_path: Path) -> None:
+    detector = MagicByteDetector()
+    zip_named = tmp_path / "archive.zip"
+    _write_bytes(zip_named, b"\x7fELF" + b"\x00" * 12)
+    result = detector._fallback_detection(zip_named.read_bytes(), zip_named)
+    assert result["file_format"] == "ELF"
+
+
 def test_magic_detector_ignores_non_dict_detail_merges(tmp_path: Path) -> None:
     class _BadFallbackDetector(MagicByteDetector):
         def _fallback_detection(self, header: bytes, file_path: Path):  # type: ignore[override]
