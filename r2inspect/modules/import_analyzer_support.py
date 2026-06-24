@@ -51,6 +51,18 @@ def _import_name_value(imp: dict[str, Any]) -> str:
     return "unknown"
 
 
+def _match_api_category(name: str, analyzer: ImportHost) -> str | None:
+    api_categories = analyzer.api_categories
+    if not isinstance(api_categories, dict):
+        return None
+    for category, functions in api_categories.items():
+        if not isinstance(functions, (list, tuple, set)):
+            continue
+        if any(isinstance(api, str) and api in name for api in functions):
+            return category
+    return None
+
+
 def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
@@ -73,16 +85,10 @@ def analyze_import(
         risk_analysis = analyzer._calculate_risk_score(name)
         if isinstance(risk_analysis, dict):
             analysis.update(risk_analysis)
-        api_categories = analyzer.api_categories
-        if not isinstance(api_categories, dict):
-            api_categories = {}
-        for category, functions in api_categories.items():
-            if not isinstance(functions, (list, tuple, set)):
-                continue
-            if any(isinstance(api, str) and api in name for api in functions):
-                analysis["category"] = category
-                analysis["description"] = analyzer._get_function_description(name)
-                break
+        category = _match_api_category(name, analyzer)
+        if category is not None:
+            analysis["category"] = category
+            analysis["description"] = analyzer._get_function_description(name)
     except Exception as exc:
         logger.error(
             "Error analyzing import %s from %s: %s",
