@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterable
 from typing import Any
 
-from ...abstractions.coercion_support import coerce_dict_list
+from ...abstractions.coercion_support import coerce_dict_list, coerce_list
 
 COMMON_SYSTEM_DLLS = {
     "kernel32.dll",
@@ -40,16 +39,7 @@ SUSPICIOUS_DLLS = {
 
 
 def analyze_dll_dependencies(dlls: list[str]) -> dict[str, Any]:
-    if isinstance(dlls, list):
-        source = dlls
-    elif isinstance(dlls, (dict, str, bytes)) or not isinstance(dlls, Iterable):
-        return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
-    else:
-        source = list(dlls)
-    if not source:
-        return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
-
-    valid_dlls = [dll for dll in source if isinstance(dll, str)]
+    valid_dlls = [dll for dll in coerce_list(dlls) if isinstance(dll, str)]
     if not valid_dlls:
         return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
 
@@ -119,7 +109,9 @@ def _unusual_dlls(imports: list[dict[str, Any]]) -> list[str]:
     return unusual_dlls
 
 
-def _append_duplicate_imports(anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]) -> None:
+def _append_duplicate_imports(
+    anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]
+) -> None:
     duplicates = _duplicate_imports(imports)
     if duplicates:
         anomalies.append(
@@ -145,7 +137,9 @@ def _append_unusual_dlls(anomalies: list[dict[str, Any]], imports: list[dict[str
         )
 
 
-def _append_excessive_imports(anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]) -> None:
+def _append_excessive_imports(
+    anomalies: list[dict[str, Any]], imports: list[dict[str, Any]]
+) -> None:
     if len(imports) > 500:
         anomalies.append(
             {
