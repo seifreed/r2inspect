@@ -102,6 +102,45 @@ def handle_list_yara_option(
     )
 
 
+def _category_label(category: Any) -> str:
+    if hasattr(category, "value"):
+        return category.value if isinstance(category.value, str) and category.value else "unknown"
+    return str(category) if category is not None else "unknown"
+
+
+def _print_errors_by_category(errors_by_category: Any, get_console: Any) -> None:
+    if not (isinstance(errors_by_category, dict) and errors_by_category):
+        return
+    category_table = Table(title="Errors by Category", show_header=True)
+    category_table.add_column("Category", style="cyan")
+    category_table.add_column("Count", style="red")
+    for category, count in errors_by_category.items():
+        label = _category_label(category)
+        category_table.add_row(label.replace("_", " ").title(), str(count))
+    get_console().print(category_table)
+
+
+def _severity_color(severity_label: str) -> str:
+    if severity_label == "critical":
+        return "red"
+    if severity_label == "high":
+        return "yellow"
+    return "dim"
+
+
+def _print_errors_by_severity(errors_by_severity: Any, get_console: Any) -> None:
+    if not (isinstance(errors_by_severity, dict) and errors_by_severity):
+        return
+    severity_table = Table(title="Errors by Severity", show_header=True)
+    severity_table.add_column("Severity", style="cyan")
+    severity_table.add_column("Count", style="red")
+    for severity, count in errors_by_severity.items():
+        severity_label = str(severity) if severity is not None else "unknown"
+        color = _severity_color(severity_label)
+        severity_table.add_row(f"[{color}]{severity_label.title()}[/{color}]", str(count))
+    get_console().print(severity_table)
+
+
 def display_error_statistics(error_stats: dict[str, Any], *, get_console: Any) -> None:
     get_console().print("\n[bold yellow]Error Statistics[/bold yellow]")
     table = Table(title="Analysis Error Summary", show_header=True)
@@ -113,37 +152,8 @@ def display_error_statistics(error_stats: dict[str, Any], *, get_console: Any) -
         "Recovery Strategies Available", str(error_stats.get("recovery_strategies_available", 0))
     )
     get_console().print(table)
-
-    errors_by_category = error_stats.get("errors_by_category", {})
-    if isinstance(errors_by_category, dict) and errors_by_category:
-        category_table = Table(title="Errors by Category", show_header=True)
-        category_table.add_column("Category", style="cyan")
-        category_table.add_column("Count", style="red")
-        for category, count in errors_by_category.items():
-            if hasattr(category, "value"):
-                label = category.value if isinstance(category.value, str) and category.value else "unknown"
-            else:
-                label = str(category) if category is not None else "unknown"
-            category_table.add_row(label.replace("_", " ").title(), str(count))
-        get_console().print(category_table)
-
-    errors_by_severity = error_stats.get("errors_by_severity", {})
-    if isinstance(errors_by_severity, dict) and errors_by_severity:
-        severity_table = Table(title="Errors by Severity", show_header=True)
-        severity_table.add_column("Severity", style="cyan")
-        severity_table.add_column("Count", style="red")
-        for severity, count in errors_by_severity.items():
-            severity_label = str(severity) if severity is not None else "unknown"
-            color = (
-                "red"
-                if severity_label == "critical"
-                else "yellow"
-                if severity_label == "high"
-                else "dim"
-            )
-            severity_table.add_row(f"[{color}]{severity_label.title()}[/{color}]", str(count))
-        get_console().print(severity_table)
-
+    _print_errors_by_category(error_stats.get("errors_by_category", {}), get_console)
+    _print_errors_by_severity(error_stats.get("errors_by_severity", {}), get_console)
     get_console().print()
 
 
