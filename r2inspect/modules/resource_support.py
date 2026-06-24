@@ -49,6 +49,31 @@ def _resource_debug_name(resource: dict[str, Any]) -> str:
     return "UNKNOWN"
 
 
+def _load_resource_byte_list(
+    analyzer: ResourceHost, resource: dict[str, Any], logger: logging.Logger
+) -> list[int] | None:
+    offset = _coerce_resource_int(resource, "offset")
+    size = _coerce_resource_int(resource, "size")
+    if offset is None or size is None:
+        logger.debug(
+            "Skipping resource with invalid offset/size: %s", _resource_debug_name(resource)
+        )
+        return None
+    size = min(size, 65536)
+    if offset == 0 or size == 0:
+        return None
+    data = analyzer._cmdj(f"pxj {size} @ {offset}", [])
+    if isinstance(data, (dict, str, bytes)):
+        return None
+    try:
+        data = list(data)
+    except TypeError:
+        return None
+    if not data or not is_byte_list(data):
+        return None
+    return data
+
+
 def analyze_resource_data(
     analyzer: ResourceHost,
     resource: dict[str, Any],
@@ -61,24 +86,8 @@ def analyze_resource_data(
             return
         resource.setdefault("entropy", 0.0)
         resource.setdefault("hashes", {})
-        offset = _coerce_resource_int(resource, "offset")
-        size = _coerce_resource_int(resource, "size")
-        if offset is None or size is None:
-            logger.debug(
-                "Skipping resource with invalid offset/size: %s", _resource_debug_name(resource)
-            )
-            return
-        size = min(size, 65536)
-        if offset == 0 or size == 0:
-            return
-        data = analyzer._cmdj(f"pxj {size} @ {offset}", [])
-        if isinstance(data, (dict, str, bytes)):
-            return
-        try:
-            data = list(data)
-        except TypeError:
-            return
-        if not data or not is_byte_list(data):
+        data = _load_resource_byte_list(analyzer, resource, logger)
+        if data is None:
             return
         resource["entropy"] = analyzer._calculate_entropy(data)
         try:
