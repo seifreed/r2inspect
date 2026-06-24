@@ -382,9 +382,7 @@ def test_simhash_analyzer_extract_function_features_exception() -> None:
 def test_simhash_extract_function_features_normalizes_iterables() -> None:
     class _IterableHost:
         def __init__(self) -> None:
-            self._functions = (
-                {"offset": 0x1000, "name": "test_func", "size": 100},
-            )
+            self._functions = ({"offset": 0x1000, "name": "test_func", "size": 100},)
 
         def _get_functions(self):
             return (func for func in self._functions)
@@ -545,7 +543,9 @@ def test_simhash_analyzer_extract_data_section_strings_not_list() -> None:
 def test_simhash_analyzer_extract_data_section_strings_iterable() -> None:
     class _IterableSectionsAnalyzer(SimHashAnalyzer):
         def _get_sections(self):  # type: ignore[override]
-            return (section for section in [{"name": ".text"}, {"name": ".data", "vaddr": 1, "size": 1}])
+            return (
+                section for section in [{"name": ".text"}, {"name": ".data", "vaddr": 1, "size": 1}]
+            )
 
         def _append_data_section_string(self, section, data_strings):  # type: ignore[override]
             if isinstance(section, dict) and section.get("name") == ".data":
