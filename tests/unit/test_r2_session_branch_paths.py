@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Branch-path tests for r2inspect/infrastructure/r2_session.py."""
+
 from __future__ import annotations
 
 import logging
@@ -11,6 +12,12 @@ from pathlib import Path
 import pytest
 
 from r2inspect.infrastructure.r2_session import R2Session
+from r2inspect.infrastructure.r2_session_cleanup import _macho_arch_flags
+
+
+def test_macho_arch_flags_empty_arches_returns_no_arch_flags():
+    """A Mach-O without a recognized fat architecture adds no -a/-b flags."""
+    assert _macho_arch_flags(set(), lambda: "x86_64") == []
 
 
 # ---------------------------------------------------------------------------
@@ -116,13 +123,12 @@ def test_open_exception_during_open_re_raises(caplog):
         raise RuntimeError("r2pipe cannot open file")
 
     session._open_with_timeout = raise_error
-    with caplog.at_level(
-        logging.ERROR, logger="r2inspect.infrastructure.r2_session"
-    ), pytest.raises(RuntimeError, match="r2pipe cannot open file"):
+    with (
+        caplog.at_level(logging.ERROR, logger="r2inspect.infrastructure.r2_session"),
+        pytest.raises(RuntimeError, match="r2pipe cannot open file"),
+    ):
         session.open(0.1)
-    assert any(
-        "Failed to initialize r2pipe" in record.getMessage() for record in caplog.records
-    )
+    assert any("Failed to initialize r2pipe" in record.getMessage() for record in caplog.records)
 
 
 def test_open_exception_closes_r2_if_already_set():

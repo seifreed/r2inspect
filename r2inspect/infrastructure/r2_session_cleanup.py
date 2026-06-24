@@ -84,13 +84,18 @@ def select_r2_flags(
     if arches or is_macho_by_ext:
         if "-NN" not in flags:
             flags.append("-NN")
-        host = (machine_fn if machine_fn is not None else platform.machine)().lower()
-        if "arm64" in arches and "arm" in host:
-            flags.extend(["-a", "arm", "-b", "64"])
-        elif "x86_64" in arches:
-            flags.extend(["-a", "x86", "-b", "64"])
+        flags.extend(_macho_arch_flags(arches, machine_fn))
     logger.debug("Selected r2 flags: %s", flags)
     return flags
+
+
+def _macho_arch_flags(arches: set[str], machine_fn: Callable[[], str] | None) -> list[str]:
+    host = (machine_fn if machine_fn is not None else platform.machine)().lower()
+    if "arm64" in arches and "arm" in host:
+        return ["-a", "arm", "-b", "64"]
+    if "x86_64" in arches:
+        return ["-a", "x86", "-b", "64"]
+    return []
 
 
 def _escalate_kill(proc: Any, timeout: float) -> None:
