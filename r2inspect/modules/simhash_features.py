@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
 from typing import Any
 
 from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
@@ -15,21 +14,10 @@ def extract_string_features(host: SimHashHost, *, logger: logging.Logger) -> lis
     string_features: list[str] = []
     try:
         strings_data = host._get_strings_data()
-        if isinstance(strings_data, list):
-            string_source = strings_data
-        elif isinstance(strings_data, (dict, str, bytes)) or not isinstance(strings_data, Iterable):
-            string_source = []
-        else:
-            string_source = list(strings_data)
-        if string_source:
-            host._collect_string_features(string_source, string_features)
+        if strings_data:
+            host._collect_string_features(strings_data, string_features)
         data_section_strings = host._extract_data_section_strings()
-        if not isinstance(data_section_strings, (dict, str, bytes)) and isinstance(
-            data_section_strings, Iterable
-        ):
-            string_features.extend(
-                value for value in data_section_strings if isinstance(value, str)
-            )
+        string_features.extend(value for value in data_section_strings if isinstance(value, str))
         logger.debug("Extracted %s string features", len(string_features))
         return string_features
     except Exception as exc:
@@ -47,8 +35,6 @@ def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> li
             if not functions:
                 return []
         for func in functions:
-            if not isinstance(func, dict):
-                continue
             func_addr = coerce_int(func.get("offset") or func.get("addr"))
             if func_addr <= 0:
                 continue
@@ -105,15 +91,9 @@ def extract_function_features(
     function_features: dict[str, dict[str, Any]] = {}
     try:
         functions = host._get_functions()
-        if isinstance(functions, list):
-            function_source = functions
-        elif isinstance(functions, (dict, str, bytes)) or not isinstance(functions, Iterable):
+        if not functions:
             return {}
-        else:
-            function_source = list(functions)
-        if not function_source:
-            return {}
-        for func in function_source:
+        for func in functions:
             entry = _function_simhash_features(host, simhash_cls, func, logger)
             if entry is not None:
                 function_features[entry[0]] = entry[1]
