@@ -121,46 +121,53 @@ def get_function_similarity(
         return {}
 
 
-def _build_machoc_summary(
-    analysis_results: dict[str, Any], similarity_fn: Any
-) -> dict[str, Any]:
+def _build_machoc_summary(analysis_results: dict[str, Any], similarity_fn: Any) -> dict[str, Any]:
     if not analysis_results:
         raise ValueError("No analysis results available")
     machoc_hashes = analysis_results.get("machoc_hashes", {})
     if not machoc_hashes:
         raise ValueError("No MACHOC hashes available")
-    similarities = similarity_fn(machoc_hashes)
+    valid_similarities = _valid_machoc_similarities(similarity_fn(machoc_hashes))
+    result: dict[str, Any] = {
+        "total_functions_hashed": len(machoc_hashes),
+        "unique_machoc_hashes": _unique_machoc_hash_count(machoc_hashes),
+        "duplicate_function_groups": len(valid_similarities),
+        "total_duplicate_functions": sum(len(names) for names in valid_similarities.values()),
+    }
+    if valid_similarities:
+        result["similarities"] = valid_similarities
+        result["most_common_patterns"] = _most_common_machoc_patterns(valid_similarities)
+    return result
+
+
+def _valid_machoc_similarities(similarities: Any) -> dict[str, Any]:
     if not isinstance(similarities, dict):
-        similarities = {}
-    valid_similarities = {
+        return {}
+    return {
         machoc_hash: function_names
         for machoc_hash, function_names in similarities.items()
         if isinstance(function_names, list)
     }
-    total_duplicate_functions = sum(len(names) for names in valid_similarities.values())
-    valid_hashes = {value for value in machoc_hashes.values() if isinstance(value, str) and value}
-    result: dict[str, Any] = {
-        "total_functions_hashed": len(machoc_hashes),
-        "unique_machoc_hashes": len(valid_hashes),
-        "duplicate_function_groups": len(valid_similarities),
-        "total_duplicate_functions": total_duplicate_functions,
-    }
-    if valid_similarities:
-        sorted_patterns = sorted(
-            valid_similarities.items(),
-            key=lambda item: len(item[1]),
-            reverse=True,
-        )
-        result["similarities"] = valid_similarities
-        result["most_common_patterns"] = [
-            {
-                "machoc_hash": machoc_hash,
-                "function_count": len(function_names),
-                "functions": function_names,
-            }
-            for machoc_hash, function_names in sorted_patterns[:5]
-        ]
-    return result
+
+
+def _unique_machoc_hash_count(machoc_hashes: dict[str, Any]) -> int:
+    return len({value for value in machoc_hashes.values() if isinstance(value, str) and value})
+
+
+def _most_common_machoc_patterns(valid_similarities: dict[str, Any]) -> list[dict[str, Any]]:
+    sorted_patterns = sorted(
+        valid_similarities.items(),
+        key=lambda item: len(item[1]),
+        reverse=True,
+    )
+    return [
+        {
+            "machoc_hash": machoc_hash,
+            "function_count": len(function_names),
+            "functions": function_names,
+        }
+        for machoc_hash, function_names in sorted_patterns[:5]
+    ]
 
 
 def generate_machoc_summary(
