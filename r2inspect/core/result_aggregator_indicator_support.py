@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
+
+from ..abstractions.coercion_support import coerce_list
 
 
 def indicator_rules() -> list[Any]:
@@ -40,32 +41,21 @@ def indicator_rules() -> list[Any]:
     ]
 
 
-def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[str, Any]]:
-    if not isinstance(results, dict):
-        return []
-    indicators: list[dict[str, Any]] = []
-    for predicate, builder in rules:
-        if predicate(results):
-            indicators.append(builder(results))
+_SUSPICIOUS_APIS = {
+    "VirtualAlloc",
+    "WriteProcessMemory",
+    "CreateRemoteThread",
+    "SetThreadContext",
+}
 
-    suspicious_apis = {
-        "VirtualAlloc",
-        "WriteProcessMemory",
-        "CreateRemoteThread",
-        "SetThreadContext",
-    }
-    imports = results.get("imports", [])
-    if isinstance(imports, list):
-        normalized_imports = imports
-    elif isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
-        normalized_imports = []
-    else:
-        normalized_imports = list(imports)
-    for imp in normalized_imports:
+
+def _suspicious_api_indicators(imports: Any) -> list[dict[str, Any]]:
+    indicators: list[dict[str, Any]] = []
+    for imp in coerce_list(imports):
         if not isinstance(imp, dict):
             continue
         name = imp.get("name") or ""
-        if any(api in name for api in suspicious_apis):
+        if any(api in name for api in _SUSPICIOUS_APIS):
             indicators.append(
                 {
                     "type": "Suspicious API",
@@ -73,14 +63,12 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
                     "severity": "Medium",
                 }
             )
-    yara_matches = results.get("yara_matches", [])
-    if isinstance(yara_matches, list):
-        normalized_yara_matches = yara_matches
-    elif isinstance(yara_matches, (dict, str, bytes)) or not isinstance(yara_matches, Iterable):
-        normalized_yara_matches = []
-    else:
-        normalized_yara_matches = list(yara_matches)
-    for match in normalized_yara_matches:
+    return indicators
+
+
+def _yara_match_indicators(yara_matches: Any) -> list[dict[str, Any]]:
+    indicators: list[dict[str, Any]] = []
+    for match in coerce_list(yara_matches):
         if not isinstance(match, dict):
             continue
         indicators.append(
@@ -90,4 +78,16 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
                 "severity": "High",
             }
         )
+    return indicators
+
+
+def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[str, Any]]:
+    if not isinstance(results, dict):
+        return []
+    indicators: list[dict[str, Any]] = []
+    for predicate, builder in rules:
+        if predicate(results):
+            indicators.append(builder(results))
+    indicators.extend(_suspicious_api_indicators(results.get("imports", [])))
+    indicators.extend(_yara_match_indicators(results.get("yara_matches", [])))
     return indicators
