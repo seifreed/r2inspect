@@ -9,6 +9,8 @@ from typing import Any
 
 from rich.table import Table
 
+from ..abstractions.coercion_support import coerce_list
+
 from .display_base import (
     ANALYZED_FUNCTIONS_LABEL,
     HTML_AMP,
@@ -108,34 +110,7 @@ def display_ccbhash(results: Results) -> None:
     _get_console().print()
 
 
-def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
-    binary_hash = ccbhash_info.get("binary_ccbhash")
-    if binary_hash:
-        table.add_row("Binary CCBHash", format_hash_display(binary_hash, max_length=64))
-    table.add_row(TOTAL_FUNCTIONS_LABEL, str(ccbhash_info.get("total_functions", 0)))
-    table.add_row(ANALYZED_FUNCTIONS_LABEL, str(ccbhash_info.get("analyzed_functions", 0)))
-    table.add_row("Unique CCBHashes", str(ccbhash_info.get("unique_hashes", 0)))
-    similar_functions = ccbhash_info.get("similar_functions", [])
-    if isinstance(similar_functions, list):
-        similar_source = similar_functions
-    elif isinstance(similar_functions, (dict, str, bytes)) or not isinstance(
-        similar_functions, Iterable
-    ):
-        return
-    else:
-        similar_source = list(similar_functions)
-    if not similar_source:
-        return
-    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similar_source)))
-    largest_group = similar_source[0] if similar_source else None
-    if not largest_group:
-        return
-    if not isinstance(largest_group, dict):
-        return
-    count = largest_group.get("count")
-    if count is None:
-        return
-    table.add_row("Largest Similar Group", f"{count} functions")
+def _add_sample_functions_row(table: Table, largest_group: dict[str, Any]) -> None:
     functions = largest_group.get("functions", [])
     if isinstance(functions, list):
         normalized_functions = functions
@@ -150,3 +125,24 @@ def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
     if len(normalized_functions) > 3:
         clean_sample_funcs.append(f"... and {len(normalized_functions) - 3} more")
     table.add_row("Sample Functions", ", ".join(clean_sample_funcs))
+
+
+def add_ccbhash_entries(table: Table, ccbhash_info: dict[str, Any]) -> None:
+    binary_hash = ccbhash_info.get("binary_ccbhash")
+    if binary_hash:
+        table.add_row("Binary CCBHash", format_hash_display(binary_hash, max_length=64))
+    table.add_row(TOTAL_FUNCTIONS_LABEL, str(ccbhash_info.get("total_functions", 0)))
+    table.add_row(ANALYZED_FUNCTIONS_LABEL, str(ccbhash_info.get("analyzed_functions", 0)))
+    table.add_row("Unique CCBHashes", str(ccbhash_info.get("unique_hashes", 0)))
+    similar_source = coerce_list(ccbhash_info.get("similar_functions", []))
+    if not similar_source:
+        return
+    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similar_source)))
+    largest_group = similar_source[0]
+    if not largest_group or not isinstance(largest_group, dict):
+        return
+    count = largest_group.get("count")
+    if count is None:
+        return
+    table.add_row("Largest Similar Group", f"{count} functions")
+    _add_sample_functions_row(table, largest_group)
