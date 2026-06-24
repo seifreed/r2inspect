@@ -103,16 +103,19 @@ def _structural_exports(exports: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _cfg_feature(cfg: Any) -> dict[str, Any] | None:
+def _first_cfg_entry(cfg: Any) -> Any:
     if isinstance(cfg, dict):
-        cfg_data = cfg
-    elif isinstance(cfg, list):
-        cfg_data = cfg[0] if cfg else {}
-    elif isinstance(cfg, (str, bytes)) or not isinstance(cfg, Iterable):
-        cfg_data = {}
-    else:
-        cfg_items = list(cfg)
-        cfg_data = cfg_items[0] if cfg_items else {}
+        return cfg
+    if isinstance(cfg, list):
+        return cfg[0] if cfg else {}
+    if isinstance(cfg, (str, bytes)) or not isinstance(cfg, Iterable):
+        return {}
+    cfg_items = list(cfg)
+    return cfg_items[0] if cfg_items else {}
+
+
+def _cfg_feature(cfg: Any) -> dict[str, Any] | None:
+    cfg_data = _first_cfg_entry(cfg)
     if not isinstance(cfg_data, dict) or not cfg_data:
         return None
     blocks = cfg_data.get("blocks", [])
