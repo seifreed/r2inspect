@@ -64,6 +64,60 @@ def compile_sources_with_timeout(
         return None
 
 
+def _as_list_or_none(value: Any) -> list[Any] | None:
+    """Coerce a YARA collection to a list, or ``None`` when it is not list-like."""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, (dict, str, bytes)) or not isinstance(value, Iterable):
+        return None
+    return list(value)
+
+
+def _parse_instance(instance: Any) -> dict[str, Any] | None:
+    if not hasattr(instance, "offset") or not hasattr(instance, "matched_data"):
+        return None
+    matched_data_raw = instance.matched_data
+    if isinstance(matched_data_raw, (bytes, bytearray)):
+        matched_data = matched_data_raw.decode("utf-8", errors="ignore")
+        default_length = len(matched_data_raw)
+    else:
+        matched_data = str(matched_data_raw)
+        default_length = len(matched_data)
+    length = getattr(instance, "length", default_length)
+    return {"offset": instance.offset, "matched_data": matched_data, "length": length}
+
+
+def _parse_string_match(string_match: Any) -> dict[str, Any] | None:
+    if not hasattr(string_match, "identifier") or not hasattr(string_match, "instances"):
+        return None
+    instance_source = _as_list_or_none(getattr(string_match, "instances", []))
+    if instance_source is None:
+        return None
+    instances = [
+        parsed for instance in instance_source if (parsed := _parse_instance(instance)) is not None
+    ]
+    return {"identifier": string_match.identifier, "instances": instances}
+
+
+def _parse_match(match: Any) -> dict[str, Any] | None:
+    if not hasattr(match, "rule") or not hasattr(match, "strings"):
+        return None
+    string_source = _as_list_or_none(getattr(match, "strings", []))
+    if string_source is None:
+        return None
+    tags = _as_list_or_none(getattr(match, "tags", []))
+    meta = getattr(match, "meta", {})
+    return {
+        "rule": str(getattr(match, "rule", "")),
+        "namespace": str(getattr(match, "namespace", "")),
+        "tags": list(tags) if tags is not None else [],
+        "meta": dict(meta) if isinstance(meta, dict) else {},
+        "strings": [
+            parsed for sm in string_source if (parsed := _parse_string_match(sm)) is not None
+        ],
+    }
+
+
 def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
     try:
@@ -77,65 +131,9 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
             except TypeError:
                 return matches
         for match in match_source:
-            if not hasattr(match, "rule") or not hasattr(match, "strings"):
-                continue
-            tags = getattr(match, "tags", [])
-            meta = getattr(match, "meta", {})
-            strings = getattr(match, "strings", [])
-            if isinstance(strings, list):
-                string_source = strings
-            elif isinstance(strings, (dict, str, bytes)) or not isinstance(strings, Iterable):
-                continue
-            else:
-                string_source = list(strings)
-            match_strings: list[dict[str, Any]] = []
-            match_info = {
-                "rule": str(getattr(match, "rule", "")),
-                "namespace": str(getattr(match, "namespace", "")),
-                "tags": (
-                    list(tags)
-                    if isinstance(tags, list)
-                    else (
-                        []
-                        if isinstance(tags, (dict, str, bytes)) or not isinstance(tags, Iterable)
-                        else list(tags)
-                    )
-                ),
-                "meta": dict(meta) if isinstance(meta, dict) else {},
-                "strings": match_strings,
-            }
-            for string_match in string_source:
-                if not hasattr(string_match, "identifier") or not hasattr(
-                    string_match, "instances"
-                ):
-                    continue
-                instances = getattr(string_match, "instances", [])
-                if isinstance(instances, list):
-                    instance_source = instances
-                elif isinstance(instances, (dict, str, bytes)) or not isinstance(
-                    instances, Iterable
-                ):
-                    continue
-                else:
-                    instance_source = list(instances)
-                string_instances: list[dict[str, Any]] = []
-                string_info = {"identifier": string_match.identifier, "instances": string_instances}
-                for instance in instance_source:
-                    if not hasattr(instance, "offset") or not hasattr(instance, "matched_data"):
-                        continue
-                    matched_data_raw = instance.matched_data
-                    if isinstance(matched_data_raw, (bytes, bytearray)):
-                        matched_data = matched_data_raw.decode("utf-8", errors="ignore")
-                        default_length = len(matched_data_raw)
-                    else:
-                        matched_data = str(matched_data_raw)
-                        default_length = len(matched_data)
-                    length = getattr(instance, "length", default_length)
-                    string_instances.append(
-                        {"offset": instance.offset, "matched_data": matched_data, "length": length}
-                    )
-                match_strings.append(string_info)
-            matches.append(match_info)
+            match_info = _parse_match(match)
+            if match_info is not None:
+                matches.append(match_info)
     except Exception as exc:
         logger.error("Error processing YARA matches: %s", exc)
     return matches
