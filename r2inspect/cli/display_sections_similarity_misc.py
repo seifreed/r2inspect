@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from rich.table import Table
 
 from .display_base import (
@@ -73,6 +75,16 @@ def _display_bindiff(results: Results) -> None:
     _get_console().print()
 
 
+def _machoc_hash_stats(machoc_hashes: dict[str, Any]) -> tuple[int, int]:
+    hash_counts: dict[str, int] = {}
+    for machoc_hash in machoc_hashes.values():
+        if not isinstance(machoc_hash, str) or not machoc_hash:
+            continue
+        hash_counts[machoc_hash] = hash_counts.get(machoc_hash, 0) + 1
+    duplicates = sum(count - 1 for count in hash_counts.values() if count > 1)
+    return len(hash_counts), duplicates
+
+
 def _display_machoc_functions(results: Results) -> None:
     functions_info, present = _get_section(results, "functions", {})
     if not present:
@@ -88,16 +100,9 @@ def _display_machoc_functions(results: Results) -> None:
     machoc_hashes = functions_info.get("machoc_hashes", {})
     if not isinstance(machoc_hashes, dict):
         machoc_hashes = {}
-    unique_hashes = len({value for value in machoc_hashes.values() if isinstance(value, str) and value}) if machoc_hashes else 0
+    unique_hashes, duplicates = _machoc_hash_stats(machoc_hashes)
     table.add_row("Unique MACHOC Hashes", str(unique_hashes))
-
     if machoc_hashes:
-        hash_counts: dict[str, int] = {}
-        for _, machoc_hash in machoc_hashes.items():
-            if not isinstance(machoc_hash, str) or not machoc_hash:
-                continue
-            hash_counts[machoc_hash] = hash_counts.get(machoc_hash, 0) + 1
-        duplicates = sum(count - 1 for count in hash_counts.values() if count > 1)
         table.add_row("Duplicate Functions", str(duplicates))
 
     _get_console().print(table)
