@@ -3,12 +3,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_list
 
 
 def _add_bindiff_entries(table: Table, bindiff_info: dict[str, Any]) -> None:
@@ -32,23 +31,23 @@ def _add_bindiff_structural(table: Table, structural: dict[str, Any]) -> None:
     table.add_row("File Type", file_type)
     table.add_row("File Size", f"{coerce_int(structural.get('file_size', 0)):,} bytes")
     table.add_row("Sections", str(structural.get("section_count", 0)))
-    section_names = structural.get("section_names")
-    if isinstance(section_names, list):
-        section_source = section_names
-    elif isinstance(section_names, (dict, str, bytes)) or not isinstance(section_names, Iterable):
-        section_source = []
-    else:
-        section_source = list(section_names)
-    if section_source:
-        section_names = [str(name) for name in section_source]
-        if len(section_names) <= 7:
-            table.add_row("Section Names", ", ".join(section_names))
-        else:
-            displayed = section_names[:5]
-            remaining = len(section_names) - 5
-            table.add_row("Section Names", f"{', '.join(displayed)}\n... and {remaining} more")
+    names_row = _section_names_row(structural.get("section_names"))
+    if names_row is not None:
+        table.add_row("Section Names", names_row)
     table.add_row("Imports", str(structural.get("import_count", 0)))
     table.add_row("Exports", str(structural.get("export_count", 0)))
+
+
+def _section_names_row(section_names: Any) -> str | None:
+    section_source = coerce_list(section_names)
+    if not section_source:
+        return None
+    names = [str(name) for name in section_source]
+    if len(names) <= 7:
+        return ", ".join(names)
+    displayed = names[:5]
+    remaining = len(names) - 5
+    return f"{', '.join(displayed)}\n... and {remaining} more"
 
 
 def _add_bindiff_functions(table: Table, function_features: dict[str, Any]) -> None:
