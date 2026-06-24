@@ -71,6 +71,34 @@ def extract_opcodes_features(host: SimHashHost, *, logger: logging.Logger) -> li
         return []
 
 
+def _function_simhash_features(
+    host: SimHashHost, simhash_cls: Any, func: Any, logger: logging.Logger
+) -> tuple[str, dict[str, Any]] | None:
+    if not isinstance(func, dict):
+        return None
+    func_addr = coerce_int(func.get("offset") or func.get("addr"))
+    if func_addr <= 0:
+        return None
+    func_name = _function_name(func, func_addr)
+    func_size = coerce_int(func.get("size", 0))
+    func_opcodes = host._extract_function_opcodes(func_addr, func_name)
+    if not func_opcodes:
+        return None
+    try:
+        func_simhash = simhash_cls(func_opcodes)
+    except Exception as exc:
+        logger.debug("Error creating SimHash for function %s: %s", func_name, exc)
+        return None
+    return func_name, {
+        "addr": func_addr,
+        "size": func_size,
+        "simhash": func_simhash.value,
+        "simhash_hex": hex(func_simhash.value),
+        "feature_count": len(func_opcodes),
+        "unique_opcodes": len(set(func_opcodes)),
+    }
+
+
 def extract_function_features(
     host: SimHashHost, simhash_cls: Any, *, logger: logging.Logger
 ) -> dict[str, dict[str, Any]]:
@@ -86,29 +114,9 @@ def extract_function_features(
         if not function_source:
             return {}
         for func in function_source:
-            if not isinstance(func, dict):
-                continue
-            func_addr = coerce_int(func.get("offset") or func.get("addr"))
-            if func_addr <= 0:
-                continue
-            func_name = _function_name(func, func_addr)
-            func_size = coerce_int(func.get("size", 0))
-            func_opcodes = host._extract_function_opcodes(func_addr, func_name)
-            if not func_opcodes:
-                continue
-            try:
-                func_simhash = simhash_cls(func_opcodes)
-                function_features[func_name] = {
-                    "addr": func_addr,
-                    "size": func_size,
-                    "simhash": func_simhash.value,
-                    "simhash_hex": hex(func_simhash.value),
-                    "feature_count": len(func_opcodes),
-                    "unique_opcodes": len(set(func_opcodes)),
-                }
-            except Exception as exc:
-                logger.debug("Error creating SimHash for function %s: %s", func_name, exc)
-                continue
+            entry = _function_simhash_features(host, simhash_cls, func, logger)
+            if entry is not None:
+                function_features[entry[0]] = entry[1]
         logger.debug("Extracted SimHash features for %s functions", len(function_features))
         return function_features
     except Exception as exc:
