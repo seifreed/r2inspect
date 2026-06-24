@@ -24,32 +24,22 @@ REGISTRY_ROOT_PATTERN = re.compile(
 
 
 def is_api_string(value: str) -> bool:
-    if not isinstance(value, str):
-        return False
     return any(pattern.lower() in value.lower() for pattern in API_PATTERNS)
 
 
 def is_path_string(value: str) -> bool:
-    if not isinstance(value, str):
-        return False
     return ("\\" in value or "/" in value) and (len(value) > 3) and not value.startswith("http")
 
 
 def is_url_string(value: str) -> bool:
-    if not isinstance(value, str):
-        return False
     return value.startswith(("http://", "https://", "ftp://"))
 
 
 def is_registry_string(value: str) -> bool:
-    if not isinstance(value, str):
-        return False
     return REGISTRY_ROOT_PATTERN.match(value) is not None
 
 
 def classify_string_type(value: str) -> str | None:
-    if not isinstance(value, str):
-        return None
     if re.match(r"https?://", value, re.IGNORECASE):
         return "url"
     if re.match(r"[a-z]:\\", value, re.IGNORECASE) or value.startswith("/"):
