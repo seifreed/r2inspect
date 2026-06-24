@@ -69,8 +69,6 @@ def build_section_name_indicators(
 
 def build_permission_indicators(analysis: dict[str, Any]) -> list[str]:
     indicators: list[str] = []
-    if not isinstance(analysis, dict):
-        return indicators
     if analysis.get("is_writable") and analysis.get("is_executable"):
         indicators.append("Writable and executable section")
     if analysis.get("is_executable") and _coerce_entropy(analysis.get("entropy", 0)) < 1.0:
@@ -108,8 +106,6 @@ def _size_ratio_indicator(vsize: int, raw_size: int) -> str | None:
 
 def build_size_indicators(vsize: int, raw_size: int) -> list[str]:
     indicators: list[str] = []
-    if not isinstance(vsize, int) or not isinstance(raw_size, int):
-        return indicators
     if vsize > 0 and raw_size > 0:
         ratio_indicator = _size_ratio_indicator(vsize, raw_size)
         if ratio_indicator:
@@ -122,8 +118,6 @@ def build_size_indicators(vsize: int, raw_size: int) -> list[str]:
 
 
 def decode_pe_characteristics(characteristics: int) -> list[str]:
-    if not isinstance(characteristics, int):
-        return []
     return [
         flag_name
         for flag_value, flag_name in PE_CHARACTERISTIC_FLAGS.items()
@@ -141,8 +135,6 @@ def build_section_characteristics(
     purpose, expected_entropy = SECTION_MAPPINGS.get(section_name, ("Unknown/Custom", "Variable"))
     characteristics["purpose"] = purpose
     characteristics["expected_entropy"] = expected_entropy
-    if not isinstance(analysis, dict):
-        return characteristics
     _mark_entropy_anomaly(characteristics, analysis)
     if analysis.get("is_executable") and code_analysis:
         characteristics["code_analysis"] = code_analysis
@@ -150,8 +142,6 @@ def build_section_characteristics(
 
 
 def _mark_entropy_anomaly(characteristics: dict[str, Any], analysis: dict[str, Any]) -> None:
-    if not isinstance(analysis, dict):
-        return
     if characteristics["expected_entropy"] == "Variable":
         return
     try:
@@ -168,8 +158,6 @@ def update_section_summary(
     section: dict[str, Any],
     flag_counts: dict[str, int],
 ) -> float:
-    if not isinstance(section, dict):
-        return 0.0
     if section.get("is_executable"):
         summary["executable_sections"] += 1
     if section.get("is_writable"):

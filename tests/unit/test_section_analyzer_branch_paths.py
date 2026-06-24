@@ -13,8 +13,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.services.section_analysis import (
     _mark_entropy_anomaly,
     build_section_characteristics,
-    decode_pe_characteristics,
-    build_size_indicators,
     build_permission_indicators,
     update_section_summary,
 )
@@ -432,12 +430,6 @@ def test_get_section_characteristics_returns_empty_on_characteristic_error():
     assert "code_analysis" not in result
 
 
-def test_get_section_characteristics_rejects_non_dict_analysis():
-    analyzer = _build_analyzer(sections=[])
-    result = analyzer._get_section_characteristics({"name": ".text"}, None)  # type: ignore[arg-type]
-    assert result["purpose"] == "Executable code"
-
-
 # ---------------------------------------------------------------------------
 # _analyze_code_section - size == 0 early return (line 352)
 # ---------------------------------------------------------------------------
@@ -797,42 +789,10 @@ def test_update_summary_for_section_replaces_missing_flags_with_empty_key():
     assert "None" not in flag_counts
 
 
-def test_decode_pe_characteristics_skips_non_int_input():
-    assert decode_pe_characteristics("bad") == []  # type: ignore[arg-type]
-
-
-def test_build_size_indicators_skips_non_int_input():
-    assert build_size_indicators("bad", 100) == []  # type: ignore[arg-type]
-    assert build_size_indicators(100, None) == []  # type: ignore[arg-type]
-
-
 def test_build_section_characteristics_rejects_non_string_name():
     result = build_section_characteristics(None, {"entropy": 8.0, "is_executable": True})  # type: ignore[arg-type]
     assert result["purpose"] == "Unknown/Custom"
     assert result["expected_entropy"] == "Variable"
-
-
-def test_build_section_characteristics_rejects_non_dict_analysis():
-    result = build_section_characteristics(".text", None)  # type: ignore[arg-type]
-    assert result["purpose"] == "Executable code"
-    assert result["expected_entropy"] == "6.0-7.5"
-
-
-def test_update_section_summary_rejects_non_dict_section():
-    summary = {
-        "executable_sections": 0,
-        "writable_sections": 0,
-        "suspicious_sections": 0,
-        "high_entropy_sections": 0,
-    }
-    flag_counts: dict[str, int] = {}
-    assert update_section_summary(summary, None, flag_counts) == 0.0  # type: ignore[arg-type]
-
-
-def test_mark_entropy_anomaly_rejects_non_dict_analysis():
-    characteristics = {"expected_entropy": "6.0-7.5"}
-    _mark_entropy_anomaly(characteristics, None)  # type: ignore[arg-type]
-    assert "entropy_anomaly" not in characteristics
 
 
 def test_apply_permissions_treats_missing_flags_as_empty():
@@ -856,10 +816,6 @@ def test_build_permission_indicators_handles_missing_flags():
     assert build_permission_indicators({"is_executable": True, "entropy": 0.5}) == [
         "Executable section with very low entropy"
     ]
-
-
-def test_build_permission_indicators_rejects_non_dict_analysis():
-    assert build_permission_indicators(None) == []  # type: ignore[arg-type]
 
 
 def test_get_arch_handles_file_info_errors():
