@@ -7,9 +7,9 @@ from typing import Any
 
 from rich.table import Table
 
-Results = dict[str, Any]
+from .display_base import _get_console as _get_console
 
-from .display_base import _get_console
+Results = dict[str, Any]
 
 
 def add_group_functions_row(table: Table, group: dict[str, Any], index: int) -> None:

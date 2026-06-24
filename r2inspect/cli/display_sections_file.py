@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from rich.console import Console
 from rich.table import Table
 
 from .display_base import _get_console, create_info_table

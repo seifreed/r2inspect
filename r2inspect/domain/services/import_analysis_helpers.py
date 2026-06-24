@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import Any
 
 from ...abstractions.coercion_support import coerce_dict_list, coerce_text
 from ..formats.import_analysis import NETWORK_CATEGORY
 from .import_analysis_anomalies import (
-    COMMON_SYSTEM_DLLS,
-    SUSPICIOUS_DLLS,
-    analyze_dll_dependencies,
-    detect_import_anomalies,
+    COMMON_SYSTEM_DLLS as COMMON_SYSTEM_DLLS,
+    SUSPICIOUS_DLLS as SUSPICIOUS_DLLS,
+    analyze_dll_dependencies as analyze_dll_dependencies,
+    detect_import_anomalies as detect_import_anomalies,
 )
+
+
 def _library_value(imp: dict[str, Any]) -> str:
     for key in ("library", "dll", "libname"):
         value = imp.get(key)
@@ -40,6 +42,8 @@ def _pattern_entry(pattern: str, description: str, severity: str, count: int) ->
         "severity": severity,
         "count": count,
     }
+
+
 def _append_injection_patterns(patterns: list[dict[str, Any]], import_names: list[str]) -> None:
     injection_count = _count_matching_apis(
         import_names, ["VirtualAllocEx", "WriteProcessMemory", "CreateRemoteThread"]
@@ -174,8 +178,7 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
             "GetProcAddress usage detected - possible dynamic API loading",
             _count_imports(
                 imports,
-                lambda imp: isinstance(imp.get("name"), str)
-                and "GetProcAddress" in imp["name"],
+                lambda imp: isinstance(imp.get("name"), str) and "GetProcAddress" in imp["name"],
             ),
             False,
         ),

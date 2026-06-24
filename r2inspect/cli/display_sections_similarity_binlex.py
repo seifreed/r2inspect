@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 import re
-from typing import Any, cast
+from typing import Any
 
 from rich.table import Table
 
@@ -127,7 +127,9 @@ def _add_binlex_top_ngrams(
         ngram_entries = _lookup_ngram_value(top_ngrams, n)
         if isinstance(ngram_entries, list):
             entry_source = ngram_entries
-        elif isinstance(ngram_entries, (dict, str, bytes)) or not isinstance(ngram_entries, Iterable):
+        elif isinstance(ngram_entries, (dict, str, bytes)) or not isinstance(
+            ngram_entries, Iterable
+        ):
             continue
         else:
             entry_source = list(ngram_entries)
