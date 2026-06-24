@@ -68,22 +68,24 @@ def _no_imports_anomaly() -> dict[str, str]:
     return {"type": "no_imports", "description": description, "severity": "HIGH"}
 
 
+def _import_key(imp: Any) -> str | None:
+    if not isinstance(imp, dict):
+        return None
+    name = imp.get("name", "")
+    if isinstance(name, bytes):
+        name = name.decode(errors="ignore")
+    if not isinstance(name, str) or not name:
+        return None
+    library = imp.get("library", imp.get("dll", ""))
+    if isinstance(library, bytes):
+        library = library.decode(errors="ignore")
+    if isinstance(library, str):
+        library = library.lower()
+    return f"{library}!{name}" if library else name
+
+
 def _duplicate_imports(imports: list[Any]) -> list[str]:
-    import_keys = []
-    for imp in imports:
-        if not isinstance(imp, dict):
-            continue
-        name = imp.get("name", "")
-        if isinstance(name, bytes):
-            name = name.decode(errors="ignore")
-        if not isinstance(name, str) or not name:
-            continue
-        library = imp.get("library", imp.get("dll", ""))
-        if isinstance(library, bytes):
-            library = library.decode(errors="ignore")
-        if isinstance(library, str):
-            library = library.lower()
-        import_keys.append(f"{library}!{name}" if library else name)
+    import_keys = [key for imp in imports if (key := _import_key(imp)) is not None]
     return [name for name, count in Counter(import_keys).items() if count > 1]
 
 
