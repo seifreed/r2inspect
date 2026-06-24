@@ -29,7 +29,6 @@ class TlshHost(Protocol):
     def compare_tlsh(self, hash1: str, hash2: str) -> int | None: ...
 
 
-
 def build_detailed_analysis(host: TlshHost, available: bool) -> dict[str, Any]:
     if not available:
         return {"available": False, "error": "TLSH library not installed"}
@@ -76,7 +75,9 @@ def calculate_section_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str, 
                 logger.debug("Skipping malformed section data: %s - %s", type(section), section)
                 continue
             section_name = section.get("name", "unknown")
-            section_name = section_name if isinstance(section_name, str) and section_name else "unknown"
+            section_name = (
+                section_name if isinstance(section_name, str) and section_name else "unknown"
+            )
             vaddr = coerce_int(section.get("vaddr", 0))
             size = coerce_int(section.get("size", 0))
             if size == 0 or size > 50 * 1024 * 1024:
@@ -94,6 +95,27 @@ def calculate_section_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str, 
     return section_hashes
 
 
+def _tlsh_for_function(
+    host: TlshHost, func: dict[str, Any], logger: logging.Logger
+) -> tuple[str, str | None]:
+    func_addr = coerce_int(func.get("addr", func.get("offset", 0)))
+    func_name_value = func.get("name")
+    func_name = (
+        func_name_value
+        if isinstance(func_name_value, str) and func_name_value
+        else f"func_{func_addr or 'unknown'}"
+    )
+    func_size = coerce_int(func.get("size", 0))
+    if not func_addr or func_size == 0 or func_size > 100000:
+        return func_name, None
+    try:
+        hex_data = host._read_bytes_hex(func_addr, func_size)
+        return func_name, host._calculate_tlsh_from_hex(hex_data)
+    except Exception as exc:
+        logger.debug("Error calculating TLSH for function %s: %s", func_name, exc)
+        return func_name, None
+
+
 def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str, str | None]:
     function_hashes: dict[str, str | None] = {}
     try:
@@ -104,29 +126,12 @@ def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str,
             return function_hashes
         else:
             function_source = list(functions)
-        if not function_source:
-            return function_hashes
         for func in function_source[:50]:
             if not isinstance(func, dict):
                 logger.debug("Skipping malformed function data: %s - %s", type(func), func)
                 continue
-            func_addr = coerce_int(func.get("addr", func.get("offset", 0)))
-            func_name_value = func.get("name")
-            func_name = (
-                func_name_value
-                if isinstance(func_name_value, str) and func_name_value
-                else f"func_{func_addr or 'unknown'}"
-            )
-            func_size = coerce_int(func.get("size", 0))
-            if not func_addr or func_size == 0 or func_size > 100000:
-                function_hashes[func_name] = None
-                continue
-            try:
-                hex_data = host._read_bytes_hex(func_addr, func_size)
-                function_hashes[func_name] = host._calculate_tlsh_from_hex(hex_data)
-            except Exception as exc:
-                logger.debug("Error calculating TLSH for function %s: %s", func_name, exc)
-                function_hashes[func_name] = None
+            func_name, func_hash = _tlsh_for_function(host, func, logger)
+            function_hashes[func_name] = func_hash
     except Exception as exc:
         logger.error("Error in function TLSH calculation: %s", exc)
     return function_hashes

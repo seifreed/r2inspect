@@ -158,32 +158,39 @@ def _category_count(categories: dict[str, Any], *names: str) -> int:
     return 0
 
 
+def _matched_api_score(func_name: str, api_name: Any, api_data: Any) -> tuple[int, str] | None:
+    if not isinstance(api_name, str):
+        return None
+    if not isinstance(api_data, tuple) or len(api_data) < 2:
+        return None
+    score, tag = api_data[:2]
+    if not isinstance(score, int) or not isinstance(tag, str):
+        return None
+    if api_name not in func_name:
+        return None
+    return score, tag
+
+
 def find_max_risk_score(
     func_name: str, categories: dict[str, dict[str, tuple[int, str]]]
 ) -> tuple[int, list[str]]:
     max_score = 0
     tags: list[str] = []
-    if not isinstance(categories, dict):
-        return max_score, tags
-    if not isinstance(func_name, str):
+    if not isinstance(categories, dict) or not isinstance(func_name, str):
         return max_score, tags
     for api_dict in categories.values():
         if not isinstance(api_dict, dict):
             continue
         for api_name, api_data in api_dict.items():
-            if not isinstance(api_name, str):
+            match = _matched_api_score(func_name, api_name, api_data)
+            if match is None:
                 continue
-            if not isinstance(api_data, tuple) or len(api_data) < 2:
-                continue
-            score, tag = api_data[:2]
-            if not isinstance(score, int) or not isinstance(tag, str):
-                continue
-            if api_name in func_name:
-                if score > max_score:
-                    max_score = score
-                    tags = [tag]
-                elif score == max_score:
-                    tags.append(tag)
+            score, tag = match
+            if score > max_score:
+                max_score = score
+                tags = [tag]
+            elif score == max_score:
+                tags.append(tag)
     return max_score, tags
 
 
