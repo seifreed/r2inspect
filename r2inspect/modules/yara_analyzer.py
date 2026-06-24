@@ -13,7 +13,7 @@ except Exception:
     yara = None
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..adapters.file_system import default_file_system
+from ..infrastructure.file_system import default_file_system
 from ..security.validators import FileValidator
 from ..infrastructure.logging import get_logger
 from .yara_rules_support import (

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..adapters.file_system import default_file_system
+from .file_system import default_file_system
 from .command_helpers import cmd as cmd_helper
 from .command_helpers import cmdj as cmdj_helper
 from .logging import get_logger

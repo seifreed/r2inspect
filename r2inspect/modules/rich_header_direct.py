@@ -7,7 +7,7 @@ import struct
 from typing import Any, cast
 
 from ..abstractions.coercion_support import coerce_int
-from ..adapters.file_system import default_file_system
+from ..infrastructure.file_system import default_file_system
 from ..domain.services.rich_header import decode_rich_header
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
 from ..infrastructure.logging import get_logger

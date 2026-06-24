@@ -17,7 +17,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from ..abstractions.coercion_support import coerce_dict, coerce_int, coerce_text
-from ..adapters.file_system import default_file_system
+from ..infrastructure.file_system import default_file_system
 from ..domain.formats.bindiff import (
     build_behavioral_signature,
     build_function_signature,

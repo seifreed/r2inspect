@@ -1187,7 +1187,7 @@ def test_magic_adapter_create_detectors_returns_tuple_or_none():
 # FileSystemAdapter
 # ---------------------------------------------------------------------------
 
-from r2inspect.adapters.file_system import FileSystemAdapter, default_file_system
+from r2inspect.infrastructure.file_system import FileSystemAdapter, default_file_system
 
 
 def test_file_system_read_bytes(tmp_path):

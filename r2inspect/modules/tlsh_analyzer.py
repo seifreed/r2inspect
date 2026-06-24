@@ -12,7 +12,7 @@ except ImportError:
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
-from ..adapters.file_system import default_file_system
+from ..infrastructure.file_system import default_file_system
 from ..infrastructure.logging import get_logger
 from .tlsh_support import (
     build_detailed_analysis,

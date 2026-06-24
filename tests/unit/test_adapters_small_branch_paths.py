@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from r2inspect.adapters.magic_adapter import MagicAdapter
-from r2inspect.adapters.file_system import FileSystemAdapter
+from r2inspect.infrastructure.file_system import FileSystemAdapter
 
 # ---------------------------------------------------------------------------
 # magic_adapter.py

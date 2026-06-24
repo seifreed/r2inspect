@@ -4,7 +4,7 @@
 from typing import Any, cast
 
 from ..abstractions import BaseAnalyzer
-from ..adapters.file_system import default_file_system
+from ..infrastructure.file_system import default_file_system
 from ..domain.services.rich_header import (
     calculate_richpe_hash,
     parse_compiler_entries,

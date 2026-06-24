@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from r2inspect.adapters.file_system import FileSystemAdapter, default_file_system
+from r2inspect.infrastructure.file_system import FileSystemAdapter, default_file_system
 
 
 @pytest.fixture
