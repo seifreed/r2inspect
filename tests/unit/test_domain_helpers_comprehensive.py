@@ -7,7 +7,6 @@ from r2inspect.domain.services.binary_helpers import (
     entropy_from_ints,
     clamp_score,
     count_suspicious_imports,
-    clean_function_name,
     extract_printable_strings,
     normalize_section_name,
     suspicious_section_name_indicator,
@@ -208,12 +207,6 @@ def test_count_suspicious_imports_skips_malformed_entries():
     assert count_suspicious_imports(imports, {"VirtualAlloc"}) == 1
 
 
-def test_count_suspicious_imports_non_list_or_non_set_inputs():
-    assert count_suspicious_imports(None, {"VirtualAlloc"}) == 0
-    assert count_suspicious_imports([{"name": "VirtualAlloc"}], None) == 0
-    assert count_suspicious_imports([{"name": "VirtualAlloc"}], "VirtualAlloc") == 0  # type: ignore[arg-type]
-
-
 def test_normalize_section_name_valid():
     """Test normalizing valid section name."""
     assert normalize_section_name(".text") == ".text"
@@ -248,14 +241,6 @@ def test_normalize_section_name_non_string():
     assert normalize_section_name([]) == ""
 
 
-def test_clean_function_name_non_string_returns_empty():
-    assert clean_function_name(None) == ""
-
-
-def test_extract_printable_strings_non_iterable_returns_empty():
-    assert extract_printable_strings(None, min_length=3) == []
-
-
 def test_suspicious_section_name_indicator_not_suspicious():
     """Test section name that is not suspicious."""
     result = suspicious_section_name_indicator(".text", ["upx", "packed"])
@@ -273,10 +258,6 @@ def test_suspicious_section_name_indicator_case_insensitive():
     """Test suspicious section name is case insensitive."""
     result = suspicious_section_name_indicator("PACKED", ["packed"])
     assert result is not None
-
-
-def test_suspicious_section_name_indicator_invalid_suspicious_input():
-    assert suspicious_section_name_indicator("UPX0", None) is None
 
 
 def test_suspicious_section_name_indicator_partial_match():
@@ -378,11 +359,6 @@ def test_suspicious_section_name_indicator_returns_string():
     assert "upx" in result
 
 
-def test_suspicious_section_name_indicator_skips_malformed_values():
-    assert suspicious_section_name_indicator(None, ["upx"]) is None
-    assert suspicious_section_name_indicator("UPX0", [None, "upx"]) == "Suspicious section name: upx"
-
-
 def test_normalize_section_name_preserves_case_in_string():
     """Test that normalize actually lowercases."""
     result = normalize_section_name("TEXT")
@@ -432,10 +408,6 @@ def test_entropy_calculations_match():
 def test_entropy_from_ints_skips_non_byte_values():
     result = entropy_from_ints([65, 999, "x", 66])
     assert result == shannon_entropy(b"AB")
-
-
-def test_extract_printable_strings_rejects_non_int_min_length():
-    assert extract_printable_strings(b"hello", min_length="3") == []  # type: ignore[arg-type]
 
 
 def test_extract_printable_strings_skips_out_of_range_values():

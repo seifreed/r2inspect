@@ -42,8 +42,6 @@ def clamp_score(score: int, minimum: int = 0, maximum: int = 100) -> int:
 
 
 def count_suspicious_imports(imports: list[dict[str, Any]], suspicious: set[str]) -> int:
-    if not isinstance(imports, list) or not isinstance(suspicious, set):
-        return 0
     suspicious_names = {name for name in suspicious if isinstance(name, str)}
     return sum(
         1 for imp in imports if isinstance(imp, dict) and imp.get("name") in suspicious_names
@@ -56,8 +54,6 @@ def normalize_section_name(name: str | None) -> str:
 
 def clean_function_name(name: str) -> str:
     """Unescape the HTML entities radare2 emits in function names."""
-    if not isinstance(name, str):
-        return ""
     return name.replace("&nbsp;", " ").replace("&amp;", "&")
 
 
@@ -71,8 +67,6 @@ def extract_printable_strings(
     data: bytes | list[int], *, min_length: int, limit: int | None = None
 ) -> list[str]:
     """Collect runs of printable ASCII at least ``min_length`` long from bytes."""
-    if not isinstance(data, (bytes, bytearray, list, tuple)) or not isinstance(min_length, int):
-        return []
     strings: list[str] = []
     current: list[str] = []
     for byte in data:
@@ -104,12 +98,8 @@ STANDARD_PE_SECTIONS = [
 
 
 def suspicious_section_name_indicator(name: str, suspicious: list[str]) -> str | None:
-    if not isinstance(name, str) or not isinstance(suspicious, (list, tuple, set)):
-        return None
     lowered = name.lower()
     for sus_name in suspicious:
-        if not isinstance(sus_name, str):
-            continue
         if sus_name in lowered:
             return f"Suspicious section name: {sus_name}"
     return None
