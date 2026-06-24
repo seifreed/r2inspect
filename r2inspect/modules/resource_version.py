@@ -61,6 +61,27 @@ class ResourceVersionMixin:
             "ProductVersion",
         ]
 
+    def _collect_utf16_value_bytes(self, data: list[int], value_start: int) -> list[int] | None:
+        value_bytes: list[int] = []
+        for i in range(value_start, min(value_start + 256, len(data) - 1), 2):
+            first = data[i]
+            second = data[i + 1]
+            if not isinstance(first, int) or not isinstance(second, int):
+                return None
+            if first == 0 and second == 0:
+                break
+            value_bytes.extend([first, second])
+        return value_bytes
+
+    def _decode_utf16_value(self, value_bytes: list[int]) -> str:
+        try:
+            if not all(0 <= value <= 0xFF for value in value_bytes):
+                return ""
+            value = bytes(value_bytes).decode("utf-16le", errors="ignore")
+            return value if value and value.isprintable() else ""
+        except UnicodeDecodeError:
+            return ""
+
     def _read_version_string_value(self, data: list[int], key: str) -> str:
         key_pattern = list(key.encode("utf-16le"))
         pos = self._find_pattern(data, key_pattern)
@@ -69,24 +90,10 @@ class ResourceVersionMixin:
         value_start = pos + len(key_pattern) + 4
         if value_start >= len(data) - 2:
             return ""
-        value_bytes: list[int] = []
-        for i in range(value_start, min(value_start + 256, len(data) - 1), 2):
-            first = data[i]
-            second = data[i + 1]
-            if not isinstance(first, int) or not isinstance(second, int):
-                return ""
-            if first == 0 and second == 0:
-                break
-            value_bytes.extend([first, second])
+        value_bytes = self._collect_utf16_value_bytes(data, value_start)
         if not value_bytes:
             return ""
-        try:
-            if not all(0 <= value <= 0xFF for value in value_bytes):
-                return ""
-            value = bytes(value_bytes).decode("utf-16le", errors="ignore")
-            return value if value and value.isprintable() else ""
-        except UnicodeDecodeError:
-            return ""
+        return self._decode_utf16_value(value_bytes)
 
     def _find_pattern(self, data: list[int], pattern: list[int]) -> int:
         pattern_len = len(pattern)
