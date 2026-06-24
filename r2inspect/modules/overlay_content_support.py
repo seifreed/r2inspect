@@ -24,12 +24,12 @@ def analyze_overlay_content(
     check_file_signatures_fn: Callable[[list[int]], list[dict[str, Any]]],
 ) -> None:
     try:
-        offset = coerce_int_or_none(offset)
-        size = coerce_int_or_none(size)
-        if offset is None or size is None:
+        read_offset = coerce_int_or_none(offset)
+        read_total = coerce_int_or_none(size)
+        if read_offset is None or read_total is None:
             return
-        read_size = min(size, 65536)
-        overlay_data = cmdj(f"pxj {read_size} @ {offset}", [])
+        read_size = min(read_total, 65536)
+        overlay_data = cmdj(f"pxj {read_size} @ {read_offset}", [])
 
         if isinstance(overlay_data, (dict, str, bytes)):
             return
