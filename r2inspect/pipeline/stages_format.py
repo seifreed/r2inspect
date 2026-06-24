@@ -232,6 +232,24 @@ class FormatDetectionStage(AnalysisStage):
                 return value
         return None
 
+    @staticmethod
+    def _high_confidence_format(file_format: str) -> str | None:
+        format_map = {
+            "PE": "PE",
+            "ELF": "ELF",
+            "MACHO": "Mach-O",
+            "JAVA_CLASS": "Java",
+            "DEX": "Android",
+        }
+        for prefix, result in format_map.items():
+            if file_format.startswith(prefix) or file_format == prefix:
+                return result
+        if file_format in ["ZIP", "RAR", "7ZIP"]:
+            return "Archive"
+        if file_format in ["PDF", "DOC", "DOCX", "RTF"]:
+            return "Document"
+        return None
+
     def _detect_via_enhanced_magic(self) -> str | None:
         enhanced_detection = self.file_type_detector(self.filename)
         if not isinstance(enhanced_detection, dict):
@@ -249,24 +267,7 @@ class FormatDetectionStage(AnalysisStage):
                 return "PE"
             return None
 
-        format_map = {
-            "PE": "PE",
-            "ELF": "ELF",
-            "MACHO": "Mach-O",
-            "JAVA_CLASS": "Java",
-            "DEX": "Android",
-        }
-
-        for prefix, result in format_map.items():
-            if file_format.startswith(prefix) or file_format == prefix:
-                return result
-
-        if file_format in ["ZIP", "RAR", "7ZIP"]:
-            return "Archive"
-        if file_format in ["PDF", "DOC", "DOCX", "RTF"]:
-            return "Document"
-
-        return None
+        return self._high_confidence_format(file_format)
 
     def _detect_via_basic_magic(self) -> str | None:
         if self.magic_detector_provider is not None:
