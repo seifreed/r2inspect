@@ -179,6 +179,38 @@ def _matching_suspicious_strings(strings: list[str]) -> list[str]:
     return matches
 
 
+def _embedded_executable_indicators(embedded_files: Any) -> list[dict[str, Any]]:
+    if not isinstance(embedded_files, list):
+        return []
+    indicators: list[dict[str, Any]] = []
+    for embedded in embedded_files:
+        if not isinstance(embedded, dict):
+            continue
+        if embedded.get("type") in {"PE", "ELF"}:
+            indicators.append(
+                _indicator(
+                    "Embedded executable",
+                    f"{embedded.get('type', 'unknown')} at offset {embedded.get('offset', 'unknown')}",
+                    "high",
+                )
+            )
+    return indicators
+
+
+def _autoit_indicators(patterns_found: Any) -> list[dict[str, Any]]:
+    if not isinstance(patterns_found, list):
+        return []
+    indicators: list[dict[str, Any]] = []
+    for pattern in patterns_found:
+        if not isinstance(pattern, dict):
+            continue
+        if pattern.get("name") == "AutoIt":
+            indicators.append(
+                _indicator("AutoIt script", "AutoIt compiled script detected", "medium")
+            )
+    return indicators
+
+
 def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(result, dict):
         return []
@@ -191,30 +223,8 @@ def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str
         )
     if overlay_entropy > 7.5:
         suspicious.append(_indicator("High entropy", f"Entropy: {overlay_entropy:g}", "high"))
-    embedded_files = result.get("embedded_files", [])
-    if not isinstance(embedded_files, list):
-        embedded_files = []
-    for embedded in embedded_files:
-        if not isinstance(embedded, dict):
-            continue
-        if embedded.get("type") in {"PE", "ELF"}:
-            suspicious.append(
-                _indicator(
-                    "Embedded executable",
-                    f"{embedded.get('type', 'unknown')} at offset {embedded.get('offset', 'unknown')}",
-                    "high",
-                )
-            )
-    patterns_found = result.get("patterns_found", [])
-    if not isinstance(patterns_found, list):
-        patterns_found = []
-    for pattern in patterns_found:
-        if not isinstance(pattern, dict):
-            continue
-        if pattern.get("name") == "AutoIt":
-            suspicious.append(
-                _indicator("AutoIt script", "AutoIt compiled script detected", "medium")
-            )
+    suspicious.extend(_embedded_executable_indicators(result.get("embedded_files", [])))
+    suspicious.extend(_autoit_indicators(result.get("patterns_found", [])))
     found_suspicious = _matching_suspicious_strings(result.get("extracted_strings", []))
     if found_suspicious:
         suspicious.append(
