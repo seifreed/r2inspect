@@ -40,6 +40,36 @@ def compare_bloom_filters(bloom1: Any, bloom2: Any, logger: logging.Logger) -> f
         return 0.0
 
 
+def _parse_bloom_params(
+    data: dict[str, Any], logger: logging.Logger
+) -> tuple[float, int, int, list[Any]] | None:
+    try:
+        error_rate = float(data["error_rate"])
+        capacity = int(data["capacity"])
+        count = int(data["count"])
+        bitarray_list = data["bitarray"]
+    except (KeyError, TypeError, ValueError) as exc:
+        logger.error("Deserialization failed: invalid parameter - %s", exc)
+        return None
+    if not (0.0 < error_rate < 1.0):
+        logger.error("Deserialization failed: invalid error_rate %s", error_rate)
+        return None
+    if not (1 <= capacity <= 1000000):
+        logger.error("Deserialization failed: invalid capacity %s", capacity)
+        return None
+    if not (0 <= count <= capacity):
+        logger.error("Deserialization failed: invalid count %s", count)
+        return None
+    if isinstance(bitarray_list, list):
+        bitarray_source = bitarray_list
+    elif isinstance(bitarray_list, (dict, str, bytes)) or not isinstance(bitarray_list, Iterable):
+        logger.error("Deserialization failed: bitarray is not iterable")
+        return None
+    else:
+        bitarray_source = list(bitarray_list)
+    return error_rate, capacity, count, bitarray_source
+
+
 def deserialize_bloom(
     bloom_b64: str, bloom_filter_class: Any, logger: logging.Logger
 ) -> Any | None:
@@ -56,33 +86,10 @@ def deserialize_bloom(
             logger.error("Deserialization failed: unsupported version %s", version)
             return None
 
-        try:
-            error_rate = float(data["error_rate"])
-            capacity = int(data["capacity"])
-            count = int(data["count"])
-            bitarray_list = data["bitarray"]
-        except (KeyError, TypeError, ValueError) as exc:
-            logger.error("Deserialization failed: invalid parameter - %s", exc)
+        params = _parse_bloom_params(data, logger)
+        if params is None:
             return None
-
-        if not (0.0 < error_rate < 1.0):
-            logger.error("Deserialization failed: invalid error_rate %s", error_rate)
-            return None
-        if not (1 <= capacity <= 1000000):
-            logger.error("Deserialization failed: invalid capacity %s", capacity)
-            return None
-        if not (0 <= count <= capacity):
-            logger.error("Deserialization failed: invalid count %s", count)
-            return None
-        if isinstance(bitarray_list, list):
-            bitarray_source = bitarray_list
-        elif isinstance(bitarray_list, (dict, str, bytes)) or not isinstance(
-            bitarray_list, Iterable
-        ):
-            logger.error("Deserialization failed: bitarray is not iterable")
-            return None
-        else:
-            bitarray_source = list(bitarray_list)
+        error_rate, capacity, count, bitarray_source = params
 
         bloom_filter = bloom_filter_class(capacity=capacity, error_rate=error_rate)
 
