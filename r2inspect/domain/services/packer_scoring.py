@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from collections.abc import Iterable
 import logging
 from typing import Any
 
@@ -18,14 +17,8 @@ logger = logging.getLogger(__name__)
 def find_packer_signature(
     search_hex_fn: Callable[[str], str], packer_signatures: dict[str, list[bytes]]
 ) -> dict[str, str] | None:
-    if not isinstance(packer_signatures, dict):
-        return None
     for packer_name, signatures in packer_signatures.items():
-        if not isinstance(signatures, (list, tuple, set)):
-            continue
         for signature in signatures:
-            if not isinstance(signature, (bytes, bytearray)):
-                continue
             if _search_signature_hex(search_hex_fn, signature.hex()):
                 return {
                     "type": packer_name,
@@ -41,8 +34,6 @@ def find_packer_string(
     if not strings_result:
         return None
     for string_info in strings_result:
-        if not isinstance(string_info, dict):
-            continue
         string_value = string_info.get("string", "")
         if not isinstance(string_value, str):
             continue
@@ -159,11 +150,7 @@ def is_suspicious_section_name(name: str) -> bool:
 
 
 def count_imports(imports: list[dict[str, Any]] | None) -> int:
-    if isinstance(imports, list):
-        return len(imports)
-    if isinstance(imports, (dict, str, bytes)) or not isinstance(imports, Iterable):
-        return 0
-    return sum(1 for imp in imports if isinstance(imp, dict))
+    return len(imports) if imports else 0
 
 
 def overlay_info(
@@ -183,8 +170,6 @@ def overlay_info(
 
     last_section_end = 0
     for section in sections:
-        if not isinstance(section, dict):
-            continue
         section_end = coerce_int(section.get("paddr")) + coerce_int(section.get("size"))
         last_section_end = max(last_section_end, section_end)
 

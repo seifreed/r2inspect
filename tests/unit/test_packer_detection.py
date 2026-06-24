@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
@@ -249,7 +248,7 @@ def test_overlay_info_no_overlay_when_sections_fill_file():
 def test_packer_scoring_skips_malformed_strings_and_sections():
     from r2inspect.domain.services.packer_scoring import analyze_sections, find_packer_string
 
-    signature = find_packer_string([{"string": ["UPX"]}, "bad"], {"UPX": [b"UPX"]})
+    signature = find_packer_string([{"string": ["UPX"]}], {"UPX": [b"UPX"]})
     sections = analyze_sections(["bad", {"name": ".text", "flags": "x", "size": "big"}])
 
     assert signature is None
@@ -289,18 +288,11 @@ def test_search_signature_hex_skips_non_string_search_output():
     assert _search_signature_hex(bad_search, "deadbeef") is False
 
 
-def test_find_packer_signature_skips_malformed_buckets():
-    from r2inspect.domain.services.packer_scoring import find_packer_signature
-
-    assert find_packer_signature(lambda _sig: "", None) is None  # type: ignore[arg-type]
-    assert find_packer_signature(lambda _sig: "", {"UPX": "bad"}) is None  # type: ignore[arg-type]
-
-
 def test_overlay_info_coerces_malformed_section_offsets():
     from r2inspect.domain.services.packer_scoring import overlay_info
 
     file_info = {"core": {"size": "100"}}
-    sections = ["bad", {"name": ".text", "paddr": "bad", "size": 1}]
+    sections = [{"name": ".text", "paddr": "bad", "size": 1}]
 
     info = overlay_info(file_info, sections)
 
@@ -344,11 +336,11 @@ def test_packer_entropy_logs_read_errors(caplog):
     assert "Error calculating section entropy: read failed" in caplog.text
 
 
-def test_count_imports_non_list_input_returns_zero():
+def test_count_imports_none_returns_zero():
     from r2inspect.domain.services.packer_scoring import count_imports
 
-    assert count_imports(None) == 0  # type: ignore[arg-type]
-    assert count_imports({"name": "only_one"}) == 0  # type: ignore[arg-type]
+    assert count_imports(None) == 0
+    assert count_imports([]) == 0
 
 
 def test_packer_result_structure():

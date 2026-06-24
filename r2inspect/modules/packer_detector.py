@@ -207,7 +207,7 @@ class PackerDetector(CommandHelperMixin):
             return []
 
     def _get_strings(self) -> list[dict[str, Any]]:
-        return cast(list[dict[str, Any]], self._get_via_adapter("get_strings", "izj"))
+        return self._coerce_dict_list(self._get_via_adapter("get_strings", "izj"))
 
     def _get_file_info(self) -> dict[str, Any]:
         return cast(dict[str, Any], self._get_via_adapter("get_file_info", "ij", as_dict=True))
