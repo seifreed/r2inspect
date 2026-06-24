@@ -77,6 +77,20 @@ def determine_pe_file_type(
     return file_type if file_type != "Unknown" else "PE"
 
 
+def _pe_format_from_header(pe_header: dict[str, Any] | None) -> str | None:
+    if not pe_header:
+        return None
+    opt_header = pe_header.get("optional_header", {})
+    if not isinstance(opt_header, dict):
+        opt_header = {}
+    magic = opt_header.get("Magic", 0)
+    if magic == 0x10B:
+        return "PE32"
+    if magic == 0x20B:
+        return PE32_PLUS
+    return None
+
+
 def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | None) -> str:
     raw_format = bin_info.get("format", "Unknown")
     format_name = raw_format if isinstance(raw_format, str) and raw_format else "Unknown"
@@ -89,16 +103,7 @@ def determine_pe_format(bin_info: dict[str, Any], pe_header: dict[str, Any] | No
     if bits == 64:
         return PE32_PLUS
 
-    if pe_header:
-        opt_header = pe_header.get("optional_header", {})
-        if not isinstance(opt_header, dict):
-            opt_header = {}
-        magic = opt_header.get("Magic", 0)
-        if magic == 0x10B:
-            return "PE32"
-        if magic == 0x20B:
-            return PE32_PLUS
-    return "PE"
+    return _pe_format_from_header(pe_header) or "PE"
 
 
 def normalize_pe_format(format_name: str) -> str:
