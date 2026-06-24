@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
+from ..abstractions.coercion_support import coerce_list
 from ..domain.services.binary_helpers import clamp_score
 
 MITIGATION_SCORES = {
@@ -21,22 +21,9 @@ MITIGATION_SCORES = {
 }
 
 
-def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(result, dict):
-        return {"score": 0, "max_score": 0, "percentage": 0.0, "grade": "Unknown"}
+def _mitigation_points(mitigations: dict[str, Any]) -> tuple[int, int]:
     score = 0
     max_score = 0
-    mitigations = result.get("mitigations")
-    if not isinstance(mitigations, dict):
-        mitigations = {}
-    vulnerabilities = result.get("vulnerabilities")
-    if isinstance(vulnerabilities, list):
-        pass
-    elif isinstance(vulnerabilities, (dict, str, bytes)) or not isinstance(vulnerabilities, Iterable):
-        vulnerabilities = []
-    else:
-        vulnerabilities = list(vulnerabilities)
-
     for mitigation_name, scoring in MITIGATION_SCORES.items():
         mitigation = mitigations.get(mitigation_name, {})
         if not isinstance(mitigation, dict):
@@ -45,14 +32,30 @@ def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
             max_score += points
             if mitigation.get(check):
                 score += points
+    return score, max_score
 
+
+def _vulnerability_penalty(vulnerabilities: list[Any]) -> int:
+    penalty = 0
     for vuln in vulnerabilities:
         if not isinstance(vuln, dict):
             continue
         if vuln.get("severity") == "high":
-            score -= 10
+            penalty += 10
         elif vuln.get("severity") == "medium":
-            score -= 5
+            penalty += 5
+    return penalty
+
+
+def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(result, dict):
+        return {"score": 0, "max_score": 0, "percentage": 0.0, "grade": "Unknown"}
+    mitigations = result.get("mitigations")
+    if not isinstance(mitigations, dict):
+        mitigations = {}
+
+    score, max_score = _mitigation_points(mitigations)
+    score -= _vulnerability_penalty(coerce_list(result.get("vulnerabilities")))
 
     score = clamp_score(score, minimum=0, maximum=max_score if max_score > 0 else 0)
     percentage = round((score / max_score * 100) if max_score > 0 else 0, 1)
