@@ -62,34 +62,42 @@ def _crypto_search_patterns(values: list[int]) -> list[tuple[str, str]]:
     return patterns
 
 
+def _crypto_constant_matches(
+    analyzer: CryptoHost, const_name: Any, const_values: Any
+) -> list[dict[str, Any]]:
+    if isinstance(const_values, (dict, str, bytes)):
+        return []
+    try:
+        const_source = list(const_values)
+    except TypeError:
+        return []
+    values: list[int] = []
+    for value in const_source:
+        try:
+            values.append(int(value, 0) if isinstance(value, str) else int(value))
+        except (TypeError, ValueError):
+            continue
+    matches: list[dict[str, Any]] = []
+    for pattern, value_repr in _crypto_search_patterns(values):
+        result = analyzer._search_hex(pattern)
+        if has_text(result):
+            matches.append(
+                {
+                    "type": const_name,
+                    "value": value_repr,
+                    "addresses": analyzer._parse_search_results(result),
+                }
+            )
+    return matches
+
+
 def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     found_constants: list[dict[str, Any]] = []
     try:
         if not isinstance(analyzer.crypto_constants, dict):
             return found_constants
         for const_name, const_values in analyzer.crypto_constants.items():
-            if isinstance(const_values, (dict, str, bytes)):
-                continue
-            try:
-                const_source = list(const_values)
-            except TypeError:
-                continue
-            values: list[int] = []
-            for value in const_source:
-                try:
-                    values.append(int(value, 0) if isinstance(value, str) else int(value))
-                except (TypeError, ValueError):
-                    continue
-            for pattern, value_repr in _crypto_search_patterns(values):
-                result = analyzer._search_hex(pattern)
-                if has_text(result):
-                    found_constants.append(
-                        {
-                            "type": const_name,
-                            "value": value_repr,
-                            "addresses": analyzer._parse_search_results(result),
-                        }
-                    )
+            found_constants.extend(_crypto_constant_matches(analyzer, const_name, const_values))
     except Exception as exc:
         logger.error("Error detecting crypto constants: %s", exc)
     return found_constants
