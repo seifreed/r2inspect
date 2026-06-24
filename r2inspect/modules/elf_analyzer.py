@@ -117,7 +117,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         info: dict[str, Any] = {}
 
         try:
-            sections = self._cmd_list("iSj")
+            sections = self._coerce_dict_list(self._cmd_list("iSj"))
             comment_section = find_section_by_name(sections, ".comment")
             if not comment_section:
                 return info
@@ -151,7 +151,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
     def _extract_build_id(self) -> str | None:
         try:
-            sections = self._cmd_list("iSj")
+            sections = self._coerce_dict_list(self._cmd_list("iSj"))
             build_id_section = find_section_by_name(sections, ".note.gnu.build-id")
             if not build_id_section:
                 return None

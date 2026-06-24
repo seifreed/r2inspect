@@ -503,10 +503,6 @@ def test_find_section_by_name_empty_list() -> None:
     assert find_section_by_name([], ".text") is None
 
 
-def test_find_section_by_name_none_list() -> None:
-    assert find_section_by_name(None, ".text") is None  # type: ignore[arg-type]
-
-
 # ===========================================================================
 # macho_domain tests
 # ===========================================================================

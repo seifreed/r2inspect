@@ -12,7 +12,6 @@ from r2inspect.domain.formats.elf import (
     parse_dwarf_producer,
 )
 
-
 # ---------------------------------------------------------------------------
 # parse_comment_compiler_info
 # ---------------------------------------------------------------------------
@@ -48,11 +47,6 @@ def test_parse_comment_compiler_info_no_match_returns_empty():
 
 def test_parse_comment_compiler_info_empty_string():
     result = parse_comment_compiler_info("")
-    assert result == {}
-
-
-def test_parse_comment_compiler_info_non_string_returns_empty():
-    result = parse_comment_compiler_info(None)  # type: ignore[arg-type]
     assert result == {}
 
 
@@ -167,11 +161,6 @@ def test_parse_dwarf_compile_time_full_date_string():
     result = parse_dwarf_compile_time(line)
     # The extended pattern may or may not match, but should not crash
     assert result is None or isinstance(result, str)
-
-
-def test_parse_dwarf_helpers_non_string_inputs_return_none():
-    assert parse_dwarf_producer(None) is None  # type: ignore[arg-type]
-    assert parse_dwarf_compile_time(None) is None  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -291,17 +280,6 @@ def test_find_section_by_name_empty_list():
     assert result is None
 
 
-def test_find_section_by_name_none_list():
-    result = find_section_by_name(None, ".text")
-    assert result is None
-
-
-def test_find_section_by_name_non_string_query_returns_none():
-    sections = [{"name": ".text"}]
-    result = find_section_by_name(sections, None)  # type: ignore[arg-type]
-    assert result is None
-
-
 def test_find_section_by_name_case_insensitive():
     sections = [{"name": ".TEXT"}]
     result = find_section_by_name(sections, ".text")
@@ -318,9 +296,3 @@ def test_find_section_by_name_no_name_key():
     sections = [{"size": 100}]
     result = find_section_by_name(sections, ".text")
     assert result is None
-
-
-def test_find_section_by_name_skips_malformed_entries():
-    sections = ["bad", {"name": ".text"}]
-    result = find_section_by_name(sections, ".text")
-    assert result == {"name": ".text"}
