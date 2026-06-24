@@ -61,6 +61,12 @@ def test_determine_pe_file_type_fallback_to_class():
     assert result == "PE32"
 
 
+def test_determine_pe_file_type_nonmatching_description_falls_back_to_class():
+    """A non-empty file_desc with no dll/exe/driver/sys keyword falls back to the class."""
+    result = determine_pe_file_type({"class": "PE32"}, None, "some random data file")
+    assert result == "PE32"
+
+
 def test_determine_pe_file_type_unknown_class_no_desc():
     """determine_pe_file_type returns class for Unknown with no file_desc."""
     result = determine_pe_file_type({"class": "Unknown"}, None, None)

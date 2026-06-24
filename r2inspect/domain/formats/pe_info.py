@@ -47,6 +47,19 @@ def find_pe_data_directory(ihj: Any, name: str) -> dict[str, Any] | None:
     }
 
 
+def _pe_type_from_description(file_desc: str | None) -> str | None:
+    if not (isinstance(file_desc, str) and file_desc):
+        return None
+    desc = file_desc.lower()
+    if "dll" in desc:
+        return "DLL"
+    if "executable" in desc and "dll" not in desc:
+        return "EXE"
+    if "driver" in desc or "sys" in desc:
+        return "SYS"
+    return None
+
+
 def determine_pe_file_type(
     bin_info: dict[str, Any], _filepath: str | None, file_desc: str | None
 ) -> str:
@@ -55,14 +68,9 @@ def determine_pe_file_type(
     if file_type not in {PE32_PLUS, "PE32", "PE", "Unknown"}:
         return file_type
 
-    if isinstance(file_desc, str) and file_desc:
-        desc = file_desc.lower()
-        if "dll" in desc:
-            return "DLL"
-        if "executable" in desc and "dll" not in desc:
-            return "EXE"
-        if "driver" in desc or "sys" in desc:
-            return "SYS"
+    desc_type = _pe_type_from_description(file_desc)
+    if desc_type is not None:
+        return desc_type
 
     if raw_class == "Unknown":
         return "Unknown"
