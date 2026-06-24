@@ -137,7 +137,7 @@ def test_categorize_apis_basic():
 
 
 def test_categorize_apis_skips_malformed_imports():
-    imports = ["bad", {"name": None}, {"name": "CreateRemoteThread"}]
+    imports = [{"name": None}, {"name": "CreateRemoteThread"}]
     result = categorize_apis(imports, {"Injection": ["CreateRemoteThread"]})
     assert result == {"Injection": {"count": 1, "apis": ["CreateRemoteThread"]}}
 
@@ -199,7 +199,6 @@ def test_categorize_apis_no_match():
 def test_categorize_apis_skips_malformed_category_entries():
     imports = [{"name": "CreateRemoteThread"}]
     api_categories = {
-        "Broken": 123,
         "AlsoBroken": [42, None],
         "Injection": ["CreateRemoteThread"],
     }

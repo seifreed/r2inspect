@@ -98,8 +98,6 @@ def build_api_categories() -> dict[str, dict[str, tuple[int, str]]]:
 def _match_category_apis(imports: list[dict[str, Any]], valid_apis: list[str]) -> list[str]:
     matched: list[str] = []
     for imp in imports:
-        if not isinstance(imp, dict):
-            continue
         api_name = imp.get("name", "")
         if not isinstance(api_name, str):
             continue
@@ -111,12 +109,8 @@ def _match_category_apis(imports: list[dict[str, Any]], valid_apis: list[str]) -
 def categorize_apis(
     imports: list[dict[str, Any]], api_categories: dict[str, list[str]]
 ) -> dict[str, Any]:
-    if not isinstance(imports, list) or not isinstance(api_categories, dict):
-        return {}
     categories: dict[str, Any] = {}
     for category, apis in api_categories.items():
-        if not isinstance(apis, (list, tuple, set)):
-            continue
         valid_apis = [api for api in apis if isinstance(api, str)]
         category_apis = _match_category_apis(imports, valid_apis)
         if category_apis:
@@ -125,8 +119,6 @@ def categorize_apis(
 
 
 def assess_api_risk(categories: dict[str, Any]) -> tuple[list[str], int]:
-    if not isinstance(categories, dict):
-        return [], 0
     suspicious_apis: list[str] = []
     risk_score = 0
     if _category_count(categories, "Anti-Analysis") >= 2:
@@ -150,8 +142,6 @@ def assess_api_risk(categories: dict[str, Any]) -> tuple[list[str], int]:
 
 
 def _category_count(categories: dict[str, Any], *names: str) -> int:
-    if not isinstance(categories, dict):
-        return 0
     for name in names:
         value = categories.get(name)
         if isinstance(value, dict):
@@ -179,11 +169,7 @@ def find_max_risk_score(
 ) -> tuple[int, list[str]]:
     max_score = 0
     tags: list[str] = []
-    if not isinstance(categories, dict) or not isinstance(func_name, str):
-        return max_score, tags
     for api_dict in categories.values():
-        if not isinstance(api_dict, dict):
-            continue
         for api_name, api_data in api_dict.items():
             match = _matched_api_score(func_name, api_name, api_data)
             if match is None:
