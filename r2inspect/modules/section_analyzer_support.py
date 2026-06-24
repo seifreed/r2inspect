@@ -82,6 +82,35 @@ def get_section_characteristics(
         return {}
 
 
+def _function_size_stats(functions: list[Any]) -> dict[str, Any]:
+    sizes = [
+        size
+        for f in functions
+        if isinstance(f, dict) and (size := coerce_int(f.get("size", 0))) and size > 0
+    ]
+    if not sizes:
+        return {}
+    return {
+        "avg_function_size": sum(sizes) / len(sizes),
+        "min_function_size": min(sizes),
+        "max_function_size": max(sizes),
+    }
+
+
+def _nop_stats(analyzer: SectionHost, vaddr: int, size: int) -> dict[str, Any]:
+    nop_count, sample_size = analyzer._count_nops_in_section(vaddr, size)
+    if sample_size <= 0:
+        return {}
+    stats: dict[str, Any] = {
+        "nop_sample_size": sample_size,
+        "nop_count": nop_count,
+        "nop_ratio": nop_count / sample_size,
+    }
+    if nop_count > sample_size / 100:
+        stats["excessive_nops"] = True
+    return stats
+
+
 def analyze_code_section(
     analyzer: SectionHost, section: dict[str, Any], *, logger: logging.Logger
 ) -> dict[str, Any]:
@@ -99,24 +128,8 @@ def analyze_code_section(
         functions = analyzer._get_functions_in_section(vaddr, vsize or size)
         code_info["function_count"] = len(functions)
         if functions:
-            sizes = [
-                coerce_int(size)
-                for f in functions
-                if isinstance(f, dict)
-                and (size := coerce_int(f.get("size", 0)))
-                and size > 0
-            ]
-            if sizes:
-                code_info["avg_function_size"] = sum(sizes) / len(sizes)
-                code_info["min_function_size"] = min(sizes)
-                code_info["max_function_size"] = max(sizes)
-        nop_count, sample_size = analyzer._count_nops_in_section(vaddr, size)
-        if sample_size > 0:
-            code_info["nop_sample_size"] = sample_size
-            code_info["nop_count"] = nop_count
-            code_info["nop_ratio"] = nop_count / sample_size
-            if nop_count > sample_size / 100:
-                code_info["excessive_nops"] = True
+            code_info.update(_function_size_stats(functions))
+        code_info.update(_nop_stats(analyzer, vaddr, size))
     except Exception as exc:
         logger.error("Error analyzing code section: %s", exc)
     return code_info

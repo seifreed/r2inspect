@@ -19,7 +19,14 @@ from r2inspect.domain.services.section_analysis import (
     update_section_summary,
 )
 from r2inspect.modules.section_analyzer import SectionAnalyzer
+from r2inspect.modules.section_analyzer_support import _function_size_stats
 from r2inspect.testing.fake_r2 import FakeR2
+
+
+def test_function_size_stats_returns_empty_without_valid_sizes():
+    """Functions with no positive sizes (zero/non-dict) yield no size stats."""
+    assert _function_size_stats([{"size": 0}, {}, "not-a-dict"]) == {}
+
 
 # ---------------------------------------------------------------------------
 # FakeR2 -- deterministic stand-in for r2pipe
@@ -76,7 +83,13 @@ def _build_analyzer(
 
 
 class IterableCmdListSectionAnalyzer(SectionAnalyzer):
-    def __init__(self, *args, sections: list[dict[str, Any]] | None = None, functions: list[dict[str, Any]] | None = None, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        sections: list[dict[str, Any]] | None = None,
+        functions: list[dict[str, Any]] | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self._iterable_sections = sections or []
         self._iterable_functions = functions or []
@@ -119,7 +132,11 @@ def test_analyze_sections_rejects_dict_sections():
     class _DictSectionsAnalyzer(SectionAnalyzer):
         def _cmd_list(self, command: str):  # type: ignore[override]
             if command == "iSj":
-                return {"sections": [{"name": ".text", "vaddr": 0, "vsize": 100, "size": 100, "flags": "r-x"}]}
+                return {
+                    "sections": [
+                        {"name": ".text", "vaddr": 0, "vsize": 100, "size": 100, "flags": "r-x"}
+                    ]
+                }
             return []
 
     analyzer = _DictSectionsAnalyzer(adapter=R2PipeAdapter(FakeR2()), config=None)
@@ -244,7 +261,9 @@ def test_analyze_single_section_records_errors():
 def test_analyze_single_section_coerces_numeric_string_sizes():
     section = {"name": ".text", "vaddr": "4096", "vsize": "512", "size": "512", "flags": "r-x"}
     analyzer = _build_analyzer(
-        sections=[{"name": ".text", "vaddr": 0x1000, "vsize": 0x200, "size": 0x200, "flags": "r-x"}],
+        sections=[
+            {"name": ".text", "vaddr": 0x1000, "vsize": 0x200, "size": 0x200, "flags": "r-x"}
+        ],
         cmd_map_extra={f"p8 512 @ {0x1000}": _hex_bytes(0xCC, 512)},
     )
 
@@ -257,9 +276,17 @@ def test_analyze_single_section_coerces_numeric_string_sizes():
 
 
 def test_analyze_single_section_coerces_hex_string_sizes():
-    section = {"name": ".text", "vaddr": "0x1000", "vsize": "0x200", "size": "0x200", "flags": "r-x"}
+    section = {
+        "name": ".text",
+        "vaddr": "0x1000",
+        "vsize": "0x200",
+        "size": "0x200",
+        "flags": "r-x",
+    }
     analyzer = _build_analyzer(
-        sections=[{"name": ".text", "vaddr": 0x1000, "vsize": 0x200, "size": 0x200, "flags": "r-x"}],
+        sections=[
+            {"name": ".text", "vaddr": 0x1000, "vsize": 0x200, "size": 0x200, "flags": "r-x"}
+        ],
         cmd_map_extra={f"p8 512 @ {0x1000}": _hex_bytes(0xCC, 512)},
     )
 
