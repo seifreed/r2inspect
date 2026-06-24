@@ -115,19 +115,16 @@ def detect_overlay_patterns(data: list[int]) -> list[dict[str, Any]]:
     return patterns
 
 
-def determine_overlay_type(patterns: list[dict[str, Any]], data: list[int]) -> str:
-    if not patterns:
-        entropy = calculate_overlay_entropy(data[:1024])
-        if entropy > 7.5:
-            return "encrypted/compressed"
-        if entropy < 3.0:
-            return "padding"
-        return "data"
-    for pattern in patterns:
-        if not isinstance(pattern, dict):
-            continue
-        if pattern.get("type") == "installer":
-            return f"installer ({pattern.get('name', 'unknown')})"
+def _overlay_type_from_entropy(data: list[int]) -> str:
+    entropy = calculate_overlay_entropy(data[:1024])
+    if entropy > 7.5:
+        return "encrypted/compressed"
+    if entropy < 3.0:
+        return "padding"
+    return "data"
+
+
+def _dominant_pattern_type(patterns: list[dict[str, Any]]) -> str:
     type_counts: dict[str, int] = {}
     for pattern in patterns:
         if not isinstance(pattern, dict):
@@ -139,6 +136,15 @@ def determine_overlay_type(patterns: list[dict[str, Any]], data: list[int]) -> s
     if type_counts:
         return max(type_counts, key=lambda k: type_counts[k])
     return "unknown"
+
+
+def determine_overlay_type(patterns: list[dict[str, Any]], data: list[int]) -> str:
+    if not patterns:
+        return _overlay_type_from_entropy(data)
+    for pattern in patterns:
+        if isinstance(pattern, dict) and pattern.get("type") == "installer":
+            return f"installer ({pattern.get('name', 'unknown')})"
+    return _dominant_pattern_type(patterns)
 
 
 def detect_embedded_files(data: list[int]) -> list[dict[str, Any]]:
