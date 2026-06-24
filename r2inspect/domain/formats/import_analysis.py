@@ -95,6 +95,19 @@ def build_api_categories() -> dict[str, dict[str, tuple[int, str]]]:
     }
 
 
+def _match_category_apis(imports: list[dict[str, Any]], valid_apis: list[str]) -> list[str]:
+    matched: list[str] = []
+    for imp in imports:
+        if not isinstance(imp, dict):
+            continue
+        api_name = imp.get("name", "")
+        if not isinstance(api_name, str):
+            continue
+        if any(api.lower() in api_name.lower() for api in valid_apis):
+            matched.append(api_name)
+    return matched
+
+
 def categorize_apis(
     imports: list[dict[str, Any]], api_categories: dict[str, list[str]]
 ) -> dict[str, Any]:
@@ -104,20 +117,10 @@ def categorize_apis(
     for category, apis in api_categories.items():
         if not isinstance(apis, (list, tuple, set)):
             continue
-        category_count = 0
-        category_apis = []
         valid_apis = [api for api in apis if isinstance(api, str)]
-        for imp in imports:
-            if not isinstance(imp, dict):
-                continue
-            api_name = imp.get("name", "")
-            if not isinstance(api_name, str):
-                continue
-            if any(api.lower() in api_name.lower() for api in valid_apis):
-                category_count += 1
-                category_apis.append(api_name)
-        if category_count > 0:
-            categories[category] = {"count": category_count, "apis": category_apis}
+        category_apis = _match_category_apis(imports, valid_apis)
+        if category_apis:
+            categories[category] = {"count": len(category_apis), "apis": category_apis}
     return categories
 
 
