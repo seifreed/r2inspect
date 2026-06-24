@@ -154,6 +154,37 @@ def display_no_files_message(auto_detect: bool, extensions: str | None) -> None:
     _support.display_no_files_message(console, auto_detect, extensions)
 
 
+def _report_magic_init_errors(init_errors: list[str]) -> bool:
+    """Report magic init errors; return True when a fatal one means no files."""
+    for message in init_errors:
+        if message.startswith("Error initializing magic:"):
+            logger.error("%s; falling back to file extension detection", message)
+            console.print(f"[red]{message}[/red]")
+            console.print("[yellow]Falling back to file extension detection[/yellow]")
+            return True
+        logger.warning("%s", message)
+        console.print(f"[yellow]{message}[/yellow]")
+    return False
+
+
+def _log_discovery_file_errors(file_errors: list[Any]) -> None:
+    for item in file_errors:
+        if not isinstance(item, tuple) or len(item) < 2:
+            continue
+        logger.warning("Error checking %s during discovery: %s", item[0], item[1])
+
+
+def _print_verbose_discovery(files: list[Path], file_errors: list[Any], scanned: int) -> None:
+    console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
+    for item in file_errors:
+        if not isinstance(item, tuple) or len(item) < 2:
+            continue
+        file_path, error = item[0], item[1]
+        console.print(f"[yellow]Error checking {file_path}: {str(error)}[/yellow]")
+    for file_path in files:
+        console.print(f"[green]Found executable: {file_path}[/green]")
+
+
 def find_executable_files_by_magic(
     directory: str | Path, recursive: bool = False, verbose: bool = False
 ) -> list[Path]:
@@ -171,32 +202,16 @@ def find_executable_files_by_magic(
         magic_module=magic_module,
     )
 
-    for message in init_errors:
-        if message.startswith("Error initializing magic:"):
-            logger.error("%s; falling back to file extension detection", message)
-            console.print(f"[red]{message}[/red]")
-            console.print("[yellow]Falling back to file extension detection[/yellow]")
-            return []
-        logger.warning("%s", message)
-        console.print(f"[yellow]{message}[/yellow]")
+    if _report_magic_init_errors(init_errors):
+        return []
 
     # Log every discovery error to the persistent log, not only to the console
     # under --verbose: a file dropped during discovery (unreadable, permissions)
     # would otherwise leave no trace in a non-verbose batch run.
-    for item in file_errors:
-        if not isinstance(item, tuple) or len(item) < 2:
-            continue
-        logger.warning("Error checking %s during discovery: %s", item[0], item[1])
+    _log_discovery_file_errors(file_errors)
 
     if verbose:
-        console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
-        for item in file_errors:
-            if not isinstance(item, tuple) or len(item) < 2:
-                continue
-            file_path, error = item[0], item[1]
-            console.print(f"[yellow]Error checking {file_path}: {str(error)}[/yellow]")
-        for file_path in files:
-            console.print(f"[green]Found executable: {file_path}[/green]")
+        _print_verbose_discovery(files, file_errors, scanned)
 
     return files
 
