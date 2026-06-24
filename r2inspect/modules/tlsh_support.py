@@ -137,6 +137,41 @@ def calculate_function_tlsh(host: TlshHost, logger: logging.Logger) -> dict[str,
     return function_hashes
 
 
+def _compare_section_pair(
+    host: TlshHost, name1: str, hash1: str, name2: str, hash2: Any, threshold: int
+) -> dict[str, Any] | None:
+    if not isinstance(hash2, str) or not hash2:
+        return None
+    similarity = host.compare_tlsh(hash1, hash2)
+    if similarity is None or similarity > threshold:
+        return None
+    return {
+        "section1": name1,
+        "section2": name2,
+        "similarity_score": similarity,
+        "hash1": hash1,
+        "hash2": hash2,
+    }
+
+
+def _collect_similar_pairs(
+    host: TlshHost, section_hashes: dict[str, Any], threshold: int
+) -> list[dict[str, Any]]:
+    similar_pairs: list[dict[str, Any]] = []
+    section_names = list(section_hashes.keys())
+    for index, name1 in enumerate(section_names):
+        hash1 = section_hashes[name1]
+        if not isinstance(hash1, str) or not hash1:
+            continue
+        for name2 in section_names[index + 1 :]:
+            pair = _compare_section_pair(
+                host, name1, hash1, name2, section_hashes[name2], threshold
+            )
+            if pair is not None:
+                similar_pairs.append(pair)
+    return similar_pairs
+
+
 def find_similar_sections(
     host: TlshHost, threshold: int, logger: logging.Logger
 ) -> list[dict[str, Any]]:
@@ -147,27 +182,7 @@ def find_similar_sections(
         section_hashes = analysis.get("section_tlsh", {})
         if not isinstance(section_hashes, dict):
             return []
-        similar_pairs: list[dict[str, Any]] = []
-        section_names = list(section_hashes.keys())
-        for index, name1 in enumerate(section_names):
-            hash1 = section_hashes[name1]
-            if not isinstance(hash1, str) or not hash1:
-                continue
-            for name2 in section_names[index + 1 :]:
-                hash2 = section_hashes[name2]
-                if not isinstance(hash2, str) or not hash2:
-                    continue
-                similarity = host.compare_tlsh(hash1, hash2)
-                if similarity is not None and similarity <= threshold:
-                    similar_pairs.append(
-                        {
-                            "section1": name1,
-                            "section2": name2,
-                            "similarity_score": similarity,
-                            "hash1": hash1,
-                            "hash2": hash2,
-                        }
-                    )
+        similar_pairs = _collect_similar_pairs(host, section_hashes, threshold)
         return sorted(similar_pairs, key=lambda item: item["similarity_score"])
     except Exception as exc:
         logger.error("Error finding similar sections: %s", exc)
