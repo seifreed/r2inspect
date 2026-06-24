@@ -175,8 +175,7 @@ def _jaccard_similarity(bits1: set[int], bits2: set[int]) -> float:
     return len(bits1 & bits2) / len(bits1 | bits2)
 
 
-def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
-    """Calculate Jaccard similarity between two bloom filters."""
+def _coerce_bloom_bit_lists(bloom1: Any, bloom2: Any) -> tuple[list[Any], list[Any]] | None:
     bit_array_1 = get_bloom_bits(bloom1)
     bit_array_2 = get_bloom_bits(bloom2)
     if (
@@ -185,12 +184,20 @@ def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
         or not isinstance(bit_array_1, Iterable)
         or not isinstance(bit_array_2, Iterable)
     ):
-        return 0.0
+        return None
     bits1_raw = list(bit_array_1)
     bits2_raw = list(bit_array_2)
     if not all(isinstance(bit, (bool, int)) for bit in bits1_raw + bits2_raw):
-        return 0.0
+        return None
+    return bits1_raw, bits2_raw
 
+
+def calculate_bloom_similarity(bloom1: Any, bloom2: Any) -> float:
+    """Calculate Jaccard similarity between two bloom filters."""
+    bit_lists = _coerce_bloom_bit_lists(bloom1, bloom2)
+    if bit_lists is None:
+        return 0.0
+    bits1_raw, bits2_raw = bit_lists
     bits1 = {i for i, bit in enumerate(bits1_raw) if bit}
     bits2 = {i for i, bit in enumerate(bits2_raw) if bit}
     return _jaccard_similarity(bits1, bits2)
