@@ -3,6 +3,7 @@ import re
 from typing import Any
 
 from ..abstractions import BaseAnalyzer
+from ..abstractions.coercion_support import coerce_list
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.services.import_analysis import (
     analyze_dll_dependencies as analyze_dll_dependencies_domain,
@@ -149,35 +150,38 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 "suspicious_patterns": [],
             }
 
+    def _imported_api_names(self) -> list[str]:
+        names: list[str] = []
+        for imp in self.get_imports():
+            if not isinstance(imp, dict):
+                continue
+            name = imp.get("name")
+            if isinstance(name, str) and name:
+                names.append(name)
+        return names
+
+    def _collect_missing_apis(
+        self, strings: Any, imported_apis: list[str], missing: list[str]
+    ) -> None:
+        for string_info in coerce_list(strings):
+            if not isinstance(string_info, dict):
+                continue
+            string_val = string_info.get("string", "")
+            if not isinstance(string_val, str) or not string_val:
+                continue
+            if not self._is_candidate_api_string(string_val, imported_apis):
+                continue
+            if self._matches_known_api(string_val):
+                missing.append(string_val)
+
     def get_missing_imports(self) -> list[str]:
-        missing = []
-
+        missing: list[str] = []
         try:
-            # Get all string references that look like API calls
+            imported_apis = self._imported_api_names()
             strings = self._get_via_adapter("get_strings", "izj")
-            imported_apis = []
-            for imp in self.get_imports():
-                if not isinstance(imp, dict):
-                    continue
-                name = imp.get("name")
-                if isinstance(name, str) and name:
-                    imported_apis.append(name)
-
-            if strings:
-                for string_info in strings:
-                    if not isinstance(string_info, dict):
-                        continue
-                    string_val = string_info.get("string", "")
-                    if not isinstance(string_val, str) or not string_val:
-                        continue
-                    if not self._is_candidate_api_string(string_val, imported_apis):
-                        continue
-                    if self._matches_known_api(string_val):
-                        missing.append(string_val)
-
+            self._collect_missing_apis(strings, imported_apis, missing)
         except Exception as exc:
             logger.error("Error detecting missing imports: %s", exc)
-
         return list(dict.fromkeys(missing))  # Remove duplicates while preserving order
 
     def _is_candidate_api_string(self, string_val: str, imported_apis: list[str]) -> bool:
