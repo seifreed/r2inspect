@@ -3,12 +3,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Any
 
 from rich.table import Table
 
-from ..abstractions.coercion_support import coerce_int
+from ..abstractions.coercion_support import coerce_int, coerce_list
 from .display_base import STATUS_AVAILABLE, STATUS_NOT_AVAILABLE, UNKNOWN_ERROR
 from .display_sections_common import Results, _get_console
 from .presenter import get_section as _get_section
@@ -50,26 +49,22 @@ def _add_rich_header_entries(table: Table, rich_header_info: dict[str, Any]) -> 
     if richpe_hash:
         table.add_row("RichPE Hash", richpe_hash)
 
-    compilers = rich_header_info.get("compilers", [])
-    if isinstance(compilers, list):
-        normalized_compilers = compilers
-    elif isinstance(compilers, (dict, str, bytes)) or not isinstance(compilers, Iterable):
-        normalized_compilers = []
-    else:
-        normalized_compilers = list(compilers)
+    normalized_compilers = coerce_list(rich_header_info.get("compilers", []))
     table.add_row("Compiler Entries", str(len(normalized_compilers)))
 
     if normalized_compilers:
-        compiler_summary = []
-        for compiler in normalized_compilers[:5]:
-            if not isinstance(compiler, dict):
-                continue
-            name = compiler.get("compiler_name", "Unknown")
-            count = compiler.get("count", 0)
-            build = compiler.get("build_number", 0)
-            compiler_summary.append(f"{name} (Build {build}): {count}")
+        table.add_row("Compilers Used", "\n".join(_compiler_summary_lines(normalized_compilers)))
 
-        if len(normalized_compilers) > 5:
-            compiler_summary.append(f"... and {len(normalized_compilers) - 5} more")
 
-        table.add_row("Compilers Used", "\n".join(compiler_summary))
+def _compiler_summary_lines(compilers: list[Any]) -> list[str]:
+    summary = []
+    for compiler in compilers[:5]:
+        if not isinstance(compiler, dict):
+            continue
+        name = compiler.get("compiler_name", "Unknown")
+        count = compiler.get("count", 0)
+        build = compiler.get("build_number", 0)
+        summary.append(f"{name} (Build {build}): {count}")
+    if len(compilers) > 5:
+        summary.append(f"... and {len(compilers) - 5} more")
+    return summary
