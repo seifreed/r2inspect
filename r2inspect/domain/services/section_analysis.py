@@ -94,19 +94,26 @@ def _coerce_entropy(value: Any) -> float:
         return 0.0
 
 
+def _size_ratio_indicator(vsize: int, raw_size: int) -> str | None:
+    ratio = vsize / raw_size
+    size_diff_ratio = abs(vsize - raw_size) / max(vsize, raw_size)
+    if ratio > 10:
+        return f"Suspicious size ratio: Virtual {ratio:.1f}x larger than raw"
+    if ratio > 5:
+        return f"Large size ratio: Virtual {ratio:.1f}x larger than raw"
+    if size_diff_ratio > 0.8:
+        return f"Large virtual/raw size difference ({size_diff_ratio:.1f})"
+    return None
+
+
 def build_size_indicators(vsize: int, raw_size: int) -> list[str]:
     indicators: list[str] = []
     if not isinstance(vsize, int) or not isinstance(raw_size, int):
         return indicators
     if vsize > 0 and raw_size > 0:
-        ratio = vsize / raw_size
-        size_diff_ratio = abs(vsize - raw_size) / max(vsize, raw_size)
-        if ratio > 10:
-            indicators.append(f"Suspicious size ratio: Virtual {ratio:.1f}x larger than raw")
-        elif ratio > 5:
-            indicators.append(f"Large size ratio: Virtual {ratio:.1f}x larger than raw")
-        elif size_diff_ratio > 0.8:
-            indicators.append(f"Large virtual/raw size difference ({size_diff_ratio:.1f})")
+        ratio_indicator = _size_ratio_indicator(vsize, raw_size)
+        if ratio_indicator:
+            indicators.append(ratio_indicator)
     if raw_size < 100 and raw_size > 0:
         indicators.append("Very small section")
     if raw_size > 52428800:
