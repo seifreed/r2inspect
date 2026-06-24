@@ -9,7 +9,7 @@ from ..domain.services.rich_header import (
     calculate_richpe_hash,
     parse_compiler_entries,
 )
-from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..infrastructure.analyzer_runner import run_analyzer_on_file
 from ..infrastructure.logging import get_logger
 from .rich_header_debug import RichHeaderDebugMixin
 from .rich_header_direct import RichHeaderDirectMixin

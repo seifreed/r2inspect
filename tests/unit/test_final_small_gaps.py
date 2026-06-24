@@ -16,7 +16,7 @@ import pytest
 
 import r2inspect.pipeline.stages_format as _sf_mod
 import r2inspect.registry.analyzer_registry as _ar_mod
-import r2inspect.adapters.analyzer_runner as _arn_mod
+import r2inspect.infrastructure.analyzer_runner as _arn_mod
 from r2inspect.config import Config
 from r2inspect.config_store import ConfigStore
 from r2inspect.core.inspector import InspectorExecutionMixin
@@ -33,7 +33,7 @@ from r2inspect.modules.simhash_analyzer import SimHashAnalyzer
 from r2inspect.modules.string_analyzer import StringAnalyzer
 from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage
 from r2inspect.registry.default_registry import create_default_registry
-from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
+from r2inspect.infrastructure.analyzer_runner import run_analyzer_on_file
 from r2inspect.infrastructure.memory import MemoryAwareAnalyzer, MemoryLimits, MemoryMonitor
 
 # ---------------------------------------------------------------------------

@@ -426,7 +426,7 @@ def test_batch_run_quiet_mode(tmp_path):
 # analyzer_runner (application re-export of utils)
 # ---------------------------------------------------------------------------
 
-from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
+from r2inspect.infrastructure.analyzer_runner import run_analyzer_on_file
 
 
 def test_run_analyzer_on_file_returns_none_for_nonexistent():

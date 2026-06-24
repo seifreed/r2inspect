@@ -166,6 +166,19 @@ def test_pipeline_does_not_import_adapters_directly() -> None:
     assert not failures, "Pipeline adapter import violations:\n" + "\n".join(failures)
 
 
+def test_modules_do_not_import_adapters_directly() -> None:
+    module_paths = _python_files(PACKAGE_ROOT / "modules")
+
+    failures = _violations(
+        module_paths,
+        lambda _path, imported: imported.startswith("r2inspect.adapters"),
+    )
+
+    assert not failures, "Analyzer modules must reach r2 only through the injected " + (
+        "adapter/CommandHelperMixin, not by importing adapters:\n" + "\n".join(failures)
+    )
+
+
 def test_pipeline_does_not_import_utils() -> None:
     pipeline_paths = _python_files(PACKAGE_ROOT / "pipeline")
 

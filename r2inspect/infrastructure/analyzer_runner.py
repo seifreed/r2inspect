@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
-from .r2pipe_context import open_r2_adapter
+from ..adapters.r2pipe_context import open_r2_adapter
 
 AnalyzerT = TypeVar("AnalyzerT")
 

@@ -10,7 +10,7 @@ from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.services.function_analysis import (
     _coerce_function_size as _coerce_function_size_impl,
 )
-from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..infrastructure.analyzer_runner import run_analyzer_on_file
 from ..domain.services.binary_helpers import clean_function_name
 from ..infrastructure.logging import get_logger
 from .binbloom_mixin import BinbloomMixin

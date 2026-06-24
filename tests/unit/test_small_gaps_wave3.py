@@ -84,7 +84,7 @@ def test_run_analysis_method_returns_none_when_no_match():
 # ---------------------------------------------------------------------------
 # 3. adapters/analyzer_runner.py - import path smoke
 # ---------------------------------------------------------------------------
-import r2inspect.adapters.analyzer_runner as _analyzer_runner_mod
+import r2inspect.infrastructure.analyzer_runner as _analyzer_runner_mod
 
 
 def test_analyzer_runner_module_importable():
@@ -206,7 +206,7 @@ def test_silent_cmdj_none_instance_returns_default():
 # ---------------------------------------------------------------------------
 # 7. analyzer_runner shim compatibility
 # ---------------------------------------------------------------------------
-import r2inspect.adapters.analyzer_runner as _app_runner_mod
+import r2inspect.infrastructure.analyzer_runner as _app_runner_mod
 
 
 def test_application_analyzer_runner_importable():

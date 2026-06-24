@@ -97,7 +97,7 @@ def test_get_ssdeep_returns_none_when_import_blocked() -> None:
 
 def test_run_analyzer_on_file_executes_analyze_with_real_file() -> None:
     """run_analyzer_on_file opens adapter and invokes analyze(); lines 27-30 execute."""
-    from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
+    from r2inspect.infrastructure.analyzer_runner import run_analyzer_on_file
 
     class SimpleAnalyzer:
         def __init__(self, adapter, filepath):
@@ -117,7 +117,7 @@ def test_run_analyzer_on_file_executes_analyze_with_real_file() -> None:
 
 def test_run_analyzer_on_file_returns_none_when_analyze_missing() -> None:
     """run_analyzer_on_file returns None when the analyzer has no analyze method."""
-    from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
+    from r2inspect.infrastructure.analyzer_runner import run_analyzer_on_file
 
     class NoAnalyzeMethod:
         def __init__(self, adapter, filepath):
@@ -133,7 +133,7 @@ def test_run_analyzer_on_file_returns_none_when_analyze_missing() -> None:
 
 def test_run_analyzer_on_file_returns_none_on_bad_path() -> None:
     """run_analyzer_on_file returns None when the file path does not exist."""
-    from r2inspect.adapters.analyzer_runner import run_analyzer_on_file
+    from r2inspect.infrastructure.analyzer_runner import run_analyzer_on_file
 
     class SimpleAnalyzer:
         def __init__(self, adapter, filepath):

@@ -9,7 +9,7 @@ from typing import Any
 
 from .binlex_support import BinlexHost
 
-from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..infrastructure.analyzer_runner import run_analyzer_on_file
 from ..domain.services.binlex import (
     calculate_binary_signature,
     extract_tokens_from_ops,

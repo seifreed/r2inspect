@@ -7,7 +7,7 @@ from ..abstractions.coercion_support import coerce_list
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import HashingStrategy, availability_result
 from ..abstractions.result_builder import init_result, mark_unavailable
-from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..infrastructure.analyzer_runner import run_analyzer_on_file
 from ..domain.hashing.simhash_compare import compare_hashes as _compare_hashes_impl
 from ..domain.services.binary_helpers import extract_printable_strings
 from ..domain.services.simhash import (

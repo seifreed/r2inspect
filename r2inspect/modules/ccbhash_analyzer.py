@@ -6,7 +6,7 @@ from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
-from ..adapters.analyzer_runner import run_analyzer_on_file
+from ..infrastructure.analyzer_runner import run_analyzer_on_file
 from ..infrastructure.logging import get_logger
 from .ccbhash_support import (
     analyze_functions as build_function_analysis,
