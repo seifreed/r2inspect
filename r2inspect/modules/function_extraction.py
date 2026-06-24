@@ -35,17 +35,22 @@ def collect_valid_functions(
     if not functions:
         logger.debug("No functions found with 'aflj' command")
         return []
-    valid_functions = []
-    for func in functions:
-        if not isinstance(func, dict):
-            continue
-        addr = coerce_int(func.get("addr", 0))
-        size = coerce_int(func.get("size", 0))
-        if addr > 0 and size > 0:
-            func["addr"] = addr
-            func["size"] = size
-            if clean_names and isinstance(func.get("name"), str) and func.get("name"):
-                func["name"] = clean_function_name(func["name"])
-            valid_functions.append(func)
+    valid_functions = [
+        valid for func in functions if (valid := _valid_function(func, clean_names)) is not None
+    ]
     logger.debug("Extracted %s valid functions", len(valid_functions))
     return valid_functions
+
+
+def _valid_function(func: Any, clean_names: bool) -> dict[str, Any] | None:
+    if not isinstance(func, dict):
+        return None
+    addr = coerce_int(func.get("addr", 0))
+    size = coerce_int(func.get("size", 0))
+    if addr <= 0 or size <= 0:
+        return None
+    func["addr"] = addr
+    func["size"] = size
+    if clean_names and isinstance(func.get("name"), str) and func.get("name"):
+        func["name"] = clean_function_name(func["name"])
+    return func
