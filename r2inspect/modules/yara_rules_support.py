@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import signal
 import threading
 import stat as stat_module
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
-
 
 _YARA_RULE_SUFFIXES = {".yar", ".yara", ".rule", ".rules"}
 YARA_RULE_PATTERNS = ("*.yar", "*.yara", "*.rule", "*.rules")
@@ -90,28 +88,38 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
                 continue
             else:
                 string_source = list(strings)
+            match_strings: list[dict[str, Any]] = []
             match_info = {
                 "rule": str(getattr(match, "rule", "")),
                 "namespace": str(getattr(match, "namespace", "")),
-                "tags": list(tags)
-                if isinstance(tags, list)
-                else []
-                if isinstance(tags, (dict, str, bytes)) or not isinstance(tags, Iterable)
-                else list(tags),
+                "tags": (
+                    list(tags)
+                    if isinstance(tags, list)
+                    else (
+                        []
+                        if isinstance(tags, (dict, str, bytes)) or not isinstance(tags, Iterable)
+                        else list(tags)
+                    )
+                ),
                 "meta": dict(meta) if isinstance(meta, dict) else {},
-                "strings": [],
+                "strings": match_strings,
             }
             for string_match in string_source:
-                if not hasattr(string_match, "identifier") or not hasattr(string_match, "instances"):
+                if not hasattr(string_match, "identifier") or not hasattr(
+                    string_match, "instances"
+                ):
                     continue
                 instances = getattr(string_match, "instances", [])
                 if isinstance(instances, list):
                     instance_source = instances
-                elif isinstance(instances, (dict, str, bytes)) or not isinstance(instances, Iterable):
+                elif isinstance(instances, (dict, str, bytes)) or not isinstance(
+                    instances, Iterable
+                ):
                     continue
                 else:
                     instance_source = list(instances)
-                string_info = {"identifier": string_match.identifier, "instances": []}
+                string_instances: list[dict[str, Any]] = []
+                string_info = {"identifier": string_match.identifier, "instances": string_instances}
                 for instance in instance_source:
                     if not hasattr(instance, "offset") or not hasattr(instance, "matched_data"):
                         continue
@@ -123,10 +131,10 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
                         matched_data = str(matched_data_raw)
                         default_length = len(matched_data)
                     length = getattr(instance, "length", default_length)
-                    string_info["instances"].append(
+                    string_instances.append(
                         {"offset": instance.offset, "matched_data": matched_data, "length": length}
                     )
-                match_info["strings"].append(string_info)
+                match_strings.append(string_info)
             matches.append(match_info)
     except Exception as exc:
         logger.error("Error processing YARA matches: %s", exc)

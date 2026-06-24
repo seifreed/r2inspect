@@ -191,7 +191,7 @@ class SectionAnalyzer(CommandHelperMixin, BaseAnalyzer):
         for func in functions:
             if not isinstance(func, dict):
                 continue
-            addr = func.get("offset", func.get("addr"))
+            addr: Any = func.get("offset", func.get("addr"))
             try:
                 addr_int = int(addr, 0) if isinstance(addr, str) else int(addr)
             except (TypeError, ValueError):

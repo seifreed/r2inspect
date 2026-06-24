@@ -17,7 +17,7 @@ def get_security_directory(cmdj: Any) -> dict[str, Any] | None:
 def _validate_security_dir(
     security_dir: dict[str, Any], result: dict[str, Any]
 ) -> tuple[int, int] | None:
-    errors = result.get("errors")
+    errors: Any = result.get("errors")
     if isinstance(errors, list):
         result["errors"] = errors
     else:

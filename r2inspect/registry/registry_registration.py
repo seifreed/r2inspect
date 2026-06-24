@@ -270,4 +270,4 @@ class AnalyzerRegistryRegistrationMixin:
         return False
 
     def is_registered(self, name: str) -> bool:
-        return name in self
+        return name in self._analyzers

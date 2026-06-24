@@ -7,6 +7,8 @@ use at the serialization boundary. Use the domain dataclasses for internal
 logic; use these schemas when validating or emitting structured output.
 """
 
+from typing import cast
+
 from pydantic import BaseModel, Field, field_validator
 
 from .base import AnalysisResultBase
@@ -22,7 +24,7 @@ from ..domain.format_types import (
 class _ToDictModelMixin:
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary representation."""
-        return self.model_dump()
+        return cast(BaseModel, self).model_dump()
 
 
 class SectionInfo(_ToDictModelMixin, _SectionMixin, BaseModel):

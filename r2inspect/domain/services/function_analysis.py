@@ -71,14 +71,16 @@ def _function_type_counts(functions: list[dict[str, Any]]) -> dict[str, int]:
     return function_types
 
 
+def _function_label(func: dict[str, Any]) -> str:
+    name = func.get("name")
+    if isinstance(name, str) and name:
+        return name
+    return f"func_{func.get('offset', '?')}"
+
+
 def _largest_functions(functions: list[dict[str, Any]]) -> list[tuple[str, int]]:
     functions_with_sizes: list[tuple[str, int]] = [
-        (
-            f.get("name")
-            if isinstance(f.get("name"), str) and f.get("name")
-            else f"func_{f.get('offset', '?')}",
-            _coerce_function_size(f.get("size")),
-        )
+        (_function_label(f), _coerce_function_size(f.get("size")))
         for f in functions
         if _coerce_function_size(f.get("size")) > 0
     ]
@@ -151,13 +153,9 @@ def build_machoc_summary(machoc_hashes: dict[str, str] | None) -> dict[str, Any]
     if not isinstance(similarities, dict):
         similarities = {}
     similarities = {
-        hash_value: funcs
-        for hash_value, funcs in similarities.items()
-        if isinstance(funcs, list)
+        hash_value: funcs for hash_value, funcs in similarities.items() if isinstance(funcs, list)
     }
-    valid_hashes = {
-        value for value in machoc_hashes.values() if isinstance(value, str) and value
-    }
+    valid_hashes = {value for value in machoc_hashes.values() if isinstance(value, str) and value}
     summary: dict[str, Any] = {
         "total_functions_hashed": len(machoc_hashes),
         "unique_machoc_hashes": len(valid_hashes),

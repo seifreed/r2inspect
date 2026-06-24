@@ -93,7 +93,9 @@ class ResourceParsingMixin:
 
     def _get_rsrc_section(self) -> dict[str, Any] | None:
         for section in coerce_list(self._cmdj("iSj", [])):
-            name = section.get("name") if isinstance(section, dict) else None
+            if not isinstance(section, dict):
+                continue
+            name = section.get("name")
             if isinstance(name, str) and ".rsrc" in name:
                 return section
         return None
