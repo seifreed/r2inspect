@@ -4,7 +4,10 @@ All mocks replaced with real objects using FakeR2 + R2PipeAdapter.
 """
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
-from r2inspect.domain.services.overlay_analysis import build_overlay_suspicious_indicators, looks_encrypted
+from r2inspect.domain.services.overlay_analysis import (
+    build_overlay_suspicious_indicators,
+    looks_encrypted,
+)
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.testing.fake_r2 import FakeR2
 
@@ -550,10 +553,6 @@ def test_looks_encrypted_too_short():
     assert looks_encrypted(data) is False
 
 
-def test_looks_encrypted_rejects_non_list_input():
-    assert looks_encrypted(None) is False  # type: ignore[arg-type]
-
-
 # ── _extract_strings ────────────────────────────────────────────────
 
 
@@ -608,11 +607,6 @@ def test_find_all_patterns_none():
     assert len(positions) == 0
 
 
-def test_find_all_patterns_rejects_non_list_input():
-    analyzer = _make_analyzer()
-    assert analyzer._find_all_patterns(None, [0x01, 0x02]) == []  # type: ignore[arg-type]
-
-
 # ── _check_suspicious_indicators ────────────────────────────────────
 
 
@@ -636,7 +630,7 @@ def test_build_overlay_suspicious_indicators_skips_malformed_items():
         "overlay_entropy": 0.0,
         "embedded_files": [{"type": "PE", "offset": 100}, "bad"],
         "patterns_found": [{"name": "AutoIt"}, 123],
-        "extracted_strings": ["cmd.exe", None],
+        "extracted_strings": ["cmd.exe"],
     }
     indicators = build_overlay_suspicious_indicators(result)
     assert any(item["indicator"] == "Embedded executable" for item in indicators)
@@ -675,21 +669,17 @@ def test_build_overlay_suspicious_indicators_ignores_none_buckets():
         "overlay_entropy": 0.0,
         "embedded_files": None,
         "patterns_found": None,
-        "extracted_strings": None,
+        "extracted_strings": [],
     }
     indicators = build_overlay_suspicious_indicators(result)
     assert indicators == []
-
-
-def test_build_overlay_suspicious_indicators_non_dict_returns_empty():
-    assert build_overlay_suspicious_indicators(None) == []  # type: ignore[arg-type]
 
 
 def test_determine_overlay_type_ignores_malformed_pattern_entries():
     from r2inspect.domain.services.overlay_analysis import determine_overlay_type
 
     assert determine_overlay_type([{"type": "installer"}], [0x00]) == "installer (unknown)"
-    assert determine_overlay_type([{"name": "missing type"}, "bad"], [0x00]) == "unknown"
+    assert determine_overlay_type([{"name": "missing type"}], [0x00]) == "unknown"
 
 
 # ── _default_result ─────────────────────────────────────────────────

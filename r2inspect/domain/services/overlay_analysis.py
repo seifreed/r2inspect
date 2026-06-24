@@ -52,14 +52,10 @@ SUSPICIOUS_OVERLAY_STRINGS: tuple[str, ...] = (
 
 
 def calculate_overlay_entropy(data: list[int]) -> float:
-    if not isinstance(data, list):
-        return 0.0
     return round(entropy_from_ints(data), 4)
 
 
 def has_pattern(data: list[int], pattern: list[int]) -> bool:
-    if not isinstance(data, list) or not isinstance(pattern, list):
-        return False
     pattern_len = len(pattern)
     data_len = len(data)
     for index in range(data_len - pattern_len + 1):
@@ -70,8 +66,6 @@ def has_pattern(data: list[int], pattern: list[int]) -> bool:
 
 def find_all_patterns(data: list[int], pattern: list[int]) -> list[int]:
     positions: list[int] = []
-    if not isinstance(data, list) or not isinstance(pattern, list):
-        return positions
     pattern_len = len(pattern)
     data_len = len(data)
     for index in range(data_len - pattern_len + 1):
@@ -81,8 +75,6 @@ def find_all_patterns(data: list[int], pattern: list[int]) -> list[int]:
 
 
 def looks_encrypted(data: list[int]) -> bool:
-    if not isinstance(data, list):
-        return False
     if len(data) < 256:
         return False
     entropy = calculate_overlay_entropy(data[:256])
@@ -93,8 +85,6 @@ def looks_encrypted(data: list[int]) -> bool:
 
 def detect_overlay_patterns(data: list[int]) -> list[dict[str, Any]]:
     patterns: list[dict[str, Any]] = []
-    if not isinstance(data, list):
-        return patterns
     for signature in INSTALLER_SIGNATURES:
         if has_pattern(data, signature["pattern"]):
             patterns.append({"type": "installer", "name": signature["name"], "confidence": "high"})
@@ -127,8 +117,6 @@ def _overlay_type_from_entropy(data: list[int]) -> str:
 def _dominant_pattern_type(patterns: list[dict[str, Any]]) -> str:
     type_counts: dict[str, int] = {}
     for pattern in patterns:
-        if not isinstance(pattern, dict):
-            continue
         pattern_type = pattern.get("type")
         if not isinstance(pattern_type, str):
             continue
@@ -149,8 +137,6 @@ def determine_overlay_type(patterns: list[dict[str, Any]], data: list[int]) -> s
 
 def detect_embedded_files(data: list[int]) -> list[dict[str, Any]]:
     signatures: list[dict[str, Any]] = []
-    if not isinstance(data, list):
-        return signatures
     for signature in FILE_SIGNATURES:
         for position in find_all_patterns(data, signature["magic"]):
             signatures.append(
@@ -173,12 +159,8 @@ def _indicator(indicator: str, details: str, severity: str) -> dict[str, str]:
 
 
 def _matching_suspicious_strings(strings: list[str]) -> list[str]:
-    if not isinstance(strings, list):
-        return []
     matches: list[str] = []
     for string in strings:
-        if not isinstance(string, str):
-            continue
         lowered = string.lower()
         if any(suspicious.lower() in lowered for suspicious in SUSPICIOUS_OVERLAY_STRINGS):
             matches.append(string)
@@ -218,8 +200,6 @@ def _autoit_indicators(patterns_found: Any) -> list[dict[str, Any]]:
 
 
 def build_overlay_suspicious_indicators(result: dict[str, Any]) -> list[dict[str, Any]]:
-    if not isinstance(result, dict):
-        return []
     suspicious: list[dict[str, Any]] = []
     overlay_size = coerce_number(result.get("overlay_size"))
     overlay_entropy = coerce_number(result.get("overlay_entropy"))
