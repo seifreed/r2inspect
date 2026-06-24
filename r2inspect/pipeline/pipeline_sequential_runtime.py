@@ -16,6 +16,17 @@ logger = logging.getLogger(__name__)
 ProgressCallback = Callable[[str, int, int], None]
 
 
+def _invoke_progress_callback(
+    callback: ProgressCallback | None, stage_name: str, idx: int, total: int
+) -> None:
+    if not callback:
+        return
+    try:
+        callback(stage_name, idx, total)
+    except Exception as exc:
+        logger.debug("Progress callback failed for %s (%s/%s): %s", stage_name, idx, total, exc)
+
+
 def execute_sequential_pipeline(
     pipeline: AnalysisPipeline,
     options: dict[str, Any] | None = None,
@@ -39,17 +50,7 @@ def execute_sequential_pipeline(
     effective_callback = progress_callback or getattr(pipeline, "_progress_callback", None)
 
     for idx, stage in enumerate(pipeline.stages, 1):
-        if effective_callback:
-            try:
-                effective_callback(stage.name, idx, total_stages)
-            except Exception as exc:
-                logger.debug(
-                    "Progress callback failed for %s (%s/%s): %s",
-                    stage.name,
-                    idx,
-                    total_stages,
-                    exc,
-                )
+        _invoke_progress_callback(effective_callback, stage.name, idx, total_stages)
         if not stage.can_execute(completed, failed_stages):
             logger.warning("Skipping stage '%s': unsatisfied dependencies", stage.name)
             error_result = {
