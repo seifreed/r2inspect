@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from r2inspect.domain.formats.pe_info import (
     PE32_PLUS,
@@ -18,7 +17,6 @@ from r2inspect.domain.formats.pe_info import (
     normalize_resource_entries,
     parse_version_info_text,
 )
-
 
 # ---------------------------------------------------------------------------
 # determine_pe_file_type() - lines 16, 21, 24, 25, 27
