@@ -50,8 +50,6 @@ def create_instruction_signature(
 
 def build_signature_components(instructions: list[str]) -> list[str]:
     """Build the logical components used to create a signature."""
-    if not isinstance(instructions, list):
-        instructions = []
     instructions = [instr for instr in instructions if isinstance(instr, str) and instr]
     unique_instructions = sorted(set(instructions))
     freq_patterns = build_frequency_patterns(instructions, unique_instructions)
@@ -69,8 +67,6 @@ def build_frequency_patterns(instructions: list[str], unique_instructions: list[
 
 
 def build_unique_bigrams(instructions: list[str]) -> list[str]:
-    if not isinstance(instructions, list):
-        return []
     bigrams = [f"{instructions[i]}→{instructions[i + 1]}" for i in range(len(instructions) - 1)]
     return sorted(set(bigrams))
 
@@ -79,8 +75,6 @@ def count_unique_signatures(function_signatures: dict[str, dict[str, Any]]) -> i
     """Count unique function signatures."""
     signatures: set[str] = set()
     for sig in function_signatures.values():
-        if not isinstance(sig, dict):
-            continue
         signature = sig.get("signature")
         if isinstance(signature, str) and signature:
             signatures.add(signature)
@@ -109,11 +103,7 @@ def group_function_names_by_signature(
 ) -> dict[str, list[str]]:
     """Bucket cleaned function names by their shared signature string."""
     signature_groups: dict[str, list[str]] = defaultdict(list)
-    if not isinstance(function_signatures, dict):
-        return signature_groups
     for func_name, func_data in function_signatures.items():
-        if not isinstance(func_data, dict):
-            continue
         signature = func_data.get("signature")
         if not isinstance(signature, str) or not signature:
             continue

@@ -276,11 +276,6 @@ def test_group_functions_html_entities():
     assert "func 2" in all_names
 
 
-def test_group_functions_by_signature_rejects_non_dict_input():
-    analyzer = BinbloomAnalyzer(make_adapter(), filepath="/tmp/test.bin")
-    assert analyzer._group_functions_by_signature(None) == {}  # type: ignore[arg-type]
-
-
 # --- _build_similar_groups ---
 
 

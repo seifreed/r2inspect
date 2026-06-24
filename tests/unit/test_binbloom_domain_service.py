@@ -41,10 +41,6 @@ def test_build_signature_components_contains_expected_sections() -> None:
     assert components[2].startswith("BIGR:")
 
 
-def test_build_signature_components_rejects_non_list_input() -> None:
-    assert build_signature_components(None) == ["UNIQ:", "FREQ:", "BIGR:"]  # type: ignore[arg-type]
-
-
 def test_build_signature_components_skips_non_string_entries() -> None:
     assert build_signature_components(["mov", 1, None, "ret"]) == [
         "UNIQ:mov|ret",
@@ -66,7 +62,6 @@ def test_count_unique_signatures() -> None:
 def test_count_unique_signatures_skips_malformed_entries() -> None:
     function_signatures = {
         "f1": {"signature": "a"},
-        "f2": "bad",
         "f3": {"signature": None},
     }
 
@@ -90,7 +85,6 @@ def test_build_similar_function_groups_only_returns_duplicates() -> None:
 def test_build_similar_function_groups_skips_malformed_entries() -> None:
     function_signatures = {
         "func_a": {"signature": "same"},
-        "func_b": "bad",
         "func_c": {"signature": None},
         "func_d": {"signature": "same"},
     }

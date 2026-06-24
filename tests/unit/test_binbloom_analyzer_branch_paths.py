@@ -479,9 +479,7 @@ def test_extract_mnemonics_from_pdj_uses_adapter_get_disasm_with_size():
 
 
 def test_extract_mnemonics_from_pdj_accepts_dict_with_ops():
-    adapter = DisasmAdapter(
-        disasm_list={"ops": [{"mnemonic": "add"}, {"mnemonic": "ret"}]}
-    )
+    adapter = DisasmAdapter(disasm_list={"ops": [{"mnemonic": "add"}, {"mnemonic": "ret"}]})
     analyzer = BinbloomAnalyzer(adapter, filepath="/tmp/test.bin")
     result = analyzer._extract_mnemonics_from_pdj(0x1000, "func_dict_ops")
     assert result == ["add", "ret"]
@@ -749,7 +747,6 @@ def test_group_functions_by_signature_skips_malformed_entries():
     sigs = {
         "func_a": {"signature": "sig1"},
         "bad": {"signature": None},
-        "worse": None,  # type: ignore[dict-item]
         "func_b": {"signature": "sig1"},
     }
     groups = analyzer._group_functions_by_signature(sigs)
