@@ -145,13 +145,6 @@ def test_individual_suspicious_checks_cover_main_cases() -> None:
     )
 
 
-def test_individual_suspicious_checks_reject_non_dict_inputs() -> None:
-    assert check_resource_entropy(None) == []  # type: ignore[arg-type]
-    assert check_resource_size(None) == []  # type: ignore[arg-type]
-    assert check_resource_rcdata(None) == []  # type: ignore[arg-type]
-    assert check_resource_embedded_pe(None, None) == []  # type: ignore[arg-type]
-
-
 def test_embedded_pe_detection_uses_header_bytes() -> None:
     resource = {"name": "payload", "type_name": "RT_RCDATA", "size": 5000, "offset": 100}
 
@@ -193,8 +186,8 @@ def test_build_icon_entries_coerces_string_size_and_offset() -> None:
     assert icons == [{"type": "RT_ICON", "size": 32, "offset": 16, "entropy": 0.0}]
 
 
-def test_build_icon_entries_skips_malformed_entries() -> None:
-    icons = build_icon_entries(["bad", {"type_name": "RT_ICON", "entropy": "high"}])
+def test_build_icon_entries_coerces_non_numeric_entropy() -> None:
+    icons = build_icon_entries([{"type_name": "RT_ICON", "entropy": "high"}])
 
     assert icons == [{"type": "RT_ICON", "size": 0, "offset": 0, "entropy": 0.0}]
 
@@ -212,8 +205,8 @@ def test_build_suspicious_resources_tolerates_partial_entries() -> None:
     ]
 
 
-def test_build_suspicious_resources_skips_malformed_entries() -> None:
-    resources = ["bad", {"type_name": "RT_RCDATA", "size": 1, "entropy": "high"}]
+def test_build_suspicious_resources_ignores_benign_small_rcdata() -> None:
+    resources = [{"type_name": "RT_RCDATA", "size": 1, "entropy": "high"}]
 
     assert build_suspicious_resources(resources, lambda _: []) == []
 

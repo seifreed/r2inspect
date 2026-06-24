@@ -60,8 +60,6 @@ def build_icon_entries(resources: list[dict[str, Any]]) -> list[dict[str, Any]]:
     icons: list[dict[str, Any]] = []
 
     for resource in resources:
-        if not isinstance(resource, dict):
-            continue
         if resource.get("type_name") not in ["RT_ICON", "RT_GROUP_ICON"]:
             continue
 
@@ -171,8 +169,6 @@ def build_resource_statistics(resources: list[dict[str, Any]]) -> dict[str, Any]
 
 def check_resource_entropy(resource: dict[str, Any]) -> list[dict[str, Any]]:
     """Flag high-entropy non-icon resources."""
-    if not isinstance(resource, dict):
-        return []
     entropy = _resource_entropy(resource)
     if entropy <= 7.5:
         return []
@@ -191,8 +187,6 @@ def check_resource_entropy(resource: dict[str, Any]) -> list[dict[str, Any]]:
 
 def check_resource_size(resource: dict[str, Any]) -> list[dict[str, Any]]:
     """Flag unusually large resources."""
-    if not isinstance(resource, dict):
-        return []
     size = _resource_size(resource)
     if size <= 1024 * 1024:
         return []
@@ -207,8 +201,6 @@ def check_resource_size(resource: dict[str, Any]) -> list[dict[str, Any]]:
 
 def check_resource_rcdata(resource: dict[str, Any]) -> list[dict[str, Any]]:
     """Flag large RCDATA blobs that may carry embedded content."""
-    if not isinstance(resource, dict):
-        return []
     type_name = _resource_type_name(resource)
     size = _resource_size(resource)
     if type_name != "RT_RCDATA" or size <= 10240:
@@ -234,8 +226,6 @@ def check_resource_embedded_pe(
     resource: dict[str, Any], header_data: list[int] | None
 ) -> list[dict[str, Any]]:
     """Flag resources that appear to contain an embedded PE file."""
-    if not isinstance(resource, dict):
-        return []
     type_name = _resource_type_name(resource)
     size = _resource_size(resource)
     offset = _resource_offset(resource)
@@ -262,8 +252,6 @@ def build_suspicious_resources(
     suspicious: list[dict[str, Any]] = []
 
     for resource in resources:
-        if not isinstance(resource, dict):
-            continue
         suspicious.extend(check_resource_entropy(resource))
         suspicious.extend(check_resource_size(resource))
         suspicious.extend(check_resource_rcdata(resource))
