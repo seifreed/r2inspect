@@ -61,6 +61,12 @@ def clean_function_name(name: str) -> str:
     return name.replace("&nbsp;", " ").replace("&amp;", "&")
 
 
+def _printable_ascii_char(byte: object) -> str | None:
+    if not isinstance(byte, int) or byte < 32 or byte > 126:
+        return None
+    return chr(byte)
+
+
 def extract_printable_strings(
     data: bytes | list[int], *, min_length: int, limit: int | None = None
 ) -> list[str]:
@@ -70,18 +76,13 @@ def extract_printable_strings(
     strings: list[str] = []
     current: list[str] = []
     for byte in data:
-        if not isinstance(byte, int) or byte < 0 or byte > 0xFF:
+        char = _printable_ascii_char(byte)
+        if char is None:
             if len(current) >= min_length:
                 strings.append("".join(current))
             current = []
             continue
-        byte_val = byte
-        if byte_val < 32 or byte_val > 126:
-            if len(current) >= min_length:
-                strings.append("".join(current))
-            current = []
-            continue
-        current.append(chr(byte_val))
+        current.append(char)
     if len(current) >= min_length:
         strings.append("".join(current))
     return strings if limit is None else strings[:limit]
