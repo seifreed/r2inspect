@@ -36,6 +36,8 @@ from typing import Any
 
 import pytest
 
+from r2inspect.infrastructure import r2_command_dispatch as _dispatch
+from tests.helpers.env import env_vars
 from r2inspect.infrastructure.r2_helpers import (
     _cmd_fallback,
     _cmdj_fallback,
@@ -65,7 +67,6 @@ from r2inspect.infrastructure.r2_helpers import (
     safe_cmdj,
     safe_cmdj_any,
 )
-
 
 # ---------------------------------------------------------------------------
 # Minimal fake r2 / adapter helpers
@@ -1198,7 +1199,6 @@ def test_safe_cmdj_any_logs_cmdj_failure(caplog: pytest.LogCaptureFixture):
 
 
 def test_safe_cmdj_any_no_cmdj_method():
-    import json
 
     class NoCmdjR2:
         def cmd(self, command: str) -> str:
@@ -1206,3 +1206,44 @@ def test_safe_cmdj_any_no_cmdj_method():
 
     result = safe_cmdj_any(NoCmdjR2(), "ij", {})
     assert result == {"key": 99}
+
+
+# ---------------------------------------------------------------------------
+# Wedged-instance tracking: a timed-out r2 pipe is desynchronized, so later
+# commands must fast-fail instead of leaking one daemon thread per call.
+# ---------------------------------------------------------------------------
+
+
+class _HangingR2:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def cmd(self, command: str) -> str:
+        self.calls += 1
+        time.sleep(0.5)
+        return "never"
+
+
+def test_run_cmd_with_timeout_marks_wedged_and_fast_fails():
+    r2 = _HangingR2()
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.05"):
+        assert _dispatch._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+        assert _dispatch._is_wedged(r2) is True
+        # The pipe is wedged: a second command must not spawn another worker.
+        assert _dispatch._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+    assert r2.calls == 1
+
+
+def test_run_cmd_with_timeout_tolerates_unhashable_instance():
+    class _Unhashable:
+        __hash__ = None  # type: ignore[assignment]
+
+        def cmd(self, command: str) -> str:
+            time.sleep(0.5)
+            return "never"
+
+    r2 = _Unhashable()
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.05"):
+        # _mark_wedged swallows the unhashable TypeError; _is_wedged returns False.
+        assert _dispatch._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+    assert _dispatch._is_wedged(r2) is False
