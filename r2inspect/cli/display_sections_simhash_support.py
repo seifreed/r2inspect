@@ -14,8 +14,6 @@ from .display_sections_common import add_group_functions_row
 
 
 def _add_simhash_feature_stats(table: Table, feature_stats: dict[str, Any]) -> None:
-    if not isinstance(feature_stats, dict):
-        return
     total_features = feature_stats.get("total_features", 0)
     total_strings = feature_stats.get("total_strings", 0)
     total_opcodes = feature_stats.get("total_opcodes", 0)
@@ -80,25 +78,15 @@ def _add_simhash_function_analysis(table: Table, simhash_info: dict[str, Any]) -
 
 
 def _add_simhash_similarity_groups(table: Table, similarity_groups: list[dict[str, Any]]) -> None:
-    if isinstance(similarity_groups, list):
-        group_source = similarity_groups
-    elif isinstance(similarity_groups, (dict, str, bytes)) or not isinstance(
-        similarity_groups, Iterable
-    ):
-        return
-    else:
-        group_source = list(similarity_groups)
-    table.add_row(SIMILAR_GROUPS_LABEL, str(len(group_source)))
-    for i, group in enumerate(group_source[:3]):
+    table.add_row(SIMILAR_GROUPS_LABEL, str(len(similarity_groups)))
+    for i, group in enumerate(similarity_groups[:3]):
         _add_simhash_similarity_group(table, i + 1, group)
 
-    if len(group_source) > 3:
-        table.add_row("Additional Groups", f"... and {len(group_source) - 3} more groups")
+    if len(similarity_groups) > 3:
+        table.add_row("Additional Groups", f"... and {len(similarity_groups) - 3} more groups")
 
 
 def _add_simhash_similarity_group(table: Table, index: int, group: dict[str, Any]) -> None:
-    if not isinstance(group, dict):
-        return
     group_size = group.get("count", 0)
     group_hash = coerce_text(group.get("representative_hash", ""))
     hash_display = f"{group_hash[:24]}...{group_hash[-8:]}" if len(group_hash) > 24 else group_hash

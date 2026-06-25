@@ -547,12 +547,6 @@ def test_add_simhash_feature_stats_missing_keys():
     assert len(table.rows) == 4
 
 
-def test_add_simhash_feature_stats_skips_non_dict_input():
-    table = _make_table()
-    _add_simhash_feature_stats(table, "bad")  # type: ignore[arg-type]
-    assert len(table.rows) == 0
-
-
 def test_format_simhash_hex_exactly_32_chars():
     result = _format_simhash_hex("a" * 32)
     assert "\n" not in result
@@ -792,9 +786,7 @@ def test_add_ccbhash_entries_accepts_iterable_functions():
             "total_functions": 1,
             "analyzed_functions": 1,
             "unique_hashes": 1,
-            "similar_functions": (
-                {"count": 2, "functions": ("f1", "f2")},
-            ),
+            "similar_functions": ({"count": 2, "functions": ("f1", "f2")},),
         },
     )
     assert len(table.rows) >= 5
