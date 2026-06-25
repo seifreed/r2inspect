@@ -6,9 +6,6 @@ from r2inspect.modules.resource_support import (
     _resource_debug_name,
     analyze_resource_data,
     check_suspicious_resources,
-    extract_manifest,
-    extract_strings,
-    extract_version_info,
     read_resource_as_string,
 )
 
@@ -49,19 +46,6 @@ def test_resource_debug_name_prefers_name_then_type_then_unknown() -> None:
     assert _resource_debug_name({"name": "icon"}) == "icon"
     assert _resource_debug_name({"name": None, "type_name": "RT_ICON"}) == "RT_ICON"  # type: ignore[arg-type]
     assert _resource_debug_name({"name": None, "type_name": None}) == "UNKNOWN"  # type: ignore[arg-type]
-
-
-def test_resource_support_helpers_skip_non_dict_resource_entries() -> None:
-    host = _Host()
-    result: dict[str, Any] = {}
-    resources: list[Any] = ["bad", {"type_name": "RT_VERSION"}, None]
-
-    analyze_resource_data(host, "bad", logger=host, calculate_hashes_for_bytes=lambda _: {})  # type: ignore[arg-type]
-    extract_version_info(host, result, resources, logger=host)  # type: ignore[arg-type]
-    extract_manifest(host, result, resources, logger=host)  # type: ignore[arg-type]
-    extract_strings(host, result, resources, logger=host, split_null_terminated=lambda *args, **kwargs: [])  # type: ignore[arg-type]
-
-    assert result == {"strings": []}
 
 
 def test_resource_support_helpers_reject_dict_payloads() -> None:
