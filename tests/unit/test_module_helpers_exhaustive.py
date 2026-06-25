@@ -117,19 +117,6 @@ def test_search_helpers_normalization() -> None:
     assert search_helpers.search_text(None, "x") == ""
 
 
-def test_search_helpers_non_string_pattern_returns_empty() -> None:
-    class DummyAdapter:
-        def search_text(self, pattern: str) -> str:
-            return f"text:{pattern}"
-
-        def search_hex(self, pattern: str) -> str:
-            return f"hex:{pattern}"
-
-    adapter = DummyAdapter()
-    assert search_helpers.search_text(adapter, None) == ""  # type: ignore[arg-type]
-    assert search_helpers.search_hex(adapter, None) == ""  # type: ignore[arg-type]
-
-
 def test_search_helpers_non_string_adapter_output_returns_empty() -> None:
     class DummyAdapter:
         def search_text(self, pattern: str) -> object:

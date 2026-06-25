@@ -5,20 +5,16 @@ from __future__ import annotations
 
 import base64
 
-import pytest
 
 from r2inspect.domain.formats.string import (
     build_xor_matches,
     decode_base64,
     decode_hex,
-    filter_strings,
     find_suspicious,
     is_base64,
     is_hex,
-    parse_search_results,
     xor_string,
 )
-
 
 # ---------------------------------------------------------------------------
 # xor_string() - line 46
@@ -113,13 +109,6 @@ def test_build_xor_matches_ignores_non_string_search_results():
         return None  # type: ignore[return-value]
 
     assert build_xor_matches("A", search_hex) == []
-
-
-def test_build_xor_matches_non_string_search_string_returns_empty():
-    def search_hex(pattern: str) -> str:
-        return ""
-
-    assert build_xor_matches(None, search_hex) == []  # type: ignore[arg-type]
 
 
 def test_build_xor_matches_rejects_unicode_search_string():

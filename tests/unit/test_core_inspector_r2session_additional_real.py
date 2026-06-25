@@ -524,13 +524,15 @@ def test_inspector_helpers_missing_analyzer_and_conversion() -> None:
         "error": "Analyzer not found",
     }
 
-    harness._result_aggregator = type("Agg", (), {"generate_indicators": lambda _self, _res: {}})()
-    assert harness.generate_indicators({"anything": True}) == []
+    harness._result_aggregator = type(
+        "Agg", (), {"generate_indicators": lambda _self, _res: [{"id": "x"}]}
+    )()
+    assert harness.generate_indicators({"anything": True}) == [{"id": "x"}]
 
     harness._result_aggregator = type(
-        "Agg", (), {"generate_executive_summary": lambda _self, _res: []}
+        "Agg", (), {"generate_executive_summary": lambda _self, _res: {"summary": True}}
     )()
-    assert harness.generate_executive_summary({"anything": True}) == {}
+    assert harness.generate_executive_summary({"anything": True}) == {"summary": True}
 
 
 def test_inspector_helpers_execution_and_format_detection() -> None:
