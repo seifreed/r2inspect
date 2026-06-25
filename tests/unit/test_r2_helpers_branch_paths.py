@@ -36,7 +36,7 @@ from typing import Any
 
 import pytest
 
-from r2inspect.infrastructure import r2_command_dispatch as _dispatch
+from r2inspect.infrastructure import r2_command_timeout as _timeout
 from tests.helpers.env import env_vars
 from r2inspect.infrastructure.r2_helpers import (
     _cmd_fallback,
@@ -1227,10 +1227,10 @@ class _HangingR2:
 def test_run_cmd_with_timeout_marks_wedged_and_fast_fails():
     r2 = _HangingR2()
     with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.05"):
-        assert _dispatch._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
-        assert _dispatch._is_wedged(r2) is True
+        assert _timeout._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+        assert _timeout._is_wedged(r2) is True
         # The pipe is wedged: a second command must not spawn another worker.
-        assert _dispatch._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+        assert _timeout._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
     assert r2.calls == 1
 
 
@@ -1245,5 +1245,5 @@ def test_run_cmd_with_timeout_tolerates_unhashable_instance():
     r2 = _Unhashable()
     with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.05"):
         # _mark_wedged swallows the unhashable TypeError; _is_wedged returns False.
-        assert _dispatch._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
-    assert _dispatch._is_wedged(r2) is False
+        assert _timeout._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+    assert _timeout._is_wedged(r2) is False
