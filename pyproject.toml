@@ -65,6 +65,8 @@ dev = [
     "bandit>=1.7.0",
     "pip-audit>=2.7.0",
     "mutmut>=2.4.0",
+    # Transitive via pip-audit -> CacheControl; pin past GHSA-6v7p-g79w-8964.
+    "msgpack>=1.2.1",
 ]
 docker = [
     "pycparser>=2.21",
