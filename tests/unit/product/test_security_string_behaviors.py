@@ -33,7 +33,7 @@ def test_pe_security_helpers_apply_flags_and_authenticode_consistently() -> None
     _apply_security_flags_from_text(
         features, "RELRO: full\nCanary: yes\nDEP: enabled\nPIE: enabled\nFortify: yes"
     )
-    _apply_authenticode_feature(features, {"has_signature": True, "signature_valid": True})
+    _apply_authenticode_feature(features, SimpleNamespace(cmdj=lambda _command: None))
 
     assert set(features) >= {"aslr", "dep", "seh", "guard_cf"}
     assert isinstance(features["aslr"], bool)

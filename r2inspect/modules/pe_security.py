@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..abstractions.coercion_support import coerce_int, coerce_int_or_none
+from ..domain.formats.pe_info import find_pe_data_directory
 from ..infrastructure.r2_helpers import get_pe_headers
 
 
@@ -30,7 +31,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
             security_info = _get_pe_security_text(adapter)
             _apply_security_flags_from_text(features, security_info)
 
-        _apply_authenticode_feature(features, pe_header)
+        _apply_authenticode_feature(features, adapter)
 
     except Exception as exc:
         logger.error("Error checking security features: %s", exc)
@@ -88,17 +89,11 @@ def _get_pe_security_text(adapter: Any) -> str:
     return str(cmd_helper(adapter, None, "iHH"))
 
 
-def _apply_authenticode_feature(
-    features: dict[str, bool], pe_header: dict[str, Any] | None
-) -> None:
-    if not pe_header:
-        return
-    data_dir = pe_header.get("data_directories", {})
-    if not isinstance(data_dir, dict):
-        return
-    security_dir = data_dir.get("security", {})
-    if not isinstance(security_dir, dict):
-        return
-    security_size = coerce_int(security_dir.get("size", 0))
-    if security_size > 0:
+def _apply_authenticode_feature(features: dict[str, bool], adapter: Any) -> None:
+    # The certificate table lives in the SECURITY data directory, which radare2
+    # exposes only inside the ``ihj`` field list (``iDj`` returns {}). The old
+    # code read ``pe_header["data_directories"]["security"]``, a key the header
+    # parser never builds, so this was False for every signed PE.
+    security_dir = find_pe_data_directory(adapter.cmdj("ihj"), "SECURITY")
+    if security_dir and coerce_int(security_dir.get("size", 0)) > 0:
         features["authenticode"] = True

@@ -7,13 +7,9 @@ Plain functions, no test classes.
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
-from pathlib import Path
 from typing import Any
 
 import pytest
-from rich.console import Console
 
 from tests.helpers import env_vars
 
@@ -622,23 +618,36 @@ def test_apply_security_flags_from_text_none():
     assert all(v is False for v in features.values())
 
 
+class _IhjSecurityAdapter:
+    def __init__(self, *, size, offset=0x800):
+        self._ihj = [
+            {"name": "IMAGE_DIRECTORY_ENTRY_SECURITY", "value": offset},
+            {"name": "SIZE_IMAGE_DIRECTORY_ENTRY_SECURITY", "value": size},
+        ]
+
+    def cmdj(self, command):
+        return self._ihj if command == "ihj" else None
+
+
 def test_apply_authenticode_feature_with_security_dir():
     features = _empty_features()
-    pe_header = {"data_directories": {"security": {"size": 1024, "rva": 0x100}}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjSecurityAdapter(size=1024))
     assert features["authenticode"] is True
 
 
 def test_apply_authenticode_feature_empty_security_dir():
     features = _empty_features()
-    pe_header = {"data_directories": {"security": {"size": 0}}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjSecurityAdapter(size=0))
     assert features["authenticode"] is False
 
 
-def test_apply_authenticode_feature_none_header():
+def test_apply_authenticode_feature_no_ihj():
+    class _NoIhj:
+        def cmdj(self, command):
+            return None
+
     features = _empty_features()
-    _apply_authenticode_feature(features, None)
+    _apply_authenticode_feature(features, _NoIhj())
     assert features["authenticode"] is False
 
 

@@ -11,6 +11,23 @@ from r2inspect.modules.pe_security import (
 )
 
 
+class _IhjAdapter:
+    """Adapter double whose ``cmdj('ihj')`` exposes a SECURITY data directory."""
+
+    def __init__(self, ihj):
+        self._ihj = ihj
+
+    def cmdj(self, command):
+        return self._ihj if command == "ihj" else None
+
+
+def _security_ihj(*, size, offset=0x800):
+    return [
+        {"name": "IMAGE_DIRECTORY_ENTRY_SECURITY", "value": offset},
+        {"name": "SIZE_IMAGE_DIRECTORY_ENTRY_SECURITY", "value": size},
+    ]
+
+
 class SilentLogger:
     """Logger that absorbs all calls without doing anything."""
 
@@ -79,9 +96,7 @@ def test_apply_security_flags_from_header_no_optional_header_key():
 
 def test_apply_security_flags_from_header_non_dict_optional_header_returns_early():
     features = {"aslr": False, "dep": False, "seh": False, "guard_cf": False, "authenticode": False}
-    _apply_security_flags_from_header(
-        features, {"optional_header": []}, SilentLogger()
-    )
+    _apply_security_flags_from_header(features, {"optional_header": []}, SilentLogger())
     assert features["aslr"] is False
 
 
@@ -193,56 +208,49 @@ def test_get_pe_security_text_falls_back_to_cmd_when_no_method():
 
 def test_apply_authenticode_feature_sets_true_when_security_dir_has_size():
     features = {"authenticode": False}
-    pe_header = {"data_directories": {"security": {"size": 1024, "offset": 0x100}}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter(_security_ihj(size=1024)))
     assert features["authenticode"] is True
 
 
 def test_apply_authenticode_feature_accepts_numeric_string_size():
     features = {"authenticode": False}
-    pe_header = {"data_directories": {"security": {"size": "1024", "offset": 0x100}}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter(_security_ihj(size="1024")))
     assert features["authenticode"] is True
 
 
 def test_apply_authenticode_feature_stays_false_when_security_dir_size_zero():
     features = {"authenticode": False}
-    pe_header = {"data_directories": {"security": {"size": 0}}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter(_security_ihj(size=0)))
     assert features["authenticode"] is False
 
 
 def test_apply_authenticode_feature_skips_malformed_size():
     features = {"authenticode": False}
-    pe_header = {"data_directories": {"security": {"size": "bad"}}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter(_security_ihj(size="bad")))
     assert features["authenticode"] is False
 
 
 def test_apply_authenticode_feature_stays_false_when_no_security_dir():
     features = {"authenticode": False}
-    pe_header = {"data_directories": {}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter([]))
     assert features["authenticode"] is False
 
 
-def test_apply_authenticode_feature_none_pe_header_returns_early():
+def test_apply_authenticode_feature_handles_missing_ihj():
     features = {"authenticode": False}
-    _apply_authenticode_feature(features, None)
+    _apply_authenticode_feature(features, _IhjAdapter(None))
     assert features["authenticode"] is False
 
 
-def test_apply_authenticode_feature_non_dict_security_dir_skipped():
+def test_apply_authenticode_feature_skips_non_dict_ihj_entries():
     features = {"authenticode": False}
-    pe_header = {"data_directories": {"security": "not-a-dict"}}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter([1, "x", {"name": "OTHER"}]))
     assert features["authenticode"] is False
 
 
-def test_apply_authenticode_feature_non_dict_data_directories_skipped():
+def test_apply_authenticode_feature_handles_non_list_ihj():
     features = {"authenticode": False}
-    pe_header = {"data_directories": []}
-    _apply_authenticode_feature(features, pe_header)
+    _apply_authenticode_feature(features, _IhjAdapter({"unexpected": "shape"}))
     assert features["authenticode"] is False
 
 
