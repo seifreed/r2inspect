@@ -148,14 +148,6 @@ def test_entropy_results_ignores_non_dict_summary():
     assert result["is_packed"] is False
 
 
-def test_packer_scorer_ignores_non_dict_inputs():
-    scorer = PackerEvidenceScorer()
-    scorer.add_entropy_results(None)  # type: ignore[arg-type]
-    scorer.add_section_results(None)  # type: ignore[arg-type]
-    result = scorer.verdict()
-    assert result["is_packed"] is False
-
-
 def test_add_signature_ignores_incomplete_signature():
     scorer = PackerEvidenceScorer()
     scorer.add_signature({"signature": "UPX!"})

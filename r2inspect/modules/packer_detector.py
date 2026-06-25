@@ -52,8 +52,6 @@ class PackerEvidenceScorer:
 
     def add_entropy_results(self, entropy_results: dict[str, Any]) -> None:
         """Register high-entropy sections (up to 30 points)."""
-        if not isinstance(entropy_results, dict):
-            entropy_results = {}
         self._entropy_results = entropy_results
         summary = entropy_results.get("summary")
         if not isinstance(summary, dict):
@@ -65,8 +63,6 @@ class PackerEvidenceScorer:
 
     def add_section_results(self, section_results: dict[str, Any]) -> None:
         """Register suspicious-section findings (up to 20 points)."""
-        if not isinstance(section_results, dict):
-            section_results = {}
         self._section_results = section_results
         suspicious = len(section_results.get("suspicious_sections", []))
         if suspicious > 0:
