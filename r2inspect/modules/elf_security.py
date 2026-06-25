@@ -42,11 +42,9 @@ def _get_elf_segments(adapter: Any) -> list[dict[str, Any]]:
     if not callable(getter):
         return []
     segments = getter("iSSj")
-    if isinstance(segments, list):
-        return segments
     if isinstance(segments, (dict, str, bytes)) or not isinstance(segments, Iterable):
         return []
-    return list(segments)
+    return [segment for segment in segments if isinstance(segment, dict)]
 
 
 def _get_dynamic_info_text(adapter: Any) -> str:

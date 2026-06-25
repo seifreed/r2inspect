@@ -12,8 +12,6 @@ def has_nx(segments: list[dict[str, Any]] | None) -> bool:
     if not segments:
         return False
     for segment in segments:
-        if not isinstance(segment, dict):
-            continue
         # r2's segment list (iSSj) names the stack segment in "name" with the
         # permissions in "perm" (e.g. "-rw-"); older/text shapes used "type"
         # and "flags". NX is on when the GNU_STACK segment is not executable.

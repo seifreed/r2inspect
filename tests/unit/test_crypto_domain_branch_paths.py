@@ -222,11 +222,6 @@ def test_has_nx_returns_false_when_no_gnu_stack() -> None:
     assert esd.has_nx(headers) is False
 
 
-def test_has_nx_skips_malformed_segments() -> None:
-    headers = ["bad", {"type": "GNU_STACK", "flags": "rw-"}]
-    assert esd.has_nx(headers) is True
-
-
 def test_has_nx_returns_true_when_gnu_stack_without_exec() -> None:
     """has_nx returns True when GNU_STACK header exists and flags have no 'x'."""
     headers = [{"type": "GNU_STACK", "flags": "rw-"}]
