@@ -121,16 +121,7 @@ def _parse_match(match: Any) -> dict[str, Any] | None:
 def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
     try:
-        if isinstance(yara_matches, list):
-            match_source = yara_matches
-        elif isinstance(yara_matches, (dict, str, bytes)) or not isinstance(yara_matches, Iterable):
-            return matches
-        else:
-            try:
-                match_source = list(yara_matches)
-            except TypeError:
-                return matches
-        for match in match_source:
+        for match in yara_matches:
             match_info = _parse_match(match)
             if match_info is not None:
                 matches.append(match_info)
