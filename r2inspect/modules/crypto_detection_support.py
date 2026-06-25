@@ -24,6 +24,7 @@ class CryptoHost(Protocol):
     def _get_sections(self) -> list[dict[str, Any]]: ...
     def _search_text(self, pattern: str) -> str: ...
     def _search_hex(self, hex_pattern: str) -> str: ...
+    def _should_search_disasm(self) -> bool: ...
 
 
 def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
@@ -176,6 +177,9 @@ def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, A
 
 def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     patterns: list[dict[str, Any]] = []
+    if not analyzer._should_search_disasm():
+        logger.debug("Skipping /aa disasm pattern search: file above large-file threshold")
+        return patterns
     try:
         xor_patterns = analyzer._search_text("xor")
         if has_text(xor_patterns):

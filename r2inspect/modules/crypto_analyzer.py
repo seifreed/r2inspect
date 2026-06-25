@@ -15,6 +15,7 @@ from .crypto_detection_support import (
     find_suspicious_patterns as build_suspicious_patterns,
 )
 from .crypto_constants import CRYPTO_CONSTANTS
+from .function_analyzer_extraction_support import should_run_full_analysis
 from ..domain.formats.crypto import consolidate_detections, detect_algorithms_from_strings
 from ..domain.services.binary_helpers import shannon_entropy
 from .search_helpers import search_hex, search_text
@@ -164,6 +165,23 @@ class CryptoAnalyzer(CommandHelperMixin):
 
     def _get_strings(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_strings") or [])
+
+    def _should_search_disasm(self) -> bool:
+        """Whether to run r2's unbounded ``/aa`` whole-binary assembly searches.
+
+        ``/aa`` scans the binary linearly and repeatedly trips the per-command
+        timeout on large inputs, stacking minutes of dead wait for a low-value
+        heuristic. Skip it above the large-file threshold unless deep analysis
+        is explicitly requested.
+        """
+        return should_run_full_analysis(self.config, self._file_size_mb())
+
+    def _file_size_mb(self) -> float | None:
+        if self.adapter is None:
+            return None
+        core = self.adapter.get_file_info().get("core", {})
+        size = coerce_int_or_none(core.get("size")) if isinstance(core, dict) else None
+        return size / (1024 * 1024) if size else None
 
     def _search_text(self, pattern: str) -> str:
         return search_text(self.adapter, pattern)

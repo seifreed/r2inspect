@@ -457,6 +457,40 @@ class TestSuspiciousPatterns:
         rot_patterns = [p for p in patterns if p["type"] == "Bit Rotation"]
         assert len(rot_patterns) >= 1
 
+    def test_large_file_skips_disasm_search(self):
+        cmd = _crypto_cmd_map(has_crypto=True)
+        cmdj = _crypto_cmdj_map()
+        cmdj["ij"] = {"core": {"size": 50 * 1024 * 1024}}
+        adapter = _make_adapter(cmd_map=cmd, cmdj_map=cmdj)
+        analyzer = CryptoAnalyzer(adapter)
+
+        patterns = analyzer._find_suspicious_patterns()
+
+        # cmd_map returns matches for /aa xor; an empty result proves the
+        # unbounded search was skipped rather than executed.
+        assert patterns == []
+
+    def test_small_file_runs_disasm_search(self):
+        cmd = _crypto_cmd_map(has_crypto=True)
+        cmdj = _crypto_cmdj_map()
+        cmdj["ij"] = {"core": {"size": 1 * 1024 * 1024}}
+        adapter = _make_adapter(cmd_map=cmd, cmdj_map=cmdj)
+        analyzer = CryptoAnalyzer(adapter)
+
+        patterns = analyzer._find_suspicious_patterns()
+
+        assert any(p["type"] == "XOR Operations" for p in patterns)
+
+    def test_file_size_mb_handles_missing_adapter(self):
+        analyzer = CryptoAnalyzer(None)
+        assert analyzer._file_size_mb() is None
+        assert analyzer._should_search_disasm() is True
+
+    def test_file_size_mb_handles_non_dict_core(self):
+        adapter = _make_adapter(cmdj_map={"ij": {"core": "not-a-dict"}})
+        analyzer = CryptoAnalyzer(adapter)
+        assert analyzer._file_size_mb() is None
+
     def test_no_patterns_when_empty(self):
         adapter = _make_adapter()
         analyzer = CryptoAnalyzer(adapter)
