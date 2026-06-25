@@ -34,8 +34,6 @@ SUSPICIOUS_PATTERNS = {
 def filter_strings(strings: list[str], min_length: int, max_length: int) -> list[str]:
     filtered = []
     for string in strings:
-        if not isinstance(string, str):
-            continue
         if len(string) < min_length or len(string) > max_length:
             continue
         cleaned = "".join(c for c in string if c.isprintable())
@@ -67,8 +65,6 @@ def xor_string(text: str, key: int) -> str:
 def build_xor_matches(
     search_string: str, search_hex_fn: Callable[[str], str]
 ) -> list[dict[str, Any]]:
-    if not isinstance(search_string, str):
-        return []
     if any(ord(char) > 0xFF for char in search_string):
         return []
     matches: list[dict[str, Any]] = []
@@ -91,8 +87,6 @@ def build_xor_matches(
 def find_suspicious(strings: list[str]) -> list[dict[str, Any]]:
     suspicious: list[dict[str, Any]] = []
     for string in strings:
-        if not isinstance(string, str):
-            continue
         for pattern_name, pattern in SUSPICIOUS_PATTERNS.items():
             matches = re.findall(pattern, string, re.IGNORECASE)
             if matches:
