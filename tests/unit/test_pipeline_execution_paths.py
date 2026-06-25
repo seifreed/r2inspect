@@ -47,13 +47,6 @@ class _FailingStage(AnalysisStage):
         raise RuntimeError("Stage failed intentionally")
 
 
-class _NonDictStage(AnalysisStage):
-    """Stage that returns malformed non-dict output."""
-
-    def _execute(self, _context: dict[str, object]) -> dict[str, object]:
-        return ["not", "a", "dict"]  # type: ignore[return-value]
-
-
 class _SlowStage(AnalysisStage):
     """Stage that sleeps for a configurable delay (for timeout tests)."""
 
@@ -271,16 +264,6 @@ class TestSequentialExecution:
         assert "failing" in result
         assert result["failing"]["success"] is False
         assert "stage2" in result
-
-    def test_execute_sequential_non_dict_stage_result(self) -> None:
-        """Malformed stage output should fail the stage without crashing."""
-        pipeline = AnalysisPipeline()
-        pipeline.add_stage(_NonDictStage("bad_stage"))
-
-        result = pipeline.execute(parallel=False)
-
-        assert result == {}
-
 
 class TestParallelExecution:
     """Test parallel pipeline execution."""

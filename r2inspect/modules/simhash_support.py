@@ -92,8 +92,6 @@ def append_data_section_string(host: SimHashHost, section: Any, data_strings: li
     if host.adapter is None or not hasattr(host.adapter, "read_bytes"):
         return
     data = host.adapter.read_bytes(section_addr, min(section_size, 1024))
-    if not isinstance(data, (bytes, bytearray)):
-        return
     for value in host._extract_printable_strings(data):
         data_strings.append(f"DATASTR:{value}")
 

@@ -43,8 +43,6 @@ class RichHeaderDebugMixin:
 
     def _debug_get_file_size(self) -> int:
         file_info = self._get_file_info()
-        if not isinstance(file_info, dict):
-            return 0
         core = file_info.get("core", {})
         if not isinstance(core, dict):
             return 0

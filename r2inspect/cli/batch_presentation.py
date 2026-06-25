@@ -41,8 +41,6 @@ def display_failed_files(console: Any, failed_files: list[tuple[str, str]], verb
     if verbose:
         console.print("\n[red]Failed files details:[/red]")
         for item in failed_files[:10]:
-            if not isinstance(item, tuple) or len(item) < 2:
-                continue
             failed_file, error = item[0], item[1]
             error_text = str(error)
             console.print(

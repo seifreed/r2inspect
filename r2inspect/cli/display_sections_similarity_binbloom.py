@@ -116,8 +116,6 @@ def _add_binbloom_similar_groups(table: Table, binbloom_info: dict[str, Any]) ->
 
 
 def _add_binbloom_group(table: Table, index: int, group: dict[str, Any]) -> None:
-    if not isinstance(group, dict):
-        return
     group_size = group.get("count", 0)
     group_signature = coerce_text(group.get("signature", ""))
     group_sig = group_signature[:32] + "..." if len(group_signature) > 32 else group_signature

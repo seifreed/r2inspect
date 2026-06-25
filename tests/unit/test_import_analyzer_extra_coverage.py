@@ -416,18 +416,6 @@ def test_detect_api_obfuscation():
     assert result["detected"] is True
 
 
-def test_detect_api_obfuscation_none():
-    analyzer = _make_analyzer()
-    result = analyzer.detect_api_obfuscation(None)
-    assert result["detected"] is False
-
-
-def test_detect_api_obfuscation_non_list_input_returns_empty_result():
-    analyzer = _make_analyzer()
-    result = analyzer.detect_api_obfuscation(123)  # type: ignore[arg-type]
-    assert result == {"detected": False, "indicators": [], "score": 0}
-
-
 def test_detect_api_obfuscation_keeps_error_path_safe_for_unsized_input():
     import r2inspect.modules.import_analyzer as import_module
 

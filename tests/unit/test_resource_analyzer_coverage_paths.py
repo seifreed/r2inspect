@@ -752,15 +752,6 @@ def test_resource_analyzer_read_version_string_value_decode_error() -> None:
     assert result == ""
 
 
-def test_resource_analyzer_read_version_string_value_skips_non_int_bytes() -> None:
-    analyzer = _make_analyzer()
-    key = "CompanyName"
-    key_pattern = list(key.encode("utf-16le"))
-    data = key_pattern + [0, 0, 0, 0, "bad", 0, 65, 0]
-    result = analyzer._read_version_string_value(data, key)
-    assert result == ""
-
-
 # ── _extract_manifest ────────────────────────────────────────────────────
 
 

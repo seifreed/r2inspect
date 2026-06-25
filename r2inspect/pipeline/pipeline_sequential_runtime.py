@@ -64,14 +64,6 @@ def execute_sequential_pipeline(
 
         stage_result = stage.execute(context)
         completed.add(stage.name)
-        if not isinstance(stage_result, dict):
-            if stage_result:
-                logger.error("Stage '%s' returned non-dict result: %r", stage.name, stage_result)
-                failed_count += 1
-                failed_stages.add(stage.name)
-            else:
-                skipped_count += 1
-            continue
         if stage_result:
             merge_into_plain_context(context, stage_result)
             if (

@@ -219,19 +219,17 @@ def _obfuscation_indicators(imports: list[dict[str, Any]]) -> list[dict[str, Any
 def detect_api_obfuscation(imports: list[dict[str, Any]]) -> dict[str, Any]:
     valid_imports = coerce_dict_list(imports)
     if not valid_imports:
-        if isinstance(imports, list):
-            return {
-                "detected": True,
-                "indicators": [
-                    {
-                        "type": "few_imports",
-                        "description": "Very few imports (0) - possible static linking or packing",
-                        "count": 0,
-                    }
-                ],
-                "score": 20,
-            }
-        return {"detected": False, "indicators": [], "score": 0}
+        return {
+            "detected": True,
+            "indicators": [
+                {
+                    "type": "few_imports",
+                    "description": "Very few imports (0) - possible static linking or packing",
+                    "count": 0,
+                }
+            ],
+            "score": 20,
+        }
     indicators = _obfuscation_indicators(valid_imports)
     return {
         "detected": len(indicators) > 0,

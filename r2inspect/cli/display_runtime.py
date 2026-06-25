@@ -38,8 +38,6 @@ def display_yara_rules_table(
     table.add_column("Path", style="green")
 
     for rule in available_rules:
-        if not isinstance(rule, dict):
-            continue
         size = rule.get("size", 0)
         try:
             size_kb = float(size) / 1024

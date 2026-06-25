@@ -66,8 +66,6 @@ class ResourceVersionMixin:
         for i in range(value_start, min(value_start + 256, len(data) - 1), 2):
             first = data[i]
             second = data[i + 1]
-            if not isinstance(first, int) or not isinstance(second, int):
-                return None
             if first == 0 and second == 0:
                 break
             value_bytes.extend([first, second])

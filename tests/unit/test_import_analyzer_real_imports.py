@@ -441,15 +441,6 @@ def test_detect_api_obfuscation_ordinal_only():
     assert result["detected"] is True
 
 
-def test_detect_api_obfuscation_error():
-    """Test detect_api_obfuscation handles errors."""
-    adapter = MinimalAdapter()
-    analyzer = ImportAnalyzer(adapter)
-
-    result = analyzer.detect_api_obfuscation(None)
-    assert result["detected"] is False
-
-
 def test_analyze_dll_dependencies_empty():
     """Test analyze_dll_dependencies with empty list."""
     adapter = MinimalAdapter()

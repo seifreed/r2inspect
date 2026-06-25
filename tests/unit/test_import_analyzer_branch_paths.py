@@ -441,15 +441,6 @@ def test_detect_api_obfuscation_ordinal_only_indicator():
 # ---------------------------------------------------------------------------
 
 
-def test_detect_api_obfuscation_exception_returns_safe_default():
-    analyzer = ImportAnalyzer(adapter=None)
-    # Pass None to trigger TypeError inside the method
-    result = analyzer.detect_api_obfuscation(None)  # type: ignore[arg-type]
-    assert result["detected"] is False
-    assert result["indicators"] == []
-    assert result["score"] == 0
-
-
 # ---------------------------------------------------------------------------
 # analyze_dll_dependencies - line 362: empty dlls early return
 # ---------------------------------------------------------------------------

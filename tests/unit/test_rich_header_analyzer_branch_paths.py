@@ -485,11 +485,6 @@ def test_bin_info_has_pe_returns_false_for_empty_fields() -> None:
     assert analyzer._bin_info_has_pe({"format": "", "class": ""}) is False
 
 
-def test_bin_info_has_pe_returns_false_for_non_dict_input() -> None:
-    analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
-    assert analyzer._bin_info_has_pe(None) is False
-
-
 def test_bin_info_has_pe_coerces_non_string_fields() -> None:
     analyzer = RichHeaderAnalyzer(adapter=None, filepath=None)
     assert analyzer._bin_info_has_pe({"format": 123, "class": object()}) is False

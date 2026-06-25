@@ -100,8 +100,6 @@ def _try_cmd_parse(
 def _parse_raw_result(raw_result: str) -> Any | None:
     import json
 
-    if not isinstance(raw_result, str):
-        return None
     try:
         return json.loads(raw_result)
     except (json.JSONDecodeError, TypeError):

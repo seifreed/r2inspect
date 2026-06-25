@@ -226,10 +226,6 @@ def test_parse_raw_result_strips_whitespace_before_returning():
     assert result == "some text"
 
 
-def test_parse_raw_result_returns_none_for_non_string_input():
-    assert _parse_raw_result(123) is None
-
-
 # ---------------------------------------------------------------------------
 # suppress_r2pipe_errors context manager (lines 120-121)
 # ---------------------------------------------------------------------------
