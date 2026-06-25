@@ -25,8 +25,6 @@ def collect_artifact_strings(
         for artifact in artifacts
     }
     for string_info in strings_result:
-        if not isinstance(string_info, dict):
-            continue
         string_val = coerce_text(string_info.get("string"))
         if not string_val:
             continue
@@ -143,8 +141,6 @@ def detect_injection_apis(
         except TypeError:
             import_source = []
     for imp in import_source:
-        if not isinstance(imp, dict):
-            continue
         if coerce_text(imp.get("name")) in injection_apis:
             injection_found += 1
     # Two or more injection-related APIs together are the established
@@ -165,8 +161,6 @@ def detect_injection_apis(
 def match_suspicious_api(
     imp: dict[str, Any], suspicious_api_categories: dict[str, list[str]]
 ) -> dict[str, Any] | None:
-    if not isinstance(imp, dict):
-        return None
     imp_name = coerce_text(imp.get("name"))
     for category, apis in suspicious_api_categories.items():
         for api in apis:

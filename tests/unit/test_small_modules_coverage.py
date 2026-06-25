@@ -816,7 +816,6 @@ def test_detect_injection_apis_normalizes_iterable_imports():
         imp
         for imp in [
             {"name": "WriteProcessMemory"},
-            "skip",
             {"name": "CreateRemoteThread"},
         ]
     )
