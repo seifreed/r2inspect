@@ -13,6 +13,7 @@ class R2PipeTextQueryMixin:
 
     _safe_query: Any  # provided by host class
     _maybe_force_error: Any  # provided by host class
+    _analysis_result: str | None  # provided by host class
 
     @property
     def _r2_iface(self) -> R2CommandInterface:
@@ -21,11 +22,16 @@ class R2PipeTextQueryMixin:
     def analyze_all(self) -> str:
         from . import r2pipe_queries as facade
 
+        if self._analysis_result is not None:
+            return self._analysis_result
+
         def _execute() -> str:
             self._maybe_force_error("analyze_all")
             return facade.safe_cmd(self._r2_iface, "aaa", "")
 
-        return cast(str, self._safe_query(_execute, "", "Error running analysis"))
+        result = cast(str, self._safe_query(_execute, "", "Error running analysis"))
+        self._analysis_result = result
+        return result
 
     def get_info_text(self) -> str:
         from . import r2pipe_queries as facade

@@ -322,6 +322,27 @@ def test_adapter_error_branches() -> None:
     assert adapter_cq.get_strings_basic() == []
 
 
+def test_analyze_all_runs_aaa_only_once() -> None:
+    class CountingR2:
+        def __init__(self) -> None:
+            self.aaa_calls = 0
+
+        def cmd(self, command: str) -> str:
+            if command.strip() == "aaa":
+                self.aaa_calls += 1
+            return ""
+
+        def cmdj(self, command: str):
+            return None
+
+    r2 = CountingR2()
+    adapter = R2PipeAdapter(r2)
+    first = adapter.analyze_all()
+    second = adapter.analyze_all()
+    assert first == second == ""
+    assert r2.aaa_calls == 1
+
+
 def test_adapter_pe_header_dict_and_read_bytes_errors() -> None:
     class FakeR2:
         def cmd(self, command: str):

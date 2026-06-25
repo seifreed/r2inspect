@@ -47,6 +47,10 @@ class R2PipeAdapter(R2PipeQueryMixin):
         self._cache: dict[str, CommandOutput] = {}
         self._cache_lock = threading.Lock()
         self._fault_injector = fault_injector
+        # Memoizes the one-time `aaa` full-analysis pass: every similarity
+        # analyzer (binbloom, binlex, bindiff, function extraction) requests it,
+        # but the r2 session state is shared, so a single pass suffices.
+        self._analysis_result: str | None = None
         logger.debug("R2PipeAdapter initialized successfully")
 
     def cmd(self, command: str) -> str:
