@@ -12,6 +12,18 @@ from .validation_support import validate_non_negative, validate_positive
 from ..domain.results import HashResult
 
 
+def availability_result(available: bool, unavailable_message: str) -> tuple[bool, str | None]:
+    """Map a library-available flag to the ``(is_available, error_message)`` contract.
+
+    Shared by every :meth:`HashingStrategy._check_library_availability` override:
+    a present library reports ``(True, None)``; a missing one reports
+    ``(False, <install hint>)``.
+    """
+    if available:
+        return True, None
+    return False, unavailable_message
+
+
 def validate_strategy_init(filepath: str, max_file_size: int, min_file_size: int) -> Path:
     if not filepath:
         raise ValueError("filepath cannot be empty")

@@ -6,22 +6,11 @@ from pathlib import Path
 from typing import Any
 
 from .hashing_strategy_support import (
+    availability_result as availability_result,
     run_hash_analysis as _run_hash_analysis_impl,
     validate_hash_file as _validate_hash_file_impl,
     validate_strategy_init as _validate_strategy_init_impl,
 )
-
-
-def availability_result(available: bool, unavailable_message: str) -> tuple[bool, str | None]:
-    """Map a library-available flag to the ``(is_available, error_message)`` contract.
-
-    Shared by every :meth:`HashingStrategy._check_library_availability` override:
-    a present library reports ``(True, None)``; a missing one reports
-    ``(False, <install hint>)``.
-    """
-    if available:
-        return True, None
-    return False, unavailable_message
 
 
 class HashingStrategy(ABC):

@@ -79,6 +79,20 @@ def find_files_to_process(
     return find_files_by_extensions(batch_path, extensions, recursive)
 
 
+def validate_magic_module(candidate: Any) -> Any | None:
+    """Return the module only if its ``Magic`` constructor actually works."""
+    if candidate is None:
+        return None
+    try:
+        candidate.Magic(mime=True)
+        candidate.Magic()
+    except Exception as exc:
+        logger.error("Error validating python-magic module: %s", exc)
+        return None
+    return candidate
+
+
 __all__ = [
     "check_executable_signature",
+    "validate_magic_module",
 ]

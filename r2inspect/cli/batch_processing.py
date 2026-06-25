@@ -78,19 +78,6 @@ _resolve_magic_module = _batch_discovery_runtime.resolve_magic_module
 _show_summary_table = partial(_show_summary_table, console=console)
 
 
-def _validate_magic_module(candidate: Any) -> Any | None:
-    """Return the module only if its ``Magic`` constructor actually works."""
-    if candidate is None:
-        return None
-    try:
-        candidate.Magic(mime=True)
-        candidate.Magic()
-    except Exception as exc:
-        logger.error("Error validating python-magic module: %s", exc)
-        return None
-    return candidate
-
-
 def _init_magic(resolve_fn: Callable[[], Any] | None = None) -> Any | None:
     """Initialize python-magic through the shared discovery runtime.
 
@@ -100,7 +87,7 @@ def _init_magic(resolve_fn: Callable[[], Any] | None = None) -> Any | None:
     global magic
     _batch_discovery_runtime.magic = magic
     resolver = resolve_fn or _batch_discovery_runtime.resolve_magic_module
-    magic = _validate_magic_module(resolver())
+    magic = _batch_discovery_runtime.validate_magic_module(resolver())
     return magic
 
 

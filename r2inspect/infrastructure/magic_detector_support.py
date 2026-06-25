@@ -28,6 +28,25 @@ THREAT_FORMATS: frozenset[str] = frozenset(
 )
 
 
+def initial_result(path: Path) -> dict[str, Any]:
+    """Build the default, all-unknown detection result for a path."""
+    return {
+        "file_format": "Unknown",
+        "format_category": "Unknown",
+        "architecture": "Unknown",
+        "bits": "Unknown",
+        "endianness": "Unknown",
+        "confidence": 0.0,
+        "is_executable": False,
+        "is_archive": False,
+        "is_document": False,
+        "potential_threat": False,
+        "magic_matches": [],
+        "file_size": path.stat().st_size if path.exists() else 0,
+        "extensions": [],
+    }
+
+
 def read_at_offset(file_handle: BinaryIO, offset: int, size: int) -> bytes:
     position = file_handle.tell()
     file_handle.seek(offset)

@@ -14,6 +14,7 @@ from .magic_detector_support import (
     analyze_macho_details as _analyze_macho_details_impl,
     analyze_pe_details as _analyze_pe_details_impl,
     fallback_detection as _fallback_detection_impl,
+    initial_result as _initial_result,
     read_at_offset as _read_at_offset_impl,
     validate_docx_format as _validate_docx_format_impl,
     validate_java_class as _validate_java_class_impl,
@@ -43,21 +44,7 @@ class MagicByteDetector:
             self.cache.move_to_end(cache_key)
             return self.cache[cache_key]
 
-        result: dict[str, Any] = {
-            "file_format": "Unknown",
-            "format_category": "Unknown",
-            "architecture": "Unknown",
-            "bits": "Unknown",
-            "endianness": "Unknown",
-            "confidence": 0.0,
-            "is_executable": False,
-            "is_archive": False,
-            "is_document": False,
-            "potential_threat": False,
-            "magic_matches": [],
-            "file_size": path.stat().st_size if path.exists() else 0,
-            "extensions": [],
-        }
+        result: dict[str, Any] = _initial_result(path)
         if not self._is_readable_regular_file(path):
             self._store(cache_key, result)
             return result

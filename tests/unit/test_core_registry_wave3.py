@@ -20,7 +20,6 @@ from typing import Any
 import psutil
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # r2inspect/cli/batch_processing.py
 # ---------------------------------------------------------------------------
@@ -57,6 +56,34 @@ def test_magic_import_failure_sets_magic_none(caplog):
         assert result is None
         assert bp.magic is None
         assert "Error importing python-magic: blocked for test" in caplog.text
+    finally:
+        rt.magic = saved_rt_magic
+        bp.magic = saved_bp_magic
+
+
+def test_init_magic_accepts_working_magic_module() -> None:
+    """A magic module whose Magic() constructors succeed is validated and kept."""
+    import r2inspect.cli.batch_processing as bp
+    import r2inspect.cli.batch_discovery_runtime as rt
+
+    class _WorkingMagicObj:
+        def from_file(self, path: str) -> str:
+            return ""
+
+    class _WorkingMagic:
+        @staticmethod
+        def Magic(mime: bool = False) -> _WorkingMagicObj:
+            return _WorkingMagicObj()
+
+    working = _WorkingMagic()
+    saved_bp_magic = bp.magic
+    saved_rt_magic = rt.magic
+    try:
+        bp.magic = bp._MAGIC_UNINITIALIZED
+        rt.magic = rt._MAGIC_UNINITIALIZED
+        result = bp._init_magic(resolve_fn=lambda: working)
+        assert result is working
+        assert bp.magic is working
     finally:
         rt.magic = saved_rt_magic
         bp.magic = saved_bp_magic
@@ -591,7 +618,6 @@ from r2inspect.domain.formats.import_analysis import (
     find_max_risk_score,
     risk_level_from_score,
 )
-
 
 # -- lines 102-109: build_api_categories return dict ------------------------
 
