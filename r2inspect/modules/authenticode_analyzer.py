@@ -80,14 +80,23 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _read_win_certificate(
         self, security_dir: dict[str, Any], result: dict[str, Any]
     ) -> dict[str, Any] | None:
-        return _read_win_certificate_impl(
-            cmdj=self._cmdj,
-            security_dir=security_dir,
-            result=result,
-            parse_header_fn=self._parse_win_cert_header,
-            get_cert_type_name_fn=self._get_cert_type_name,
-            parse_pkcs7_fn=self._parse_pkcs7,
-        )
+        # The SECURITY data directory address is a FILE offset and the
+        # certificate table lives in the PE overlay (mapped to no virtual
+        # address), so r2's default va-mode reads return 0xFF padding. Read
+        # physically for the duration of the certificate parse, restoring io.va
+        # afterwards so the shared session leaves other analyzers unaffected.
+        self._cmd("e io.va=0")
+        try:
+            return _read_win_certificate_impl(
+                cmdj=self._cmdj,
+                security_dir=security_dir,
+                result=result,
+                parse_header_fn=self._parse_win_cert_header,
+                get_cert_type_name_fn=self._get_cert_type_name,
+                parse_pkcs7_fn=self._parse_pkcs7,
+            )
+        finally:
+            self._cmd("e io.va=1")
 
     def _parse_win_cert_header(self, data: list[int]) -> tuple[int, int, int]:
         if len(data) < 8 or not is_byte_list(data[:8]):

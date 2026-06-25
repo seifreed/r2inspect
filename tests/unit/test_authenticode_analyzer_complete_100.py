@@ -761,3 +761,23 @@ def test_verify_signature_integrity_zero_size_dir():
         "security_directory": {"size": 0},
     }
     assert analyzer._verify_signature_integrity(info) is False
+
+
+def test_read_win_certificate_toggles_io_va_for_physical_read():
+    # The SECURITY directory address is a file offset and the certificate lives
+    # in the overlay, so the read must drop io.va (physical) and restore it,
+    # otherwise va-mode reads return 0xFF padding and the cert parses as garbage.
+    calls: list[str] = []
+
+    def record_cmd(command: str) -> str:
+        calls.append(command)
+        return ""
+
+    fake_r2 = FakeR2(cmdj_map={"pxj 8 @ 2048": list(WIN_CERT_HEADER)}, cmd_fn=record_cmd)
+    analyzer = AuthenticodeAnalyzer(adapter=R2PipeAdapter(fake_r2))
+
+    analyzer._read_win_certificate({"paddr": 2048, "size": 512}, {"errors": []})
+
+    assert "e io.va=0" in calls
+    assert "e io.va=1" in calls
+    assert calls.index("e io.va=0") < calls.index("e io.va=1")
