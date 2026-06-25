@@ -61,9 +61,7 @@ def build_similarity_groups(
     distance_fn: Any,
 ) -> list[dict[str, Any]]:
     similar_groups: list[dict[str, Any]] = []
-    processed_functions = set()
-    if not isinstance(function_features, dict):
-        return similar_groups
+    processed_functions: set[str] = set()
     valid_features = {
         name: data
         for name, data in function_features.items()
@@ -146,8 +144,6 @@ def classify_opcode_type(mnemonic: str | Any) -> str:
 
 def extract_opcodes_from_ops(ops: list[Any], *, max_instructions: int) -> list[str]:
     opcodes: list[str] = []
-    if not isinstance(ops, list):
-        return opcodes
     for i, op in enumerate(ops):
         if i >= max_instructions:
             break
