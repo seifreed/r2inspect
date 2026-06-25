@@ -25,8 +25,12 @@ def is_pie(macho_info: dict[str, Any] | None) -> bool:
 
 
 def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
+    # r2 surfaces the canary helpers as ``imp.__stack_chk_fail`` (symbols) and
+    # ``__stack_chk_guard`` (imports) -- two leading underscores, sometimes an
+    # ``imp.`` prefix. The old ``___stack_chk_*`` (three underscores) literal
+    # never matched, so stack_canary was False for every Mach-O.
     return any_symbol_name(
-        symbols, lambda name: "___stack_chk_fail" in name or "___stack_chk_guard" in name
+        symbols, lambda name: "_stack_chk_fail" in name or "_stack_chk_guard" in name
     )
 
 

@@ -361,6 +361,14 @@ def test_macho_has_stack_canary_guard():
     assert macho_has_stack_canary(symbols) is True
 
 
+def test_macho_has_stack_canary_real_r2_import_name():
+    # radare2 actually exposes the canary helper as ``imp.__stack_chk_fail``
+    # (two underscores, imp. prefix) -- the historical ``___stack_chk_*`` literal
+    # never matched it, so every Mach-O reported stack_canary=False.
+    assert macho_has_stack_canary([{"name": "imp.__stack_chk_fail"}]) is True
+    assert macho_has_stack_canary([{"name": "__stack_chk_guard"}]) is True
+
+
 def test_macho_has_stack_canary_false():
     symbols = [{"name": "printf"}]
     assert macho_has_stack_canary(symbols) is False
