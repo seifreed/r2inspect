@@ -69,11 +69,6 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             self._log_info("Starting import analysis")
 
             imports = self.get_imports()
-            if not isinstance(imports, list):
-                try:
-                    imports = list(imports)
-                except TypeError:
-                    imports = []
             dlls = _collect_import_dlls_impl(imports)
 
             result["imports"] = imports
@@ -129,11 +124,6 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
         imports: list[dict[str, Any]] = []
         try:
             imports = self.get_imports()
-            if not isinstance(imports, list):
-                try:
-                    imports = list(imports)
-                except TypeError:
-                    imports = []
             return build_import_statistics(imports)
         except Exception as exc:
             logger.error(
@@ -153,8 +143,6 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
     def _imported_api_names(self) -> list[str]:
         names: list[str] = []
         for imp in self.get_imports():
-            if not isinstance(imp, dict):
-                continue
             name = imp.get("name")
             if isinstance(name, str) and name:
                 names.append(name)

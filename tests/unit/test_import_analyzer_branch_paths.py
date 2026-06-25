@@ -106,13 +106,6 @@ class _RaisingForwardingAnalyzer(ImportAnalyzer):
         raise RuntimeError("simulated forwarding error")
 
 
-class _IterableImportsAnalyzer(ImportAnalyzer):
-    """Subclass that returns an iterable instead of a list from get_imports."""
-
-    def get_imports(self):  # type: ignore[override]
-        return (imp for imp in [{"name": "CreateFileA", "library": "kernel32.dll"}])
-
-
 # ---------------------------------------------------------------------------
 # supports_format - line 41
 # ---------------------------------------------------------------------------
@@ -136,12 +129,6 @@ def test_supports_format_exe():
 def test_supports_format_elf_returns_false():
     analyzer = ImportAnalyzer(adapter=None)
     assert analyzer.supports_format("ELF") is False
-
-
-def test_analyze_normalizes_iterable_imports():
-    analyzer = _IterableImportsAnalyzer(adapter=None)
-    result = analyzer.analyze()
-    assert result["total_imports"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -250,12 +237,6 @@ def test_get_import_statistics_exception_returns_default_stats():
     assert result["suspicious_patterns"] == []
 
 
-def test_get_import_statistics_normalizes_iterable_imports():
-    analyzer = _IterableImportsAnalyzer(adapter=None)
-    result = analyzer.get_import_statistics()
-    assert result["total_imports"] == 1
-
-
 # ---------------------------------------------------------------------------
 # get_missing_imports - line 252: else branch (no adapter.get_strings)
 # ---------------------------------------------------------------------------
@@ -312,9 +293,7 @@ def test_get_missing_imports_skips_malformed_import_entries():
 
 
 def test_get_missing_imports_preserves_first_seen_order():
-    adapter = _StringsAdapter(
-        strings=[{"string": "CreateFileA"}, {"string": "WriteProcessMemory"}]
-    )
+    adapter = _StringsAdapter(strings=[{"string": "CreateFileA"}, {"string": "WriteProcessMemory"}])
 
     class _NoImportsAnalyzer(ImportAnalyzer):
         def get_imports(self) -> list:
