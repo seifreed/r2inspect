@@ -256,7 +256,7 @@ def test_binbloom_collect_function_blooms_skips_malformed_functions():
 
     analyzer = Analyzer(MockAdapter(), "/path/to/binary")
     _, signatures, instructions, analyzed = analyzer._collect_function_blooms(
-        ["bad", {"addr": 0x1000, "name": ["bad"], "size": 4}],
+        [{"addr": 0x1000, "name": ["bad"], "size": 4}],
         256,
         0.001,
     )

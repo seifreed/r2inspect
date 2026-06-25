@@ -95,8 +95,6 @@ class BinbloomAnalyzer(BinbloomMixin, CommandHelperMixin, BaseAnalyzer):
         analyzed_count = 0
 
         for func in functions:
-            if not isinstance(func, dict):
-                continue
             func_addr = self._coerce_function_size(func.get("addr"))
             if func_addr <= 0:
                 continue

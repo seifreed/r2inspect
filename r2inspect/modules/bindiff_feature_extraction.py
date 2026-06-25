@@ -197,8 +197,6 @@ class BinDiffFeatureExtractor:
     def _collect_cfg_features(self, functions: list[dict[str, Any]]) -> list[dict[str, Any]]:
         cfg_features = []
         for func in functions[:10]:
-            if not isinstance(func, dict):
-                continue
             # r2's aflj emits the function address as "addr" (not "offset"), so
             # this was always 0 and the CFG features were never collected.
             func_addr = coerce_int(func.get("addr") or func.get("offset", 0))
