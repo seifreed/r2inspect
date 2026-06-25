@@ -82,8 +82,6 @@ def _yara_match_indicators(yara_matches: Any) -> list[dict[str, Any]]:
 
 
 def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[str, Any]]:
-    if not isinstance(results, dict):
-        return []
     indicators: list[dict[str, Any]] = []
     for predicate, builder in rules:
         if predicate(results):

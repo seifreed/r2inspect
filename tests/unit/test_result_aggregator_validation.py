@@ -14,8 +14,6 @@ from r2inspect.core.result_aggregator import (
     _count_suspicious_sections,
     _count_crypto_indicators,
 )
-from r2inspect.core.result_aggregator_indicator_support import generate_indicators
-from r2inspect.core.result_aggregator_recommendation_support import generate_recommendations
 from r2inspect.schemas import results as results_schema
 
 
@@ -701,12 +699,6 @@ def test_generate_recommendations_skips_non_dict_buckets():
     assert isinstance(recommendations, list)
 
 
-def test_generate_recommendations_non_dict_input_returns_default():
-    assert generate_recommendations(None) == [
-        "No immediate concerns detected; proceed with standard analysis."
-    ]
-
-
 def test_result_aggregator_generate_indicators_packer():
     agg = ResultAggregator()
     results = {
@@ -809,10 +801,6 @@ def test_result_aggregator_generate_indicators_empty():
 
     indicators = agg.generate_indicators(results)
     assert indicators == []
-
-
-def test_generate_indicators_non_dict_input_returns_empty():
-    assert generate_indicators(None, []) == []
 
 
 def test_result_aggregator_generate_executive_summary():
