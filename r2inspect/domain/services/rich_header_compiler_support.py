@@ -8,8 +8,6 @@ from .rich_header_decode_support import parse_rich_entry
 
 
 def get_compiler_description(compiler_name: str, build_number: int) -> str:
-    if not isinstance(compiler_name, str):
-        compiler_name = ""
     descriptions = {
         "Utc": "Microsoft C/C++ Compiler",
         "Linker": "Microsoft Linker",
@@ -32,8 +30,6 @@ def parse_compiler_entries(
     entries: list[dict[str, Any]], compiler_products: dict[int, str]
 ) -> list[dict[str, Any]]:
     compilers: list[dict[str, Any]] = []
-    if not isinstance(entries, list):
-        return compilers
     for entry in entries:
         parsed = parse_rich_entry(entry)
         if parsed is None:

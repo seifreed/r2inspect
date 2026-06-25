@@ -31,10 +31,6 @@ def test_get_compiler_description() -> None:
     assert "Microsoft C/C++ Compiler" in get_compiler_description("Utc1900_C", 123)
 
 
-def test_get_compiler_description_rejects_non_string_input() -> None:
-    assert get_compiler_description(None, 123) == " (Build 123)"  # type: ignore[arg-type]
-
-
 def test_decode_validate_and_build_rich_result() -> None:
     xor_key = 0x12345678
     prodid = 0x0008
