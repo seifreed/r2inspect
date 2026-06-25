@@ -14,6 +14,9 @@ class DummyAdapter:
             {"string": "sandbox", "vaddr": 20},
         ]
 
+    def get_file_info(self):
+        return {}
+
     def get_imports(self):
         return self._imports
 

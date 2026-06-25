@@ -35,6 +35,10 @@ from .anti_analysis_helpers import (
     detect_self_modifying,
     match_suspicious_api,
 )
+from .function_analyzer_extraction_support import (
+    file_size_mb_from_adapter,
+    should_run_full_analysis,
+)
 from .search_helpers import search_text
 
 logger = get_logger(__name__)
@@ -166,13 +170,18 @@ class AntiAnalysisDetector(CommandHelperMixin):
             ),
         )
 
+    def _should_search_opcodes(self) -> bool:
+        return should_run_full_analysis(self.config, file_size_mb_from_adapter(self.adapter))
+
     def _search_opcode(self, pattern: str) -> str:
         # Each /aa scans the whole binary; several techniques probe the same
         # opcode (e.g. rdtsc), so cache per pattern to avoid duplicate scans.
+        # Above the large-file threshold the linear /aa scan repeatedly trips
+        # the per-command timeout, so skip it (and cache the empty result).
         cached = self._opcode_search_cache.get(pattern)
         if cached is not None:
             return cached
-        result = search_text(self.adapter, pattern)
+        result = search_text(self.adapter, pattern) if self._should_search_opcodes() else ""
         self._opcode_search_cache[pattern] = result
         return result
 

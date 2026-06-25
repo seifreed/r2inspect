@@ -15,7 +15,10 @@ from .crypto_detection_support import (
     find_suspicious_patterns as build_suspicious_patterns,
 )
 from .crypto_constants import CRYPTO_CONSTANTS
-from .function_analyzer_extraction_support import should_run_full_analysis
+from .function_analyzer_extraction_support import (
+    file_size_mb_from_adapter,
+    should_run_full_analysis,
+)
 from ..domain.formats.crypto import consolidate_detections, detect_algorithms_from_strings
 from ..domain.services.binary_helpers import shannon_entropy
 from .search_helpers import search_hex, search_text
@@ -182,11 +185,7 @@ class CryptoAnalyzer(CommandHelperMixin):
         return should_run_full_analysis(self.config, self._file_size_mb())
 
     def _file_size_mb(self) -> float | None:
-        if self.adapter is None:
-            return None
-        core = self.adapter.get_file_info().get("core", {})
-        size = coerce_int_or_none(core.get("size")) if isinstance(core, dict) else None
-        return size / (1024 * 1024) if size else None
+        return file_size_mb_from_adapter(self.adapter)
 
     def _search_text(self, pattern: str) -> str:
         return search_text(self.adapter, pattern)

@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any, Protocol
 
+from ..abstractions.coercion_support import coerce_int_or_none
 from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import extract_mnemonics_from_text
 from ..domain.text_helpers import has_text
@@ -45,6 +46,15 @@ def get_file_size_mb(filename: str | None) -> float | None:
         return Path(filename).stat().st_size / (1024 * 1024)
     except OSError:
         return None
+
+
+def file_size_mb_from_adapter(adapter: Any) -> float | None:
+    """File size in MiB from the adapter's ``ij`` core info, or None if unknown."""
+    if adapter is None:
+        return None
+    core = adapter.get_file_info().get("core", {})
+    size = coerce_int_or_none(core.get("size")) if isinstance(core, dict) else None
+    return size / (1024 * 1024) if size else None
 
 
 def should_run_full_analysis(config: Any | None, file_size_mb: float | None) -> bool:

@@ -23,6 +23,26 @@ def _make_detector(imports=None, strings=None, cmd_map=None):
     return AntiAnalysisDetector(adapter, None)
 
 
+def _make_detector_with_size(size_bytes, cmd_map=None):
+    fake = FakeR2(
+        cmdj_map={"iij": [], "izzj": [], "ij": {"core": {"size": size_bytes}}},
+        cmd_map=cmd_map or {},
+    )
+    return AntiAnalysisDetector(R2PipeAdapter(fake), None)
+
+
+def test_large_file_skips_opcode_search():
+    detector = _make_detector_with_size(50 * 1024 * 1024, cmd_map={"/aa rdtsc": "0x1000\n"})
+    assert detector._should_search_opcodes() is False
+    assert detector._search_opcode("rdtsc") == ""
+
+
+def test_small_file_runs_opcode_search():
+    detector = _make_detector_with_size(1 * 1024 * 1024, cmd_map={"/aa rdtsc": "0x1000\n"})
+    assert detector._should_search_opcodes() is True
+    assert "0x1000" in detector._search_opcode("rdtsc")
+
+
 def test_anti_debug_with_is_debugger_present_api():
     detector = _make_detector(
         imports=[{"name": "IsDebuggerPresent", "plt": 0x1000, "libname": "kernel32.dll"}],
