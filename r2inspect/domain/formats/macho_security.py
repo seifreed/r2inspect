@@ -35,8 +35,14 @@ def has_stack_canary(symbols: list[dict[str, Any]] | None) -> bool:
 
 
 def has_arc(symbols: list[dict[str, Any]] | None) -> bool:
+    # r2 surfaces the ObjC runtime helpers as ``imp.objc_retain...`` /
+    # ``imp.objc_storeStrong`` -- no leading underscore on ``objc`` and often an
+    # ``imp.`` prefix. The old ``_objc_`` literal never matched, so arc was
+    # False for every ARC binary.
     return any_symbol_name(
-        symbols, lambda name: "_objc_" in name and ("retain" in name or "release" in name)
+        symbols,
+        lambda name: "objc_" in name
+        and ("retain" in name or "release" in name or "storeStrong" in name),
     )
 
 

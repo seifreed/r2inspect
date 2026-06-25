@@ -388,6 +388,13 @@ def test_macho_has_arc_release():
     assert has_arc(symbols) is True
 
 
+def test_macho_has_arc_real_r2_import_names():
+    # radare2 surfaces ARC runtime helpers as imp.objc_* (no leading underscore
+    # on objc) -- the historical _objc_ literal never matched these.
+    assert has_arc([{"name": "imp.objc_retainAutoreleasedReturnValue"}]) is True
+    assert has_arc([{"name": "imp.objc_storeStrong"}]) is True
+
+
 def test_macho_has_arc_false():
     symbols = [{"name": "malloc"}]
     assert has_arc(symbols) is False
