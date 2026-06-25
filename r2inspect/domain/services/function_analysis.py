@@ -20,8 +20,6 @@ def _coerce_function_type(value: Any) -> str:
 def extract_mnemonics_from_ops(ops: list[Any]) -> list[str]:
     """Extract instruction mnemonics from radare2 op dictionaries."""
     mnemonics: list[str] = []
-    if not isinstance(ops, list):
-        return mnemonics
     for op in ops:
         if not isinstance(op, dict):
             continue
@@ -208,9 +206,6 @@ def _is_thunk_name(name: str, func: dict[str, Any]) -> bool:
 def classify_function_type(func_name: str | None, func: dict[str, Any]) -> str:
     """Classify a function using stable naming and size heuristics."""
     if not func_name:
-        return "unknown"
-
-    if not isinstance(func_name, str):
         return "unknown"
 
     name = func_name.lower()
