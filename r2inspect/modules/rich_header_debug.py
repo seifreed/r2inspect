@@ -52,7 +52,7 @@ class RichHeaderDebugMixin:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
         data = self.adapter.read_bytes(0, size)
-        return data if isinstance(data, (bytes, bytearray)) and data else None
+        return bytes(data) if isinstance(data, (bytes, bytearray)) and data else None
 
     @staticmethod
     def _debug_has_mz_header(data: bytes) -> bool:
@@ -96,9 +96,10 @@ class RichHeaderDebugMixin:
         logger.debug("Searching first 2KB for Rich Header patterns...")
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return
-        extended_bytes = self.adapter.read_bytes(0, 2048)
-        if not isinstance(extended_bytes, (bytes, bytearray)) or not extended_bytes:
+        raw = self.adapter.read_bytes(0, 2048)
+        if not isinstance(raw, (bytes, bytearray)) or not raw:
             return
+        extended_bytes = bytes(raw)
         rich_positions, dans_positions = self._find_rich_dans_positions(extended_bytes)
 
         logger.debug("Found 'Rich' at positions: %s", rich_positions)

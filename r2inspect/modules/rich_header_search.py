@@ -59,7 +59,7 @@ class RichHeaderSearchMixin:
         if self.adapter is None or not hasattr(self.adapter, "read_bytes"):
             return None
         data = self.adapter.read_bytes(0, 2048)
-        return data if isinstance(data, (bytes, bytearray)) and data else None
+        return bytes(data) if isinstance(data, (bytes, bytearray)) and data else None
 
     def _find_signature_offsets(
         self, data: bytes, rich_sig: bytes, dans_sig: bytes

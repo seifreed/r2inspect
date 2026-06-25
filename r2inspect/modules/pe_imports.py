@@ -52,8 +52,6 @@ def has_known_library_name(lib_name: str | bytes | None) -> bool:
 
 
 def normalize_library_name(lib_name: str | bytes, extensions: list[str]) -> str:
-    if isinstance(lib_name, bytearray):
-        lib_name = lib_name.decode(errors="ignore")
     if isinstance(lib_name, bytes):
         lib_name = lib_name.decode(errors="ignore")
 

@@ -142,11 +142,6 @@ def test_normalize_library_name_bytes_input() -> None:
     assert result == "kernel32"
 
 
-def test_normalize_library_name_bytearray_input() -> None:
-    result = normalize_library_name(bytearray(b"KERNEL32.DLL"), ["dll", "ocx", "sys"])
-    assert result == "kernel32"
-
-
 def test_normalize_library_name_strips_extension() -> None:
     result = normalize_library_name("ntdll.dll", ["dll"])
     assert result == "ntdll"

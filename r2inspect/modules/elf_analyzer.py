@@ -241,7 +241,7 @@ class ELFAnalyzer(CommandHelperMixin, BaseAnalyzer):
         data = self.adapter.read_bytes(vaddr, read_size)
         if not isinstance(data, (bytes, bytearray)):
             return None
-        return _format_section_bytes(data, cmd)
+        return _format_section_bytes(bytes(data), cmd)
 
     def _parse_comment_compiler_info(self, comment_data: str) -> dict[str, Any]:
         return parse_comment_compiler_info(comment_data)
