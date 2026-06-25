@@ -15,6 +15,9 @@ from r2inspect.modules.crypto_analyzer import CryptoAnalyzer
 class EmptyAdapter:
     """Minimal adapter returning empty data for all calls."""
 
+    def get_file_info(self) -> dict[str, Any]:
+        return {}
+
     def get_imports(self) -> list[dict[str, Any]]:
         return []
 
