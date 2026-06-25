@@ -52,8 +52,6 @@ def detect_algorithms_from_strings(
     strings_result: list[dict[str, Any]], detected_algos: dict[str, list]
 ) -> None:
     for string_info in strings_result:
-        if not isinstance(string_info, dict):
-            continue
         raw_string = string_info.get("string", "")
         if not isinstance(raw_string, str):
             continue

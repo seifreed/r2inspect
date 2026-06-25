@@ -48,7 +48,7 @@ def test_match_patterns_adds_detection() -> None:
 
 def test_detect_algorithms_from_strings_skips_malformed_entries() -> None:
     detected: dict = {}
-    strings = ["bad", {"string": None}, {"string": "aes encryption used", "vaddr": 0x1000}]
+    strings = [{"string": None}, {"string": "aes encryption used", "vaddr": 0x1000}]
 
     cd.detect_algorithms_from_strings(strings, detected)
 

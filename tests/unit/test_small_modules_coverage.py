@@ -484,8 +484,8 @@ def test_extract_strings_from_entries_missing_string_key():
     assert result == []
 
 
-def test_extract_strings_from_entries_skips_non_dict_entry():
-    entries = [{"string": "hello"}, 123, {"string": "world"}]
+def test_extract_strings_from_entries_collects_valid_strings():
+    entries = [{"string": "hello"}, {"string": "world"}]
     result = extract_strings_from_entries(entries, min_length=4)
     assert result == ["hello", "world"]
 

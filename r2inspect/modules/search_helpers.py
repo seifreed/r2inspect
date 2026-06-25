@@ -7,8 +7,6 @@ from typing import Any
 
 
 def _normalize_pattern(pattern: str) -> str:
-    if not isinstance(pattern, str):
-        return ""
     return pattern.strip()
 
 
