@@ -36,6 +36,32 @@ def test_setup_logger_thread_safe_true_creates_handlers() -> None:
         _cleanup_logger(name)
 
 
+def test_thread_safe_console_handler_lock_is_reentrant() -> None:
+    # Regression: emit() -> flush() re-acquires the handler lock on the same
+    # thread, so a non-reentrant Lock self-deadlocks and wedges batch workers
+    # the first time they log. The replacement lock must be reentrant.
+    name = "r2inspect.test.bp.reentrant_lock"
+    try:
+        logger = setup_logger(name, level=logging.DEBUG, thread_safe=True)
+        console_handlers = [
+            handler
+            for handler in logger.handlers
+            if isinstance(handler, logging.StreamHandler)
+            and not isinstance(handler, logging.FileHandler)
+        ]
+        assert console_handlers
+        lock = console_handlers[0].lock
+        assert lock is not None
+        assert lock.acquire(blocking=False)
+        try:
+            assert lock.acquire(blocking=False)
+            lock.release()
+        finally:
+            lock.release()
+    finally:
+        _cleanup_logger(name)
+
+
 def test_setup_logger_thread_safe_false_creates_handlers() -> None:
     name = "r2inspect.test.bp.thread_safe_false"
     try:

@@ -78,9 +78,10 @@ def setup_logger(
 
         console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setLevel(level)
-
-        if thread_safe:
-            console_handler.lock = threading.Lock()
+        # The handler keeps its default reentrant lock. It must stay reentrant:
+        # Handler.handle() holds the lock while StreamHandler.emit() calls
+        # flush(), which re-acquires it on the same thread -- a plain Lock would
+        # self-deadlock and wedge every batch worker the first time it logs.
 
         try:
             log_dir = Path.home() / ".r2inspect" / "logs"
