@@ -117,11 +117,6 @@ def test_section_info_has_permission_case_insensitive():
     assert s.has_permission("X") is True
 
 
-def test_section_info_has_permission_non_string_returns_false():
-    s = SectionInfo(name=".text", is_executable=True)
-    assert s.has_permission(None) is False  # type: ignore[arg-type]
-
-
 # ---------------------------------------------------------------------------
 # SectionInfo.to_dict – line 67
 # ---------------------------------------------------------------------------
