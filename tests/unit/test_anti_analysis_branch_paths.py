@@ -569,3 +569,23 @@ def test_get_strings_uses_cmd_list_fallback() -> None:
     detector = AntiAnalysisDetector(adapter)
     result = detector._get_strings()
     assert result == [{"string": "sandbox"}]
+
+
+def test_search_opcode_caches_repeated_pattern() -> None:
+    # Regression: each /aa scans the whole binary and several techniques probe
+    # the same opcode (rdtsc is searched by two detectors), so a repeated
+    # pattern must hit the adapter only once.
+    calls: list[str] = []
+
+    def counting_search(pattern: str) -> str:
+        calls.append(pattern)
+        return "0x401000"
+
+    detector = AntiAnalysisDetector(_search_text_adapter(counting_search))
+    first = detector._search_opcode("rdtsc")
+    second = detector._search_opcode("rdtsc")
+    assert first == second == "0x401000"
+    assert calls == ["rdtsc"]
+    # A distinct pattern is searched independently.
+    detector._search_opcode("cpuid")
+    assert calls == ["rdtsc", "cpuid"]

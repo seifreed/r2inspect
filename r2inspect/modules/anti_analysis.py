@@ -66,6 +66,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
         self.anti_debug_apis = ANTI_DEBUG_APIS
         self.vm_artifacts = VM_ARTIFACTS
         self.sandbox_indicators = SANDBOX_INDICATORS
+        self._opcode_search_cache: dict[str, str] = {}
 
     def analyze(self) -> dict[str, Any]:
         """Unified entry point for pipeline dispatch."""
@@ -166,7 +167,14 @@ class AntiAnalysisDetector(CommandHelperMixin):
         )
 
     def _search_opcode(self, pattern: str) -> str:
-        return search_text(self.adapter, pattern)
+        # Each /aa scans the whole binary; several techniques probe the same
+        # opcode (e.g. rdtsc), so cache per pattern to avoid duplicate scans.
+        cached = self._opcode_search_cache.get(pattern)
+        if cached is not None:
+            return cached
+        result = search_text(self.adapter, pattern)
+        self._opcode_search_cache[pattern] = result
+        return result
 
     def _get_imports(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports", "iij"))
