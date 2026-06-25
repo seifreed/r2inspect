@@ -34,7 +34,11 @@ def update_indicator_stats(stats: dict[str, Any], file_key: str, result: dict[st
     indicators = result.get("indicators")
     if isinstance(indicators, list) and indicators:
         stats["suspicious_indicators"].extend(
-            [{"file": file_key, **indicator} for indicator in indicators if isinstance(indicator, dict)]
+            [
+                {"file": file_key, **indicator}
+                for indicator in indicators
+                if isinstance(indicator, dict)
+            ]
         )
 
 

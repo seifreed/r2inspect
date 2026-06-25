@@ -27,8 +27,7 @@ T = TypeVar("T")
 
 
 class R2PipeQueryMixin(
-    ABC,
-    R2PipeCachedQueryMixin, R2PipeTextQueryMixin, R2PipeByteQueryMixin, R2CommandInterface
+    ABC, R2PipeCachedQueryMixin, R2PipeTextQueryMixin, R2PipeByteQueryMixin, R2CommandInterface
 ):
     """Query helpers for r2pipe-backed adapters."""
 
@@ -43,12 +42,10 @@ class R2PipeQueryMixin(
         error_msg: str = "",
         *,
         cache: bool = True,
-    ) -> list[dict[str, Any]] | dict[str, Any]:
-        ...
+    ) -> list[dict[str, Any]] | dict[str, Any]: ...
 
     @abstractmethod
-    def _maybe_force_error(self, method: str) -> None:
-        ...
+    def _maybe_force_error(self, method: str) -> None: ...
 
     def _safe_query(self, action: Callable[[], T], default: T, error_message: str) -> T:
         try:

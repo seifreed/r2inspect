@@ -22,6 +22,8 @@ from .display_base import (
 )
 from .display_sections_common import Results, _get_console, add_group_functions_row
 from .presenter import get_section as _get_section
+
+
 def _display_binbloom(results: Results) -> None:
     binbloom_info, present = _get_section(results, "binbloom", {})
     if not present:
@@ -79,13 +81,11 @@ def _add_binbloom_stats(table: Table, binbloom_info: dict[str, Any]) -> None:
 
     valid_signatures = [sig for sig in function_signatures.values() if isinstance(sig, dict)]
     total_instructions = sum(
-        coerce_number(sig.get("instruction_count", 0))
-        for sig in valid_signatures
+        coerce_number(sig.get("instruction_count", 0)) for sig in valid_signatures
     )
     avg_instructions = total_instructions / len(valid_signatures) if valid_signatures else 0
     unique_instructions = sum(
-        coerce_number(sig.get("unique_instructions", 0))
-        for sig in valid_signatures
+        coerce_number(sig.get("unique_instructions", 0)) for sig in valid_signatures
     )
     avg_unique = unique_instructions / len(valid_signatures) if valid_signatures else 0
 
@@ -178,7 +178,9 @@ def _display_binbloom_signature_details(binbloom_info: dict[str, Any]) -> None:
     unique_sigs = list(signatures_by_hash.keys())[:5]
     for i, sig_hash in enumerate(unique_sigs):
         funcs = signatures_by_hash[sig_hash]
-        clean_funcs = [re.sub(r"&nbsp;?", " ", str(func)).replace(HTML_AMP, "&") for func in funcs[:3]]
+        clean_funcs = [
+            re.sub(r"&nbsp;?", " ", str(func)).replace(HTML_AMP, "&") for func in funcs[:3]
+        ]
         func_list = ", ".join(clean_funcs) + ("..." if len(funcs) > 3 else "")
         sig_table.add_row(
             f"Signature {i + 1}",

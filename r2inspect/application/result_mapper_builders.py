@@ -20,6 +20,7 @@ from ..abstractions.coercion_support import coerce_list
 
 logger = get_logger(__name__)
 
+
 def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
     if not raw or not isinstance(raw, dict):
         return FileInfo()
@@ -37,6 +38,7 @@ def build_file_info(raw: dict[str, Any] | None) -> FileInfo:
         mime_type=raw.get("mime_type", ""),
     )
 
+
 def build_hashing_result(raw: dict[str, Any] | None) -> HashingResult:
     if not raw or not isinstance(raw, dict):
         return HashingResult()
@@ -52,11 +54,13 @@ def build_hashing_result(raw: dict[str, Any] | None) -> HashingResult:
         machoc_hash=raw.get("machoc_hash", ""),
     )
 
+
 def build_security_features(raw: dict[str, Any] | None) -> SecurityFeatures:
     if not raw or not isinstance(raw, dict):
         return SecurityFeatures()
     known = set(SecurityFeatures().to_dict())
     return SecurityFeatures(**{k: v for k, v in raw.items() if k in known})
+
 
 def build_import_info(raw: dict[str, Any]) -> ImportInfo:
     return ImportInfo(
@@ -69,6 +73,7 @@ def build_import_info(raw: dict[str, Any]) -> ImportInfo:
         risk_level=raw.get("risk_level", "Low"),
         risk_tags=coerce_list(raw.get("risk_tags", [])),
     )
+
 
 def build_export_info(raw: dict[str, Any]) -> ExportInfo:
     return ExportInfo(

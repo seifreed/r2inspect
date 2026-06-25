@@ -43,6 +43,7 @@ _SIMPLE_BASE_CALLS: dict[str, str] = {
     "afl": "get_functions",
 }
 
+
 def safe_cmdj(
     r2_instance: R2CommandInterface, command: str, default: Any | None = None
 ) -> Any | None:
@@ -67,6 +68,7 @@ def safe_cmdj(
 
     return _execute()
 
+
 def safe_cmdj_any(
     r2_instance: R2CommandInterface, command: str, default: Any | None = None
 ) -> Any | None:
@@ -76,6 +78,7 @@ def safe_cmdj_any(
         except Exception as exc:
             logger.debug("safe_cmdj_any cmdj failed for %s: %s", command, exc)
     return safe_cmdj(r2_instance, command, default)
+
 
 def _run_cmd_with_timeout(
     r2_instance: R2CommandInterface, command: str, default: Any | None
@@ -109,6 +112,7 @@ def _run_cmd_with_timeout(
 
     return result["value"]
 
+
 def _parse_address(command: str) -> tuple[str, int | None]:
     if "@" not in command:
         return command.strip(), None
@@ -122,6 +126,7 @@ def _parse_address(command: str) -> tuple[str, int | None]:
     except ValueError:
         return base, None
 
+
 def _parse_size(base: str) -> int | None:
     parts = base.split()
     if len(parts) <= 1:
@@ -130,6 +135,7 @@ def _parse_size(base: str) -> int | None:
         return int(parts[1], 0)
     except ValueError:
         return None
+
 
 def _handle_search(adapter: Any, command: str) -> Any | None:
     if command.startswith("/xj ") and hasattr(adapter, "search_hex_json"):
@@ -140,6 +146,7 @@ def _handle_search(adapter: Any, command: str) -> Any | None:
         return adapter.search_hex(command[3:].strip())
     return None
 
+
 def _handle_functions(adapter: Any, base: str, address: int | None) -> Any | None:
     if base == "aflj":
         if address is not None and hasattr(adapter, "get_functions_at"):
@@ -149,6 +156,7 @@ def _handle_functions(adapter: Any, base: str, address: int | None) -> Any | Non
     if base.startswith("afij") and address is not None and hasattr(adapter, "get_function_info"):
         return adapter.get_function_info(address)
     return None
+
 
 def _handle_simple(adapter: Any, base: str, command: str, address: int | None) -> Any | None:
     if base.startswith("iz~") and hasattr(adapter, "get_strings_filtered"):
@@ -161,6 +169,7 @@ def _handle_simple(adapter: Any, base: str, command: str, address: int | None) -
         return getattr(adapter, method_name)()
     return None
 
+
 def _handle_disasm(adapter: Any, base: str, address: int | None) -> Any | None:
     if base.startswith("pdfj") and hasattr(adapter, "get_disasm"):
         return adapter.get_disasm(address=address)
@@ -172,6 +181,7 @@ def _handle_disasm(adapter: Any, base: str, address: int | None) -> Any | None:
         return adapter.get_cfg(address=address)
     return None
 
+
 def _coerce_byte_list(data: Any) -> list[int]:
     if not isinstance(data, list):
         return []
@@ -179,10 +189,12 @@ def _coerce_byte_list(data: Any) -> list[int]:
         return []
     return data
 
+
 def _coerce_hex_bytes(data: Any) -> str:
     if not isinstance(data, (bytes, bytearray)) or not data:
         return ""
     return data.hex()
+
 
 def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
     if address is None:
@@ -195,6 +207,7 @@ def _handle_bytes(adapter: Any, base: str, address: int | None) -> Any | None:
     if base.startswith("p8") and hasattr(adapter, "read_bytes"):
         return _coerce_hex_bytes(adapter.read_bytes(address, size))
     return None
+
 
 def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
     if adapter is None:
@@ -214,10 +227,12 @@ def _maybe_use_adapter(adapter: Any, command: str) -> Any | None:
         return bytes_result
     return None
 
+
 def _cmd_fallback(r2_fallback: Any, command: str) -> str:
     if r2_fallback is None or not hasattr(r2_fallback, "cmd"):
         return ""
     return safe_cmd(r2_fallback, command, "")
+
 
 def _cmdj_fallback(r2_fallback: Any, command: str, default: Any) -> Any:
     if r2_fallback is None or (
@@ -226,17 +241,20 @@ def _cmdj_fallback(r2_fallback: Any, command: str, default: Any) -> Any:
         return default
     return safe_cmdj_any(r2_fallback, command, default)
 
+
 def cmd(adapter: Any, r2_fallback: Any, command: str) -> str:
     adapter_result = _maybe_use_adapter(adapter, command)
     if isinstance(adapter_result, str):
         return adapter_result
     return _cmd_fallback(r2_fallback, command)
 
+
 def cmdj(adapter: Any, r2_fallback: Any, command: str, default: Any) -> Any:
     adapter_result = _maybe_use_adapter(adapter, command)
     if adapter_result is not None:
         return adapter_result
     return _cmdj_fallback(r2_fallback, command, default)
+
 
 def cmd_list(adapter: Any, r2_fallback: Any, command: str) -> list[Any]:
     result = cmdj(adapter, r2_fallback, command, [])
@@ -245,6 +263,7 @@ def cmd_list(adapter: Any, r2_fallback: Any, command: str) -> list[Any]:
     if isinstance(result, (dict, str, bytes)) or not isinstance(result, Iterable):
         return []
     return list(result)
+
 
 def _select_json_policy(command: str, default: Any) -> Any:
     if not isinstance(command, str):
@@ -256,13 +275,16 @@ def _select_json_policy(command: str, default: Any) -> Any:
         return R2_JSON_LIST_POLICY
     return R2_JSON_DICT_POLICY
 
+
 def safe_cmd_list(r2_instance: R2CommandInterface, command: str) -> list[dict[str, Any]]:
     result = safe_cmdj(r2_instance, command, [])
     return cast(list[dict[str, Any]], validate_r2_data(result, "list"))
 
+
 def safe_cmd_dict(r2_instance: R2CommandInterface, command: str) -> dict[str, Any]:
     result = safe_cmdj(r2_instance, command, {})
     return cast(dict[str, Any], validate_r2_data(result, "dict"))
+
 
 def safe_cmd(r2_instance: R2CommandInterface, command: str, default: str = "") -> str:
     @handle_errors(R2_TEXT_POLICY)

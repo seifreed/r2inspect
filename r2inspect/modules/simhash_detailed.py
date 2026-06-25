@@ -30,7 +30,11 @@ def _add_function_simhashes(
     results["function_simhashes"] = function_features
     results["total_functions"] = len(function_features)
     results["analyzed_functions"] = len(
-        [f for f in function_features.values() if isinstance(f, dict) and f.get("simhash") is not None]
+        [
+            f
+            for f in function_features.values()
+            if isinstance(f, dict) and f.get("simhash") is not None
+        ]
     )
     results["similarity_groups"] = find_similar_functions(function_features)
 

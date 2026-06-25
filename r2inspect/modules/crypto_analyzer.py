@@ -23,7 +23,6 @@ from ..domain.formats.string import parse_search_results
 logger = get_logger(__name__)
 
 
-
 class CryptoAnalyzer(CommandHelperMixin):
     """Cryptographic patterns detection using a backend interface."""
 

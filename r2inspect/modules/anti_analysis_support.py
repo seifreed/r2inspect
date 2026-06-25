@@ -23,6 +23,8 @@ from .anti_analysis_helpers import (
     detect_self_modifying,
     match_suspicious_api,
 )
+
+
 def _evidence_list(result: Any) -> list[Any]:
     if isinstance(result, dict):
         evidence = result.get("evidence")
