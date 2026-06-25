@@ -30,9 +30,6 @@ __pycache__/
 CLAUDE.md
 **/CLAUDE.md
 
-# Local-only tooling (not part of the published repo)
-scripts/quality_gate.sh
-
 # Editor / code-intelligence tool artifacts
 .codegraph/
 .cursor/
