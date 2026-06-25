@@ -13,9 +13,6 @@ from .display_base import _get_console
 
 def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
     """Display retry statistics table"""
-    if not isinstance(retry_stats, dict):
-        return
-
     if coerce_number(retry_stats.get("total_retries", 0)) <= 0:
         return
 
@@ -40,9 +37,6 @@ def _display_retry_statistics(retry_stats: dict[str, Any]) -> None:
 
 def _display_most_retried_commands(retry_stats: dict[str, Any]) -> None:
     """Display table of most retried commands"""
-    if not isinstance(retry_stats, dict):
-        return
-
     commands_retried = retry_stats.get("commands_retried", {})
     if not isinstance(commands_retried, dict) or not commands_retried:
         return
