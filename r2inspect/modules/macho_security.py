@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..abstractions.coercion_support import coerce_dict
+from ..abstractions.coercion_support import coerce_dict, coerce_dict_iterable
 from ..domain.formats.macho_security import (
     has_arc,
     has_stack_canary,
@@ -28,7 +28,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
     try:
         info = _get_info(adapter)
         features["pie"] = is_pie(info)
-        symbols = adapter.get_symbols()
+        symbols = coerce_dict_iterable(adapter.get_symbols())
         features["stack_canary"] = has_stack_canary(symbols)
         features["arc"] = has_arc(symbols)
         bin_info = coerce_dict(info).get("bin", {})

@@ -161,7 +161,7 @@ def test_has_stack_canary_returns_true() -> None:
 
 
 def test_has_stack_canary_skips_malformed_symbols() -> None:
-    symbols = ["bad", {"name": None}, {"name": "___stack_chk_fail"}]
+    symbols = [{"name": None}, {"name": "___stack_chk_fail"}]
     assert msd.has_stack_canary(symbols) is True
 
 
@@ -177,7 +177,7 @@ def test_has_arc_returns_true() -> None:
 
 
 def test_has_arc_skips_malformed_symbols() -> None:
-    symbols = ["bad", {"name": None}, {"name": "_objc_retain"}]
+    symbols = [{"name": None}, {"name": "_objc_retain"}]
     assert msd.has_arc(symbols) is True
 
 
@@ -241,7 +241,7 @@ def test_has_stack_canary_elf_returns_true() -> None:
 
 
 def test_has_stack_canary_elf_skips_malformed_symbols() -> None:
-    symbols = ["bad", {"name": None}, {"name": "__stack_chk_fail"}]
+    symbols = [{"name": None}, {"name": "__stack_chk_fail"}]
     assert esd.has_stack_canary(symbols) is True
 
 
