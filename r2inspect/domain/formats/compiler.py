@@ -174,13 +174,20 @@ def _check_string_signatures(
     score = 0.0
     max_score = 3.0
 
+    # Search the joined string blob once per pattern instead of re-running each
+    # pattern against every extracted string: a large binary yields hundreds of
+    # thousands of strings, so the per-string loop was the dominant analysis
+    # cost. None of the signatures are anchored and the search has no DOTALL, so
+    # "pattern matches the newline-joined blob" is equivalent to "pattern
+    # matches some individual string".
+    if not strings_data:
+        return score, max_score
+    haystack = "\n".join(string for string in strings_data if isinstance(string, str))
     for pattern in signatures["strings"]:
         if not isinstance(pattern, str):
             continue
-        for string in strings_data:
-            if re.search(pattern, string, re.IGNORECASE):
-                score += 3.0 / len(signatures["strings"])
-                break
+        if re.search(pattern, haystack, re.IGNORECASE):
+            score += 3.0 / len(signatures["strings"])
 
     return score, max_score
 

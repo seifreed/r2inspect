@@ -305,6 +305,20 @@ def test_check_string_signatures_missing_key_returns_zeros():
     assert max_score == 0.0
 
 
+def test_check_string_signatures_empty_strings_data_returns_max_only():
+    sigs = {"strings": ["hello"]}
+    score, max_score = _check_string_signatures(sigs, [])
+    assert score == 0.0
+    assert max_score == 3.0
+
+
+def test_check_string_signatures_skips_non_string_pattern():
+    sigs = {"strings": [123, "hello"]}
+    score, max_score = _check_string_signatures(sigs, ["hello world"])
+    assert score > 0.0
+    assert max_score == 3.0
+
+
 def test_check_string_signatures_with_match():
     sigs = {"strings": ["hello"]}
     score, max_score = _check_string_signatures(sigs, ["hello world"])
