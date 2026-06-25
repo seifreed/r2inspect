@@ -38,15 +38,7 @@ def build_function_ccbhashes(
     """Hash each function's CFG, returning the hash map and the count hashed."""
     function_hashes: dict[str, dict[str, Any]] = {}
     analyzed_count = 0
-    if isinstance(functions, list):
-        function_source = functions
-    elif isinstance(functions, (dict, str, bytes)) or not isinstance(functions, Iterable):
-        return function_hashes, analyzed_count
-    else:
-        function_source = list(functions)
-    for func in function_source:
-        if not isinstance(func, dict):
-            continue
+    for func in functions:
         func_offset = coerce_int(func.get("addr"))
         if func_offset <= 0:
             continue
@@ -145,8 +137,6 @@ def _blocks_canonical(blocks: list[Any]) -> str:
 
 
 def build_canonical_representation(cfg: dict[str, Any], func_offset: int) -> str | None:
-    if not isinstance(cfg, dict):
-        return str(func_offset)
     edges = cfg.get("edges", [])
     if isinstance(edges, list) and edges:
         return _edges_canonical(edges)
@@ -175,6 +165,8 @@ def calculate_function_ccbhash(
             logger.debug("No CFG data found for function %s", func_name)
             return None
         cfg = cfg_source[0]
+        if not isinstance(cfg, dict):
+            cfg = {}
         canonical = analyzer._build_canonical_representation(cfg, func_offset)
         if not canonical:
             return None
@@ -192,8 +184,6 @@ def find_similar_functions(
     try:
         hash_groups: dict[str, list[str]] = {}
         for func_name, func_data in function_hashes.items():
-            if not isinstance(func_data, dict):
-                continue
             ccbhash = func_data.get("ccbhash")
             if not isinstance(ccbhash, str) or not ccbhash:
                 continue

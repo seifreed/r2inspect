@@ -6,7 +6,6 @@ from typing import Any
 
 from r2inspect.modules.ccbhash_analyzer import CCBHashAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Adapter helpers (no unittest.mock)
 # ---------------------------------------------------------------------------
@@ -375,9 +374,8 @@ def test_build_canonical_representation_fallback_to_func_offset():
     assert result == "20480"
 
 
-def test_build_canonical_representation_ignores_malformed_cfg():
-    """Malformed CFG input falls back to the function offset."""
-    assert CCBHashAnalyzer._build_canonical_representation(None, 0x5000) == "20480"  # type: ignore[arg-type]
+def test_build_canonical_representation_non_list_edges_falls_back():
+    """Non-list edges/blocks fall back to the function offset."""
     assert (
         CCBHashAnalyzer._build_canonical_representation({"edges": "bad", "blocks": "bad"}, 0x5000)
         == "20480"
@@ -418,7 +416,6 @@ def test_find_similar_functions_skips_malformed_entries():
     fhashes = {
         "alpha": {"ccbhash": "aaa"},
         "bad": {"ccbhash": None},
-        "worse": None,  # type: ignore[dict-item]
         "beta": {"ccbhash": "aaa"},
     }
     result = analyzer._find_similar_functions(fhashes)

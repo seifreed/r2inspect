@@ -105,15 +105,6 @@ def test_ccbhash_extract_functions():
     assert all("size" in f for f in functions)
 
 
-def test_ccbhash_build_function_hashes_rejects_non_list_functions():
-    adapter = MockAdapter(has_functions=True)
-    analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
-    hashes, count = build_function_ccbhashes(analyzer, None)  # type: ignore[arg-type]
-
-    assert hashes == {}
-    assert count == 0
-
-
 def test_ccbhash_build_function_hashes_normalizes_iterable_functions():
     adapter = MockAdapter(has_functions=True)
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
@@ -149,6 +140,18 @@ def test_ccbhash_hash_deterministic():
     hash1 = analyzer._calculate_function_ccbhash(0x1000, "test_func")
     hash2 = analyzer._calculate_function_ccbhash(0x1000, "test_func")
     assert hash1 == hash2
+
+
+def test_ccbhash_calculate_function_handles_non_dict_cfg_entry():
+    class _NonDictCfgAdapter(MockAdapter):
+        def get_cfg(self, func_offset: int):
+            return ["not_a_dict"]
+
+    analyzer = CCBHashAnalyzer(_NonDictCfgAdapter(), "/path/to/binary")
+    ccbhash = analyzer._calculate_function_ccbhash(0x1000, "test_func")
+
+    assert ccbhash is not None
+    assert len(ccbhash) == 64
 
 
 def test_ccbhash_canonical_representation():
@@ -342,7 +345,7 @@ def test_ccbhash_build_function_hashes_skips_malformed_functions():
 
     hashes, analyzed = build_function_ccbhashes(
         Host(),
-        ["bad", {"addr": 0x1000, "name": ["bad"], "size": 4}],
+        [{"addr": 0x1000, "name": ["bad"], "size": 4}],
     )
 
     assert analyzed == 1
