@@ -167,19 +167,16 @@ def _report_magic_init_errors(init_errors: list[str]) -> bool:
     return False
 
 
-def _log_discovery_file_errors(file_errors: list[Any]) -> None:
-    for item in file_errors:
-        if not isinstance(item, tuple) or len(item) < 2:
-            continue
-        logger.warning("Error checking %s during discovery: %s", item[0], item[1])
+def _log_discovery_file_errors(file_errors: list[tuple[Path, str]]) -> None:
+    for file_path, error in file_errors:
+        logger.warning("Error checking %s during discovery: %s", file_path, error)
 
 
-def _print_verbose_discovery(files: list[Path], file_errors: list[Any], scanned: int) -> None:
+def _print_verbose_discovery(
+    files: list[Path], file_errors: list[tuple[Path, str]], scanned: int
+) -> None:
     console.print(f"[blue]Scanning {scanned} files for executable signatures...[/blue]")
-    for item in file_errors:
-        if not isinstance(item, tuple) or len(item) < 2:
-            continue
-        file_path, error = item[0], item[1]
+    for file_path, error in file_errors:
         console.print(f"[yellow]Error checking {file_path}: {str(error)}[/yellow]")
     for file_path in files:
         console.print(f"[green]Found executable: {file_path}[/green]")

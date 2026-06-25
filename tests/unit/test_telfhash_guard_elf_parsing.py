@@ -11,6 +11,7 @@ from r2inspect.modules.telfhash_guard import (
     _resolve_telfhash_timeout,
     _telfhash_safe_to_call,
 )
+from tests.helpers.env import env_vars
 
 
 def _elf64(*, e_phoff: int, e_phentsize: int, e_phnum: int, ei_data: int = 1) -> bytes:
@@ -42,9 +43,9 @@ def _ph_entry(p_type: int, size: int) -> bytes:
     return bytes(entry)
 
 
-def test_resolve_telfhash_timeout_invalid_override(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_TELFHASH_TIMEOUT_SECONDS", "bad-value")
-    assert _resolve_telfhash_timeout() > 0
+def test_resolve_telfhash_timeout_invalid_override() -> None:
+    with env_vars(R2INSPECT_TELFHASH_TIMEOUT_SECONDS="bad-value"):
+        assert _resolve_telfhash_timeout() > 0
 
 
 def _write(tmp_path: Path, data: bytes) -> str:
