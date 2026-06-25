@@ -70,9 +70,7 @@ def _add_bindiff_strings(table: Table, string_features: dict[str, Any]) -> None:
 
 
 def _add_bindiff_signatures(table: Table, signatures: dict[str, Any]) -> None:
-    if not signatures:
-        return
-    if not isinstance(signatures, dict):
+    if not isinstance(signatures, dict) or not signatures:
         return
     for key, value in signatures.items():
         if value:
