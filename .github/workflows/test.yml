@@ -122,21 +122,10 @@ jobs:
           print(f"Copied {len(found)} fixtures from {repo} to {dst}")
           PY
 
-      - name: Lint with ruff
-        run: |
-          ruff check r2inspect
-
-      - name: Format check with black
-        run: |
-          black --check r2inspect
-
-      - name: Security check with bandit
-        run: |
-          bandit -r r2inspect -f json -o bandit-report.json
-
-      - name: Type check with mypy
-        run: |
-          mypy r2inspect
+      - name: Quality gate (format, lint, types, security, audit, policy scans)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: bash scripts/quality_gate.sh
 
       - name: Test installation (Unix)
         if: runner.os != 'Windows'
