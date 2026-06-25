@@ -9,8 +9,6 @@ from collections.abc import Callable
 
 def detect_file_format(file_info: dict[str, Any], *, logger: Any) -> str:
     try:
-        if not isinstance(file_info, dict):
-            return "Unknown"
         bin_info = file_info.get("bin")
         if not isinstance(bin_info, dict):
             return "Unknown"
@@ -68,8 +66,6 @@ def score_compilers(
     *,
     calculate_score: Callable[[dict[str, Any], list[str], list[str], list[str], list[str]], float],
 ) -> dict[str, float]:
-    if not isinstance(compiler_signatures, dict):
-        return {}
     scores: dict[str, float] = {}
     for compiler_name, signatures in compiler_signatures.items():
         # Each compiler maps to a signature dict ({"strings": [...], "imports":
@@ -128,8 +124,6 @@ def detect_compiler_version(
     *,
     detectors: dict[str, Callable[[list[str], list[str]], str]],
 ) -> str:
-    if not isinstance(detectors, dict):
-        return "Unknown"
     detector = detectors.get(compiler)
     return detector(strings_data, imports_data) if detector else "Unknown"
 

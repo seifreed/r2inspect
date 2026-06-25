@@ -473,18 +473,6 @@ def test_score_compilers():
     assert isinstance(scores, dict)
 
 
-def test_score_compilers_skips_non_dict_input():
-    scores = score_compilers(
-        None,  # type: ignore[arg-type]
-        [],
-        [],
-        [],
-        [],
-        calculate_score=lambda signatures, *_: float(len(signatures)),
-    )
-    assert scores == {}
-
-
 def test_score_compilers_forwards_dict_signatures():
     """Each compiler's signature dict must reach calculate_score unchanged."""
     captured = {}
@@ -537,20 +525,6 @@ def test_score_compilers_scores_real_signatures():
         calculate_score=calculate_compiler_score,
     )
     assert scores.get("MSVC", 0.0) > 0.3
-
-
-def test_detect_compiler_version_skips_non_dict_detectors():
-    from r2inspect.modules.compiler_detector_support import detect_compiler_version
-
-    assert (
-        detect_compiler_version(
-            "MSVC",
-            [],
-            [],
-            detectors=None,  # type: ignore[arg-type]
-        )
-        == "Unknown"
-    )
 
 
 def test_apply_best_compiler_skips_non_dict_scores():
