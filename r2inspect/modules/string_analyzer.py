@@ -65,12 +65,6 @@ class StringAnalyzer(BaseAnalyzer):
         with self._analysis_context(result, error_message="String analysis failed"):
             self._log_info("Starting string analysis")
             strings = self.extract_strings()
-            if isinstance(strings, list):
-                pass
-            elif isinstance(strings, (dict, str, bytes)) or not isinstance(strings, Iterable):
-                strings = []
-            else:
-                strings = list(strings)
             result["strings"] = strings
             result["total_strings"] = len(strings)
             self._log_info(f"Extracted {len(strings)} strings")
@@ -200,8 +194,6 @@ class StringAnalyzer(BaseAnalyzer):
         charset_count = {"ascii": 0, "unicode": 0, "printable": 0, "alphanumeric": 0}
 
         for string in strings:
-            if not isinstance(string, str):
-                continue
             if all(ord(c) < 128 for c in string):
                 charset_count["ascii"] += 1
             else:
