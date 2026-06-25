@@ -47,14 +47,6 @@ class _NoOverlay(OverlayAnalyzer):
         return [1, 2, 3, 4]
 
 
-class _BadCalcPeEnd(OverlayAnalyzer):
-    """Overlay double whose _calculate_pe_end returns a non-int, exercising
-    the real _get_valid_pe_end conversion-failure branch."""
-
-    def _calculate_pe_end(self) -> int:
-        return cast(int, "x")
-
-
 def test_similarity_scoring_helpers() -> None:
     assert jaccard_similarity(set(), set()) == 1.0
     assert jaccard_similarity({"a"}, set()) == 0.0
@@ -175,9 +167,10 @@ def test_crypto_overlay_pe_imports_registry_residuals() -> None:
     assert out == {}
 
     # un-hex-able section bytes -> entropy 0.0 (real path via subclass double)
-    assert _BadBytesCrypto(adapter=object())._calculate_section_entropy(
-        {"vaddr": 1, "size": 10}
-    ) == 0.0
+    assert (
+        _BadBytesCrypto(adapter=object())._calculate_section_entropy({"vaddr": 1, "size": 10})
+        == 0.0
+    )
 
     assert crypto._get_imports() == []
     assert crypto._get_sections() == []
@@ -189,10 +182,6 @@ def test_crypto_overlay_pe_imports_registry_residuals() -> None:
     ov = _NoOverlay(adapter=SimpleNamespace(cmdj=lambda _c: {}))
     r = ov.analyze()
     assert r["has_overlay"] is False
-
-    # invalid pe_end conversion -> None (real _get_valid_pe_end)
-    ov2 = _BadCalcPeEnd(adapter=SimpleNamespace(cmdj=lambda _c: {}))
-    assert ov2._get_valid_pe_end(100) is None
 
     # hash-exception handling via the calculate_hashes_fn DI seam
     res = ov._default_result()

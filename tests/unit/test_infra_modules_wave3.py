@@ -346,28 +346,6 @@ def test_overlay_analyzer_zero_overlay_size() -> None:
 
 
 # ===========================================================================
-# overlay_analyzer.py – lines 112-113
-# Trigger path: _calculate_pe_end returns a non-numeric string so int() raises
-# ValueError, and _get_valid_pe_end returns None (line 113).
-# ===========================================================================
-
-
-def test_overlay_analyzer_pe_end_not_castable_to_int() -> None:
-    """Lines 112-113: ValueError in int(pe_end) causes _get_valid_pe_end to return None."""
-    from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
-
-    class _BadPeEnd(OverlayAnalyzer):
-        def _get_file_size(self) -> int:
-            return 200
-
-        def _calculate_pe_end(self) -> Any:  # type: ignore[override]
-            return "not_a_number"
-
-    result = _BadPeEnd(adapter=None).analyze()
-    assert result["has_overlay"] is False
-
-
-# ===========================================================================
 # overlay_analyzer.py – lines 186-188
 # Trigger path: overlay_data contains integers > 255 so bytes(overlay_data)
 # raises ValueError inside the inner try/except, logging the error and setting

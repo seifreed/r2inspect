@@ -189,28 +189,6 @@ def test_calculate_pe_end_exception_returns_zero():
     assert result["has_overlay"] is False
 
 
-def test_get_valid_pe_end_handles_non_int_value():
-    """_get_valid_pe_end catches ValueError/TypeError while coercing pe_end (lines 112-113)."""
-
-    class _BadPeEndOverlayAnalyzer(OverlayAnalyzer):
-        def _calculate_pe_end(self):
-            return "not_an_int"
-
-    analyzer = _BadPeEndOverlayAnalyzer(OverlayAdapter())
-    assert analyzer._get_valid_pe_end(10000) is None
-
-
-def test_get_valid_pe_end_accepts_hex_string_value():
-    """Hex string pe_end values should still be accepted."""
-
-    class _HexPeEndOverlayAnalyzer(OverlayAnalyzer):
-        def _calculate_pe_end(self):
-            return "0x1000"
-
-    analyzer = _HexPeEndOverlayAnalyzer(OverlayAdapter())
-    assert analyzer._get_valid_pe_end(10000) == 4096
-
-
 # ---------------------------------------------------------------------------
 # _extend_end_with_certificate  (lines 159, 161-166)
 # ---------------------------------------------------------------------------

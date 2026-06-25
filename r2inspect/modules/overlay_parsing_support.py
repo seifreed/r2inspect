@@ -8,7 +8,6 @@ from typing import Any
 from ..abstractions.coercion_support import coerce_int_or_none, coerce_list
 
 
-
 def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:
     file_info = cmdj("ij", {})
     if not isinstance(file_info, dict):
@@ -24,15 +23,9 @@ def get_file_size(cmdj: Callable[[str, Any], Any]) -> int | None:
 
 def get_valid_pe_end(calculate_pe_end: Callable[[], int], file_size: int) -> int | None:
     pe_end = calculate_pe_end()
-    if not pe_end:
+    if not pe_end or pe_end >= file_size:
         return None
-    try:
-        pe_end_int = int(pe_end, 0) if isinstance(pe_end, str) else int(pe_end)
-    except (ValueError, TypeError):
-        return None
-    if pe_end_int == 0 or pe_end_int >= file_size:
-        return None
-    return pe_end_int
+    return pe_end
 
 
 def calculate_pe_end(
