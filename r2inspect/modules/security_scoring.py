@@ -48,8 +48,6 @@ def _vulnerability_penalty(vulnerabilities: list[Any]) -> int:
 
 
 def build_security_score(result: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(result, dict):
-        return {"score": 0, "max_score": 0, "percentage": 0.0, "grade": "Unknown"}
     mitigations = result.get("mitigations")
     if not isinstance(mitigations, dict):
         mitigations = {}

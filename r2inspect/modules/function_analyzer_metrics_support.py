@@ -33,8 +33,6 @@ def _accumulate_function_stats(functions: list[Any]) -> tuple[int, int, list[int
     with_blocks = 0
     sizes: list[int] = []
     for func in coerce_dict_iterable(functions):
-        if not isinstance(func, dict):
-            continue
         size = coerce_positive_int(func.get("size"))
         if size > 0:
             with_size += 1

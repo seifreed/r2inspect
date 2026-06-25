@@ -73,8 +73,6 @@ def populate_import_statistics(
     get_risk_level_fn: Any,
     count_suspicious_indicators_fn: Any,
 ) -> None:
-    if not isinstance(result, dict):
-        return
     api_analysis = result.get("api_analysis")
     if not isinstance(api_analysis, dict):
         api_analysis = {}
