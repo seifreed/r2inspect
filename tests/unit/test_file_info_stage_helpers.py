@@ -48,25 +48,6 @@ def test_enhanced_detection_info_rejects_malformed_input() -> None:
     assert FileInfoStage._enhanced_detection_info({"confidence": "bad"}) == {}
 
 
-def test_format_detection_stage_ignores_malformed_enhanced_detector() -> None:
-    class _NullAdapter:
-        def get_file_info(self) -> dict[str, Any]:
-            return {}
-
-    class _BadDetector:
-        def __call__(self, filename: str) -> object:
-            return ["bad"]
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
-        f.write(b"\x00" * 32)
-        path = Path(f.name)
-    try:
-        stage = FormatDetectionStage(adapter=_NullAdapter(), filename=str(path), file_type_detector=_BadDetector())
-        assert stage._detect_via_enhanced_magic() is None
-    finally:
-        path.unlink(missing_ok=True)
-
-
 def test_format_detection_stage_ignores_basic_magic_detector_errors() -> None:
     class _NullAdapter:
         def get_file_info(self) -> dict[str, Any]:

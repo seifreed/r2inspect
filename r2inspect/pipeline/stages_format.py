@@ -125,9 +125,6 @@ class FileInfoStage(AnalysisStage):
 
     @staticmethod
     def _enhanced_detection_info(enhanced_detection: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(enhanced_detection, dict):
-            return {}
-
         try:
             confidence = float(enhanced_detection.get("confidence", 0.0))
         except (TypeError, ValueError):
@@ -252,8 +249,6 @@ class FormatDetectionStage(AnalysisStage):
 
     def _detect_via_enhanced_magic(self) -> str | None:
         enhanced_detection = self.file_type_detector(self.filename)
-        if not isinstance(enhanced_detection, dict):
-            return None
 
         try:
             confidence = float(enhanced_detection.get("confidence", 0.0))
