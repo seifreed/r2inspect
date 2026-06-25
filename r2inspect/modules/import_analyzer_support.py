@@ -53,8 +53,6 @@ def _import_name_value(imp: dict[str, Any]) -> str:
 
 def _match_api_category(name: str, analyzer: ImportHost) -> str | None:
     api_categories = analyzer.api_categories
-    if not isinstance(api_categories, dict):
-        return None
     for category, functions in api_categories.items():
         if not isinstance(functions, (list, tuple, set)):
             continue
@@ -66,8 +64,6 @@ def _match_api_category(name: str, analyzer: ImportHost) -> str | None:
 def analyze_import(
     imp: dict[str, Any], analyzer: ImportHost, *, logger: logging.Logger
 ) -> dict[str, Any]:
-    if not isinstance(imp, dict):
-        imp = {}
     name = _import_name_value(imp)
     analysis = {
         "name": name,

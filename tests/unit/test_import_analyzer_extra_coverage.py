@@ -182,12 +182,6 @@ def test_analyze_import_missing_fields():
     assert result["name"] == "unknown"
 
 
-def test_analyze_import_rejects_non_dict_input():
-    analyzer = _make_analyzer()
-    result = analyzer._analyze_import(None)  # type: ignore[arg-type]
-    assert result["name"] == "unknown"
-
-
 def test_analyze_import_skips_non_dict_risk_result():
     analyzer = _make_analyzer()
     analyzer._calculate_risk_score = lambda _func_name: None  # type: ignore[method-assign]
