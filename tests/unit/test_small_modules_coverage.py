@@ -4,8 +4,6 @@ import pytest
 """Unit tests for small utility modules (items 1-11)."""
 
 import hashlib
-import math
-import tempfile
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
