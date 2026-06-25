@@ -634,3 +634,42 @@ def test_get_strings_raw_returns_string():
 
     result = detector._get_strings_raw()
     assert result == ""
+
+
+def test_r2_metadata_compiler_fills_in_when_signatures_empty():
+    # A stripped clang Mach-O carries no string signature, but r2 still reports
+    # bin.compiler -> the fallback upgrades the otherwise-Unknown result.
+    adapter = FakeAdapter(file_info={"bin": {"class": "MACH064", "compiler": "clang"}})
+    result = CompilerDetector(adapter).detect_compiler()
+    assert result["compiler"] == "Clang"
+    assert result["confidence"] == 0.6
+    assert result["detected"] is True
+    assert result["details"]["detection_method"] == "radare2 bin.compiler metadata"
+
+
+def test_r2_metadata_compiler_normalizes_gcc():
+    adapter = FakeAdapter(file_info={"bin": {"class": "ELF64", "compiler": "gcc"}})
+    assert CompilerDetector(adapter).detect_compiler()["compiler"] == "GCC"
+
+
+def test_r2_metadata_compiler_passes_through_unmapped_value():
+    adapter = FakeAdapter(file_info={"bin": {"class": "ELF64", "compiler": "tcc"}})
+    assert CompilerDetector(adapter).detect_compiler()["compiler"] == "tcc"
+
+
+def test_r2_metadata_compiler_does_not_override_signature_match():
+    # Signature scoring already identifies UPX; the r2 metadata fallback must not
+    # run because the result is no longer Unknown.
+    adapter = FakeAdapter(
+        file_info={"bin": {"class": "PE32", "compiler": "clang"}},
+        sections=[{"name": "UPX0"}, {"name": "UPX1"}],
+        strings=[{"string": "UPX!"}],
+    )
+    result = CompilerDetector(adapter).detect_compiler()
+    assert result["compiler"] == "UPX"
+
+
+def test_r2_metadata_compiler_absent_stays_unknown():
+    adapter = FakeAdapter(file_info={"bin": {"class": "MACH064"}})
+    result = CompilerDetector(adapter).detect_compiler()
+    assert result["compiler"] == "Unknown"

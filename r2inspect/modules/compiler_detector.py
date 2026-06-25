@@ -48,6 +48,15 @@ from .compiler_signatures import (
 
 logger = get_logger(__name__)
 
+# Maps radare2's lowercase ``bin.compiler`` values onto the canonical names this
+# detector uses elsewhere; unmapped values pass through unchanged.
+_R2_COMPILER_NAMES = {
+    "clang": "Clang",
+    "gcc": "GCC",
+    "msvc": "MSVC",
+    "rustc": "Rust",
+}
+
 # Constants
 
 
@@ -105,6 +114,9 @@ class CompilerDetector(CommandHelperMixin):
                 results, compiler_scores, strings_data, imports_data, file_format
             )
 
+            if results["compiler"] == "Unknown":
+                self._apply_r2_metadata_compiler(results)
+
             logger.debug(
                 "Compiler detection completed: %s (confidence: %.2f)",
                 results["compiler"],
@@ -116,6 +128,30 @@ class CompilerDetector(CommandHelperMixin):
             results["error"] = str(e)
 
         return results
+
+    def _apply_r2_metadata_compiler(self, results: dict[str, Any]) -> None:
+        """Fill in the compiler from radare2's own ``bin.compiler`` metadata when
+        signature scoring found nothing. r2 derives it from load commands / build
+        info (e.g. a stripped clang Mach-O carries no string signature but r2 still
+        reports ``clang``), so this only ever upgrades an otherwise Unknown result."""
+        raw = self._get_r2_compiler()
+        if not raw:
+            return
+        results["detected"] = True
+        results["compiler"] = _R2_COMPILER_NAMES.get(raw.lower(), raw)
+        results["confidence"] = 0.6
+        results["details"]["detection_method"] = "radare2 bin.compiler metadata"
+
+    def _get_r2_compiler(self) -> str:
+        empty: dict[str, Any] = {}
+        file_info = self._safe_call(
+            lambda: _collect_file_info(self),
+            default=empty,
+            error_msg="Error reading file info for compiler metadata",
+        )
+        bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
+        compiler = bin_info.get("compiler") if isinstance(bin_info, dict) else None
+        return compiler.strip() if isinstance(compiler, str) else ""
 
     def _apply_rich_header_detection(self, results: dict[str, Any]) -> bool:
         return _apply_rich_header_detection(
