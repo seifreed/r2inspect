@@ -94,8 +94,6 @@ def _crypto_constant_matches(
 def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> list[dict[str, Any]]:
     found_constants: list[dict[str, Any]] = []
     try:
-        if not isinstance(analyzer.crypto_constants, dict):
-            return found_constants
         for const_name, const_values in analyzer.crypto_constants.items():
             found_constants.extend(_crypto_constant_matches(analyzer, const_name, const_values))
     except Exception as exc:
@@ -135,8 +133,6 @@ def detect_crypto_apis(analyzer: CryptoHost, logger: logging.Logger) -> list[dic
             "SHA256_Init": "SHA256",
         }
         for imp in imports:
-            if not isinstance(imp, dict):
-                continue
             func_name = imp.get("name", "")
             if not isinstance(func_name, str):
                 continue
@@ -161,8 +157,6 @@ def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, A
         sections = analyzer._get_sections()
         if sections:
             for section in sections:
-                if not isinstance(section, dict):
-                    continue
                 section_name_value = section.get("name", "unknown")
                 section_name = (
                     section_name_value if isinstance(section_name_value, str) else "unknown"
@@ -240,8 +234,6 @@ def detect_crypto_libraries(analyzer: CryptoHost, logger: logging.Logger) -> lis
             ],
         }
         for imp in imports:
-            if not isinstance(imp, dict):
-                continue
             imp_name = imp.get("name", "")
             if not isinstance(imp_name, str):
                 continue
