@@ -42,8 +42,6 @@ def group_imports_by_library(
 
 
 def has_known_library_name(lib_name: str | bytes | None) -> bool:
-    if isinstance(lib_name, bytearray):
-        lib_name = lib_name.decode(errors="ignore")
     if isinstance(lib_name, bytes):
         lib_name = lib_name.decode(errors="ignore")
     return (
@@ -93,8 +91,6 @@ def _library_import_strings(normalized_lib: str, functions: Any) -> list[str]:
 
 def _build_import_strings(imports_by_lib: dict[str, Any], extensions: list[str]) -> list[str]:
     impstrs: list[str] = []
-    if not isinstance(imports_by_lib, dict):
-        return impstrs
     for libname, functions in imports_by_lib.items():
         if not has_known_library_name(libname):
             continue

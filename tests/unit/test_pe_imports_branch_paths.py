@@ -34,10 +34,6 @@ def test_build_import_strings_accepts_bytearray_function_entries() -> None:
     assert result == ["kernel32.createfilew"]
 
 
-def test_build_import_strings_rejects_non_dict_input() -> None:
-    assert _build_import_strings(None, ["dll"]) == []  # type: ignore[arg-type]
-
-
 class _FakeLogger:
     def debug(self, msg: str, *args: object) -> None:
         pass
