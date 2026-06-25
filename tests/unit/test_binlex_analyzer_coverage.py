@@ -422,18 +422,10 @@ def test_collect_signatures_for_size_no_signature_key():
     assert len(signatures) == 0
 
 
-def test_collect_signatures_for_size_non_dict_input():
-    analyzer = BinlexAnalyzer(adapter=None, filepath=None)
-    signatures, groups = analyzer._collect_signatures_for_size("bad", 2)  # type: ignore[arg-type]
-    assert len(signatures) == 0
-    assert len(groups) == 0
-
-
 def test_collect_signatures_for_size_skips_malformed_function_buckets():
     analyzer = BinlexAnalyzer(adapter=None, filepath=None)
     function_signatures = {
         "func_a": {2: {"signature": "same"}},
-        "func_b": "bad",
         "func_c": {2: {"signature": "same"}},
         "func_d": {2: {"signature": None}},
     }
@@ -894,7 +886,6 @@ def test_collect_function_signatures_skips_malformed_function_entries():
 
     analyzer = StableSignatureBinlexAnalyzer(adapter=None, filepath=None)
     functions = [
-        "bad",
         {"name": ["bad"], "addr": 0x1000, "size": 100},
         {"name": "valid_func", "addr": 0x2000, "size": 100},
     ]

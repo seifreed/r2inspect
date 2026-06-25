@@ -55,8 +55,6 @@ def collect_function_signatures(
     all_ngrams: defaultdict[int, Counter[str]] = defaultdict(Counter)
     analyzed_count = 0
     for func in functions:
-        if not isinstance(func, dict):
-            continue
         func_addr = coerce_int(func.get("addr"))
         func_name_value = func.get("name")
         func_name = (
@@ -80,8 +78,6 @@ def accumulate_ngrams(
     func_sigs: dict[int, dict[str, Any]],
     ngram_sizes: list[int],
 ) -> None:
-    if not isinstance(func_sigs, dict):
-        return
     for n in ngram_sizes:
         if not isinstance(func_sigs.get(n), dict):
             continue
@@ -115,11 +111,7 @@ def collect_signatures_for_size(
 ) -> tuple[set[str], defaultdict[str, list[str]]]:
     signatures: set[str] = set()
     signature_groups: defaultdict[str, list[str]] = defaultdict(list)
-    if not isinstance(function_signatures, dict):
-        return signatures, signature_groups
     for func_name, func_sigs in function_signatures.items():
-        if not isinstance(func_sigs, dict):
-            continue
         if n not in func_sigs or "signature" not in func_sigs[n]:
             continue
         sig_value = func_sigs[n].get("signature")
