@@ -31,6 +31,7 @@ class CryptoAnalyzer(CommandHelperMixin):
         self.adapter = adapter
         self.config = config
         self.crypto_constants = CRYPTO_CONSTANTS
+        self._constants_cache: list[dict[str, Any]] | None = None
 
     def analyze(self) -> dict[str, Any]:
         """Unified entry point for pipeline dispatch."""
@@ -51,7 +52,11 @@ class CryptoAnalyzer(CommandHelperMixin):
             }
 
     def _detect_crypto_constants(self) -> list[dict[str, Any]]:
-        return find_crypto_constants(self, logger)
+        # Cached: build_crypto_report queries constants directly and again via
+        # _detect_crypto_algorithms, and each query runs whole-binary /x scans.
+        if self._constants_cache is None:
+            self._constants_cache = find_crypto_constants(self, logger)
+        return self._constants_cache
 
     def _detect_crypto_apis(self) -> list[dict[str, Any]]:
         return find_crypto_apis(self, logger)

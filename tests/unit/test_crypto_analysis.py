@@ -491,6 +491,16 @@ class TestSuspiciousPatterns:
         analyzer = CryptoAnalyzer(adapter)
         assert analyzer._file_size_mb() is None
 
+    def test_crypto_constants_search_is_memoized(self):
+        adapter = _make_crypto_adapter(has_crypto=True)
+        analyzer = CryptoAnalyzer(adapter)
+
+        first = analyzer._detect_crypto_constants()
+        second = analyzer._detect_crypto_constants()
+
+        # Same object returned: the whole-binary /x scan runs once per analyzer.
+        assert first is second
+
     def test_no_patterns_when_empty(self):
         adapter = _make_adapter()
         analyzer = CryptoAnalyzer(adapter)
