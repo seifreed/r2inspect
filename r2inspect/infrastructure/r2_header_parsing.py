@@ -189,8 +189,6 @@ def _get_headers_json(
 
 
 def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
-    if not isinstance(ph_output, str):
-        return []
     headers: list[dict[str, Any]] = []
     for raw_line in ph_output.split("\n"):
         line = raw_line.strip()
@@ -206,8 +204,6 @@ def _parse_elf_headers_text(ph_output: str) -> list[dict[str, Any]]:
 
 def _parse_macho_headers_text(text_output: str) -> list[dict[str, Any]]:
     """Parse Mach-O header text output (ih) into a list of dicts."""
-    if not isinstance(text_output, str):
-        return []
     headers: list[dict[str, Any]] = []
     for raw_line in text_output.split("\n"):
         line = raw_line.strip()
