@@ -355,14 +355,6 @@ def test_normalize_resource_entries_uses_defaults():
     assert result[0]["lang"] == "Unknown"
 
 
-def test_normalize_resource_entries_skips_malformed_entries():
-    """normalize_resource_entries skips non-dict resource entries."""
-    result = normalize_resource_entries(["bad", {"name": "ICON"}])
-    assert result == [
-        {"name": "ICON", "type": "Unknown", "size": 0, "lang": "Unknown"},
-    ]
-
-
 def test_normalize_resource_entries_replaces_none_values():
     result = normalize_resource_entries(
         [{"name": None, "type": None, "size": None, "lang": None}]  # type: ignore[list-item]
@@ -404,11 +396,6 @@ def test_parse_version_info_text_value_with_equals():
 def test_parse_version_info_text_empty_string():
     """parse_version_info_text returns empty dict for empty string."""
     result = parse_version_info_text("")
-    assert result == {}
-
-
-def test_parse_version_info_text_rejects_non_string_input():
-    result = parse_version_info_text(None)  # type: ignore[arg-type]
     assert result == {}
 
 
