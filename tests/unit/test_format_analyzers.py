@@ -64,11 +64,17 @@ def test_elf_security_features():
     segments = [{"name": "GNU_STACK", "perm": "-rw-"}]
     adapter = R2PipeAdapter(
         FakeR2(
-            cmd_map={"id": "BIND_NOW\nRPATH\nRUNPATH"},
             cmdj_map={
                 "iSSj": segments,
                 "isj": [{"name": "__stack_chk_fail"}],
-                "ij": {"bin": {"pic": True, "relro": "full"}},
+                "ij": {
+                    "bin": {
+                        "pic": True,
+                        "relro": "full",
+                        "rpath": "/usr/lib",
+                        "runpath": "/opt/lib",
+                    }
+                },
             },
         )
     )

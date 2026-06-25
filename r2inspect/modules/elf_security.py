@@ -27,7 +27,7 @@ def get_security_features(adapter: Any, logger: Any) -> dict[str, bool]:
         bin_info = coerce_dict(file_info).get("bin", {})
         features["relro"] = has_relro(bin_info.get("relro"))
         features["pie"] = is_pie(file_info)
-        features.update(path_features(_get_dynamic_info_text(adapter)))
+        features.update(path_features(bin_info))
     except Exception as exc:
         logger.debug("Error checking security features: %s", exc)
 
@@ -45,13 +45,3 @@ def _get_elf_segments(adapter: Any) -> list[dict[str, Any]]:
     if isinstance(segments, (dict, str, bytes)) or not isinstance(segments, Iterable):
         return []
     return [segment for segment in segments if isinstance(segment, dict)]
-
-
-def _get_dynamic_info_text(adapter: Any) -> str:
-    getter = getattr(adapter, "get_dynamic_info_text", None)
-    if callable(getter):
-        result = getter()
-        return result if isinstance(result, str) else str(result)
-    from ..infrastructure.command_helpers import cmd as cmd_helper
-
-    return str(cmd_helper(adapter, None, "id"))

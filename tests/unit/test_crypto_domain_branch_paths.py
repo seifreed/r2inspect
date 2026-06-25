@@ -7,7 +7,6 @@ import r2inspect.domain.formats.crypto as cd
 import r2inspect.domain.formats.macho_security as msd
 import r2inspect.domain.formats.elf_security as esd
 
-
 # ---------------------------------------------------------------------------
 # crypto_domain.py
 # ---------------------------------------------------------------------------
@@ -255,15 +254,14 @@ def test_is_pie_elf_returns_false_for_malformed_bin_info() -> None:
 
 
 def test_path_features_rpath_and_runpath() -> None:
-    """path_features correctly detects RPATH and RUNPATH strings."""
-    info = "NEEDED libc.so RPATH /usr/lib RUNPATH /opt/lib"
-    result = esd.path_features(info)
+    """path_features detects rpath/runpath from the ij bin path strings."""
+    result = esd.path_features({"rpath": "/usr/lib", "runpath": "/opt/lib"})
     assert result["rpath"] is True
     assert result["runpath"] is True
 
 
 def test_path_features_neither() -> None:
     """path_features returns False for both when neither is present."""
-    result = esd.path_features("NEEDED libc.so")
+    result = esd.path_features({"rpath": "NONE", "runpath": "NONE"})
     assert result["rpath"] is False
     assert result["runpath"] is False

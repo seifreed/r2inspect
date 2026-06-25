@@ -55,6 +55,17 @@ def is_pie(elf_info: dict[str, Any] | None) -> bool:
     return "DYN" in elf_type.upper()
 
 
-def path_features(dynamic_info: str | None) -> dict[str, bool]:
-    info = dynamic_info or ""
-    return {"rpath": "RPATH" in info, "runpath": "RUNPATH" in info}
+def _has_runtime_path(value: Any) -> bool:
+    # r2's ij reports the DT_RPATH/DT_RUNPATH entry as the path string, or the
+    # literal "NONE" when absent. The previous code parsed the "id" (DWARF) text
+    # for an uppercase "RPATH" that command never emits, so rpath/runpath were
+    # always False even when an rpath was present.
+    return isinstance(value, str) and value not in ("", "NONE")
+
+
+def path_features(bin_info: dict[str, Any] | None) -> dict[str, bool]:
+    info = bin_info if isinstance(bin_info, dict) else {}
+    return {
+        "rpath": _has_runtime_path(info.get("rpath")),
+        "runpath": _has_runtime_path(info.get("runpath")),
+    }

@@ -11,7 +11,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # 1. r2inspect/modules/string_domain.py - lines 29, 87, 88, 100, 101
 # ---------------------------------------------------------------------------
@@ -94,29 +93,7 @@ def test_analyzer_runner_module_importable():
 # ---------------------------------------------------------------------------
 # 4. r2inspect/modules/elf_security.py - lines 29, 30, 40, 42
 # ---------------------------------------------------------------------------
-from r2inspect.modules.elf_security import _get_dynamic_info_text, get_security_features
-
-
-def test_get_dynamic_info_text_fallback_to_cmd_helper():
-    # Lines 40, 42: no get_dynamic_info_text attr -> fallback to cmd_helper
-
-    class AdapterWithoutGetter:
-        def cmd(self, command: str) -> str:
-            return ""
-
-    result = _get_dynamic_info_text(AdapterWithoutGetter())
-    assert isinstance(result, str)
-
-
-def test_get_dynamic_info_text_converts_non_string():
-    # Line 39: returns str(result) when callable returns non-string
-
-    class AdapterReturnsInt:
-        def get_dynamic_info_text(self) -> int:
-            return 12345
-
-    result = _get_dynamic_info_text(AdapterReturnsInt())
-    assert result == "12345"
+from r2inspect.modules.elf_security import get_security_features
 
 
 def test_get_security_features_logs_exception_on_error():
@@ -403,7 +380,7 @@ def test_simhash_analysis_exception_sets_error():
 # ---------------------------------------------------------------------------
 # 14. r2inspect/utils/retry_manager.py - lines 225, 227, 228
 # ---------------------------------------------------------------------------
-from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager, RetryStrategy
+from r2inspect.infrastructure.retry_manager import RetryConfig, RetryManager
 
 
 def test_retry_manager_raises_after_single_attempt():

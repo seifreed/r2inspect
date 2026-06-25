@@ -514,19 +514,27 @@ def test_elf_is_pie_missing():
 
 
 def test_elf_path_features_rpath():
-    result = path_features("RPATH /usr/local/lib")
+    result = path_features({"rpath": "/usr/local/lib", "runpath": "NONE"})
     assert result["rpath"] is True
     assert result["runpath"] is False
 
 
 def test_elf_path_features_runpath():
-    result = path_features("RUNPATH /opt/lib")
+    result = path_features({"rpath": "NONE", "runpath": "/opt/lib"})
     assert result["runpath"] is True
     assert result["rpath"] is False
 
 
 def test_elf_path_features_none():
     result = path_features(None)
+    assert result["rpath"] is False
+    assert result["runpath"] is False
+
+
+def test_elf_path_features_none_sentinel_is_absent():
+    # radare2 reports an absent rpath as the literal "NONE", which must not be
+    # mistaken for a present runtime path.
+    result = path_features({"rpath": "NONE", "runpath": "NONE"})
     assert result["rpath"] is False
     assert result["runpath"] is False
 

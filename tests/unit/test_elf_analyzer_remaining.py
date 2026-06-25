@@ -452,13 +452,13 @@ def test_get_security_features():
     """Test get_security_features runs through real security check code."""
     ij = _elf_bin_info()
     ij["bin"]["relro"] = "full"  # r2 reports RELRO in ij.bin (partial/full)
+    ij["bin"]["rpath"] = "/foo"  # r2 reports the DT_RPATH path in ij.bin.rpath
     adapter = _make_adapter(
         cmdj_map={
             "ij": ij,
             "isj": [],
             "iSSj": [{"name": "GNU_STACK", "perm": "-rw-"}],
         },
-        cmd_map={"id": "BIND_NOW\nRPATH=/foo\n"},
     )
     analyzer = ELFAnalyzer(adapter)
     result = analyzer.get_security_features()
