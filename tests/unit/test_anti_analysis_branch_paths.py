@@ -73,15 +73,15 @@ FULL_STRINGS = [
 FULL_CMD_MAP: dict[str, str] = {
     "iz~mac": "mac_address",
     "iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX": "",
-    "ii~Sleep|ii~Delay": "Sleep",
-    "ii~FindFirst|ii~Process32|ii~Module32": "FindFirstFileA",
+    "ii~Sleep,Delay": "Sleep",
+    "ii~FindFirst,Process32,Module32": "FindFirstFileA",
     "/aa mov.*cs:|/c mov.*ds:": "",
     "iz~hash|iz~crc32|iz~fnv": "",
     # Environment check commands from domain
     "iz~GetUserName|iz~USER": "",
     "iz~GetComputerName|iz~COMPUTERNAME": "",
-    "ii~GetSystemInfo|ii~GlobalMemoryStatus": "",
-    "ii~CreateToolhelp32Snapshot|ii~Process32": "",
+    "ii~GetSystemInfo,GlobalMemoryStatus": "",
+    "ii~CreateToolhelp32Snapshot,Process32": "",
 }
 
 FULL_CMDJ_MAP: dict[str, Any] = {

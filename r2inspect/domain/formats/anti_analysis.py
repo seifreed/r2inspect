@@ -97,12 +97,12 @@ ENVIRONMENT_CHECK_COMMANDS = [
         "Computer name enumeration detected",
     ),
     (
-        "ii~GetSystemInfo|ii~GlobalMemoryStatus",
+        "ii~GetSystemInfo,GlobalMemoryStatus",
         "System Info Check",
         "System information queries detected",
     ),
     (
-        "ii~CreateToolhelp32Snapshot|ii~Process32",
+        "ii~CreateToolhelp32Snapshot,Process32",
         "Process Enumeration",
         "Process enumeration detected",
     ),

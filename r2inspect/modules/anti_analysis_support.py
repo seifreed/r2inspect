@@ -212,7 +212,7 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
         )
     add_simple_evidence(
         result,
-        detector._cmd("ii~Sleep|ii~Delay"),
+        detector._cmd("ii~Sleep,Delay"),
         "Sleep/Delay Calls",
         "Sleep or delay functions found (sandbox evasion)",
         "functions",
@@ -220,7 +220,7 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
     )
     add_simple_evidence(
         result,
-        detector._cmd("ii~FindFirst|ii~Process32|ii~Module32"),
+        detector._cmd("ii~FindFirst,Process32,Module32"),
         "Environment Enumeration",
         "File/process enumeration APIs found (fingerprinting)",
         "functions",
