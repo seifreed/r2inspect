@@ -99,6 +99,31 @@ def test_resolve_file_size_rejects_missing_size():
     assert "/x ab" in fake.calls["cmd"]
 
 
+def test_search_text_scopes_to_file_backed_maps():
+    omj = [{"from": 0x401000, "to": 0x401FFF, "delta": 0x1000}]
+    fake = FakeR2Adapter(
+        cmd_responses={"/aa xor @e:search.in=io.map @ 0x401000": "0x401005 xor eax, eax\n"},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    result = adapter.search_text("xor")
+
+    assert "xor" in result
+    assert "/aa xor @e:search.in=io.map @ 0x401000" in fake.calls["cmd"]
+    assert "/aa xor" not in fake.calls["cmd"]
+
+
+def test_search_text_falls_back_without_maps():
+    fake = FakeR2Adapter(cmd_responses={"/aa rol": "0x401005 rol eax, 3\n"})
+    adapter = R2PipeAdapter(fake)
+
+    result = adapter.search_text("rol")
+
+    assert "rol" in result
+    assert "/aa rol" in fake.calls["cmd"]
+
+
 def test_compute_returns_empty_when_omj_not_a_list():
     fake = FakeR2Adapter(
         cmd_responses={"/x ab": "0x1 hit\n"},

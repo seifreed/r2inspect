@@ -129,36 +129,46 @@ class R2PipeTextQueryMixin:
         return cast(str, self._safe_query(_execute, "", "Error retrieving disasm text"))
 
     def search_text(self, pattern: str) -> str:
-        from . import r2pipe_queries as facade
-
+        # /aa = linear case-insensitive assembly search. r2's /c means
+        # "search for crypto materials" and returns its help text for an
+        # arbitrary argument, which every opcode detector then mistook for a
+        # positive match.
         def _execute() -> str:
             self._maybe_force_error("search_text")
-            # /aa = linear case-insensitive assembly search. r2's /c means
-            # "search for crypto materials" and returns its help text for an
-            # arbitrary argument, which every opcode detector then mistook for a
-            # positive match.
-            return facade.safe_cmd(self._r2_iface, f"/aa {pattern}")
+            return self._scoped_search("/aa", pattern)
 
         return cast(str, self._safe_query(_execute, "", "Error searching text pattern"))
 
     def search_hex(self, hex_pattern: str) -> str:
-        from . import r2pipe_queries as facade
-
         def _execute() -> str:
             self._maybe_force_error("search_hex")
-            starts = self._get_file_backed_map_starts()
-            if not starts:
-                return facade.safe_cmd(self._r2_iface, f"/x {hex_pattern}")
-            outputs = [
-                facade.safe_cmd(
-                    self._r2_iface,
-                    f"/x {hex_pattern} @e:search.in=io.map @ {start:#x}",
-                )
-                for start in starts
-            ]
-            return "\n".join(output for output in outputs if output)
+            return self._scoped_search("/x", hex_pattern)
 
         return cast(str, self._safe_query(_execute, "", "Error searching hex pattern"))
+
+    def _scoped_search(self, search_cmd: str, pattern: str) -> str:
+        """Run an r2 search restricted to file-backed io maps.
+
+        r2's default ``search.in=io.maps`` spans the anonymous, zero-filled BSS
+        map (up to ~1 GB for statically-linked binaries), so an unscoped ``/x``
+        or ``/aa`` wastes seconds scanning zeros. Search each file-backed map in
+        turn instead, falling back to a plain whole-binary search when the maps
+        can't be resolved. Constants and code only live in file-backed regions,
+        so results are unchanged.
+        """
+        from . import r2pipe_queries as facade
+
+        starts = self._get_file_backed_map_starts()
+        if not starts:
+            return facade.safe_cmd(self._r2_iface, f"{search_cmd} {pattern}")
+        outputs = [
+            facade.safe_cmd(
+                self._r2_iface,
+                f"{search_cmd} {pattern} @e:search.in=io.map @ {start:#x}",
+            )
+            for start in starts
+        ]
+        return "\n".join(output for output in outputs if output)
 
     def _resolve_file_size(self) -> int | None:
         from . import r2pipe_queries as facade

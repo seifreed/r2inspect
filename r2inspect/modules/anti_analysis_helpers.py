@@ -104,7 +104,9 @@ def detect_obfuscation(
 
 
 def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
-    modify_patterns = cmd_fn("/c mov.*cs:|/c mov.*ds:")
+    # Two separate /c searches: r2 reads a single "/c mov.*cs:|/c mov.*ds:" as a
+    # shell pipe (hanging on the bogus second command), not as a regex "or".
+    modify_patterns = cmd_fn("/c mov.*cs:") or cmd_fn("/c mov.*ds:")
     if has_text(modify_patterns):
         return [
             {
