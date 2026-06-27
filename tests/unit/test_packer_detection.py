@@ -257,6 +257,22 @@ def test_packer_scoring_skips_malformed_strings_and_sections():
     assert sections["suspicious_sections"][0]["size"] == 0
 
 
+def test_find_packer_string_requires_whole_word_match():
+    from r2inspect.domain.services.packer_scoring import find_packer_string
+
+    sigs = {"MEW": [b"MEW "], "UPX": [b"UPX!"], "Themida": [b"Themida"]}
+
+    # Regression: "mew" is a substring of "RuntimeWrappedException" (...meWrapped),
+    # which used to false-flag clean .NET/Mach-O binaries as MEW-packed.
+    embedded = find_packer_string([{"string": "System.RuntimeWrappedException"}], sigs)
+    assert embedded is None
+
+    # A genuine whole-word packer name in a string still matches.
+    real = find_packer_string([{"string": "packed with Themida protector"}], sigs)
+    assert real is not None
+    assert real["type"] == "Themida"
+
+
 def test_packer_scoring_ignores_non_string_flags():
     from r2inspect.domain.services.packer_scoring import analyze_sections
 

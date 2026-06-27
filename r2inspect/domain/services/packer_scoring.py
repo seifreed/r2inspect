@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import logging
+import re
 from typing import Any
 
 from ...abstractions.coercion_support import coerce_int
@@ -39,7 +40,10 @@ def find_packer_string(
             continue
         string_val = string_value.lower()
         for packer_name in packer_signatures:
-            if packer_name.lower() in string_val:
+            # Whole-word match only: a loose substring lets short names like
+            # "mew"/"fsg"/"upx" false-match ordinary strings (e.g. "mew" inside
+            # "RuntimeWrappedException"), flagging clean binaries as packed.
+            if re.search(rf"\b{re.escape(packer_name.lower())}\b", string_val):
                 return {"type": packer_name, "signature": string_val}
     return None
 
