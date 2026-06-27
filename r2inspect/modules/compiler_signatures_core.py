@@ -93,7 +93,7 @@ CORE_COMPILER_SIGNATURES = {
         "symbols": ["runtime.main"],
     },
     "Rust": {
-        "strings": [r"rustc", r"\.rustc"],
+        "strings": [r"/rustc/", r"RUST_BACKTRACE", r"\brustc\b", r"rust_begin_unwind"],
         "imports": [],
         "sections": [".rustc"],
         "symbols": ["_ZN"],

@@ -135,12 +135,22 @@ def apply_best_compiler(
 
     # A large tie of string-only signatures is noise: short markers matching
     # random strings in a big binary (a 113 MB Rust PE tied D/Pascal/Fortran/
-    # Swift/OCaml/Haskell/Erlang/LLVM at 1.0). Naming any of them is arbitrary
-    # and wrong, so detect nothing and let the r2-metadata fallback decide.
+    # Swift/OCaml/Haskell/Erlang/LLVM at 1.0). Ignore the noise and fall back to
+    # the best corroborated candidate beneath it (the real Rust signal), or
+    # detect nothing if there is none.
     if len(tied) >= _STRING_ONLY_TIE_NOISE_THRESHOLD and all(
         _signature_corroboration(compiler_signatures, name) <= 1 for name in tied
     ):
-        return
+        corroborated = {
+            name: score
+            for name, score in numeric_scores.items()
+            if _signature_corroboration(compiler_signatures, name) >= 2 and score > 0.3
+        }
+        if not corroborated:
+            return
+        numeric_scores = corroborated
+        best_score = max(corroborated.values())
+        tied = [name for name, score in corroborated.items() if score == best_score]
 
     # Deterministic winner: among compilers tied at the top score, prefer the
     # one with the strongest signature definition, then alphabetical — never

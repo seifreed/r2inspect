@@ -150,6 +150,24 @@ def test_apply_best_compiler_large_tie_with_corroboration_still_detects():
     assert results["compiler"] == "GCC"
 
 
+def test_apply_best_compiler_garbage_tie_falls_back_to_corroborated():
+    detector = _make_detector()
+    results: dict = {}
+
+    # Garbage string-only tie at the top (1.0) but a corroborated compiler
+    # (GCC) scores below it: the real signal wins instead of Unknown.
+    detector._apply_best_compiler(
+        results,
+        {"Pascal": 1.0, "Swift": 1.0, "OCaml": 1.0, "GCC": 0.5},
+        ["GCC version"],
+        [],
+        "ELF",
+    )
+
+    assert results["compiler"] == "GCC"
+    assert results["confidence"] == 0.5
+
+
 def test_apply_best_compiler_string_only_winner_capped():
     detector = _make_detector()
     results: dict = {}
