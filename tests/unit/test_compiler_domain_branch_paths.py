@@ -326,6 +326,28 @@ def test_check_string_signatures_with_match():
     assert max_score == 3.0
 
 
+def test_extended_ada_signature_ignores_metadata_substring():
+    from r2inspect.modules.compiler_signatures_extended import EXTENDED_COMPILER_SIGNATURES
+
+    # ".NET" binaries are full of "metadata"; the old bare r"Ada" pattern matched
+    # the "ada" inside it and scored Ada at 1.0, beating real detections.
+    score, _ = _check_string_signatures(
+        EXTENDED_COMPILER_SIGNATURES["Ada"], ["metadata", "loaded module"]
+    )
+    assert score == 0.0
+    real, _ = _check_string_signatures(EXTENDED_COMPILER_SIGNATURES["Ada"], ["GNAT 12.2"])
+    assert real > 0.0
+
+
+def test_extended_sco_signature_ignores_substring():
+    from r2inspect.modules.compiler_signatures_extended import EXTENDED_COMPILER_SIGNATURES
+
+    score, _ = _check_string_signatures(
+        EXTENDED_COMPILER_SIGNATURES["SCO"], ["Cisco router", "disco"]
+    )
+    assert score == 0.0
+
+
 # ---------------------------------------------------------------------------
 # _check_import_signatures – line 183 (early return when "imports" absent)
 # ---------------------------------------------------------------------------
