@@ -187,14 +187,6 @@ def detect_anti_vm(detector: Any) -> dict[str, Any]:
         "strings",
         3,
     )
-    add_simple_evidence(
-        result,
-        detector._cmd("iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX"),
-        "Registry VM Check",
-        "VM-related registry keys found",
-        "keys",
-        3,
-    )
     return result
 
 

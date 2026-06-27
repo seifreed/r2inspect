@@ -45,8 +45,6 @@ class DummyAdapter:
     def cmd(self, command: str):
         if command.startswith("iz~mac"):
             return "mac"
-        if command.startswith("iz~HKEY"):
-            return "hkey"
         if command.startswith("ii~Sleep"):
             return "Sleep"
         if command.startswith("ii~FindFirst"):

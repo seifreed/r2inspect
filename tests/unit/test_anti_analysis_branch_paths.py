@@ -72,7 +72,6 @@ FULL_STRINGS = [
 # doesn't intercept them as simple base calls.
 FULL_CMD_MAP: dict[str, str] = {
     "iz~mac": "mac_address",
-    "iz~HKEY.*VMware|HKEY.*VirtualBox|HKEY.*VBOX": "",
     "ii~Sleep,Delay": "Sleep",
     "ii~FindFirst,Process32,Module32": "FindFirstFileA",
     "/aa mov.*cs:|/c mov.*ds:": "",
