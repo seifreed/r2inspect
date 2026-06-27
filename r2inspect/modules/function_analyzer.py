@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
-from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
+from ..domain.constants import HUGE_FILE_THRESHOLD_MB, VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import (
     build_function_stats,
     extract_mnemonics_from_ops,
@@ -106,7 +106,7 @@ class FunctionAnalyzer(CommandHelperMixin):
             if self.functions_cache is None:
                 # Prefer existing analysis results before triggering heavy analysis.
                 functions = _normalize_function_list(self._cmd_list("aflj"))
-                if not functions:
+                if not functions and not self._should_skip_heavy_analysis():
                     if self._should_run_full_analysis():
                         self._cmd("aaa")
                     else:
@@ -125,6 +125,12 @@ class FunctionAnalyzer(CommandHelperMixin):
 
     def _should_run_full_analysis(self) -> bool:
         return _should_run_full_analysis_impl(self.config, self._file_size_mb)
+
+    def _should_skip_heavy_analysis(self) -> bool:
+        # Above the huge-file threshold the r2 session deliberately skips its
+        # initial analysis; forcing aa/aaa here would only burn the command
+        # timeout and wedge the shared session for every later analyzer.
+        return self._file_size_mb is not None and self._file_size_mb > HUGE_FILE_THRESHOLD_MB
 
     def _generate_machoc_hashes(self, functions: list[dict[str, Any]]) -> dict[str, str]:
         """
