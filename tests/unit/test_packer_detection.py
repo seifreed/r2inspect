@@ -273,6 +273,78 @@ def test_find_packer_string_requires_whole_word_match():
     assert real["type"] == "Themida"
 
 
+def test_find_packer_signature_rejects_alnum_embedded_match():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    # Regression: b"teLock" matches inside Go identifiers like "writeLock";
+    # an embedded hit (alnum neighbours) must not count as a packer signature.
+    sigs = {"teLock": [b"teLock"]}
+
+    def search(_hexsig: str) -> str:
+        return "0x1000 hit0_0 writeLock\n"
+
+    def reader(addr: int, _size: int) -> bytes:
+        return {0x0FFF: b"i", 0x1006: b"w"}.get(addr, b"\x00")
+
+    assert find_packer_signature(search, sigs, reader) is None
+
+
+def test_find_packer_signature_accepts_standalone_match():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    sigs = {"teLock": [b"teLock"]}
+
+    def search(_hexsig: str) -> str:
+        return "0x2000 hit0_0 .teLock.\n"
+
+    def reader(addr: int, _size: int) -> bytes:
+        return b"." if addr in (0x1FFF, 0x2006) else b"\x00"
+
+    result = find_packer_signature(search, sigs, reader)
+    assert result is not None
+    assert result["type"] == "teLock"
+
+
+def test_find_packer_signature_distinctive_sig_skips_boundary_check():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    # A signature with punctuation is distinctive; matches without a reader.
+    sigs = {"UPX": [b"UPX!"]}
+    result = find_packer_signature(lambda _h: "0x3000 hit\n", sigs)
+    assert result is not None
+    assert result["type"] == "UPX"
+
+
+def test_find_packer_signature_alnum_without_reader_keeps_legacy_accept():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    sigs = {"MPRESS": [b"MPRESS"]}
+    result = find_packer_signature(lambda _h: "0x4000 hit\n", sigs)
+    assert result is not None
+    assert result["type"] == "MPRESS"
+
+
+def test_find_packer_signature_accepts_when_no_addresses_parse():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    # has_text is true but there are no parseable 0x addresses; without hit
+    # locations we can't prove embedding, so fall back to accepting.
+    sigs = {"MPRESS": [b"MPRESS"]}
+    result = find_packer_signature(lambda _h: "matched\n", sigs, lambda _a, _s: b"\x00")
+    assert result is not None
+    assert result["type"] == "MPRESS"
+
+
+def test_find_packer_signature_skips_unparseable_address():
+    from r2inspect.domain.services.packer_scoring import find_packer_signature
+
+    # A malformed hex address is skipped; with no valid standalone hit the
+    # alphanumeric signature is rejected.
+    sigs = {"MPRESS": [b"MPRESS"]}
+    result = find_packer_signature(lambda _h: "0xZZ hit\n", sigs, lambda _a, _s: b"\x00")
+    assert result is None
+
+
 def test_packer_scoring_ignores_non_string_flags():
     from r2inspect.domain.services.packer_scoring import analyze_sections
 

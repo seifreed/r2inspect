@@ -142,7 +142,7 @@ class PackerDetector(CommandHelperMixin):
         """Check for known packer signatures in hex patterns and strings."""
         return self._safe_call(
             lambda: (
-                find_packer_signature(self._search_hex, self.packer_signatures)
+                find_packer_signature(self._search_hex, self.packer_signatures, self._read_bytes)
                 or find_packer_string(self._get_strings(), self.packer_signatures)
             ),
             default=None,

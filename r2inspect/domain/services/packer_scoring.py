@@ -9,6 +9,7 @@ import re
 from typing import Any
 
 from ...abstractions.coercion_support import coerce_int
+from ..formats.string import parse_search_results
 from ..text_helpers import has_text
 from .binary_helpers import shannon_entropy
 
@@ -16,16 +17,52 @@ logger = logging.getLogger(__name__)
 
 
 def find_packer_signature(
-    search_hex_fn: Callable[[str], str], packer_signatures: dict[str, list[bytes]]
+    search_hex_fn: Callable[[str], str],
+    packer_signatures: dict[str, list[bytes]],
+    read_bytes_fn: Callable[[int, int], bytes] | None = None,
 ) -> dict[str, str] | None:
     for packer_name, signatures in packer_signatures.items():
         for signature in signatures:
-            if _search_signature_hex(search_hex_fn, signature.hex()):
-                return {
-                    "type": packer_name,
-                    "signature": signature.decode("utf-8", errors="ignore"),
-                }
+            result = search_hex_fn(signature.hex())
+            if not has_text(result):
+                continue
+            # A bare alphanumeric signature like b"teLock" matches inside ordinary
+            # identifiers ("writeLock", "stateLocked"). Require at least one hit
+            # that isn't embedded in a larger token; signatures carrying
+            # punctuation (".aspack", "UPX!") are already distinctive.
+            if signature.isalnum() and not _has_standalone_match(
+                result, len(signature), read_bytes_fn
+            ):
+                continue
+            return {
+                "type": packer_name,
+                "signature": signature.decode("utf-8", errors="ignore"),
+            }
     return None
+
+
+def _is_alnum_byte(data: bytes) -> bool:
+    return len(data) == 1 and chr(data[0]).isalnum()
+
+
+def _has_standalone_match(
+    search_result: str, length: int, read_bytes_fn: Callable[[int, int], bytes] | None
+) -> bool:
+    if read_bytes_fn is None:
+        return True  # no reader: keep legacy (accept) behaviour
+    addresses = parse_search_results(search_result)
+    if not addresses:
+        return True
+    for address in addresses[:50]:
+        try:
+            start = int(address, 16)
+        except ValueError:
+            continue
+        before = read_bytes_fn(start - 1, 1) if start > 0 else b""
+        after = read_bytes_fn(start + length, 1)
+        if not _is_alnum_byte(before) and not _is_alnum_byte(after):
+            return True
+    return False
 
 
 def find_packer_string(
