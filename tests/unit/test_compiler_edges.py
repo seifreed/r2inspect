@@ -126,6 +126,30 @@ def test_apply_best_compiler_corroboration_breaks_tie():
     assert results["confidence"] <= 0.5
 
 
+def test_apply_best_compiler_large_string_only_tie_is_noise():
+    detector = _make_detector()
+    results: dict = {}
+
+    # 3+ string-only signatures tied at the top = garbage matches; detect
+    # nothing rather than name an arbitrary winner.
+    detector._apply_best_compiler(
+        results, {"Pascal": 1.0, "Swift": 1.0, "OCaml": 1.0}, [], [], "ELF"
+    )
+
+    assert results == {}
+
+
+def test_apply_best_compiler_large_tie_with_corroboration_still_detects():
+    detector = _make_detector()
+    results: dict = {}
+
+    # The noise rule only fires when ALL tied signatures are string-only; a
+    # corroborated compiler (GCC) in the tie keeps detection alive.
+    detector._apply_best_compiler(results, {"Pascal": 1.0, "Swift": 1.0, "GCC": 1.0}, [], [], "ELF")
+
+    assert results["compiler"] == "GCC"
+
+
 def test_apply_best_compiler_string_only_winner_capped():
     detector = _make_detector()
     results: dict = {}

@@ -148,8 +148,13 @@ CORE_COMPILER_SIGNATURES = {
         "sections": [],
         "symbols": [],
     },
-    "FASM": {"strings": [r"fasm"], "imports": [], "sections": [], "symbols": []},
-    "MASM": {"strings": [r"masm"], "imports": [], "sections": [], "symbols": []},
+    "FASM": {"strings": [r"flat assembler"], "imports": [], "sections": [], "symbols": []},
+    "MASM": {
+        "strings": [r"Microsoft.*Macro Assembler"],
+        "imports": [],
+        "sections": [],
+        "symbols": [],
+    },
     "Watcom": {"strings": [r"Watcom"], "imports": [], "sections": [], "symbols": []},
     "Qt": {
         "strings": [r"Qt[0-9]?(Core|Gui|Widgets|Network|Qml|Quick)"],

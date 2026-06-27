@@ -17,7 +17,12 @@ EXTENDED_COMPILER_SIGNATURES = {
     },
     "LLVM": {"strings": [r"\bLLVM\b"], "imports": [], "sections": [], "symbols": []},
     "Go Compiler": {"strings": [r"Go Compiler"], "imports": [], "sections": [], "symbols": []},
-    "Zig": {"strings": [r"\bZig\b"], "imports": [], "sections": [], "symbols": []},
+    "Zig": {
+        "strings": [r"\.zig:", r"/zig/std/", r"zig_probe_stack"],
+        "imports": [],
+        "sections": [],
+        "symbols": [],
+    },
     "Crystal": {"strings": [r"\bCrystal\b"], "imports": [], "sections": [], "symbols": []},
     "D": {"strings": [r"D language"], "imports": [], "sections": [], "symbols": []},
     "Nim": {
@@ -61,7 +66,7 @@ EXTENDED_COMPILER_SIGNATURES = {
         "symbols": [],
     },
     "Microsoft Foundation Classes": {
-        "strings": [r"\bMFC\b"],
+        "strings": [r"MFC\d{2,}", r"mfc\d+u?\.dll"],
         "imports": [],
         "sections": [],
         "symbols": [],
@@ -83,7 +88,12 @@ EXTENDED_COMPILER_SIGNATURES = {
         "symbols": [],
     },
     "IBM XL": {"strings": [r"IBM XL"], "imports": [], "sections": [], "symbols": []},
-    "QNX": {"strings": [r"\bQNX\b"], "imports": [], "sections": [], "symbols": []},
+    "QNX": {
+        "strings": [r"QNX Neutrino", r"/usr/qnx"],
+        "imports": [],
+        "sections": [],
+        "symbols": [],
+    },
     "Ti C/C++": {"strings": [r"TI C\+\+"], "imports": [], "sections": [], "symbols": []},
     "Diab": {"strings": [r"\bDiab\b"], "imports": [], "sections": [], "symbols": []},
     "Green Hills": {"strings": [r"Green Hills"], "imports": [], "sections": [], "symbols": []},

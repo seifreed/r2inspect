@@ -371,6 +371,10 @@ def test_tightened_signatures_reject_garbage_accept_real():
         "IAR": ["\\iAR", "liar"],
         "OS/2": ["os/2x", "DOSing"],
         "UPX": ["upxy", "UPx"],
+        "FASM": ["\\fasM", "*ЙFAsm"],
+        "Zig": [":zig\\bF", "ZiG$("],
+        "Microsoft Foundation Classes": ["MfC]", "\\a*mfC"],
+        "QNX": ['qnX"R', "5 qNx*"],
     }
     for name, strings in garbage.items():
         score, _ = _check_string_signatures(COMPILER_SIGNATURES[name], strings)
@@ -387,6 +391,10 @@ def test_tightened_signatures_reject_garbage_accept_real():
         "Mono": ["Mono.Runtime"],
         "IAR": ["IAR Systems"],
         "UPX": ["UPX!"],
+        "FASM": ["flat assembler"],
+        "Zig": ["/zig/std/mem.zig"],
+        "Microsoft Foundation Classes": ["MFC140.DLL"],
+        "QNX": ["QNX Neutrino"],
     }
     for name, strings in real.items():
         score, _ = _check_string_signatures(COMPILER_SIGNATURES[name], strings)
