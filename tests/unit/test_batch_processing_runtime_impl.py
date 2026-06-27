@@ -10,9 +10,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import dataclasses
+
 from r2inspect.cli.batch_processing_runtime import (
     BatchRunCollaborators,
     BatchRunRequest,
+    _warn_missing_output_format,
     run_batch_analysis,
 )
 
@@ -57,6 +60,34 @@ def _request() -> BatchRunRequest:
         threads=2,
         quiet=False,
     )
+
+
+def test_warn_missing_output_format_warns_for_output_without_format() -> None:
+    console = _FakeConsole()
+    request = dataclasses.replace(_request(), output_dir="out", output_json=False, output_csv=False)
+    _warn_missing_output_format(console, request)
+    assert any("no result files will be written" in line for line in console.lines)
+
+
+def test_warn_missing_output_format_silent_with_json() -> None:
+    console = _FakeConsole()
+    request = dataclasses.replace(_request(), output_dir="out", output_json=True)
+    _warn_missing_output_format(console, request)
+    assert console.lines == []
+
+
+def test_warn_missing_output_format_silent_without_output_dir() -> None:
+    console = _FakeConsole()
+    request = dataclasses.replace(_request(), output_dir=None)
+    _warn_missing_output_format(console, request)
+    assert console.lines == []
+
+
+def test_warn_missing_output_format_silent_when_quiet() -> None:
+    console = _FakeConsole()
+    request = dataclasses.replace(_request(), output_dir="out", quiet=True)
+    _warn_missing_output_format(console, request)
+    assert console.lines == []
 
 
 def _collaborators(

@@ -76,6 +76,18 @@ def _display_run_header(console: Any, files_count: int, threads: int, quiet: boo
         console.print(f"[blue]Using {threads} parallel threads[/blue]")
 
 
+def _warn_missing_output_format(console: Any, request: BatchRunRequest) -> None:
+    """Warn when -o is given without a format, since nothing gets written then."""
+    if request.quiet or not request.output_dir:
+        return
+    if request.output_json or request.output_csv:
+        return
+    console.print(
+        "[yellow]Warning: --output is set but neither --json nor --csv was given; "
+        "no result files will be written. Add -j or -c to save output.[/yellow]"
+    )
+
+
 def run_batch_analysis(request: BatchRunRequest, collaborators: BatchRunCollaborators) -> None:
     """Orchestrate a single batch analysis run.
 
@@ -87,6 +99,7 @@ def run_batch_analysis(request: BatchRunRequest, collaborators: BatchRunCollabor
     output_path = collaborators.setup_batch_output_directory(
         request.output_dir, request.output_json, request.output_csv
     )
+    _warn_missing_output_format(collaborators.console, request)
     deps = _build_deps(collaborators.find_files_to_process, collaborators.setup_rate_limiter)
 
     batch_result = collaborators.batch_service.run_batch_analysis(
