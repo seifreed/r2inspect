@@ -7,6 +7,7 @@ from typing import Any, Literal, cast
 
 from ..interfaces import BinaryAnalyzerInterface
 from ..infrastructure.logging import get_logger
+from ..infrastructure.r2_command_timeout import is_wedged
 from ..infrastructure.r2_helpers import safe_cmd_dict, safe_cmd_list
 from ..infrastructure.r2_suppress import silent_cmdj
 from .r2pipe_queries import R2PipeQueryMixin
@@ -54,10 +55,17 @@ class R2PipeAdapter(R2PipeQueryMixin):
         logger.debug("R2PipeAdapter initialized successfully")
 
     def cmd(self, command: str) -> str:
+        # A prior command that timed out abandoned a worker thread still blocked
+        # in this synchronous pipe; any further command would queue behind it and
+        # hang forever. Fast-fail once the instance is marked wedged.
+        if is_wedged(self):
+            return ""
         result = self._r2.cmd(command)
         return result if isinstance(result, str) else str(result)
 
     def cmdj(self, command: str) -> Any:
+        if is_wedged(self):
+            return None
         return silent_cmdj(self._r2, command, None)
 
     @property

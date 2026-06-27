@@ -24,7 +24,7 @@ _wedged_lock = threading.Lock()
 _wedged_instances: weakref.WeakSet[Any] = weakref.WeakSet()
 
 
-def _is_wedged(r2_instance: Any) -> bool:
+def is_wedged(r2_instance: Any) -> bool:
     with _wedged_lock:
         try:
             return r2_instance in _wedged_instances
@@ -32,7 +32,7 @@ def _is_wedged(r2_instance: Any) -> bool:
             return False
 
 
-def _mark_wedged(r2_instance: Any) -> None:
+def mark_wedged(r2_instance: Any) -> None:
     with _wedged_lock, contextlib.suppress(TypeError):
         _wedged_instances.add(r2_instance)
 
@@ -40,7 +40,7 @@ def _mark_wedged(r2_instance: Any) -> None:
 def _run_cmd_with_timeout(
     r2_instance: R2CommandInterface, command: str, default: Any | None
 ) -> Any | None:
-    if _is_wedged(r2_instance):
+    if is_wedged(r2_instance):
         return default
 
     result: dict[str, Any] = {"value": default, "done": False}
@@ -68,7 +68,7 @@ def _run_cmd_with_timeout(
 
     if not result["done"]:
         logger.warning("r2 command timed out: %s", command)
-        _mark_wedged(r2_instance)
+        mark_wedged(r2_instance)
         return default
 
     return result["value"]
