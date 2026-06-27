@@ -14,6 +14,8 @@ class R2PipeTextQueryMixin:
     _safe_query: Any  # provided by host class
     _maybe_force_error: Any  # provided by host class
     _analysis_result: str | None  # provided by host class
+    _file_backed_map_starts: list[int] | None  # provided by host class
+    _file_backed_maps_resolved: bool  # provided by host class
 
     @property
     def _r2_iface(self) -> R2CommandInterface:
@@ -144,6 +146,73 @@ class R2PipeTextQueryMixin:
 
         def _execute() -> str:
             self._maybe_force_error("search_hex")
-            return facade.safe_cmd(self._r2_iface, f"/x {hex_pattern}")
+            starts = self._get_file_backed_map_starts()
+            if not starts:
+                return facade.safe_cmd(self._r2_iface, f"/x {hex_pattern}")
+            outputs = [
+                facade.safe_cmd(
+                    self._r2_iface,
+                    f"/x {hex_pattern} @e:search.in=io.map @ {start:#x}",
+                )
+                for start in starts
+            ]
+            return "\n".join(output for output in outputs if output)
 
         return cast(str, self._safe_query(_execute, "", "Error searching hex pattern"))
+
+    def _resolve_file_size(self) -> int | None:
+        from . import r2pipe_queries as facade
+
+        info = facade.safe_cmdj(self._r2_iface, "ij")
+        if not isinstance(info, dict):
+            return None
+        core = info.get("core")
+        if not isinstance(core, dict):
+            return None
+        size = core.get("size")
+        return size if isinstance(size, int) and size > 0 else None
+
+    def _get_file_backed_map_starts(self) -> list[int]:
+        """Vaddr starts of the file-backed io maps, for scoped ``/x`` searches.
+
+        r2's default ``search.in=io.maps`` spans the anonymous, zero-filled BSS
+        map, which for statically-linked binaries can reach ~1 GB and makes
+        every ``/x`` scan take seconds. Byte signatures only ever live in
+        file-backed regions, so the hex search restricts itself to those maps
+        (one ``@e:search.in=io.map`` pass each). Returns an empty list when the
+        maps or file size can't be resolved, so the caller falls back to a plain
+        whole-binary ``/x``.
+        """
+        if self._file_backed_maps_resolved:
+            return self._file_backed_map_starts or []
+        self._file_backed_maps_resolved = True
+        starts = self._compute_file_backed_map_starts()
+        self._file_backed_map_starts = starts
+        return starts
+
+    def _compute_file_backed_map_starts(self) -> list[int]:
+        from . import r2pipe_queries as facade
+
+        file_size = self._resolve_file_size()
+        if not file_size:
+            return []
+        maps = facade.safe_cmdj(self._r2_iface, "omj")
+        if not isinstance(maps, list):
+            return []
+        starts: list[int] = []
+        for entry in maps:
+            if not isinstance(entry, dict):
+                continue
+            start = entry.get("from")
+            end = entry.get("to")
+            delta = entry.get("delta", 0)
+            if not (isinstance(start, int) and isinstance(end, int) and isinstance(delta, int)):
+                continue
+            length = end - start + 1
+            if length <= 0:
+                continue
+            # A map whose physical backing fits inside the file is real content;
+            # the oversized anonymous BSS map (delta+length far past EOF) is not.
+            if delta + length <= file_size:
+                starts.append(start)
+        return starts

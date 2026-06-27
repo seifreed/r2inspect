@@ -59,6 +59,11 @@ class R2PipeAdapter(R2PipeQueryMixin):
         # analyzer (binbloom, binlex, bindiff, function extraction) requests it,
         # but the r2 session state is shared, so a single pass suffices.
         self._analysis_result: str | None = None
+        # Memoizes the file-backed io-map starts used to scope /x hex searches
+        # away from the (potentially ~1 GB) anonymous BSS map; resolved once on
+        # first search. See R2PipeTextQueryMixin._get_file_backed_map_starts.
+        self._file_backed_map_starts: list[int] | None = None
+        self._file_backed_maps_resolved: bool = False
         logger.debug("R2PipeAdapter initialized successfully")
 
     def cmd(self, command: str) -> str:
