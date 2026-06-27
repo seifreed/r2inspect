@@ -190,6 +190,7 @@ class CompilerDetector(CommandHelperMixin):
             file_format,
             detect_version=self._detect_compiler_version,
             detection_method_fn=detection_method,
+            compiler_signatures=self.compiler_signatures,
         )
 
     def _get_file_format(self) -> str:

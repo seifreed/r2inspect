@@ -348,6 +348,51 @@ def test_extended_sco_signature_ignores_substring():
     assert score == 0.0
 
 
+def test_ambiguous_compiler_signatures_removed():
+    from r2inspect.modules.compiler_signatures import COMPILER_SIGNATURES
+
+    # Bare-substring garbage magnets dropped (covered by DotNet/Qt/FASM/MASM/ICC).
+    for removed in ("C#", "F#", "QT", "Intel", "ASM"):
+        assert removed not in COMPILER_SIGNATURES
+
+
+def test_tightened_signatures_reject_garbage_accept_real():
+    from r2inspect.modules.compiler_signatures import COMPILER_SIGNATURES
+
+    # garbage strings (random-case fragments) must NOT match
+    garbage = {
+        "Qt": ["qTUç", "Gqtח"],
+        "Nim": ["NiM?", "L\\niM"],
+        "VBA": ["%vBa7", "VbA'I"],
+        "Lua": ["lua", "BLUApp"],
+        "PHP": ["PhP", "phP"],
+        "Java": ["jVM", "JvM"],
+        "Mono": ["Monolith", "mono"],
+        "IAR": ["\\iAR", "liar"],
+        "OS/2": ["os/2x", "DOSing"],
+        "UPX": ["upxy", "UPx"],
+    }
+    for name, strings in garbage.items():
+        score, _ = _check_string_signatures(COMPILER_SIGNATURES[name], strings)
+        assert score == 0.0, f"{name} false-matched garbage {strings}"
+
+    # real toolchain markers MUST match
+    real = {
+        "Qt": ["Qt5Core.dll"],
+        "Nim": ["@mmain.nim"],
+        "VBA": ["VBE7.DLL"],
+        "Lua": ["luaL_loadfile"],
+        "PHP": ["PHP/8.2"],
+        "Java": ["java/lang/Object"],
+        "Mono": ["Mono.Runtime"],
+        "IAR": ["IAR Systems"],
+        "UPX": ["UPX!"],
+    }
+    for name, strings in real.items():
+        score, _ = _check_string_signatures(COMPILER_SIGNATURES[name], strings)
+        assert score > 0.0, f"{name} failed to match real marker {strings}"
+
+
 # ---------------------------------------------------------------------------
 # _check_import_signatures – line 183 (early return when "imports" absent)
 # ---------------------------------------------------------------------------

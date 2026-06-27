@@ -101,6 +101,52 @@ def test_apply_best_compiler_high_score():
     assert results["details"]["file_format"] == "ELF"
 
 
+def test_apply_best_compiler_tie_is_ambiguous_and_deterministic():
+    detector = _make_detector()
+    results: dict = {}
+
+    # Two string-only signatures tied at the top: winner is deterministic
+    # (alphabetical, since equal corroboration), confidence demoted, tie noted.
+    detector._apply_best_compiler(results, {"Mono": 1.0, "Lua": 1.0}, [], [], "ELF")
+
+    assert results["compiler"] == "Lua"
+    assert results["confidence"] <= 0.5
+    assert results["details"]["ambiguous_with"] == ["Mono"]
+
+
+def test_apply_best_compiler_corroboration_breaks_tie():
+    detector = _make_detector()
+    results: dict = {}
+
+    # GCC (strings+imports+sections+symbols) outranks string-only Lua at an
+    # equal score; still ambiguous, so confidence is demoted.
+    detector._apply_best_compiler(results, {"Lua": 1.0, "GCC": 1.0}, [], [], "ELF")
+
+    assert results["compiler"] == "GCC"
+    assert results["confidence"] <= 0.5
+
+
+def test_apply_best_compiler_string_only_winner_capped():
+    detector = _make_detector()
+    results: dict = {}
+
+    # A lone string-only win is weak evidence: capped below "high confidence".
+    detector._apply_best_compiler(results, {"Lua": 1.0}, [], [], "ELF")
+
+    assert results["compiler"] == "Lua"
+    assert results["confidence"] <= 0.6
+
+
+def test_apply_best_compiler_corroborated_winner_not_capped():
+    detector = _make_detector()
+    results: dict = {}
+
+    detector._apply_best_compiler(results, {"GCC": 0.9}, ["GCC version"], [], "ELF")
+
+    assert results["compiler"] == "GCC"
+    assert results["confidence"] == 0.9
+
+
 # ---------------------------------------------------------------------------
 # _get_file_format
 # ---------------------------------------------------------------------------

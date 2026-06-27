@@ -539,6 +539,7 @@ def test_apply_best_compiler_skips_non_dict_scores():
         "ELF",
         detect_version=lambda *_: "Unknown",
         detection_method_fn=lambda *_: "method",
+        compiler_signatures={},
     )
     assert results == {}
 
@@ -555,8 +556,28 @@ def test_apply_best_compiler_skips_non_numeric_scores():
         "ELF",
         detect_version=lambda *_: "Unknown",
         detection_method_fn=lambda *_: "method",
+        compiler_signatures={},
     )
     assert results == {}
+
+
+def test_apply_best_compiler_corroboration_handles_non_dict_signature():
+    from r2inspect.modules.compiler_detector_support import apply_best_compiler
+
+    results: dict[str, object] = {}
+    apply_best_compiler(
+        results,
+        {"A": 1.0, "B": 1.0},
+        [],
+        [],
+        "ELF",
+        detect_version=lambda *_: "Unknown",
+        detection_method_fn=lambda *_: "method",
+        # "A" has a non-dict signature (corroboration 0); "B" is a real dict
+        # (corroboration 1) and wins the tie.
+        compiler_signatures={"A": "not-a-dict", "B": {"strings": ["x"]}},
+    )
+    assert results["compiler"] == "B"
 
 
 def test_detect_file_format_skips_non_dict_input():

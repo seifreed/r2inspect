@@ -83,6 +83,27 @@ def score_compilers(
     return scores
 
 
+# Confidence ceilings that keep weak/ambiguous evidence from being reported as
+# a confident win (see _confidence_label thresholds: 0.8 = high, 0.6 = medium).
+_AMBIGUOUS_CONFIDENCE_CAP = 0.5
+_WEAK_EVIDENCE_CONFIDENCE_CAP = 0.6
+_SIGNATURE_CATEGORIES = ("strings", "imports", "sections", "symbols")
+
+
+def _signature_corroboration(compiler_signatures: dict[str, Any], name: str) -> int:
+    """How many signature categories the compiler defines.
+
+    A string-only signature (corroboration == 1) can only ever win on a string
+    match, which against a garbage-laden strings blob is weak evidence; a
+    multi-category signature (e.g. MSVC strings+imports+sections) is far harder
+    to trigger by chance.
+    """
+    signature = compiler_signatures.get(name, {})
+    if not isinstance(signature, dict):
+        return 0
+    return sum(1 for category in _SIGNATURE_CATEGORIES if signature.get(category))
+
+
 def apply_best_compiler(
     results: dict[str, Any],
     compiler_scores: dict[str, float],
@@ -92,29 +113,45 @@ def apply_best_compiler(
     *,
     detect_version: Callable[[str, list[str], list[str]], str],
     detection_method_fn: Callable[[str, float], str],
+    compiler_signatures: dict[str, Any],
 ) -> None:
     if not isinstance(compiler_scores, dict) or not compiler_scores:
         return
     numeric_scores = {
-        compiler_name: score
+        compiler_name: float(score)
         for compiler_name, score in compiler_scores.items()
         if isinstance(score, (int, float))
     }
     if not numeric_scores:
         return
-    best_compiler = max(numeric_scores, key=lambda k: numeric_scores[k])
-    best_score = float(numeric_scores[best_compiler])
+    best_score = max(numeric_scores.values())
     if best_score <= 0.3:
         return
+
+    # Deterministic winner: among compilers tied at the top score, prefer the
+    # one with the strongest signature definition, then alphabetical — never
+    # dict-insertion order.
+    tied = [name for name, score in numeric_scores.items() if score == best_score]
+    best_compiler = min(
+        tied, key=lambda name: (-_signature_corroboration(compiler_signatures, name), name)
+    )
+
+    confidence = best_score
+    details: dict[str, Any] = {"all_scores": compiler_scores, "file_format": file_format}
+    if len(tied) > 1:
+        # The scores do not discriminate between compilers: report it honestly
+        # as low confidence rather than a confident-but-arbitrary winner.
+        confidence = min(confidence, _AMBIGUOUS_CONFIDENCE_CAP)
+        details["ambiguous_with"] = sorted(name for name in tied if name != best_compiler)
+    elif _signature_corroboration(compiler_signatures, best_compiler) <= 1:
+        confidence = min(confidence, _WEAK_EVIDENCE_CONFIDENCE_CAP)
+
     results["detected"] = True
     results["compiler"] = best_compiler
-    results["confidence"] = best_score
+    results["confidence"] = confidence
     results["version"] = detect_version(best_compiler, strings_data, imports_data)
-    results["details"] = {
-        "all_scores": compiler_scores,
-        "file_format": file_format,
-        "detection_method": detection_method_fn(best_compiler, best_score),
-    }
+    details["detection_method"] = detection_method_fn(best_compiler, confidence)
+    results["details"] = details
 
 
 def detect_compiler_version(
