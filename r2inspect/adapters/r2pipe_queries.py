@@ -42,6 +42,7 @@ class R2PipeQueryMixin(
         error_msg: str = "",
         *,
         cache: bool = True,
+        bounded: bool = False,
     ) -> list[dict[str, Any]] | dict[str, Any]: ...
 
     @abstractmethod

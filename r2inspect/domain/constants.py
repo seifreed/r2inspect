@@ -54,6 +54,16 @@ EXCESSIVE_IMPORTS_THRESHOLD = 500  # Above this: unusually high import count
 SUBPROCESS_TIMEOUT_SECONDS = 30  # Maximum seconds to wait for subprocess
 
 # =============================================================================
+# Per-function disassembly cache (shared across similarity analyzers)
+# =============================================================================
+# binlex, function_analyzer, and simhash each issue identical `pdfj @ <addr>`
+# per function; caching dedupes them. Disabled above the function-count gate so
+# function-heavy binaries don't accumulate hundreds of MB of cached disasm.
+# Both are overridable via R2INSPECT_DISASM_CACHE_MAX_FUNCS / _ENTRIES.
+DISASM_CACHE_MAX_FUNCS = 20000  # Cache per-address disasm only at/below this function count
+DISASM_CACHE_MAX_ENTRIES = 20000  # Hard cap on cached per-address entries (stop-at-cap)
+
+# =============================================================================
 # Test Mode Thresholds (more aggressive to reduce resource usage)
 # =============================================================================
 # When R2INSPECT_TEST_MODE=1, these thresholds are used instead of the standard ones
@@ -97,6 +107,9 @@ __all__ = [
     "EXCESSIVE_IMPORTS_THRESHOLD",
     # Process execution
     "SUBPROCESS_TIMEOUT_SECONDS",
+    # Disassembly cache
+    "DISASM_CACHE_MAX_FUNCS",
+    "DISASM_CACHE_MAX_ENTRIES",
     # Detection confidence
     "CONFIDENCE_API",
     "CONFIDENCE_CONSTANT",

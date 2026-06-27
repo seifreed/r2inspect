@@ -70,6 +70,13 @@ def create_inspector(
             cfg,
             filename,
         )
+
+        def _cleanup() -> None:
+            # Release the (up to ~160 MB) per-function disasm cache before the
+            # r2 session teardown, rather than waiting for adapter GC.
+            adapter.clear_disasm_cache()
+            session.close()
+
         deps = InspectorDependencies(
             adapter=adapter,
             registry_factory=create_default_registry,
@@ -85,7 +92,7 @@ def create_inspector(
             file_validator_factory=lambda path: FileValidator(path),
             result_aggregator_factory=ResultAggregator,
             memory_monitor=monitor,
-            cleanup_callback=session.close,
+            cleanup_callback=_cleanup,
         )
         return make_inspector(
             filename=filename,

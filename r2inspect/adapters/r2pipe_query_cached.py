@@ -166,6 +166,7 @@ class R2PipeCachedQueryMixin:
                 data_type,
                 error_msg=f"No disassembly found for '{cmd}'",
                 cache=address is None,
+                bounded=address is not None,
             )
         except Exception as exc:
             logger.exception("Error retrieving disassembly for '%s': %s", cmd, exc)
@@ -182,6 +183,7 @@ class R2PipeCachedQueryMixin:
                 "list",
                 error_msg=f"No CFG data found for '{cmd}'",
                 cache=address is None,
+                bounded=address is not None,
             )
         except Exception as exc:
             logger.exception("Error retrieving CFG for '%s': %s", cmd, exc)

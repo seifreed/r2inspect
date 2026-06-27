@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """R2Pipe adapter implementation."""
 
+import os
 import threading
 from collections.abc import Iterable
 from typing import Any, Literal, cast
 
+from ..domain.constants import DISASM_CACHE_MAX_ENTRIES, DISASM_CACHE_MAX_FUNCS
 from ..interfaces import BinaryAnalyzerInterface
 from ..infrastructure.logging import get_logger
 from ..infrastructure.r2_command_timeout import is_wedged
@@ -46,6 +48,11 @@ class R2PipeAdapter(R2PipeQueryMixin):
 
         self._r2 = r2_instance
         self._cache: dict[str, CommandOutput] = {}
+        # Separate bounded cache for per-address disasm (pdfj/agj @ addr) so the
+        # similarity analyzers share one disassembly pass; kept apart from the
+        # unbounded _cache so it can be size-gated and cleared independently.
+        self._disasm_cache: dict[str, CommandOutput] = {}
+        self._disasm_cache_enabled: bool | None = None
         self._cache_lock = threading.Lock()
         self._fault_injector = fault_injector
         # Memoizes the one-time `aaa` full-analysis pass: every similarity
@@ -108,6 +115,34 @@ class R2PipeAdapter(R2PipeQueryMixin):
         text = self.cmd(cmd_text)
         return text
 
+    @staticmethod
+    def _env_int(name: str, fallback: int) -> int:
+        raw = os.environ.get(name)
+        if not raw:
+            return fallback
+        try:
+            return int(raw)
+        except ValueError:
+            return fallback
+
+    def _disasm_cache_active(self) -> bool:
+        """Whether per-address disasm caching is enabled for this binary.
+
+        Decided once: a function-heavy binary (more functions than the gate)
+        would accumulate too much cached disasm, so caching stays off and we
+        keep the current per-call behavior. Any failure to count disables it.
+        """
+        if self._disasm_cache_enabled is None:
+            max_funcs = self._env_int("R2INSPECT_DISASM_CACHE_MAX_FUNCS", DISASM_CACHE_MAX_FUNCS)
+            # get_functions() never raises (it returns [] on any error), so the
+            # count is always available here.
+            self._disasm_cache_enabled = len(self.get_functions()) <= max_funcs
+        return self._disasm_cache_enabled
+
+    def clear_disasm_cache(self) -> None:
+        with self._cache_lock:
+            self._disasm_cache.clear()
+
     def _cached_query(
         self,
         cmd: str,
@@ -116,6 +151,7 @@ class R2PipeAdapter(R2PipeQueryMixin):
         error_msg: str = "",
         *,
         cache: bool = True,
+        bounded: bool = False,
     ) -> list[dict[str, Any]] | dict[str, Any]:
         """
         Execute r2 command with caching and validation.
@@ -144,6 +180,10 @@ class R2PipeAdapter(R2PipeQueryMixin):
             with self._cache_lock:
                 if cmd in self._cache:
                     return self._as_typed(self._cache[cmd], data_type)
+        if bounded:
+            with self._cache_lock:
+                if cmd in self._disasm_cache:
+                    return self._as_typed(self._disasm_cache[cmd], data_type)
 
         result, default_value = self._fetch_and_default(cmd, data_type, default)
 
@@ -156,6 +196,15 @@ class R2PipeAdapter(R2PipeQueryMixin):
         if cache:
             with self._cache_lock:
                 self._cache[cmd] = validated
+        elif bounded and self._disasm_cache_active():
+            max_entries = self._env_int(
+                "R2INSPECT_DISASM_CACHE_MAX_ENTRIES", DISASM_CACHE_MAX_ENTRIES
+            )
+            with self._cache_lock:
+                # Stop-at-cap (no eviction): LRU would thrash on the fill-then-
+                # drain access pattern where one analyzer fills and the next reads.
+                if len(self._disasm_cache) < max_entries:
+                    self._disasm_cache[cmd] = validated
         return self._as_typed(validated, data_type)
 
     @staticmethod
