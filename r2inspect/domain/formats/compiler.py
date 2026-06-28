@@ -13,8 +13,11 @@ def calculate_compiler_score(
     imports_data: list[str],
     sections_data: list[str],
     symbols_data: list[str],
+    string_haystack: str | None = None,
 ) -> float:
-    string_score, string_max = _check_string_signatures(signatures, strings_data)
+    string_score, string_max = _check_string_signatures(
+        signatures, strings_data, haystack=string_haystack
+    )
     import_score, import_max = _check_import_signatures(signatures, imports_data)
     section_score, section_max = _check_section_signatures(signatures, sections_data)
     symbol_score, symbol_max = _check_symbol_signatures(signatures, symbols_data)
@@ -163,7 +166,7 @@ def extract_symbol_names(symbols_data: list[dict[str, Any]]) -> list[str]:
 
 
 def _check_string_signatures(
-    signatures: dict[str, Any], strings_data: list[str]
+    signatures: dict[str, Any], strings_data: list[str], *, haystack: str | None = None
 ) -> tuple[float, float]:
     # An empty (or absent) signature list contributes nothing — counting its
     # weight in max_score would dilute the score so that string-only compilers
@@ -179,10 +182,12 @@ def _check_string_signatures(
     # thousands of strings, so the per-string loop was the dominant analysis
     # cost. None of the signatures are anchored and the search has no DOTALL, so
     # "pattern matches the newline-joined blob" is equivalent to "pattern
-    # matches some individual string".
-    if not strings_data:
-        return score, max_score
-    haystack = "\n".join(string for string in strings_data if isinstance(string, str))
+    # matches some individual string". The caller may pass a precomputed
+    # haystack so the multi-MB join isn't repeated for every compiler.
+    if haystack is None:
+        if not strings_data:
+            return score, max_score
+        haystack = "\n".join(string for string in strings_data if isinstance(string, str))
     for pattern in signatures["strings"]:
         if not isinstance(pattern, str):
             continue

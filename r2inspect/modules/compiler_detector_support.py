@@ -64,8 +64,12 @@ def score_compilers(
     sections_data: list[str],
     symbols_data: list[str],
     *,
-    calculate_score: Callable[[dict[str, Any], list[str], list[str], list[str], list[str]], float],
+    calculate_score: Callable[..., float],
 ) -> dict[str, float]:
+    # Build the joined string blob once: every compiler's string-signature
+    # check searches the same blob, so re-joining hundreds of thousands of
+    # strings per compiler was the dominant cost on large binaries.
+    string_haystack = "\n".join(s for s in strings_data if isinstance(s, str))
     scores: dict[str, float] = {}
     for compiler_name, signatures in compiler_signatures.items():
         # Each compiler maps to a signature dict ({"strings": [...], "imports":
@@ -79,6 +83,7 @@ def score_compilers(
             imports_data,
             sections_data,
             symbols_data,
+            string_haystack,
         )
     return scores
 
