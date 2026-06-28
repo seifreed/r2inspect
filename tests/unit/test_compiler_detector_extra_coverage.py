@@ -665,7 +665,29 @@ def test_r2_metadata_compiler_fills_in_when_signatures_empty():
     assert result["compiler"] == "Clang"
     assert result["confidence"] == 0.6
     assert result["detected"] is True
-    assert result["details"]["detection_method"] == "radare2 bin.compiler metadata"
+    assert result["details"]["detection_method"] == "radare2 bin metadata"
+
+
+def test_r2_metadata_compiler_falls_back_to_bin_lang_for_pe():
+    # r2 leaves bin.compiler empty for most PEs but still reports bin.lang;
+    # the fallback must use it so MSVC/C binaries aren't left Unknown.
+    adapter = FakeAdapter(file_info={"bin": {"class": "PE32", "compiler": "", "lang": "msvc"}})
+    result = CompilerDetector(adapter).detect_compiler()
+    assert result["compiler"] == "MSVC"
+    assert result["confidence"] == 0.6
+    assert result["details"]["detection_method"] == "radare2 bin metadata"
+
+
+def test_r2_metadata_compiler_prefers_compiler_over_lang():
+    adapter = FakeAdapter(file_info={"bin": {"class": "ELF64", "compiler": "gcc", "lang": "c"}})
+    assert CompilerDetector(adapter).detect_compiler()["compiler"] == "GCC"
+
+
+def test_r2_metadata_compiler_maps_bin_lang_c_and_cpp():
+    pe_c = FakeAdapter(file_info={"bin": {"class": "PE32", "lang": "c"}})
+    assert CompilerDetector(pe_c).detect_compiler()["compiler"] == "C"
+    pe_cpp = FakeAdapter(file_info={"bin": {"class": "PE32", "lang": "cpp"}})
+    assert CompilerDetector(pe_cpp).detect_compiler()["compiler"] == "C++"
 
 
 def test_r2_metadata_compiler_normalizes_gcc():
@@ -694,3 +716,14 @@ def test_r2_metadata_compiler_absent_stays_unknown():
     adapter = FakeAdapter(file_info={"bin": {"class": "MACH064"}})
     result = CompilerDetector(adapter).detect_compiler()
     assert result["compiler"] == "Unknown"
+
+
+def test_r2_metadata_compiler_handles_non_dict_bin():
+    adapter = FakeAdapter(file_info={"bin": "not-a-dict"})
+    result = CompilerDetector(adapter).detect_compiler()
+    assert result["compiler"] == "Unknown"
+
+
+def test_compiler_detector_analyze_delegates_to_detect():
+    adapter = FakeAdapter(file_info={"bin": {"class": "ELF64", "compiler": "gcc"}})
+    assert CompilerDetector(adapter).analyze()["compiler"] == "GCC"

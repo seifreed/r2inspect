@@ -55,6 +55,8 @@ _R2_COMPILER_NAMES = {
     "gcc": "GCC",
     "msvc": "MSVC",
     "rustc": "Rust",
+    "c": "C",
+    "cpp": "C++",
 }
 
 # Constants
@@ -130,17 +132,19 @@ class CompilerDetector(CommandHelperMixin):
         return results
 
     def _apply_r2_metadata_compiler(self, results: dict[str, Any]) -> None:
-        """Fill in the compiler from radare2's own ``bin.compiler`` metadata when
-        signature scoring found nothing. r2 derives it from load commands / build
-        info (e.g. a stripped clang Mach-O carries no string signature but r2 still
-        reports ``clang``), so this only ever upgrades an otherwise Unknown result."""
+        """Fill in the compiler from radare2's own ``bin`` metadata when signature
+        scoring found nothing. r2 derives it from load commands / build info (e.g. a
+        stripped clang Mach-O carries no string signature but r2 still reports
+        ``clang``; PEs usually leave ``bin.compiler`` empty but still report
+        ``bin.lang`` such as ``msvc``), so this only ever upgrades an otherwise
+        Unknown result."""
         raw = self._get_r2_compiler()
         if not raw:
             return
         results["detected"] = True
         results["compiler"] = _R2_COMPILER_NAMES.get(raw.lower(), raw)
         results["confidence"] = 0.6
-        results["details"]["detection_method"] = "radare2 bin.compiler metadata"
+        results["details"]["detection_method"] = "radare2 bin metadata"
 
     def _get_r2_compiler(self) -> str:
         empty: dict[str, Any] = {}
@@ -150,8 +154,15 @@ class CompilerDetector(CommandHelperMixin):
             error_msg="Error reading file info for compiler metadata",
         )
         bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
-        compiler = bin_info.get("compiler") if isinstance(bin_info, dict) else None
-        return compiler.strip() if isinstance(compiler, str) else ""
+        if not isinstance(bin_info, dict):
+            return ""
+        compiler = bin_info.get("compiler")
+        if isinstance(compiler, str) and compiler.strip():
+            return compiler.strip()
+        # r2 commonly leaves bin.compiler empty for PEs but still reports bin.lang
+        # (e.g. "msvc"/"c"/"cpp"); use it as the authoritative fallback.
+        lang = bin_info.get("lang")
+        return lang.strip() if isinstance(lang, str) else ""
 
     def _apply_rich_header_detection(self, results: dict[str, Any]) -> bool:
         return _apply_rich_header_detection(
