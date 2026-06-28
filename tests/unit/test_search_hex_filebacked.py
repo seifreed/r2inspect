@@ -150,6 +150,22 @@ def test_search_hex_reads_maps_once_and_finds_in_memory():
     assert not any(c.startswith("/x") for c in fake.calls["cmd"])
 
 
+def test_search_hex_in_memory_matches_non_overlapping():
+    # A run of repeated bytes: r2's /x steps past each hit by the pattern length,
+    # so "aaaa" (2 bytes) over six 0xAA bytes matches at offsets 0, 2, 4 -- not
+    # the overlapping 0, 1, 2, 3, 4 that a one-byte step would report.
+    omj = [{"from": 0x1000, "to": 0x1005, "delta": 0, "perm": "r--"}]
+    fake = FakeR2Adapter(
+        cmd_responses={"p8 6 @ 4096": "aaaaaaaaaaaa"},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    result = adapter.search_hex("aaaa")
+
+    assert result == "0x1000\n0x1002\n0x1004"
+
+
 def test_search_hex_falls_back_to_scan_on_short_map_read():
     # omj resolves but the p8 read isn't available (returns ""), so the in-memory
     # view is incomplete and the search must fall back to /x for correctness.

@@ -175,11 +175,15 @@ class R2PipeTextQueryMixin:
         if map_bytes is None:
             return None
         lines: list[str] = []
+        step = len(needle)
         for base, buf in map_bytes:
             offset = buf.find(needle)
             while offset != -1:
                 lines.append(f"{base + offset:#x}")
-                offset = buf.find(needle, offset + 1)
+                # r2's /x steps past each hit by the pattern length, so a run of
+                # repeated bytes yields non-overlapping matches; mirror that here
+                # instead of advancing one byte (which over-reports overlaps).
+                offset = buf.find(needle, offset + step)
         return "\n".join(lines)
 
     def _get_map_bytes(self) -> list[tuple[int, bytes]] | None:
