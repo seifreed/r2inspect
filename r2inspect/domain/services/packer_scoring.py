@@ -71,16 +71,19 @@ def find_packer_string(
 ) -> dict[str, str] | None:
     if not strings_result:
         return None
+    # Whole-word match only: a loose substring lets short names like
+    # "mew"/"fsg"/"upx" false-match ordinary strings (e.g. "mew" inside
+    # "RuntimeWrappedException"), flagging clean binaries as packed. Each
+    # pattern depends only on the packer name, so compile it once instead of
+    # rebuilding it for every string scanned.
+    compiled = {name: re.compile(rf"\b{re.escape(name.lower())}\b") for name in packer_signatures}
     for string_info in strings_result:
         string_value = string_info.get("string", "")
         if not isinstance(string_value, str):
             continue
         string_val = string_value.lower()
-        for packer_name in packer_signatures:
-            # Whole-word match only: a loose substring lets short names like
-            # "mew"/"fsg"/"upx" false-match ordinary strings (e.g. "mew" inside
-            # "RuntimeWrappedException"), flagging clean binaries as packed.
-            if re.search(rf"\b{re.escape(packer_name.lower())}\b", string_val):
+        for packer_name, pattern in compiled.items():
+            if pattern.search(string_val):
                 return {"type": packer_name, "signature": string_val}
     return None
 
