@@ -9,8 +9,11 @@ keeping the Config model focused on validation and accessors.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigStore:
@@ -25,7 +28,9 @@ class ConfigStore:
             if isinstance(data, dict):
                 return data
         except Exception as exc:
-            print(f"Warning: Could not load config from {path}: {exc}")
+            # Diagnostics go to the logger (stderr), never stdout -- a stray
+            # warning there corrupts -j/-c machine output piped to a parser.
+            logger.warning("Could not load config from %s: %s", path, exc)
         return None
 
     @staticmethod
@@ -37,4 +42,4 @@ class ConfigStore:
             with open(path, "w") as handle:
                 json.dump(payload, handle, indent=2)
         except Exception as exc:
-            print(f"Warning: Could not save config to {path}: {exc}")
+            logger.warning("Could not save config to %s: %s", path, exc)

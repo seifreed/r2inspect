@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -18,34 +19,36 @@ def test_config_alias_and_dict_access(tmp_path: Path):
     assert isinstance(cfg.to_dict().get("custom"), dict)
 
 
-def test_config_load_invalid_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+def test_config_load_invalid_json(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     config_path = tmp_path / "bad.json"
     config_path.write_text("{")
-    cfg = Config(str(config_path))
-    out = capsys.readouterr().out
-    assert "Warning: Could not load config" in out
+    with caplog.at_level(logging.WARNING):
+        cfg = Config(str(config_path))
+    # Warning goes to the logger (stderr), not stdout, so -j output stays clean.
+    assert "Could not load config" in caplog.text
     assert isinstance(cfg.to_dict(), dict)
 
 
-def test_config_save_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+def test_config_save_error(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     cfg = Config(str(tmp_path / "config.json"))
     cfg.config_path = str(tmp_path)
-    cfg.save_config()
-    out = capsys.readouterr().out
-    assert "Warning: Could not save config" in out
+    with caplog.at_level(logging.WARNING):
+        cfg.save_config()
+    assert "Could not save config" in caplog.text
 
 
-def test_config_load_from_dict_fallback(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+def test_config_load_from_dict_fallback(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     cfg = Config(str(tmp_path / "config.json"))
     bad = {"general": {"min_string_length": 0}}
-    cfg._load_from_dict(bad)
-    out = capsys.readouterr().out
-    assert "Invalid configuration values" in out
+    with caplog.at_level(logging.WARNING):
+        cfg._load_from_dict(bad)
+    assert "Invalid configuration values" in caplog.text
     assert cfg.typed_config.general.min_string_length == 4
 
-    cfg._load_from_dict({"general": "oops"})
-    out = capsys.readouterr().out
-    assert "Invalid configuration values" in out
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        cfg._load_from_dict({"general": "oops"})
+    assert "Invalid configuration values" in caplog.text
 
 
 def test_config_misc_helpers(tmp_path: Path):

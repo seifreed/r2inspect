@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
 
 from r2inspect.config import Config
-
 
 # ---------------------------------------------------------------------------
 # Config.__init__ - new file creates default (line 90)
@@ -70,24 +70,24 @@ def test_merge_config_merges_dict_section():
 
 
 def test_load_from_dict_falls_back_to_defaults_on_invalid_values(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
     cfg = Config(str(tmp_path / "cfg.json"))
     # min_string_length=0 triggers ValueError in GeneralConfig.__post_init__
-    cfg._load_from_dict({"general": {"min_string_length": 0}})
-    out = capsys.readouterr().out
-    assert "Invalid configuration values" in out
+    with caplog.at_level(logging.WARNING):
+        cfg._load_from_dict({"general": {"min_string_length": 0}})
+    assert "Invalid configuration values" in caplog.text
     assert cfg.typed_config.general.min_string_length == 4
 
 
 def test_load_from_dict_falls_back_to_defaults_on_type_error(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
     cfg = Config(str(tmp_path / "cfg.json"))
     # Passing a non-dict for 'general' triggers a TypeError or ValueError
-    cfg._load_from_dict({"general": "not_a_dict"})
-    out = capsys.readouterr().out
-    assert "Invalid configuration values" in out
+    with caplog.at_level(logging.WARNING):
+        cfg._load_from_dict({"general": "not_a_dict"})
+    assert "Invalid configuration values" in caplog.text
 
 
 # ---------------------------------------------------------------------------

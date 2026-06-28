@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -20,7 +21,7 @@ def test_main_entrypoint_version_exit() -> None:
     assert result.returncode == 0
 
 
-def test_config_store_load_and_save(tmp_path, capsys) -> None:
+def test_config_store_load_and_save(tmp_path, caplog) -> None:
     config_path = tmp_path / "config.json"
     payload = {"a": 1}
     config_store.ConfigStore.save(str(config_path), payload)
@@ -28,17 +29,20 @@ def test_config_store_load_and_save(tmp_path, capsys) -> None:
     loaded = config_store.ConfigStore.load(str(config_path))
     assert loaded == payload
 
-    missing = config_store.ConfigStore.load(str(tmp_path / "missing.json"))
+    with caplog.at_level(logging.WARNING):
+        missing = config_store.ConfigStore.load(str(tmp_path / "missing.json"))
     assert missing is None
-    assert "Warning: Could not load config" in capsys.readouterr().out
+    assert "Could not load config" in caplog.text
 
     # Force save error by targeting a directory as file path
     bad_path = tmp_path / "dir" / "config.json"
     (tmp_path / "dir").mkdir()
     os.chmod(tmp_path / "dir", 0o400)
     try:
-        config_store.ConfigStore.save(str(bad_path), payload)
-        assert "Warning: Could not save config" in capsys.readouterr().out
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            config_store.ConfigStore.save(str(bad_path), payload)
+        assert "Could not save config" in caplog.text
     finally:
         os.chmod(tmp_path / "dir", 0o700)
 

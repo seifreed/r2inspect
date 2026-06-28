@@ -648,11 +648,13 @@ def test_inspector_helpers_detect_crypto_success_path():
 # ---------------------------------------------------------------------------
 
 
-def test_config_store_save_exception_is_printed(capsys: Any) -> None:
-    """Lines 39-40: exception during save is caught and warning printed."""
-    ConfigStore.save("/nonexistent/readonly/path/config.json", {"key": "value"})
-    captured = capsys.readouterr()
-    assert "Warning" in captured.out
+def test_config_store_save_exception_is_printed(caplog: Any) -> None:
+    """Exception during save is caught and logged (stderr), not printed to stdout."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        ConfigStore.save("/nonexistent/readonly/path/config.json", {"key": "value"})
+    assert "Could not save config" in caplog.text
 
 
 # ---------------------------------------------------------------------------

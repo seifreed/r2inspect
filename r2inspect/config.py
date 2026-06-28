@@ -18,6 +18,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import json
+import logging
 import os
 import threading
 from pathlib import Path
@@ -25,6 +26,8 @@ from typing import Any, cast
 
 from .config_schemas.schemas import R2InspectConfig
 from .config_store import ConfigStore
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -149,8 +152,8 @@ class Config:
         try:
             self._typed_config = R2InspectConfig.from_dict(merged_config)
         except (ValueError, TypeError) as e:
-            print(f"Warning: Invalid configuration values: {e}")
-            print("Using default configuration")
+            # Logger (stderr), not stdout: a stray warning corrupts -j/-c output.
+            logger.warning("Invalid configuration values: %s; using defaults", e)
             self._typed_config = R2InspectConfig.from_dict(self.DEFAULT_CONFIG)
 
     def save_config(self) -> None:
