@@ -63,6 +63,10 @@ class R2PipeAdapter(R2PipeQueryMixin):
         # away from the (potentially ~1 GB) anonymous BSS map; resolved once on
         # first search. See R2PipeTextQueryMixin._get_file_backed_map_starts.
         self._file_backed_map_starts: list[int] | None = None
+        # Executable file-backed map starts, used to scope /aa assembly searches:
+        # instructions can only live in r-x maps, so disassembling data maps is
+        # both wasted work and a source of false opcode matches.
+        self._executable_map_starts: list[int] | None = None
         self._file_backed_maps_resolved: bool = False
         logger.debug("R2PipeAdapter initialized successfully")
 

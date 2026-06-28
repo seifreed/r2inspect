@@ -99,8 +99,8 @@ def test_resolve_file_size_rejects_missing_size():
     assert "/x ab" in fake.calls["cmd"]
 
 
-def test_search_text_scopes_to_file_backed_maps():
-    omj = [{"from": 0x401000, "to": 0x401FFF, "delta": 0x1000}]
+def test_search_text_scopes_to_executable_maps():
+    omj = [{"from": 0x401000, "to": 0x401FFF, "delta": 0x1000, "perm": "r-x"}]
     fake = FakeR2Adapter(
         cmd_responses={"/aa xor @e:search.in=io.map @ 0x401000": "0x401005 xor eax, eax\n"},
         cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
@@ -112,6 +112,26 @@ def test_search_text_scopes_to_file_backed_maps():
     assert "xor" in result
     assert "/aa xor @e:search.in=io.map @ 0x401000" in fake.calls["cmd"]
     assert "/aa xor" not in fake.calls["cmd"]
+
+
+def test_search_text_skips_non_executable_maps():
+    # /aa disassembles, so only r-x maps can hold instructions. A data map is
+    # file-backed (so /x would scan it) but must not be disassembled by /aa.
+    omj = [
+        {"from": 0x401000, "to": 0x401FFF, "delta": 0x1000, "perm": "r-x"},
+        {"from": 0x402000, "to": 0x402FFF, "delta": 0x2000, "perm": "rw-"},
+    ]
+    fake = FakeR2Adapter(
+        cmd_responses={"/aa cpuid @e:search.in=io.map @ 0x401000": "0x401005 cpuid\n"},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    adapter.search_text("cpuid")
+
+    issued = fake.calls["cmd"]
+    assert "/aa cpuid @e:search.in=io.map @ 0x401000" in issued
+    assert not any("@ 0x402000" in c for c in issued)  # data map never disassembled
 
 
 def test_search_text_falls_back_without_maps():

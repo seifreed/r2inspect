@@ -15,6 +15,7 @@ class R2PipeTextQueryMixin:
     _maybe_force_error: Any  # provided by host class
     _analysis_result: str | None  # provided by host class
     _file_backed_map_starts: list[int] | None  # provided by host class
+    _executable_map_starts: list[int] | None  # provided by host class
     _file_backed_maps_resolved: bool  # provided by host class
 
     @property
@@ -151,14 +152,20 @@ class R2PipeTextQueryMixin:
 
         r2's default ``search.in=io.maps`` spans the anonymous, zero-filled BSS
         map (up to ~1 GB for statically-linked binaries), so an unscoped ``/x``
-        or ``/aa`` wastes seconds scanning zeros. Search each file-backed map in
-        turn instead, falling back to a plain whole-binary search when the maps
-        can't be resolved. Constants and code only live in file-backed regions,
-        so results are unchanged.
+        or ``/aa`` wastes seconds scanning zeros. Search each scoped map in turn
+        instead, falling back to a plain whole-binary search when the maps can't
+        be resolved. ``/aa`` disassembles, so it is restricted to executable maps
+        (instructions only live in r-x regions); ``/x`` byte searches span every
+        file-backed map (constants live in data sections too). Results are
+        unchanged.
         """
         from . import r2pipe_queries as facade
 
-        starts = self._get_file_backed_map_starts()
+        starts = (
+            self._get_executable_map_starts()
+            if search_cmd == "/aa"
+            else self._get_file_backed_map_starts()
+        )
         if not starts:
             return facade.safe_cmd(self._r2_iface, f"{search_cmd} {pattern}")
         outputs = [
@@ -193,23 +200,38 @@ class R2PipeTextQueryMixin:
         maps or file size can't be resolved, so the caller falls back to a plain
         whole-binary ``/x``.
         """
-        if self._file_backed_maps_resolved:
-            return self._file_backed_map_starts or []
-        self._file_backed_maps_resolved = True
-        starts = self._compute_file_backed_map_starts()
-        self._file_backed_map_starts = starts
-        return starts
+        self._ensure_map_starts_resolved()
+        return self._file_backed_map_starts or []
 
-    def _compute_file_backed_map_starts(self) -> list[int]:
+    def _get_executable_map_starts(self) -> list[int]:
+        """Vaddr starts of the executable file-backed io maps, for ``/aa`` scans.
+
+        ``/aa`` disassembles the search region, so only ``r-x`` maps can hold
+        real instructions. Returns an empty list when no executable map resolves,
+        so the caller falls back to a plain whole-binary ``/aa``.
+        """
+        self._ensure_map_starts_resolved()
+        return self._executable_map_starts or []
+
+    def _ensure_map_starts_resolved(self) -> None:
+        if self._file_backed_maps_resolved:
+            return
+        self._file_backed_maps_resolved = True
+        file_backed, executable = self._compute_map_starts()
+        self._file_backed_map_starts = file_backed
+        self._executable_map_starts = executable
+
+    def _compute_map_starts(self) -> tuple[list[int], list[int]]:
         from . import r2pipe_queries as facade
 
         file_size = self._resolve_file_size()
         if not file_size:
-            return []
+            return [], []
         maps = facade.safe_cmdj(self._r2_iface, "omj")
         if not isinstance(maps, list):
-            return []
-        starts: list[int] = []
+            return [], []
+        file_backed: list[int] = []
+        executable: list[int] = []
         for entry in maps:
             if not isinstance(entry, dict):
                 continue
@@ -224,5 +246,8 @@ class R2PipeTextQueryMixin:
             # A map whose physical backing fits inside the file is real content;
             # the oversized anonymous BSS map (delta+length far past EOF) is not.
             if delta + length <= file_size:
-                starts.append(start)
-        return starts
+                file_backed.append(start)
+                perm = entry.get("perm")
+                if isinstance(perm, str) and "x" in perm:
+                    executable.append(start)
+        return file_backed, executable
