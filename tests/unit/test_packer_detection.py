@@ -267,10 +267,37 @@ def test_find_packer_string_requires_whole_word_match():
     embedded = find_packer_string([{"string": "System.RuntimeWrappedException"}], sigs)
     assert embedded is None
 
-    # A genuine whole-word packer name in a string still matches.
+    # A genuine signature in a string still matches.
     real = find_packer_string([{"string": "packed with Themida protector"}], sigs)
     assert real is not None
     assert real["type"] == "Themida"
+
+
+def test_find_packer_string_ignores_short_name_noise():
+    from r2inspect.domain.services.packer_scoring import find_packer_string
+
+    sigs = {"MEW": [b"MEW ", b"MEW11"], "UPX": [b"UPX!"]}
+
+    # Regression: a large binary yields millions of strings; the bare 3-char
+    # name matched word-boundary noise like "$MEw%" / "`mew" / "meW{", flagging
+    # clean goodware as MEW-packed. Matching the distinctive signature instead
+    # rejects all of these.
+    noise = [{"string": s} for s in ("$MEw%", "`mew", "meW{", "s;Mew", 'mew"', "upx-ish")]
+    assert find_packer_string(noise, sigs) is None
+
+    # The real uppercase signature still matches.
+    assert find_packer_string([{"string": "MEW 1.2 stub"}], sigs)["type"] == "MEW"
+
+
+def test_find_packer_string_skips_unusable_signatures():
+    from r2inspect.domain.services.packer_scoring import find_packer_string
+
+    # Non-ASCII and empty signatures can't be matched against text strings and
+    # are skipped (the raw-byte search path still handles them); a valid
+    # signature in the same set still works.
+    sigs = {"Weird": [b"\xff\xfe", b""], "UPX": [b"UPX!"]}
+    assert find_packer_string([{"string": "UPX!"}], sigs)["type"] == "UPX"
+    assert find_packer_string([{"string": "nothing to see"}], sigs) is None
 
 
 def test_find_packer_signature_rejects_alnum_embedded_match():

@@ -65,26 +65,44 @@ def _has_standalone_match(
     return False
 
 
+def _compile_packer_string_patterns(
+    packer_signatures: dict[str, list[bytes]],
+) -> list[tuple[str, re.Pattern[str]]]:
+    # Match the distinctive byte signatures ("UPX!", "MEW ", "Themida"), not the
+    # bare packer name. A short name like "mew"/"upx"/"fsg" matches noise in the
+    # millions of strings a large binary yields even with word boundaries (e.g.
+    # "$MEw%" satisfies \bmew\b), flagging clean binaries as packed. Signatures
+    # carry punctuation or are long enough to be distinctive; purely
+    # alphanumeric ones still get a word-boundary guard so they don't match
+    # inside a larger token.
+    compiled: list[tuple[str, re.Pattern[str]]] = []
+    for name, signatures in packer_signatures.items():
+        for signature in signatures:
+            try:
+                text = signature.decode("ascii")
+            except (UnicodeDecodeError, AttributeError):
+                continue
+            if not text:
+                continue
+            expression = rf"\b{re.escape(text)}\b" if text.isalnum() else re.escape(text)
+            compiled.append((name, re.compile(expression)))
+    return compiled
+
+
 def find_packer_string(
     strings_result: list[dict[str, Any]] | None,
     packer_signatures: dict[str, list[bytes]],
 ) -> dict[str, str] | None:
     if not strings_result:
         return None
-    # Whole-word match only: a loose substring lets short names like
-    # "mew"/"fsg"/"upx" false-match ordinary strings (e.g. "mew" inside
-    # "RuntimeWrappedException"), flagging clean binaries as packed. Each
-    # pattern depends only on the packer name, so compile it once instead of
-    # rebuilding it for every string scanned.
-    compiled = {name: re.compile(rf"\b{re.escape(name.lower())}\b") for name in packer_signatures}
+    compiled = _compile_packer_string_patterns(packer_signatures)
     for string_info in strings_result:
         string_value = string_info.get("string", "")
         if not isinstance(string_value, str):
             continue
-        string_val = string_value.lower()
-        for packer_name, pattern in compiled.items():
-            if pattern.search(string_val):
-                return {"type": packer_name, "signature": string_val}
+        for packer_name, pattern in compiled:
+            if pattern.search(string_value):
+                return {"type": packer_name, "signature": string_value}
     return None
 
 
