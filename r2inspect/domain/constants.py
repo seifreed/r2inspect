@@ -53,6 +53,13 @@ EXCESSIVE_IMPORTS_THRESHOLD = 500  # Above this: unusually high import count
 # Timeout for external subprocess calls (e.g., YARA, ssdeep)
 SUBPROCESS_TIMEOUT_SECONDS = 30  # Maximum seconds to wait for subprocess
 
+# Above the huge-file threshold the initial `aa` analysis still runs (so function
+# discovery works on big binaries) but needs more headroom than the standard
+# analysis timeout: aa is linear at ~0.08s/MB, so this covers multi-GB inputs
+# while still bounding a genuinely stuck r2. Override with
+# R2INSPECT_ANALYSIS_TIMEOUT_SECONDS.
+HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS = 300
+
 # =============================================================================
 # Per-function disassembly cache (shared across similarity analyzers)
 # =============================================================================
@@ -107,6 +114,7 @@ __all__ = [
     "EXCESSIVE_IMPORTS_THRESHOLD",
     # Process execution
     "SUBPROCESS_TIMEOUT_SECONDS",
+    "HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS",
     # Disassembly cache
     "DISASM_CACHE_MAX_FUNCS",
     "DISASM_CACHE_MAX_ENTRIES",

@@ -469,7 +469,8 @@ def test_r2_session_core_paths(tmp_path: Path) -> None:
     session = R2Session(str(sample))
     session.r2 = _R2()
     session._run_cmd_with_timeout = lambda *_args, **_kwargs: False  # type: ignore[assignment]
-    assert session._perform_initial_analysis(10000.0) is True
+    # Huge files now run aa instead of skipping, so the analysis result propagates.
+    assert session._perform_initial_analysis(10000.0) is False
 
     session = R2Session(str(sample))
     session.r2 = _R2()

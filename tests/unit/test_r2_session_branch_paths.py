@@ -64,6 +64,45 @@ def test_get_analysis_timeout_production_full_returns_60():
     assert session._get_analysis_timeout(full_analysis=True) == 60.0
 
 
+def test_get_huge_analysis_timeout_production_default():
+    from r2inspect.domain.constants import HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS
+
+    session = R2Session("/tmp/test")
+    session._test_mode = False
+    os.environ.pop("R2INSPECT_ANALYSIS_TIMEOUT_SECONDS", None)
+    assert session._get_huge_analysis_timeout() == float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
+
+
+def test_get_huge_analysis_timeout_test_mode():
+    from r2inspect.domain.constants import TEST_R2_ANALYSIS_TIMEOUT
+
+    session = R2Session("/tmp/test")
+    session._test_mode = True
+    assert session._get_huge_analysis_timeout() == float(TEST_R2_ANALYSIS_TIMEOUT)
+
+
+def test_get_huge_analysis_timeout_env_override():
+    session = R2Session("/tmp/test")
+    session._test_mode = False
+    os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"] = "123.5"
+    try:
+        assert session._get_huge_analysis_timeout() == 123.5
+    finally:
+        del os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"]
+
+
+def test_get_huge_analysis_timeout_env_invalid_falls_back():
+    from r2inspect.domain.constants import HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS
+
+    session = R2Session("/tmp/test")
+    session._test_mode = False
+    os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"] = "not-a-number"
+    try:
+        assert session._get_huge_analysis_timeout() == float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
+    finally:
+        del os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"]
+
+
 def test_get_large_file_threshold_production_returns_constant():
     """Line 88: non-test mode returns LARGE_FILE_THRESHOLD_MB."""
     from r2inspect.domain.constants import LARGE_FILE_THRESHOLD_MB
@@ -478,14 +517,24 @@ def test_perform_initial_analysis_depth_zero_skips_all_analysis():
         os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 
 
-def test_perform_initial_analysis_huge_file_skips_in_production():
-    """Lines 322-326: file_size_mb > huge threshold in production -> True."""
+def test_perform_initial_analysis_huge_file_runs_aa_in_production():
+    """Huge files run the fast linear aa (not aaa) instead of skipping."""
+    ran = []
     session = R2Session("/tmp/test")
     session.r2 = FakeR2()
     session._test_mode = False
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
+
+    def mock_run(cmd: str, timeout: float) -> bool:
+        ran.append((cmd, timeout))
+        return True
+
+    session._run_cmd_with_timeout = mock_run
     result = session._perform_initial_analysis(file_size_mb=99999.0)
+
     assert result is True
+    assert [cmd for cmd, _ in ran] == ["aa"]
+    assert ran[0][1] == session._get_huge_analysis_timeout()
 
 
 def test_perform_initial_analysis_aa_timeout_returns_false():

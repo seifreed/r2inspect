@@ -11,6 +11,7 @@ import psutil
 import r2pipe
 
 from ..domain.constants import (
+    HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS,
     HUGE_FILE_THRESHOLD_MB,
     LARGE_FILE_THRESHOLD_MB,
     MIN_INFO_RESPONSE_LENGTH,
@@ -99,6 +100,19 @@ class R2Session:
         if self._is_test_mode:
             return float(TEST_R2_ANALYSIS_TIMEOUT)
         return 60.0 if full_analysis else 30.0
+
+    def _get_huge_analysis_timeout(self) -> float:
+        """Analysis timeout for huge files: generous, so aa completes instead of
+        wedging, but still bounded. Overridable via env for CI tuning."""
+        if self._is_test_mode:
+            return float(TEST_R2_ANALYSIS_TIMEOUT)
+        env_timeout = os.environ.get("R2INSPECT_ANALYSIS_TIMEOUT_SECONDS")
+        if env_timeout:
+            try:
+                return float(env_timeout)
+            except ValueError:
+                pass
+        return float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
 
     def _get_large_file_threshold(self) -> float:
         """Return large file threshold based on mode."""

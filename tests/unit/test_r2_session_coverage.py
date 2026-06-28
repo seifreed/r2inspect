@@ -373,13 +373,21 @@ def test_perform_initial_analysis_depth_zero_skips():
     del os.environ["R2INSPECT_ANALYSIS_DEPTH"]
 
 
-def test_perform_initial_analysis_huge_file_skips():
+def test_perform_initial_analysis_huge_file_runs_aa():
+    ran_commands = []
     session = R2Session("/tmp/test")
     session.r2 = object()
     session._test_mode = True
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
+
+    def mock_run_cmd(cmd, timeout):
+        ran_commands.append(cmd)
+        return True
+
+    session._run_cmd_with_timeout = mock_run_cmd
     result = session._perform_initial_analysis(file_size_mb=9999.0)
     assert result is True
+    assert ran_commands == ["aa"]
 
 
 def test_perform_initial_analysis_test_mode_uses_aa():

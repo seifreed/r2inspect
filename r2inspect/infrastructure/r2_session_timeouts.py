@@ -108,7 +108,11 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
             return True
 
         if file_size_mb > session._get_huge_file_threshold():
-            return True
+            # Always-complete policy: run basic analysis even on huge binaries so
+            # function discovery works, with a generous timeout. aa is linear and
+            # fast (~0.08s/MB); only aaa is the multi-minute command, so aa is used
+            # here to keep huge binaries tractable while still finding functions.
+            return bool(session._run_cmd_with_timeout("aa", session._get_huge_analysis_timeout()))
 
         if session._is_test_mode or file_size_mb > session._get_large_file_threshold():
             return bool(session._run_cmd_with_timeout("aa", session._get_analysis_timeout()))

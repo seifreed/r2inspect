@@ -1,9 +1,10 @@
-"""FunctionAnalyzer must not force aa/aaa on huge files.
+"""FunctionAnalyzer runs basic analysis on huge files instead of skipping.
 
-Above the huge-file threshold the r2 session skips its initial analysis;
-forcing aa/aaa in _get_functions only burns the command timeout and wedges
-the shared session. Uses a real sparse file + a recording adapter -- no
-mocks, no monkeypatch.
+The always-complete policy means function discovery must work on big binaries.
+The session runs aa at open; this fallback in _get_functions fires when aflj is
+still empty. aa (not aaa) is used above the very-large threshold so huge files
+stay tractable. Uses a real sparse file + a recording adapter -- no mocks, no
+monkeypatch.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ class _RecordingAdapter:
         self.commands: list[str] = []
 
     def get_functions(self) -> list[dict[str, Any]]:
-        return []  # aflj -> empty, so analysis would be triggered if allowed
+        return []  # aflj -> empty, so analysis is triggered
 
     def cmd(self, command: str) -> str:
         self.commands.append(command)
@@ -34,26 +35,24 @@ def _sparse_file(path, size_bytes: int) -> str:
     return str(path)
 
 
-def test_huge_file_skips_forced_analysis(tmp_path):
+def test_huge_file_runs_basic_analysis(tmp_path):
     filename = _sparse_file(tmp_path / "huge.bin", (HUGE_FILE_THRESHOLD_MB + 1) * 1024 * 1024)
     adapter = _RecordingAdapter()
     analyzer = FunctionAnalyzer(adapter, filename=filename)
 
-    functions = analyzer._get_functions()
+    analyzer._get_functions()
 
-    assert functions == []
-    assert analyzer._should_skip_heavy_analysis() is True
-    assert "aa" not in adapter.commands
+    # Above the very-large threshold: the fast linear aa, never the slow aaa.
+    assert "aa" in adapter.commands
     assert "aaa" not in adapter.commands
 
 
-def test_small_file_still_triggers_analysis(tmp_path):
+def test_small_file_still_triggers_full_analysis(tmp_path):
     filename = _sparse_file(tmp_path / "small.bin", 1024)
     adapter = _RecordingAdapter()
     analyzer = FunctionAnalyzer(adapter, filename=filename)
 
     analyzer._get_functions()
 
-    assert analyzer._should_skip_heavy_analysis() is False
     # <= 10 MB -> full analysis path issues aaa
     assert "aaa" in adapter.commands
