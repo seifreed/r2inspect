@@ -348,6 +348,32 @@ def test_extended_sco_signature_ignores_substring():
     assert score == 0.0
 
 
+def test_extended_pascal_swift_signatures_ignore_bare_words():
+    from r2inspect.modules.compiler_signatures_extended import EXTENDED_COMPILER_SIGNATURES
+
+    # A .NET assembly's metadata contains the bare words "Pascal"/"Swift" as
+    # identifiers; the old r"\bPascal\b"/r"\bSwift\b" patterns scored each at 1.0
+    # (string-only -> full score), beating the corroborated DotNet detection.
+    pascal_garbage, _ = _check_string_signatures(
+        EXTENDED_COMPILER_SIGNATURES["Pascal"], ["Pascal", "PascalCase helper"]
+    )
+    swift_garbage, _ = _check_string_signatures(
+        EXTENDED_COMPILER_SIGNATURES["Swift"], ["Swift", "TaylorSwift", "swiftly"]
+    )
+    assert pascal_garbage == 0.0
+    assert swift_garbage == 0.0
+
+    # Real toolchain markers still detect.
+    pascal_real, _ = _check_string_signatures(
+        EXTENDED_COMPILER_SIGNATURES["Pascal"], ["Turbo Pascal Copyright"]
+    )
+    swift_real, _ = _check_string_signatures(
+        EXTENDED_COMPILER_SIGNATURES["Swift"], ["libswiftCore.dylib", "swift_release"]
+    )
+    assert pascal_real > 0.0
+    assert swift_real > 0.0
+
+
 def test_ambiguous_compiler_signatures_removed():
     from r2inspect.modules.compiler_signatures import COMPILER_SIGNATURES
 
