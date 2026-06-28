@@ -28,3 +28,13 @@ def search_hex(adapter: Any, pattern: str) -> str:
         result = adapter.search_hex(pattern)
         return result if isinstance(result, str) else ""
     return ""
+
+
+def search_executable_hex(adapter: Any, pattern: str) -> str | None:
+    pattern = _normalize_pattern(pattern)
+    if not pattern:
+        return None
+    if adapter is not None and hasattr(adapter, "search_executable_hex"):
+        result = adapter.search_executable_hex(pattern)
+        return result if isinstance(result, str) else None
+    return None

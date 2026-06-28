@@ -38,9 +38,15 @@ from .function_analyzer_extraction_support import (
     file_size_mb_from_adapter,
     should_run_full_analysis,
 )
-from .search_helpers import search_text
+from .search_helpers import search_executable_hex, search_text
 
 logger = get_logger(__name__)
+
+# Distinctive opcodes with a single fixed byte encoding can be located by byte
+# search instead of a linear /aa disassembly sweep. This keeps these detectors
+# working on large binaries, where /aa repeatedly trips the per-command timeout
+# and the size gate otherwise skips the scan entirely.
+_FIXED_OPCODE_BYTES = {"rdtsc": "0f31", "cpuid": "0fa2"}
 
 
 def _error_evidence(detail: str) -> list[dict[str, str]]:
@@ -175,14 +181,25 @@ class AntiAnalysisDetector(CommandHelperMixin):
     def _search_opcode(self, pattern: str) -> str:
         # Each /aa scans the whole binary; several techniques probe the same
         # opcode (e.g. rdtsc), so cache per pattern to avoid duplicate scans.
-        # Above the large-file threshold the linear /aa scan repeatedly trips
-        # the per-command timeout, so skip it (and cache the empty result).
         cached = self._opcode_search_cache.get(pattern)
         if cached is not None:
             return cached
-        result = search_text(self.adapter, pattern) if self._should_search_opcodes() else ""
+        if self._should_search_opcodes():
+            # Small/medium binaries: linear /aa disassembly, unchanged.
+            result = search_text(self.adapter, pattern)
+        else:
+            # Above the large-file threshold /aa repeatedly trips the per-command
+            # timeout. Fixed-encoding opcodes can still be byte-searched in the
+            # executable maps; everything else stays skipped (empty result).
+            result = self._byte_search_opcode(pattern) or ""
         self._opcode_search_cache[pattern] = result
         return result
+
+    def _byte_search_opcode(self, pattern: str) -> str | None:
+        hex_encoding = _FIXED_OPCODE_BYTES.get(pattern)
+        if hex_encoding is None:
+            return None
+        return search_executable_hex(self.adapter, hex_encoding)
 
     def _get_imports(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports", "iij"))

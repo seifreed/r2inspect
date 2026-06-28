@@ -182,6 +182,55 @@ def test_search_hex_falls_back_to_scan_on_short_map_read():
     assert any(c.startswith("/x cafe") for c in fake.calls["cmd"])
 
 
+def test_search_executable_hex_scopes_to_executable_maps_only():
+    # An r-x map and a rw- map both contain 0f31; only the executable hit counts
+    # (the same byte pair in a data section is not an instruction).
+    omj = [
+        {"from": 0x1000, "to": 0x1007, "delta": 0, "perm": "r-x"},
+        {"from": 0x2000, "to": 0x2007, "delta": 0x1000, "perm": "rw-"},
+    ]
+    fake = FakeR2Adapter(
+        cmd_responses={
+            "p8 8 @ 4096": "00000f3100000000",  # 0f31 at exec vaddr 0x1002
+            "p8 8 @ 8192": "0f31000000000000",  # 0f31 at data vaddr 0x2000 (ignored)
+        },
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    assert adapter.search_executable_hex("0f31") == "0x1002"
+
+
+def test_search_executable_hex_returns_none_without_executable_maps():
+    omj = [{"from": 0x2000, "to": 0x2007, "delta": 0, "perm": "rw-"}]
+    fake = FakeR2Adapter(
+        cmd_responses={"p8 8 @ 8192": "0f31000000000000"},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    assert adapter.search_executable_hex("0f31") is None
+
+
+def test_search_executable_hex_rejects_non_hex_and_empty():
+    adapter = R2PipeAdapter(FakeR2Adapter())
+    assert adapter.search_executable_hex("zz") is None
+    assert adapter.search_executable_hex("") is None
+
+
+def test_search_executable_hex_returns_none_on_short_map_read():
+    # omj resolves but the p8 read isn't available, so the in-memory view is
+    # incomplete and the caller must fall back rather than miss hits.
+    omj = [{"from": 0x1000, "to": 0x100F, "delta": 0, "perm": "r-x"}]
+    fake = FakeR2Adapter(
+        cmd_responses={},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    assert adapter.search_executable_hex("0f31") is None
+
+
 def test_search_hex_non_hex_pattern_falls_back():
     # A pattern that isn't plain hex can't be searched in memory; /x handles it.
     fake = FakeR2Adapter(cmd_responses={"/x zz": "0x2000 hit\n"})

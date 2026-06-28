@@ -337,6 +337,27 @@ def test_search_opcode_calls_adapter() -> None:
     assert "0x402000" in result
 
 
+def test_search_opcode_byte_searches_fixed_opcodes_above_size_gate() -> None:
+    # Above the size gate the linear /aa scan is skipped; fixed-encoding opcodes
+    # (rdtsc 0f31, cpuid 0fa2) fall back to an executable-scoped byte search so
+    # the detectors still fire on large binaries. Opcodes without a fixed byte
+    # encoding (e.g. int3 'cc') stay skipped rather than flood on data bytes.
+    big_bytes = 64 * 1024 * 1024
+    omj = [{"from": 0x1000, "to": 0x1007, "delta": 0, "perm": "r-x"}]
+
+    def cmd_fn(command: str) -> str:
+        if command.startswith("p8 8 @ 4096"):
+            return "00000f3100000000"  # rdtsc 0f31 at exec vaddr 0x1002
+        return ""
+
+    fake = FakeR2(cmdj_map={"ij": {"core": {"size": big_bytes}}, "omj": omj}, cmd_fn=cmd_fn)
+    detector = AntiAnalysisDetector(R2PipeAdapter(fake))
+
+    assert detector._should_search_opcodes() is False
+    assert detector._search_opcode("rdtsc") == "0x1002"
+    assert detector._search_opcode("cc") == ""
+
+
 # ---------------------------------------------------------------------------
 # Tests: _coerce_dict_list (static, no adapter needed)
 # ---------------------------------------------------------------------------

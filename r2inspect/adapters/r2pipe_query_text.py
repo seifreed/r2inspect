@@ -174,6 +174,37 @@ class R2PipeTextQueryMixin:
         map_bytes = self._get_map_bytes()
         if map_bytes is None:
             return None
+        return self._find_pattern_lines(needle, map_bytes)
+
+    def search_executable_hex(self, hex_pattern: str) -> str | None:
+        """Find a byte pattern in the executable file-backed maps only.
+
+        Distinctive fixed-encoding opcodes (e.g. rdtsc ``0f31``, cpuid ``0fa2``)
+        can be located by byte search instead of a linear ``/aa`` disassembly
+        sweep, which lets the opcode detectors run on large binaries where the
+        per-command ``/aa`` timeout would otherwise skip them. Restrict the
+        search to ``r-x`` maps so the same byte pair appearing in data sections
+        isn't reported as an instruction. Returns ``None`` -- so the caller can
+        fall back to ``/aa`` -- when the pattern isn't plain hex or the maps and
+        their bytes can't be resolved.
+        """
+        try:
+            needle = bytes.fromhex(hex_pattern)
+        except ValueError:
+            return None
+        if not needle:
+            return None
+        map_bytes = self._get_map_bytes()
+        if map_bytes is None:
+            return None
+        executable = set(self._get_executable_map_starts())
+        if not executable:
+            return None
+        scoped = [(base, buf) for base, buf in map_bytes if base in executable]
+        return self._find_pattern_lines(needle, scoped)
+
+    @staticmethod
+    def _find_pattern_lines(needle: bytes, map_bytes: list[tuple[int, bytes]]) -> str:
         lines: list[str] = []
         step = len(needle)
         for base, buf in map_bytes:
