@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from ..abstractions.coercion_support import coerce_int_or_none
-from ..domain.constants import HUGE_FILE_THRESHOLD_MB, VERY_LARGE_FILE_THRESHOLD_MB
+from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
 from ..domain.services.function_analysis import extract_mnemonics_from_text
 from ..domain.text_helpers import has_text
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
@@ -74,22 +74,6 @@ def should_run_full_analysis(config: Any | None, file_size_mb: float | None) -> 
         return True
     if file_size_mb is not None:
         return file_size_mb <= VERY_LARGE_FILE_THRESHOLD_MB
-    return True
-
-
-def should_run_byte_scans(config: Any | None, file_size_mb: float | None) -> bool:
-    """Whether to run whole-binary ``/x`` hex scans (crypto constants, packer
-    signatures).
-
-    Each such scan walks the entire file once per pattern, so above
-    ``HUGE_FILE_THRESHOLD_MB`` they dominate runtime (tens of seconds on a
-    100 MB+ binary). Skip them there -- consistent with the >50 MB auto-analysis
-    skip -- unless deep analysis is explicitly requested.
-    """
-    if _deep_analysis_enabled(config):
-        return True
-    if file_size_mb is not None:
-        return file_size_mb <= HUGE_FILE_THRESHOLD_MB
     return True
 
 
