@@ -19,7 +19,6 @@ from r2inspect.cli_main import (
     run_cli,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -121,6 +120,19 @@ def test_run_cli_validation_errors_exit_one(tmp_path):
     with pytest.raises(SystemExit) as exc:
         run_cli(args)
     assert exc.value.code == 1
+
+
+def test_run_cli_validation_errors_json_output(tmp_path, capsys):
+    """With output_json, validation errors are emitted as parseable JSON, not text."""
+    import json
+
+    nonexistent = str(tmp_path / "nonexistent.bin")
+    args = _make_args(filename=nonexistent, output_json=True)
+    with pytest.raises(SystemExit) as exc:
+        run_cli(args)
+    assert exc.value.code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert "error" in payload
 
 
 def test_run_cli_list_yara_exits_zero(tmp_path):

@@ -104,6 +104,16 @@ def test_analyze_command_handle_error_compact(tmp_path):
     assert "failed" in text.lower() or "test error" in text
 
 
+def test_analyze_command_handle_error_json(tmp_path, capsys):
+    """With output_json, the error is emitted as parseable JSON on stdout."""
+    import json
+
+    cmd = AnalyzeCommand(_make_context(tmp_path))
+    cmd._handle_error(ValueError("boom"), verbose=False, output_json=True)
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {"error": "Analysis failed: boom"}
+
+
 def test_analyze_command_setup_analysis_options(tmp_path):
     """Test _setup_analysis_options."""
     cmd = AnalyzeCommand(_make_context(tmp_path))

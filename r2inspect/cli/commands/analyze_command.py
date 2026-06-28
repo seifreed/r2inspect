@@ -48,7 +48,7 @@ class AnalyzeCommand(Command):
             return 1
 
         except Exception as e:
-            self._handle_error(e, verbose, "Analysis")
+            self._handle_error(e, verbose, "Analysis", output_json=args.get("output_json", False))
             return 1
 
     def _run_analysis(

@@ -22,6 +22,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import json
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -157,7 +158,12 @@ def run_cli(
         args.threads,
     )
     if validation_errors:
-        display_validation_errors(validation_errors)
+        if args.output_json:
+            # Raw print (not rich console) so the JSON isn't soft-wrapped into
+            # invalid output, matching how successful -j results are emitted.
+            print(json.dumps({"error": "; ".join(validation_errors)}))
+        else:
+            display_validation_errors(validation_errors)
         sys.exit(1)
 
     if args.list_yara:

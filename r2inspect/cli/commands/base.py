@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+import json
 from typing import Any
 
 from rich.console import Console
@@ -111,10 +112,24 @@ class Command(ABC):
             yield inspector, options
 
     def _handle_error(
-        self, error: Exception, verbose: bool, context_label: str = "Analysis"
+        self,
+        error: Exception,
+        verbose: bool,
+        context_label: str = "Analysis",
+        *,
+        output_json: bool = False,
     ) -> None:
-        """Render command errors using verbose or concise CLI output."""
+        """Render command errors using verbose or concise CLI output.
+
+        With ``output_json`` the error is emitted as a JSON ``{"error": ...}``
+        object so a ``-j`` consumer's stream stays machine-parseable on failure.
+        """
         self.context.logger.error("Error during %s: %s", context_label.lower(), error)
+        if output_json:
+            # Raw print (not rich console) so the JSON isn't soft-wrapped into
+            # invalid output, matching how successful -j results are emitted.
+            print(json.dumps({"error": f"{context_label} failed: {error}"}))
+            return
         if verbose:
             import traceback
 

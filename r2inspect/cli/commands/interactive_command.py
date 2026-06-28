@@ -37,10 +37,15 @@ class InteractiveCommand(Command):
             return 1
 
     def _handle_error(
-        self, error: Exception, verbose: bool, context_label: str = "Interactive mode"
+        self,
+        error: Exception,
+        verbose: bool,
+        context_label: str = "Interactive mode",
+        *,
+        output_json: bool = False,
     ) -> None:
         """Label interactive-mode errors distinctly from generic analysis errors."""
-        super()._handle_error(error, verbose, context_label)
+        super()._handle_error(error, verbose, context_label, output_json=output_json)
 
     def _run_interactive_mode(
         self,
