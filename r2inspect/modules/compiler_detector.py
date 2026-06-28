@@ -19,17 +19,12 @@ from .compiler_detector_support import (
     analyze_rich_header as _analyze_rich_header,
     apply_best_compiler as _apply_best_compiler,
     apply_rich_header_detection as _apply_rich_header_detection,
-    detect_compiler_version as _detect_compiler_version,
     detect_file_format as _detect_file_format,
     score_compilers as _score_compilers,
 )
+from .compiler_version_detection import CompilerVersionDetectionMixin
 from ..domain.formats.compiler import (
     calculate_compiler_score,
-    detect_clang_version,
-    detect_gcc_version,
-    detect_go_version,
-    detect_msvc_version,
-    detect_rust_version,
     detection_method,
     extract_import_names,
     extract_section_names,
@@ -62,7 +57,7 @@ _R2_COMPILER_NAMES = {
 # Constants
 
 
-class CompilerDetector(CommandHelperMixin):
+class CompilerDetector(CommandHelperMixin, CompilerVersionDetectionMixin):
     """Detects compiler information from binaries."""
 
     def __init__(self, adapter: Any, config: Any | None = None) -> None:
@@ -243,63 +238,6 @@ class CompilerDetector(CommandHelperMixin):
     def _analyze_rich_header(self) -> dict[str, Any]:
         """Analyze Rich Header for PE files (MSVC specific)"""
         return _analyze_rich_header(self, logger=logger)
-
-    def _detect_compiler_version(
-        self, compiler: str, strings_data: list[str], imports_data: list[str]
-    ) -> str:
-        """Detect specific compiler version"""
-        return _detect_compiler_version(
-            compiler,
-            strings_data,
-            imports_data,
-            detectors={
-                "MSVC": self._detect_msvc_version,
-                "GCC": self._detect_gcc_version,
-                "Clang": self._detect_clang_version,
-                "Intel": self._detect_intel_version,
-                "Borland": self._detect_borland_version,
-                "MinGW": self._detect_mingw_version,
-                "Go": self._detect_go_version,
-                "Rust": self._detect_rust_version,
-                "Delphi": self._detect_delphi_version,
-            },
-        )
-
-    def _detect_msvc_version(self, strings_data: list[str], imports_data: list[str]) -> str:
-        """Detect MSVC version"""
-        return detect_msvc_version(strings_data, imports_data, self.msvc_versions)
-
-    def _detect_gcc_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect GCC version"""
-        return detect_gcc_version(strings_data)
-
-    def _detect_clang_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect Clang version"""
-        return detect_clang_version(strings_data)
-
-    def _detect_intel_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect Intel version"""
-        return "Unknown"
-
-    def _detect_borland_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect Borland version"""
-        return "Unknown"
-
-    def _detect_mingw_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect MinGW version"""
-        return "Unknown"
-
-    def _detect_go_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect Go version"""
-        return detect_go_version(strings_data)
-
-    def _detect_rust_version(self, strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect Rust version"""
-        return detect_rust_version(strings_data)
-
-    def _detect_delphi_version(self, _strings_data: list[str], _imports_data: list[str]) -> str:
-        """Detect Delphi version"""
-        return "Unknown"
 
     def _get_file_info(self) -> dict[str, Any]:
         return _collect_file_info(self)
