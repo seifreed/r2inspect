@@ -90,9 +90,12 @@ TIMING_APIS = {
 }
 
 ENVIRONMENT_CHECK_COMMANDS = [
-    ("iz~GetUserName|iz~USER", "Username Check", "Username enumeration detected"),
+    # r2's ~ grep ORs with ',' (not '|', a shell pipe). The dropped second
+    # terms ("USER"/"COMPUTERNAME") were dead AND too loose to enable safely
+    # (they match ordinary strings), so keep only the specific API-name probe.
+    ("iz~GetUserName", "Username Check", "Username enumeration detected"),
     (
-        "iz~GetComputerName|iz~COMPUTERNAME",
+        "iz~GetComputerName",
         "Computer Name Check",
         "Computer name enumeration detected",
     ),

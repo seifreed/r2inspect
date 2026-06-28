@@ -119,7 +119,10 @@ def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
 
 
 def detect_api_hashing(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
-    hash_patterns = cmd_fn("iz~hash|iz~crc32|iz~fnv")
+    # r2's ~ grep ORs keywords with ',' -- '|' is a shell pipe, so the old
+    # "iz~hash|iz~crc32|iz~fnv" only ever matched "hash". crc32/fnv are
+    # distinctive enough to enable; comma-OR restores them.
+    hash_patterns = cmd_fn("iz~hash,crc32,fnv")
     if has_text(hash_patterns):
         return [
             {
