@@ -120,11 +120,14 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
             # Large/huge binaries: run the fast linear aa first (cheap, and on
             # symbol-rich binaries it already finds everything). Symbol-poor
             # binaries get almost nothing from aa, so escalate to the deeper aaa
-            # -- which is cheap precisely when aa underperformed. The generous
-            # huge timeout keeps the escalation bounded but tractable.
-            timeout = (
-                session._get_huge_analysis_timeout() if huge else session._get_analysis_timeout()
-            )
+            # -- which is cheap precisely when aa underperformed.
+            #
+            # aa runtime tracks code density, not file size: a dense, stripped
+            # 40MB binary can take >70s while a sparse 287MB one takes ~2s. So
+            # use the generous bounded timeout across the whole large+huge path,
+            # not just huge -- the short default wedges slow mid-size analyses
+            # (timeout -> reopen in safe mode -> almost no functions).
+            timeout = session._get_extended_analysis_timeout()
             ran = bool(session._run_cmd_with_timeout("aa", timeout))
             if ran and _count_functions(session) < MIN_AA_FUNCTIONS_BEFORE_DEEP:
                 session._run_cmd_with_timeout("aaa", timeout)

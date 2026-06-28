@@ -64,41 +64,41 @@ def test_get_analysis_timeout_production_full_returns_60():
     assert session._get_analysis_timeout(full_analysis=True) == 60.0
 
 
-def test_get_huge_analysis_timeout_production_default():
+def test_get_extended_analysis_timeout_production_default():
     from r2inspect.domain.constants import HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS
 
     session = R2Session("/tmp/test")
     session._test_mode = False
     os.environ.pop("R2INSPECT_ANALYSIS_TIMEOUT_SECONDS", None)
-    assert session._get_huge_analysis_timeout() == float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
+    assert session._get_extended_analysis_timeout() == float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
 
 
-def test_get_huge_analysis_timeout_test_mode():
+def test_get_extended_analysis_timeout_test_mode():
     from r2inspect.domain.constants import TEST_R2_ANALYSIS_TIMEOUT
 
     session = R2Session("/tmp/test")
     session._test_mode = True
-    assert session._get_huge_analysis_timeout() == float(TEST_R2_ANALYSIS_TIMEOUT)
+    assert session._get_extended_analysis_timeout() == float(TEST_R2_ANALYSIS_TIMEOUT)
 
 
-def test_get_huge_analysis_timeout_env_override():
+def test_get_extended_analysis_timeout_env_override():
     session = R2Session("/tmp/test")
     session._test_mode = False
     os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"] = "123.5"
     try:
-        assert session._get_huge_analysis_timeout() == 123.5
+        assert session._get_extended_analysis_timeout() == 123.5
     finally:
         del os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"]
 
 
-def test_get_huge_analysis_timeout_env_invalid_falls_back():
+def test_get_extended_analysis_timeout_env_invalid_falls_back():
     from r2inspect.domain.constants import HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS
 
     session = R2Session("/tmp/test")
     session._test_mode = False
     os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"] = "not-a-number"
     try:
-        assert session._get_huge_analysis_timeout() == float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
+        assert session._get_extended_analysis_timeout() == float(HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS)
     finally:
         del os.environ["R2INSPECT_ANALYSIS_TIMEOUT_SECONDS"]
 
@@ -569,7 +569,7 @@ def test_perform_initial_analysis_huge_file_escalates_to_aaa_when_aa_finds_few()
 
     assert result is True
     assert [cmd for cmd, _ in ran] == ["aa", "aaa"]
-    assert ran[0][1] == session._get_huge_analysis_timeout()
+    assert ran[0][1] == session._get_extended_analysis_timeout()
 
 
 def test_perform_initial_analysis_huge_file_skips_aaa_when_aa_finds_enough():
@@ -589,7 +589,7 @@ def test_perform_initial_analysis_huge_file_skips_aaa_when_aa_finds_enough():
 
     assert result is True
     assert [cmd for cmd, _ in ran] == ["aa"]
-    assert ran[0][1] == session._get_huge_analysis_timeout()
+    assert ran[0][1] == session._get_extended_analysis_timeout()
 
 
 def test_perform_initial_analysis_aa_timeout_returns_false():

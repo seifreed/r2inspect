@@ -101,9 +101,10 @@ class R2Session:
             return float(TEST_R2_ANALYSIS_TIMEOUT)
         return 60.0 if full_analysis else 30.0
 
-    def _get_huge_analysis_timeout(self) -> float:
-        """Analysis timeout for huge files: generous, so aa completes instead of
-        wedging, but still bounded. Overridable via env for CI tuning."""
+    def _get_extended_analysis_timeout(self) -> float:
+        """Generous, bounded analysis timeout for large/huge binaries, so aa
+        completes instead of wedging on dense binaries whose aa exceeds the
+        default. Overridable via env for CI tuning."""
         if self._is_test_mode:
             return float(TEST_R2_ANALYSIS_TIMEOUT)
         env_timeout = os.environ.get("R2INSPECT_ANALYSIS_TIMEOUT_SECONDS")
