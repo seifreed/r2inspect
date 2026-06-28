@@ -8,6 +8,7 @@ import threading
 import time
 from typing import Any
 
+from ..domain.constants import MIN_AA_FUNCTIONS_BEFORE_DEEP
 from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
 
@@ -99,6 +100,13 @@ def run_basic_info_check(session: Any, *, logger: Any, min_info_response_length:
     return True
 
 
+def _count_functions(session: Any) -> int:
+    try:
+        return int((session.r2.cmd("aflc") or "0").strip() or "0")
+    except (ValueError, AttributeError, OSError):
+        return 0
+
+
 def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) -> bool:
     try:
         if session.r2 is None:
@@ -107,15 +115,20 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
         if analysis_depth == "0":
             return True
 
-        if file_size_mb > session._get_huge_file_threshold():
-            # Always-complete policy: run basic analysis even on huge binaries so
-            # function discovery works, with a generous timeout. aa is linear and
-            # fast (~0.08s/MB); only aaa is the multi-minute command, so aa is used
-            # here to keep huge binaries tractable while still finding functions.
-            return bool(session._run_cmd_with_timeout("aa", session._get_huge_analysis_timeout()))
-
-        if session._is_test_mode or file_size_mb > session._get_large_file_threshold():
-            return bool(session._run_cmd_with_timeout("aa", session._get_analysis_timeout()))
+        huge = file_size_mb > session._get_huge_file_threshold()
+        if huge or session._is_test_mode or file_size_mb > session._get_large_file_threshold():
+            # Large/huge binaries: run the fast linear aa first (cheap, and on
+            # symbol-rich binaries it already finds everything). Symbol-poor
+            # binaries get almost nothing from aa, so escalate to the deeper aaa
+            # -- which is cheap precisely when aa underperformed. The generous
+            # huge timeout keeps the escalation bounded but tractable.
+            timeout = (
+                session._get_huge_analysis_timeout() if huge else session._get_analysis_timeout()
+            )
+            ran = bool(session._run_cmd_with_timeout("aa", timeout))
+            if ran and _count_functions(session) < MIN_AA_FUNCTIONS_BEFORE_DEEP:
+                session._run_cmd_with_timeout("aaa", timeout)
+            return ran
 
         return bool(
             session._run_cmd_with_timeout("aaa", session._get_analysis_timeout(full_analysis=True))

@@ -517,11 +517,66 @@ def test_perform_initial_analysis_depth_zero_skips_all_analysis():
         os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 
 
-def test_perform_initial_analysis_huge_file_runs_aa_in_production():
-    """Huge files run the fast linear aa (not aaa) instead of skipping."""
+def test_count_functions_parses_and_handles_errors():
+    from r2inspect.infrastructure.r2_session_timeouts import _count_functions
+
+    class _Sess:
+        def __init__(self, r2):
+            self.r2 = r2
+
+    class _AflcR2:
+        def __init__(self, value):
+            self._value = value
+
+        def cmd(self, command):
+            return self._value
+
+    assert _count_functions(_Sess(_AflcR2("42"))) == 42
+    assert _count_functions(_Sess(_AflcR2(""))) == 0  # empty -> 0, no exception
+    assert _count_functions(_Sess(_AflcR2("not-a-number"))) == 0  # ValueError -> 0
+    assert _count_functions(_Sess(object())) == 0  # no cmd() -> AttributeError -> 0
+
+
+class _FuncCountR2:
+    """Fake whose aflc reports a fixed function count; other cmds are inert."""
+
+    def __init__(self, func_count: int) -> None:
+        self._func_count = func_count
+
+    def cmd(self, command: str) -> str:
+        if command.strip() == "aflc":
+            return str(self._func_count)
+        return ""
+
+    def quit(self) -> None:
+        pass
+
+
+def test_perform_initial_analysis_huge_file_escalates_to_aaa_when_aa_finds_few():
+    """Huge file: aa runs first; when it finds few functions, escalate to aaa."""
     ran = []
     session = R2Session("/tmp/test")
-    session.r2 = FakeR2()
+    session.r2 = _FuncCountR2(func_count=3)  # below MIN_AA_FUNCTIONS_BEFORE_DEEP
+    session._test_mode = False
+    os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
+
+    def mock_run(cmd: str, timeout: float) -> bool:
+        ran.append((cmd, timeout))
+        return True
+
+    session._run_cmd_with_timeout = mock_run
+    result = session._perform_initial_analysis(file_size_mb=99999.0)
+
+    assert result is True
+    assert [cmd for cmd, _ in ran] == ["aa", "aaa"]
+    assert ran[0][1] == session._get_huge_analysis_timeout()
+
+
+def test_perform_initial_analysis_huge_file_skips_aaa_when_aa_finds_enough():
+    """Symbol-rich huge file: aa already finds plenty, so aaa is not run."""
+    ran = []
+    session = R2Session("/tmp/test")
+    session.r2 = _FuncCountR2(func_count=10717)
     session._test_mode = False
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 

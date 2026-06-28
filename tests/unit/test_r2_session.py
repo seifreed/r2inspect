@@ -47,4 +47,6 @@ def test_r2_session_analysis_modes(tmp_path):
 
     session = R2Session(str(tmp_path / "sample.bin"), opener=fake_open)
     session.open(file_size_mb=r2_session.HUGE_FILE_THRESHOLD_MB + 1)
-    assert "aaa" not in fake.commands
+    # The fake reports no functions from aflc, so aa escalates to the deeper aaa.
+    assert "aa" in fake.commands
+    assert "aaa" in fake.commands

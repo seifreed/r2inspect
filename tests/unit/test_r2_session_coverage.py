@@ -374,6 +374,8 @@ def test_perform_initial_analysis_depth_zero_skips():
 
 
 def test_perform_initial_analysis_huge_file_runs_aa():
+    # object() has no cmd(), so _count_functions hits AttributeError -> 0, which
+    # is below the escalation threshold, so aaa runs after aa.
     ran_commands = []
     session = R2Session("/tmp/test")
     session.r2 = object()
@@ -387,7 +389,7 @@ def test_perform_initial_analysis_huge_file_runs_aa():
     session._run_cmd_with_timeout = mock_run_cmd
     result = session._perform_initial_analysis(file_size_mb=9999.0)
     assert result is True
-    assert ran_commands == ["aa"]
+    assert ran_commands == ["aa", "aaa"]
 
 
 def test_perform_initial_analysis_test_mode_uses_aa():

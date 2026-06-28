@@ -60,6 +60,14 @@ SUBPROCESS_TIMEOUT_SECONDS = 30  # Maximum seconds to wait for subprocess
 # R2INSPECT_ANALYSIS_TIMEOUT_SECONDS.
 HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS = 300
 
+# Basic `aa` analysis discovers functions from symbols + entrypoint, so on
+# symbol-poor binaries (stripped, Delphi, packed) it finds almost nothing -- a
+# large binary reporting fewer functions than this almost certainly needs the
+# deeper `aaa` reference analysis. Escalation is cheap exactly here: aaa is fast
+# when aa found little (few symbols to chase), and is skipped on symbol-rich
+# binaries where aa already succeeds and aaa would be slow.
+MIN_AA_FUNCTIONS_BEFORE_DEEP = 50
+
 # =============================================================================
 # Per-function disassembly cache (shared across similarity analyzers)
 # =============================================================================
@@ -115,6 +123,7 @@ __all__ = [
     # Process execution
     "SUBPROCESS_TIMEOUT_SECONDS",
     "HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS",
+    "MIN_AA_FUNCTIONS_BEFORE_DEEP",
     # Disassembly cache
     "DISASM_CACHE_MAX_FUNCS",
     "DISASM_CACHE_MAX_ENTRIES",
