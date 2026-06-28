@@ -30,12 +30,28 @@ def clean_list_items(data: list[Any], logger: Any) -> list[dict[str, Any]]:
     return cleaned
 
 
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+
+# ASCII control codes that ``str.isprintable()`` rejects, minus the tab and
+# newline the sanitizer keeps. For pure-ASCII text, deleting exactly these via
+# ``str.translate`` reproduces ``isprintable() or char in "\n\t"`` at C speed,
+# avoiding a Python-level ``isprintable()`` call per character on every r2
+# response (the dominant non-r2 CPU cost on large binaries).
+_ASCII_CONTROL_DELETE: dict[int, None] = {cp: None for cp in range(0x20) if cp not in (0x09, 0x0A)}
+_ASCII_CONTROL_DELETE[0x7F] = None
+
+
+def _strip_nonprintable(output: str) -> str:
+    if output.isascii():
+        return output.translate(_ASCII_CONTROL_DELETE)
+    return "".join(char for char in output if char.isprintable() or char in "\n\t")
+
+
 def sanitize_output(output: str) -> str:
     if not output:
         return ""
-    ansi_escape = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
-    output = ansi_escape.sub("", output)
-    output = "".join(char for char in output if char.isprintable() or char in "\n\t")
+    output = _ANSI_ESCAPE.sub("", output)
+    output = _strip_nonprintable(output)
     output = output.strip()
     output = output.replace("&nbsp;", " ").replace("&amp;", "&")
     output = output.replace("&lt;", "<").replace("&gt;", ">")
