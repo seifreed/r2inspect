@@ -134,6 +134,51 @@ def test_search_text_skips_non_executable_maps():
     assert not any("@ 0x402000" in c for c in issued)  # data map never disassembled
 
 
+def test_search_hex_reads_maps_once_and_finds_in_memory():
+    # One file-backed map of 16 bytes with "deadbeef" at offset 2 -> vaddr 0x1002.
+    omj = [{"from": 0x1000, "to": 0x100F, "delta": 0, "perm": "r--"}]
+    fake = FakeR2Adapter(
+        cmd_responses={"p8 16 @ 4096": "0011deadbeef22334455667788990011"},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    result = adapter.search_hex("deadbeef")
+
+    assert result == "0x1002"
+    # The in-memory read replaces the per-pattern /x scan entirely.
+    assert not any(c.startswith("/x") for c in fake.calls["cmd"])
+
+
+def test_search_hex_falls_back_to_scan_on_short_map_read():
+    # omj resolves but the p8 read isn't available (returns ""), so the in-memory
+    # view is incomplete and the search must fall back to /x for correctness.
+    omj = [{"from": 0x1000, "to": 0x100F, "delta": 0, "perm": "r--"}]
+    fake = FakeR2Adapter(
+        cmd_responses={"/x cafe @e:search.in=io.map @ 0x1000": "0x1000 hit cafe\n"},
+        cmdj_responses={"ij": {"core": {"size": 0x100000}}, "omj": [omj]},
+    )
+    adapter = R2PipeAdapter(fake)
+
+    result = adapter.search_hex("cafe")
+
+    assert "0x1000" in result
+    assert any(c.startswith("/x cafe") for c in fake.calls["cmd"])
+
+
+def test_search_hex_non_hex_pattern_falls_back():
+    # A pattern that isn't plain hex can't be searched in memory; /x handles it.
+    fake = FakeR2Adapter(cmd_responses={"/x zz": "0x2000 hit\n"})
+    adapter = R2PipeAdapter(fake)
+
+    assert "0x2000" in adapter.search_hex("zz")
+
+
+def test_search_hex_empty_pattern_returns_no_hits():
+    adapter = R2PipeAdapter(FakeR2Adapter())
+    assert adapter.search_hex("") == ""
+
+
 def test_search_text_falls_back_without_maps():
     fake = FakeR2Adapter(cmd_responses={"/aa rol": "0x401005 rol eax, 3\n"})
     adapter = R2PipeAdapter(fake)

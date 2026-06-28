@@ -67,6 +67,12 @@ class R2PipeAdapter(R2PipeQueryMixin):
         # instructions can only live in r-x maps, so disassembling data maps is
         # both wasted work and a source of false opcode matches.
         self._executable_map_starts: list[int] | None = None
+        # (vaddr, length) of each file-backed map, and a one-time read of their
+        # bytes so /x hex searches run in memory instead of re-scanning per
+        # pattern. See R2PipeTextQueryMixin._search_hex_in_memory.
+        self._file_backed_map_regions: list[tuple[int, int]] | None = None
+        self._map_bytes_resolved: bool = False
+        self._map_bytes: list[tuple[int, bytes]] | None = None
         self._file_backed_maps_resolved: bool = False
         logger.debug("R2PipeAdapter initialized successfully")
 
