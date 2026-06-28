@@ -43,27 +43,6 @@ def test_small_file_runs_opcode_search():
     assert "0x1000" in detector._search_opcode("rdtsc")
 
 
-def _evasion_detector_recording(size_bytes):
-    seen: list[str] = []
-    fake = FakeR2(
-        cmdj_map={"iij": [], "izzj": [], "ij": {"core": {"size": size_bytes}}},
-        cmd_fn=lambda command: (seen.append(command) or ""),
-    )
-    return AntiAnalysisDetector(R2PipeAdapter(fake), None), seen
-
-
-def test_large_file_skips_self_modifying_search():
-    detector, seen = _evasion_detector_recording(50 * 1024 * 1024)
-    detector._detect_evasion_techniques()
-    assert not any("mov.*cs" in command for command in seen)
-
-
-def test_small_file_runs_self_modifying_search():
-    detector, seen = _evasion_detector_recording(1 * 1024 * 1024)
-    detector._detect_evasion_techniques()
-    assert any("mov.*cs" in command for command in seen)
-
-
 def test_anti_debug_with_is_debugger_present_api():
     detector = _make_detector(
         imports=[{"name": "IsDebuggerPresent", "plt": 0x1000, "libname": "kernel32.dll"}],

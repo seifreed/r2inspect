@@ -74,7 +74,6 @@ FULL_CMD_MAP: dict[str, str] = {
     "iz~mac": "mac_address",
     "ii~Sleep,Delay": "Sleep",
     "ii~FindFirst,Process32,Module32": "FindFirstFileA",
-    "/aa mov.*cs:": "",
     "iz~hash,crc32,fnv": "",
     # Environment check commands from domain
     "iz~GetUserName": "",

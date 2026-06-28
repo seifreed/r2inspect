@@ -17,7 +17,6 @@ from r2inspect.modules.anti_analysis_helpers import (
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
-    detect_self_modifying,
     match_suspicious_api,
 )
 from r2inspect.domain.services.binary_helpers import (
@@ -440,13 +439,10 @@ def test_anti_analysis_helpers_real() -> None:
     assert detect_obfuscation(_search_fn)
 
     def _cmd_fn(command: str) -> str:
-        if "/c mov" in command:
-            return "hit"
         if "iz~hash" in command:
             return "hash"
         return ""
 
-    assert detect_self_modifying(_cmd_fn)
     assert detect_api_hashing(_cmd_fn)
 
     imports = [{"name": "CreateRemoteThread"}, {"name": "WriteProcessMemory"}]

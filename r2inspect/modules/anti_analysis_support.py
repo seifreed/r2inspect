@@ -20,7 +20,6 @@ from .anti_analysis_helpers import (
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
-    detect_self_modifying,
     match_suspicious_api,
 )
 
@@ -224,10 +223,6 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
 def detect_evasion_techniques(detector: Any) -> list[dict[str, Any]]:
     techniques: list[dict[str, Any]] = []
     techniques.extend(detect_obfuscation(detector._search_opcode))
-    # detect_self_modifying runs /c mov.*cs: (whole-binary asm search); gate it
-    # behind the large-file threshold like the other /aa-class scans.
-    if detector._should_search_opcodes():
-        techniques.extend(detect_self_modifying(detector._cmd))
     techniques.extend(detect_api_hashing(detector._cmd))
     techniques.extend(detect_injection_apis(detector._get_imports(), set(INJECTION_APIS)))
     return techniques

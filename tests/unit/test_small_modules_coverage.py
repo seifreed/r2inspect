@@ -621,7 +621,6 @@ from r2inspect.modules.anti_analysis_helpers import (
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
-    detect_self_modifying,
     match_suspicious_api,
 )
 
@@ -738,29 +737,6 @@ def test_detect_obfuscation_low_count():
 
     result = detect_obfuscation(search)
     assert result == []
-
-
-def test_detect_self_modifying_detected():
-    def cmd(pattern):
-        return "mov eax, cs:0x1000"
-
-    result = detect_self_modifying(cmd)
-    assert len(result) == 1
-    assert result[0]["severity"] == "High"
-
-
-def test_detect_self_modifying_none():
-    def cmd(pattern):
-        return ""
-
-    assert detect_self_modifying(cmd) == []
-
-
-def test_detect_self_modifying_non_string_output():
-    def cmd(pattern):
-        return None  # type: ignore[return-value]
-
-    assert detect_self_modifying(cmd) == []
 
 
 def test_detect_api_hashing_detected():

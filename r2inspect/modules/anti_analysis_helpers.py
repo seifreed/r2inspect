@@ -103,21 +103,6 @@ def detect_obfuscation(
     return techniques
 
 
-def detect_self_modifying(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
-    # Two separate /c searches: r2 reads a single "/c mov.*cs:|/c mov.*ds:" as a
-    # shell pipe (hanging on the bogus second command), not as a regex "or".
-    modify_patterns = cmd_fn("/c mov.*cs:") or cmd_fn("/c mov.*ds:")
-    if has_text(modify_patterns):
-        return [
-            {
-                "technique": "Self-Modifying Code",
-                "description": "Code segment modifications detected",
-                "severity": "High",
-            }
-        ]
-    return []
-
-
 def detect_api_hashing(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
     # r2's ~ grep ORs keywords with ',' -- '|' is a shell pipe, so the old
     # "iz~hash|iz~crc32|iz~fnv" only ever matched "hash". crc32/fnv are

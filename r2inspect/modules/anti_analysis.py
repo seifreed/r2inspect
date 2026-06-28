@@ -32,7 +32,6 @@ from .anti_analysis_helpers import (
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
-    detect_self_modifying,
     match_suspicious_api,
 )
 from .function_analyzer_extraction_support import (
@@ -203,6 +202,5 @@ __all__ = [
     "detect_environment_checks",
     "detect_injection_apis",
     "detect_obfuscation",
-    "detect_self_modifying",
     "match_suspicious_api",
 ]
