@@ -17,6 +17,7 @@ from .crypto_detection_support import (
 from .crypto_constants import CRYPTO_CONSTANTS
 from .function_analyzer_extraction_support import (
     file_size_mb_from_adapter,
+    should_run_byte_scans,
     should_run_full_analysis,
 )
 from ..domain.formats.crypto import consolidate_detections, detect_algorithms_from_strings
@@ -57,8 +58,13 @@ class CryptoAnalyzer(CommandHelperMixin):
     def _detect_crypto_constants(self) -> list[dict[str, Any]]:
         # Cached: build_crypto_report queries constants directly and again via
         # _detect_crypto_algorithms, and each query runs whole-binary /x scans.
+        # Those scans walk the whole file per constant, so skip them on huge
+        # binaries (string- and API-based crypto detection still run).
         if self._constants_cache is None:
-            self._constants_cache = find_crypto_constants(self, logger)
+            if should_run_byte_scans(self.config, self._file_size_mb()):
+                self._constants_cache = find_crypto_constants(self, logger)
+            else:
+                self._constants_cache = []
         return self._constants_cache
 
     def _detect_crypto_apis(self) -> list[dict[str, Any]]:

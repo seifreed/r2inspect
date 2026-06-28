@@ -501,6 +501,26 @@ class TestSuspiciousPatterns:
         # Same object returned: the whole-binary /x scan runs once per analyzer.
         assert first is second
 
+    def test_large_file_skips_constant_scan(self):
+        cmd = _crypto_cmd_map(has_crypto=True)
+        cmdj = _crypto_cmdj_map()
+        cmdj["ij"] = {"core": {"size": 60 * 1024 * 1024}}  # > 50 MB HUGE threshold
+        adapter = _make_adapter(cmd_map=cmd, cmdj_map=cmdj)
+        analyzer = CryptoAnalyzer(adapter)
+
+        # The /x constant scans would match on this fixture; an empty result
+        # proves the whole-binary scan was skipped on the huge file.
+        assert analyzer._detect_crypto_constants() == []
+
+    def test_small_file_runs_constant_scan(self):
+        cmd = _crypto_cmd_map(has_crypto=True)
+        cmdj = _crypto_cmdj_map()
+        cmdj["ij"] = {"core": {"size": 1 * 1024 * 1024}}
+        adapter = _make_adapter(cmd_map=cmd, cmdj_map=cmdj)
+        analyzer = CryptoAnalyzer(adapter)
+
+        assert analyzer._detect_crypto_constants() != []
+
     def test_no_patterns_when_empty(self):
         adapter = _make_adapter()
         analyzer = CryptoAnalyzer(adapter)

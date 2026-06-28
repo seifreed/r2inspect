@@ -16,6 +16,10 @@ from ..domain.services.packer_scoring import (
     find_packer_string,
     overlay_info,
 )
+from .function_analyzer_extraction_support import (
+    file_size_mb_from_adapter,
+    should_run_byte_scans,
+)
 from .search_helpers import search_hex, search_text
 
 logger = get_logger(__name__)
@@ -141,13 +145,22 @@ class PackerDetector(CommandHelperMixin):
     def _check_packer_signatures(self) -> dict[str, str] | None:
         """Check for known packer signatures in hex patterns and strings."""
         return self._safe_call(
-            lambda: (
-                find_packer_signature(self._search_hex, self.packer_signatures, self._read_bytes)
-                or find_packer_string(self._get_strings(), self.packer_signatures)
-            ),
+            self._find_packer_match,
             default=None,
             error_msg="Error checking packer signatures",
         )
+
+    def _find_packer_match(self) -> dict[str, str] | None:
+        # find_packer_signature runs a whole-binary /x scan per signature, which
+        # dominates runtime on huge binaries; skip it there and rely on the
+        # string-based match (plus entropy/section signals scored separately).
+        if should_run_byte_scans(self.config, file_size_mb_from_adapter(self.adapter)):
+            match = find_packer_signature(
+                self._search_hex, self.packer_signatures, self._read_bytes
+            )
+            if match:
+                return match
+        return find_packer_string(self._get_strings(), self.packer_signatures)
 
     def _analyze_entropy(self) -> dict[str, Any]:
         """Analyze entropy of file sections."""

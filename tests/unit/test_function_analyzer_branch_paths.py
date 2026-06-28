@@ -295,6 +295,28 @@ def test_should_run_full_analysis_file_size_none_no_config():
     assert analyzer._should_run_full_analysis() is True
 
 
+def test_should_run_byte_scans_deep_analysis_overrides_size():
+    from r2inspect.modules.function_analyzer_extraction_support import should_run_byte_scans
+
+    # Deep analysis forces whole-binary /x scans even on a huge file.
+    assert should_run_byte_scans(_DeepAnalysisConfig(), 200.0) is True
+
+
+def test_should_run_byte_scans_huge_file_skipped():
+    from r2inspect.modules.function_analyzer_extraction_support import should_run_byte_scans
+
+    # 200 MB > 50 MB HUGE threshold, no deep analysis -> skip.
+    assert should_run_byte_scans(_ShallowAnalysisConfig(), 200.0) is False
+    # At/under the threshold the scans still run.
+    assert should_run_byte_scans(_ShallowAnalysisConfig(), 40.0) is True
+
+
+def test_should_run_byte_scans_unknown_size_runs():
+    from r2inspect.modules.function_analyzer_extraction_support import should_run_byte_scans
+
+    assert should_run_byte_scans(None, None) is True
+
+
 # ---------------------------------------------------------------------------
 # _generate_machoc_hashes - result is None branch (line 139)
 # ---------------------------------------------------------------------------

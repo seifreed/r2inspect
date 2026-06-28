@@ -42,6 +42,19 @@ def test_packer_themida_signature():
     assert result["is_packed"] is True
 
 
+def test_packer_huge_file_skips_hex_scan_uses_strings():
+    # On a >50 MB binary the whole-binary /x signature scan is skipped; the
+    # string-based match still detects the packer.
+    detector = _make_detector(
+        strings=[{"string": "UPX!", "vaddr": 0x1000}],
+        file_info={"core": {"size": 60 * 1024 * 1024}},
+    )
+    result = detector.detect()
+
+    assert result["packer_type"] == "UPX"
+    assert result["is_packed"] is True
+
+
 def test_packer_vmprotect_signature():
     detector = _make_detector(
         strings=[{"string": "VMProtect", "vaddr": 0x1000}],
