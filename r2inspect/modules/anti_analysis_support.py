@@ -239,9 +239,13 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
     )
     add_simple_evidence(
         result,
-        detector._cmd("ii~FindFirst,Process32,Module32"),
+        # Process/module enumeration via the toolhelp snapshot APIs is a
+        # reasonable analysis-tool fingerprinting signal. FindFirstFile was
+        # dropped: file enumeration is ubiquitous (every directory listing /
+        # file dialog uses it), so it flagged ordinary software.
+        detector._cmd("ii~Process32,Module32"),
         "Environment Enumeration",
-        "File/process enumeration APIs found (fingerprinting)",
+        "Process/module enumeration APIs found (fingerprinting)",
         "functions",
         3,
     )

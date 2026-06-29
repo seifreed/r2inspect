@@ -34,7 +34,7 @@ def test_sandbox_delay_load_imports_do_not_false_positive():
 
 
 def test_sandbox_enumeration_detects_via_third_term():
-    det = _detector({"ii~FindFirst,Process32,Module32": "0x1 Module32"})
+    det = _detector({"ii~Process32,Module32": "0x1 Module32"})
     result = det._detect_anti_sandbox_detailed()
     assert any(e.get("type") == "Environment Enumeration" for e in result["evidence"])
 

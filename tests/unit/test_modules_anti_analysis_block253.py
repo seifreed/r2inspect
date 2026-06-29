@@ -45,8 +45,8 @@ class DummyAdapter:
     def cmd(self, command: str):
         if command.startswith("ii~Sleep"):
             return "Sleep"
-        if command.startswith("ii~FindFirst"):
-            return "FindFirst"
+        if command.startswith("ii~Process32"):
+            return "Process32First"
         if command.startswith("/aa mov"):
             return "mov cs"
         if command.startswith("iz~GetUserName") or command.startswith("iz~USER"):

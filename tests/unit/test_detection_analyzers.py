@@ -57,7 +57,7 @@ def test_anti_analysis_detects_multiple_indicators():
             "/aa rdtsc": "0x401010",
             "/aa cpuid": "0x401020",
             "ii~Sleep,NtDelayExecution": "Sleep",
-            "ii~FindFirst,Process32,Module32": "Process32First",
+            "ii~Process32,Module32": "Process32First",
         },
         cmdj_map={
             "iij": [{"name": "IsDebuggerPresent", "plt": 4096, "libname": "kernel32.dll"}],
