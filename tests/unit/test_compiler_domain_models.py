@@ -37,6 +37,27 @@ class TestCalculateCompilerScore:
         result = calculate_compiler_score(signatures, [], [], [], [])
         assert result == 0.0
 
+    def test_delphi_signature_no_false_positive_on_stripped_binary(self):
+        """The real Delphi signature must not fire on a stripped, string-poor
+        binary that merely has a universal .bss section. Regression for the
+        false 'Delphi' detections on large stripped ELF/Mach-O binaries."""
+        from r2inspect.modules.compiler_signatures_core import CORE_COMPILER_SIGNATURES
+
+        delphi = CORE_COMPILER_SIGNATURES["Delphi"]
+        stripped_sections = [".text", ".data", ".bss", ".rodata"]
+        assert calculate_compiler_score(delphi, [], [], stripped_sections, []) == 0.0
+
+    def test_delphi_signature_still_detects_real_delphi(self):
+        """Distinctive Delphi markers (.itext + Delphi string + rtl bpl) still
+        score strongly after dropping the universal .bss marker."""
+        from r2inspect.modules.compiler_signatures_core import CORE_COMPILER_SIGNATURES
+
+        delphi = CORE_COMPILER_SIGNATURES["Delphi"]
+        score = calculate_compiler_score(
+            delphi, ["Borland Delphi"], ["rtl60.bpl"], [".text", ".itext", ".bss"], []
+        )
+        assert score > 0.5
+
     def test_calculate_compiler_score_perfect_match(self):
         """Test with perfect matching data."""
         signatures = {

@@ -83,7 +83,10 @@ CORE_COMPILER_SIGNATURES = {
     "Delphi": {
         "strings": [r"Delphi", r"Borland.*Delphi"],
         "imports": ["rtl*.bpl"],
-        "sections": [".itext", ".bss"],
+        # .itext is Delphi-distinctive; .bss is universal (present in nearly
+        # every ELF/PE) and made Delphi the lone non-zero score on stripped,
+        # string-poor binaries -> false "Delphi" detections.
+        "sections": [".itext"],
         "symbols": [],
     },
     "Go": {
