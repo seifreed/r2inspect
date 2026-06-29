@@ -39,6 +39,7 @@ class AnalyzeCommand(Command):
                     output_csv=args.get("output_csv", False),
                     output_file=args.get("output"),
                     verbose=verbose,
+                    csv_delimiter=config.typed_config.output.csv_delimiter,
                 )
 
             return 0
@@ -59,12 +60,13 @@ class AnalyzeCommand(Command):
         output_csv: bool,
         output_file: str | Path | None,
         verbose: bool = False,
+        csv_delimiter: str = ",",
     ) -> None:
         """Execute analysis and render results."""
         self._print_status_if_needed(output_json, output_csv, output_file)
         result = AnalyzeBinaryUseCase().run(inspector, options)
         results = result.to_dict()
-        self._output_results(results, output_json, output_csv, output_file, verbose)
+        self._output_results(results, output_json, output_csv, output_file, verbose, csv_delimiter)
 
     def _show_analysis_start(
         self,
@@ -102,6 +104,7 @@ class AnalyzeCommand(Command):
         output_csv: bool,
         output_file: str | Path | None,
         verbose: bool,
+        csv_delimiter: str = ",",
     ) -> None:
         """Output results in the appropriate format."""
         analysis_output.output_results(
@@ -111,6 +114,7 @@ class AnalyzeCommand(Command):
             output_file,
             verbose,
             self.context.console,
+            csv_delimiter=csv_delimiter,
         )
 
     def _output_json_results(

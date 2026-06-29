@@ -259,7 +259,9 @@ def test_analyze_command_run_analysis():
             return {"analysis": "data"}
 
     class _CaptureCommand(AnalyzeCommand):
-        def _output_results(self, results, output_json, output_csv, output_file, verbose):
+        def _output_results(
+            self, results, output_json, output_csv, output_file, verbose, csv_delimiter=","
+        ):
             self.captured_results = results
 
     ctx = _make_context()

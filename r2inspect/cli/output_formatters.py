@@ -18,11 +18,12 @@ from .output_json import JsonOutputFormatter
 class OutputFormatter:
     """Format analysis results for different output types."""
 
-    def __init__(self, results: dict[str, Any]):
+    def __init__(self, results: dict[str, Any], csv_delimiter: str = ","):
         self.results = results
         self.console = Console()
+        self._csv_delimiter = csv_delimiter
         self._json_formatter = JsonOutputFormatter(results)
-        self._csv_formatter = CsvOutputFormatter(results)
+        self._csv_formatter = CsvOutputFormatter(results, delimiter=csv_delimiter)
 
     def to_json(self, indent: int = 2) -> str:
         """Convert results to JSON format."""
@@ -37,7 +38,7 @@ class OutputFormatter:
 
             logging.getLogger(__name__).error("CSV export failed: %s", exc)
             output = io.StringIO()
-            writer = csv.writer(output)
+            writer = csv.writer(output, delimiter=self._csv_delimiter)
             writer.writerow(["Error", "Message"])
             writer.writerow(["CSV Export Failed", str(exc)])
             return output.getvalue()

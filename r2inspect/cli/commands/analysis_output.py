@@ -49,9 +49,10 @@ def output_results(
     output_file: str | Path | None,
     verbose: bool,
     console: Any,
+    csv_delimiter: str = ",",
 ) -> None:
     """Output results in the appropriate format."""
-    formatter = OutputFormatter(results)
+    formatter = OutputFormatter(results, csv_delimiter=csv_delimiter)
 
     if output_json:
         _output_json_results(formatter, output_file, console)

@@ -18,8 +18,9 @@ FILE_SIZE_UNITS = ("B", "KB", "MB", "GB", "TB")
 class CsvOutputFormatter:
     """Serialize one analysis result payload into a single CSV row."""
 
-    def __init__(self, results: dict[str, Any]):
+    def __init__(self, results: dict[str, Any], delimiter: str = ","):
         self.results = results
+        self.delimiter = delimiter
 
     def to_csv(self) -> str:
         """Render the current result payload as CSV text."""
@@ -29,7 +30,9 @@ class CsvOutputFormatter:
             if csv_data.get("error"):
                 raise ValueError(str(csv_data["error"]))
             if csv_data:
-                dict_writer = csv.DictWriter(output, fieldnames=FIELDNAMES)
+                dict_writer = csv.DictWriter(
+                    output, fieldnames=FIELDNAMES, delimiter=self.delimiter
+                )
                 dict_writer.writeheader()
                 dict_writer.writerow(
                     {key: _csv_fields.escape_csv_formula(value) for key, value in csv_data.items()}
@@ -84,10 +87,9 @@ class CsvOutputFormatter:
             csv_row["error"] = f"Data extraction failed: {str(exc)}"
         return csv_row
 
-    @staticmethod
-    def _write_error_csv(output: io.StringIO, exc: Exception) -> None:
+    def _write_error_csv(self, output: io.StringIO, exc: Exception) -> None:
         """Write the fallback error CSV used when serialization fails."""
-        row_writer = csv.writer(output)
+        row_writer = csv.writer(output, delimiter=self.delimiter)
         row_writer.writerow(["Error", "Message"])
         row_writer.writerow(["CSV Export Failed", str(exc)])
 
