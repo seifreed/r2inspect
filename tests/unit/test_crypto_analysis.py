@@ -149,6 +149,12 @@ class TestCryptoAnalyzerInit:
         analyzer = CryptoAnalyzer(adapter)
         assert analyzer.crypto_constants is CRYPTO_CONSTANTS
 
+    def test_rsa_exponents_exclude_ubiquitous_small_values(self):
+        # 3 and 17 as 32-bit words (03 00 00 00 / 11 00 00 00) occur in nearly
+        # every binary and produced false "0x3"/"0x11" crypto constants. Only the
+        # distinctive F4 exponent (65537) should remain.
+        assert CRYPTO_CONSTANTS["rsa_exponents"] == [65537]
+
     def test_initialization_with_config(self):
         adapter = _make_crypto_adapter()
         cfg = {"max_entropy_sections": 5}

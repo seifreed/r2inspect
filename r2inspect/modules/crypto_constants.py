@@ -33,5 +33,9 @@ CRYPTO_CONSTANTS = {
         0xAB1C5ED5,
     ],
     "des_sbox": [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7],
-    "rsa_exponents": [3, 17, 65537],
+    # Only the distinctive F4 exponent (65537). The small valid exponents 3 and
+    # 17 are searched as the 32-bit words 03 00 00 00 / 11 00 00 00, which occur
+    # in virtually every binary -> they reported "0x3"/"0x11" crypto constants on
+    # benign PE/ELF. 65537 (01 00 01 00) is a meaningful RSA marker.
+    "rsa_exponents": [65537],
 }
