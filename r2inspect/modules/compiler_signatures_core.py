@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Primary compiler signatures."""
 
-from .compiler_signature_constants import SECTION_EH_FRAME, SECTION_RDATA, SECTION_TEXT
+from .compiler_signature_constants import SECTION_EH_FRAME, SECTION_RDATA
 
 CORE_COMPILER_SIGNATURES = {
     "MSVC": {
@@ -77,7 +77,10 @@ CORE_COMPILER_SIGNATURES = {
             "libstdc++-6.dll",
             "libwinpthread-1.dll",
         ],
-        "sections": [SECTION_EH_FRAME],
+        # .eh_frame is universal in ELF (and common in PE), not MinGW-specific;
+        # as the sole section marker it false-positived MinGW on any stripped
+        # binary. MinGW is identified by its strings + runtime DLL imports.
+        "sections": [],
         "symbols": [],
     },
     "Delphi": {
@@ -117,7 +120,10 @@ CORE_COMPILER_SIGNATURES = {
     "DotNet": {
         "strings": [r"\.NETFramework", r"mscorlib"],
         "imports": ["mscoree.dll"],
-        "sections": [SECTION_TEXT],
+        # .text is in every binary; as the sole section marker it false-positived
+        # DotNet on everything. .NET is identified by the mscoree.dll import and
+        # the mscorlib/.NETFramework strings.
+        "sections": [],
         "symbols": [],
     },
     "Lua": {

@@ -58,6 +58,30 @@ class TestCalculateCompilerScore:
         )
         assert score > 0.5
 
+    def test_dotnet_signature_no_false_positive_from_text_section(self):
+        """`.text` is in every binary and must not, on its own, score DotNet.
+        Regression for DotNet false-positiving on any binary with a .text section."""
+        from r2inspect.modules.compiler_signatures_core import CORE_COMPILER_SIGNATURES
+
+        dotnet = CORE_COMPILER_SIGNATURES["DotNet"]
+        assert calculate_compiler_score(dotnet, [], [], [".text", ".data", ".bss"], []) == 0.0
+        # Real .NET still detected via mscoree.dll import + strings.
+        real = calculate_compiler_score(
+            dotnet, [".NETFramework", "mscorlib"], ["mscoree.dll"], [".text"], []
+        )
+        assert real > 0.5
+
+    def test_mingw_signature_no_false_positive_from_eh_frame_section(self):
+        """`.eh_frame` is universal in ELF and must not, on its own, score MinGW."""
+        from r2inspect.modules.compiler_signatures_core import CORE_COMPILER_SIGNATURES
+
+        mingw = CORE_COMPILER_SIGNATURES["MinGW"]
+        generic = [".text", ".eh_frame", ".eh_frame_hdr", ".bss"]
+        assert calculate_compiler_score(mingw, [], [], generic, []) == 0.0
+        # Real MinGW still detected via its strings + runtime DLL imports.
+        real = calculate_compiler_score(mingw, ["mingw 12.1"], ["libstdc++-6.dll"], generic, [])
+        assert real > 0.3
+
     def test_calculate_compiler_score_perfect_match(self):
         """Test with perfect matching data."""
         signatures = {
