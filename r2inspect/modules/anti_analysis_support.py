@@ -12,6 +12,7 @@ from ..domain.formats.anti_analysis import (
     SUSPICIOUS_API_CATEGORIES,
     TIMING_APIS,
     VM_MAC_OUIS,
+    WEAK_ANTI_DEBUG_APIS,
 )
 from ..domain.text_helpers import has_text
 from .anti_analysis_helpers import (
@@ -91,14 +92,16 @@ def _anti_debug_import_evidence(detector: Any) -> list[dict[str, Any]]:
             continue
         func_name = coerce_text(imp.get("name"))
         if func_name in detector.anti_debug_apis:
-            evidence.append(
-                {
-                    "type": "API Call",
-                    "detail": f"Anti-debug API: {func_name}",
-                    "address": hex(coerce_int(imp.get("plt", 0))),
-                    "library": imp.get("libname") or imp.get("library", "unknown"),
-                }
-            )
+            entry: dict[str, Any] = {
+                "type": "API Call",
+                "detail": f"Anti-debug API: {func_name}",
+                "address": hex(coerce_int(imp.get("plt", 0))),
+                "library": imp.get("libname") or imp.get("library", "unknown"),
+            }
+            if func_name in WEAK_ANTI_DEBUG_APIS:
+                entry["detail"] = f"Timing API: {func_name} (informational)"
+                entry["weak"] = True
+            evidence.append(entry)
     return evidence
 
 

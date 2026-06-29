@@ -15,6 +15,16 @@ ANTI_DEBUG_APIS = [
     "NtClose",
 ]
 
+# General-purpose timing APIs that are used by virtually every program (frame
+# timing, performance measurement, RNG seeding). They CAN drive a timing-based
+# anti-debug check, but their mere import is not evidence of one -- so they are
+# recorded as informational ("weak") rather than asserting anti-debug.
+WEAK_ANTI_DEBUG_APIS = {
+    "GetTickCount",
+    "GetTickCount64",
+    "QueryPerformanceCounter",
+}
+
 VM_ARTIFACTS = [
     "VMware",
     "VirtualBox",

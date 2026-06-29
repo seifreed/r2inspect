@@ -55,6 +55,23 @@ def test_anti_debug_with_is_debugger_present_api():
     )
 
 
+def test_timing_apis_alone_do_not_assert_anti_debug():
+    """GetTickCount / QueryPerformanceCounter are general timing APIs in nearly
+    every program; their import alone is informational and must not flip
+    anti_debug (regression for goodware flagged on timing imports)."""
+    detector = _make_detector(
+        imports=[
+            {"name": "QueryPerformanceCounter", "plt": 0x1000, "libname": "kernel32.dll"},
+            {"name": "GetTickCount", "plt": 0x1008, "libname": "kernel32.dll"},
+        ],
+    )
+    result = detector.detect()
+
+    assert result["anti_debug"] is False
+    evidence = result["detection_details"]["anti_debug_evidence"]
+    assert evidence and all(e.get("weak") is True for e in evidence)
+
+
 def test_anti_debug_accepts_hex_plt_address():
     detector = _make_detector(
         imports=[{"name": "IsDebuggerPresent", "plt": "0x1000", "libname": "kernel32.dll"}],
