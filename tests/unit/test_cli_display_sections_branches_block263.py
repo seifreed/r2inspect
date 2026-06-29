@@ -19,9 +19,30 @@ def test_display_sections_early_returns(capsys) -> None:
     ds._display_circuit_breaker_statistics({})
     ds._display_circuit_breaker_statistics({"opened": 0})
     ds._display_indicators({"indicators": []})
+    ds._display_xor_search({})
+    ds._display_xor_search({"xor_search": "not-a-dict"})
 
     out = capsys.readouterr().out
     assert out == ""
+
+
+def test_display_xor_search_with_and_without_matches(capsys) -> None:
+    ds._display_xor_search(
+        {
+            "xor_search": {
+                "search_string": "SECRET",
+                "matches": [{"xor_key": 66, "addresses": ["0x1002c"]}, "not-a-dict"],
+            }
+        }
+    )
+    out = capsys.readouterr().out
+    assert "SECRET" in out
+    assert "0x42" in out
+    assert "0x1002c" in out
+
+    ds._display_xor_search({"xor_search": {"search_string": "NONE", "matches": []}})
+    out = capsys.readouterr().out
+    assert "No XOR-encoded matches found" in out
 
 
 def test_display_sections_helpers_variants(capsys) -> None:

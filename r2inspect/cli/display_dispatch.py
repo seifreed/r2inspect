@@ -19,6 +19,7 @@ DISPLAY_ORDER = [
     "_display_bindiff",
     "_display_machoc_functions",
     "_display_indicators",
+    "_display_xor_search",
 ]
 
 

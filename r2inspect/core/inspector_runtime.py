@@ -180,6 +180,15 @@ def _analyze_impl(
         else:
             results = inspector._execute_without_progress(pipeline, options, parallel=use_parallel)
 
+        xor_target = options.get("xor_search")
+        if xor_target:
+            try:
+                xor_matches = inspector.search_xor(xor_target)
+            except Exception as exc:
+                _logger.warning("XOR search failed: %s", exc)
+                xor_matches = []
+            results["xor_search"] = {"search_string": xor_target, "matches": xor_matches}
+
         final_memory = inspector.memory_monitor.check_memory(force=True)
         results["memory_stats"] = _collect_memory_stats(initial_memory, final_memory)
         return cast(dict[str, Any], results)

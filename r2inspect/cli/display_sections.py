@@ -34,6 +34,7 @@ from .display_sections_simhash_support import (
 )
 from .display_sections_indicators import _display_indicators
 from .display_sections_metadata import _add_rich_header_entries, _display_rich_header
+from .display_sections_xor import _display_xor_search
 from .display_sections_similarity import (
     _add_binbloom_binary_signature,
     _add_binbloom_bloom_stats,
@@ -77,6 +78,7 @@ __all__ = [
     "_display_bindiff",
     "_display_machoc_functions",
     "_display_indicators",
+    "_display_xor_search",
     "_display_circuit_breaker_statistics",
     "_display_retry_statistics",
     "_display_most_retried_commands",

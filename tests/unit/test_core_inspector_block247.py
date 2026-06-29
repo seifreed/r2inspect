@@ -70,3 +70,27 @@ def test_inspector_analyze_and_cleanup():
     assert "memory_stats" in results
 
     inspector.close()
+
+
+def test_inspector_analyze_runs_xor_search_when_requested():
+    inspector = R2Inspector(
+        filename=str(FIXTURE),
+        config=DummyConfig(),
+        verbose=False,
+        deps=InspectorDependencies(
+            adapter=DummyAdapter(),
+            registry_factory=DummyRegistry,
+            pipeline_builder_factory=lambda a, r, c, f: DummyPipelineBuilder(a, r, c, f),
+            config_factory=DummyConfig,
+            file_validator_factory=FileValidator,
+            result_aggregator_factory=ResultAggregator,
+            memory_monitor=global_memory_monitor,
+            cleanup_callback=lambda: None,
+        ),
+    )
+
+    results = inspector.analyze(xor_search="SECRET")
+    assert results["xor_search"]["search_string"] == "SECRET"
+    assert isinstance(results["xor_search"]["matches"], list)
+
+    inspector.close()
