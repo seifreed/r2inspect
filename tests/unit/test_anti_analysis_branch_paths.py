@@ -348,12 +348,39 @@ def test_search_opcode_byte_searches_fixed_opcodes_above_size_gate() -> None:
             return "00000f3100000000"  # rdtsc 0f31 at exec vaddr 0x1002
         return ""
 
-    fake = FakeR2(cmdj_map={"ij": {"core": {"size": big_bytes}}, "omj": omj}, cmd_fn=cmd_fn)
+    fake = FakeR2(
+        cmdj_map={"ij": {"core": {"size": big_bytes}, "bin": {"arch": "x86"}}, "omj": omj},
+        cmd_fn=cmd_fn,
+    )
     detector = AntiAnalysisDetector(R2PipeAdapter(fake))
 
     assert detector._should_search_opcodes() is False
     assert detector._search_opcode("rdtsc") == "0x1002"
     assert detector._search_opcode("cc") == ""
+
+
+def test_byte_search_opcode_skipped_on_non_x86_binary() -> None:
+    # cpuid (0fa2) / rdtsc (0f31) are x86 encodings; on ARM/MIPS/etc. those bytes
+    # are not those instructions, so the byte search must be skipped to avoid
+    # false cpuid/rdtsc hits on incidental data.
+    big_bytes = 64 * 1024 * 1024
+    omj = [{"from": 0x1000, "to": 0x1007, "delta": 0, "perm": "r-x"}]
+
+    def cmd_fn(command: str) -> str:
+        if command.startswith("p8 8 @ 4096"):
+            return "00000f3100000000"  # would be rdtsc 0f31 on x86
+        return ""
+
+    fake = FakeR2(
+        cmdj_map={"ij": {"core": {"size": big_bytes}, "bin": {"arch": "arm"}}, "omj": omj},
+        cmd_fn=cmd_fn,
+    )
+    detector = AntiAnalysisDetector(R2PipeAdapter(fake))
+
+    assert detector._should_search_opcodes() is False
+    assert detector._is_x86_binary() is False
+    assert detector._search_opcode("rdtsc") == ""
+    assert detector._search_opcode("cpuid") == ""
 
 
 # ---------------------------------------------------------------------------

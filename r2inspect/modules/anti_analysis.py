@@ -198,7 +198,18 @@ class AntiAnalysisDetector(CommandHelperMixin):
         hex_encoding = _FIXED_OPCODE_BYTES.get(pattern)
         if hex_encoding is None:
             return None
+        # _FIXED_OPCODE_BYTES are x86 encodings (cpuid 0fa2, rdtsc 0f31). On any
+        # other architecture those bytes are not those instructions, so a byte
+        # search only matches incidental data -- false cpuid/rdtsc on ARM/MIPS/etc.
+        if not self._is_x86_binary():
+            return None
         return search_executable_hex(self.adapter, hex_encoding)
+
+    def _is_x86_binary(self) -> bool:
+        file_info = self.adapter.get_file_info() if self.adapter is not None else None
+        bin_info = file_info.get("bin", {}) if isinstance(file_info, dict) else {}
+        arch = bin_info.get("arch") if isinstance(bin_info, dict) else None
+        return arch == "x86"
 
     def _get_imports(self) -> list[dict[str, Any]]:
         return self._coerce_dict_list(self._get_via_adapter("get_imports", "iij"))
