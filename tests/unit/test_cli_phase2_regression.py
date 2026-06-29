@@ -36,6 +36,22 @@ def test_batch_command_setup_analysis_options_adds_custom_flags() -> None:
     assert options["xor_search"] == "needle"
 
 
+def test_single_file_yara_option_uses_key_consumed_by_yara_stage() -> None:
+    """The single-file --yara option must land under the SAME key the YARA
+    pipeline stage reads, or custom rules are silently ignored. Regression:
+    the builder used "yara_rules_dir" while the stage reads "custom_yara"."""
+    import inspect
+
+    from r2inspect.cli.command_runtime import build_analysis_options
+    from r2inspect.pipeline import stages_detection
+
+    options = build_analysis_options(yara="rules-dir", xor="needle")
+    consumed_key = "custom_yara"
+    assert consumed_key in inspect.getsource(stages_detection.DetectionStage._run_yara_analysis)
+    assert options[consumed_key] == "rules-dir"
+    assert options["xor_search"] == "needle"
+
+
 def test_interactive_cmd_strings_prints_results() -> None:
     """Cover the strings command iteration branch."""
     console = Console(file=io.StringIO(), force_terminal=False)

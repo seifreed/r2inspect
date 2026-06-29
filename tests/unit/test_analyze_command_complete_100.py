@@ -118,4 +118,4 @@ def test_analyze_command_setup_analysis_options(tmp_path):
     """Test _setup_analysis_options."""
     cmd = AnalyzeCommand(_make_context(tmp_path))
     options = cmd._setup_analysis_options(yara="/rules", xor="ff")
-    assert options == {"yara_rules_dir": "/rules", "xor_search": "ff"}
+    assert options == {"custom_yara": "/rules", "xor_search": "ff"}

@@ -143,8 +143,8 @@ def test_analyze_command_setup_analysis_options_yara():
     context = CommandContext.create()
     cmd = AnalyzeCommand(context)
     options = cmd._setup_analysis_options(yara="/path/to/rules")
-    assert "yara_rules_dir" in options
-    assert options["yara_rules_dir"] == "/path/to/rules"
+    assert "custom_yara" in options
+    assert options["custom_yara"] == "/path/to/rules"
 
 
 def test_analyze_command_setup_analysis_options_xor():
@@ -160,7 +160,7 @@ def test_analyze_command_setup_analysis_options_both():
     cmd = AnalyzeCommand(context)
     options = cmd._setup_analysis_options(yara="/rules", xor="FF")
     assert len(options) == 2
-    assert options["yara_rules_dir"] == "/rules"
+    assert options["custom_yara"] == "/rules"
     assert options["xor_search"] == "FF"
 
 

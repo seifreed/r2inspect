@@ -98,10 +98,10 @@ def test_command_get_config_prefers_path(tmp_path: Path):
 def test_setup_analysis_options():
     cmd = _DummyCommand()
     assert cmd._setup_analysis_options() == {}
-    assert cmd._setup_analysis_options(yara="rules") == {"yara_rules_dir": "rules"}
+    assert cmd._setup_analysis_options(yara="rules") == {"custom_yara": "rules"}
     assert cmd._setup_analysis_options(xor="AA") == {"xor_search": "AA"}
     assert cmd._setup_analysis_options(yara="rules", xor="AA") == {
-        "yara_rules_dir": "rules",
+        "custom_yara": "rules",
         "xor_search": "AA",
     }
 

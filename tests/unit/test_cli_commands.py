@@ -94,7 +94,7 @@ def test_command_get_config_falls_back_to_context(tmp_path):
 def test_command_setup_analysis_options(tmp_path):
     cmd = _DummyCommand(_make_context(tmp_path))
     options = cmd._setup_analysis_options(yara="/rules", xor="ff")
-    assert options == {"yara_rules_dir": "/rules", "xor_search": "ff"}
+    assert options == {"custom_yara": "/rules", "xor_search": "ff"}
 
 
 def test_analyze_command_run_analysis_writes_json(tmp_path):

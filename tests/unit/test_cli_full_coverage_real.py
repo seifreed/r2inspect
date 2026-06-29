@@ -341,7 +341,7 @@ def test_cli_command_base_and_config_version(tmp_path: Path) -> None:
 
     assert command._setup_analysis_options() == {}
     assert command._setup_analysis_options(yara="rules", xor="aa") == {
-        "yara_rules_dir": "rules",
+        "custom_yara": "rules",
         "xor_search": "aa",
     }
 

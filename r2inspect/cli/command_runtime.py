@@ -53,7 +53,9 @@ def apply_thread_settings(config: Any, threads: int | None) -> None:
 def build_analysis_options(yara: str | None = None, xor: str | None = None) -> dict[str, Any]:
     options: dict[str, Any] = {}
     if yara:
-        options["yara_rules_dir"] = yara
+        # The YARA stage reads "custom_yara"; the old "yara_rules_dir" key was
+        # never consumed, so --yara was silently ignored for single-file scans.
+        options["custom_yara"] = yara
     if xor:
         options["xor_search"] = xor
     return options

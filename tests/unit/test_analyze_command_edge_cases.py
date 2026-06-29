@@ -326,7 +326,7 @@ def test_setup_analysis_options_with_yara():
 
     opts = cmd._setup_analysis_options(yara="/rules/dir", xor=None)
 
-    assert opts["yara_rules_dir"] == "/rules/dir"
+    assert opts["custom_yara"] == "/rules/dir"
     assert "xor_search" not in opts
 
 
@@ -338,7 +338,7 @@ def test_setup_analysis_options_with_xor():
     opts = cmd._setup_analysis_options(yara=None, xor="searchme")
 
     assert opts["xor_search"] == "searchme"
-    assert "yara_rules_dir" not in opts
+    assert "custom_yara" not in opts
 
 
 def test_setup_analysis_options_with_both():
@@ -348,7 +348,7 @@ def test_setup_analysis_options_with_both():
 
     opts = cmd._setup_analysis_options(yara="/rules", xor="needle")
 
-    assert opts["yara_rules_dir"] == "/rules"
+    assert opts["custom_yara"] == "/rules"
     assert opts["xor_search"] == "needle"
 
 

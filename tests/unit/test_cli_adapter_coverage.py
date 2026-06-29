@@ -853,7 +853,7 @@ def test_command_setup_analysis_options_empty():
 def test_command_setup_analysis_options_yara():
     cmd = ConcreteCommand(CommandContext.create())
     opts = cmd._setup_analysis_options(yara="/rules")
-    assert opts["yara_rules_dir"] == "/rules"
+    assert opts["custom_yara"] == "/rules"
 
 
 def test_command_setup_analysis_options_xor():
