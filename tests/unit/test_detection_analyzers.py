@@ -75,6 +75,16 @@ def test_anti_analysis_detects_multiple_indicators():
     assert result["anti_sandbox"] is True
     assert result["timing_checks"] is True
 
+    cpuid_evidence = [
+        e
+        for e in result["detection_details"]["anti_vm_evidence"]
+        if e.get("type") == "CPUID Detection"
+    ]
+    assert cpuid_evidence
+    detail = cpuid_evidence[0]["detail"]
+    assert "at at" not in detail
+    assert detail == "CPUID instruction at 1 locations"
+
 
 def test_compiler_detector_gcc_detection():
     strings_output = "\n".join(

@@ -175,7 +175,9 @@ def detect_anti_vm(detector: Any) -> dict[str, Any]:
         result,
         detector._search_opcode("cpuid"),
         "CPUID Detection",
-        "CPUID instruction at",
+        # add_simple_evidence appends " at N locations" for address fields, so the
+        # prefix must not already end in "at" (avoids "CPUID instruction at at N").
+        "CPUID instruction",
         "addresses",
         3,
     )
