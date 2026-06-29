@@ -112,6 +112,36 @@ def test_anti_vm_with_vmware_strings():
     )
 
 
+def test_cpuid_alone_does_not_assert_anti_vm():
+    """CPUID is benign CPU-feature detection; on its own it is informational and
+    must not flip anti_vm (regression for goodware flagged via stray CPUID)."""
+    detector = _make_detector(cmd_map={"/aa cpuid": "0x401000\n0x401010\n0x401020"})
+    result = detector.detect()
+
+    assert result["anti_vm"] is False
+    cpuid = [
+        e
+        for e in result["detection_details"]["anti_vm_evidence"]
+        if e.get("type") == "CPUID Detection"
+    ]
+    assert cpuid and cpuid[0].get("weak") is True
+
+
+def test_rdtsc_alone_does_not_assert_anti_debug():
+    """RDTSC is benign timing/benchmarking; on its own it is informational and
+    must not flip anti_debug."""
+    detector = _make_detector(cmd_map={"/aa rdtsc": "0x402000\n0x402010"})
+    result = detector.detect()
+
+    assert result["anti_debug"] is False
+    rdtsc = [
+        e
+        for e in result["detection_details"]["anti_debug_evidence"]
+        if e.get("type") == "Timing Check"
+    ]
+    assert rdtsc and rdtsc[0].get("weak") is True
+
+
 def test_anti_vm_with_vm_mac_oui_string():
     """A hardcoded VM-vendor MAC OUI prefix is real VM fingerprinting evidence."""
     detector = _make_detector(

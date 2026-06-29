@@ -61,7 +61,7 @@ def test_anti_analysis_detects_multiple_indicators():
         },
         cmdj_map={
             "iij": [{"name": "IsDebuggerPresent", "plt": 4096, "libname": "kernel32.dll"}],
-            "izj": [
+            "izzj": [
                 {"string": "VMware Tools", "vaddr": 8192},
                 {"string": "cuckoo sandbox", "vaddr": 8200},
             ],
@@ -83,7 +83,9 @@ def test_anti_analysis_detects_multiple_indicators():
     assert cpuid_evidence
     detail = cpuid_evidence[0]["detail"]
     assert "at at" not in detail
-    assert detail == "CPUID instruction at 1 locations"
+    assert detail == "CPUID instruction at 1 locations (informational)"
+    # CPUID is informational and must not, on its own, assert anti-VM.
+    assert cpuid_evidence[0].get("weak") is True
 
 
 def test_compiler_detector_gcc_detection():

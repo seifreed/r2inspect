@@ -137,11 +137,16 @@ def _rdtsc_timing_evidence(detector: Any) -> list[dict[str, Any]]:
     if not isinstance(rdtsc_checks, str) or not rdtsc_checks.strip():
         return []
     addresses = rdtsc_checks.strip().split("\n")
+    # RDTSC is the standard way to read a cycle counter for benchmarking/timing,
+    # so bare presence is dominated by benign code. Record it as informational
+    # ("weak") -- it does not, on its own, assert anti-debug. A real timing-based
+    # anti-debug check compares two reads and branches, which presence misses.
     return [
         {
             "type": "Timing Check",
-            "detail": f"RDTSC instruction at {len(addresses)} locations",
+            "detail": f"RDTSC instruction at {len(addresses)} locations (informational)",
             "addresses": addresses[:3],
+            "weak": True,
         }
     ]
 
@@ -155,7 +160,9 @@ def detect_anti_debug(detector: Any) -> dict[str, Any]:
         _rdtsc_timing_evidence,
     ):
         evidence.extend(evidence_fn(detector))
-    return {"detected": bool(evidence), "evidence": evidence}
+    # Weak (informational) evidence is kept for the analyst but must not flip the
+    # verdict on its own -- otherwise ordinary timing code reads as anti-debug.
+    return {"detected": any(not e.get("weak") for e in evidence), "evidence": evidence}
 
 
 def detect_anti_vm(detector: Any) -> dict[str, Any]:
@@ -170,16 +177,22 @@ def detect_anti_vm(detector: Any) -> dict[str, Any]:
                 "strings": vm_strings[:5],
             }
         )
-    add_simple_evidence(
-        result,
-        detector._search_opcode("cpuid"),
-        "CPUID Detection",
-        # add_simple_evidence appends " at N locations" for address fields, so the
-        # prefix must not already end in "at" (avoids "CPUID instruction at at N").
-        "CPUID instruction",
-        "addresses",
-        3,
-    )
+    cpuid_hits = detector._search_opcode("cpuid")
+    if isinstance(cpuid_hits, str) and cpuid_hits.strip():
+        cpuid_addresses = cpuid_hits.strip().split("\n")
+        # CPUID is the standard CPU-feature probe (every libc / SIMD dispatch path
+        # uses it), so bare presence is overwhelmingly benign -- a stripped static
+        # binary can carry dozens. Record it as informational only; real VM
+        # detection inspects specific CPUID leaves/results, not mere presence, so
+        # CPUID does not assert anti-VM on its own.
+        result["evidence"].append(
+            {
+                "type": "CPUID Detection",
+                "detail": f"CPUID instruction at {len(cpuid_addresses)} locations (informational)",
+                "addresses": cpuid_addresses[:3],
+                "weak": True,
+            }
+        )
     mac_strings = collect_artifact_strings(detector._get_strings(), VM_MAC_OUIS)
     if mac_strings:
         result["detected"] = True
