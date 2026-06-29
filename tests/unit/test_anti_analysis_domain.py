@@ -91,11 +91,12 @@ def test_sandbox_indicators_not_empty():
     assert len(SANDBOX_INDICATORS) > 0
 
 
-def test_sandbox_indicators_generic():
-    assert "sample" in SANDBOX_INDICATORS
-    assert "virus" in SANDBOX_INDICATORS
-    assert "malware" in SANDBOX_INDICATORS
-    assert "sandbox" in SANDBOX_INDICATORS
+def test_sandbox_indicators_exclude_generic_words():
+    # Generic security words fire on ordinary software (e.g. "sample rate",
+    # "Chromium sandbox") and are not sandbox-product names, so they must NOT be
+    # sandbox indicators.
+    for generic in ("sample", "virus", "malware", "sandbox"):
+        assert generic not in SANDBOX_INDICATORS
 
 
 def test_sandbox_indicators_specific():
@@ -303,7 +304,7 @@ def test_vm_artifacts_count():
 
 
 def test_sandbox_indicators_count():
-    assert len(SANDBOX_INDICATORS) >= 8
+    assert len(SANDBOX_INDICATORS) >= 6
 
 
 def test_injection_apis_count():

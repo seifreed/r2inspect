@@ -62,11 +62,11 @@ VM_MAC_OUIS = [
     "52:54:00",  # QEMU / KVM
 ]
 
+# Distinctive sandbox / analysis-environment identifiers only. The generic words
+# "sample"/"virus"/"malware"/"sandbox" were dropped: they are not sandbox-product
+# names and fire on ordinary software ("sample rate", "app sandbox",
+# "Chromium sandbox", "malware scan"), flagging goodware as anti-sandbox.
 SANDBOX_INDICATORS = [
-    "sample",
-    "virus",
-    "malware",
-    "sandbox",
     "cuckoo",
     "anubis",
     "joesandbox",

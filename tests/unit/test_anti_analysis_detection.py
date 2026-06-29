@@ -255,15 +255,15 @@ def test_anti_sandbox_with_sandbox_indicator():
     detector = _make_detector(
         strings=[
             {
-                "string": "sandbox",
+                "string": "joesandbox",
                 "vaddr": 0x1000,
                 "type": "ascii",
-                "length": 7,
+                "length": 10,
                 "section": ".data",
                 "paddr": 0x1000,
             },
             {
-                "string": "virus.exe",
+                "string": "cwsandbox",
                 "vaddr": 0x2000,
                 "type": "ascii",
                 "length": 9,
@@ -501,7 +501,7 @@ def test_combined_evasion_techniques():
                 "paddr": 0x1000,
             },
             {
-                "string": "sandbox",
+                "string": "cuckoo",
                 "vaddr": 0x2000,
                 "type": "ascii",
                 "length": 7,
