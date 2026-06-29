@@ -72,7 +72,7 @@ FULL_STRINGS = [
 # doesn't intercept them as simple base calls.
 FULL_CMD_MAP: dict[str, str] = {
     "iz~mac": "mac_address",
-    "ii~Sleep,Delay": "Sleep",
+    "ii~Sleep,NtDelayExecution": "Sleep",
     "ii~FindFirst,Process32,Module32": "FindFirstFileA",
     "iz~hash,crc32,fnv": "",
     # Environment check commands from domain

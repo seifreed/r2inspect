@@ -19,9 +19,18 @@ def _detector(cmd_map: dict[str, str]) -> AntiAnalysisDetector:
 
 
 def test_sandbox_sleep_delay_detects_via_second_term():
-    det = _detector({"ii~Sleep,Delay": "0x3000 Delay"})
+    det = _detector({"ii~Sleep,NtDelayExecution": "0x3000 NtDelayExecution"})
     result = det._detect_anti_sandbox_detailed()
     assert any(e.get("type") == "Sleep/Delay Calls" for e in result["evidence"])
+
+
+def test_sandbox_delay_load_imports_do_not_false_positive():
+    """DLL delay-LOAD runtime imports must not be read as sandbox-evasion sleeps.
+    The grep targets Sleep/NtDelayExecution, so a binary that only imports
+    ResolveDelayLoadedAPI / DelayLoadFailureHook yields no Sleep/Delay evidence."""
+    det = _detector({"ii~Sleep,NtDelayExecution": ""})
+    result = det._detect_anti_sandbox_detailed()
+    assert not any(e.get("type") == "Sleep/Delay Calls" for e in result["evidence"])
 
 
 def test_sandbox_enumeration_detects_via_third_term():

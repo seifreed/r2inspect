@@ -203,7 +203,11 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
         )
     add_simple_evidence(
         result,
-        detector._cmd("ii~Sleep,Delay"),
+        # Match Sleep/SleepEx and the native NtDelayExecution timing API, NOT a
+        # bare "Delay" substring -- that hit the DLL delay-LOAD runtime imports
+        # (ResolveDelayLoadedAPI, DelayLoadFailureHook), which are present in
+        # ordinary binaries and have nothing to do with sandbox-evasion sleeps.
+        detector._cmd("ii~Sleep,NtDelayExecution"),
         "Sleep/Delay Calls",
         "Sleep or delay functions found (sandbox evasion)",
         "functions",

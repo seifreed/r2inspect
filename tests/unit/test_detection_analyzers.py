@@ -56,7 +56,7 @@ def test_anti_analysis_detects_multiple_indicators():
             "/aa fs:[0x30]": "0x401000",
             "/aa rdtsc": "0x401010",
             "/aa cpuid": "0x401020",
-            "ii~Sleep,Delay": "Sleep",
+            "ii~Sleep,NtDelayExecution": "Sleep",
             "ii~FindFirst,Process32,Module32": "Process32First",
         },
         cmdj_map={
