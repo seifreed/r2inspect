@@ -74,6 +74,9 @@ class R2PipeAdapter(R2PipeQueryMixin):
         self._map_bytes_resolved: bool = False
         self._map_bytes: list[tuple[int, bytes]] | None = None
         self._file_backed_maps_resolved: bool = False
+        # Logged once when the whole-file string scan (izzj) is downgraded to the
+        # sections-only scan (izj) on an oversized binary; see get_strings.
+        self._overlay_strings_skipped_logged: bool = False
         logger.debug("R2PipeAdapter initialized successfully")
 
     def cmd(self, command: str) -> str:

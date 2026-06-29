@@ -17,6 +17,15 @@ LARGE_FILE_THRESHOLD_MB = 2  # Above this: use standard analysis (aa)
 VERY_LARGE_FILE_THRESHOLD_MB = 10  # Above this: use minimal analysis (aa)
 HUGE_FILE_THRESHOLD_MB = 50  # Above this: skip automatic analysis
 
+# Above this size the whole-file string scan (izzj) -- which includes a PE/ELF
+# overlay -- is replaced by the sections-only scan (izj) for the internal
+# string consumers (compiler/simhash/bindiff/exploit-mitigation). An overlay-
+# heavy 287MB binary returns ~373MB of izzj strings and peaks ~4.6GB RAM. File
+# size is a heuristic proxy for overlay-heaviness; tunable via
+# R2INSPECT_STRING_SCAN_THRESHOLD_MB. The JSON `strings` output field is
+# unaffected (it already uses izj sections).
+OVERLAY_STRING_SCAN_THRESHOLD_MB = 100
+
 # =============================================================================
 # Entropy Analysis Constants
 # =============================================================================
@@ -107,6 +116,7 @@ __all__ = [
     "LARGE_FILE_THRESHOLD_MB",
     "VERY_LARGE_FILE_THRESHOLD_MB",
     "HUGE_FILE_THRESHOLD_MB",
+    "OVERLAY_STRING_SCAN_THRESHOLD_MB",
     # Entropy analysis
     "HIGH_ENTROPY_THRESHOLD",
     "MAX_ENTROPY",

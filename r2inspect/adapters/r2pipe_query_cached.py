@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 if TYPE_CHECKING:
     from ..interfaces.core import R2CommandInterface
 
+from ..domain.constants import OVERLAY_STRING_SCAN_THRESHOLD_MB
 from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,6 +22,7 @@ class R2PipeCachedQueryMixin:
     _cache: dict[str, Any]  # provided by host class
     _safe_cached_query: Any  # provided by host class
     _cached_query: Any  # provided by host class
+    _overlay_strings_skipped_logged: bool  # provided by host class
 
     @property
     def _r2_iface(self) -> R2CommandInterface:
@@ -115,7 +118,40 @@ class R2PipeCachedQueryMixin:
             ),
         )
 
+    def _overlay_string_scan_threshold_mb(self) -> float:
+        env = os.environ.get("R2INSPECT_STRING_SCAN_THRESHOLD_MB")
+        if env:
+            try:
+                return float(env)
+            except ValueError:
+                pass
+        return float(OVERLAY_STRING_SCAN_THRESHOLD_MB)
+
+    def _string_scan_uses_sections(self) -> bool:
+        """Whether to scan only sections (izj) instead of the whole file (izzj).
+
+        Above the threshold the whole-file scan over a large overlay returns
+        hundreds of MB of strings and balloons RAM; fall back to the bounded
+        sections-only scan. File size proxies overlay-heaviness here.
+        """
+        core = self.get_file_info().get("core", {})
+        size = core.get("size") if isinstance(core, dict) else None
+        if not isinstance(size, int) or size <= 0:
+            return False
+        return size / (1024 * 1024) > self._overlay_string_scan_threshold_mb()
+
     def get_strings(self) -> list[dict[str, Any]]:
+        if self._string_scan_uses_sections():
+            if not self._overlay_strings_skipped_logged:
+                self._overlay_strings_skipped_logged = True
+                logger.warning(
+                    "Binary exceeds the %.0f MB string-scan threshold; using "
+                    "sections-only strings (izj) instead of the whole-file scan "
+                    "(izzj) to bound memory. Overlay strings are excluded from "
+                    "compiler/simhash/bindiff analysis.",
+                    self._overlay_string_scan_threshold_mb(),
+                )
+            return self.get_strings_basic()
         return cast(
             list[dict[str, Any]],
             self._safe_cached_query(
