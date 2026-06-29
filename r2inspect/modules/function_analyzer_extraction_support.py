@@ -98,6 +98,11 @@ def try_pdfj_extraction(
     analyzer: FunctionExtractionHost, func_name: str, func_addr: int, logger: logging.Logger
 ) -> list[str]:
     try:
+        adapter = analyzer.adapter
+        if adapter is not None and hasattr(adapter, "get_function_mnemonics"):
+            # Shared per-function mnemonic cache: one pdfj pass reused across the
+            # similarity analyzers. Empty -> fall back to the pdj/pi chain.
+            return list(adapter.get_function_mnemonics(func_addr))
         ops_source = extract_pdfj_ops(analyzer, func_addr)
         if ops_source:
             logger.debug("pdfj succeeded for %s, got %s instructions", func_name, len(ops_source))

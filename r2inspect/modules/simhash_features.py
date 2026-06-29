@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from ..abstractions.coercion_support import coerce_dict_iterable, coerce_int
+from ..domain.services.simhash import opcode_features_from_mnemonics
 from .function_analyzer_machoc_support import _function_name
 from .simhash_support import SimHashHost
 
@@ -108,13 +109,23 @@ def extract_function_opcodes(
     host: SimHashHost, func_addr: int, func_name: str, *, logger: logging.Logger
 ) -> list[str]:
     try:
-        if host.adapter is None or not hasattr(host.adapter, "get_disasm"):
+        adapter = host.adapter
+        if adapter is None or not hasattr(adapter, "get_disasm"):
             return []
-        disasm = host.adapter.get_disasm(address=func_addr)
-        ops = host._extract_ops_from_disasm(disasm)
-        if ops:
-            return host._extract_opcodes_from_ops(ops)
-        disasm_range = host.adapter.get_disasm(
+        if hasattr(adapter, "get_function_mnemonics"):
+            # Shared per-function mnemonic cache: reuse the single pdfj pass.
+            raw = adapter.get_function_mnemonics(func_addr)
+            if raw:
+                return opcode_features_from_mnemonics(
+                    list(raw), max_instructions=host.max_instructions_per_function
+                )
+        else:
+            disasm = adapter.get_disasm(address=func_addr)
+            ops = host._extract_ops_from_disasm(disasm)
+            if ops:
+                return host._extract_opcodes_from_ops(ops)
+        # pdfj yielded nothing (or no shared cache): size-limited pdj fallback.
+        disasm_range = adapter.get_disasm(
             address=func_addr, size=host.max_instructions_per_function
         )
         ops = host._extract_ops_from_disasm(disasm_range)

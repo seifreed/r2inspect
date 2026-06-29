@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+import sys
+import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 if TYPE_CHECKING:
     from ..interfaces.core import R2CommandInterface
 
-from ..domain.constants import OVERLAY_STRING_SCAN_THRESHOLD_MB
+from ..domain.constants import MNEMONIC_CACHE_MAX_ENTRIES, OVERLAY_STRING_SCAN_THRESHOLD_MB
+from ..domain.services.function_analysis import extract_mnemonics_from_ops
 from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -23,6 +26,9 @@ class R2PipeCachedQueryMixin:
     _safe_cached_query: Any  # provided by host class
     _cached_query: Any  # provided by host class
     _overlay_strings_skipped_logged: bool  # provided by host class
+    _mnemonic_cache: dict[int, tuple[str, ...]]  # provided by host class
+    _cache_lock: threading.Lock  # provided by host class
+    _env_int: Any  # provided by host class
 
     @property
     def _r2_iface(self) -> R2CommandInterface:
@@ -224,6 +230,27 @@ class R2PipeCachedQueryMixin:
         except Exception as exc:
             logger.exception("Error retrieving CFG for '%s': %s", cmd, exc)
             return []
+
+    def get_function_mnemonics(self, address: int) -> tuple[str, ...]:
+        """Raw ordered mnemonics for the function at ``address`` from one ``pdfj``
+        pass, cached compactly so the similarity analyzers share a single
+        disassembly. Returns an empty tuple when pdfj yields no ops, so the
+        caller falls back to its own pdj/pi chain (byte-identical there)."""
+        with self._cache_lock:
+            cached = self._mnemonic_cache.get(address)
+        if cached is not None:
+            return cached
+        disasm = self.get_disasm(address=address)
+        ops = disasm.get("ops", []) if isinstance(disasm, dict) else []
+        mnemonics = tuple(sys.intern(m) for m in extract_mnemonics_from_ops(ops))
+        with self._cache_lock:
+            if address not in self._mnemonic_cache:
+                max_entries = self._env_int(
+                    "R2INSPECT_MNEMONIC_CACHE_MAX_ENTRIES", MNEMONIC_CACHE_MAX_ENTRIES
+                )
+                if len(self._mnemonic_cache) < max_entries:
+                    self._mnemonic_cache[address] = mnemonics
+        return mnemonics
 
     def get_strings_basic(self) -> list[dict[str, Any]]:
         return cast(

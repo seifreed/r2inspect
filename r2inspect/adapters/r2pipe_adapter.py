@@ -52,6 +52,11 @@ class R2PipeAdapter(R2PipeQueryMixin):
         # similarity analyzers share one disassembly pass; kept apart from the
         # unbounded _cache so it can be size-gated and cleared independently.
         self._disasm_cache: dict[str, CommandOutput] = {}
+        # Compact shared per-function mnemonic cache: raw mnemonic tuples are
+        # ~100x smaller than full pdfj JSON, so the similarity analyzers can
+        # share one disassembly pass even on dense binaries where _disasm_cache
+        # is gated off. Cleared alongside _disasm_cache.
+        self._mnemonic_cache: dict[int, tuple[str, ...]] = {}
         self._disasm_cache_enabled: bool | None = None
         self._cache_lock = threading.Lock()
         self._fault_injector = fault_injector
@@ -160,6 +165,7 @@ class R2PipeAdapter(R2PipeQueryMixin):
     def clear_disasm_cache(self) -> None:
         with self._cache_lock:
             self._disasm_cache.clear()
+            self._mnemonic_cache.clear()
 
     def _cached_query(
         self,

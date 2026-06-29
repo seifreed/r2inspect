@@ -14,6 +14,7 @@ from ..domain.services.binlex import (
     calculate_binary_signature,
     extract_tokens_from_ops,
     extract_tokens_from_text,
+    normalize_mnemonic,
 )
 
 
@@ -84,9 +85,18 @@ def run_binlex_analysis(
 def extract_tokens_from_pdfj(
     analyzer: BinlexHost, func_addr: int, func_name: str, *, logger: logging.Logger
 ) -> list[str]:
+    adapter = analyzer.adapter
+    if adapter is not None and hasattr(adapter, "get_function_mnemonics"):
+        # Shared per-function mnemonic cache: normalize the raw tokens on top,
+        # reproducing extract_tokens_from_ops. Empty -> fall back to pdj/text.
+        raw = adapter.get_function_mnemonics(func_addr)
+        tokens = [token for mnemonic in raw if (token := normalize_mnemonic(mnemonic))]
+        if tokens:
+            logger.debug("Extracted %s tokens from %s using pdfj", len(tokens), func_name)
+        return tokens
     disasm = (
-        analyzer.adapter.get_disasm(address=func_addr)
-        if analyzer.adapter is not None and hasattr(analyzer.adapter, "get_disasm")
+        adapter.get_disasm(address=func_addr)
+        if adapter is not None and hasattr(adapter, "get_disasm")
         else analyzer._cmdj("pdfj", {})
     )
     if not isinstance(disasm, dict) or "ops" not in disasm:

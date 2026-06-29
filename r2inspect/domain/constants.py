@@ -77,6 +77,12 @@ HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS = 300
 # binaries where aa already succeeds and aaa would be slow.
 MIN_AA_FUNCTIONS_BEFORE_DEEP = 50
 
+# Cap on the shared per-function mnemonic cache (raw mnemonic tuples are ~100x
+# smaller than full pdfj JSON, so this can hold all functions of even a dense
+# binary -- ~80k -- where the full-disasm cache is gated off). Override with
+# R2INSPECT_MNEMONIC_CACHE_MAX_ENTRIES.
+MNEMONIC_CACHE_MAX_ENTRIES = 200000
+
 # =============================================================================
 # Per-function disassembly cache (shared across similarity analyzers)
 # =============================================================================
@@ -134,6 +140,7 @@ __all__ = [
     "SUBPROCESS_TIMEOUT_SECONDS",
     "HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS",
     "MIN_AA_FUNCTIONS_BEFORE_DEEP",
+    "MNEMONIC_CACHE_MAX_ENTRIES",
     # Disassembly cache
     "DISASM_CACHE_MAX_FUNCS",
     "DISASM_CACHE_MAX_ENTRIES",

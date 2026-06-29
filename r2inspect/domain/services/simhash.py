@@ -142,6 +142,23 @@ def classify_opcode_type(mnemonic: str | Any) -> str:
     return "other"
 
 
+def opcode_features_from_mnemonics(mnemonics: list[str], *, max_instructions: int) -> list[str]:
+    """Build OP:/OPTYPE: features from a raw mnemonic sequence (the shared
+    per-function mnemonic cache). Equivalent to extract_opcodes_from_ops on
+    radare2's pdfj output, where ops carry no ``mnemonic`` field so the BIGRAM
+    branch (which keys off that field) never fires."""
+    features: list[str] = []
+    for i, raw in enumerate(mnemonics):
+        if i >= max_instructions:
+            break
+        mnemonic = raw.strip().lower()
+        if not mnemonic:
+            continue
+        features.append(f"OP:{mnemonic}")
+        features.append(f"OPTYPE:{classify_opcode_type(mnemonic)}")
+    return features
+
+
 def extract_opcodes_from_ops(ops: list[Any], *, max_instructions: int) -> list[str]:
     opcodes: list[str] = []
     for i, op in enumerate(ops):
