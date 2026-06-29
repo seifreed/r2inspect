@@ -84,7 +84,12 @@ CORE_COMPILER_SIGNATURES = {
         "symbols": [],
     },
     "Delphi": {
-        "strings": [r"Delphi", r"Borland.*Delphi"],
+        # Bare "Delphi" / "Borland.*Delphi" matched DWARF debug-constant names
+        # (DW_TAG_BORLAND_Delphi_*, baked into any binary bundling an LLVM/libdwarf
+        # tag table) and incidental words like "Delphine"/"Adelphi" -> false
+        # Delphi on non-Delphi binaries. Anchor to whole-word Delphi (optionally
+        # version-suffixed) and the space-separated Borland Delphi copyright.
+        "strings": [r"\bDelphi\d*\b", r"Borland Delphi"],
         "imports": ["rtl*.bpl"],
         # .itext is Delphi-distinctive; .bss is universal (present in nearly
         # every ELF/PE) and made Delphi the lone non-zero score on stripped,
@@ -152,7 +157,9 @@ CORE_COMPILER_SIGNATURES = {
         "symbols": [],
     },
     "Delphi (VCL)": {
-        "strings": [r"Vcl\.\w+", r"Borland.{0,4}Delphi"],
+        # Borland.{0,4}Delphi also matched DW_*_BORLAND_Delphi_* DWARF names;
+        # use the space-separated copyright string instead.
+        "strings": [r"Vcl\.\w+", r"Borland Delphi"],
         "imports": [],
         "sections": [],
         "symbols": [],

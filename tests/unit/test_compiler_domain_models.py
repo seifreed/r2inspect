@@ -58,6 +58,32 @@ class TestCalculateCompilerScore:
         )
         assert score > 0.5
 
+    def test_delphi_signature_no_false_positive_on_dwarf_tag_names(self):
+        """DWARF debug-constant names (DW_*_BORLAND_Delphi_*) and incidental words
+        like 'Delphine'/'Adelphi' must not score Delphi. These appear in any binary
+        bundling a libdwarf/LLVM tag table. Regression for false Delphi on a
+        clang/Obj-C Mach-O."""
+        from r2inspect.modules.compiler_signatures_core import CORE_COMPILER_SIGNATURES
+
+        noise = [
+            "DW_TAG_BORLAND_Delphi_string",
+            "DW_AT_BORLAND_Delphi_class",
+            "DW_LANG_BORLAND_Delphi",
+            "Delphine Software International CIN video",
+            "Adelphi University",
+        ]
+        for key in ("Delphi", "Delphi (VCL)"):
+            sig = CORE_COMPILER_SIGNATURES[key]
+            assert calculate_compiler_score(sig, noise, [], [".text", ".data"], []) == 0.0
+
+    def test_delphi_signature_detects_real_delphi_strings(self):
+        """Real Delphi markers — version-suffixed and copyright forms — still score."""
+        from r2inspect.modules.compiler_signatures_core import CORE_COMPILER_SIGNATURES
+
+        delphi = CORE_COMPILER_SIGNATURES["Delphi"]
+        for real in ("Borland Delphi 7.0", r"C:\Program Files\Borland\Delphi5", "Delphi7"):
+            assert calculate_compiler_score(delphi, [real], [], [], []) > 0.0
+
     def test_dotnet_signature_no_false_positive_from_text_section(self):
         """`.text` is in every binary and must not, on its own, score DotNet.
         Regression for DotNet false-positiving on any binary with a .text section."""
