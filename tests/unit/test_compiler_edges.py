@@ -168,6 +168,25 @@ def test_apply_best_compiler_garbage_tie_falls_back_to_corroborated():
     assert results["confidence"] == 0.5
 
 
+def test_apply_best_compiler_two_string_only_tie_falls_back_to_corroborated():
+    detector = _make_detector()
+    results: dict = {}
+
+    # A .NET assembly's metadata contains the bare words "Pascal"/"Swift", which
+    # tie at 1.0 (below the 3-way noise threshold) above the real corroborated
+    # DotNet at 0.667. The corroborated candidate must win, not the bare words.
+    detector._apply_best_compiler(
+        results,
+        {"Pascal": 1.0, "Swift": 1.0, "DotNet": 0.667},
+        [],
+        [],
+        "PE",
+    )
+
+    assert results["compiler"] == "DotNet"
+    assert results["confidence"] == 0.667
+
+
 def test_apply_best_compiler_string_only_winner_capped():
     detector = _make_detector()
     results: dict = {}
