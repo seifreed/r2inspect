@@ -47,6 +47,8 @@ def add_simple_evidence(
     detail_prefix: str,
     field: str,
     limit: int,
+    *,
+    weak: bool = False,
 ) -> None:
     if not isinstance(checks, str) or not checks.strip():
         return
@@ -54,14 +56,20 @@ def add_simple_evidence(
     if not isinstance(evidence, list):
         evidence = []
         result["evidence"] = evidence
-    result["detected"] = True
+    # Weak (informational) matches are recorded but must not flip the verdict on
+    # their own -- e.g. a lone Sleep import is in nearly every program.
+    if not weak:
+        result["detected"] = True
     items = checks.strip().split("\n")[:limit]
     detail = (
         f"{detail_prefix} at {len(checks.strip().splitlines())} locations"
         if field == "addresses"
         else detail_prefix
     )
-    evidence.append({"type": evidence_type, "detail": detail, field: items})
+    entry: dict[str, Any] = {"type": evidence_type, "detail": detail, field: items}
+    if weak:
+        entry["weak"] = True
+    evidence.append(entry)
 
 
 def count_opcode_occurrences(search_fn: Callable[[str], str], pattern: str) -> int:

@@ -229,9 +229,13 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
         # ordinary binaries and have nothing to do with sandbox-evasion sleeps.
         detector._cmd("ii~Sleep,NtDelayExecution"),
         "Sleep/Delay Calls",
-        "Sleep or delay functions found (sandbox evasion)",
+        "Sleep or delay functions found (informational)",
         "functions",
         3,
+        # Sleep/NtDelayExecution are in nearly every program; sandbox evasion uses
+        # a LONG sleep to outlast the analysis window, which a bare import can't
+        # show. Keep as informational rather than asserting anti-sandbox.
+        weak=True,
     )
     add_simple_evidence(
         result,

@@ -129,6 +129,20 @@ def test_anti_vm_with_vmware_strings():
     )
 
 
+def test_sleep_import_alone_does_not_assert_anti_sandbox():
+    """A lone Sleep import is in nearly every program; informational only."""
+    detector = _make_detector(cmd_map={"ii~Sleep,NtDelayExecution": "0x1 Sleep"})
+    result = detector.detect()
+
+    assert result["anti_sandbox"] is False
+    sleep_ev = [
+        e
+        for e in result["detection_details"]["anti_sandbox_evidence"]
+        if e.get("type") == "Sleep/Delay Calls"
+    ]
+    assert sleep_ev and sleep_ev[0].get("weak") is True
+
+
 def test_cpuid_alone_does_not_assert_anti_vm():
     """CPUID is benign CPU-feature detection; on its own it is informational and
     must not flip anti_vm (regression for goodware flagged via stray CPUID)."""
