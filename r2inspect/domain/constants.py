@@ -77,6 +77,14 @@ HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS = 300
 # binaries where aa already succeeds and aaa would be slow.
 MIN_AA_FUNCTIONS_BEFORE_DEEP = 50
 
+# radare2's native `anal.timeout` stops aa/aaa in C at the budget and returns
+# the partial results found so far. The Python-thread soft timeout that wraps
+# the command must sit ABOVE that budget, or it fires first, reports failure,
+# and forces a safe-mode reopen that throws those partial results away. This
+# margin gives radare2 room to wind down the in-flight function after the
+# native deadline before the soft backstop trips.
+ANAL_TIMEOUT_SOFT_MARGIN_SECONDS = 60
+
 # Cap on the shared per-function mnemonic cache (raw mnemonic tuples are ~100x
 # smaller than full pdfj JSON, so this can hold all functions of even a dense
 # binary -- ~80k -- where the full-disasm cache is gated off). Override with
@@ -140,6 +148,7 @@ __all__ = [
     "SUBPROCESS_TIMEOUT_SECONDS",
     "HUGE_FILE_ANALYSIS_TIMEOUT_SECONDS",
     "MIN_AA_FUNCTIONS_BEFORE_DEEP",
+    "ANAL_TIMEOUT_SOFT_MARGIN_SECONDS",
     "MNEMONIC_CACHE_MAX_ENTRIES",
     # Disassembly cache
     "DISASM_CACHE_MAX_FUNCS",

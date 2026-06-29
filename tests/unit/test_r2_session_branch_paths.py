@@ -569,7 +569,10 @@ def test_perform_initial_analysis_huge_file_escalates_to_aaa_when_aa_finds_few()
 
     assert result is True
     assert [cmd for cmd, _ in ran] == ["aa", "aaa"]
-    assert ran[0][1] == session._get_extended_analysis_timeout()
+    from r2inspect.domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS
+
+    expected = session._get_extended_analysis_timeout() + ANAL_TIMEOUT_SOFT_MARGIN_SECONDS
+    assert ran[0][1] == expected
 
 
 def test_perform_initial_analysis_huge_file_skips_aaa_when_aa_finds_enough():
@@ -589,7 +592,50 @@ def test_perform_initial_analysis_huge_file_skips_aaa_when_aa_finds_enough():
 
     assert result is True
     assert [cmd for cmd, _ in ran] == ["aa"]
-    assert ran[0][1] == session._get_extended_analysis_timeout()
+    from r2inspect.domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS
+
+    expected = session._get_extended_analysis_timeout() + ANAL_TIMEOUT_SOFT_MARGIN_SECONDS
+    assert ran[0][1] == expected
+
+
+class _RecordingR2:
+    """Fake that records every cmd and reports a fixed aflc function count."""
+
+    def __init__(self, func_count: int) -> None:
+        self._func_count = func_count
+        self.commands: list[str] = []
+
+    def cmd(self, command: str) -> str:
+        self.commands.append(command)
+        if command.strip() == "aflc":
+            return str(self._func_count)
+        return ""
+
+    def quit(self) -> None:
+        pass
+
+
+def test_perform_initial_analysis_huge_file_sets_native_anal_timeout():
+    """Huge file: radare2's native anal.timeout is set so aa is bounded in C.
+
+    The Python-thread soft timeout cannot interrupt a running aa, so without the
+    native bound a dense huge binary runs away past the budget and wedges.
+    """
+    session = R2Session("/tmp/test")
+    r2 = _RecordingR2(func_count=10717)
+    session.r2 = r2
+    session._test_mode = False
+    os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
+
+    def mock_run(cmd: str, timeout: float) -> bool:
+        return True
+
+    session._run_cmd_with_timeout = mock_run
+    result = session._perform_initial_analysis(file_size_mb=99999.0)
+
+    assert result is True
+    budget = int(session._get_extended_analysis_timeout())
+    assert f"e anal.timeout={budget}" in r2.commands
 
 
 def test_perform_initial_analysis_aa_timeout_returns_false():

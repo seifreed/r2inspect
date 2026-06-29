@@ -8,7 +8,7 @@ import threading
 import time
 from typing import Any
 
-from ..domain.constants import MIN_AA_FUNCTIONS_BEFORE_DEEP
+from ..domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS, MIN_AA_FUNCTIONS_BEFORE_DEEP
 from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
 
@@ -127,10 +127,21 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
             # use the generous bounded timeout across the whole large+huge path,
             # not just huge -- the short default wedges slow mid-size analyses
             # (timeout -> reopen in safe mode -> almost no functions).
-            timeout = session._get_extended_analysis_timeout()
-            ran = bool(session._run_cmd_with_timeout("aa", timeout))
+            budget = session._get_extended_analysis_timeout()
+            # Bind aa/aaa with radare2's native anal.timeout. The Python-thread
+            # soft timeout cannot interrupt a running aa, so a dense huge binary
+            # would otherwise run away past the budget and wedge the r2 pipe
+            # (infinite hang + 100% CPU). The native config stops analysis in C
+            # and returns the partial results found within the budget. The soft
+            # timeout stays as a backstop but is given headroom above the native
+            # budget so radare2 self-terminates and keeps its partial results,
+            # rather than the soft timeout tripping first and forcing a
+            # safe-mode reopen that discards them.
+            session.r2.cmd(f"e anal.timeout={int(budget)}")
+            soft_timeout = budget + ANAL_TIMEOUT_SOFT_MARGIN_SECONDS
+            ran = bool(session._run_cmd_with_timeout("aa", soft_timeout))
             if ran and _count_functions(session) < MIN_AA_FUNCTIONS_BEFORE_DEEP:
-                session._run_cmd_with_timeout("aaa", timeout)
+                session._run_cmd_with_timeout("aaa", soft_timeout)
             return ran
 
         return bool(

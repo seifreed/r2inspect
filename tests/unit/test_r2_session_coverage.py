@@ -13,6 +13,17 @@ import pytest
 from r2inspect.infrastructure.r2_session import R2Session
 
 
+class _AnalTimeoutR2:
+    """Minimal r2 fake: accepts cmd (e.g. ``e anal.timeout=...``) and reports
+    zero functions so the aa -> aaa escalation path stays exercised."""
+
+    def cmd(self, command: str) -> str:
+        return "0"
+
+    def quit(self) -> None:
+        pass
+
+
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
@@ -374,11 +385,11 @@ def test_perform_initial_analysis_depth_zero_skips():
 
 
 def test_perform_initial_analysis_huge_file_runs_aa():
-    # object() has no cmd(), so _count_functions hits AttributeError -> 0, which
-    # is below the escalation threshold, so aaa runs after aa.
+    # aflc reports 0 functions, which is below the escalation threshold, so aaa
+    # runs after aa.
     ran_commands = []
     session = R2Session("/tmp/test")
-    session.r2 = object()
+    session.r2 = _AnalTimeoutR2()
     session._test_mode = True
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 
@@ -397,7 +408,7 @@ def test_perform_initial_analysis_test_mode_uses_aa():
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 
     session = R2Session("/tmp/test")
-    session.r2 = object()
+    session.r2 = _AnalTimeoutR2()
     session._test_mode = True
 
     def mock_run_cmd(cmd, timeout):
@@ -601,7 +612,7 @@ def test_perform_initial_analysis_aa_command_times_out():
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 
     session = R2Session("/tmp/test")
-    session.r2 = object()
+    session.r2 = _AnalTimeoutR2()
     session._test_mode = True
     # Simulate aa timeout
     session._run_cmd_with_timeout = lambda cmd, timeout: False
@@ -624,7 +635,7 @@ def test_perform_initial_analysis_large_file_uses_aa():
     os.environ.pop("R2INSPECT_ANALYSIS_DEPTH", None)
 
     session = R2Session("/tmp/test")
-    session.r2 = object()
+    session.r2 = _AnalTimeoutR2()
     session._test_mode = False
 
     def mock_run_cmd(cmd, timeout):
