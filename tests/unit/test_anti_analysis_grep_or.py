@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.domain.formats.anti_analysis import ENVIRONMENT_CHECK_COMMANDS
-from r2inspect.modules.anti_analysis import AntiAnalysisDetector, detect_api_hashing
+from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -57,27 +57,6 @@ def test_import_based_env_commands_use_comma_not_pipe():
     for cmd in import_cmds:
         assert "|" not in cmd
         assert "," in cmd
-
-
-def test_api_hashing_detects_via_crc32_term():
-    # crc32 was dead under the old "iz~hash|iz~crc32" shell pipe; comma-OR enables it.
-    def cmd(command: str) -> str:
-        return "0x1 crc32_table" if command == "iz~hash,crc32,fnv" else ""
-
-    result = detect_api_hashing(cmd)
-    assert result
-    assert result[0]["technique"] == "API Hashing"
-
-
-def test_api_hashing_issues_single_comma_or_command():
-    issued: list[str] = []
-
-    def cmd(command: str) -> str:
-        issued.append(command)
-        return ""
-
-    detect_api_hashing(cmd)
-    assert issued == ["iz~hash,crc32,fnv"]
 
 
 def test_environment_check_commands_drop_loose_iz_terms():

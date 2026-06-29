@@ -13,7 +13,6 @@ from r2inspect.modules.anti_analysis_helpers import (
     add_simple_evidence,
     collect_artifact_strings,
     count_opcode_occurrences,
-    detect_api_hashing,
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
@@ -438,18 +437,14 @@ def test_anti_analysis_helpers_real() -> None:
     assert count_opcode_occurrences(_search_fn, "jmp") == 101
     assert detect_obfuscation(_search_fn)
 
-    def _cmd_fn(command: str) -> str:
-        if "iz~hash" in command:
-            return "hash"
-        return ""
-
-    assert detect_api_hashing(_cmd_fn)
-
     imports = [{"name": "CreateRemoteThread"}, {"name": "WriteProcessMemory"}]
     assert detect_injection_apis(imports, {"CreateRemoteThread", "WriteProcessMemory"})
 
     match = match_suspicious_api({"name": "VirtualAlloc", "plt": 32}, {"mem": ["Virtual"]})
     assert match and match["address"] == "0x20"
+
+    def _cmd_fn(command: str) -> str:
+        return ""
 
     env_checks = detect_environment_checks(_cmd_fn, [("cmd", "type", "desc")])
     assert env_checks == []

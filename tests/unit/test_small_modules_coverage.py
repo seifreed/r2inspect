@@ -617,7 +617,6 @@ from r2inspect.modules.anti_analysis_helpers import (
     add_simple_evidence,
     collect_artifact_strings,
     count_opcode_occurrences,
-    detect_api_hashing,
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
@@ -737,29 +736,6 @@ def test_detect_obfuscation_low_count():
 
     result = detect_obfuscation(search)
     assert result == []
-
-
-def test_detect_api_hashing_detected():
-    def cmd(pattern):
-        return "crc32 hash found"
-
-    result = detect_api_hashing(cmd)
-    assert len(result) == 1
-    assert result[0]["technique"] == "API Hashing"
-
-
-def test_detect_api_hashing_none():
-    def cmd(pattern):
-        return ""
-
-    assert detect_api_hashing(cmd) == []
-
-
-def test_detect_api_hashing_non_string_output():
-    def cmd(pattern):
-        return None  # type: ignore[return-value]
-
-    assert detect_api_hashing(cmd) == []
 
 
 def test_detect_injection_apis_threshold():

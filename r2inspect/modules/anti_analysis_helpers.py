@@ -103,22 +103,6 @@ def detect_obfuscation(
     return techniques
 
 
-def detect_api_hashing(cmd_fn: Callable[[str], str]) -> list[dict[str, Any]]:
-    # r2's ~ grep ORs keywords with ',' -- '|' is a shell pipe, so the old
-    # "iz~hash|iz~crc32|iz~fnv" only ever matched "hash". crc32/fnv are
-    # distinctive enough to enable; comma-OR restores them.
-    hash_patterns = cmd_fn("iz~hash,crc32,fnv")
-    if has_text(hash_patterns):
-        return [
-            {
-                "technique": "API Hashing",
-                "description": "Hash-based API resolution detected",
-                "severity": "Medium",
-            }
-        ]
-    return []
-
-
 def detect_injection_apis(
     imports: list[dict[str, Any]] | None, injection_apis: set[str]
 ) -> list[dict[str, Any]]:

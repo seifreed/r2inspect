@@ -73,7 +73,6 @@ FULL_STRINGS = [
 FULL_CMD_MAP: dict[str, str] = {
     "ii~Sleep,NtDelayExecution": "Sleep",
     "ii~FindFirst,Process32,Module32": "FindFirstFileA",
-    "iz~hash,crc32,fnv": "",
     # Environment check commands from domain
     "iz~GetUserName": "",
     "iz~GetComputerName": "",

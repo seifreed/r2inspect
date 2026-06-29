@@ -28,7 +28,6 @@ from ..domain.formats.anti_analysis import (
 from .anti_analysis_helpers import (
     add_simple_evidence,
     collect_artifact_strings,
-    detect_api_hashing,
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
@@ -215,7 +214,6 @@ __all__ = [
     "TIMING_APIS",
     "add_simple_evidence",
     "collect_artifact_strings",
-    "detect_api_hashing",
     "detect_environment_checks",
     "detect_injection_apis",
     "detect_obfuscation",

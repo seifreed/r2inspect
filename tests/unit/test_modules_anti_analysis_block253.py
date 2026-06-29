@@ -49,8 +49,6 @@ class DummyAdapter:
             return "FindFirst"
         if command.startswith("/aa mov"):
             return "mov cs"
-        if command.startswith("iz~hash"):
-            return "hash"
         if command.startswith("iz~GetUserName") or command.startswith("iz~USER"):
             return "user"
         if command.startswith("iz~GetComputerName") or command.startswith("iz~COMPUTERNAME"):

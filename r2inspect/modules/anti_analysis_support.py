@@ -17,7 +17,6 @@ from ..domain.text_helpers import has_text
 from .anti_analysis_helpers import (
     add_simple_evidence,
     collect_artifact_strings,
-    detect_api_hashing,
     detect_environment_checks,
     detect_injection_apis,
     detect_obfuscation,
@@ -232,7 +231,6 @@ def detect_anti_sandbox(detector: Any) -> dict[str, Any]:
 def detect_evasion_techniques(detector: Any) -> list[dict[str, Any]]:
     techniques: list[dict[str, Any]] = []
     techniques.extend(detect_obfuscation(detector._search_opcode))
-    techniques.extend(detect_api_hashing(detector._cmd))
     techniques.extend(detect_injection_apis(detector._get_imports(), set(INJECTION_APIS)))
     return techniques
 
