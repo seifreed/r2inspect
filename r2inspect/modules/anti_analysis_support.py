@@ -11,6 +11,7 @@ from ..domain.formats.anti_analysis import (
     INJECTION_APIS,
     SUSPICIOUS_API_CATEGORIES,
     TIMING_APIS,
+    VM_MAC_OUIS,
 )
 from ..domain.text_helpers import has_text
 from .anti_analysis_helpers import (
@@ -178,14 +179,16 @@ def detect_anti_vm(detector: Any) -> dict[str, Any]:
         "addresses",
         3,
     )
-    add_simple_evidence(
-        result,
-        detector._cmd("iz~mac"),
-        "MAC Address Query",
-        "MAC address strings found (VM fingerprinting)",
-        "strings",
-        3,
-    )
+    mac_strings = collect_artifact_strings(detector._get_strings(), VM_MAC_OUIS)
+    if mac_strings:
+        result["detected"] = True
+        result["evidence"].append(
+            {
+                "type": "MAC Address Query",
+                "detail": "VM-vendor MAC address prefixes found (VM fingerprinting)",
+                "strings": mac_strings[:5],
+            }
+        )
     return result
 
 

@@ -71,7 +71,6 @@ FULL_STRINGS = [
 # These go through _cmd_fallback -> r2.cmd() since _maybe_use_adapter
 # doesn't intercept them as simple base calls.
 FULL_CMD_MAP: dict[str, str] = {
-    "iz~mac": "mac_address",
     "ii~Sleep,NtDelayExecution": "Sleep",
     "ii~FindFirst,Process32,Module32": "FindFirstFileA",
     "iz~hash,crc32,fnv": "",

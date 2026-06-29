@@ -36,6 +36,22 @@ VM_ARTIFACTS = [
     "vhd",
 ]
 
+# VM-vendor MAC-address OUI prefixes (colon form). A binary that hardcodes one
+# of these is fingerprinting the host NIC to spot a hypervisor. Matched with
+# word boundaries, NOT a bare "mac" substring -- that hit benign tokens like
+# "machine", "dl-machine", "hmac"/"hmac.HMAC", and "Cinemachine".
+VM_MAC_OUIS = [
+    "00:05:69",  # VMware
+    "00:0c:29",  # VMware
+    "00:1c:14",  # VMware
+    "00:50:56",  # VMware
+    "08:00:27",  # VirtualBox
+    "00:15:5d",  # Hyper-V
+    "00:1c:42",  # Parallels
+    "00:16:3e",  # Xen
+    "52:54:00",  # QEMU / KVM
+]
+
 SANDBOX_INDICATORS = [
     "sample",
     "virus",

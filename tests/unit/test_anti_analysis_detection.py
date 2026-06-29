@@ -112,6 +112,40 @@ def test_anti_vm_with_vmware_strings():
     )
 
 
+def test_anti_vm_with_vm_mac_oui_string():
+    """A hardcoded VM-vendor MAC OUI prefix is real VM fingerprinting evidence."""
+    detector = _make_detector(
+        strings=[
+            {"string": "00:0c:29:5a:b1:c2", "vaddr": 0x3000, "type": "ascii", "section": ".data"},
+        ],
+    )
+    result = detector.detect()
+
+    assert result["anti_vm"] is True
+    assert any(
+        "MAC Address Query" in str(e) for e in result["detection_details"]["anti_vm_evidence"]
+    )
+
+
+def test_anti_vm_mac_no_false_positive_on_machine_hmac():
+    """'machine', 'hmac', 'dl-machine.h' etc. must not read as MAC-address VM
+    fingerprinting. Regression for benign Go/glibc/Unity binaries flagged
+    anti_vm by the old bare 'mac' substring grep."""
+    detector = _make_detector(
+        strings=[
+            {"string": "hmac.HMAC", "vaddr": 0x1000, "type": "ascii", "section": ".rodata"},
+            {"string": "../sysdeps/x86_64/dl-machine.h", "vaddr": 0x1100, "type": "ascii"},
+            {"string": "Cinemachine.dll", "vaddr": 0x1200, "type": "ascii"},
+        ],
+    )
+    result = detector.detect()
+
+    assert result["anti_vm"] is False
+    assert not any(
+        "MAC Address Query" in str(e) for e in result["detection_details"]["anti_vm_evidence"]
+    )
+
+
 def test_anti_vm_with_virtualbox_strings():
     detector = _make_detector(
         strings=[
