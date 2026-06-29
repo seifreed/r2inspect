@@ -42,8 +42,6 @@ VM_ARTIFACTS = [
     "fiddler",
     "regmon",
     "procmon",
-    "vmx",
-    "vhd",
 ]
 
 # VM-vendor MAC-address OUI prefixes (colon form). A binary that hardcodes one

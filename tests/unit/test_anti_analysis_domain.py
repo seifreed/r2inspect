@@ -76,9 +76,11 @@ def test_vm_artifacts_analysis_tools():
     assert "procmon" in VM_ARTIFACTS
 
 
-def test_vm_artifacts_file_extensions():
-    assert "vmx" in VM_ARTIFACTS
-    assert "vhd" in VM_ARTIFACTS
+def test_vm_artifacts_exclude_short_generic_tokens():
+    # "vmx"/"vhd" are 3-char tokens that match incidental data (e.g. "vmX",
+    # "vhD"), flagging goodware as anti-VM, so they must not be VM artifacts.
+    assert "vmx" not in VM_ARTIFACTS
+    assert "vhd" not in VM_ARTIFACTS
 
 
 def test_vm_artifacts_all_strings():
