@@ -161,6 +161,8 @@ jobs:
 
       - name: Run unit tests
         shell: bash
+        env:
+          R2INSPECT_TEST_MAX_CPU_SECONDS: "900"
         run: |
           python - <<'PY'
           import sys
@@ -180,6 +182,9 @@ jobs:
                   "r2pipe.open(",
                   "R2Session(str(",
                   "process_single_file(",
+                  "calculate_ccbhash_from_file(",
+                  "real_binary",
+                  "samples/fixtures/",
               )
               for test_file in sorted(Path("tests/unit").rglob("test_*.py")):
                   test_source = test_file.read_text(encoding="utf-8")
