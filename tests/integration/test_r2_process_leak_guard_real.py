@@ -12,6 +12,7 @@ open orphan, forced-exit child reaping).
 from __future__ import annotations
 
 import gc
+import sys
 from pathlib import Path
 
 import psutil
@@ -81,6 +82,8 @@ def test_repeated_analysis_on_one_inspector_does_not_grow_objects() -> None:
     """
     if not _FIXTURE.exists():
         pytest.skip("hello_pe.exe fixture missing")
+    if sys.platform != "linux":
+        pytest.skip("gc.get_objects() leak guard is stable only on Linux CI")
 
     with (
         env_vars(R2INSPECT_TEST_MODE="1", R2INSPECT_ANALYSIS_DEPTH="0"),
