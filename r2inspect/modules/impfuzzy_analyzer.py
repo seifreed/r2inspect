@@ -31,6 +31,7 @@ except ImportError:
         IMPFUZZY_AVAILABLE = True
         logger.debug("impfuzzy library available")
     except ImportError:
+        pyimpfuzzy = None
         IMPFUZZY_AVAILABLE = False
         logger.debug("impfuzzy library not available")
 
