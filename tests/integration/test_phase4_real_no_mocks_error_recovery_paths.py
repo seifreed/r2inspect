@@ -93,10 +93,18 @@ def test_phase4_binlex_real_token_extractors_and_recovery(samples_dir: Path) -> 
     combined = analyzer._extract_instruction_tokens(addr, str(first.get("name", "f")))
     assert isinstance(combined, list)
 
+    # Pick a function whose tokens were never extracted: the shared per-function
+    # mnemonic cache holds no entry for it, so a post-close read must reach r2
+    # (a cached function would still return its memoized tokens, by design).
+    uncached = functions[-1]
+    uncached_addr = uncached.get("addr")
+    assert isinstance(uncached_addr, int)
+    assert uncached_addr != addr
+
     session.close()
 
-    # Closed session path should fail safely.
-    recovered = analyzer._extract_instruction_tokens(addr, str(first.get("name", "f")))
+    # Closed session path (uncached function) should fail safely.
+    recovered = analyzer._extract_instruction_tokens(uncached_addr, str(uncached.get("name", "f")))
     assert recovered == []
 
 
