@@ -109,7 +109,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         )
     )
     for item in items:
-        if item.nodeid in _WINDOWS_NONPORTABLE_TESTS:
+        if item.nodeid.replace("\\", "/") in _WINDOWS_NONPORTABLE_TESTS:
             item.add_marker(skip_windows_nonportable)
 
 
