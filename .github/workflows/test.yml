@@ -178,7 +178,12 @@ jobs:
 
       - name: Export combined coverage
         run: |
-          coverage combine
+          # pytest-cov already collapses parallel data into .coverage, so a bare
+          # `coverage combine` aborts with "No data to combine". Only combine when
+          # parallel fragments are actually present, then emit the XML.
+          if ls .coverage.* >/dev/null 2>&1; then
+            coverage combine
+          fi
           coverage xml -o coverage.xml
 
       - name: Upload coverage reports to Codecov
