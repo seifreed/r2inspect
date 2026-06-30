@@ -82,6 +82,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          choco install -y radare2
           $zipUrl = "https://github.com/ssdeep-project/ssdeep/releases/download/release-2.14.1/ssdeep-2.14.1-win32-binary.zip"
           $zipPath = "$env:RUNNER_TEMP\ssdeep-win32.zip"
           $extractRoot = "$env:RUNNER_TEMP\ssdeep"
@@ -150,6 +151,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           python -c "import r2inspect, sys; print(r2inspect.__version__)"
+          r2 -v
           ssdeep -V
 
       - name: Run integration tests (continue on error)
