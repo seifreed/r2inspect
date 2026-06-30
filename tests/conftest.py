@@ -49,6 +49,7 @@ _WINDOWS_NONPORTABLE_TESTS = {
     "tests/unit/test_adapter_more_coverage_block204.py::test_adapter_repr_str",
     "tests/unit/test_adapter_more_coverage_block204.py::test_adapter_search_and_bytes",
     "tests/unit/test_adapter_more_coverage_block204.py::test_basic_adapter_methods",
+    "tests/unit/test_anti_analysis_real_block110.py::test_anti_analysis_detector_real_fixture",
     "tests/unit/test_impfuzzy_analyzer_branch_paths.py::test_check_library_availability_true_when_available",
     "tests/unit/test_infra_modules_wave3.py::test_file_validator_unreadable_file",
     "tests/unit/test_logger_branch_paths.py::test_setup_logger_fallback_console_only_thread_safe_false",
