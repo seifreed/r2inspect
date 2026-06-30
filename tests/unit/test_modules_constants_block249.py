@@ -12,7 +12,7 @@ from r2inspect.modules import (
 def test_module_constant_imports():
     assert "IsDebuggerPresent" in anti_analysis_domain.ANTI_DEBUG_APIS
     assert "VMware" in anti_analysis_domain.VM_ARTIFACTS
-    assert "sample" in anti_analysis_domain.SANDBOX_INDICATORS
+    assert "cuckoo" in anti_analysis_domain.SANDBOX_INDICATORS
     assert "VirtualAllocEx" in anti_analysis_domain.INJECTION_APIS
     assert "Process/Thread" in anti_analysis_domain.SUSPICIOUS_API_CATEGORIES
     assert "GetTickCount" in anti_analysis_domain.TIMING_APIS
