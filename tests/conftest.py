@@ -69,6 +69,7 @@ _WINDOWS_NONPORTABLE_TESTS = {
     "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_unknown",
     "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_zip",
     "tests/unit/test_magic_detector_utils.py::test_detect_file_type_error_handling",
+    "tests/unit/test_mass_method_walk_no_mocks.py::test_mass_method_walk_without_mocks",
     "tests/unit/test_package_method_walk_no_mocks.py::test_package_method_walk_without_mocks",
     "tests/unit/test_phase1_cli_additional.py::test_output_json_csv_results_error_on_directory",
     "tests/unit/test_phase2_cli_real_coverage.py::test_config_command_size_format_and_cli_list_yara_real",
