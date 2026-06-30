@@ -1,4 +1,5 @@
 import struct
+import threading
 import time
 from pathlib import Path
 
@@ -9,13 +10,17 @@ from tests.helpers import env_vars
 
 
 class DummyR2:
-    def __init__(self):
+    def __init__(self, release: threading.Event | None = None):
         self.commands = []
+        self.release = release
 
     def cmd(self, command: str):
         self.commands.append(command)
         if command == "sleep":
-            time.sleep(0.05)
+            if self.release is not None:
+                self.release.wait(5.0)
+            else:
+                time.sleep(0.05)
         return "ok"
 
 
@@ -46,13 +51,17 @@ def test_run_cmd_with_timeout_forced(tmp_path: Path):
     file_path.write_bytes(b"A" * 64)
 
     session = R2Session(str(file_path))
-    session.r2 = DummyR2()
+    release = threading.Event()
+    session.r2 = DummyR2(release)
 
-    with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="sleep"):
-        assert session._run_cmd_with_timeout("sleep", timeout=0.01) is False
+    try:
+        with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT="sleep"):
+            assert session._run_cmd_with_timeout("sleep", timeout=0.01) is False
 
-    with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT=None):
-        assert session._run_cmd_with_timeout("sleep", timeout=0.01) is False
+        with env_vars(R2INSPECT_FORCE_CMD_TIMEOUT=None):
+            assert session._run_cmd_with_timeout("sleep", timeout=0.01) is False
+    finally:
+        release.set()
 
     session.r2 = None
     assert session._run_cmd_with_timeout("any", timeout=0.01) is False
