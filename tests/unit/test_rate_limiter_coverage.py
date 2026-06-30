@@ -21,11 +21,15 @@ def test_token_bucket_basic_acquire():
 
 
 def test_token_bucket_exhausts_and_refills():
-    bucket = TokenBucket(capacity=2, refill_rate=50.0)
+    # refill_rate=1/s (one token per second) keeps the "bucket is empty" check
+    # robust against CI scheduling jitter: a fast refill rate could top the
+    # bucket back up within the few milliseconds of slack between statements and
+    # flip the expected False to True.
+    bucket = TokenBucket(capacity=2, refill_rate=1.0)
     assert bucket.acquire(tokens=1, timeout=0.05) is True
     assert bucket.acquire(tokens=1, timeout=0.05) is True
     assert bucket.acquire(tokens=1, timeout=0.01) is False
-    time.sleep(0.03)
+    time.sleep(1.1)
     assert bucket.acquire(tokens=1, timeout=0.1) is True
 
 

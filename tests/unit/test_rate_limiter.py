@@ -4,10 +4,12 @@ from r2inspect.infrastructure.rate_limiter import BatchRateLimiter, TokenBucket,
 
 
 def test_token_bucket_acquire_and_refill():
-    bucket = TokenBucket(capacity=1, refill_rate=50.0)
+    # refill_rate=1/s keeps the empty-bucket assertion robust against CI
+    # scheduling jitter (a fast rate could refill a token between statements).
+    bucket = TokenBucket(capacity=1, refill_rate=1.0)
     assert bucket.acquire(tokens=1, timeout=0.01) is True
     assert bucket.acquire(tokens=1, timeout=0.01) is False
-    time.sleep(0.03)
+    time.sleep(1.1)
     assert bucket.acquire(tokens=1, timeout=0.05) is True
 
 
