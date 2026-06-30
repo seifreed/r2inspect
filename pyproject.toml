@@ -67,6 +67,14 @@ dev = [
     "mutmut>=2.4.0",
     # Transitive via pip-audit -> CacheControl; pin past GHSA-6v7p-g79w-8964.
     "msgpack>=1.2.1",
+    # Native hash libraries the analyzers (and their tests) exercise. They were
+    # only in the optional "docker" group, so the documented `.[dev]` test
+    # install lacked them and the impfuzzy/telfhash tests failed. pyimpfuzzy
+    # builds the impfuzzyutil C extension against libfuzzy, which is unavailable
+    # on the Windows runner, so exclude it there.
+    "pyimpfuzzy>=0.1.1; sys_platform != 'win32'",
+    "telfhash>=0.9.8; sys_platform != 'win32'",
+    "python-tlsh>=4.5.0",
 ]
 docker = [
     "pycparser>=2.21",

@@ -59,12 +59,12 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev
+          sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install libmagic ssdeep
+          brew install libmagic ssdeep lld
 
       - name: Install radare2
         if: runner.os != 'Windows'
