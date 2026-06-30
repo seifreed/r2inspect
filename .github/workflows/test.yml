@@ -161,7 +161,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/unit -m "not slow"
+          pytest tests/unit -m "not slow" --timeout=180
 
       - name: Export combined coverage
         run: |
