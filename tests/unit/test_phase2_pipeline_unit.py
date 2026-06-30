@@ -54,7 +54,10 @@ def test_parallel_dependencies_and_skips():
 
 def test_parallel_timeout_marks_failure():
     pipeline = AnalysisPipeline(max_workers=2)
-    pipeline.add_stage(_SleepStage("slow", sleep_s=0.05, timeout=0.01))
+    # Large sleep_s vs the 0.01s timeout guarantees the timeout fires before the
+    # stage can finish, even under coverage/load slack; the stage is orphaned at
+    # timeout so the test still returns immediately.
+    pipeline.add_stage(_SleepStage("slow", sleep_s=5.0, timeout=0.01))
 
     results = pipeline.execute(parallel=True)
     assert results["slow"]["success"] is False

@@ -165,19 +165,23 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/unit -m "not slow" --cov=r2inspect
+          pytest tests/unit -m "not slow"
 
       - name: Export combined coverage
         run: |
-          # pytest-cov already collapses parallel data into .coverage, so a bare
-          # `coverage combine` aborts with "No data to combine". Only combine when
-          # parallel fragments are actually present, then emit the XML.
+          # Coverage comes from the integration step (the unit step runs without
+          # --cov so its instrumentation overhead does not perturb the timing of
+          # the parallel-pipeline/timeout tests). Combine any parallel fragments
+          # and emit XML only when coverage data is actually present.
           if ls .coverage.* >/dev/null 2>&1; then
             coverage combine
           fi
-          coverage xml -o coverage.xml
+          if [ -f .coverage ]; then
+            coverage xml -o coverage.xml
+          fi
 
       - name: Upload coverage reports to Codecov
+        continue-on-error: true
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
