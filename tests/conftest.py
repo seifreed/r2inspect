@@ -97,7 +97,20 @@ _WINDOWS_NONPORTABLE_TESTS = {
 }
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+def _normalize_nodeid_for_windows_skip(nodeid: str) -> str:
+    normalized = nodeid.replace("\\", "/")
+    while "//" in normalized:
+        normalized = normalized.replace("//", "/")
+    test_root = "tests/unit/"
+    if test_root in normalized:
+        normalized = normalized[normalized.index(test_root) :]
+    return normalized
+
+
+def pytest_collection_modifyitems(
+    session: pytest.Session, config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    del session
     del config
     if sys.platform != "win32":
         return
@@ -109,7 +122,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         )
     )
     for item in items:
-        if item.nodeid.replace("\\", "/") in _WINDOWS_NONPORTABLE_TESTS:
+        if _normalize_nodeid_for_windows_skip(item.nodeid) in _WINDOWS_NONPORTABLE_TESTS:
             item.add_marker(skip_windows_nonportable)
 
 
