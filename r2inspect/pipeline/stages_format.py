@@ -284,7 +284,9 @@ class FormatDetectionStage(AnalysisStage):
         if "mach-o" in file_type:
             return "Mach-O"
 
-        return None
+        # libmagic did not classify it (its verdict varies by version for tiny
+        # stubs); fall back to the raw signature bytes, which are unambiguous.
+        return _detect_via_header_bytes(self.filename)
 
 
 __all__ = [
