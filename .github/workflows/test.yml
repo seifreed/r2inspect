@@ -199,6 +199,7 @@ jobs:
           PY
 
       - name: Export combined coverage
+        shell: bash
         run: |
           # Coverage comes from the integration step (the unit step runs without
           # --cov so its instrumentation overhead does not perturb the timing of
