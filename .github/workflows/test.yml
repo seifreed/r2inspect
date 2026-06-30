@@ -65,6 +65,11 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install libmagic ssdeep lld
+          # Expose Homebrew's ssdeep headers/libs so pyimpfuzzy's impfuzzyutil
+          # C extension (which #includes <fuzzy.h>) compiles; Homebrew does not
+          # put them on clang's default search path.
+          echo "CPPFLAGS=-I$(brew --prefix ssdeep)/include ${CPPFLAGS:-}" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-L$(brew --prefix ssdeep)/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"
 
       - name: Install radare2
         if: runner.os != 'Windows'
@@ -169,7 +174,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/unit -m "not slow"
+          pytest tests/unit -m "not slow" --cov=r2inspect
 
       - name: Export combined coverage
         run: |
