@@ -176,8 +176,14 @@ jobs:
 
               marker_expression = "not slow and not requires_r2"
               args = ["tests/unit", "-m", marker_expression, "--timeout=180"]
+              real_r2_process_patterns = (
+                  "r2pipe.open(",
+                  "R2Session(str(",
+                  "process_single_file(",
+              )
               for test_file in sorted(Path("tests/unit").rglob("test_*.py")):
-                  if "r2pipe.open(" in test_file.read_text(encoding="utf-8"):
+                  test_source = test_file.read_text(encoding="utf-8")
+                  if any(pattern in test_source for pattern in real_r2_process_patterns):
                       args.extend(["--ignore", test_file.as_posix()])
               for nodeid in sorted(_WINDOWS_NONPORTABLE_TESTS):
                   args.extend(["--deselect", nodeid])
