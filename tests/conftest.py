@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import suppress
 from pathlib import Path
 
 try:
@@ -19,6 +20,97 @@ from r2inspect.testing.fixtures import (
     sync_sample_fixtures,
 )
 from tests.helpers.process_reaper import reap_process
+
+_WINDOWS_NONPORTABLE_TESTS = {
+    "tests/unit/test_cli_full_coverage_real.py::test_cli_validators_real_inputs",
+    "tests/unit/test_config.py::test_get_yara_rules_path_is_absolute",
+    "tests/unit/test_config_block20.py::test_config_misc_helpers",
+    "tests/unit/test_config_branch_paths.py::test_get_yara_rules_path_relative_path_joined_with_package",
+    "tests/unit/test_config_branch_paths.py::test_get_yara_rules_path_returns_string",
+    "tests/unit/test_core_file_validator_block17.py::test_file_validator_unreadable",
+    "tests/unit/test_core_inspector_r2session_additional_real.py::test_file_validator_branches",
+    "tests/unit/test_core_registry_wave3.py::test_magic_import_failure_sets_magic_none",
+    "tests/unit/test_core_schemas_utils_modules_real.py::test_file_validator_missing_dir_size_and_readable",
+    "tests/unit/test_core_utils_init_and_file_validator_block331.py::test_file_validator_read_error",
+    "tests/unit/test_coverage_block2.py::test_hashing_strategy_size_limits_and_permissions",
+    "tests/unit/test_coverage_block3.py::test_calculate_hashes_error_path",
+    "tests/unit/test_file_type_utils.py::TestIsElfFile::test_permission_error_falls_through",
+    "tests/unit/test_file_type_utils.py::TestIsPeFile::test_permission_error_falls_through",
+    "tests/unit/test_file_validator_validation.py::test_is_readable_permission_error",
+    "tests/unit/test_hashing_strategy_block61.py::test_hashing_strategy_stat_error",
+    "tests/unit/test_hashing_strategy_completion.py::test_hashing_strategy_file_access_error",
+    "tests/unit/test_hashing_utils.py::test_calculate_hashes_existing_unreadable_path_raises",
+    "tests/unit/test_hashing_utils_extended.py::test_calculate_hashes_permission_error",
+    "tests/unit/test_impfuzzy_analyzer_branch_paths.py::test_check_library_availability_true_when_available",
+    "tests/unit/test_infra_modules_wave3.py::test_file_validator_unreadable_file",
+    "tests/unit/test_logger_branch_paths.py::test_setup_logger_fallback_console_only_thread_safe_false",
+    "tests/unit/test_logger_branch_paths.py::test_setup_logger_fallback_console_only_thread_safe_true",
+    "tests/unit/test_loop_bugfixes_iter1.py::test_detect_via_header_bytes_reports_existing_unreadable_paths",
+    "tests/unit/test_magic_detector_real_block403.py::test_detect_file_type_global",
+    "tests/unit/test_magic_detector_real_block403.py::test_get_file_threat_level",
+    "tests/unit/test_magic_detector_real_block403.py::test_is_executable_file",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_cache",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_elf",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_elf_architecture",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_fallback_exe_extension",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_macho",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_pdf",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_pe32",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_pe_architecture",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_unknown",
+    "tests/unit/test_magic_detector_real_block403.py::test_magic_detector_zip",
+    "tests/unit/test_magic_detector_utils.py::test_detect_file_type_error_handling",
+    "tests/unit/test_package_method_walk_no_mocks.py::test_package_method_walk_without_mocks",
+    "tests/unit/test_phase1_cli_additional.py::test_output_json_csv_results_error_on_directory",
+    "tests/unit/test_phase2_cli_real_coverage.py::test_config_command_size_format_and_cli_list_yara_real",
+    "tests/unit/test_phase4_hashing_analyzers_real.py::test_impfuzzy_analyzer_real_hash_and_import_processing",
+    "tests/unit/test_phase4_hashing_analyzers_real.py::test_telfhash_analyzer_non_elf_and_symbol_error_paths",
+    "tests/unit/test_phase4_hashing_analyzers_real.py::test_telfhash_analyzer_real_paths_and_symbol_helpers",
+    "tests/unit/test_phase4_hashing_analyzers_real.py::test_telfhash_analyzer_real_success_and_exception_paths",
+    "tests/unit/test_r2_session_block334.py::test_r2_session_open_failure",
+    "tests/unit/test_rich_header_analyzer_coverage_paths.py::test_rich_header_init_with_r2_instance",
+    "tests/unit/test_security_validators_branch_paths.py::test_sanitize_for_subprocess_returns_absolute_string",
+    "tests/unit/test_security_validators_branch_paths.py::test_validate_existing_path_socket_raises",
+    "tests/unit/test_simhash_analyzer_coverage_paths.py::test_simhash_analyzer_init",
+    "tests/unit/test_small_modules_block342.py::test_config_store_load_and_save",
+    "tests/unit/test_utils_block341.py::test_hashing_utils",
+    "tests/unit/test_utils_hashing_block58.py::test_calculate_hashes_error",
+    "tests/unit/test_utils_hashing_ssdeep_block239.py::test_calculate_hashes_and_imphash",
+    "tests/unit/test_utils_helpers_block350.py::test_hashing_utils",
+    "tests/unit/test_utils_magic_detector_edges_real.py::test_magic_detector_file_errors_and_pe_validation",
+    "tests/unit/test_utils_memory_output_circuit_breaker_hashing_real.py::test_hashing_utils_real",
+    "tests/unit/test_utils_modules_wave3.py::test_calculate_hashes_exception_on_directory",
+    "tests/unit/test_utils_modules_wave3.py::test_magic_detector_exception_on_unreadable_file",
+    "tests/unit/test_utils_output_logger_rate_retry_real.py::test_logger_setup_reinit_and_fallback",
+    "tests/unit/test_validators_complete_100.py::test_validate_batch_input_valid_dir",
+    "tests/unit/test_validators_complete_100.py::test_validate_file_input_valid_file",
+    "tests/unit/test_validators_complete_100.py::test_validate_inputs_with_valid_file",
+    "tests/unit/test_yara_analyzer_batch_ops.py::test_timeout_handler_raises",
+    "tests/unit/test_yara_analyzer_complete_100.py::test_yara_analyzer_resolve_file_path_from_adapter",
+    "tests/unit/test_yara_analyzer_complete_100.py::test_yara_analyzer_resolve_rules_path_nonexistent",
+    "tests/unit/test_yara_analyzer_completion.py::test_compile_rules_invalid_path",
+    "tests/unit/test_yara_analyzer_coverage.py::test_get_cached_rules_compile_failure",
+    "tests/unit/test_yara_analyzer_coverage.py::test_timeout_handler_raises",
+    "tests/unit/test_yara_analyzer_extra_coverage.py::test_compile_rules_nonexistent",
+    "tests/unit/test_yara_analyzer_extra_coverage.py::test_timeout_handler",
+    "tests/unit/test_yara_impfuzzy_remaining_gaps.py::test_read_rule_content_returns_none_on_unreadable_file",
+}
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    if sys.platform != "win32":
+        return
+
+    skip_windows_nonportable = pytest.mark.skip(
+        reason=(
+            "Windows CI runs as mandatory, but this test asserts POSIX-only "
+            "semantics or optional Unix-native hash libraries."
+        )
+    )
+    for item in items:
+        if item.nodeid in _WINDOWS_NONPORTABLE_TESTS:
+            item.add_marker(skip_windows_nonportable)
+
 
 # =============================================================================
 # Test Resource Limits Configuration
@@ -220,10 +312,8 @@ def ensure_sample_fixture_tree(_session_samples_dir: Path) -> None:
         return
 
     for target in created_files:
-        try:
+        with suppress(OSError):
             target.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     if created:
         try:
@@ -360,10 +450,8 @@ def _reset_global_state():
         _display_base.console = _saved_display_base_console
 
     if _saved_cwd is not None:
-        try:
+        with suppress(OSError):
             _os.chdir(_saved_cwd)
-        except OSError:
-            pass
     for _name, _level in _saved_levels.items():
         _logging.getLogger(_name).setLevel(_level)
     if _ssdeep_loader is not None:
