@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from collections.abc import Callable
 from typing import Any
@@ -80,6 +81,8 @@ def _get_entry_info(adapter: Any, logger: Any) -> list[dict[str, Any]] | None:
 
 def _get_file_description(filepath: str | None, logger: Any) -> str | None:
     if not filepath:
+        return None
+    if sys.platform == "win32":
         return None
     try:
         import magic

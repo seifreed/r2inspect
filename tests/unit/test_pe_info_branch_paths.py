@@ -297,6 +297,16 @@ def test_get_file_description_returns_none_or_string_for_existing_file(tmp_path:
     assert result is None or isinstance(result, str)
 
 
+def test_get_file_description_skips_magic_on_windows(monkeypatch, tmp_path: Path):
+    log = StubLogger()
+    target = tmp_path / "test.exe"
+    target.write_bytes(b"MZ")
+
+    monkeypatch.setattr(pe_info.sys, "platform", "win32")
+
+    assert pe_info._get_file_description(str(target), log) is None
+
+
 # ---------------------------------------------------------------------------
 # get_file_characteristics
 # ---------------------------------------------------------------------------
