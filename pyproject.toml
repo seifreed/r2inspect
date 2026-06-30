@@ -74,7 +74,9 @@ dev = [
     # on the Windows runner, so exclude it there.
     "pyimpfuzzy>=0.1.1; sys_platform != 'win32'",
     "telfhash>=0.9.8; sys_platform != 'win32'",
-    "python-tlsh>=4.5.0",
+    # python-tlsh builds from C source and its tlsh.h pulls a Windows header MSVC
+    # cannot resolve, so it only builds on the Unix runners.
+    "python-tlsh>=4.5.0; sys_platform != 'win32'",
 ]
 docker = [
     "pycparser>=2.21",

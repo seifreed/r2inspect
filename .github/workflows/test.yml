@@ -97,19 +97,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
-      - name: Diagnose optional native hash libs
-        continue-on-error: true
-        run: |
-          python - <<'PY'
-          import importlib, traceback
-          for mod in ("pyimpfuzzy", "impfuzzyutil", "telfhash"):
-              try:
-                  importlib.import_module(mod)
-                  print(f"OK: import {mod}")
-              except Exception:
-                  print(f"FAIL: import {mod}")
-                  traceback.print_exc()
-          PY
 
       - name: Fetch test binaries
         shell: bash
