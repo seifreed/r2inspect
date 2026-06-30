@@ -160,8 +160,24 @@ jobs:
           python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 70
 
       - name: Run unit tests
+        shell: bash
         run: |
-          pytest tests/unit -m "not slow" --timeout=180
+          python - <<'PY'
+          import sys
+
+          import pytest
+
+          args = ["tests/unit", "-m", "not slow", "--timeout=180"]
+
+          if sys.platform == "win32":
+              from tests.conftest import _WINDOWS_NONPORTABLE_TESTS
+
+              for nodeid in sorted(_WINDOWS_NONPORTABLE_TESTS):
+                  args.extend(["--deselect", nodeid])
+                  args.extend(["--deselect", nodeid.replace("/", "\\")])
+
+          raise SystemExit(pytest.main(args))
+          PY
 
       - name: Export combined coverage
         run: |
