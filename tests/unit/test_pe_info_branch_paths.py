@@ -170,6 +170,7 @@ def test_get_pe_headers_info_returns_data_when_bin_present():
 
 def test_get_pe_headers_info_ignores_non_dict_bin():
     log = StubLogger()
+
     class AdapterWithBadBin(AdapterWithFullBin):
         def get_file_info(self):
             return {"bin": "not-a-dict"}
@@ -180,6 +181,7 @@ def test_get_pe_headers_info_ignores_non_dict_bin():
 
 def test_get_pe_headers_info_ignores_list_file_info():
     log = StubLogger()
+
     class AdapterWithListInfo(AdapterWithFullBin):
         def get_file_info(self):
             return []
@@ -297,14 +299,12 @@ def test_get_file_description_returns_none_or_string_for_existing_file(tmp_path:
     assert result is None or isinstance(result, str)
 
 
-def test_get_file_description_skips_magic_on_windows(monkeypatch, tmp_path: Path):
+def test_get_file_description_skips_magic_on_windows(tmp_path: Path):
     log = StubLogger()
     target = tmp_path / "test.exe"
     target.write_bytes(b"MZ")
 
-    monkeypatch.setattr(pe_info.sys, "platform", "win32")
-
-    assert pe_info._get_file_description(str(target), log) is None
+    assert pe_info._get_file_description(str(target), log, platform="win32") is None
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +326,7 @@ def test_get_file_characteristics_returns_has_debug_when_bin_present():
 
 def test_get_file_characteristics_ignores_non_dict_bin():
     log = StubLogger()
+
     class AdapterWithBadBin(AdapterWithFullBin):
         def get_file_info(self):
             return {"bin": "not-a-dict"}
@@ -374,6 +375,7 @@ def test_get_compilation_info_returns_empty_when_no_bin():
 
 def test_get_compilation_info_ignores_non_dict_bin():
     log = StubLogger()
+
     class AdapterWithBadBin(AdapterWithFullBin):
         def get_file_info(self):
             return {"bin": "not-a-dict"}
@@ -460,6 +462,7 @@ def test_get_subsystem_info_returns_empty_when_no_bin():
 
 def test_get_subsystem_info_ignores_non_dict_bin():
     log = StubLogger()
+
     class AdapterWithBadBin(AdapterWithFullBin):
         def get_file_info(self):
             return {"bin": "not-a-dict"}
@@ -470,6 +473,7 @@ def test_get_subsystem_info_ignores_non_dict_bin():
 
 def test_get_subsystem_info_ignores_list_file_info():
     log = StubLogger()
+
     class AdapterWithListInfo(AdapterWithFullBin):
         def get_file_info(self):
             return []

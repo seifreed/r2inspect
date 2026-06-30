@@ -69,9 +69,7 @@ def _get_entry_info(adapter: Any, logger: Any) -> list[dict[str, Any]] | None:
             entry_info = adapter.get_entry_info()
             if isinstance(entry_info, list):
                 return entry_info
-            if isinstance(entry_info, (dict, str, bytes)):
-                return None
-            if isinstance(entry_info, (dict, str, bytes)) or not isinstance(entry_info, Iterable):
+            if isinstance(entry_info, dict | str | bytes) or not isinstance(entry_info, Iterable):
                 return None
             return list(entry_info)
     except Exception as exc:
@@ -79,10 +77,12 @@ def _get_entry_info(adapter: Any, logger: Any) -> list[dict[str, Any]] | None:
     return None
 
 
-def _get_file_description(filepath: str | None, logger: Any) -> str | None:
+def _get_file_description(
+    filepath: str | None, logger: Any, platform: str | None = None
+) -> str | None:
     if not filepath:
         return None
-    if sys.platform == "win32":
+    if (platform or sys.platform) == "win32":
         return None
     try:
         import magic
