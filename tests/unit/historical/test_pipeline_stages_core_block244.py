@@ -215,7 +215,12 @@ def test_pipeline_sequential_and_progress():
 
 def test_pipeline_parallel_timeout_and_skip():
     pipeline = AnalysisPipeline(max_workers=2)
-    slow = SlowStage("slow", delay=0.05)
+    # delay must dwarf the timeout AND any scheduling slack between submit() and
+    # future.result(): under coverage instrumentation on a loaded runner a small
+    # 0.05s delay let the stage finish inside the 0.01s wait window and return a
+    # success result instead of timing out (intermittent macOS/py3.14 failure).
+    # The stage is orphaned at timeout, so a long delay does not slow the test.
+    slow = SlowStage("slow", delay=5.0)
     slow.timeout = 0.01
     pipeline.add_stage(slow)
     pipeline.add_stage(SimpleStage("fast", {"v": 1}))
