@@ -9,10 +9,6 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.target.os }}
-    # Windows is a best-effort target: the workflow does not install radare2
-    # there and the native hash libraries (pyimpfuzzy/telfhash/python-tlsh) do
-    # not build under MSVC, so its result is informational, not a gate.
-    continue-on-error: ${{ contains(matrix.target.os, 'windows') }}
     strategy:
       fail-fast: false
       matrix:
