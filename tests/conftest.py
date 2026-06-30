@@ -28,7 +28,14 @@ from tests.helpers.process_reaper import reap_process
 
 DEFAULT_TEST_MAX_WORKERS = "1"  # Single worker to reduce r2 process spawning
 DEFAULT_TEST_MAX_THREADS = "1"  # Single thread for r2 operations
-DEFAULT_TEST_MEMORY_LIMIT_MB = 1024  # 1GB memory limit per test process
+# RLIMIT_AS caps *virtual* address space, not resident memory. A Python process
+# loading numpy/pandas/pydantic and spawning threads reserves multiple GB of
+# virtual space (thread stacks ~8MB each, glibc per-thread malloc arenas ~64MB)
+# while using ~100MB RSS. A 1GB cap therefore false-tripped thread-heavy tests on
+# Linux CI with "RuntimeError: can't start new thread". Real memory is bounded by
+# the RSS-based memory monitor; this stays only as a backstop against pathological
+# virtual-space runaway, so it must sit well above the threaded footprint.
+DEFAULT_TEST_MEMORY_LIMIT_MB = 8192  # 8GB virtual-address-space backstop
 DEFAULT_TEST_CPU_LIMIT_SECONDS = 300  # 5 minute CPU time limit per test session
 
 
