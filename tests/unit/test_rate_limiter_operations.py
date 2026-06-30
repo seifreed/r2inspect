@@ -506,6 +506,8 @@ def test_batch_rate_limiter_acquire_with_adaptive_draining():
 
     # Drain internal bucket tokens.
     limiter.rate_limiter.bucket.tokens = 0
+    limiter.rate_limiter.bucket.last_refill = time.time()
+    limiter.rate_limiter.current_rate = 0.01
     limiter.rate_limiter.bucket.refill_rate = 0.01
 
     result = limiter.acquire(timeout=0.05)
@@ -526,11 +528,14 @@ def test_batch_rate_limiter_semaphore_released_on_rate_limit_failure():
 
     # Drain bucket to force rate-limit failure.
     limiter.rate_limiter.bucket.tokens = 0
+    limiter.rate_limiter.bucket.last_refill = time.time()
+    limiter.rate_limiter.current_rate = 0.01
     limiter.rate_limiter.bucket.refill_rate = 0.01
     limiter.acquire(timeout=0.05)
 
     # Restore tokens so the next acquire can succeed.
     limiter.rate_limiter.bucket.tokens = 10
+    limiter.rate_limiter.current_rate = 100.0
     limiter.rate_limiter.bucket.refill_rate = 100.0
 
     result = limiter.acquire(timeout=1.0)
