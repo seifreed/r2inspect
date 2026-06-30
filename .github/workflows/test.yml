@@ -167,11 +167,14 @@ jobs:
 
           import pytest
 
-          args = ["tests/unit", "-m", "not slow", "--timeout=180"]
+          marker_expression = "not slow"
+          args = ["tests/unit", "-m", marker_expression, "--timeout=180"]
 
           if sys.platform == "win32":
               from tests.conftest import _WINDOWS_NONPORTABLE_TESTS
 
+              marker_expression = "not slow and not requires_r2"
+              args = ["tests/unit", "-m", marker_expression, "--timeout=180"]
               for nodeid in sorted(_WINDOWS_NONPORTABLE_TESTS):
                   args.extend(["--deselect", nodeid])
                   args.extend(["--deselect", nodeid.replace("/", "\\")])
