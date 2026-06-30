@@ -155,10 +155,16 @@ def test_rich_header_analyzer_real_paths(
     assert analyzer._bin_info_has_pe({"format": "", "class": "pe32"}) is True
     assert analyzer._bin_info_has_pe({"format": "elf", "class": "elf64"}) is False
 
-    class _Entry:
-        product_id = 1
-        build_version = 2
-        count = 3
+    class _RichHeader:
+        values = [(1 | (2 << 16)), 3]
 
-    assert analyzer._pefile_parse_entry(_Entry())["prodid"] == (1 | (2 << 16))
-    assert analyzer._pefile_parse_entry(object()) is None
+    class _Pe:
+        RICH_HEADER = _RichHeader()
+
+    entries = analyzer._pefile_extract_entries(_Pe())
+    assert entries == [{"product_id": 1, "build_number": 2, "count": 3, "prodid": (1 | (2 << 16))}]
+
+    class _NoRich:
+        RICH_HEADER = None
+
+    assert analyzer._pefile_extract_entries(_NoRich()) == []
