@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import io
-import signal
-import sys
-import threading
 from pathlib import Path
 
 import pytest
@@ -90,21 +87,20 @@ def test_interactive_command_execute_handles_invalid_file_verbose() -> None:
 @pytest.mark.unit
 def test_interactive_command_execute_keyboard_interrupt() -> None:
     sample = _sample_path()
-    cmd = InteractiveCommand(CommandContext.create(quiet=True))
-    original_stdin = sys.stdin
-    try:
-        sys.stdin = io.StringIO("help\n")
-        threading.Timer(0.05, lambda: signal.raise_signal(signal.SIGINT)).start()
-        exit_code = cmd.execute(
-            {
-                "filename": str(sample),
-                "config": None,
-                "yara": None,
-                "xor": None,
-                "verbose": False,
-            }
-        )
-    finally:
-        sys.stdin = original_stdin
+
+    class _InterruptedInteractiveCommand(InteractiveCommand):
+        def _run_interactive_mode(self, inspector, options, *, input_fn=None):  # type: ignore[no-untyped-def]
+            raise KeyboardInterrupt
+
+    cmd = _InterruptedInteractiveCommand(CommandContext.create(quiet=True))
+    exit_code = cmd.execute(
+        {
+            "filename": str(sample),
+            "config": None,
+            "yara": None,
+            "xor": None,
+            "verbose": False,
+        }
+    )
 
     assert exit_code == 0

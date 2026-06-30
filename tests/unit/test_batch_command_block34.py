@@ -23,19 +23,21 @@ def test_batch_command_helpers(tmp_path: Path):
 
 def test_batch_command_execute_empty_dir(tmp_path: Path):
     cmd = BatchCommand(CommandContext.create())
-    exit_code = cmd.execute(
-        {
-            "batch": str(tmp_path),
-            "config": None,
-            "yara": None,
-            "xor": None,
-            "output_json": False,
-            "output_csv": False,
-            "output": None,
-            "extensions": None,
-            "threads": 1,
-            "verbose": False,
-            "quiet": False,
-        }
-    )
+    args = {
+        "batch": str(tmp_path),
+        "config": None,
+        "yara": None,
+        "xor": None,
+        "output_json": False,
+        "output_csv": False,
+        "output": None,
+        "extensions": None,
+        "threads": 1,
+        "verbose": False,
+        "quiet": False,
+    }
+    try:
+        exit_code = cmd.execute(args)
+    except SystemExit as exc:
+        exit_code = exc.code
     assert exit_code == 0

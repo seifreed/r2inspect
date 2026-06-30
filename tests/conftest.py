@@ -97,7 +97,8 @@ _WINDOWS_NONPORTABLE_TESTS = {
 }
 
 
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    del config
     if sys.platform != "win32":
         return
 
