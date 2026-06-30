@@ -41,6 +41,7 @@ _WINDOWS_NONPORTABLE_TESTS = {
     "tests/unit/test_hashing_strategy_completion.py::test_hashing_strategy_file_access_error",
     "tests/unit/test_hashing_utils.py::test_calculate_hashes_existing_unreadable_path_raises",
     "tests/unit/test_hashing_utils_extended.py::test_calculate_hashes_permission_error",
+    "tests/unit/historical/test_batch_output_additional_full_block374.py::test_prepare_and_run_batch_analysis",
     "tests/unit/test_impfuzzy_analyzer_branch_paths.py::test_check_library_availability_true_when_available",
     "tests/unit/test_infra_modules_wave3.py::test_file_validator_unreadable_file",
     "tests/unit/test_logger_branch_paths.py::test_setup_logger_fallback_console_only_thread_safe_false",
