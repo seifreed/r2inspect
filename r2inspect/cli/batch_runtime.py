@@ -169,7 +169,9 @@ def ensure_batch_shutdown(timeout: float = 2.0) -> None:
         return [
             thread
             for thread in threading.enumerate()
-            if thread is not current and not thread.daemon
+            if thread is not current
+            and not thread.daemon
+            and not thread.name.startswith("pytest_timeout")
         ]
 
     remaining = _remaining_threads()

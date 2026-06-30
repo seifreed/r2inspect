@@ -61,7 +61,7 @@ def test_ccbhash_analyzer_initialization():
     adapter = MockAdapter()
     analyzer = CCBHashAnalyzer(adapter, "/path/to/binary")
     assert analyzer.adapter == adapter
-    assert str(analyzer.filepath) == "/path/to/binary"
+    assert analyzer.filepath == Path("/path/to/binary")
 
 
 def test_ccbhash_no_functions():

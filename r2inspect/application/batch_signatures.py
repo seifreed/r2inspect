@@ -8,6 +8,8 @@ from typing import Any
 
 def check_executable_signature(file_path: Path) -> bool:
     """Check for executable signatures in file header (PE, ELF, Mach-O)."""
+    if not file_path.is_file():
+        return False
     try:
         with open(file_path, "rb") as f:
             header = f.read(64)

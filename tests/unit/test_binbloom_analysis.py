@@ -66,7 +66,7 @@ def test_binbloom_analyzer_initialization():
     adapter = MockAdapter()
     analyzer = BinbloomAnalyzer(adapter, "/path/to/binary")
     assert analyzer.adapter == adapter
-    assert str(analyzer.filepath) == "/path/to/binary"
+    assert analyzer.filepath == Path("/path/to/binary")
     assert analyzer.default_capacity == 256
     assert analyzer.default_error_rate == 0.001
 
