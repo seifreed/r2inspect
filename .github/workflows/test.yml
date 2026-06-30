@@ -183,6 +183,7 @@ jobs:
                   "R2Session(str(",
                   "process_single_file(",
                   "calculate_ccbhash_from_file(",
+                  "_from_file(",
                   "real_binary",
                   "samples/fixtures/",
               )
