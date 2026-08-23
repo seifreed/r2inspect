@@ -37,7 +37,6 @@ from r2inspect.cli.output_formatters import OutputFormatter
 
 from tests.helpers import chdir
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -91,6 +90,16 @@ class TestSetupAnalysisOptions:
         opts = setup_analysis_options("/yara/path", "xor_data")
         assert opts["custom_yara"] == "/yara/path"
         assert opts["xor_search"] == "xor_data"
+
+    def test_cost_profiles(self):
+        fast = setup_analysis_options(None, None, "fast")
+        standard = setup_analysis_options(None, None, "standard")
+        deep = setup_analysis_options(None, None, "deep")
+
+        assert fast["analyze_functions"] is False
+        assert fast["detect_yara"] is False
+        assert standard["analyze_functions"] is True
+        assert deep["deep_analysis"] is True
 
 
 # ---------------------------------------------------------------------------

@@ -86,9 +86,11 @@ def setup_single_file_output(
     return _runner_support.setup_single_file_output(output_json, output_csv, output, filename)
 
 
-def setup_analysis_options(yara: str | None, sanitized_xor: str | None) -> dict[str, Any]:
+def setup_analysis_options(
+    yara: str | None, sanitized_xor: str | None, profile: str = "standard"
+) -> dict[str, Any]:
     """Build the default analysis option set for CLI execution."""
-    return build_analysis_options(yara, sanitized_xor)
+    return build_analysis_options(yara, sanitized_xor, profile)
 
 
 def handle_main_error(e: Exception, verbose: bool) -> None:

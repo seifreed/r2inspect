@@ -30,17 +30,20 @@ class DetectionStage(OptionsRegistryStage):
             if res is not None:
                 results.update(res)
 
-        res = self._run_anti_analysis_detection(context)
-        if res is not None:
-            results.update(res)
+        if self.options.get("detect_anti_analysis", True):
+            res = self._run_anti_analysis_detection(context)
+            if res is not None:
+                results.update(res)
 
-        res = self._run_compiler_detection(context)
-        if res is not None:
-            results.update(res)
+        if self.options.get("detect_compiler", True):
+            res = self._run_compiler_detection(context)
+            if res is not None:
+                results.update(res)
 
-        res = self._run_yara_analysis(context)
-        if res is not None:
-            results.update(res)
+        if self.options.get("detect_yara", True):
+            res = self._run_yara_analysis(context)
+            if res is not None:
+                results.update(res)
 
         return results
 

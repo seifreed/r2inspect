@@ -31,7 +31,12 @@ class AnalyzeCommand(Command):
                 output_file=args.get("output"),
             )
             with self._analysis_session(
-                filename, config, verbose, yara=args.get("yara"), xor=args.get("xor")
+                filename,
+                config,
+                verbose,
+                yara=args.get("yara"),
+                xor=args.get("xor"),
+                profile=args.get("profile", "standard"),
             ) as (inspector, analysis_options):
                 self._run_analysis(
                     inspector=inspector,

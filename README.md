@@ -125,7 +125,12 @@ r2inspect --yara /path/to/rules malware.exe
 | `-x, --xor`         | XOR search string               |
 | `-v, --verbose`     | Verbose output                  |
 | `--quiet`           | Suppress non-critical output    |
+| `--profile`         | `fast`, `standard`, or `deep`   |
 | `--threads`         | Parallel threads for batch mode |
+
+`fast` limits analysis to format, metadata, security, and hashing stages;
+`standard` is the default detector set; `deep` additionally enables the
+deep-analysis option for analyzers that support it.
 
 ---
 

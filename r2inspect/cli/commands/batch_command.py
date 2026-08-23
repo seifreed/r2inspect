@@ -35,6 +35,7 @@ class BatchCommand(Command):
             analysis_options = self._setup_analysis_options(
                 yara=args.get("yara"),
                 xor=args.get("xor"),
+                profile=args.get("profile", "standard"),
             )
             request = BatchRunRequest(
                 batch_dir=batch_dir,
@@ -104,8 +105,9 @@ class BatchCommand(Command):
         self,
         yara: str | None = None,
         xor: str | None = None,
+        profile: str = "standard",
     ) -> dict[str, Any]:
-        return build_analysis_options(yara, xor)
+        return build_analysis_options(yara, xor, profile)
 
 
 __all__ = [

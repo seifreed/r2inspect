@@ -92,9 +92,10 @@ class Command(ABC):
         self,
         yara: str | None = None,
         xor: str | None = None,
+        profile: str = "standard",
     ) -> dict[str, Any]:
         """Build the standardized analysis-options dictionary."""
-        return _build_analysis_options(yara, xor)
+        return _build_analysis_options(yara, xor, profile)
 
     @contextmanager
     def _analysis_session(
@@ -105,9 +106,10 @@ class Command(ABC):
         *,
         yara: str | None,
         xor: str | None,
+        profile: str = "standard",
     ) -> Iterator[tuple[Any, dict[str, Any]]]:
         """Open an inspector alongside the standard analysis options."""
-        options = self._setup_analysis_options(yara=yara, xor=xor)
+        options = self._setup_analysis_options(yara=yara, xor=xor, profile=profile)
         with create_inspector(filename=filename, config=config, verbose=verbose) as inspector:
             yield inspector, options
 

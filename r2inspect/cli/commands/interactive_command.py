@@ -21,7 +21,12 @@ class InteractiveCommand(Command):
         try:
             self.context.console.print(f"[blue]Initializing analysis for: {filename}[/blue]")
             with self._analysis_session(
-                filename, config, verbose, yara=args.get("yara"), xor=args.get("xor")
+                filename,
+                config,
+                verbose,
+                yara=args.get("yara"),
+                xor=args.get("xor"),
+                profile=args.get("profile", "standard"),
             ) as (inspector, analysis_options):
                 self._run_interactive_mode(inspector, analysis_options)
 

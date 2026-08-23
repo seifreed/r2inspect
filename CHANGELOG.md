@@ -20,6 +20,8 @@ Versioning and keeps unreleased work at the top.
 - Populated report provenance from the running Git checkout and radare2 binary,
   preserving unknown PE, ELF, and Mach-O mitigations as unknown instead of false.
 - Added declarative `AnalyzerSpec` plugin discovery without analyzer construction.
+- Added `fast`, `standard`, and `deep` analysis cost profiles across single-file,
+  batch, interactive, and report workflows.
 
 ## 3.0.0
 

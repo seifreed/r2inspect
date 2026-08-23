@@ -64,6 +64,7 @@ class CLIArgs:
     list_yara: bool
     threads: int
     version: bool
+    profile: str = "standard"
 
 
 def main(
@@ -122,6 +123,13 @@ def main(
 )
 @click.option("--list-yara", is_flag=True, help="List all available YARA rules and exit")
 @click.option("--version", is_flag=True, help="Show version information and exit")
+@click.option(
+    "--profile",
+    type=click.Choice(["fast", "standard", "deep"], case_sensitive=False),
+    default="standard",
+    show_default=True,
+    help="Analysis cost profile",
+)
 @click.option(
     "--threads",
     default=10,

@@ -57,6 +57,7 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
                 "threads": args.threads,
                 "verbose": args.verbose,
                 "quiet": args.quiet,
+                "profile": getattr(args, "profile", "standard"),
             },
         )
     if args.interactive:
@@ -68,6 +69,7 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
                 "yara": args.yara,
                 "xor": args.xor,
                 "verbose": args.verbose,
+                "profile": getattr(args, "profile", "standard"),
             },
         )
     return CommandDispatch(
@@ -82,6 +84,7 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
             "output": args.output,
             "verbose": args.verbose,
             "threads": args.threads,
+            "profile": getattr(args, "profile", "standard"),
         },
     )
 

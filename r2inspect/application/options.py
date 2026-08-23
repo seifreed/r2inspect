@@ -5,13 +5,25 @@ from __future__ import annotations
 from typing import Any
 
 
-def build_analysis_options(yara: str | None, sanitized_xor: str | None) -> dict[str, Any]:
-    """Build analysis options with all modules enabled by default."""
+def build_analysis_options(
+    yara: str | None, sanitized_xor: str | None, profile: str = "standard"
+) -> dict[str, Any]:
+    """Build the effective options for a named analysis cost profile."""
+    if profile not in {"fast", "standard", "deep"}:
+        raise ValueError(f"Unknown analysis profile: {profile}")
+    deep = profile == "deep"
+    detect = profile != "fast"
     return {
-        "detect_packer": True,
-        "detect_crypto": True,
-        "detect_av": True,
-        "full_analysis": True,
+        "profile": profile,
+        "detect_packer": detect,
+        "detect_crypto": detect,
+        "detect_av": detect,
+        "detect_anti_analysis": detect,
+        "detect_compiler": detect,
+        "detect_yara": detect,
+        "analyze_functions": detect,
+        "deep_analysis": deep,
+        "full_analysis": detect,
         "custom_yara": yara,
         "xor_search": sanitized_xor,
     }
