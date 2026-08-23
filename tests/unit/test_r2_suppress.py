@@ -3,6 +3,7 @@ import json
 import time
 
 from r2inspect.infrastructure.r2_suppress import _parse_raw_result, silent_cmdj
+from tests.helpers import env_vars
 from r2inspect.testing.fake_r2 import FakeR2
 
 
@@ -33,13 +34,12 @@ def test_silent_cmdj_falls_back_to_cmd_parse():
     assert silent_cmdj(r2, "ij", default={}) == {"k": 1}
 
 
-def test_silent_cmdj_times_out_native_json_command(monkeypatch):
-    monkeypatch.setenv("R2INSPECT_CMD_TIMEOUT_SECONDS", "0.01")
-
+def test_silent_cmdj_times_out_native_json_command():
     class HungR2:
         def cmdj(self, _command):
             time.sleep(1)
 
     started = time.monotonic()
-    assert silent_cmdj(HungR2(), "ij", default={}) == {}
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.01"):
+        assert silent_cmdj(HungR2(), "ij", default={}) == {}
     assert time.monotonic() - started < 0.5
