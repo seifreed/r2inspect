@@ -10,6 +10,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+import pytest
+
 import r2inspect
 
 
@@ -180,6 +182,7 @@ def _walk_instance_methods(instance: Any, pool: dict[str, Any], max_calls: int) 
     return executed
 
 
+@pytest.mark.requires_posix
 def test_package_method_walk_without_mocks() -> None:
     os.environ.setdefault("R2INSPECT_TEST_MODE", "1")
     os.environ.setdefault("R2INSPECT_ANALYSIS_DEPTH", "1")

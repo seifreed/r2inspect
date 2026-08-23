@@ -46,6 +46,7 @@ def test_cli_invalid_option_values_and_threads_validation() -> None:
     assert "Invalid value for '--threads'" in bad_threads.output
 
 
+@pytest.mark.requires_posix
 def test_validate_inputs_aggregates_option_errors(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"")

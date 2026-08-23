@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+
+import pytest
 from tempfile import NamedTemporaryFile
 
 from r2inspect.abstractions.hashing_strategy import HashingStrategy
@@ -78,6 +80,7 @@ def test_hashing_strategy_validate_file_errors(tmp_path: Path):
     assert "too small" in (result["error"] or "")
 
 
+@pytest.mark.requires_posix
 def test_hashing_strategy_size_limits_and_permissions(tmp_path: Path):
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"abc")

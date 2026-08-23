@@ -72,6 +72,7 @@ def test_cli_analyze_json_output(tmp_path):
     assert payload["format_detection"]["file_format"] == "Mach-O"
 
 
+@pytest.mark.requires_posix
 def test_cli_batch_json_output(tmp_path):
     batch_dir = tmp_path / "batch"
     batch_dir.mkdir()

@@ -144,6 +144,7 @@ def test_output_formatter_tables_and_helpers() -> None:
     assert formatter._clean_file_type(123) == 123
 
 
+@pytest.mark.requires_posix
 def test_logger_setup_reinit_and_fallback(tmp_path: Path) -> None:
     home_dir = tmp_path / "home"
     home_dir.mkdir()

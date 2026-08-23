@@ -167,6 +167,7 @@ def test_validate_batch_input_errors(tmp_path: Path):
     assert any("not a directory" in e for e in errors)
 
 
+@pytest.mark.requires_posix
 def test_validate_output_input_permission_error(tmp_path: Path):
     output_path = tmp_path / "out.txt"
     output_path.write_text("data")

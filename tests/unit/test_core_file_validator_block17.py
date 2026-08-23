@@ -48,6 +48,7 @@ def test_file_validator_exception_path(tmp_path: Path):
     assert ExplodingValidator(str(sample)).validate() is False
 
 
+@pytest.mark.requires_posix
 def test_file_validator_unreadable(tmp_path: Path):
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"A" * 64)

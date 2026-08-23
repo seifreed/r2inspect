@@ -4,6 +4,8 @@ import os
 import struct
 from pathlib import Path
 
+import pytest
+
 from r2inspect.infrastructure.magic_detector import (
     MagicByteDetector,
     _read_at_offset,
@@ -15,6 +17,7 @@ def _write_bytes(path: Path, data: bytes) -> None:
     path.write_bytes(data)
 
 
+@pytest.mark.requires_posix
 def test_magic_detector_file_errors_and_pe_validation(tmp_path: Path) -> None:
     detector = MagicByteDetector()
 

@@ -24,7 +24,6 @@ from r2inspect.cli.validators import (
     validate_yara_input,
 )
 
-
 # ---------------------------------------------------------------------------
 # validate_inputs – integration (lines 59-69)
 # ---------------------------------------------------------------------------
@@ -256,6 +255,7 @@ def test_validate_output_input_nonexistent_no_extension_valid_parent(tmp_path):
     assert validate_output_input(str(path)) == []
 
 
+@pytest.mark.requires_posix
 def test_validate_output_input_read_only_file_reports_error(tmp_path):
     """Lines 170-171: read-only existing file reports cannot-write error."""
     f = tmp_path / "readonly.json"

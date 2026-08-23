@@ -153,6 +153,7 @@ def test_hashing_strategy_validation_and_errors(tmp_path):
     assert result["error"] is not None
 
 
+@pytest.mark.requires_posix
 def test_hashing_strategy_permission_and_stat_error(tmp_path):
     sample = tmp_path / "perm.bin"
     sample.write_bytes(b"abcd")

@@ -17,7 +17,6 @@ from r2inspect.modules.yara_analyzer import (
     timeout_handler,
 )
 
-
 # ---------------------------------------------------------------------------
 # Minimal helpers
 # ---------------------------------------------------------------------------
@@ -64,9 +63,8 @@ def test_timeout_exception_is_exception():
 
 
 def test_timeout_handler_raises():
-
     with pytest.raises(TimeoutException):
-        timeout_handler(signal.SIGALRM, None)
+        timeout_handler(getattr(signal, "SIGALRM", signal.SIGABRT), None)
 
 
 # ---------------------------------------------------------------------------

@@ -113,6 +113,7 @@ def test_cli_init_lazy_attrs_and_main() -> None:
         sys.argv = argv
 
 
+@pytest.mark.requires_posix
 def test_cli_validators_real_inputs(tmp_path: Path) -> None:
     console, _buffer = _console_buffer()
     original_console = validators.console
@@ -805,6 +806,7 @@ def test_batch_output_and_processing_helpers(tmp_path: Path) -> None:
         batch_output.console = original_console
 
 
+@pytest.mark.requires_posix
 def test_batch_processing_core_and_error_paths(tmp_path: Path) -> None:
     console, _buffer = _console_buffer()
     original_console = batch_processing.console

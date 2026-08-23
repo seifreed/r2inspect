@@ -150,6 +150,7 @@ def test_file_validator_fails_memory_limit(tmp_path: Path) -> None:
 # ===========================================================================
 
 
+@pytest.mark.requires_posix
 def test_file_validator_unreadable_file(tmp_path: Path) -> None:
     """Lines 174-176: _is_readable returns False on OSError."""
     from r2inspect.core.file_validator import FileValidator

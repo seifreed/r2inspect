@@ -226,6 +226,7 @@ markers = [
     "unit: fast unit-level coverage tests",
     "integration: broader workflow and integration coverage",
     "requires_r2: requires radare2/r2pipe runtime support",
+    "requires_posix: requires POSIX signals, permissions, sockets, or process APIs",
     "slow: slower-running tests that may touch larger fixtures or subprocesses",
 ]
 

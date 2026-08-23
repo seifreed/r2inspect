@@ -91,6 +91,7 @@ class _InspectorHarness(InspectorExecutionMixin):
         self._result_aggregator = ResultAggregator()
 
 
+@pytest.mark.requires_posix
 def test_file_validator_branches(tmp_path: Path) -> None:
     missing = FileValidator(tmp_path / "missing.bin")
     assert missing.validate() is False

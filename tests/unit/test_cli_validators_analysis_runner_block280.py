@@ -18,6 +18,7 @@ from r2inspect.infrastructure.retry_manager import global_retry_manager, reset_r
 
 
 @pytest.mark.unit
+@pytest.mark.requires_posix
 def test_validators_file_output_and_threads(tmp_path: Path) -> None:
     empty_file = tmp_path / "empty.bin"
     empty_file.write_bytes(b"")

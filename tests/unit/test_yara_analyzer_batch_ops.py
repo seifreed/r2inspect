@@ -21,7 +21,6 @@ from r2inspect.modules.yara_analyzer import (
     _COMPILED_CACHE,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fakes -- no mocks
 # ---------------------------------------------------------------------------
@@ -547,7 +546,7 @@ def test_discover_rule_files_multiple_extensions(
 
 def test_timeout_handler_raises() -> None:
     with pytest.raises(TimeoutException):
-        timeout_handler(signal.SIGALRM, None)
+        timeout_handler(getattr(signal, "SIGALRM", signal.SIGABRT), None)
 
 
 def test_compile_in_non_main_thread(adapter: FakeR2, config: FakeConfig, tmp_path: Path) -> None:

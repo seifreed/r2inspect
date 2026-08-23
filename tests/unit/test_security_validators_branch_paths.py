@@ -10,7 +10,6 @@ import pytest
 
 from r2inspect.security.validators import FileValidator, validate_file_for_analysis
 
-
 # ---------------------------------------------------------------------------
 # FileValidator.__init__ with invalid allowed_directory
 # ---------------------------------------------------------------------------
@@ -131,6 +130,7 @@ def test_validate_existing_path_not_called_when_check_exists_false(tmp_path: Pat
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.requires_posix
 def test_validate_existing_path_socket_raises():
     import os
 
@@ -161,7 +161,7 @@ def test_sanitize_for_subprocess_returns_absolute_string(tmp_path: Path):
     real_file.write_text("ok")
     safe = v.sanitize_for_subprocess(real_file)
     assert isinstance(safe, str)
-    assert safe.startswith("/")
+    assert Path(safe).is_absolute()
 
 
 def test_sanitize_for_subprocess_non_path_raises_type_error(tmp_path: Path):

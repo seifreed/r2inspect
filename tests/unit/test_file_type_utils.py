@@ -16,7 +16,6 @@ from r2inspect.infrastructure.file_type import (
     is_pe_file,
 )
 
-
 # ---------------------------------------------------------------------------
 # Lightweight stub adapter that delegates to real command dispatch
 # ---------------------------------------------------------------------------
@@ -242,6 +241,7 @@ class TestIsPeFile:
         getattr(os, "getuid", lambda: -1)() == 0,
         reason="Root bypasses permission checks; os.getuid unavailable on Windows",
     )
+    @pytest.mark.requires_posix
     def test_permission_error_falls_through(self, tmp_path: Path):
         pe = _write_pe(tmp_path)
         os.chmod(pe, 0o000)
@@ -376,6 +376,7 @@ class TestIsElfFile:
         getattr(os, "getuid", lambda: -1)() == 0,
         reason="Root bypasses permission checks; os.getuid unavailable on Windows",
     )
+    @pytest.mark.requires_posix
     def test_permission_error_falls_through(self, tmp_path: Path):
         elf = _write_elf(tmp_path)
         os.chmod(elf, 0o000)

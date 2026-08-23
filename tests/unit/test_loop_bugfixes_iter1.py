@@ -55,6 +55,7 @@ def test_detect_via_header_bytes_does_not_read_whole_file(tmp_path) -> None:
     assert detect_via_header_bytes(str(missing)) is None
 
 
+@pytest.mark.requires_posix
 def test_detect_via_header_bytes_reports_existing_unreadable_paths(tmp_path) -> None:
     with pytest.raises(IsADirectoryError):
         detect_via_header_bytes(str(tmp_path))

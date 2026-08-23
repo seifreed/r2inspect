@@ -68,7 +68,7 @@ def test_end_to_end_fixtures_match_expected_snapshots() -> None:
 
 
 def _cli_path() -> str:
-    return str(Path(sys.executable).parent / "r2inspect")
+    return shutil.which("r2inspect") or str(Path(sys.executable).parent / "r2inspect")
 
 
 def test_batch_mode_mixed_files_and_csv_output(tmp_path: Path) -> None:

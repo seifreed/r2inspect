@@ -40,6 +40,7 @@ def test_calculate_hashes_binary_content(tmp_path: Path):
     assert len(hashes["sha512"]) == 128
 
 
+@pytest.mark.requires_posix
 def test_calculate_hashes_permission_error(tmp_path: Path):
     test_file = tmp_path / "noaccess.bin"
     test_file.write_bytes(b"secret data")

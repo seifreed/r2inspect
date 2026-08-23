@@ -90,6 +90,7 @@ def test_calculate_ssdeep_error_path(tmp_path: Path) -> None:
         _reset_ssdeep_loader()
 
 
+@pytest.mark.requires_posix
 def test_logger_setup_variants(tmp_path: Path) -> None:
     log = logger_utils.setup_logger(name="r2inspect_test_logger", thread_safe=True)
     assert log.handlers

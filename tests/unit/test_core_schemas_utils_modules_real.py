@@ -66,6 +66,7 @@ from r2inspect.infrastructure.memory import (
 )
 
 
+@pytest.mark.requires_posix
 def test_file_validator_missing_dir_size_and_readable(tmp_path: Path) -> None:
     missing = tmp_path / "missing.bin"
     assert FileValidator(missing).validate() is False

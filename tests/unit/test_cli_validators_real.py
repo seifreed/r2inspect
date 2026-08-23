@@ -37,6 +37,7 @@ def test_validate_file_input_variants(tmp_path: Path) -> None:
     assert any("File path security validation failed" in error for error in errors)
 
 
+@pytest.mark.requires_posix
 def test_validate_batch_output_config_yara_inputs(tmp_path: Path) -> None:
     batch_dir = tmp_path / "batch"
     batch_dir.mkdir()

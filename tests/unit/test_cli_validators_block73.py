@@ -19,6 +19,7 @@ def test_validate_file_input(tmp_path: Path):
     assert any("security validation failed" in e for e in errors)
 
 
+@pytest.mark.requires_posix
 def test_validate_batch_output_and_config(tmp_path: Path):
     file_path = tmp_path / "file.bin"
     file_path.write_text("x")

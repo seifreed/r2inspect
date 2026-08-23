@@ -152,6 +152,7 @@ def test_hashing_strategy_file_too_large(tmp_path: Path) -> None:
     assert "maximum: 100 bytes" in result["error"]
 
 
+@pytest.mark.requires_posix
 def test_hashing_strategy_file_access_error(tmp_path: Path) -> None:
     import os
 

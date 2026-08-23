@@ -21,6 +21,7 @@ def test_main_entrypoint_version_exit() -> None:
     assert result.returncode == 0
 
 
+@pytest.mark.requires_posix
 def test_config_store_load_and_save(tmp_path, caplog) -> None:
     config_path = tmp_path / "config.json"
     payload = {"a": 1}

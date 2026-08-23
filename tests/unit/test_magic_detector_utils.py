@@ -383,6 +383,7 @@ def test_detect_file_type_multiple_matches(tmp_path: Path):
     assert len(result["magic_matches"]) >= 1
 
 
+@pytest.mark.requires_posix
 def test_detect_file_type_error_handling(tmp_path: Path):
     import os
 

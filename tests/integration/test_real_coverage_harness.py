@@ -7,6 +7,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+import pytest
+
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.infrastructure.r2_session import R2Session
@@ -219,6 +221,7 @@ def _build_analyzer_instance(analyzer_class, adapter, config, filepath: str):
     raise TypeError(f"Could not construct analyzer {analyzer_class.__name__}")
 
 
+@pytest.mark.requires_posix
 def test_best_effort_analyzer_method_walk(samples_dir: Path):
     with env_vars(
         R2INSPECT_TEST_MODE="0",

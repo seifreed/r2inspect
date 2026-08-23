@@ -13,6 +13,8 @@ permissions:
 jobs:
   test:
     runs-on: ${{ matrix.target.os }}
+    env:
+      PYTHONUTF8: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -162,11 +164,16 @@ jobs:
 
       - name: Run integration tests
         timeout-minutes: 20
+        shell: bash
         env:
           COVERAGE_FILE: .coverage.integration
         run: |
+          marker="not slow"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            marker="not slow and not requires_posix"
+          fi
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
-          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0
+          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0 --marker "$marker"
 
       - name: Run unit tests with coverage
         shell: bash
@@ -181,7 +188,7 @@ jobs:
 
           marker_expression = "not slow"
           if sys.platform == "win32":
-              marker_expression = "not slow and not requires_r2"
+              marker_expression = "not slow and not requires_r2 and not requires_posix"
           args = [
               "tests/unit",
               "-m",

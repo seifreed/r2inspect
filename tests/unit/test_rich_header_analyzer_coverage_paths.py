@@ -59,7 +59,7 @@ def test_rich_header_init_with_r2_instance() -> None:
     adapter = _make_adapter()
     analyzer = RichHeaderAnalyzer(r2_instance=adapter, filepath="/fake/path")
     assert analyzer.adapter is adapter
-    assert str(analyzer.filepath) == "/fake/path"
+    assert analyzer.filepath == Path("/fake/path")
 
 
 def test_rich_header_init_with_adapter() -> None:

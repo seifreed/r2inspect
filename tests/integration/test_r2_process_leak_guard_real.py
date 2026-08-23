@@ -43,6 +43,12 @@ def _radare2_child_count(proc: psutil.Process) -> int:
     return count
 
 
+def _open_resource_count(proc: psutil.Process) -> int:
+    if sys.platform == "win32":
+        return proc.num_handles()
+    return proc.num_fds()
+
+
 def _run_one_cycle() -> None:
     with create_inspector(filename=str(_FIXTURE)) as inspector:
         AnalyzeBinaryUseCase().run(inspector, {"batch_mode": True})
@@ -57,14 +63,14 @@ def test_repeated_analysis_leaks_no_processes_or_fds() -> None:
         # Warmup absorbs one-time allocations (logging file handler, imports)
         # so the baseline reflects steady state, not first-run setup.
         _run_one_cycle()
-        base_fds = proc.num_fds()
+        base_fds = _open_resource_count(proc)
         base_children = _radare2_child_count(proc)
 
         for _ in range(_CYCLES):
             _run_one_cycle()
 
         leaked_children = _radare2_child_count(proc) - base_children
-        leaked_fds = proc.num_fds() - base_fds
+        leaked_fds = _open_resource_count(proc) - base_fds
 
     assert (
         leaked_children <= 0
@@ -132,7 +138,7 @@ def test_parallel_batch_leaks_no_processes_or_fds(tmp_path: Path) -> None:
     all_results: dict[str, dict] = {}
     failed: list[tuple[str, str]] = []
     with env_vars(R2INSPECT_TEST_MODE="1", R2INSPECT_ANALYSIS_DEPTH="0"):
-        base_fds = proc.num_fds()
+        base_fds = _open_resource_count(proc)
         base_children = _radare2_child_count(proc)
         rate_limiter = BatchRateLimiter(max_concurrent=4, rate_per_second=50, burst_size=20)
         process_files_parallel(
@@ -148,7 +154,7 @@ def test_parallel_batch_leaks_no_processes_or_fds(tmp_path: Path) -> None:
             rate_limiter,
         )
         leaked_children = _radare2_child_count(proc) - base_children
-        leaked_fds = proc.num_fds() - base_fds
+        leaked_fds = _open_resource_count(proc) - base_fds
 
     assert all_results, "batch processed no files"
     assert leaked_children <= 0, f"orphaned radare2 after parallel batch: +{leaked_children}"

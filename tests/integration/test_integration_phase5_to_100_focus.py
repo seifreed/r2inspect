@@ -374,6 +374,7 @@ def test_validators_exception_paths(tmp_path: Path) -> None:
         ]
 
 
+@pytest.mark.requires_posix
 def test_validate_output_input_permission_error(tmp_path: Path) -> None:
     output_file = tmp_path / "locked.txt"
     output_file.write_text("x")

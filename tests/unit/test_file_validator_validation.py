@@ -8,6 +8,8 @@ direct calls to the production FileValidator.
 import os
 from pathlib import Path
 
+import pytest
+
 from r2inspect.core.file_validator import FileValidator
 from r2inspect.domain.constants import MIN_EXECUTABLE_SIZE_BYTES, MIN_HEADER_SIZE_BYTES
 
@@ -230,6 +232,7 @@ def test_is_readable_four_bytes(tmp_path):
     assert validator._is_readable() is True
 
 
+@pytest.mark.requires_posix
 def test_is_readable_permission_error(tmp_path):
     unreadable = tmp_path / "unreadable.bin"
     unreadable.write_bytes(b"MZ" + b"\x00" * 100)

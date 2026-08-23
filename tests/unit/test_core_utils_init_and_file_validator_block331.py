@@ -68,6 +68,7 @@ def test_file_validator_directory_path(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.requires_posix
 def test_file_validator_read_error(tmp_path: Path) -> None:
     sample = tmp_path / "locked.bin"
     sample.write_bytes(b"A" * 64)

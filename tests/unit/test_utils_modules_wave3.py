@@ -257,6 +257,7 @@ from r2inspect.infrastructure.magic_detector import (
 )
 
 
+@pytest.mark.requires_posix
 def test_magic_detector_exception_on_unreadable_file(tmp_path: Path):
     # Create a file then make it unreadable -> open() raises -> lines 90, 91, 92
     f = tmp_path / "unreadable.bin"

@@ -29,6 +29,7 @@ class _DummyHash(HashingStrategy):
         return True
 
 
+@pytest.mark.requires_posix
 def test_hashing_strategy_stat_error(tmp_path: Path):
     data = tmp_path / "data.bin"
     data.write_bytes(b"hello")

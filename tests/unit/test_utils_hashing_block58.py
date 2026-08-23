@@ -19,6 +19,7 @@ def test_calculate_hashes_success(tmp_path: Path):
     assert hashes["sha512"]
 
 
+@pytest.mark.requires_posix
 def test_calculate_hashes_error(tmp_path: Path):
     file_path = tmp_path / "secret.bin"
     file_path.write_bytes(b"secret")

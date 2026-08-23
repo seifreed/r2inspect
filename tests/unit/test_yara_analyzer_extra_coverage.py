@@ -102,7 +102,7 @@ def test_timeout_exception():
 def test_timeout_handler():
     """timeout_handler raises TimeoutException."""
     with pytest.raises(TimeoutException, match="YARA compilation timed out"):
-        timeout_handler(signal.SIGALRM, None)
+        timeout_handler(getattr(signal, "SIGALRM", signal.SIGABRT), None)
 
 
 def test_yara_analyzer_init_without_config():

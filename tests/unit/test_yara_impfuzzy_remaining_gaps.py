@@ -112,6 +112,7 @@ def test_collect_rules_sources_neither_file_nor_dir_returns_empty(tmp_path: Path
 
 
 @pytest.mark.skipif(not YARA_AVAILABLE, reason="python-yara not installed")
+@pytest.mark.requires_posix
 def test_read_rule_content_returns_none_on_unreadable_file(tmp_path: Path) -> None:
     """_read_rule_content returns None when the file cannot be read (permission denied)."""
     rule_file = tmp_path / "locked.yar"

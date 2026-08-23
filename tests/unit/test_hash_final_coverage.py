@@ -200,6 +200,7 @@ def test_calculate_hash_oserror_path_nonexistent_lines_67_73_74():
     assert error is not None
 
 
+@pytest.mark.requires_posix
 def test_calculate_hash_oserror_path_unreadable_lines_67_73_74(tmp_path):
     """Cover lines 67, 70, 73-74: OSError fallback when file is not readable."""
     f = tmp_path / "unreadable.bin"

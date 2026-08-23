@@ -31,6 +31,7 @@ def run_batch(
     total_batches: int,
     coverage_dir: Path,
     threshold: float,
+    marker: str,
 ) -> int:
     """Run a single batch of tests."""
     if not batch_files:
@@ -47,8 +48,8 @@ def run_batch(
         *test_paths,
         "-q",
         "-m",
-        "not slow",
-        f"--cov=r2inspect",
+        marker,
+        "--cov=r2inspect",
         f"--cov-report=json:{coverage_file}",
         "--cov-report=term-missing",
         f"--cov-fail-under={threshold}",
@@ -87,6 +88,11 @@ def main() -> int:
         default="tests/integration",
         help="Directory containing integration tests",
     )
+    parser.add_argument(
+        "--marker",
+        default="not slow",
+        help="Pytest marker expression",
+    )
     args = parser.parse_args()
 
     tests_dir = Path(args.tests_dir)
@@ -116,6 +122,7 @@ def main() -> int:
         args.total_batches,
         coverage_dir,
         args.threshold,
+        args.marker,
     )
 
 

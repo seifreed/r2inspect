@@ -146,6 +146,7 @@ def test_validate_output_input_valid_file(tmp_path):
     assert errors == []
 
 
+@pytest.mark.requires_posix
 def test_validate_output_input_readonly_file(tmp_path):
     """Test validation handles read-only output files"""
     output_file = tmp_path / "readonly.json"
