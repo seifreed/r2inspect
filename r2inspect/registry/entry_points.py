@@ -68,12 +68,15 @@ class EntryPointLoader:
     def _register_entry_point_class(self, ep: Any, obj: Any) -> int:
         try:
             name = self._derive_entry_point_name(ep, obj)
+            category = None
+            if not self._registry.is_base_analyzer(obj):
+                category = self._registry._parse_category("metadata")
             self._registry.register(
                 name=name,
                 analyzer_class=obj,
                 required=False,
                 auto_extract=True,
-                category=self._registry._parse_category("metadata"),
+                category=category,
             )
             return 1
         except Exception as exc:

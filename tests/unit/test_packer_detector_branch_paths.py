@@ -284,10 +284,14 @@ def test_analyze_entropy_returns_dict_on_exception():
 # ---------------------------------------------------------------------------
 
 
-def test_count_imports_returns_zero_on_exception():
+def test_count_imports_returns_unknown_on_exception():
     detector = PackerDetector(AdapterWithRaisingMethods(), StubConfig())
     count = detector._count_imports()
-    assert count == 0
+    assert count is None
+
+    scorer = PackerEvidenceScorer()
+    scorer.add_import_count(count)
+    assert scorer.verdict()["indicators"] == ["No packing indicators found"]
 
 
 # ---------------------------------------------------------------------------

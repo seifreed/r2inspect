@@ -526,7 +526,7 @@ def test_registry_entry_point_handling(tmp_path):
         "    def analyze(self):\n"
         "        return {'available': True}\n"
         "    def get_category(self):\n"
-        "        return 'metadata'\n"
+        "        return 'detection'\n"
         "    def get_supported_formats(self):\n"
         "        return {'PE'}\n"
         "    def get_description(self):\n"
@@ -558,6 +558,7 @@ def test_registry_entry_point_handling(tmp_path):
             group="r2inspect.analyzers",
         )
         assert EntryPointLoader(registry)._handle_entry_point(ep_class) == 1
+        assert registry.get_metadata("temp").category == AnalyzerCategory.DETECTION
 
         ep_missing = EntryPoint(
             name="missing",

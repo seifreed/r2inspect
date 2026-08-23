@@ -69,9 +69,9 @@ class PackerEvidenceScorer:
             self._score += min(suspicious * 10, 20)
             self._reasons.append(f"{suspicious} suspicious sections")
 
-    def add_import_count(self, import_count: int) -> None:
+    def add_import_count(self, import_count: int | None) -> None:
         """Register low import count as packing indicator (10 points)."""
-        if import_count < 10:
+        if import_count is not None and import_count < 10:
             self._score += 10
             self._reasons.append(f"Few imports ({import_count})")
 
@@ -157,11 +157,11 @@ class PackerDetector(CommandHelperMixin):
             error_msg="Error analyzing entropy",
         )
 
-    def _count_imports(self) -> int:
+    def _count_imports(self) -> int | None:
         """Count number of imports."""
         return self._safe_call(
             lambda: count_imports(self._get_imports()),
-            default=0,
+            default=None,
             error_msg="Error counting imports",
         )
 
