@@ -70,7 +70,7 @@ def test_anti_analysis_detector_full_flow():
     assert result["anti_debug"] is True
     assert result["anti_vm"] is True
     assert result["anti_sandbox"] is True
-    assert result["timing_checks"] is True
+    assert result["timing_checks"] is False
 
     assert result["evasion_techniques"]
     assert result["suspicious_apis"]

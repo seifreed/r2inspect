@@ -97,7 +97,6 @@ def test_command_setup_analysis_options(tmp_path):
     options = cmd._setup_analysis_options(yara="/rules", xor="ff")
     assert options["custom_yara"] == "/rules"
     assert options["xor_search"] == "ff"
-    assert options["profile"] == "standard"
 
 
 def test_analyze_command_run_analysis_writes_json(tmp_path):

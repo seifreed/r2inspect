@@ -4,11 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import re
-import subprocess
-from functools import cache
-from pathlib import Path
 from typing import Any, Literal, cast
 from uuid import uuid4
 
@@ -17,19 +12,17 @@ from pydantic_core import to_jsonable_python
 from ..__version__ import __version__
 from ..schemas.report_v1 import (
     AnalysisMetadataV1,
-    AnalyzerOutcomeV1,
-    AnalyzerStatus,
-    EvidenceV1,
-    FindingV1,
     FormatCommonV1,
     FormatReportV1,
-    MitigationV1,
     ReportV1,
     SampleInfoV1,
-    SecurityReportV1,
     ToolInfoV1,
 )
 from ..schemas.results_models import AnalysisResult
+from .report_components import analyzer_outcomes, capa_capabilities, findings, floss_artifacts
+from .report_provenance import radare2_version as detected_radare2_version
+from .report_provenance import tool_commit
+from .report_security import normalized_security
 
 
 def _configuration_digest(configuration: dict[str, Any] | None) -> str | None:
@@ -52,264 +45,7 @@ def _format_family(file_type: str) -> str | None:
         return "PE"
     if normalized.startswith("ELF"):
         return "ELF"
-    if "MACH" in normalized:
-        return "MACHO"
-    return None
-
-
-@cache
-def _command_output(command: tuple[str, ...], cwd: str | None = None) -> str | None:
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=2,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    output = completed.stdout.strip()
-    return output.splitlines()[0] if completed.returncode == 0 and output else None
-
-
-def _tool_commit() -> str | None:
-    return os.getenv("R2INSPECT_COMMIT") or _command_output(
-        ("git", "rev-parse", "HEAD"), str(Path(__file__).resolve().parents[2])
-    )
-
-
-def _radare2_version() -> str | None:
-    return os.getenv("R2INSPECT_RADARE2_VERSION") or _command_output(("r2", "-v"))
-
-
-def _feature(details: dict[str, Any], key: str, fallback: bool | str | None) -> bool | None:
-    value = details.get(key, fallback)
-    if value is None:
-        return None
-    return bool(value)
-
-
-def _any_feature(details: dict[str, Any], names: tuple[str, ...]) -> bool | None:
-    values = [details[name] for name in names if name in details]
-    return any(bool(value) for value in values) if values else None
-
-
-def _normalized_security(result: AnalysisResult) -> SecurityReportV1:
-    security = result.security
-    raw = result.to_dict()
-    file_type = result.file_info.file_type.upper()
-    if file_type.startswith("ELF"):
-        details = _format_details(raw, "elf_info") or {}
-        features = details.get("security_features")
-        format_specific = features if isinstance(features, dict) else security.to_dict()
-        fallback = {} if isinstance(features, dict) else security.to_dict()
-        values = {
-            "randomization": (
-                _feature(format_specific, "pie", fallback.get("pie")),
-                "elf.security_features.pie",
-            ),
-            "no_execution": (
-                _feature(format_specific, "nx", fallback.get("nx")),
-                "elf.security_features.nx",
-            ),
-            "stack_protection": (
-                _feature(
-                    format_specific,
-                    "stack_canary",
-                    fallback.get("stack_canary") or fallback.get("canary"),
-                ),
-                "elf.security_features.stack_canary",
-            ),
-            "control_flow_integrity": (None, "elf.security_features"),
-            "signature": (None, "elf.provenance"),
-            "relocations": (
-                _feature(format_specific, "relro", fallback.get("relro")),
-                "elf.security_features.relro",
-            ),
-            "additional_hardening": (
-                _feature(format_specific, "fortify", fallback.get("fortify")),
-                "elf.security_features.fortify",
-            ),
-        }
-    elif "MACH" in file_type:
-        details = _format_details(raw, "macho_info") or {}
-        features = details.get("security_features")
-        format_specific = features if isinstance(features, dict) else security.to_dict()
-        fallback = {} if isinstance(features, dict) else security.to_dict()
-        values = {
-            "randomization": (
-                _feature(format_specific, "pie", fallback.get("pie")),
-                "macho.security_features.pie",
-            ),
-            "no_execution": (
-                _feature(format_specific, "nx", fallback.get("nx")),
-                "macho.security_features.nx",
-            ),
-            "stack_protection": (
-                _feature(
-                    format_specific,
-                    "stack_canary",
-                    fallback.get("stack_canary") or fallback.get("canary"),
-                ),
-                "macho.security_features.stack_canary",
-            ),
-            "control_flow_integrity": (None, "macho.security_features"),
-            "signature": (
-                _feature(format_specific, "signed", None),
-                "macho.security_features.signed",
-            ),
-            "relocations": (
-                _feature(format_specific, "pie", fallback.get("pie")),
-                "macho.security_features.pie",
-            ),
-            "additional_hardening": (
-                _any_feature(format_specific, ("arc", "encrypted")),
-                "macho.security_features",
-            ),
-        }
-    else:
-        details = _format_details(raw, "pe_info") or {}
-        features = details.get("security_features")
-        format_specific = features if isinstance(features, dict) else security.to_dict()
-        fallback = {} if isinstance(features, dict) else security.to_dict()
-        values = {
-            "randomization": (
-                _feature(format_specific, "aslr", fallback.get("aslr")),
-                "pe.security_features.aslr",
-            ),
-            "no_execution": (
-                _feature(format_specific, "dep", fallback.get("dep")),
-                "pe.security_features.dep",
-            ),
-            "stack_protection": (
-                _feature(
-                    format_specific,
-                    "stack_canary",
-                    fallback.get("stack_canary") or fallback.get("canary"),
-                ),
-                "pe.security_features.stack_canary",
-            ),
-            "control_flow_integrity": (
-                _feature(format_specific, "guard_cf", fallback.get("guard_cf")),
-                "pe.security_features.guard_cf",
-            ),
-            "signature": (
-                _feature(format_specific, "authenticode", fallback.get("authenticode")),
-                "pe.security_features.authenticode",
-            ),
-            "relocations": (
-                _feature(format_specific, "aslr", fallback.get("aslr")),
-                "pe.security_features.aslr",
-            ),
-            "additional_hardening": (
-                _feature(format_specific, "seh", fallback.get("seh")),
-                "pe.security_features.seh",
-            ),
-        }
-    return SecurityReportV1(
-        normalized_mitigations={
-            name: MitigationV1(enabled=enabled, source=source)
-            for name, (enabled, source) in values.items()
-        },
-        format_specific=format_specific,
-    )
-
-
-def _slug(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", ".", value.lower()).strip(".") or "unknown"
-
-
-def _findings(result: AnalysisResult) -> list[FindingV1]:
-    findings: list[FindingV1] = []
-    severity_aliases = {"info": "informational", "warning": "medium"}
-    valid_severities = {"informational", "low", "medium", "high", "critical"}
-    for indicator in result.indicators:
-        severity = severity_aliases.get(indicator.severity.lower(), indicator.severity.lower())
-        if severity not in valid_severities:
-            severity = "informational"
-        rule_id = f"legacy.indicator.{_slug(indicator.type)}"
-        digest = hashlib.sha256(f"{rule_id}\0{indicator.description}".encode()).hexdigest()[:16]
-        finding_severity = cast(
-            Literal["informational", "low", "medium", "high", "critical"], severity
-        )
-        findings.append(
-            FindingV1(
-                finding_id=f"finding-{digest}",
-                rule_id=rule_id,
-                title=indicator.description or indicator.type or "Security indicator",
-                category=indicator.type or "security",
-                severity=finding_severity,
-                confidence=0.5,
-                source_analyzer="result_aggregator",
-                method="legacy_indicator",
-                evidence=[EvidenceV1(kind="description", value=indicator.description)],
-            )
-        )
-    return findings
-
-
-def _analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
-    outcomes: list[AnalyzerOutcomeV1] = []
-    for analyzer_id, value in sorted(raw.items()):
-        if not isinstance(value, dict) or not {"available", "error", "execution_time"}.intersection(
-            value
-        ):
-            continue
-        error = value.get("error")
-        error_text = str(error).lower() if error else ""
-        if error:
-            if "timed out" in error_text or "timeout" in error_text:
-                status = AnalyzerStatus.TIMED_OUT
-            elif "unsupported" in error_text:
-                status = AnalyzerStatus.UNSUPPORTED
-            elif value.get("library_available") is False or "dependency" in error_text:
-                status = AnalyzerStatus.DEPENDENCY_UNAVAILABLE
-            else:
-                status = AnalyzerStatus.FAILED
-        elif value.get("available") is False:
-            status = AnalyzerStatus.DEPENDENCY_UNAVAILABLE
-        elif value.get("detected") is False:
-            status = AnalyzerStatus.NOT_DETECTED
-        else:
-            status = AnalyzerStatus.COMPLETED
-        duration = value.get("execution_time", 0.0)
-        outcomes.append(
-            AnalyzerOutcomeV1(
-                analyzer_id=analyzer_id,
-                status=status,
-                duration=float(duration) if isinstance(duration, (int, float)) else 0.0,
-                error=str(error) if error else None,
-            )
-        )
-    return outcomes
-
-
-def _capa_capabilities(raw: dict[str, Any]) -> list[dict[str, Any]]:
-    capa = raw.get("capa")
-    payload = capa.get("result") if isinstance(capa, dict) else None
-    rules = payload.get("rules") if isinstance(payload, dict) else None
-    if not isinstance(rules, dict):
-        return []
-    return [
-        {"source": "capa", "name": name, "details": details}
-        for name, details in sorted(rules.items())
-    ]
-
-
-def _floss_artifacts(raw: dict[str, Any]) -> list[dict[str, Any]]:
-    floss = raw.get("floss")
-    payload = floss.get("result") if isinstance(floss, dict) else None
-    strings = payload.get("strings") if isinstance(payload, dict) else None
-    if not isinstance(strings, dict):
-        return []
-    artifacts: list[dict[str, Any]] = []
-    for kind, values in strings.items():
-        if not isinstance(values, list):
-            continue
-        artifacts.extend({"source": "floss", "type": str(kind), "value": value} for value in values)
-    return artifacts
+    return "MACHO" if "MACH" in normalized else None
 
 
 def build_report_v1(
@@ -342,19 +78,15 @@ def build_report_v1(
     elif file_info.bits == 64:
         bits = 64
     raw_endian = {"le": "little", "be": "big"}.get(file_info.endian, file_info.endian)
-    endian: Literal["little", "big"] | None = None
-    if raw_endian == "little":
-        endian = "little"
-    elif raw_endian == "big":
-        endian = "big"
-    errors = [result.error] if result.error else []
+    endian: Literal["little", "big"] | None = (
+        cast(Literal["little", "big"], raw_endian) if raw_endian in {"little", "big"} else None
+    )
     format_family = _format_family(file_info.file_type)
-
     return ReportV1(
         tool=ToolInfoV1(
             version=__version__,
-            commit=commit or _tool_commit(),
-            radare2_version=radare2_version or _radare2_version(),
+            commit=commit or tool_commit(),
+            radare2_version=radare2_version or detected_radare2_version(),
         ),
         analysis=AnalysisMetadataV1(
             id=analysis_id or str(uuid4()),
@@ -382,13 +114,13 @@ def build_report_v1(
             elf=_format_details(raw, "elf_info"),
             macho=_format_details(raw, "macho_info"),
         ),
-        security=_normalized_security(result),
-        findings=_findings(result),
-        artifacts=_floss_artifacts(raw),
-        capabilities=_capa_capabilities(raw),
+        security=normalized_security(result),
+        findings=findings(result),
+        artifacts=floss_artifacts(raw),
+        capabilities=capa_capabilities(raw),
         similarity=similarity,
-        analyzers=_analyzer_outcomes(raw),
-        errors=errors,
+        analyzers=analyzer_outcomes(raw),
+        errors=[result.error] if result.error else [],
         warnings=(
             [str(item) for item in raw.get("warnings", [])]
             if isinstance(raw.get("warnings"), list)

@@ -1,5 +1,3 @@
-"""Shared analyzer registry helpers for registration workflows."""
-
 from __future__ import annotations
 
 import logging
@@ -83,9 +81,6 @@ class AnalyzerRegistryRegistrationMixin:
                 required=required,
                 dependencies=dependencies,
                 description=description,
-                version=version,
-                architectures=architectures,
-                output_schema=output_schema,
             )
             if lazy_result is not None:
                 return
@@ -94,12 +89,7 @@ class AnalyzerRegistryRegistrationMixin:
 
         analyzer_class = self._ensure_analyzer_class(analyzer_class)
         category, file_formats, description = self._auto_extract_metadata(
-            analyzer_class=analyzer_class,
-            name=name,
-            category=category,
-            file_formats=file_formats,
-            description=description,
-            auto_extract=auto_extract,
+            analyzer_class, name, category, file_formats, description, auto_extract
         )
         category = self._ensure_category(analyzer_class, category)
 
@@ -187,9 +177,6 @@ class AnalyzerRegistryRegistrationMixin:
         required: bool,
         dependencies: set[str] | None,
         description: str,
-        version: str | None = None,
-        architectures: set[str] | None = None,
-        output_schema: str | None = None,
     ) -> AnalyzerMetadata | None:
         if module_path is None or class_name is None:
             raise ValueError("module_path and class_name are required for lazy registration")
@@ -213,9 +200,6 @@ class AnalyzerRegistryRegistrationMixin:
                     "required": required,
                     "dependencies": dependencies or set(),
                     "description": description,
-                    "version": version,
-                    "architectures": architectures or set(),
-                    "output_schema": output_schema,
                 },
             )
 
@@ -231,9 +215,6 @@ class AnalyzerRegistryRegistrationMixin:
                 required=required,
                 dependencies=dependencies,
                 description=description,
-                version=version,
-                architectures=architectures,
-                output_schema=output_schema,
             )
 
             self._analyzers[name] = metadata
