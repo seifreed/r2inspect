@@ -263,3 +263,61 @@ jobs:
           test -n "$artifact"
           python -m pip install "$artifact"
           r2inspect --help
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch pinned test binaries
+        shell: bash
+        run: |
+          git init test-binaries
+          git -C test-binaries remote add origin https://github.com/seifreed/r2inspect-test-binaries.git
+          git -C test-binaries fetch --depth 1 origin f907471e37e9b6c8ea2d3664b677f76258c7aab8
+          git -C test-binaries checkout --detach FETCH_HEAD
+          test "$(git -C test-binaries rev-parse HEAD)" = "f907471e37e9b6c8ea2d3664b677f76258c7aab8"
+          mkdir -p samples/fixtures
+          find test-binaries -type f \( \
+            -name hello_pe.exe -o \
+            -name hello_elf -o \
+            -name hello_macho \
+          \) -exec cp {} samples/fixtures/ \;
+
+      - name: Build container
+        run: docker build --provenance=false --iidfile /tmp/image-a --tag r2inspect:test .
+
+      - name: Verify reproducible image digest
+        run: |
+          docker build --provenance=false --iidfile /tmp/image-b --tag r2inspect:repeat .
+          cmp /tmp/image-a /tmp/image-b
+
+      - name: Verify pinned radare2
+        shell: bash
+        run: |
+          version="$(docker run --rm --entrypoint r2 r2inspect:test -v)"
+          grep -F "radare2 6.1.8" <<<"$version"
+          grep -F "commit: d904d02e1157b45135c6e61651d890bac8abe873" <<<"$version"
+
+      - name: Verify minimal unprivileged runtime
+        run: |
+          docker run --rm --entrypoint python r2inspect:test -c \
+            "import os, shutil; assert os.getuid() == os.getgid() == 10001; assert not any(shutil.which(x) for x in ('gcc', 'git', 'make'))"
+
+      - name: Smoke test PE, ELF, and Mach-O
+        shell: bash
+        run: |
+          for sample in hello_pe.exe hello_elf hello_macho; do
+            docker run --rm \
+              --volume "$PWD/samples/fixtures:/samples:ro" \
+              r2inspect:test --json "/samples/$sample" >/dev/null
+          done
+
+      - name: Scan container
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: r2inspect:test
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL
