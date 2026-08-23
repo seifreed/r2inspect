@@ -29,6 +29,12 @@ sample hashes and format, normalized and format-specific security properties,
 findings, evidence locations, artifacts, capabilities, similarity results,
 analyzer outcomes, errors, warnings, and metrics.
 
+The CLI detects the current Git commit and `r2 -v` output once per process.
+Packaged builds can set `R2INSPECT_COMMIT` and `R2INSPECT_RADARE2_VERSION` to
+provide immutable build provenance. An absent or unsupported mitigation is
+`null`; `false` is reserved for a mitigation that was evaluated and found
+disabled.
+
 Analyzer outcomes distinguish `completed`, `not_detected`,
 `not_applicable`, `unsupported`, `dependency_unavailable`,
 `skipped_by_profile`, `timed_out`, and `failed`. An extraction failure must

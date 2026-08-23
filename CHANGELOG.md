@@ -17,6 +17,8 @@ Versioning and keeps unreleased work at the top.
   threat model, security, contribution, and roadmap documentation.
 - Added the strict `r2inspect.report/v1` schema and envelope for CLI and batch
   JSON, including normalized format/security fields and analyzer outcomes.
+- Populated report provenance from the running Git checkout and radare2 binary,
+  preserving unknown PE, ELF, and Mach-O mitigations as unknown instead of false.
 
 ## 3.0.0
 

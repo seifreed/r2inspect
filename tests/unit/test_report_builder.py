@@ -84,3 +84,69 @@ def test_build_report_v1_rejects_unknown_legacy_objects() -> None:
 
     with pytest.raises(PydanticSerializationError):
         build_report_v1(result, analysis_id="analysis-3")
+
+
+@pytest.mark.parametrize(
+    ("file_type", "detail_key", "features", "expected"),
+    [
+        (
+            "PE32+",
+            "pe_info",
+            {"aslr": True, "dep": True, "guard_cf": True, "authenticode": True},
+            {
+                "randomization": True,
+                "no_execution": True,
+                "control_flow_integrity": True,
+                "signature": True,
+            },
+        ),
+        (
+            "ELF64",
+            "elf_info",
+            {"pie": True, "nx": True, "stack_canary": True, "relro": "full"},
+            {
+                "randomization": True,
+                "no_execution": True,
+                "stack_protection": True,
+                "relocations": True,
+            },
+        ),
+        (
+            "Mach-O 64",
+            "macho_info",
+            {"pie": True, "nx": True, "signed": True, "arc": True},
+            {
+                "randomization": True,
+                "no_execution": True,
+                "signature": True,
+                "additional_hardening": True,
+            },
+        ),
+    ],
+)
+def test_build_report_v1_normalizes_format_security(
+    file_type: str,
+    detail_key: str,
+    features: dict[str, object],
+    expected: dict[str, bool],
+) -> None:
+    result = build_analysis_result(
+        {
+            "file_info": {"file_type": file_type},
+            detail_key: {"security_features": features},
+        }
+    )
+
+    report = build_report_v1(
+        result,
+        analysis_id="analysis-security",
+        commit="abc123",
+        radare2_version="6.1.8",
+    )
+
+    assert report.security.format_specific == features
+    assert {
+        name: report.security.normalized_mitigations[name].enabled for name in expected
+    } == expected
+    if file_type == "PE32+":
+        assert report.security.normalized_mitigations["stack_protection"].enabled is None
