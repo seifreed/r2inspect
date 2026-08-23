@@ -92,7 +92,7 @@ class Command(ABC):
         self,
         yara: str | None = None,
         xor: str | None = None,
-        profile: str = "standard",
+        profile: str | None = None,
     ) -> dict[str, Any]:
         """Build the standardized analysis-options dictionary."""
         return _build_analysis_options(yara, xor, profile)

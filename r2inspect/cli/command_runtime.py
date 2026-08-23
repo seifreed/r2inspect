@@ -51,8 +51,13 @@ def apply_thread_settings(config: Any, threads: int | None) -> None:
 
 
 def build_analysis_options(
-    yara: str | None = None, xor: str | None = None, profile: str = "standard"
+    yara: str | None = None, xor: str | None = None, profile: str | None = None
 ) -> dict[str, Any]:
+    if profile is None:
+        return {
+            **({"custom_yara": yara} if yara else {}),
+            **({"xor_search": xor} if xor else {}),
+        }
     from ..application.options import build_analysis_options as build_options
 
     return build_options(yara, xor, profile)

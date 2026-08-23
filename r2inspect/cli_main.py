@@ -73,15 +73,7 @@ def main(
     error_handler_fn: Callable[[Exception, bool], None] | None = None,
     **kwargs: Any,
 ) -> None:
-    """
-    r2inspect - Advanced malware analysis tool using radare2 and r2pipe.
-
-    Modular Command Pattern implementation with delegated execution.
-
-    ``run_cli_fn`` defaults to the real ``run_cli`` and ``error_handler_fn``
-    to the real ``handle_main_error``; tests inject deterministic callables
-    instead of patching the module.
-    """
+    """Run the CLI with injectable dispatch and error handling."""
     args: CLIArgs | None = None
     try:
         args = CLIArgs(**kwargs)

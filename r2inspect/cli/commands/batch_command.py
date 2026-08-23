@@ -105,9 +105,9 @@ class BatchCommand(Command):
         self,
         yara: str | None = None,
         xor: str | None = None,
-        profile: str = "standard",
+        profile: str | None = None,
     ) -> dict[str, Any]:
-        return build_analysis_options(yara, xor, profile)
+        return build_analysis_options(yara, xor, profile or "standard")
 
 
 __all__ = [

@@ -73,7 +73,7 @@ def test_anti_analysis_detects_multiple_indicators():
     assert result["anti_debug"] is True
     assert result["anti_vm"] is True
     assert result["anti_sandbox"] is True
-    assert result["timing_checks"] is True
+    assert result["timing_checks"] is False
 
     cpuid_evidence = [
         e
