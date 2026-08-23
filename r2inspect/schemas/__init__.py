@@ -43,6 +43,21 @@ from .results import SectionInfo as SectionInfoDC
 from .results import SecurityFeatures as SecurityFeaturesDC
 from .results import StringInfo as StringInfoDC
 from .results import YaraMatch, from_dict
+from .report_v1 import (
+    AnalysisMetadataV1,
+    AnalyzerOutcomeV1,
+    AnalyzerStatus,
+    EvidenceV1,
+    FindingV1,
+    FormatCommonV1,
+    FormatReportV1,
+    LocationV1,
+    MitigationV1,
+    ReportV1,
+    SampleInfoV1,
+    SecurityReportV1,
+    ToolInfoV1,
+)
 
 # Security schemas
 from .security import (
@@ -162,6 +177,20 @@ __all__ = [
     "StringInfoDC",
     "YaraMatch",
     "from_dict",
+    # Stable report contract
+    "AnalysisMetadataV1",
+    "AnalyzerOutcomeV1",
+    "AnalyzerStatus",
+    "EvidenceV1",
+    "FindingV1",
+    "FormatCommonV1",
+    "FormatReportV1",
+    "LocationV1",
+    "MitigationV1",
+    "ReportV1",
+    "SampleInfoV1",
+    "SecurityReportV1",
+    "ToolInfoV1",
 ]
 
 

@@ -1,0 +1,697 @@
+{
+  "$defs": {
+    "AnalysisMetadataV1": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configuration Digest"
+        },
+        "duration": {
+          "minimum": 0.0,
+          "title": "Duration",
+          "type": "number"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "profile": {
+          "default": "standard",
+          "title": "Profile",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "started_at",
+        "duration"
+      ],
+      "title": "AnalysisMetadataV1",
+      "type": "object"
+    },
+    "AnalyzerOutcomeV1": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzer_id": {
+          "title": "Analyzer Id",
+          "type": "string"
+        },
+        "duration": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Duration",
+          "type": "number"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "status": {
+          "$ref": "#/$defs/AnalyzerStatus"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "analyzer_id",
+        "status"
+      ],
+      "title": "AnalyzerOutcomeV1",
+      "type": "object"
+    },
+    "AnalyzerStatus": {
+      "enum": [
+        "completed",
+        "not_detected",
+        "not_applicable",
+        "unsupported",
+        "dependency_unavailable",
+        "skipped_by_profile",
+        "timed_out",
+        "failed"
+      ],
+      "title": "AnalyzerStatus",
+      "type": "string"
+    },
+    "EvidenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "EvidenceV1",
+      "type": "object"
+    },
+    "FindingV1": {
+      "additionalProperties": false,
+      "properties": {
+        "attack": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Attack",
+          "type": "array"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceV1"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "finding_id": {
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "locations": {
+          "items": {
+            "$ref": "#/$defs/LocationV1"
+          },
+          "title": "Locations",
+          "type": "array"
+        },
+        "mbc": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mbc",
+          "type": "array"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "informational",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_analyzer": {
+          "title": "Source Analyzer",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id",
+        "rule_id",
+        "title",
+        "category",
+        "severity",
+        "confidence",
+        "source_analyzer",
+        "method"
+      ],
+      "title": "FindingV1",
+      "type": "object"
+    },
+    "FormatCommonV1": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "bits": {
+          "anyOf": [
+            {
+              "enum": [
+                32,
+                64
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bits"
+        },
+        "endian": {
+          "anyOf": [
+            {
+              "enum": [
+                "little",
+                "big"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endian"
+        },
+        "entry_point": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entry Point"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        }
+      },
+      "title": "FormatCommonV1",
+      "type": "object"
+    },
+    "FormatReportV1": {
+      "additionalProperties": false,
+      "properties": {
+        "common": {
+          "$ref": "#/$defs/FormatCommonV1"
+        },
+        "elf": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Elf"
+        },
+        "macho": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Macho"
+        },
+        "pe": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pe"
+        }
+      },
+      "title": "FormatReportV1",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "LocationV1": {
+      "additionalProperties": false,
+      "properties": {
+        "basic_block": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basic Block"
+        },
+        "function": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Function"
+        },
+        "offset": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offset"
+        },
+        "virtual_address": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Virtual Address"
+        }
+      },
+      "title": "LocationV1",
+      "type": "object"
+    },
+    "MitigationV1": {
+      "additionalProperties": false,
+      "properties": {
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Details",
+          "type": "object"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Enabled"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "source"
+      ],
+      "title": "MitigationV1",
+      "type": "object"
+    },
+    "SampleInfoV1": {
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "bits": {
+          "anyOf": [
+            {
+              "enum": [
+                32,
+                64
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bits"
+        },
+        "detected_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detected Format"
+        },
+        "hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Hashes",
+          "type": "object"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "size": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        }
+      },
+      "title": "SampleInfoV1",
+      "type": "object"
+    },
+    "SecurityReportV1": {
+      "additionalProperties": false,
+      "properties": {
+        "format_specific": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Format Specific",
+          "type": "object"
+        },
+        "normalized_mitigations": {
+          "additionalProperties": {
+            "$ref": "#/$defs/MitigationV1"
+          },
+          "title": "Normalized Mitigations",
+          "type": "object"
+        }
+      },
+      "title": "SecurityReportV1",
+      "type": "object"
+    },
+    "ToolInfoV1": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commit"
+        },
+        "name": {
+          "default": "r2inspect",
+          "title": "Name",
+          "type": "string"
+        },
+        "radare2_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Radare2 Version"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "ToolInfoV1",
+      "type": "object"
+    }
+  },
+  "$id": "https://r2inspect.dev/schemas/r2inspect.report.v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "analysis": {
+      "$ref": "#/$defs/AnalysisMetadataV1"
+    },
+    "analyzers": {
+      "items": {
+        "$ref": "#/$defs/AnalyzerOutcomeV1"
+      },
+      "title": "Analyzers",
+      "type": "array"
+    },
+    "artifacts": {
+      "items": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "type": "object"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "capabilities": {
+      "items": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "type": "object"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "extras": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Extras",
+      "type": "object"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/FindingV1"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "format": {
+      "$ref": "#/$defs/FormatReportV1"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Metrics",
+      "type": "object"
+    },
+    "sample": {
+      "$ref": "#/$defs/SampleInfoV1"
+    },
+    "schema_version": {
+      "const": "r2inspect.report/v1",
+      "default": "r2inspect.report/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "security": {
+      "$ref": "#/$defs/SecurityReportV1"
+    },
+    "similarity": {
+      "items": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "type": "object"
+      },
+      "title": "Similarity",
+      "type": "array"
+    },
+    "tool": {
+      "$ref": "#/$defs/ToolInfoV1"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "tool",
+    "analysis",
+    "sample"
+  ],
+  "title": "ReportV1",
+  "type": "object"
+}

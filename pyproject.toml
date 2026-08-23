@@ -106,6 +106,7 @@ exclude = ["tests*", "docs*", "examples*"]
 "r2inspect" = [
     "rules/yara/*.yar",
     "rules/yara/*.yara",
+    "schemas/*.json",
 ]
 
 [tool.black]

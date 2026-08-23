@@ -21,6 +21,9 @@ The first stable wire contract will identify itself as:
 {"schema_version": "r2inspect.report/v1"}
 ```
 
+The generated [JSON Schema](../r2inspect/schemas/r2inspect.report.v1.schema.json)
+is included in source and wheel distributions.
+
 It will contain tool and backend provenance, analysis identity and profile,
 sample hashes and format, normalized and format-specific security properties,
 findings, evidence locations, artifacts, capabilities, similarity results,
