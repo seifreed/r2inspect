@@ -175,6 +175,7 @@ jobs:
           marker="not slow"
           if [ "$RUNNER_OS" = "Windows" ]; then
             marker="not slow and not requires_posix"
+            export R2INSPECT_CMD_TIMEOUT_SECONDS=1
           fi
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
           python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0 --marker "$marker"
