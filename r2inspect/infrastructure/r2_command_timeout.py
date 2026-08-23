@@ -7,6 +7,7 @@ import os
 import threading
 import time
 import weakref
+from collections.abc import Callable
 from typing import Any
 
 from ..domain.constants import SUBPROCESS_TIMEOUT_SECONDS
@@ -23,6 +24,7 @@ logger = get_logger(__name__)
 # and in CI ("RuntimeError: can't start new thread").
 _wedged_lock = threading.Lock()
 _wedged_instances: weakref.WeakSet[Any] = weakref.WeakSet()
+_USE_DEFAULT = object()
 
 
 def is_wedged(r2_instance: Any) -> bool:
@@ -38,8 +40,12 @@ def mark_wedged(r2_instance: Any) -> None:
         _wedged_instances.add(r2_instance)
 
 
-def _run_cmd_with_timeout(
-    r2_instance: R2CommandInterface, command: str, default: Any | None
+def _run_with_timeout(
+    r2_instance: R2CommandInterface,
+    command: str,
+    default: Any | None,
+    operation: Callable[[], Any],
+    error_default: Any = _USE_DEFAULT,
 ) -> Any | None:
     if is_wedged(r2_instance):
         return default
@@ -48,10 +54,10 @@ def _run_cmd_with_timeout(
 
     def _run() -> None:
         try:
-            result["value"] = r2_instance.cmd(command)
+            result["value"] = operation()
         except Exception as exc:
             logger.debug("r2 cmd failed for %s: %s", command, exc)
-            result["value"] = default
+            result["value"] = default if error_default is _USE_DEFAULT else error_default
         finally:
             result["completed_at"] = time.monotonic()
             result["done"] = True
@@ -76,3 +82,25 @@ def _run_cmd_with_timeout(
         return default
 
     return result["value"]
+
+
+def _run_cmd_with_timeout(
+    r2_instance: R2CommandInterface, command: str, default: Any | None
+) -> Any | None:
+    return _run_with_timeout(r2_instance, command, default, lambda: r2_instance.cmd(command))
+
+
+def _run_cmdj_with_timeout(
+    r2_instance: R2CommandInterface,
+    command: str,
+    default: Any | None,
+    *,
+    error_default: Any = _USE_DEFAULT,
+) -> Any | None:
+    def _cmdj() -> Any:
+        try:
+            return r2_instance.cmdj(command)
+        except OSError:
+            return default
+
+    return _run_with_timeout(r2_instance, command, default, _cmdj, error_default=error_default)
