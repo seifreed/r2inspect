@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .categories import AnalyzerCategory
+from .metadata import AnalyzerSpec
 
 
 def parse_category(category_value: Any) -> AnalyzerCategory:
@@ -46,6 +47,17 @@ def extract_metadata_from_class(
     """
     if not is_base_analyzer(analyzer_class):
         raise ValueError(f"{analyzer_class.__name__} does not inherit from BaseAnalyzer")
+
+    spec = getattr(analyzer_class, "spec", None)
+    if spec is not None:
+        if not isinstance(spec, AnalyzerSpec):
+            raise TypeError(f"{analyzer_class.__name__}.spec must be an AnalyzerSpec")
+        return {
+            "name": name or spec.id,
+            "category": spec.category,
+            "formats": set(spec.formats),
+            "description": spec.description,
+        }
 
     try:
         temp_instance = analyzer_class(adapter=None, config=None, filepath=None)

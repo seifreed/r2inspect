@@ -7,6 +7,29 @@ from typing import Any
 from .categories import AnalyzerCategory
 
 
+@dataclass(frozen=True, slots=True)
+class AnalyzerSpec:
+    """Declarative analyzer metadata safe to inspect without construction."""
+
+    id: str
+    version: str
+    category: AnalyzerCategory
+    formats: frozenset[str] = frozenset()
+    architectures: frozenset[str] = frozenset()
+    dependencies: frozenset[str] = frozenset()
+    output_schema: str | None = None
+    description: str = ""
+    required: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("Analyzer id cannot be empty")
+        if not self.version:
+            raise ValueError("Analyzer version cannot be empty")
+        if not isinstance(self.category, AnalyzerCategory):
+            raise TypeError("Analyzer category must be an AnalyzerCategory")
+
+
 @dataclass(slots=True)
 class AnalyzerMetadata:
     """Metadata for a registered analyzer."""
@@ -18,6 +41,9 @@ class AnalyzerMetadata:
     required: bool = False
     dependencies: set[str] | None = None
     description: str = ""
+    version: str | None = None
+    architectures: set[str] | None = None
+    output_schema: str | None = None
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -30,6 +56,8 @@ class AnalyzerMetadata:
             self.file_formats = set()
         if self.dependencies is None:
             self.dependencies = set()
+        if self.architectures is None:
+            self.architectures = set()
 
     def supports_format(self, file_format: str) -> bool:
         """
@@ -61,4 +89,7 @@ class AnalyzerMetadata:
             "required": self.required,
             "dependencies": list(self.dependencies or []),
             "description": self.description,
+            "version": self.version,
+            "architectures": list(self.architectures or []),
+            "output_schema": self.output_schema,
         }

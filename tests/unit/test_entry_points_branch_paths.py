@@ -8,9 +8,9 @@ from typing import Any
 import pytest
 
 from r2inspect.abstractions.base_analyzer import BaseAnalyzer
+from r2inspect.registry import AnalyzerCategory, AnalyzerSpec
 from r2inspect.registry.analyzer_registry import AnalyzerRegistry
 from r2inspect.registry.entry_points import EntryPointLoader
-
 
 # ---------------------------------------------------------------------------
 # Stub helpers
@@ -34,6 +34,24 @@ class _PlainClass:
     """Non-BaseAnalyzer class to exercise class registration path."""
 
     pass
+
+
+class _DeclarativeAnalyzer(BaseAnalyzer):
+    spec = AnalyzerSpec(
+        id="vendor.declarative",
+        version="1.2.3",
+        category=AnalyzerCategory.DETECTION,
+        formats=frozenset({"PE"}),
+        architectures=frozenset({"x86_64"}),
+        dependencies=frozenset({"optional-tool"}),
+        output_schema="vendor.declarative/v1",
+    )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise AssertionError("plugin discovery must not construct analyzers")
+
+    def analyze(self) -> dict[str, Any]:
+        return {}
 
 
 class _FakeEP:
@@ -199,6 +217,27 @@ def test_register_entry_point_class_success_base_analyzer():
     ep = _FakeEP("stub_ep", _StubBaseAnalyzer)
     result = loader._register_entry_point_class(ep, _StubBaseAnalyzer)
     assert result == 1
+
+
+def test_register_entry_point_class_uses_declarative_spec_without_construction():
+    registry = AnalyzerRegistry(lazy_loading=False)
+    loader = EntryPointLoader(registry)
+
+    assert (
+        loader._register_entry_point_class(
+            _FakeEP("ignored", _DeclarativeAnalyzer), _DeclarativeAnalyzer
+        )
+        == 1
+    )
+
+    metadata = registry.get_metadata("vendor.declarative")
+    assert metadata is not None
+    assert metadata.category is AnalyzerCategory.DETECTION
+    assert metadata.file_formats == {"PE"}
+    assert metadata.architectures == {"x86_64"}
+    assert metadata.dependencies == {"optional-tool"}
+    assert metadata.version == "1.2.3"
+    assert metadata.output_schema == "vendor.declarative/v1"
 
 
 def test_register_entry_point_class_plain_class_uses_ep_name():

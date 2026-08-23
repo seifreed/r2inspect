@@ -19,6 +19,7 @@ Versioning and keeps unreleased work at the top.
   JSON, including normalized format/security fields and analyzer outcomes.
 - Populated report provenance from the running Git checkout and radare2 binary,
   preserving unknown PE, ELF, and Mach-O mitigations as unknown instead of false.
+- Added declarative `AnalyzerSpec` plugin discovery without analyzer construction.
 
 ## 3.0.0
 

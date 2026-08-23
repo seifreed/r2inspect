@@ -10,17 +10,18 @@ receives the registry.
 from typing import Any
 
 from r2inspect.abstractions.base_analyzer import BaseAnalyzer
+from r2inspect.registry import AnalyzerCategory, AnalyzerSpec
 
 
 class ExampleAnalyzer(BaseAnalyzer):
-    def get_name(self) -> str:
-        return "vendor.example"
-
-    def get_category(self) -> str:
-        return "detection"
-
-    def get_supported_formats(self) -> set[str]:
-        return {"PE"}
+    spec = AnalyzerSpec(
+        id="vendor.example",
+        version="1.0.0",
+        category=AnalyzerCategory.DETECTION,
+        formats=frozenset({"PE"}),
+        architectures=frozenset({"x86", "x86_64"}),
+        output_schema="vendor.example/v1",
+    )
 
     def analyze(self) -> dict[str, Any]:
         return {"available": True, "detected": False, "evidence": []}
@@ -33,10 +34,9 @@ Register it in the plugin package:
 example = "vendor_plugin:ExampleAnalyzer"
 ```
 
-The loader derives name, category, formats, and description from a
-`BaseAnalyzer` class without constructing it. Non-`BaseAnalyzer` classes default
-to metadata; callable entry points should call `registry.register()` with an
-explicit category and supported formats.
+The loader reads `AnalyzerSpec` without constructing the analyzer. Classes
+without a spec retain the legacy metadata-method discovery path; callable entry
+points should call `registry.register()` with an explicit category and formats.
 
 Constructors must accept the runtime dependencies used by the analyzer factory:
 `adapter`, `r2`, `config`, and `filepath`/`filename` as applicable. Do not open

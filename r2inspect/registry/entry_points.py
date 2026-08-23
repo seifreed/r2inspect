@@ -9,6 +9,8 @@ from collections.abc import Callable
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
+from .metadata import AnalyzerSpec
+
 if TYPE_CHECKING:
     from .analyzer_registry import AnalyzerRegistry
 
@@ -67,6 +69,24 @@ class EntryPointLoader:
 
     def _register_entry_point_class(self, ep: Any, obj: Any) -> int:
         try:
+            spec = getattr(obj, "spec", None)
+            if spec is not None:
+                if not isinstance(spec, AnalyzerSpec):
+                    raise TypeError("spec must be an AnalyzerSpec")
+                self._registry.register(
+                    name=spec.id,
+                    analyzer_class=obj,
+                    category=spec.category,
+                    file_formats=set(spec.formats),
+                    required=spec.required,
+                    dependencies=set(spec.dependencies),
+                    description=spec.description,
+                    version=spec.version,
+                    architectures=set(spec.architectures),
+                    output_schema=spec.output_schema,
+                    auto_extract=False,
+                )
+                return 1
             name = self._derive_entry_point_name(ep, obj)
             category = None
             if not self._registry.is_base_analyzer(obj):
@@ -86,6 +106,9 @@ class EntryPointLoader:
             return 0
 
     def _derive_entry_point_name(self, ep: Any, obj: Any) -> str:
+        spec = getattr(obj, "spec", None)
+        if isinstance(spec, AnalyzerSpec):
+            return spec.id
         if self._registry.is_base_analyzer(obj):
             meta = self._registry.extract_metadata_from_class(obj)
             return str(meta["name"])

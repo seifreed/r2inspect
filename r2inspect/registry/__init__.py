@@ -94,6 +94,7 @@ Examples:
 """
 
 from .analyzer_registry import AnalyzerCategory, AnalyzerMetadata, AnalyzerRegistry
+from .metadata import AnalyzerSpec
 from .default_registry import (
     create_default_registry,
     get_category_registry,
@@ -105,6 +106,7 @@ __all__ = [
     # Core registry classes
     "AnalyzerRegistry",
     "AnalyzerMetadata",
+    "AnalyzerSpec",
     "AnalyzerCategory",
     # Registry factory functions
     "create_default_registry",
