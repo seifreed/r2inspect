@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ...application.analysis_service import default_analysis_service
+from ...application.report_builder import report_payload_v1
 from ...application.use_cases import AnalyzeBinaryUseCase
 from . import analysis_output
 from .base import Command, apply_thread_settings
@@ -66,7 +67,10 @@ class AnalyzeCommand(Command):
         self._print_status_if_needed(output_json, output_csv, output_file)
         result = AnalyzeBinaryUseCase().run(inspector, options)
         results = result.to_dict()
-        self._output_results(results, output_json, output_csv, output_file, verbose, csv_delimiter)
+        output_payload = report_payload_v1(result, options) if output_json else results
+        self._output_results(
+            output_payload, output_json, output_csv, output_file, verbose, csv_delimiter
+        )
 
     def _show_analysis_start(
         self,

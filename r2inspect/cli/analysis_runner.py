@@ -8,6 +8,7 @@ from rich.console import Console
 
 from ..application.options import build_analysis_options
 from ..application.analysis_service import default_analysis_service
+from ..application.report_builder import report_payload_v1
 from ..application.use_cases import AnalyzeBinaryUseCase
 from ..cli.output_formatters import OutputFormatter
 from . import analysis_runner_support as _runner_support
@@ -27,7 +28,8 @@ def run_analysis(
     print_status_if_appropriate(output_json, output_csv, output_file)
     result = AnalyzeBinaryUseCase().run(inspector, options)
     results = result.to_dict()
-    output_results(results, output_json, output_csv, output_file, verbose)
+    output_payload = report_payload_v1(result, options) if output_json else results
+    output_results(output_payload, output_json, output_csv, output_file, verbose)
     return results
 
 

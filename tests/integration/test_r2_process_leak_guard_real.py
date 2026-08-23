@@ -111,16 +111,20 @@ def test_repeated_analysis_on_one_inspector_does_not_grow_objects() -> None:
         gc.collect()
         final_objects = len(gc.get_objects())
 
+        for _ in range(half_cycles):
+            inspector.analyze(batch_mode=True)
+        gc.collect()
+        settled_objects = len(gc.get_objects())
+
     first_window_growth = mid_objects - base_objects
     second_window_growth = final_objects - mid_objects
-    # Runtime/library caches can appear after warmup on some Python builds. A
-    # sustained per-run leak should still grow in the second measurement window.
-    assert (
-        second_window_growth <= 750
-    ), f"live objects kept growing by {second_window_growth} over {half_cycles} analyze() calls"
-    assert second_window_growth <= max(
-        250, first_window_growth
-    ), f"second growth window ({second_window_growth}) exceeded first ({first_window_growth})"
+    settled_window_growth = settled_objects - final_objects
+    # Runtime, coverage, and library caches can appear after warmup. A sustained
+    # per-run leak keeps the same slope; cache growth decays in the next window.
+    assert settled_window_growth <= max(250, second_window_growth // 2), (
+        "live-object growth did not settle across analysis windows: "
+        f"{first_window_growth}, {second_window_growth}, {settled_window_growth}"
+    )
 
 
 def test_parallel_batch_leaks_no_processes_or_fds(tmp_path: Path) -> None:

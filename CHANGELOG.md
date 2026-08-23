@@ -15,6 +15,8 @@ Versioning and keeps unreleased work at the top.
 - Added explicit POSIX test markers and portable Windows resource checks.
 - Added project architecture, output, SDK, methodology, limitation, benchmark,
   threat model, security, contribution, and roadmap documentation.
+- Added the strict `r2inspect.report/v1` schema and envelope for CLI and batch
+  JSON, including normalized format/security fields and analyzer outcomes.
 
 ## 3.0.0
 

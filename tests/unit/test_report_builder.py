@@ -53,6 +53,7 @@ def test_build_report_v1_maps_core_data_findings_and_outcomes() -> None:
 
     assert ReportV1.model_validate_json(report.model_dump_json()) == report
     assert report.sample.hashes["sha256"] == "ab" * 32
+    assert report.sample.detected_format == "PE"
     assert report.format.pe == {"entry_point": 4096}
     assert report.security.normalized_mitigations["randomization"].enabled is True
     assert report.findings[0].severity == "high"

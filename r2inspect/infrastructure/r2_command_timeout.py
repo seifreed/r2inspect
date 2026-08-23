@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import os
 import threading
+import time
 import weakref
 from typing import Any
 
@@ -43,7 +44,7 @@ def _run_cmd_with_timeout(
     if is_wedged(r2_instance):
         return default
 
-    result: dict[str, Any] = {"value": default, "done": False}
+    result: dict[str, Any] = {"value": default, "done": False, "completed_at": None}
 
     def _run() -> None:
         try:
@@ -52,6 +53,7 @@ def _run_cmd_with_timeout(
             logger.debug("r2 cmd failed for %s: %s", command, exc)
             result["value"] = default
         finally:
+            result["completed_at"] = time.monotonic()
             result["done"] = True
 
     timeout_seconds: float = float(SUBPROCESS_TIMEOUT_SECONDS)
@@ -63,10 +65,12 @@ def _run_cmd_with_timeout(
             timeout_seconds = SUBPROCESS_TIMEOUT_SECONDS
 
     thread = threading.Thread(target=_run, daemon=True)
+    deadline = time.monotonic() + timeout_seconds
     thread.start()
     thread.join(timeout=timeout_seconds)
 
-    if not result["done"]:
+    completed_at = result["completed_at"]
+    if not result["done"] or not isinstance(completed_at, float) or completed_at > deadline:
         logger.warning("r2 command timed out: %s", command)
         mark_wedged(r2_instance)
         return default

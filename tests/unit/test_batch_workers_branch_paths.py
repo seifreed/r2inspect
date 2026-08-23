@@ -14,9 +14,9 @@ Missing lines targeted:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-import threading
 from pathlib import Path
 
 import pytest
@@ -28,7 +28,6 @@ from r2inspect.cli.batch_workers import (
 )
 from r2inspect.config import Config
 from r2inspect.infrastructure.rate_limiter import BatchRateLimiter
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -186,6 +185,9 @@ def test_process_single_file_json_output_written(tmp_path: Path):
     assert error is None
     json_file = output_path / f"{local.name}_analysis.json"
     assert json_file.exists()
+    payload = json.loads(json_file.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "r2inspect.report/v1"
+    assert results is not None and results["filename"] == str(local)
 
 
 def test_process_single_file_sets_relative_path(tmp_path: Path):

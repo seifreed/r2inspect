@@ -14,6 +14,7 @@ from typing import Any
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
+from ..application.report_builder import report_payload_v1
 from ..application.use_cases import AnalyzeBinaryUseCase
 from ..factory import create_inspector
 from ..infrastructure.logging import get_logger
@@ -72,7 +73,7 @@ def process_single_file(
             results["relative_path"] = str(file_path.relative_to(batch_path))
 
             if output_json:
-                formatter = OutputFormatter(results)
+                formatter = OutputFormatter(report_payload_v1(result, analysis_options))
                 json_output = formatter.to_json()
                 json_file = output_path / per_file_json_name(str(results["relative_path"]))
                 # Write atomically: write to temp file then rename to prevent partial files

@@ -43,6 +43,17 @@ def _format_details(raw: dict[str, Any], key: str) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _format_family(file_type: str) -> str | None:
+    normalized = file_type.upper()
+    if normalized.startswith("PE"):
+        return "PE"
+    if normalized.startswith("ELF"):
+        return "ELF"
+    if "MACH" in normalized:
+        return "MACHO"
+    return None
+
+
 def _normalized_security(result: AnalysisResult) -> SecurityReportV1:
     security = result.security
     file_type = result.file_info.file_type.upper()
@@ -199,6 +210,7 @@ def build_report_v1(
     elif raw_endian == "big":
         endian = "big"
     errors = [result.error] if result.error else []
+    format_family = _format_family(file_info.file_type)
 
     return ReportV1(
         tool=ToolInfoV1(
@@ -217,13 +229,13 @@ def build_report_v1(
             path=file_info.path or None,
             size=file_info.size,
             hashes=hashes,
-            detected_format=file_info.file_type or None,
+            detected_format=format_family,
             architecture=file_info.architecture or None,
             bits=bits,
         ),
         format=FormatReportV1(
             common=FormatCommonV1(
-                format=file_info.file_type or None,
+                format=format_family,
                 architecture=file_info.architecture or None,
                 bits=bits,
                 endian=endian,
@@ -251,4 +263,14 @@ def build_report_v1(
     )
 
 
-__all__ = ["build_report_v1"]
+def report_payload_v1(result: AnalysisResult, options: dict[str, Any]) -> dict[str, Any]:
+    """Return a JSON-compatible report payload for CLI and batch writers."""
+    report = build_report_v1(
+        result,
+        profile=str(options.get("profile", "standard")),
+        configuration=options,
+    )
+    return report.model_dump(mode="json")
+
+
+__all__ = ["build_report_v1", "report_payload_v1"]

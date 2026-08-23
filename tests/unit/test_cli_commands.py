@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 
 from rich.console import Console
@@ -113,7 +114,9 @@ def test_analyze_command_run_analysis_writes_json(tmp_path):
     )
 
     assert output_file.exists()
-    assert "sample" in output_file.read_text()
+    payload = json.loads(output_file.read_text())
+    assert payload["schema_version"] == "r2inspect.report/v1"
+    assert payload["extras"]["file_info"]["name"] == "sample"
 
 
 def test_analyze_command_print_status_when_console_output(tmp_path):

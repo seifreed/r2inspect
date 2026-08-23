@@ -6,10 +6,16 @@ from r2inspect.cli.analysis_runner import (
     has_circuit_breaker_data,
     output_csv_results,
     output_json_results,
+    run_analysis,
     setup_analysis_options,
     setup_single_file_output,
 )
 from r2inspect.cli.output_formatters import OutputFormatter
+
+
+class _FakeInspector:
+    def analyze(self, **_kwargs):
+        return {"file_info": {"name": "sample", "size": 1}}
 
 
 def test_setup_single_file_output(tmp_path):
@@ -47,3 +53,14 @@ def test_add_statistics_to_results():
     add_statistics_to_results(results)
     # error/retry stats may or may not be present, but should not error
     assert isinstance(results, dict)
+
+
+def test_run_analysis_emits_report_v1_but_returns_legacy_data(tmp_path: Path) -> None:
+    output = tmp_path / "analysis.json"
+
+    results = run_analysis(_FakeInspector(), {}, True, False, output)
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "r2inspect.report/v1"
+    assert payload["extras"]["file_info"]["name"] == "sample"
+    assert results["file_info"]["name"] == "sample"

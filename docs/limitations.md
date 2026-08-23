@@ -4,8 +4,8 @@
   encryption, self-modification, environment checks, or backend blind spots.
 - Detector scores are heuristics; most are not yet calibrated on a published
   representative corpus.
-- The stable `r2inspect.report/v1` contract is not implemented in 3.0. Current
-  JSON consumers must tolerate additive and structural changes.
+- `r2inspect.report/v1` preserves analyzer-specific legacy data in `extras`;
+  that compatibility object is not a stable sub-schema.
 - radare2 is the production extraction backend. Its parsing and analysis errors
   can make downstream results incomplete.
 - PE, ELF, and Mach-O analyzers expose different format-specific detail; common
