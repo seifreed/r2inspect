@@ -151,7 +151,19 @@ CLI -> create_inspector -> R2Inspector -> AnalysisPipeline -> analyzers
                                       -> Adapter (r2pipe) -> radare2
 ```
 
-See `docs/architecture.md` for a short overview of the layers and extension points.
+See the [architecture](docs/architecture.md), [output contract](docs/output-schema.md),
+and [analyzer SDK](docs/analyzer-sdk.md) documentation for extension details.
+
+## Project documentation
+
+- [Detection methodology](docs/detection-methodology.md)
+- [Known limitations](docs/limitations.md)
+- [Benchmark policy](docs/benchmark.md)
+- [Threat model](docs/threat-model.md)
+- [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Roadmap](ROADMAP.md)
 
 ---
 
