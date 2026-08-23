@@ -14,6 +14,7 @@ from __future__ import annotations
 import gc
 import sys
 from pathlib import Path
+from types import MethodType
 
 import psutil
 import pytest
@@ -30,6 +31,12 @@ pytestmark = pytest.mark.requires_r2
 _FIXTURE = Path("samples/fixtures/hello_pe.exe")
 _FIXTURE_DIR = Path("samples/fixtures")
 _CYCLES = 8
+
+
+def _live_application_objects() -> int:
+    # coverage.py retains bound-method wrappers as it discovers executed code;
+    # those are tracer state, not objects retained by an inspector run.
+    return sum(not isinstance(obj, MethodType) for obj in gc.get_objects())
 
 
 def _radare2_child_count(proc: psutil.Process) -> int:
@@ -99,22 +106,22 @@ def test_repeated_analysis_on_one_inspector_does_not_grow_objects() -> None:
             inspector.analyze(batch_mode=True)
         half_cycles = _CYCLES // 2
         gc.collect()
-        base_objects = len(gc.get_objects())
+        base_objects = _live_application_objects()
 
         for _ in range(half_cycles):
             inspector.analyze(batch_mode=True)
         gc.collect()
-        mid_objects = len(gc.get_objects())
+        mid_objects = _live_application_objects()
 
         for _ in range(half_cycles):
             inspector.analyze(batch_mode=True)
         gc.collect()
-        final_objects = len(gc.get_objects())
+        final_objects = _live_application_objects()
 
         for _ in range(half_cycles):
             inspector.analyze(batch_mode=True)
         gc.collect()
-        settled_objects = len(gc.get_objects())
+        settled_objects = _live_application_objects()
 
     first_window_growth = mid_objects - base_objects
     second_window_growth = final_objects - mid_objects
