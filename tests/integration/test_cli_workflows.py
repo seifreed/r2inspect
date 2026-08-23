@@ -1,5 +1,4 @@
 import contextlib
-import json
 import os
 import signal
 import subprocess
@@ -8,6 +7,8 @@ import time
 from pathlib import Path
 
 import pytest
+
+from r2inspect.schemas.report_v1 import ReportV1
 
 pytestmark = pytest.mark.requires_r2
 
@@ -68,8 +69,8 @@ def test_cli_analyze_json_output(tmp_path):
     assert result.returncode == 0
     assert output_file.exists()
 
-    payload = json.loads(output_file.read_text())
-    assert payload["format_detection"]["file_format"] == "Mach-O"
+    report = ReportV1.model_validate_json(output_file.read_text())
+    assert report.sample.detected_format == "MACHO"
 
 
 @pytest.mark.requires_posix
