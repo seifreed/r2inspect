@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ClassVar
 
 from ..abstractions import BaseAnalyzer
+from ..infrastructure.command_runner import run_command
 
 
 class ExternalJsonAnalyzer(BaseAnalyzer):
@@ -48,11 +48,8 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 "execution_time": time.monotonic() - started,
             }
         try:
-            completed = subprocess.run(
+            completed = run_command(
                 [executable, "-j", str(Path(self.filepath))],
-                capture_output=True,
-                text=True,
-                check=False,
                 timeout=120,
             )
             if completed.returncode != 0:
@@ -65,7 +62,7 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 "result": payload,
                 "execution_time": time.monotonic() - started,
             }
-        except subprocess.TimeoutExpired:
+        except TimeoutError:
             return {
                 "available": True,
                 "error": "timed out after 120 seconds",
