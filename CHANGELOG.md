@@ -27,6 +27,8 @@ Versioning and keeps unreleased work at the top.
 - Split PE, YARA, and similarity engines into optional dependency groups and
   documented the tested Python 3.13+ support boundary.
 - Added a golden compatibility projection for PE, ELF, and Mach-O report-v1 output.
+- Required a contextual read/delta/branch pattern before timing observations become
+  an anti-analysis verdict.
 
 ## 3.0.0
 

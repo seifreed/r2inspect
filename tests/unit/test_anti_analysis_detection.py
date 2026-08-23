@@ -287,7 +287,7 @@ def test_timing_checks_with_get_tick_count():
     )
     result = detector.detect()
 
-    assert result["timing_checks"] is True
+    assert result["timing_checks"] is False
     assert any("Timing API Calls" in str(e) for e in result["detection_details"]["timing_evidence"])
 
 
@@ -344,7 +344,7 @@ def test_timing_checks_with_query_performance_counter():
     )
     result = detector.detect()
 
-    assert result["timing_checks"] is True
+    assert result["timing_checks"] is False
 
 
 def test_suspicious_api_virtual_alloc():
@@ -515,7 +515,7 @@ def test_combined_evasion_techniques():
     assert result["anti_debug"] is True
     assert result["anti_vm"] is True
     assert result["anti_sandbox"] is True
-    assert result["timing_checks"] is True
+    assert result["timing_checks"] is False
     assert len(result["suspicious_apis"]) > 0
 
 

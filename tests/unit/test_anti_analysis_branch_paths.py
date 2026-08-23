@@ -270,7 +270,14 @@ def test_detect_anti_sandbox_with_sandbox_strings() -> None:
 
 
 def test_detect_timing_checks_with_rdtsc() -> None:
-    adapter = _search_text_adapter(lambda p: "0x402000\n0x402100\n0x402200" if p == "rdtsc" else "")
+    def timing_pattern(pattern: str) -> str:
+        return {
+            "rdtsc": "0x402000\n0x402100",
+            "sub": "0x402108",
+            "jne": "0x402110",
+        }.get(pattern, "")
+
+    adapter = _search_text_adapter(timing_pattern)
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_timing_checks_detailed()
     assert result["detected"] is True
@@ -317,7 +324,7 @@ def test_detect_timing_checks_detailed_skips_malformed_imports() -> None:
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_timing_checks_detailed()
 
-    assert result["detected"] is True
+    assert result["detected"] is False
     assert any(e.get("type") == "Timing API Calls" for e in result["evidence"])
 
 

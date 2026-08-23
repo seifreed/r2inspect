@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -288,7 +289,6 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
                         "library": imp.get("libname") or imp.get("library", "unknown"),
                     }
                 )
-                result["detected"] = True
         if timing_imports:
             result["evidence"].append(
                 {
@@ -299,8 +299,22 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
             )
     rdtsc_usage = detector._search_opcode("rdtsc")
     if has_text(rdtsc_usage):
-        result["detected"] = True
         addresses = rdtsc_usage.strip().split("\n")
+        rdtsc_addresses = _search_addresses(rdtsc_usage)
+        delta_addresses = _search_addresses(detector._search_opcode("sub")) | _search_addresses(
+            detector._search_opcode("cmp")
+        )
+        branch_addresses = set()
+        for opcode in ("je", "jne", "ja", "jb", "jg", "jl"):
+            branch_addresses.update(_search_addresses(detector._search_opcode(opcode)))
+        result["detected"] = any(
+            second > first
+            and second - first <= 0x100
+            and any(first <= address <= second + 0x40 for address in delta_addresses)
+            and any(first <= address <= second + 0x40 for address in branch_addresses)
+            for first in rdtsc_addresses
+            for second in rdtsc_addresses
+        )
         result["evidence"].append(
             {
                 "type": "RDTSC Instruction",
@@ -309,6 +323,12 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
             }
         )
     return result
+
+
+def _search_addresses(output: Any) -> set[int]:
+    if not isinstance(output, str):
+        return set()
+    return {int(address, 16) for address in re.findall(r"\b0x[0-9a-fA-F]+\b", output)}
 
 
 def detect_environment_fingerprinting(detector: Any) -> list[dict[str, Any]]:
