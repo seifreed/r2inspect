@@ -13,6 +13,7 @@ from typing import Any, Literal, TextIO
 
 from ..interfaces import R2CommandInterface
 from .logging import get_logger
+from .r2_command_timeout import _run_cmdj_with_timeout
 from .r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
@@ -77,7 +78,9 @@ def silent_cmdj(
 def _try_cmdj(r2_instance: R2CommandInterface, command: str, default: Any | None) -> Any | None:
     with R2PipeErrorSuppressor():
         try:
-            result = r2_instance.cmdj(command)
+            result = _run_cmdj_with_timeout(
+                r2_instance, command, default, error_default=_CMDJ_FAILED
+            )
             return result if result is not None else default
         except OSError:
             return default
