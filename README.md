@@ -58,6 +58,9 @@ macOS    Mach-O / Universal
 
 ```bash
 pip install r2inspect
+
+# Optional format/detection engines
+pip install 'r2inspect[pe,yara,similarity]'
 ```
 
 ### From Source

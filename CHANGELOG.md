@@ -24,6 +24,8 @@ Versioning and keeps unreleased work at the top.
   batch, interactive, and report workflows.
 - Added a reproducible report-v1 precision benchmark scorer and manifest format.
 - Added optional capa capability and FLOSS string integrations to the deep profile.
+- Split PE, YARA, and similarity engines into optional dependency groups and
+  documented the tested Python 3.13+ support boundary.
 
 ## 3.0.0
 
