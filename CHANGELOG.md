@@ -23,6 +23,7 @@ Versioning and keeps unreleased work at the top.
 - Added `fast`, `standard`, and `deep` analysis cost profiles across single-file,
   batch, interactive, and report workflows.
 - Added a reproducible report-v1 precision benchmark scorer and manifest format.
+- Added optional capa capability and FLOSS string integrations to the deep profile.
 
 ## 3.0.0
 

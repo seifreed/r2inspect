@@ -23,6 +23,8 @@ def build_analysis_options(
         "detect_yara": detect,
         "analyze_functions": detect,
         "deep_analysis": deep,
+        "detect_capa": deep,
+        "detect_floss": deep,
         "full_analysis": detect,
         "custom_yara": yara,
         "xor_search": sanitized_xor,

@@ -286,6 +286,32 @@ def _analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
     return outcomes
 
 
+def _capa_capabilities(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    capa = raw.get("capa")
+    payload = capa.get("result") if isinstance(capa, dict) else None
+    rules = payload.get("rules") if isinstance(payload, dict) else None
+    if not isinstance(rules, dict):
+        return []
+    return [
+        {"source": "capa", "name": name, "details": details}
+        for name, details in sorted(rules.items())
+    ]
+
+
+def _floss_artifacts(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    floss = raw.get("floss")
+    payload = floss.get("result") if isinstance(floss, dict) else None
+    strings = payload.get("strings") if isinstance(payload, dict) else None
+    if not isinstance(strings, dict):
+        return []
+    artifacts: list[dict[str, Any]] = []
+    for kind, values in strings.items():
+        if not isinstance(values, list):
+            continue
+        artifacts.extend({"source": "floss", "type": str(kind), "value": value} for value in values)
+    return artifacts
+
+
 def build_report_v1(
     result: AnalysisResult,
     *,
@@ -358,6 +384,8 @@ def build_report_v1(
         ),
         security=_normalized_security(result),
         findings=_findings(result),
+        artifacts=_floss_artifacts(raw),
+        capabilities=_capa_capabilities(raw),
         similarity=similarity,
         analyzers=_analyzer_outcomes(raw),
         errors=errors,

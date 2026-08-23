@@ -42,3 +42,10 @@ Constructors must accept the runtime dependencies used by the analyzer factory:
 `adapter`, `r2`, `config`, and `filepath`/`filename` as applicable. Do not open
 sessions or perform analysis at import time. Return JSON-compatible values and
 preserve extraction errors as explicit unavailable/failed results.
+
+## Optional engines
+
+The `deep` profile runs `capa -j` and `floss -j` when those executables are on
+`PATH`. Missing tools produce `dependency_unavailable` analyzer outcomes. capa
+rules are exposed as report capabilities and FLOSS strings as report artifacts;
+their native JSON remains available in `extras`.

@@ -45,6 +45,16 @@ class DetectionStage(OptionsRegistryStage):
             if res is not None:
                 results.update(res)
 
+        if self.options.get("detect_capa", False):
+            res = self._run_analyzer(context, "capa", "capa")
+            if res is not None:
+                results.update(res)
+
+        if self.options.get("detect_floss", False):
+            res = self._run_analyzer(context, "floss", "floss")
+            if res is not None:
+                results.update(res)
+
         return results
 
     def _run_analyzer(
