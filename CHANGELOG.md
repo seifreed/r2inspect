@@ -26,6 +26,7 @@ Versioning and keeps unreleased work at the top.
 - Added optional capa capability and FLOSS string integrations to the deep profile.
 - Split PE, YARA, and similarity engines into optional dependency groups and
   documented the tested Python 3.13+ support boundary.
+- Added a golden compatibility projection for PE, ELF, and Mach-O report-v1 output.
 
 ## 3.0.0
 

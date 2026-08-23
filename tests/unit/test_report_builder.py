@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import json
+from pathlib import Path
 
 import pytest
 from pydantic_core import PydanticSerializationError
@@ -150,3 +152,38 @@ def test_build_report_v1_normalizes_format_security(
     } == expected
     if file_type == "PE32+":
         assert report.security.normalized_mitigations["stack_protection"].enabled is None
+
+
+def test_report_v1_format_projection_matches_golden() -> None:
+    golden_path = Path(__file__).parents[1] / "golden" / "report_v1_formats.json"
+    expected = json.loads(golden_path.read_text(encoding="utf-8"))
+    inputs = {
+        "PE32+": ("pe_info", {"aslr": True, "dep": True, "guard_cf": True, "authenticode": True}),
+        "ELF64": ("elf_info", {"pie": True, "nx": True, "stack_canary": True, "relro": "full"}),
+        "Mach-O 64": ("macho_info", {"pie": True, "nx": True, "signed": True, "arc": True}),
+    }
+
+    actual = {}
+    for file_type, (detail_key, features) in inputs.items():
+        report = build_report_v1(
+            build_analysis_result(
+                {"file_info": {"file_type": file_type}, detail_key: {"security_features": features}}
+            ),
+            analysis_id="golden",
+            commit="abc",
+            radare2_version="6.1.8",
+        )
+        normalized = {
+            name: mitigation.enabled
+            for name, mitigation in report.security.normalized_mitigations.items()
+            if mitigation.enabled is not None
+        }
+        if file_type == "PE32+":
+            normalized["stack_protection"] = None
+        actual[file_type] = {
+            "detected_format": report.sample.detected_format,
+            "format_specific": report.security.format_specific,
+            "normalized": normalized,
+        }
+
+    assert actual == expected

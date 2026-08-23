@@ -1,0 +1,17 @@
+{
+  "ELF64": {
+    "detected_format": "ELF",
+    "format_specific": {"nx": true, "pie": true, "relro": "full", "stack_canary": true},
+    "normalized": {"no_execution": true, "randomization": true, "relocations": true, "stack_protection": true}
+  },
+  "Mach-O 64": {
+    "detected_format": "MACHO",
+    "format_specific": {"arc": true, "nx": true, "pie": true, "signed": true},
+    "normalized": {"additional_hardening": true, "no_execution": true, "randomization": true, "relocations": true, "signature": true}
+  },
+  "PE32+": {
+    "detected_format": "PE",
+    "format_specific": {"aslr": true, "authenticode": true, "dep": true, "guard_cf": true},
+    "normalized": {"control_flow_integrity": true, "no_execution": true, "randomization": true, "relocations": true, "signature": true, "stack_protection": null}
+  }
+}
