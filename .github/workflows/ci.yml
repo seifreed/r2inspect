@@ -1,10 +1,14 @@
-name: Tests
+name: CI
 
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -100,7 +104,11 @@ jobs:
       - name: Fetch test binaries
         shell: bash
         run: |
-          git clone --depth 1 https://github.com/seifreed/r2inspect-test-binaries.git test-binaries
+          git init test-binaries
+          git -C test-binaries remote add origin https://github.com/seifreed/r2inspect-test-binaries.git
+          git -C test-binaries fetch --depth 1 origin f907471e37e9b6c8ea2d3664b677f76258c7aab8
+          git -C test-binaries checkout --detach FETCH_HEAD
+          test "$(git -C test-binaries rev-parse HEAD)" = "f907471e37e9b6c8ea2d3664b677f76258c7aab8"
           python - <<'PY'
           from pathlib import Path
           import shutil
@@ -152,73 +160,55 @@ jobs:
           r2 -v
           ssdeep -V
 
-      - name: Run integration tests (continue on error)
-        continue-on-error: true
+      - name: Run integration tests
         timeout-minutes: 20
+        env:
+          COVERAGE_FILE: .coverage.integration
         run: |
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
-          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 70
+          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         shell: bash
         env:
           R2INSPECT_TEST_MAX_CPU_SECONDS: "900"
+          COVERAGE_FILE: .coverage.unit
         run: |
           python - <<'PY'
           import sys
-          from pathlib import Path
 
           import pytest
 
           marker_expression = "not slow"
-          args = ["tests/unit", "-m", marker_expression, "--timeout=180"]
-
           if sys.platform == "win32":
-              from tests.conftest import _WINDOWS_NONPORTABLE_TESTS
-
               marker_expression = "not slow and not requires_r2"
-              args = ["tests/unit", "-m", marker_expression, "--timeout=180"]
-              real_r2_process_patterns = (
-                  "r2pipe.open(",
-                  "R2Session(str(",
-                  "process_single_file(",
-                  "calculate_ccbhash_from_file(",
-                  "_from_file(",
-                  "real_binary",
-                  "samples/fixtures/",
-              )
-              for test_file in sorted(Path("tests/unit").rglob("test_*.py")):
-                  test_source = test_file.read_text(encoding="utf-8")
-                  if any(pattern in test_source for pattern in real_r2_process_patterns):
-                      args.extend(["--ignore", test_file.as_posix()])
-              for nodeid in sorted(_WINDOWS_NONPORTABLE_TESTS):
-                  args.extend(["--deselect", nodeid])
-                  args.extend(["--deselect", nodeid.replace("/", "\\")])
-
+          args = [
+              "tests/unit",
+              "-m",
+              marker_expression,
+              "--timeout=180",
+              "--cov=r2inspect",
+              "--cov-report=term-missing",
+          ]
           raise SystemExit(pytest.main(args))
           PY
 
-      - name: Export combined coverage
+      - name: Export separate and combined coverage
         shell: bash
         run: |
-          # Coverage comes from the integration step (the unit step runs without
-          # --cov so its instrumentation overhead does not perturb the timing of
-          # the parallel-pipeline/timeout tests). Combine any parallel fragments
-          # and emit XML only when coverage data is actually present.
-          if ls .coverage.* >/dev/null 2>&1; then
-            coverage combine
-          fi
-          if [ -f .coverage ]; then
-            coverage xml -o coverage.xml
-          fi
+          COVERAGE_FILE=.coverage.integration coverage xml -o coverage-integration.xml
+          COVERAGE_FILE=.coverage.unit coverage xml -o coverage-unit.xml
+          coverage combine --keep .coverage.integration .coverage.unit
+          coverage report --fail-under=98
+          coverage xml -o coverage-combined.xml
 
       - name: Upload coverage reports to Codecov
-        continue-on-error: true
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: seifreed/r2inspect
-          files: ./coverage.xml
+          files: ./coverage-unit.xml,./coverage-integration.xml,./coverage-combined.xml
+          fail_ci_if_error: true
 
   test-linux-x86-ssdeep-cli:
     runs-on: ubuntu-latest
@@ -234,3 +224,42 @@ jobs:
         run: |
           ssdeep -V
           ssdeep -s /etc/hosts
+
+  build-distributions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade build twine
+      - run: python -m build
+      - run: twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+  smoke-distributions:
+    needs: build-distributions
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+        package: ["*.whl", "*.tar.gz"]
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist
+      - name: Install and run distribution
+        shell: bash
+        run: |
+          artifact="$(find dist -type f -name '${{ matrix.package }}' -print -quit)"
+          test -n "$artifact"
+          python -m pip install "$artifact"
+          r2inspect --help
