@@ -22,6 +22,7 @@ Versioning and keeps unreleased work at the top.
 - Added declarative `AnalyzerSpec` plugin discovery without analyzer construction.
 - Added `fast`, `standard`, and `deep` analysis cost profiles across single-file,
   batch, interactive, and report workflows.
+- Added a reproducible report-v1 precision benchmark scorer and manifest format.
 
 ## 3.0.0
 

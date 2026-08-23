@@ -25,3 +25,25 @@ high-severity findings, and no extraction error silently converted to
 Private malware and benignware evaluation runs nightly and publishes aggregate
 metrics only. Benchmark tooling and sanitized manifests will be versioned with
 the report schema so release-to-release comparisons remain reproducible.
+
+## Reproducible evaluation
+
+Create a manifest next to strict report-v1 files:
+
+```json
+{
+  "cases": [
+    {"report": "reports/sample.json", "expected_rule_ids": ["packer.upx"]}
+  ]
+}
+```
+
+Labels must be assigned independently of r2inspect. Evaluate it with:
+
+```bash
+python benchmarks/evaluate_reports.py corpus/manifest.json --output metrics.json
+```
+
+The versioned output reports finding precision/recall, explicit analyzer status
+rates, and median/P95/P99 latency. A manifest pins the exact reports evaluated,
+so public and private corpora use the same scorer without publishing samples.
