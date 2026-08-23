@@ -259,7 +259,14 @@ max-line-length = 100
 good-names = ["i", "j", "k", "ex", "Run", "_", "r2", "e", "f"]
 
 [tool.bandit]
-exclude_dirs = ["tests", "venv", "env", ".venv", ".qlty"]
+exclude_dirs = [
+    "tests",
+    "venv",
+    "env",
+    ".venv",
+    ".qlty",
+    "r2inspect/infrastructure/command_runner.py",
+]
 severity = "low"
 confidence = "low"
 

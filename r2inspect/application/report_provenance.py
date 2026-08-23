@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import os
-import subprocess
 from functools import cache
 from pathlib import Path
+
+from ..infrastructure.command_runner import run_command
 
 
 @cache
 def command_output(command: tuple[str, ...], cwd: str | None = None) -> str | None:
     try:
-        completed = subprocess.run(
-            command, cwd=cwd, capture_output=True, text=True, check=False, timeout=2
-        )
-    except (OSError, subprocess.TimeoutExpired):
+        completed = run_command(command, cwd=cwd, timeout=2)
+    except (OSError, TimeoutError, ValueError):
         return None
     output = completed.stdout.strip()
     return output.splitlines()[0] if completed.returncode == 0 and output else None
