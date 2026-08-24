@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable
 from typing import Any
+
+from ..infrastructure.json_serialization import dumps
 
 from rich.table import Table
 
@@ -196,5 +197,8 @@ def append_yara_summary(summary_lines: list[str], results: dict[str, Any]) -> No
 def _stringify_table_value(value: Any) -> str:
     """Render nested structures as JSON and scalars as plain strings."""
     if isinstance(value, dict | list):
-        return json.dumps(value, indent=2, default=str)
+        try:
+            return dumps(value)
+        except TypeError:
+            return "<unserializable value>"
     return str(value)

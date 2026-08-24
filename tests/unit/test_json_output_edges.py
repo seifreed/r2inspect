@@ -6,7 +6,6 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 
-import pytest
 
 from r2inspect.cli.output_json import JsonOutputFormatter
 
@@ -78,8 +77,8 @@ def test_non_serializable_object():
     formatter = JsonOutputFormatter({"obj": obj})
     result = formatter.to_json()
     parsed = json.loads(result)
-    # When non-serializable is encountered, str() is called
-    assert parsed == {"obj": "custom_string"}
+    assert "JSON serialization failed" in parsed["error"]
+    assert "partial_results" in parsed
 
 
 def test_serialization_error_handling(caplog):
@@ -110,7 +109,7 @@ def test_datetime_object():
     formatter = JsonOutputFormatter({"timestamp": dt})
     result = formatter.to_json()
     parsed = json.loads(result)
-    # datetime gets converted via str()
+    # Standard datetime values use the canonical JSON representation.
     assert "2025-01-01" in parsed["timestamp"]
 
 
@@ -120,8 +119,7 @@ def test_decimal_object():
     formatter = JsonOutputFormatter({"amount": dec})
     result = formatter.to_json()
     parsed = json.loads(result)
-    # Decimal gets converted via str()
-    assert "123.45" in str(parsed["amount"])
+    assert parsed["amount"] == "123.45"
 
 
 def test_large_indent():

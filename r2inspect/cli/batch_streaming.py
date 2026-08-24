@@ -17,11 +17,12 @@ JSON summary references the per-file JSON files (written by the worker when
 from __future__ import annotations
 
 import csv
-import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from ..infrastructure.json_serialization import dump
 
 from ..application.batch_stats import (
     update_compiler_stats,
@@ -157,7 +158,7 @@ def make_streaming_create_batch_summary(
                 aggregator, list(all_results.keys()), failed_files
             )
             with open(summary_file, "w", encoding="utf-8") as handle:
-                json.dump(payload, handle, indent=2, default=str)
+                dump(payload, handle)
             output_filename = (
                 f"{output_filename} + {summary_file.name}" if output_csv else summary_file.name
             )

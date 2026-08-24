@@ -7,6 +7,8 @@ import json
 import logging
 from typing import Any
 
+from ..infrastructure.json_serialization import dumps
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +20,7 @@ class JsonOutputFormatter:
 
     def to_json(self, indent: int = 2) -> str:
         try:
-            return json.dumps(self.results, indent=indent, default=str)
+            return dumps(self.results, indent=indent)
         except Exception as exc:
             # The user gets an error blob instead of their results; make sure the
             # reason is in the log rather than only in the returned JSON.

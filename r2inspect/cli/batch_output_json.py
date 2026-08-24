@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from ..infrastructure.json_serialization import dump
 
 
 def per_file_json_name(relative_path: str) -> str:
@@ -27,7 +28,7 @@ def write_individual_json_results(
         relative_path = str(result.get("relative_path") or Path(file_key).name)
         per_file_path = output_path / per_file_json_name(relative_path)
         with open(per_file_path, "w", encoding="utf-8") as per_file_handle:
-            json.dump(result, per_file_handle, indent=2, default=str)
+            dump(result, per_file_handle)
 
 
 def build_batch_summary_payload(
@@ -76,14 +77,12 @@ def create_json_batch_summary(
     write_individual_json_results(all_results, output_path)
     summary_file = output_path / f"r2inspect_batch_{timestamp}.json"
     with open(summary_file, "w", encoding="utf-8") as f:
-        json.dump(
+        dump(
             build_batch_summary_payload(
                 all_results,
                 failed_files,
                 collect_batch_statistics=collect_batch_statistics,
             ),
             f,
-            indent=2,
-            default=str,
         )
     return f"{summary_file.name} + individual JSONs"

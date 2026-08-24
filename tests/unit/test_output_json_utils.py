@@ -3,7 +3,6 @@
 
 import json
 
-import pytest
 
 from r2inspect.cli.output_json import JsonOutputFormatter
 
@@ -41,7 +40,7 @@ def test_formatter_with_indent():
     assert json.loads(output_2) == json.loads(output_4)
 
 
-def test_formatter_default_str_conversion():
+def test_formatter_rejects_unknown_types():
     class CustomObject:
         def __str__(self):
             return "custom_object"
@@ -52,7 +51,8 @@ def test_formatter_default_str_conversion():
     output = formatter.to_json()
     parsed = json.loads(output)
 
-    assert parsed["obj"] == "custom_object"
+    assert "JSON serialization failed" in parsed["error"]
+    assert "partial_results" in parsed
 
 
 def test_formatter_with_none():
