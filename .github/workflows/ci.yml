@@ -112,9 +112,9 @@ jobs:
         run: |
           git init test-binaries
           git -C test-binaries remote add origin https://github.com/seifreed/r2inspect-test-binaries.git
-          git -C test-binaries fetch --depth 1 origin f907471e37e9b6c8ea2d3664b677f76258c7aab8
+          git -C test-binaries fetch --depth 1 origin 1d8a0ac76d92dfd68587ba30b1c987b78b59009a
           git -C test-binaries checkout --detach FETCH_HEAD
-          test "$(git -C test-binaries rev-parse HEAD)" = "f907471e37e9b6c8ea2d3664b677f76258c7aab8"
+          test "$(git -C test-binaries rev-parse HEAD)" = "1d8a0ac76d92dfd68587ba30b1c987b78b59009a"
           python - <<'PY'
           from pathlib import Path
           import shutil
@@ -288,9 +288,9 @@ jobs:
         run: |
           git init test-binaries
           git -C test-binaries remote add origin https://github.com/seifreed/r2inspect-test-binaries.git
-          git -C test-binaries fetch --depth 1 origin f907471e37e9b6c8ea2d3664b677f76258c7aab8
+          git -C test-binaries fetch --depth 1 origin 1d8a0ac76d92dfd68587ba30b1c987b78b59009a
           git -C test-binaries checkout --detach FETCH_HEAD
-          test "$(git -C test-binaries rev-parse HEAD)" = "f907471e37e9b6c8ea2d3664b677f76258c7aab8"
+          test "$(git -C test-binaries rev-parse HEAD)" = "1d8a0ac76d92dfd68587ba30b1c987b78b59009a"
           mkdir -p samples/fixtures
           find test-binaries -type f \( \
             -name hello_pe.exe -o \

@@ -2,7 +2,8 @@
 
 The public fixture set is a cross-platform smoke corpus with independent labels
 and SHA-256 values. It contains PE, ELF, Mach-O, stripped Mach-O, malformed,
-high-entropy, packed, and tiny samples pinned to commit `1d8a0ac` of
+high-entropy, packed, and tiny samples pinned to commit
+`1d8a0ac76d92dfd68587ba30b1c987b78b59009a` of
 `r2inspect-test-binaries`.
 
 ## Public benchmark

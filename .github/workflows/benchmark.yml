@@ -29,9 +29,9 @@ jobs:
       - name: Fetch pinned public corpus
         run: |
           git clone --depth 1 https://github.com/seifreed/r2inspect-test-binaries.git test-binaries
-          git -C test-binaries fetch --depth 1 origin 1d8a0ac
-          git -C test-binaries checkout --detach 1d8a0ac
-          test "$(git -C test-binaries rev-parse HEAD)" = "1d8a0ac"
+          git -C test-binaries fetch --depth 1 origin 1d8a0ac76d92dfd68587ba30b1c987b78b59009a
+          git -C test-binaries checkout --detach 1d8a0ac76d92dfd68587ba30b1c987b78b59009a
+          test "$(git -C test-binaries rev-parse HEAD)" = "1d8a0ac76d92dfd68587ba30b1c987b78b59009a"
       - name: Run corpus and score reports
         run: |
           python benchmarks/run_corpus.py benchmarks/public_corpus.json \

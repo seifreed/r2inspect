@@ -2,7 +2,7 @@
     "schema_version": "r2inspect.benchmark/v1",
     "corpus_id": "r2inspect-public-smoke",
     "fixture_repository": "https://github.com/seifreed/r2inspect-test-binaries.git",
-    "fixture_commit": "1d8a0ac",
+    "fixture_commit": "1d8a0ac76d92dfd68587ba30b1c987b78b59009a",
     "profile": "standard",
     "cases": [
         {
