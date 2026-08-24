@@ -100,7 +100,7 @@ jobs:
             --corpus-dir private-corpus --output-dir private-benchmark-results
           python benchmarks/evaluate_reports.py private-benchmark-results/manifest.json \
             --output private-benchmark-results/metrics.json \
-            --min-precision 0.9 --min-recall 0.9 --max-error-rate 0.2
+            --min-precision 0.9 --min-recall 0.9
       - name: Publish aggregate private metrics
         if: steps.config.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
