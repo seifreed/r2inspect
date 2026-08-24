@@ -89,14 +89,33 @@ class EntryPointLoader:
                 )
                 return 1
             name = self._derive_entry_point_name(ep, obj)
+            category = AnalyzerCategory.METADATA
+            formats: set[str] = set()
+            description = ""
+            legacy = self._probe_legacy_metadata(obj)
+            if legacy is not None:
+                category, formats, description = legacy
             self._registry.register(
                 name=name,
                 analyzer_class=obj,
-                category=AnalyzerCategory.METADATA,
-                file_formats=set(),
+                category=category,
+                file_formats=formats,
                 required=False,
+                description=description,
                 auto_extract=False,
             )
+            if legacy is not None:
+                extracted_name = self._probe_name(obj)
+                if extracted_name and extracted_name != name:
+                    self._registry.register(
+                        name=extracted_name,
+                        analyzer_class=obj,
+                        category=category,
+                        file_formats=formats,
+                        required=False,
+                        description=description,
+                        auto_extract=False,
+                    )
             return 1
         except Exception as exc:
             logging.getLogger(__name__).warning(
@@ -108,3 +127,28 @@ class EntryPointLoader:
         # Legacy entry points must provide metadata through the entry-point
         # name; discovery must never construct an analyzer just to inspect it.
         return str(getattr(ep, "name", None) or getattr(obj, "__name__", "analyzer"))
+
+    def _probe_name(self, analyzer_class: type) -> str | None:
+        try:
+            probe = object.__new__(analyzer_class)
+            probe._cached_name = None
+            return str(analyzer_class.get_name(probe))
+        except Exception:
+            return None
+
+    def _probe_legacy_metadata(
+        self, analyzer_class: type
+    ) -> tuple[AnalyzerCategory, set[str], str] | None:
+        """Read legacy metadata without invoking plugin ``__init__``."""
+        if not self._registry.is_base_analyzer(analyzer_class):
+            return None
+        try:
+            probe = object.__new__(analyzer_class)
+            probe._cached_name = None
+            probe._cached_category = None
+            category = self._registry._parse_category(analyzer_class.get_category(probe))
+            formats = set(analyzer_class.get_supported_formats(probe))
+            description = str(analyzer_class.get_description(probe))
+            return category, formats, description
+        except Exception:
+            return None

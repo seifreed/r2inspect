@@ -25,13 +25,17 @@ class JsonOutputFormatter:
             # The user gets an error blob instead of their results; make sure the
             # reason is in the log rather than only in the returned JSON.
             logger.error("JSON serialization of analysis results failed: %s", exc)
-            return json.dumps(
-                {
-                    "error": f"JSON serialization failed: {str(exc)}",
-                    "partial_results": {},
-                },
-                indent=indent,
-            )
+            payload: dict[str, Any] = {
+                "error": f"JSON serialization failed: {str(exc)}",
+                "partial_results": {},
+            }
+            if isinstance(self.results, dict):
+                for key, value in self.results.items():
+                    try:
+                        payload[key] = [str(value)]
+                    except Exception:
+                        payload[key] = {"type": type(value).__name__}
+            return json.dumps(payload, indent=indent)
 
 
 __all__ = ["JsonOutputFormatter"]

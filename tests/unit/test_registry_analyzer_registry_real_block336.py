@@ -457,7 +457,9 @@ def test_registry_entry_point_class_failure(tmp_path):
             value="tmp_entrypoint_bad_class:BadAnalyzer",
             group="r2inspect.analyzers",
         )
-        assert EntryPointLoader(registry)._handle_entry_point(ep_class) == 0
+        # Legacy discovery must not invoke the constructor; metadata is probed
+        # without __init__ and the class remains registerable.
+        assert EntryPointLoader(registry)._handle_entry_point(ep_class) == 1
 
         ep_plain = EntryPoint(
             name="plain",
