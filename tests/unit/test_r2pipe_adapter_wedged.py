@@ -46,3 +46,15 @@ def test_unwedged_adapter_reaches_backend() -> None:
 
     assert adapter.cmd("i") == "should-not-be-reached"
     assert backend.cmds == ["i"]
+
+
+def test_backend_wedge_propagates_to_adapter() -> None:
+    backend = _RecordingR2()
+    adapter = R2PipeAdapter(backend)
+    mark_wedged(backend)
+
+    assert adapter.cmdj("ij") is None
+    assert adapter.cmd("i") == ""
+    assert is_wedged(adapter) is True
+    assert backend.cmds == []
+    assert backend.cmdjs == []

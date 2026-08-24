@@ -13,7 +13,7 @@ from typing import Any, Literal, TextIO
 
 from ..interfaces import R2CommandInterface
 from .logging import get_logger
-from .r2_command_timeout import _run_cmdj_with_timeout
+from .r2_command_timeout import _run_cmdj_with_timeout, is_wedged
 from .r2_helpers import safe_cmdj
 
 logger = get_logger(__name__)
@@ -58,6 +58,8 @@ def silent_cmdj(
     with R2PipeErrorSuppressor():
         try:
             result = _try_cmdj(r2_instance, command, default)
+            if is_wedged(r2_instance):
+                return default
             if result is _CMDJ_FAILED:
                 logger.debug("cmdj failed for %s, falling back to text parsing", command)
                 result = None
