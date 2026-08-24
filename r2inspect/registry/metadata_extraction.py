@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 
 from .categories import AnalyzerCategory
@@ -42,8 +43,8 @@ def extract_metadata_from_class(
     """
     Extract metadata from a BaseAnalyzer class.
 
-    Creates a temporary instance (with None parameters) to call metadata
-    methods and extract analyzer information.
+    Creates an uninitialised metadata probe to call legacy metadata methods.
+    Plugin constructors must never run during discovery.
     """
     if not is_base_analyzer(analyzer_class):
         raise ValueError(f"{analyzer_class.__name__} does not inherit from BaseAnalyzer")
@@ -60,7 +61,18 @@ def extract_metadata_from_class(
         }
 
     try:
-        temp_instance = analyzer_class(adapter=None, config=None, filepath=None)
+        temp_instance = object.__new__(analyzer_class)
+        # BaseAnalyzer metadata methods commonly cache values on the instance;
+        # seed only those fields without invoking plugin initialization.
+        for attribute, value in (
+            ("adapter", None),
+            ("config", None),
+            ("filepath", None),
+            ("_cached_name", None),
+            ("_cached_category", None),
+        ):
+            with suppress(Exception):
+                setattr(temp_instance, attribute, value)
         extracted_name = name or temp_instance.get_name()
         category_str = temp_instance.get_category()
         formats = temp_instance.get_supported_formats()

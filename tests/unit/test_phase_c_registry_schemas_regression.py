@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 from pydantic import BaseModel
 
@@ -52,13 +50,18 @@ def test_parse_category_rejects_wrong_type() -> None:
         parse_category(123)
 
 
-def test_extract_metadata_from_class_raises_runtime_error_on_constructor_failure() -> None:
+def test_extract_metadata_from_class_does_not_run_constructor() -> None:
     class _FailsInit(_BaseLikeAnalyzer):
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             raise RuntimeError("init failed")
 
-    with pytest.raises(RuntimeError, match="Failed to extract metadata"):
-        extract_metadata_from_class(_FailsInit, is_base_analyzer=_always_true)
+    metadata = extract_metadata_from_class(_FailsInit, is_base_analyzer=_always_true)
+    assert metadata == {
+        "name": "base_like",
+        "category": "format",
+        "formats": {"PE"},
+        "description": "desc",
+    }
 
 
 def test_auto_extract_metadata_fallback_to_declared_metadata_on_failure() -> None:
