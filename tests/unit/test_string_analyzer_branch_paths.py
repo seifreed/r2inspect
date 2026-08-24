@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from r2inspect.config import Config
 from r2inspect.modules.string_analyzer import StringAnalyzer
+from tests.helpers import env_vars
 
 
 class _StringEntriesAdapter:
@@ -136,3 +138,19 @@ def test_extract_strings_exception_path_returns_partial_result():
     analyzer = _RaisingUnicodeStringAnalyzer(adapter=_StringEntriesAdapter([]), config=Config())
     strings = analyzer.extract_strings()
     assert isinstance(strings, list)
+
+
+def test_raw_backend_cmdj_uses_timeout_dispatch() -> None:
+    class HungBackend:
+        def cmdj(self, _command: str):
+            time.sleep(1)
+            return [{"string": "unexpected"}]
+
+    class RawAdapter:
+        r2 = HungBackend()
+
+    analyzer = StringAnalyzer(adapter=RawAdapter(), config=Config())
+    started = time.monotonic()
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.01"):
+        assert analyzer._run_cmdj("izj") == []
+    assert time.monotonic() - started < 0.5
