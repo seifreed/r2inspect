@@ -105,6 +105,9 @@ Changelog = "https://github.com/seifreed/r2inspect/releases"
 
 [project.scripts]
 r2inspect = "r2inspect.cli:main"
+r2inspect-export = "r2inspect.application.report_cli:export_main"
+r2inspect-compare = "r2inspect.application.report_cli:compare_main"
+r2inspect-baseline = "r2inspect.application.report_cli:baseline_main"
 
 [tool.setuptools]
 include-package-data = true
