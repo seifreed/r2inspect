@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from ..abstractions import BaseAnalyzer
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
 from ..infrastructure.logging import get_logger
+from ..infrastructure.r2_command_timeout import _run_cmdj_with_timeout
 from .search_helpers import search_hex
 from ..domain.formats.string import (
     build_xor_matches,
@@ -120,9 +121,9 @@ class StringAnalyzer(BaseAnalyzer):
     def _run_cmdj(self, cmd: str) -> Any:
         raw_backend = getattr(self.adapter, "r2", None)
         if raw_backend is not None and hasattr(raw_backend, "cmdj"):
-            return cmdj_helper(self.adapter, raw_backend, cmd, [])
+            return _run_cmdj_with_timeout(raw_backend, cmd, [])
         if self.adapter is not None and hasattr(self.adapter, "cmdj"):
-            return cmdj_helper(self.adapter, self.adapter, cmd, [])
+            return _run_cmdj_with_timeout(self.adapter, cmd, [])
         return cmdj_helper(self.adapter, self.adapter, cmd, [])
 
     def _fetch_string_entries(self, cmd: str) -> list[dict[str, Any]]:
