@@ -1,0 +1,45 @@
+name: Benchmark
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
+      - name: Install radare2
+        uses: radareorg/github-actions@v2
+        with:
+          version: "6.1.8"
+      - name: Install package
+        run: python -m pip install -e ".[dev]"
+      - name: Fetch pinned public corpus
+        run: |
+          git clone --depth 1 https://github.com/seifreed/r2inspect-test-binaries.git test-binaries
+          git -C test-binaries fetch --depth 1 origin 1d8a0ac
+          git -C test-binaries checkout --detach 1d8a0ac
+          test "$(git -C test-binaries rev-parse HEAD)" = "1d8a0ac"
+      - name: Run corpus and score reports
+        run: |
+          python benchmarks/run_corpus.py benchmarks/public_corpus.json \
+            --corpus-dir test-binaries --output-dir benchmark-results
+          python benchmarks/evaluate_reports.py benchmark-results/manifest.json \
+            --output benchmark-results/metrics.json
+      - name: Publish benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2inspect-benchmark-${{ github.run_id }}
+          path: benchmark-results/

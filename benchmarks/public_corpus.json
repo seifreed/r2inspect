@@ -1,0 +1,65 @@
+{
+    "schema_version": "r2inspect.benchmark/v1",
+    "corpus_id": "r2inspect-public-smoke",
+    "fixture_repository": "https://github.com/seifreed/r2inspect-test-binaries.git",
+    "fixture_commit": "1d8a0ac",
+    "profile": "standard",
+    "cases": [
+        {
+            "id": "hello_pe_benign",
+            "sample": "pe/hello_pe.exe",
+            "sha256": "b4b674b6ede0cd5d4dcff2cff31a5957ac022ab995da977c667ddc7626205aea",
+            "class": "benign",
+            "expected_rule_ids": []
+        },
+        {
+            "id": "hello_elf_benign",
+            "sample": "elf/hello_elf",
+            "sha256": "39688c91f985915d521bd21983f600817507de4a70cde683ea372eb8472a3a09",
+            "class": "benign",
+            "expected_rule_ids": []
+        },
+        {
+            "id": "hello_macho_benign",
+            "sample": "mach0/hello_macho",
+            "sha256": "ccee249906bc711fae5d2cce11a3420e5598d71b10efa89c954e459905566357",
+            "class": "benign",
+            "expected_rule_ids": []
+        },
+        {
+            "id": "hello_macho_stripped_benign",
+            "sample": "mach0/hello_macho_stripped",
+            "sha256": "df350f6cb624bf5a9510e29693cc0142dbd4cfc3bbd0b9eccb9c49def29286ec",
+            "class": "benign",
+            "expected_rule_ids": []
+        },
+        {
+            "id": "edge_packed_upx",
+            "sample": "edge/edge_packed.bin",
+            "sha256": "aa91ef5653e4c6782ec48e0dec950e8e30cd5ca04c55feeb2ceb2c3ad175fee6",
+            "class": "synthetic_packed",
+            "expected_rule_ids": ["legacy.indicator.packer", "legacy.indicator.yara.match"]
+        },
+        {
+            "id": "edge_high_entropy_unknown",
+            "sample": "edge/edge_high_entropy.bin",
+            "sha256": "9053b0f9ae54e451e48aae2a391f6ba9132475e4665faa39a84abcd4c3b13ee1",
+            "class": "unknown_data",
+            "expected_rule_ids": []
+        },
+        {
+            "id": "edge_bad_pe_malformed",
+            "sample": "edge/edge_bad_pe.bin",
+            "sha256": "10162bac44ed65caf0b4b8cb1dd6ff78522719e3d26580d9f0c63debeefd44c1",
+            "class": "malformed",
+            "expected_rule_ids": []
+        },
+        {
+            "id": "edge_tiny_malformed",
+            "sample": "edge/edge_tiny.bin",
+            "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+            "class": "malformed",
+            "expected_rule_ids": []
+        }
+    ]
+}
