@@ -96,7 +96,7 @@ jobs:
       - name: Run and score private corpus
         if: steps.config.outputs.enabled == 'true'
         run: |
-          python benchmarks/run_corpus.py private-corpus/manifest.json \
+          python benchmarks/run_corpus.py private-corpus/benchmark/manifest.json \
             --corpus-dir private-corpus --output-dir private-benchmark-results
           python benchmarks/evaluate_reports.py private-benchmark-results/manifest.json \
             --output private-benchmark-results/metrics.json \
