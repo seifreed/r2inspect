@@ -19,6 +19,20 @@ from .r2_command_timeout import _run_cmd_with_timeout, _run_cmdj_with_timeout
 logger = get_logger(__name__)
 _CMDJ_FAILED = object()
 
+
+def _run_native_cmdj(
+    r2_instance: R2CommandInterface, command: str, default: Any | None
+) -> Any | None:
+    try:
+        native = _run_cmdj_with_timeout(r2_instance, command, default, error_default=_CMDJ_FAILED)
+    except Exception as exc:
+        logger.debug("Native cmdj failed for %s: %s", command, exc)
+        return _CMDJ_FAILED
+    if native is _CMDJ_FAILED:
+        logger.debug("Native cmdj failed for %s", command)
+    return native
+
+
 _SIMPLE_BASE_CALLS: dict[str, str] = {
     "aaa": "analyze_all",
     "i": "get_info_text",
@@ -51,14 +65,9 @@ def safe_cmdj(
     @handle_errors(policy)
     def _execute() -> Any:
         if hasattr(r2_instance, "cmdj"):
-            try:
-                native = _run_cmdj_with_timeout(
-                    r2_instance, command, default, error_default=_CMDJ_FAILED
-                )
-                if native is not _CMDJ_FAILED and native is not None:
-                    return native
-            except Exception as exc:
-                logger.debug("Native cmdj failed for %s: %s", command, exc)
+            native = _run_native_cmdj(r2_instance, command, default)
+            if native is not _CMDJ_FAILED and native is not None:
+                return native
         raw = _run_cmd_with_timeout(r2_instance, command, default)
         if not isinstance(raw, str) or not raw.strip():
             return default
@@ -74,14 +83,11 @@ def safe_cmdj_any(
     r2_instance: R2CommandInterface, command: str, default: Any | None = None
 ) -> Any | None:
     if hasattr(r2_instance, "cmdj"):
-        try:
-            native = _run_cmdj_with_timeout(
-                r2_instance, command, default, error_default=_CMDJ_FAILED
-            )
-            if native is not _CMDJ_FAILED and native is not None:
-                return native
-        except Exception as exc:
-            logger.debug("safe_cmdj_any cmdj failed for %s: %s", command, exc)
+        native = _run_native_cmdj(r2_instance, command, default)
+        if native is _CMDJ_FAILED:
+            logger.debug("safe_cmdj_any cmdj failed for %s", command)
+        if native is not _CMDJ_FAILED and native is not None:
+            return native
     return safe_cmdj(r2_instance, command, default)
 
 
