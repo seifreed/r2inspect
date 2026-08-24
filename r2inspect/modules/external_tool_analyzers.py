@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import time
 from collections.abc import Callable
@@ -10,7 +11,10 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from ..abstractions import BaseAnalyzer
-from ..infrastructure.command_runner import run_command
+from ..infrastructure.command_runner import resolve_timeout, run_command
+
+_EXTERNAL_TOOL_TIMEOUT_SECONDS = 120.0
+_TEST_EXTERNAL_TOOL_TIMEOUT_SECONDS = 0.2
 
 
 class ExternalJsonAnalyzer(BaseAnalyzer):
@@ -48,9 +52,15 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 "execution_time": time.monotonic() - started,
             }
         try:
+            default_timeout = (
+                _TEST_EXTERNAL_TOOL_TIMEOUT_SECONDS
+                if os.getenv("R2INSPECT_TEST_MODE") == "1"
+                else _EXTERNAL_TOOL_TIMEOUT_SECONDS
+            )
+            timeout = resolve_timeout(default_timeout)
             completed = run_command(
                 [executable, "-j", str(Path(self.filepath))],
-                timeout=120,
+                timeout=timeout,
             )
             if completed.returncode != 0:
                 raise RuntimeError(completed.stderr.strip() or f"exit code {completed.returncode}")
@@ -62,10 +72,10 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 "result": payload,
                 "execution_time": time.monotonic() - started,
             }
-        except TimeoutError:
+        except TimeoutError as exc:
             return {
                 "available": True,
-                "error": "timed out after 120 seconds",
+                "error": str(exc),
                 "execution_time": time.monotonic() - started,
             }
         except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:

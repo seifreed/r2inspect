@@ -1,3 +1,6 @@
+import os
+import time
+
 from r2inspect.application.report_builder import build_report_v1
 from r2inspect.application.result_mapper import build_analysis_result
 from r2inspect.modules.external_tool_analyzers import CapaAnalyzer, FlossAnalyzer
@@ -19,6 +22,22 @@ def test_external_tools_report_missing_dependencies_explicitly() -> None:
         ]
         is False
     )
+
+
+def test_external_tools_use_short_timeout_in_test_mode(tmp_path, monkeypatch) -> None:
+    executable = tmp_path / "slow-tool"
+    executable.write_text("#!/usr/bin/env python3\nimport time\ntime.sleep(1)\n")
+    executable.chmod(os.stat(executable).st_mode | 0o111)
+    monkeypatch.setenv("R2INSPECT_TEST_MODE", "1")
+    monkeypatch.delenv("R2INSPECT_CMD_TIMEOUT_SECONDS", raising=False)
+
+    started = time.monotonic()
+    result = CapaAnalyzer(
+        filename="sample.exe", executable_lookup=lambda _name: str(executable)
+    ).analyze()
+
+    assert result["error"] == "command timed out after 0.2 seconds"
+    assert time.monotonic() - started < 1
 
 
 def test_report_normalizes_capa_and_floss_results() -> None:
