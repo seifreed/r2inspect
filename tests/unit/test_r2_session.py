@@ -1,5 +1,6 @@
 import r2inspect.infrastructure.r2_session as r2_session
 from r2inspect.infrastructure.r2_session import R2Session
+from r2inspect.infrastructure.r2_command_timeout import mark_wedged
 
 
 class FakeR2:
@@ -29,6 +30,22 @@ def test_r2_session_open_and_close(tmp_path):
     assert session.is_open is True
     session.close()
     assert fake.quit_called is True
+    assert session.is_open is False
+
+
+def test_r2_session_close_skips_quit_for_wedged_pipe(tmp_path):
+    fake = FakeR2()
+
+    def fake_open(_filename, flags=None):
+        return fake
+
+    session = R2Session(str(tmp_path / "sample.bin"), opener=fake_open)
+    session.open(file_size_mb=0.0)
+    mark_wedged(fake)
+
+    session.close()
+
+    assert fake.quit_called is False
     assert session.is_open is False
 
 
