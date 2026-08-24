@@ -39,6 +39,7 @@ def pe_adapter(pe_fixture_path: Path):
             session.close()
 
 
+@pytest.mark.requires_r2
 def test_r2_session_basic_and_safe_mode(pe_fixture_path: Path):
     with env_vars(R2INSPECT_TEST_MODE="1"):
         session = R2Session(str(pe_fixture_path))
