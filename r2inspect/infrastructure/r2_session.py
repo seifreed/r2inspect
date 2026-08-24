@@ -23,6 +23,7 @@ from ..domain.constants import (
 )
 from ..error_handling.classifier import ErrorCategory, ErrorSeverity, error_handler
 from ..infrastructure.logging import get_logger
+from .r2_command_timeout import is_wedged
 from .r2_session_cleanup import (
     detect_fat_macho_arches as _detect_fat_macho_arches_impl,
     force_close_process as _force_close_process_impl,
@@ -205,10 +206,14 @@ class R2Session:
         r2_instance = self.r2
         if r2_instance and self._cleanup_required:
             try:
-                logger.debug("Cleaning up r2pipe instance")
-                r2_instance.quit()
-            except Exception as e:
-                logger.debug("Error during r2pipe cleanup: %s", e)
+                if is_wedged(r2_instance):
+                    logger.debug("Skipping r2pipe quit for wedged instance")
+                else:
+                    try:
+                        logger.debug("Cleaning up r2pipe instance")
+                        r2_instance.quit()
+                    except Exception as e:
+                        logger.debug("Error during r2pipe cleanup: %s", e)
             finally:
                 self._force_close_process(r2_instance)
                 self._cleanup_required = False
