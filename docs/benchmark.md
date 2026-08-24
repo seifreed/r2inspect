@@ -24,10 +24,14 @@ for valid supported binaries, less than 1 percent false positives for
 high-severity findings, and no extraction error silently converted to
 `not_detected`.
 
-Private malware and benignware evaluation is supported by the same scheduled
-workflow when `R2INSPECT_PRIVATE_CORPUS_URL` and
-`R2INSPECT_PRIVATE_CORPUS_SHA256` secrets are configured. The archive must
-contain `manifest.json` and its samples; only aggregate metrics are uploaded.
+Private holdout evaluation runs in the same scheduled workflow from the
+private `r2inspect-private-binaries` repository. It requires the repository
+tarball URL, SHA-256, and read token in
+`R2INSPECT_PRIVATE_CORPUS_URL`, `R2INSPECT_PRIVATE_CORPUS_SHA256`, and
+`R2INSPECT_PRIVATE_CORPUS_TOKEN`. The current gate requires precision and
+recall of at least 0.9 and an analyzer error rate of at most 0.25; the latter
+is explicit because malformed/optional analyzer paths are retained in the
+holdout. Only aggregate metrics are uploaded.
 Benchmark tooling and sanitized manifests are versioned with the report schema
 so release-to-release comparisons remain reproducible.
 

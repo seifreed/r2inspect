@@ -52,8 +52,10 @@ jobs:
         id: config
         env:
           CORPUS_URL: ${{ secrets.R2INSPECT_PRIVATE_CORPUS_URL }}
+          CORPUS_TOKEN: ${{ secrets.R2INSPECT_PRIVATE_CORPUS_TOKEN }}
+          CORPUS_SHA256: ${{ secrets.R2INSPECT_PRIVATE_CORPUS_SHA256 }}
         run: |
-          if [ -n "$CORPUS_URL" ]; then
+          if [ -n "$CORPUS_URL" ] && [ -n "$CORPUS_TOKEN" ] && [ -n "$CORPUS_SHA256" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
@@ -81,12 +83,16 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         env:
           CORPUS_URL: ${{ secrets.R2INSPECT_PRIVATE_CORPUS_URL }}
+          CORPUS_TOKEN: ${{ secrets.R2INSPECT_PRIVATE_CORPUS_TOKEN }}
           CORPUS_SHA256: ${{ secrets.R2INSPECT_PRIVATE_CORPUS_SHA256 }}
         run: |
-          curl --fail --location --retry 3 "$CORPUS_URL" --output private-corpus.tar
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer $CORPUS_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$CORPUS_URL" --output private-corpus.tar
           echo "$CORPUS_SHA256  private-corpus.tar" | sha256sum --check
           mkdir private-corpus
-          tar -xf private-corpus.tar --directory private-corpus
+          tar -xf private-corpus.tar --strip-components=1 --directory private-corpus
       - name: Run and score private corpus
         if: steps.config.outputs.enabled == 'true'
         run: |
@@ -94,7 +100,7 @@ jobs:
             --corpus-dir private-corpus --output-dir private-benchmark-results
           python benchmarks/evaluate_reports.py private-benchmark-results/manifest.json \
             --output private-benchmark-results/metrics.json \
-            --min-precision 0.9 --min-recall 0.9 --max-error-rate 0.01
+            --min-precision 0.9 --min-recall 0.9 --max-error-rate 0.25
       - name: Publish aggregate private metrics
         if: steps.config.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
