@@ -3,10 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import r2pipe
+import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.export_analyzer import ExportAnalyzer
+
+
+pytestmark = pytest.mark.requires_r2
 
 
 def test_export_analyzer_helpers(tmp_path: Path):

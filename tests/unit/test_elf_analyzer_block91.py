@@ -3,10 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import r2pipe
+import pytest
 
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
+
+
+pytestmark = pytest.mark.requires_r2
 
 
 def test_elf_analyzer_basic(tmp_path: Path):
