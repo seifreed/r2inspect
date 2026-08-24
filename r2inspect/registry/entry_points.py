@@ -9,6 +9,7 @@ from collections.abc import Callable
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
+from .categories import AnalyzerCategory
 from .metadata import AnalyzerSpec
 
 if TYPE_CHECKING:
@@ -88,15 +89,13 @@ class EntryPointLoader:
                 )
                 return 1
             name = self._derive_entry_point_name(ep, obj)
-            category = None
-            if not self._registry.is_base_analyzer(obj):
-                category = self._registry._parse_category("metadata")
             self._registry.register(
                 name=name,
                 analyzer_class=obj,
+                category=AnalyzerCategory.METADATA,
+                file_formats=set(),
                 required=False,
-                auto_extract=True,
-                category=category,
+                auto_extract=False,
             )
             return 1
         except Exception as exc:
@@ -106,10 +105,6 @@ class EntryPointLoader:
             return 0
 
     def _derive_entry_point_name(self, ep: Any, obj: Any) -> str:
-        spec = getattr(obj, "spec", None)
-        if isinstance(spec, AnalyzerSpec):
-            return spec.id
-        if self._registry.is_base_analyzer(obj):
-            meta = self._registry.extract_metadata_from_class(obj)
-            return str(meta["name"])
-        return str(ep.name)
+        # Legacy entry points must provide metadata through the entry-point
+        # name; discovery must never construct an analyzer just to inspect it.
+        return str(getattr(ep, "name", None) or getattr(obj, "__name__", "analyzer"))

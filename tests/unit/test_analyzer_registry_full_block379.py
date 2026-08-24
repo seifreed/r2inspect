@@ -211,7 +211,9 @@ def test_registry_lazy_loading_and_entry_points(tmp_path: Path) -> None:
     class _BadEP:
         name = "bad"
 
-    assert loader._register_entry_point_class(_BadEP(), BadAnalyzer) == 0
+    # Legacy entry-point discovery no longer instantiates BadAnalyzer just to
+    # infer metadata; it registers neutral metadata under the entry-point name.
+    assert loader._register_entry_point_class(_BadEP(), BadAnalyzer) == 1
 
 
 def test_registry_dependencies_and_order() -> None:

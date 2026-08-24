@@ -54,6 +54,14 @@ class _DeclarativeAnalyzer(BaseAnalyzer):
         return {}
 
 
+class _NoConstructionAnalyzer(BaseAnalyzer):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        raise AssertionError("legacy discovery must not construct analyzers")
+
+    def analyze(self) -> dict[str, Any]:
+        return {}
+
+
 class _FakeEP:
     """Fake entry point that loads a pre-set object."""
 
@@ -238,6 +246,21 @@ def test_register_entry_point_class_uses_declarative_spec_without_construction()
     assert metadata.dependencies == {"optional-tool"}
     assert metadata.version == "1.2.3"
     assert metadata.output_schema == "vendor.declarative/v1"
+
+
+def test_register_entry_point_class_legacy_does_not_construct_analyzer():
+    registry = AnalyzerRegistry(lazy_loading=False)
+    loader = EntryPointLoader(registry)
+
+    assert (
+        loader._register_entry_point_class(
+            _FakeEP("legacy_ep", _NoConstructionAnalyzer), _NoConstructionAnalyzer
+        )
+        == 1
+    )
+    metadata = registry.get_metadata("legacy_ep")
+    assert metadata is not None
+    assert metadata.category is AnalyzerCategory.METADATA
 
 
 def test_register_entry_point_class_plain_class_uses_ep_name():
