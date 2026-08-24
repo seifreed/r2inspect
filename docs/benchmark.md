@@ -29,7 +29,7 @@ private `r2inspect-private-binaries` repository. It requires the repository
 tarball URL, SHA-256, and read token in
 `R2INSPECT_PRIVATE_CORPUS_URL`, `R2INSPECT_PRIVATE_CORPUS_SHA256`, and
 `R2INSPECT_PRIVATE_CORPUS_TOKEN`. The current gate requires precision and
-recall of at least 0.9 and an analyzer error rate of at most 0.25; the latter
+recall of at least 0.9 and an analyzer error rate of at most 0.2; the latter
 is explicit because malformed/optional analyzer paths are retained in the
 holdout. Only aggregate metrics are uploaded.
 Benchmark tooling and sanitized manifests are versioned with the report schema
