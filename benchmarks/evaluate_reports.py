@@ -78,12 +78,25 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--min-precision", type=float)
+    parser.add_argument("--min-recall", type=float)
+    parser.add_argument("--max-error-rate", type=float)
     args = parser.parse_args()
-    result = json.dumps(evaluate(args.manifest), indent=2, sort_keys=True) + "\n"
+    metrics = evaluate(args.manifest)
+    result = json.dumps(metrics, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.write_text(result, encoding="utf-8")
     else:
         print(result, end="")
+    precision = metrics["findings"]["precision"]
+    recall = metrics["findings"]["recall"]
+    error_rate = metrics["analyzers"]["error_rate"]
+    if args.min_precision is not None and (precision is None or precision < args.min_precision):
+        raise SystemExit("benchmark precision is below the configured threshold")
+    if args.min_recall is not None and (recall is None or recall < args.min_recall):
+        raise SystemExit("benchmark recall is below the configured threshold")
+    if args.max_error_rate is not None and (error_rate is None or error_rate > args.max_error_rate):
+        raise SystemExit("benchmark error rate is above the configured threshold")
 
 
 if __name__ == "__main__":

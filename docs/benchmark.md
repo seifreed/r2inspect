@@ -1,15 +1,16 @@
 # Benchmark Policy
 
-The current fixture set is a cross-platform smoke corpus, not evidence of
-detector accuracy. It contains PE, ELF, Mach-O, stripped Mach-O, malformed,
-high-entropy, packed, and tiny samples pinned to a repository commit.
+The public fixture set is a cross-platform smoke corpus with independent labels
+and SHA-256 values. It contains PE, ELF, Mach-O, stripped Mach-O, malformed,
+high-entropy, packed, and tiny samples pinned to commit `1d8a0ac` of
+`r2inspect-test-binaries`.
 
 ## Public benchmark
 
-The public sanitized corpus will include synthetic and redistributable benign
-and positive cases across formats, architectures, compilers, mitigations,
-packers, and malformed inputs. Every sample requires provenance, a content hash,
-and labels independent of the detector under test.
+The public sanitized corpus is stored in the fixture repository's
+`benchmark/corpus.json`. Every sample has provenance, a content hash, and labels
+independent of the detector under test. The scheduled workflow runs it nightly
+and stores reports plus aggregate metrics as an artifact.
 
 ## Metrics
 
@@ -22,9 +23,12 @@ for valid supported binaries, less than 1 percent false positives for
 high-severity findings, and no extraction error silently converted to
 `not_detected`.
 
-Private malware and benignware evaluation runs nightly and publishes aggregate
-metrics only. Benchmark tooling and sanitized manifests will be versioned with
-the report schema so release-to-release comparisons remain reproducible.
+Private malware and benignware evaluation is supported by the same scheduled
+workflow when `R2INSPECT_PRIVATE_CORPUS_URL` and
+`R2INSPECT_PRIVATE_CORPUS_SHA256` secrets are configured. The archive must
+contain `manifest.json` and its samples; only aggregate metrics are uploaded.
+Benchmark tooling and sanitized manifests are versioned with the report schema
+so release-to-release comparisons remain reproducible.
 
 ## Reproducible evaluation
 
