@@ -10,6 +10,25 @@ from typing import Any
 from ..infrastructure.json_serialization import dump
 
 
+def _json_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Normalize legacy YARA match objects without stringifying unknown values."""
+    matches = result.get("yara_matches")
+    if not isinstance(matches, (list, tuple)):
+        return result
+
+    normalized: list[Any] = []
+    for match in matches:
+        if isinstance(match, dict) or match is None or isinstance(match, (str, int, float, bool)):
+            normalized.append(match)
+        elif hasattr(match, "to_dict") and callable(match.to_dict):
+            normalized.append(match.to_dict())
+        elif hasattr(match, "rule"):
+            normalized.append({"rule": str(match.rule)})
+        else:
+            normalized.append(match)
+    return {**result, "yara_matches": normalized}
+
+
 def per_file_json_name(relative_path: str) -> str:
     """Per-file artifact name derived from the batch-relative path.
 
@@ -28,7 +47,7 @@ def write_individual_json_results(
         relative_path = str(result.get("relative_path") or Path(file_key).name)
         per_file_path = output_path / per_file_json_name(relative_path)
         with open(per_file_path, "w", encoding="utf-8") as per_file_handle:
-            dump(result, per_file_handle)
+            dump(_json_result(result), per_file_handle)
 
 
 def build_batch_summary_payload(
@@ -45,7 +64,7 @@ def build_batch_summary_payload(
             "timestamp": datetime.now(UTC).isoformat(),
             "processed_files": list(all_results.keys()),
         },
-        "results": all_results,
+        "results": {key: _json_result(result) for key, result in all_results.items()},
         "failed_files": [{"file": f[0], "error": f[1]} for f in failed_files],
         "statistics": collect_batch_statistics(all_results),
     }
