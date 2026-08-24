@@ -105,6 +105,7 @@ _WINDOWS_NONPORTABLE_TESTS = {
     "tests/unit/test_yara_analyzer_extra_coverage.py::test_timeout_handler",
     "tests/unit/test_yara_impfuzzy_remaining_gaps.py::test_read_rule_content_returns_none_on_unreadable_file",
 }
+_WINDOWS_DIRECT_R2_FILES: set[Path] | None = None
 
 
 def _normalize_nodeid_for_windows_skip(nodeid: str) -> str:
@@ -131,9 +132,22 @@ def pytest_collection_modifyitems(
             "semantics or optional Unix-native hash libraries."
         )
     )
+    global _WINDOWS_DIRECT_R2_FILES
+    if _WINDOWS_DIRECT_R2_FILES is None:
+        unit_root = Path(__file__).parent / "unit"
+        _WINDOWS_DIRECT_R2_FILES = {
+            path.resolve()
+            for path in unit_root.rglob("test_*.py")
+            if "guardrails" not in path.parts
+            and "r2pipe.open(" in path.read_text(encoding="utf-8", errors="ignore")
+        }
     for item in items:
         if _normalize_nodeid_for_windows_skip(item.nodeid) in _WINDOWS_NONPORTABLE_TESTS:
             item.add_marker(skip_windows_nonportable)
+        if Path(str(item.fspath)).resolve() in _WINDOWS_DIRECT_R2_FILES:
+            item.add_marker(
+                pytest.mark.skip(reason="Windows CI does not run direct r2pipe unit tests.")
+            )
 
 
 # =============================================================================
