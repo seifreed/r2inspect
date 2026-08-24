@@ -39,6 +39,10 @@ def test_silent_cmdj_times_out_native_json_command():
         def cmdj(self, _command):
             time.sleep(1)
 
+        def cmd(self, _command):
+            time.sleep(1)
+            return '{"unexpected": true}'
+
     started = time.monotonic()
     with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.01"):
         assert silent_cmdj(HungR2(), "ij", default={}) == {}
