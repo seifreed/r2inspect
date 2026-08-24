@@ -174,7 +174,7 @@ jobs:
         run: |
           marker="not slow"
           if [ "$RUNNER_OS" = "Windows" ]; then
-            marker="not slow and not requires_posix"
+            marker="not slow and not requires_r2 and not requires_posix"
             export R2INSPECT_CMD_TIMEOUT_SECONDS=0.1
           fi
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
