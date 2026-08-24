@@ -8,6 +8,7 @@ import pytest
 from r2inspect.infrastructure.r2_session import R2Session
 import r2inspect.infrastructure.r2_helpers as h
 from r2inspect.adapters import validation as v
+from tests.helpers import env_vars
 
 
 @pytest.fixture
@@ -215,6 +216,21 @@ def test_safe_cmdj_timeout_returns_default() -> None:
         assert h.safe_cmdj(SlowCmd(), "ij", {"ok": True}) == {"ok": True}
     finally:
         os.environ.pop("R2INSPECT_CMD_TIMEOUT_SECONDS", None)
+
+
+def test_safe_cmdj_timeout_native_json_command() -> None:
+    class HungNative:
+        def cmdj(self, _command: str):
+            time.sleep(0.5)
+            return {"unexpected": True}
+
+        def cmd(self, _command: str):
+            return "{}"
+
+    started = time.monotonic()
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.01"):
+        assert h.safe_cmdj(HungNative(), "ij", {}) == {}
+    assert time.monotonic() - started < 0.5
 
 
 def test_safe_cmdj_timeout_invalid_env_uses_default() -> None:

@@ -14,9 +14,10 @@ from ..error_handling.presets import (
 )
 from ..interfaces import R2CommandInterface
 from .logging import get_logger
-from .r2_command_timeout import _run_cmd_with_timeout
+from .r2_command_timeout import _run_cmd_with_timeout, _run_cmdj_with_timeout
 
 logger = get_logger(__name__)
+_CMDJ_FAILED = object()
 
 _SIMPLE_BASE_CALLS: dict[str, str] = {
     "aaa": "analyze_all",
@@ -51,8 +52,10 @@ def safe_cmdj(
     def _execute() -> Any:
         if hasattr(r2_instance, "cmdj"):
             try:
-                native = r2_instance.cmdj(command)
-                if native is not None:
+                native = _run_cmdj_with_timeout(
+                    r2_instance, command, default, error_default=_CMDJ_FAILED
+                )
+                if native is not _CMDJ_FAILED and native is not None:
                     return native
             except Exception as exc:
                 logger.debug("Native cmdj failed for %s: %s", command, exc)
@@ -72,7 +75,11 @@ def safe_cmdj_any(
 ) -> Any | None:
     if hasattr(r2_instance, "cmdj"):
         try:
-            return r2_instance.cmdj(command)
+            native = _run_cmdj_with_timeout(
+                r2_instance, command, default, error_default=_CMDJ_FAILED
+            )
+            if native is not _CMDJ_FAILED and native is not None:
+                return native
         except Exception as exc:
             logger.debug("safe_cmdj_any cmdj failed for %s: %s", command, exc)
     return safe_cmdj(r2_instance, command, default)
