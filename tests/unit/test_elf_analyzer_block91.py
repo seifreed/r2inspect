@@ -9,7 +9,6 @@ from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.config import Config
 from r2inspect.modules.elf_analyzer import ELFAnalyzer
 
-
 pytestmark = pytest.mark.requires_r2
 
 
