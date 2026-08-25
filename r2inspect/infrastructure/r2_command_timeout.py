@@ -40,6 +40,16 @@ def mark_wedged(r2_instance: Any) -> None:
         _wedged_instances.add(r2_instance)
 
 
+def _terminate_wedged_process(r2_instance: Any) -> None:
+    """Close the child process before abandoning a blocked pipe read."""
+    try:
+        from .r2_session_cleanup import force_close_process
+
+        force_close_process(r2_instance)
+    except Exception as exc:
+        logger.debug("Failed to terminate wedged r2 process: %s", exc)
+
+
 def _run_with_timeout(
     r2_instance: R2CommandInterface,
     command: str,
@@ -79,6 +89,7 @@ def _run_with_timeout(
     if not result["done"] or not isinstance(completed_at, float) or completed_at > deadline:
         logger.warning("r2 command timed out: %s", command)
         mark_wedged(r2_instance)
+        _terminate_wedged_process(r2_instance)
         return default
 
     return result["value"]

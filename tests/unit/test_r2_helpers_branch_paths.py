@@ -1234,6 +1234,36 @@ def test_run_cmd_with_timeout_marks_wedged_and_fast_fails():
     assert r2.calls == 1
 
 
+def test_run_cmd_with_timeout_terminates_child_process():
+    class _Process:
+        def __init__(self) -> None:
+            self.terminated = False
+            self.killed = False
+            self.stdin = self.stdout = self.stderr = None
+
+        def poll(self):
+            return None if not self.terminated and not self.killed else 1
+
+        def terminate(self):
+            self.terminated = True
+
+        def wait(self, timeout=None):
+            return 1
+
+        def kill(self):
+            self.killed = True
+
+    class _HangingR2WithProcess(_HangingR2):
+        def __init__(self) -> None:
+            super().__init__()
+            self.process = _Process()
+
+    r2 = _HangingR2WithProcess()
+    with env_vars(R2INSPECT_CMD_TIMEOUT_SECONDS="0.01"):
+        assert _timeout._run_cmd_with_timeout(r2, "pdfj", "DEF") == "DEF"
+    assert r2.process.terminated is True
+
+
 def test_run_cmd_with_timeout_tolerates_unhashable_instance():
     class _Unhashable:
         __hash__ = None  # type: ignore[assignment]
