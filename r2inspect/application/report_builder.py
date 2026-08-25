@@ -25,6 +25,19 @@ from .report_provenance import tool_commit
 from .report_security import normalized_security
 
 
+def _json_safe(value: Any) -> Any:
+    """Preserve binary evidence without asking JSON to decode it as UTF-8."""
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return {"encoding": "hex", "value": bytes(value).hex()}
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 def _configuration_digest(configuration: dict[str, Any] | None) -> str | None:
     if configuration is None:
         return None
@@ -58,7 +71,7 @@ def build_report_v1(
     radare2_version: str | None = None,
 ) -> ReportV1:
     """Build a strict report/v1 envelope while preserving legacy details in extras."""
-    raw = cast(dict[str, Any], to_jsonable_python(result.to_dict()))
+    raw = cast(dict[str, Any], to_jsonable_python(_json_safe(result.to_dict())))
     file_info = result.file_info
     hashes = {
         name: value

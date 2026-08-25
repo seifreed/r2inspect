@@ -88,6 +88,14 @@ def test_build_report_v1_rejects_unknown_legacy_objects() -> None:
         build_report_v1(result, analysis_id="analysis-3")
 
 
+def test_build_report_v1_preserves_non_utf8_binary_evidence() -> None:
+    result = build_analysis_result({"binary_evidence": b"\x83\xff"})
+
+    report = build_report_v1(result, analysis_id="analysis-bytes")
+
+    assert report.extras["binary_evidence"] == {"encoding": "hex", "value": "83ff"}
+
+
 @pytest.mark.parametrize(
     ("file_type", "detail_key", "features", "expected"),
     [
