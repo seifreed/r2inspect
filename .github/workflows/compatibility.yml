@@ -50,7 +50,13 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip build
-          python -m pip install "pytest>=9.0.3" "pytest-timeout>=2.0.0"
+          python -m pip install \
+            "pytest>=9.0.3" \
+            "pytest-timeout>=2.0.0" \
+            "yara-python>=4.5.0" \
+            "pefile>=2023.2.7" \
+            "pybloom-live>=4.0.0" \
+            "simhash>=2.1.0"
           python -m build --wheel --outdir dist
           python -m pip install dist/*.whl
       - name: Run unit and integration smoke tests
