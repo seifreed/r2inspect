@@ -103,6 +103,9 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
     )
     result = {
         "schema_version": "r2inspect.benchmark/v1",
+        "corpus_kind": manifest.get("corpus_kind", "synthetic"),
+        "corpus_id": manifest.get("corpus_id"),
+        "provenance": manifest.get("provenance"),
         "cases": len(cases),
         "findings": {
             "true_positive": tp,

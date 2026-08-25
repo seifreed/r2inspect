@@ -77,7 +77,16 @@ def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) ->
         radare2_version="6.1.8",
     )
     (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
-    manifest = {"cases": [{"id": "sample-1", "report": "report.json", "platform": "linux"}]}
+    manifest = {
+        "corpus_kind": "real_labeled",
+        "corpus_id": "dataset-v1",
+        "provenance": {
+            "source": "licensed-source",
+            "dataset_version": "v1",
+            "labeling_method": "independent-review",
+        },
+        "cases": [{"id": "sample-1", "report": "report.json", "platform": "linux"}],
+    }
     (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     (tmp_path / "baseline.json").write_text(json.dumps(manifest), encoding="utf-8")
 
@@ -87,3 +96,5 @@ def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) ->
     assert result["memory_mb"]["median"] == 12.5
     assert result["environment"] == {"platforms": {"linux": 1}, "radare2_versions": {"6.1.8": 1}}
     assert result["differential"]["changed_cases"] == []
+    assert result["corpus_kind"] == "real_labeled"
+    assert result["provenance"]["dataset_version"] == "v1"
