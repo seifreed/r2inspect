@@ -11,7 +11,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from r2inspect.application.clustering import cluster_reports
 from r2inspect.application.explain import explain, radare2_commands
 from r2inspect.application.rule_packs import RulePackManifest, verify_rule_pack
-from r2inspect.schemas.report_v1 import EvidenceV1, FindingV1, LocationV1, ReportV1
+from r2inspect.schemas.report_v1 import (
+    EvidenceV1,
+    FindingV1,
+    LocationV1,
+    ReportV1,
+    SampleInfoV1,
+)
 
 
 def _report(rule_ids: list[str]) -> ReportV1:
@@ -61,6 +67,15 @@ def test_cluster_reports_groups_similar_finding_sets(tmp_path: Path) -> None:
         (tmp_path / name).write_text(_report(rules).model_dump_json(), encoding="utf-8")
     clusters = cluster_reports([tmp_path / "a.json", tmp_path / "b.json", tmp_path / "c.json"])
     assert [len(cluster) for cluster in clusters] == [2, 1]
+
+
+def test_cluster_reports_uses_similarity_hashes(tmp_path: Path) -> None:
+    sample = SampleInfoV1(size=1, hashes={"imphash": "abc"})
+    left = _report([]).model_copy(update={"sample": sample})
+    right = _report([]).model_copy(update={"sample": sample})
+    (tmp_path / "left.json").write_text(left.model_dump_json(), encoding="utf-8")
+    (tmp_path / "right.json").write_text(right.model_dump_json(), encoding="utf-8")
+    assert len(cluster_reports([tmp_path / "left.json", tmp_path / "right.json"])) == 1
 
 
 def test_verify_signed_rule_pack(tmp_path: Path) -> None:
