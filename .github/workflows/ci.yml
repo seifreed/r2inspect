@@ -204,6 +204,8 @@ jobs:
               "--cov=r2inspect",
               "--cov-report=term-missing",
           ]
+          if sys.platform == "win32":
+              args.extend(["--ignore", "tests/unit/test_adapter_more_coverage_block204.py"])
           raise SystemExit(pytest.main(args))
           PY
 
