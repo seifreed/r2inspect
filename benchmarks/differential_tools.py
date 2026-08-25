@@ -130,10 +130,11 @@ def compare_report(
     else:
         report_findings = {finding.rule_id for finding in report.findings}
     normalized_report = {_normalize(item): item for item in report_findings if _normalize(item)}
-    normalized_specialist = {_normalize(item): item for item in specialist_findings if _normalize(item)}
+    normalized_specialist = {
+        _normalize(item): item for item in specialist_findings if _normalize(item)
+    }
     matched = sorted(
-        normalized_report[key]
-        for key in normalized_report.keys() & normalized_specialist.keys()
+        normalized_report[key] for key in normalized_report.keys() & normalized_specialist.keys()
     )
     return {
         "r2inspect_findings": sorted(report_findings),
