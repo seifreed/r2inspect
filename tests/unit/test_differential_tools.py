@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import json
+import sys
 
 import benchmarks.differential_tools as differential_tools
 from benchmarks.differential_tools import _tool_findings, compare_report, run_specialist_safe
@@ -86,20 +87,23 @@ def test_specialist_runner_parses_json_command(tmp_path: Path) -> None:
             '@echo {"rules": {"rule.one": {}}}\r\n',
             encoding="utf-8",
         )
+        command = ("capa", "-j")
     else:
-        tool = tmp_path / "capa"
+        tool = tmp_path / "capa.py"
         tool.write_text(
-            "#!/bin/sh\n"
-            "printf '%s\\n' '{\"rules\": {\"rule.one\": {}}}'\n",
+            "import json\n" "print(json.dumps({'rules': {'rule.one': {}}}))\n",
             encoding="utf-8",
         )
-    tool.chmod(0o755)
+        command = (sys.executable, str(tool), "-j")
     original_path = os.environ.get("PATH", "")
+    original_command = differential_tools.TOOL_COMMANDS["capa"]
     os.environ["PATH"] = f"{tmp_path}{os.pathsep}{original_path}"
+    differential_tools.TOOL_COMMANDS["capa"] = command
     try:
         assert differential_tools.run_specialist("capa", sample, timeout=2) == {"rule.one"}
     finally:
         os.environ["PATH"] = original_path
+        differential_tools.TOOL_COMMANDS["capa"] = original_command
 
 
 def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:

@@ -58,8 +58,10 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
     command = TOOL_COMMANDS.get(tool)
     if command is None:
         raise ValueError(f"unsupported differential tool: {tool}")
-    if shutil.which(command[0]) is None:
+    resolved = shutil.which(command[0])
+    if resolved is None:
         raise FileNotFoundError(command[0])
+    executable = resolved if os.name == "nt" else command[0]
     kwargs: dict[str, Any] = {
         "stdout": subprocess.PIPE,
         "stderr": subprocess.PIPE,
@@ -69,7 +71,7 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
         kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     else:
         kwargs["start_new_session"] = True
-    process = subprocess.Popen([*command, str(sample)], **kwargs)
+    process = subprocess.Popen([executable, *command[1:], str(sample)], **kwargs)
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as exc:
