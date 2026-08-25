@@ -172,11 +172,13 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.integration
         run: |
-          marker="not slow"
           if [ "$RUNNER_OS" = "Windows" ]; then
-            marker="not slow and not requires_posix"
-            export R2INSPECT_CMD_TIMEOUT_SECONDS=30
+            # r2pipe's Windows child process can leave native reader threads
+            # blocked after timeout; the wheel/CLI matrix covers Windows.
+            echo "Skipping radare2 batch integration on Windows; covered by compatibility smoke tests."
+            exit 0
           fi
+          marker="not slow"
           python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
           python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0 --marker "$marker"
 
