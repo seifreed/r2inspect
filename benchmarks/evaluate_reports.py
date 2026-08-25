@@ -32,6 +32,55 @@ def _distribution(values: list[float]) -> dict[str, float | None]:
     }
 
 
+def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool:
+    """Apply the manifest-declared, reproducible classification strategy."""
+    strategy = classification.get("strategy")
+    if strategy == "any_finding":
+        return bool(report.findings)
+    if strategy == "high_or_critical":
+        return any(finding.severity in {"high", "critical"} for finding in report.findings)
+    if strategy == "rule_ids":
+        rule_ids = classification.get("positive_rule_ids")
+        if not isinstance(rule_ids, list) or not all(isinstance(item, str) for item in rule_ids):
+            raise ValueError("rule_ids classification requires positive_rule_ids")
+        return bool({finding.rule_id for finding in report.findings} & set(rule_ids))
+    raise ValueError(
+        "classification.strategy must be any_finding, high_or_critical, or rule_ids"
+    )
+
+
+def _classification_metrics(
+    rows: list[tuple[str, bool]], classification: dict[str, Any]
+) -> dict[str, Any]:
+    """Score binary labels while leaving unknown cases out of the denominator."""
+    tp = fp = tn = fn = 0
+    for expected, predicted in rows:
+        if expected == "unknown":
+            continue
+        if expected == "malware" and predicted:
+            tp += 1
+        elif expected == "benign" and predicted:
+            fp += 1
+        elif expected == "benign":
+            tn += 1
+        elif expected == "malware":
+            fn += 1
+        else:
+            raise ValueError(f"unsupported classification label: {expected}")
+    return {
+        "strategy": classification.get("strategy"),
+        "evaluated_cases": tp + fp + tn + fn,
+        "unknown_cases": sum(expected == "unknown" for expected, _ in rows),
+        "true_positive": tp,
+        "false_positive": fp,
+        "true_negative": tn,
+        "false_negative": fn,
+        "precision": _ratio(tp, tp + fp),
+        "recall": _ratio(tp, tp + fn),
+        "false_positive_rate": _ratio(fp, fp + tn),
+    }
+
+
 def _differential(manifest_path: Path, baseline_path: Path) -> dict[str, Any]:
     def load(path: Path) -> dict[str, tuple[str, ...]]:
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -74,6 +123,10 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
     memory_values: list[float] = []
     platforms: Counter[str] = Counter()
     radare2_versions: Counter[str] = Counter()
+    classification_rows: list[tuple[str, bool]] = []
+    classification = manifest.get("classification")
+    if classification is not None and not isinstance(classification, dict):
+        raise ValueError("classification must be an object")
     for case in cases:
         if not isinstance(case, dict) or not isinstance(case.get("report"), str):
             raise ValueError("each case requires a report path")
@@ -88,6 +141,11 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
         statuses.update(outcome.status.value for outcome in report.analyzers)
         platforms[str(case.get("platform") or report.extras.get("platform") or "unknown")] += 1
         radare2_versions[report.tool.radare2_version or "unknown"] += 1
+        if isinstance(classification, dict):
+            label = case.get("class")
+            if label not in {"benign", "malware", "unknown"}:
+                raise ValueError("classification requires benign, malware, or unknown case labels")
+            classification_rows.append((str(label), _predicted_malware(report, classification)))
         memory = report.extras.get("memory_stats")
         peak_memory = memory.get("peak_memory_mb") if isinstance(memory, dict) else None
         if isinstance(peak_memory, (int, float)):
@@ -139,6 +197,8 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             "radare2_versions": dict(sorted(radare2_versions.items())),
         },
     }
+    if isinstance(classification, dict):
+        result["classification"] = _classification_metrics(classification_rows, classification)
     differential = manifest.get("differential")
     if isinstance(differential, list):
         by_tool: dict[str, dict[str, int]] = defaultdict(lambda: {"cases": 0, "agreements": 0})

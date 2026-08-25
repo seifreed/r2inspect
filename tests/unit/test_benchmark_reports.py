@@ -98,3 +98,59 @@ def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) ->
     assert result["differential"]["changed_cases"] == []
     assert result["corpus_kind"] == "real_labeled"
     assert result["provenance"]["dataset_version"] == "v1"
+
+
+def test_evaluate_reports_scores_declared_real_classification(tmp_path: Path) -> None:
+    report = build_report_v1(
+        build_analysis_result(
+            {
+                "file_info": {"file_type": "PE"},
+                "detector": {"available": True, "detected": True},
+            }
+        ),
+        analysis_id="malware-case",
+        commit="abc",
+        radare2_version="6.1.8",
+    )
+    report.findings.append(
+        FindingV1(
+            finding_id="finding-1",
+            rule_id="rule.malware",
+            title="Detection",
+            category="detection",
+            severity="high",
+            confidence=1.0,
+            source_analyzer="detector",
+            method="fixture",
+        )
+    )
+    (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
+    (tmp_path / "manifest.json").write_text(
+        json.dumps(
+            {
+                "corpus_kind": "real_labeled",
+                "classification": {"strategy": "high_or_critical"},
+                "cases": [
+                    {"report": "report.json", "class": "malware"},
+                    {"report": "report.json", "class": "benign"},
+                    {"report": "report.json", "class": "unknown"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = evaluate(tmp_path / "manifest.json")
+
+    assert result["classification"] == {
+        "strategy": "high_or_critical",
+        "evaluated_cases": 2,
+        "unknown_cases": 1,
+        "true_positive": 1,
+        "false_positive": 1,
+        "true_negative": 0,
+        "false_negative": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "false_positive_rate": 1.0,
+    }
