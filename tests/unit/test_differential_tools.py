@@ -43,6 +43,22 @@ def test_compare_report_exposes_disagreement() -> None:
     assert result["specialist_only"] == ["rule.two"]
 
 
+def test_compare_report_uses_tool_specific_domains() -> None:
+    report = ReportV1(
+        tool={"version": "test"},
+        analysis={"id": "id", "started_at": "2026-01-01T00:00:00Z", "duration": 0},
+        sample={"size": 1},
+        capabilities=[{"source": "capa", "name": "Create Process"}],
+        artifacts=[{"source": "floss", "type": "static", "value": "Secret Value"}],
+    )
+    assert compare_report(report, {"create_process"}, tool="capa")["agreement"] == [
+        "Create Process"
+    ]
+    assert compare_report(report, {"secret-value"}, tool="floss")["agreement"] == [
+        "Secret Value"
+    ]
+
+
 def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:
     def fail(*_args, **_kwargs):
         raise __import__("subprocess").TimeoutExpired("capa", 120)

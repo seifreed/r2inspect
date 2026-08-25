@@ -142,7 +142,7 @@ def run_corpus(
                         "case": case["id"],
                         "tool": tool,
                         **observation,
-                        **compare_report(report_model, findings),
+                        **compare_report(report_model, findings, tool=tool),
                     }
                 )
 

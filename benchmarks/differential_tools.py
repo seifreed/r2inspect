@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+import signal
 import shutil
 import subprocess
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -22,12 +26,19 @@ def _tool_findings(tool: str, payload: Any) -> set[str]:
         rules = payload.get("rules")
         return set(rules) if isinstance(rules, dict) else set()
     if tool == "floss" and isinstance(payload, dict):
-        return {
-            str(value)
-            for key in ("strings", "decoded_strings", "stack_strings", "tight_strings")
-            for value in payload.get(key, [])
-            if isinstance(payload.get(key), list)
-        }
+        values: set[str] = set()
+        for key in ("strings", "decoded_strings", "stack_strings", "tight_strings"):
+            entries = payload.get(key, [])
+            if isinstance(entries, dict):
+                entries = [
+                    value
+                    for values_list in entries.values()
+                    if isinstance(values_list, list)
+                    for value in values_list
+                ]
+            if isinstance(entries, list):
+                values.update(str(value) for value in entries if isinstance(value, (str, bytes)))
+        return values
     if tool == "yara" and isinstance(payload, str):
         return {line.split(maxsplit=1)[0] for line in payload.splitlines() if line.strip()}
     return set()
@@ -39,13 +50,22 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
         raise ValueError(f"unsupported differential tool: {tool}")
     if shutil.which(command[0]) is None:
         raise FileNotFoundError(command[0])
-    completed = subprocess.run(
-        [*command, str(sample)],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        check=False,
-    )
+    kwargs: dict[str, Any] = {"capture_output": True, "text": True}
+    if os.name == "nt":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    process = subprocess.Popen([*command, str(sample)], **kwargs)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        if os.name == "nt":
+            process.kill()
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+        process.communicate()
+        raise exc
+    completed = subprocess.CompletedProcess(process.args, process.returncode, stdout, stderr)
     if completed.returncode != 0:
         raise RuntimeError(f"{tool} failed for {sample}: {completed.stderr.strip()}")
     payload: Any = completed.stdout
@@ -69,14 +89,63 @@ def run_specialist_safe(tool: str, sample: Path, *, timeout: int = 120) -> dict[
         return {"status": "failed", "findings": [], "error": str(exc)}
 
 
-def compare_report(report: ReportV1, specialist_findings: set[str]) -> dict[str, Any]:
-    report_findings = {finding.rule_id for finding in report.findings}
+def _normalize(value: str) -> str:
+    text = unicodedata.normalize("NFKC", str(value)).casefold()
+    return re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+
+
+def _string_values(value: Any) -> set[str]:
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, list):
+        return {item for child in value for item in _string_values(child)}
+    if isinstance(value, dict):
+        return {item for child in value.values() for item in _string_values(child)}
+    return set()
+
+
+def compare_report(
+    report: ReportV1, specialist_findings: set[str], *, tool: str | None = None
+) -> dict[str, Any]:
+    tool = tool or "generic"
+    if tool == "capa":
+        report_findings = {
+            str(item.get("name"))
+            for item in report.capabilities
+            if isinstance(item.get("name"), str)
+        }
+        report_findings.update(finding.rule_id for finding in report.findings)
+        report_findings.update(finding.title for finding in report.findings)
+    elif tool == "floss":
+        report_findings = {
+            str(item.get("value"))
+            for item in report.artifacts
+            if isinstance(item, dict) and isinstance(item.get("value"), str)
+        }
+        for key in ("strings", "decoded_strings", "stack_strings", "tight_strings"):
+            report_findings.update(_string_values(report.extras.get(key)))
+        file_info = report.extras.get("file_info")
+        if isinstance(file_info, dict):
+            report_findings.update(_string_values(file_info.get("strings")))
+    else:
+        report_findings = {finding.rule_id for finding in report.findings}
+    normalized_report = {_normalize(item): item for item in report_findings if _normalize(item)}
+    normalized_specialist = {_normalize(item): item for item in specialist_findings if _normalize(item)}
+    matched = sorted(
+        normalized_report[key]
+        for key in normalized_report.keys() & normalized_specialist.keys()
+    )
     return {
         "r2inspect_findings": sorted(report_findings),
         "specialist_findings": sorted(specialist_findings),
-        "agreement": sorted(report_findings & specialist_findings),
-        "r2inspect_only": sorted(report_findings - specialist_findings),
-        "specialist_only": sorted(specialist_findings - report_findings),
+        "agreement": matched,
+        "r2inspect_only": sorted(
+            value for key, value in normalized_report.items() if key not in normalized_specialist
+        ),
+        "specialist_only": sorted(
+            value for key, value in normalized_specialist.items() if key not in normalized_report
+        ),
+        "comparison_basis": tool,
     }
 
 
