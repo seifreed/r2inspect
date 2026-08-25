@@ -61,3 +61,29 @@ def test_evaluate_reports_scores_findings_statuses_and_latency(tmp_path: Path) -
     }
     assert result["analyzers"]["statuses"] == {"not_detected": 1}
     assert result["latency_seconds"]["p99"] == 2.0
+
+
+def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) -> None:
+    report = build_report_v1(
+        build_analysis_result(
+            {
+                "file_info": {"file_type": "ELF"},
+                "detector": {"available": True, "detected": True, "execution_time": 0.25},
+                "execution_time": 1.0,
+                "memory_stats": {"peak_memory_mb": 12.5},
+            }
+        ),
+        analysis_id="case-1",
+        radare2_version="6.1.8",
+    )
+    (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
+    manifest = {"cases": [{"id": "sample-1", "report": "report.json", "platform": "linux"}]}
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (tmp_path / "baseline.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = evaluate(tmp_path / "manifest.json", baseline_manifest=tmp_path / "baseline.json")
+
+    assert result["analyzer_metrics"]["detector"]["latency_seconds"]["median"] == 0.25
+    assert result["memory_mb"]["median"] == 12.5
+    assert result["environment"] == {"platforms": {"linux": 1}, "radare2_versions": {"6.1.8": 1}}
+    assert result["differential"]["changed_cases"] == []
