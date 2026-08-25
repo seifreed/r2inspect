@@ -50,6 +50,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip build
+          python -m pip install "pytest>=9.0.3" "pytest-timeout>=2.0.0"
           python -m build --wheel --outdir dist
           python -m pip install dist/*.whl
       - name: Run unit and integration smoke tests
