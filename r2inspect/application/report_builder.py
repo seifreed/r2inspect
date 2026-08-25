@@ -85,6 +85,7 @@ def build_report_v1(
     return ReportV1(
         tool=ToolInfoV1(
             version=__version__,
+            backend=str(raw.get("backend", "r2")),
             commit=commit or tool_commit(),
             radare2_version=radare2_version or detected_radare2_version(),
         ),

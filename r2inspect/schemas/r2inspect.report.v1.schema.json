@@ -549,6 +549,11 @@
     "ToolInfoV1": {
       "additionalProperties": false,
       "properties": {
+        "backend": {
+          "default": "r2",
+          "title": "Backend",
+          "type": "string"
+        },
         "commit": {
           "anyOf": [
             {

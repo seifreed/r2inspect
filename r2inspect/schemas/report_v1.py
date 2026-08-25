@@ -31,6 +31,7 @@ class AnalyzerStatus(StrEnum):
 class ToolInfoV1(WireModel):
     name: str = "r2inspect"
     version: str
+    backend: str = "r2"
     commit: str | None = None
     radare2_version: str | None = None
 

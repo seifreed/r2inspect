@@ -48,6 +48,7 @@ def test_report_v1_round_trips_and_rejects_unknown_fields() -> None:
     payload = json.loads(report.model_dump_json())
 
     assert payload["schema_version"] == "r2inspect.report/v1"
+    assert payload["tool"]["backend"] == "r2"
     assert ReportV1.model_validate(payload) == report
     with pytest.raises(ValidationError):
         ReportV1.model_validate({**payload, "unknown": True})
