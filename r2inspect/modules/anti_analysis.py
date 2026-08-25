@@ -137,7 +137,9 @@ class AntiAnalysisDetector(CommandHelperMixin):
         return cast(
             list[dict[str, Any]],
             _run_detail_detector(
-                "evasion technique detection", lambda: build_evasion_techniques(self), []
+                "evasion technique detection",
+                lambda: build_evasion_techniques(self),
+                lambda exc: self._failed_list(exc),
             ),
         )
 
@@ -146,7 +148,9 @@ class AntiAnalysisDetector(CommandHelperMixin):
         return cast(
             list[dict[str, Any]],
             _run_detail_detector(
-                "suspicious API detection", lambda: find_suspicious_apis(self), []
+                "suspicious API detection",
+                lambda: find_suspicious_apis(self),
+                lambda exc: self._failed_list(exc),
             ),
         )
 
@@ -168,9 +172,13 @@ class AntiAnalysisDetector(CommandHelperMixin):
             _run_detail_detector(
                 "environment-check detection",
                 lambda: detect_environment_fingerprinting(self),
-                [],
+                lambda exc: self._failed_list(exc),
             ),
         )
+
+    def _failed_list(self, error: Exception) -> list[dict[str, Any]]:
+        self._record_analysis_error(error)
+        return []
 
     def _should_search_opcodes(self) -> bool:
         return should_run_full_analysis(self.config, file_size_mb_from_adapter(self.adapter))

@@ -86,6 +86,13 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 get_risk_level_fn=self._get_risk_level,
                 count_suspicious_indicators_fn=self._count_suspicious_indicators,
             )
+            nested_errors = [
+                str(value["error"])
+                for value in result.values()
+                if isinstance(value, dict) and value.get("error")
+            ]
+            if nested_errors:
+                result["error"] = "; ".join(dict.fromkeys(nested_errors))
 
             self._log_info(f"Analyzed {len(imports)} imports from {len(dlls)} DLLs")
 
@@ -202,7 +209,14 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             logger.error(
                 "Error analyzing API usage for %s imports: %s", _safe_len_impl(imports), exc
             )
-            return {"categories": {}, "suspicious_apis": [], "risk_score": 0}
+            self._record_analysis_error(exc)
+            return {
+                "categories": {},
+                "suspicious_apis": [],
+                "risk_score": 0,
+                "status": "failed",
+                "error": str(exc),
+            }
 
     def detect_api_obfuscation(self, imports: list[dict]) -> dict[str, Any]:
         try:
@@ -213,6 +227,7 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 _safe_len_impl(imports),
                 exc,
             )
+            self._record_analysis_error(exc)
             return {
                 "detected": False,
                 "indicators": [],
@@ -228,7 +243,14 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             logger.error(
                 "Error analyzing DLL dependencies for %s DLLs: %s", _safe_len_impl(dlls), exc
             )
-            return {"common_dlls": [], "suspicious_dlls": [], "analysis": {}}
+            self._record_analysis_error(exc)
+            return {
+                "common_dlls": [],
+                "suspicious_dlls": [],
+                "analysis": {},
+                "status": "failed",
+                "error": str(exc),
+            }
 
     def detect_import_anomalies(self, imports: list[dict[str, Any]]) -> dict[str, Any]:
         try:
@@ -237,7 +259,8 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             logger.error(
                 "Error detecting import anomalies for %s imports: %s", _safe_len_impl(imports), exc
             )
-            return {"anomalies": [], "count": 0}
+            self._record_analysis_error(exc)
+            return {"anomalies": [], "count": 0, "status": "failed", "error": str(exc)}
 
     def check_import_forwarding(self) -> dict[str, Any]:
         try:
@@ -245,6 +268,7 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return _check_import_forwarding_impl(strings, logger=logger)
         except Exception as exc:
             logger.error("Error checking import forwarding from strings: %s", exc)
+            self._record_analysis_error(exc)
             return {
                 "detected": False,
                 "forwards": [],

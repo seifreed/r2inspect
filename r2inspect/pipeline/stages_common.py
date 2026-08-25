@@ -67,6 +67,10 @@ def run_registered_analyzer(
         _results_bucket(context)[result_key] = data
         status = getattr(analyzer, "last_status", None)
         error = getattr(analyzer, "last_error", None)
+        errors = getattr(analyzer, "_analysis_errors", None)
+        if isinstance(errors, list) and errors:
+            error = "; ".join(str(item) for item in errors)
+            status = "failed"
         if error or (status and status != "completed"):
             _record_analyzer_status(
                 context,

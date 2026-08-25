@@ -136,7 +136,11 @@ class PackerDetector(CommandHelperMixin):
         scorer.add_entropy_results(self._analyze_entropy())
         scorer.add_section_results(self._analyze_sections())
         scorer.add_import_count(self._count_imports())
-        return scorer.verdict()
+        result = scorer.verdict()
+        errors = getattr(self, "_analysis_errors", [])
+        if errors:
+            result["error"] = "; ".join(str(item) for item in errors)
+        return result
 
     def _check_packer_signatures(self) -> dict[str, str] | None:
         """Check for known packer signatures in hex patterns and strings."""

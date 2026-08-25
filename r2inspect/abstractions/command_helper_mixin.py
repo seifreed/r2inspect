@@ -22,6 +22,16 @@ class CommandHelperMixin:
 
     adapter: Any
 
+    def _record_analysis_error(self, error: Any) -> None:
+        """Collect recoverable sub-analyzer failures for pipeline reporting."""
+        errors = getattr(self, "_analysis_errors", None)
+        if not isinstance(errors, list):
+            errors = []
+            self._analysis_errors = errors
+        message = str(error)
+        if message and message not in errors:
+            errors.append(message)
+
     # cmd/cmdj/cmd_list take (adapter, r2_fallback, command). The adapter
     # serves both roles: high-level query interface and r2pipe fallback.
     def _cmd(self, command: str) -> str:
@@ -79,4 +89,5 @@ class CommandHelperMixin:
             return fn()
         except Exception as exc:
             _log.error("%s: %s", error_msg, exc)
+            self._record_analysis_error(f"{error_msg}: {exc}")
             return default

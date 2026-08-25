@@ -27,6 +27,12 @@ class CryptoHost(Protocol):
     def _should_search_disasm(self) -> bool: ...
 
 
+def _record_error(analyzer: Any, error: Exception) -> None:
+    recorder = getattr(analyzer, "_record_analysis_error", None)
+    if callable(recorder):
+        recorder(error)
+
+
 def build_crypto_report(analyzer: CryptoHost) -> dict[str, Any]:
     crypto_info: dict[str, Any] = {
         "algorithms": [],
@@ -99,6 +105,7 @@ def detect_crypto_constants(analyzer: CryptoHost, logger: logging.Logger) -> lis
             found_constants.extend(_crypto_constant_matches(analyzer, const_name, const_values))
     except Exception as exc:
         logger.error("Error detecting crypto constants: %s", exc)
+        _record_error(analyzer, exc)
     return found_constants
 
 
@@ -149,6 +156,7 @@ def detect_crypto_apis(analyzer: CryptoHost, logger: logging.Logger) -> list[dic
                     )
     except Exception as exc:
         logger.error("Error detecting crypto APIs: %s", exc)
+        _record_error(analyzer, exc)
     return crypto_apis
 
 
@@ -172,6 +180,7 @@ def analyze_entropy(analyzer: CryptoHost, logger: logging.Logger) -> dict[str, A
                     }
     except Exception as exc:
         logger.error("Error analyzing entropy: %s", exc)
+        _record_error(analyzer, exc)
     return entropy_info
 
 
@@ -204,6 +213,7 @@ def find_suspicious_patterns(analyzer: CryptoHost, logger: logging.Logger) -> li
             )
     except Exception as exc:
         logger.error("Error finding suspicious patterns: %s", exc)
+        _record_error(analyzer, exc)
     return patterns
 
 
@@ -252,4 +262,5 @@ def detect_crypto_libraries(analyzer: CryptoHost, logger: logging.Logger) -> lis
                     )
     except Exception as exc:
         logger.error("Error detecting crypto libraries: %s", exc)
+        _record_error(analyzer, exc)
     return crypto_libs

@@ -43,7 +43,11 @@ class CryptoAnalyzer(CommandHelperMixin):
     def detect(self) -> dict[str, Any]:
         """Detect cryptographic patterns and algorithms."""
         try:
-            return build_crypto_report(self)
+            result = build_crypto_report(self)
+            errors = getattr(self, "_analysis_errors", [])
+            if errors:
+                result["error"] = "; ".join(str(item) for item in errors)
+            return result
         except Exception as e:
             logger.error("Error in crypto detection: %s", e)
             return {
