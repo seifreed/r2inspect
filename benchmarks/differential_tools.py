@@ -66,7 +66,7 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
         "text": True,
     }
     if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     else:
         kwargs["start_new_session"] = True
     process = subprocess.Popen([*command, str(sample)], **kwargs)

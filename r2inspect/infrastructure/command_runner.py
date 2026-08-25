@@ -9,6 +9,7 @@ import shutil
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 
 def resolve_timeout(timeout: float) -> float:
@@ -36,7 +37,7 @@ def run_command(
         raise FileNotFoundError(command[0])
     effective_timeout = resolve_timeout(timeout)
     argv = [str(Path(executable).resolve()), *command[1:]]
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, Any] = {
         "cwd": cwd,
         "stdout": subprocess.PIPE,
         "stderr": subprocess.PIPE,
@@ -44,7 +45,7 @@ def run_command(
         "shell": False,
     }
     if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     else:
         kwargs["start_new_session"] = True
     process = subprocess.Popen(argv, **kwargs)
