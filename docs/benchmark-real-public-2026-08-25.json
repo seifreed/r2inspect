@@ -1,0 +1,41 @@
+{
+  "schema_version": "r2inspect.benchmark/v1",
+  "execution": {
+    "generated_at": "2026-08-25T19:30:00Z",
+    "code_commit": "76c1546e",
+    "platform": "macos-arm64",
+    "radare2_version": "6.2.0",
+    "profile": "forensic",
+    "specialist_timeout_seconds": 30
+  },
+  "corpus": {
+    "corpus_kind": "real_labeled",
+    "corpus_id": "capa-testfiles-pma-kernel32-v1",
+    "cases": 11,
+    "source": "https://github.com/mandiant/capa-testfiles/tree/4fa9a0448a1453a80bdcbcefb6dff870f6333b64",
+    "dataset_version": "4fa9a0448a1453a80bdcbcefb6dff870f6333b64",
+    "labeling_method": "upstream sample provenance plus manual source review"
+  },
+  "classification": {
+    "strategy": "high_or_critical",
+    "evaluated_cases": 11,
+    "unknown_cases": 0,
+    "true_positive": 5,
+    "false_positive": 2,
+    "true_negative": 1,
+    "false_negative": 3,
+    "precision": 0.7142857142857143,
+    "recall": 0.625,
+    "false_positive_rate": 0.6666666666666666
+  },
+  "analyzers": {
+    "statuses": {"completed": 79, "failed": 20},
+    "error_rate": 0.20202020202020202,
+    "unknown_rate": 0.0
+  },
+  "differential_tools": {
+    "capa": {"cases": 11, "completed": 3, "timed_out": 8, "failed": 0, "agreements": 0, "agreement_rate": 0.0},
+    "floss": {"cases": 11, "completed": 0, "timed_out": 10, "failed": 1, "agreements": 0, "agreement_rate": null}
+  },
+  "interpretation": "Real-corpus evidence only; the binary classifier is not release-calibrated. Specialist timeouts and analyzer failures remain visible and are not counted as not_detected."
+}
