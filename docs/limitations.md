@@ -11,8 +11,8 @@
 - PE, ELF, and Mach-O analyzers expose different format-specific detail; common
   mitigation normalization is still in progress.
 - Optional YARA and similarity dependencies may be unavailable on a platform.
-- Python 3.13 is the minimum tested runtime; 3.11/3.12 are not advertised until
-  they pass the full wheel and integration release matrix.
+- Python 3.11 through 3.14 are supported; the compatibility workflow covers
+  3.11/3.12 while the full radare2 matrix remains on 3.13/3.14.
 - The base package contains the r2 pipeline and report contract. The `pe`,
   `yara`, and `similarity` extras install optional engines; `elf` and `macho`
   are dependency-free deployment markers, and `all` installs every Python

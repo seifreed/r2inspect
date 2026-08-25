@@ -15,8 +15,14 @@ Compare two reports by stable finding and analyzer identifiers:
 ```bash
 r2inspect-compare baseline.json candidate.json
 r2inspect-baseline baseline.json candidate.json --fail-on-change
+r2inspect --explain finding-abc123 report.json
+r2inspect-cluster reports/*.json --threshold 0.5
+r2inspect-rules-verify ./rule-pack --public-key analyst-ed25519.pub
 ```
 
 The exports are deterministic projections of the report contract. They do not
 claim that a finding is malicious; consumers should preserve the source
-analyzer, confidence, evidence, and report provenance.
+analyzer, confidence, evidence, and report provenance. Explanations include
+the evidence, locations, and ready-to-run radare2 seek/disassembly commands.
+Rule packs use a versioned manifest, SHA-256 file hashes, and Ed25519
+signatures; updating a pack means replacing the verified directory atomically.

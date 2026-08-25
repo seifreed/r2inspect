@@ -51,8 +51,13 @@ Labels must be assigned independently of r2inspect. Evaluate it with:
 
 ```bash
 python benchmarks/evaluate_reports.py corpus/manifest.json --output metrics.json
+# Compare the same labeled cases with a previous run.
+python benchmarks/evaluate_reports.py corpus/manifest.json \
+  --baseline-manifest previous/manifest.json
 ```
 
 The versioned output reports finding precision/recall, explicit analyzer status
-rates, and median/P95/P99 latency. A manifest pins the exact reports evaluated,
-so public and private corpora use the same scorer without publishing samples.
+rates, per-analyzer latency/error rates, peak-memory distribution, platform and
+radare2-version counts, and differential finding changes. A manifest pins the
+exact reports evaluated, so public and private corpora use the same scorer
+without publishing samples.
