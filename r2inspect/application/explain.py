@@ -17,6 +17,14 @@ def radare2_commands(finding: FindingV1) -> list[str]:
         )
         if address is not None:
             commands.extend((f"s 0x{address:x}", f"pdf @ 0x{address:x}"))
+    for evidence in finding.evidence:
+        values = (
+            evidence.value if isinstance(evidence.value, dict) else {evidence.kind: evidence.value}
+        )
+        for key in ("virtual_address", "address", "offset"):
+            address = values.get(key)
+            if isinstance(address, int) and address >= 0:
+                commands.extend((f"s 0x{address:x}", f"pdf @ 0x{address:x}"))
     return list(dict.fromkeys(commands))
 
 

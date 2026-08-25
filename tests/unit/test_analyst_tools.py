@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from r2inspect.application.clustering import cluster_reports
 from r2inspect.application.explain import explain, radare2_commands
 from r2inspect.application.rule_packs import RulePackManifest, verify_rule_pack
-from r2inspect.schemas.report_v1 import FindingV1, LocationV1, ReportV1
+from r2inspect.schemas.report_v1 import EvidenceV1, FindingV1, LocationV1, ReportV1
 
 
 def _report(rule_ids: list[str]) -> ReportV1:
@@ -41,6 +41,15 @@ def test_explain_includes_radare2_commands() -> None:
     result = explain(_report(["rule.one"]), finding.finding_id)
     assert radare2_commands(finding) == ["s 0x401000", "pdf @ 0x401000"]
     assert result["radare2_commands"] == ["s 0x401000", "pdf @ 0x401000"]
+
+
+def test_explain_reads_offsets_from_evidence() -> None:
+    finding = (
+        _report(["rule.one"])
+        .findings[0]
+        .model_copy(update={"locations": [], "evidence": [EvidenceV1(kind="offset", value=0x40)]})
+    )
+    assert radare2_commands(finding) == ["s 0x40", "pdf @ 0x40"]
 
 
 def test_cluster_reports_groups_similar_finding_sets(tmp_path: Path) -> None:
