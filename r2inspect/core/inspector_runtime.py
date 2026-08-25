@@ -13,6 +13,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from ..application.result_semantics import normalize_analyzer_results
+
 if TYPE_CHECKING:
     from .inspector import InspectorDependencies
 
@@ -179,6 +181,7 @@ def _analyze_impl(
             results = inspector._execute_with_progress(pipeline, options, progress_callback)
         else:
             results = inspector._execute_without_progress(pipeline, options, parallel=use_parallel)
+        normalize_analyzer_results(results)
 
         xor_target = options.get("xor_search")
         if xor_target:

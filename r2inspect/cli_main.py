@@ -122,7 +122,7 @@ def main(
 @click.option("--explain", help="Explain a finding ID or rule ID from a report JSON file")
 @click.option(
     "--profile",
-    type=click.Choice(["fast", "standard", "deep"], case_sensitive=False),
+    type=click.Choice(["fast", "standard", "deep", "forensic"], case_sensitive=False),
     default="standard",
     show_default=True,
     help="Analysis cost profile",

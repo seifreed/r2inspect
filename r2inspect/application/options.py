@@ -9,9 +9,9 @@ def build_analysis_options(
     yara: str | None, sanitized_xor: str | None, profile: str = "standard"
 ) -> dict[str, Any]:
     """Build the effective options for a named analysis cost profile."""
-    if profile not in {"fast", "standard", "deep"}:
+    if profile not in {"fast", "standard", "deep", "forensic"}:
         raise ValueError(f"Unknown analysis profile: {profile}")
-    deep = profile == "deep"
+    deep = profile in {"deep", "forensic"}
     detect = profile != "fast"
     return {
         "profile": profile,
@@ -26,6 +26,8 @@ def build_analysis_options(
         "detect_capa": deep,
         "detect_floss": deep,
         "full_analysis": detect,
+        "forensic_evidence": profile == "forensic",
+        "preserve_artifacts": profile == "forensic",
         "custom_yara": yara,
         "xor_search": sanitized_xor,
     }

@@ -8,6 +8,7 @@ from typing import Any, Literal, cast
 
 from ..schemas.report_v1 import AnalyzerOutcomeV1, AnalyzerStatus, EvidenceV1, FindingV1
 from ..schemas.results_models import AnalysisResult
+from .technique_mappings import map_techniques
 
 
 def findings(result: AnalysisResult) -> list[FindingV1]:
@@ -20,6 +21,7 @@ def findings(result: AnalysisResult) -> list[FindingV1]:
         slug = re.sub(r"[^a-z0-9]+", ".", indicator.type.lower()).strip(".") or "unknown"
         rule_id = f"legacy.indicator.{slug}"
         digest = hashlib.sha256(f"{rule_id}\0{indicator.description}".encode()).hexdigest()[:16]
+        attack, mbc = map_techniques(indicator.type, rule_id)
         output.append(
             FindingV1(
                 finding_id=f"finding-{digest}",
@@ -33,6 +35,8 @@ def findings(result: AnalysisResult) -> list[FindingV1]:
                 source_analyzer="result_aggregator",
                 method="legacy_indicator",
                 evidence=[EvidenceV1(kind="description", value=indicator.description)],
+                attack=attack,
+                mbc=mbc,
             )
         )
     return output
