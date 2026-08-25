@@ -14,7 +14,7 @@ maintainers = [
     {name = "Marc Rivero", email = "mriverolopez@gmail.com"}
 ]
 license = "GPL-3.0-or-later"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -24,6 +24,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Security",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Systems Administration",
@@ -126,7 +128,7 @@ exclude = ["tests*", "docs*", "examples*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -148,7 +150,7 @@ extend-exclude = '''
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py311"
 extend-exclude = [
     "templates/**",
     "bench_samples/**",
