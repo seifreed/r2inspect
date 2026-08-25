@@ -16,6 +16,10 @@ def test_specialist_payloads_are_normalized() -> None:
         "one",
         "two",
     }
+    assert _tool_findings(
+        "floss",
+        {"strings": {"static_strings": [{"string": "three", "offset": 1}]}},
+    ) == {"three"}
     assert _tool_findings("yara", "rule.one sample\n") == {"rule.one"}
 
 
@@ -54,9 +58,7 @@ def test_compare_report_uses_tool_specific_domains() -> None:
     assert compare_report(report, {"create_process"}, tool="capa")["agreement"] == [
         "Create Process"
     ]
-    assert compare_report(report, {"secret-value"}, tool="floss")["agreement"] == [
-        "Secret Value"
-    ]
+    assert compare_report(report, {"secret-value"}, tool="floss")["agreement"] == ["Secret Value"]
 
 
 def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:

@@ -21,24 +21,34 @@ TOOL_COMMANDS = {
 }
 
 
+def _string_leaves(value: Any) -> set[str]:
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, bytes):
+        return {value.decode("utf-8", errors="replace")}
+    if isinstance(value, list):
+        return {item for child in value for item in _string_leaves(child)}
+    if isinstance(value, dict):
+        return {item for child in value.values() for item in _string_leaves(child)}
+    return set()
+
+
 def _tool_findings(tool: str, payload: Any) -> set[str]:
     if tool == "capa" and isinstance(payload, dict):
         rules = payload.get("rules")
         return set(rules) if isinstance(rules, dict) else set()
     if tool == "floss" and isinstance(payload, dict):
-        values: set[str] = set()
-        for key in ("strings", "decoded_strings", "stack_strings", "tight_strings"):
-            entries = payload.get(key, [])
-            if isinstance(entries, dict):
-                entries = [
-                    value
-                    for values_list in entries.values()
-                    if isinstance(values_list, list)
-                    for value in values_list
-                ]
-            if isinstance(entries, list):
-                values.update(str(value) for value in entries if isinstance(value, (str, bytes)))
-        return values
+        return {
+            item
+            for key in (
+                "strings",
+                "static_strings",
+                "decoded_strings",
+                "stack_strings",
+                "tight_strings",
+            )
+            for item in _string_leaves(payload.get(key, []))
+        }
     if tool == "yara" and isinstance(payload, str):
         return {line.split(maxsplit=1)[0] for line in payload.splitlines() if line.strip()}
     return set()
