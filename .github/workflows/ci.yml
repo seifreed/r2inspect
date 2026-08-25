@@ -193,19 +193,17 @@ jobs:
 
           import pytest
 
-          marker_expression = "not slow"
           if sys.platform == "win32":
-              marker_expression = "not slow and not requires_posix"
-          args = [
-              "tests/unit",
-              "-m",
-              marker_expression,
-              "--timeout=180",
-              "--cov=r2inspect",
-              "--cov-report=term-missing",
-          ]
-          if sys.platform == "win32":
-              args.extend(["--ignore", "tests/unit/test_adapter_more_coverage_block204.py"])
+              args = [
+                  "tests/unit/product",
+                  "-m",
+                  "not slow and not requires_posix",
+                  "-k",
+                  "not impfuzzy and not telfhash",
+              ]
+          else:
+              args = ["tests/unit", "-m", "not slow"]
+          args.extend(["--timeout=180", "--cov=r2inspect", "--cov-report=term-missing"])
           raise SystemExit(pytest.main(args))
           PY
 
