@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from r2inspect.schemas.report_v1 import ReportV1
 from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist
@@ -26,7 +26,7 @@ def _sha256(path: Path) -> str:
 
 
 def _load_manifest(path: Path) -> dict[str, Any]:
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest = cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     cases = manifest.get("cases")
     if not isinstance(cases, list) or not cases:
         raise ValueError("manifest must contain a non-empty cases list")

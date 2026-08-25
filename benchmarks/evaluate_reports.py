@@ -89,8 +89,9 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
         platforms[str(case.get("platform") or report.extras.get("platform") or "unknown")] += 1
         radare2_versions[report.tool.radare2_version or "unknown"] += 1
         memory = report.extras.get("memory_stats")
-        if isinstance(memory, dict) and isinstance(memory.get("peak_memory_mb"), (int, float)):
-            memory_values.append(float(memory["peak_memory_mb"]))
+        peak_memory = memory.get("peak_memory_mb") if isinstance(memory, dict) else None
+        if isinstance(peak_memory, (int, float)):
+            memory_values.append(float(peak_memory))
         for outcome in report.analyzers:
             stats = analyzer_stats[outcome.analyzer_id]
             stats["statuses"][outcome.status.value] += 1
