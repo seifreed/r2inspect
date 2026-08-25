@@ -14,7 +14,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from r2inspect.schemas.report_v1 import ReportV1
-from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist
+try:
+    from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist
+except ModuleNotFoundError:  # direct ``python benchmarks/run_corpus.py`` execution
+    from differential_tools import TOOL_COMMANDS, compare_report, run_specialist
 
 
 def _sha256(path: Path) -> str:
