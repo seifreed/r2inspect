@@ -15,17 +15,72 @@ DATASET_COMMIT = "4fa9a0448a1453a80bdcbcefb6dff870f6333b64"
 DATASET_URL = f"https://github.com/{DATASET}/tree/{DATASET_COMMIT}"
 
 _SAMPLES = (
-    ("pma_01_01_dll", "Practical Malware Analysis Lab 01-01.dll_", "malware", "f50e42c8dfaab649bde0398867e930b86c2a599e8db83b8260393082268f2dba"),
-    ("pma_01_01_exe", "Practical Malware Analysis Lab 01-01.exe_", "malware", "58898bd42c5bd3bf9b1389f0eee5b39cd59180e8370eb9ea838a0b327bd6fe47"),
-    ("pma_01_02_exe", "Practical Malware Analysis Lab 01-02.exe_", "malware", "c876a332d7dd8da331cb8eee7ab7bf32752834d4b2b54eaa362674a2a48f64a6"),
-    ("pma_01_04_exe", "Practical Malware Analysis Lab 01-04.exe_", "malware", "0fa1498340fca6c562cfa389ad3e93395f44c72fd128d7ba08579a69aaf3b126"),
-    ("pma_03_02_dll", "Practical Malware Analysis Lab 03-02.dll_", "malware", "5eced7367ed63354b4ed5c556e2363514293f614c2c2eb187273381b2ef5f0f9"),
-    ("pma_03_03_exe", "Practical Malware Analysis Lab 03-03.exe_", "malware", "ae8a1c7eb64c42ea2a04f97523ebf0844c27029eb040d910048b680f884b9dce"),
-    ("pma_03_04_exe", "Practical Malware Analysis Lab 03-04.exe_", "malware", "6ac06dfa543dca43327d55a61d0aaed25f3c90cce791e0555e3e306d47107859"),
-    ("pma_05_01_dll", "Practical Malware Analysis Lab 05-01.dll_", "malware", "eb1079bdd96bc9cc19c38b76342113a09666aad47518ff1a7536eebff8aadb4a"),
-    ("kernel32_x86", "kernel32.dll_", "benign", "3f94f8630c7603f9da79bf021cb56ac5357502badf6cb12f6ce11e5b2b244153"),
-    ("kernel32_x64", "kernel32-64.dll_", "benign", "7d148e220040de2fae1439fbc0e783ef344dceaea4757611722d8378a4938d0b"),
-    ("microsocks_elf", "microsocks.elf_", "benign", "4f405550ba8ce619bf5a3547acb7871009d1e51160d4feabdb3b7d827b44e507"),
+    (
+        "pma_01_01_dll",
+        "Practical Malware Analysis Lab 01-01.dll_",
+        "malware",
+        "f50e42c8dfaab649bde0398867e930b86c2a599e8db83b8260393082268f2dba",
+    ),
+    (
+        "pma_01_01_exe",
+        "Practical Malware Analysis Lab 01-01.exe_",
+        "malware",
+        "58898bd42c5bd3bf9b1389f0eee5b39cd59180e8370eb9ea838a0b327bd6fe47",
+    ),
+    (
+        "pma_01_02_exe",
+        "Practical Malware Analysis Lab 01-02.exe_",
+        "malware",
+        "c876a332d7dd8da331cb8eee7ab7bf32752834d4b2b54eaa362674a2a48f64a6",
+    ),
+    (
+        "pma_01_04_exe",
+        "Practical Malware Analysis Lab 01-04.exe_",
+        "malware",
+        "0fa1498340fca6c562cfa389ad3e93395f44c72fd128d7ba08579a69aaf3b126",
+    ),
+    (
+        "pma_03_02_dll",
+        "Practical Malware Analysis Lab 03-02.dll_",
+        "malware",
+        "5eced7367ed63354b4ed5c556e2363514293f614c2c2eb187273381b2ef5f0f9",
+    ),
+    (
+        "pma_03_03_exe",
+        "Practical Malware Analysis Lab 03-03.exe_",
+        "malware",
+        "ae8a1c7eb64c42ea2a04f97523ebf0844c27029eb040d910048b680f884b9dce",
+    ),
+    (
+        "pma_03_04_exe",
+        "Practical Malware Analysis Lab 03-04.exe_",
+        "malware",
+        "6ac06dfa543dca43327d55a61d0aaed25f3c90cce791e0555e3e306d47107859",
+    ),
+    (
+        "pma_05_01_dll",
+        "Practical Malware Analysis Lab 05-01.dll_",
+        "malware",
+        "eb1079bdd96bc9cc19c38b76342113a09666aad47518ff1a7536eebff8aadb4a",
+    ),
+    (
+        "kernel32_x86",
+        "kernel32.dll_",
+        "benign",
+        "3f94f8630c7603f9da79bf021cb56ac5357502badf6cb12f6ce11e5b2b244153",
+    ),
+    (
+        "kernel32_x64",
+        "kernel32-64.dll_",
+        "benign",
+        "7d148e220040de2fae1439fbc0e783ef344dceaea4757611722d8378a4938d0b",
+    ),
+    (
+        "microsocks_elf",
+        "microsocks.elf_",
+        "benign",
+        "4f405550ba8ce619bf5a3547acb7871009d1e51160d4feabdb3b7d827b44e507",
+    ),
 )
 
 
@@ -42,7 +97,12 @@ def _manifest() -> dict[str, object]:
         "fixture_repository": f"https://github.com/{DATASET}.git",
         "fixture_commit": DATASET_COMMIT,
         "profile": "forensic",
-        "classification": {"strategy": "high_or_critical"},
+        "classification": {
+            "strategy": "calibrated_behavior",
+            "max_functions": 1000,
+            "max_imports": 500,
+            "max_exports": 500,
+        },
         "cases": [
             {
                 "id": case_id,

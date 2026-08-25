@@ -39,13 +39,40 @@ def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool
         return bool(report.findings)
     if strategy == "high_or_critical":
         return any(finding.severity in {"high", "critical"} for finding in report.findings)
+    if strategy == "calibrated_behavior":
+        extras = report.extras
+        functions = extras.get("functions")
+        function_count = functions.get("total_functions", 0) if isinstance(functions, dict) else 0
+        import_count = (
+            len(extras.get("imports", [])) if isinstance(extras.get("imports"), list) else 0
+        )
+        export_count = (
+            len(extras.get("exports", [])) if isinstance(extras.get("exports"), list) else 0
+        )
+        max_functions = int(classification.get("max_functions", 1000))
+        max_imports = int(classification.get("max_imports", 500))
+        max_exports = int(classification.get("max_exports", 500))
+        if max(function_count, import_count, export_count) > max(
+            max_functions, max_imports, max_exports
+        ):
+            return False
+        severe = [
+            finding for finding in report.findings if finding.severity in {"high", "critical"}
+        ]
+        categories = {finding.category for finding in severe}
+        if len(categories) >= 2:
+            return True
+        return any(
+            finding.category == "Suspicious API" and finding.severity == "medium"
+            for finding in report.findings
+        )
     if strategy == "rule_ids":
         rule_ids = classification.get("positive_rule_ids")
         if not isinstance(rule_ids, list) or not all(isinstance(item, str) for item in rule_ids):
             raise ValueError("rule_ids classification requires positive_rule_ids")
         return bool({finding.rule_id for finding in report.findings} & set(rule_ids))
     raise ValueError(
-        "classification.strategy must be any_finding, high_or_critical, or rule_ids"
+        "classification.strategy must be any_finding, high_or_critical, calibrated_behavior, or rule_ids"
     )
 
 
@@ -216,7 +243,7 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
                 stats["timed_out"] += 1
             else:
                 stats["failed"] += 1
-            if status == "completed" and item.get("r2inspect_only") == [] and item.get("specialist_only") == []:
+            if status == "completed" and item.get("agreement"):
                 stats["agreements"] += 1
         result["differential_tools"] = {
             tool: {

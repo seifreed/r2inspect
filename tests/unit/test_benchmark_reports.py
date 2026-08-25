@@ -154,3 +154,53 @@ def test_evaluate_reports_scores_declared_real_classification(tmp_path: Path) ->
         "recall": 1.0,
         "false_positive_rate": 1.0,
     }
+
+
+def test_calibrated_behavior_ignores_generic_signatures_in_large_binaries(tmp_path: Path) -> None:
+    report = build_report_v1(
+        build_analysis_result(
+            {
+                "file_info": {"file_type": "PE"},
+                "detector": {"available": True, "detected": True},
+                "imports": [{"name": str(index)} for index in range(600)],
+                "exports": [{"name": str(index)} for index in range(600)],
+                "functions": {"total_functions": 1200},
+            }
+        ),
+        analysis_id="system-dll",
+    )
+    report.findings.append(
+        FindingV1(
+            finding_id="finding-1",
+            rule_id="rule.anti-debug",
+            title="Anti-debugging",
+            category="Anti-Debug",
+            severity="high",
+            confidence=1.0,
+            source_analyzer="yara",
+            method="fixture",
+        )
+    )
+    report.extras.update(
+        {
+            "imports": [{"name": str(index)} for index in range(600)],
+            "exports": [{"name": str(index)} for index in range(600)],
+            "functions": {"total_functions": 1200},
+        }
+    )
+    (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
+    (tmp_path / "manifest.json").write_text(
+        json.dumps(
+            {
+                "corpus_kind": "real_labeled",
+                "classification": {"strategy": "calibrated_behavior"},
+                "cases": [
+                    {"report": "report.json", "class": "benign"},
+                    {"report": "report.json", "class": "unknown"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = evaluate(tmp_path / "manifest.json")
+    assert result["classification"]["false_positive"] == 0
