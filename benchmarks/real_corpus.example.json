@@ -1,0 +1,20 @@
+{
+  "schema_version": "r2inspect.benchmark/v1",
+  "corpus_kind": "real_labeled",
+  "corpus_id": "replace-with-private-corpus-id",
+  "provenance": {
+    "source": "licensed-private-dataset",
+    "dataset_version": "pin-a-release-or-commit",
+    "labeling_method": "two-analyst-review-plus-source-provenance"
+  },
+  "profile": "standard",
+  "cases": [
+    {
+      "id": "real-sample-001",
+      "sample": "samples/real-sample-001.bin",
+      "sha256": "replace-with-sha256",
+      "class": "benign",
+      "expected_rule_ids": []
+    }
+  ]
+}

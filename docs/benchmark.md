@@ -13,6 +13,12 @@ The public sanitized corpus is stored in the fixture repository's
 independent of the detector under test. The scheduled workflow runs it nightly
 and stores reports plus aggregate metrics as an artifact.
 
+The scheduled workflow also supports a licensed real-labeled corpus supplied
+as a private archive through `R2INSPECT_REAL_CORPUS_URL`,
+`R2INSPECT_REAL_CORPUS_SHA256`, and `R2INSPECT_REAL_CORPUS_TOKEN`. Its manifest
+must declare `"corpus_kind": "real_labeled"`, provenance, independent labels,
+and SHA-256 values. Samples are never uploaded; only aggregate metrics are.
+
 ## Metrics
 
 Each analyzer report will include precision, recall, false-positive and
@@ -61,3 +67,12 @@ rates, per-analyzer latency/error rates, peak-memory distribution, platform and
 radare2-version counts, and differential finding changes. A manifest pins the
 exact reports evaluated, so public and private corpora use the same scorer
 without publishing samples.
+
+Optional specialist differential testing runs capa, FLOSS, or YARA and records
+agreement/disagreement alongside the benchmark manifest:
+
+```bash
+python benchmarks/run_corpus.py corpus/manifest.json \
+  --corpus-dir corpus --output-dir results \
+  --differential-tool capa --differential-tool floss
+```

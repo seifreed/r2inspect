@@ -107,3 +107,44 @@ jobs:
         with:
           name: r2inspect-private-benchmark-${{ github.run_id }}
           path: private-benchmark-results/metrics.json
+
+  real-labeled-corpus:
+    if: ${{ secrets.R2INSPECT_REAL_CORPUS_URL != '' && secrets.R2INSPECT_REAL_CORPUS_TOKEN != '' && secrets.R2INSPECT_REAL_CORPUS_SHA256 != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
+      - name: Install radare2
+        uses: radareorg/github-actions@v2
+        with:
+          version: "6.1.8"
+      - name: Install package
+        run: python -m pip install -e ".[dev]"
+      - name: Install specialist differential tools
+        run: python -m pip install flare-capa floss
+      - name: Fetch licensed real corpus
+        env:
+          CORPUS_URL: ${{ secrets.R2INSPECT_REAL_CORPUS_URL }}
+          CORPUS_TOKEN: ${{ secrets.R2INSPECT_REAL_CORPUS_TOKEN }}
+          CORPUS_SHA256: ${{ secrets.R2INSPECT_REAL_CORPUS_SHA256 }}
+        run: |
+          curl --fail --location --retry 3 -H "Authorization: Bearer $CORPUS_TOKEN" "$CORPUS_URL" --output real-corpus.tar
+          echo "$CORPUS_SHA256  real-corpus.tar" | sha256sum --check
+          mkdir real-corpus
+          tar -xf real-corpus.tar --strip-components=1 --directory real-corpus
+          test "$(python -c 'import json; print(json.load(open("real-corpus/benchmark/manifest.json"))["corpus_kind"])')" = real_labeled
+      - name: Run and score real labeled corpus
+        run: |
+          python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json --corpus-dir real-corpus --output-dir real-benchmark-results --differential-tool capa --differential-tool floss
+          python benchmarks/evaluate_reports.py real-benchmark-results/manifest.json --output real-benchmark-results/metrics.json --min-precision 0.9 --min-recall 0.9
+      - name: Publish aggregate real metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2inspect-real-benchmark-${{ github.run_id }}
+          path: real-benchmark-results/metrics.json

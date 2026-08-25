@@ -135,6 +135,20 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             "radare2_versions": dict(sorted(radare2_versions.items())),
         },
     }
+    differential = manifest.get("differential")
+    if isinstance(differential, list):
+        by_tool: dict[str, dict[str, int]] = defaultdict(lambda: {"cases": 0, "agreements": 0})
+        for item in differential:
+            if not isinstance(item, dict) or not isinstance(item.get("tool"), str):
+                continue
+            stats = by_tool[item["tool"]]
+            stats["cases"] += 1
+            if item.get("r2inspect_only") == [] and item.get("specialist_only") == []:
+                stats["agreements"] += 1
+        result["differential_tools"] = {
+            tool: {**stats, "agreement_rate": _ratio(stats["agreements"], stats["cases"])}
+            for tool, stats in sorted(by_tool.items())
+        }
     if baseline_manifest is not None:
         result["differential"] = _differential(manifest_path, baseline_manifest)
     return result

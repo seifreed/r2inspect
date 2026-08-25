@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from r2inspect.schemas.report_v1 import ReportV1
+from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist
 
 
 def _sha256(path: Path) -> str:
@@ -92,6 +93,7 @@ def run_corpus(
     output_dir: Path,
     *,
     profile: str | None = None,
+    differential_tools: tuple[str, ...] = (),
     project_root: Path | None = None,
 ) -> Path:
     manifest = _load_manifest(manifest_path)
@@ -100,9 +102,19 @@ def run_corpus(
     reports_dir.mkdir(parents=True, exist_ok=True)
     selected_profile = profile or str(manifest.get("profile", "standard"))
     evaluated_cases: list[dict[str, Any]] = []
+    differential: list[dict[str, Any]] = []
     for case in manifest["cases"]:
         report = _run_case(case, corpus_dir, reports_dir, selected_profile, root)
         evaluated_cases.append({**case, "report": report})
+        if differential_tools:
+            report_model = ReportV1.model_validate_json(
+                (output_dir / report).read_text(encoding="utf-8")
+            )
+            for tool in differential_tools:
+                findings = run_specialist(tool, corpus_dir / str(case["sample"]))
+                differential.append(
+                    {"case": case["id"], "tool": tool, **compare_report(report_model, findings)}
+                )
 
     evaluation_manifest = {
         "schema_version": manifest.get("schema_version", "r2inspect.benchmark/v1"),
@@ -112,6 +124,8 @@ def run_corpus(
         "profile": selected_profile,
         "cases": evaluated_cases,
     }
+    if differential:
+        evaluation_manifest["differential"] = differential
     output_dir.mkdir(parents=True, exist_ok=True)
     result_path = output_dir / "manifest.json"
     result_path.write_text(
@@ -125,9 +139,16 @@ def main() -> None:
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--profile", choices=("fast", "standard", "deep"))
+    parser.add_argument("--profile", choices=("fast", "standard", "deep", "forensic"))
+    parser.add_argument("--differential-tool", action="append", choices=tuple(TOOL_COMMANDS))
     args = parser.parse_args()
-    run_corpus(args.manifest, args.corpus_dir, args.output_dir, profile=args.profile)
+    run_corpus(
+        args.manifest,
+        args.corpus_dir,
+        args.output_dir,
+        profile=args.profile,
+        differential_tools=tuple(args.differential_tool or ()),
+    )
 
 
 if __name__ == "__main__":
