@@ -208,6 +208,7 @@ jobs:
           PY
 
       - name: Export separate and combined coverage
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           COVERAGE_FILE=.coverage.integration coverage xml -o coverage-integration.xml
@@ -217,6 +218,7 @@ jobs:
           coverage xml -o coverage-combined.xml
 
       - name: Upload coverage reports to Codecov
+        if: runner.os != 'Windows'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
