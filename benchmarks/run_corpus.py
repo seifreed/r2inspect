@@ -133,7 +133,9 @@ def run_corpus(
 
     evaluation_manifest = {
         "schema_version": manifest.get("schema_version", "r2inspect.benchmark/v1"),
+        "corpus_kind": manifest.get("corpus_kind", "synthetic"),
         "corpus_id": manifest.get("corpus_id"),
+        "provenance": manifest.get("provenance"),
         "fixture_repository": manifest.get("fixture_repository"),
         "fixture_commit": manifest.get("fixture_commit"),
         "profile": selected_profile,
