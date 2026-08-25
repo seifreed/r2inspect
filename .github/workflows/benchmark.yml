@@ -157,6 +157,7 @@ jobs:
           mkdir real-corpus
           tar -xf real-corpus.tar --strip-components=1 --directory real-corpus
           test "$(python -c 'import json; print(json.load(open("real-corpus/benchmark/manifest.json"))["corpus_kind"])')" = real_labeled
+          test "$(python -c 'import json; print(len(json.load(open("real-corpus/benchmark/manifest.json"))["cases"]))')" -ge 10
       - name: Run and score real labeled corpus
         run: |
           python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json --corpus-dir real-corpus --output-dir real-benchmark-results --differential-tool capa --differential-tool floss

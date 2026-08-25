@@ -33,6 +33,21 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     for case in cases:
         if not isinstance(case, dict) or not isinstance(case.get("sample"), str):
             raise ValueError("each corpus case requires a sample path")
+    if manifest.get("corpus_kind") == "real_labeled":
+        provenance = manifest.get("provenance")
+        if not isinstance(provenance, dict) or not all(
+            isinstance(provenance.get(key), str) and provenance[key]
+            for key in ("source", "dataset_version", "labeling_method")
+        ):
+            raise ValueError(
+                "real_labeled corpora require source, version, and labeling provenance"
+            )
+        for case in cases:
+            if case.get("class") not in {"benign", "malware", "unknown"}:
+                raise ValueError("real_labeled cases require benign, malware, or unknown classes")
+            digest = case.get("sha256")
+            if not isinstance(digest, str) or len(digest) != 64:
+                raise ValueError("real_labeled cases require SHA-256 hashes")
     return manifest
 
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from benchmarks.differential_tools import _tool_findings, compare_report
+from benchmarks.run_corpus import _load_manifest
 from r2inspect.schemas.report_v1 import FindingV1, ReportV1
 
 
@@ -35,3 +38,14 @@ def test_compare_report_exposes_disagreement() -> None:
     assert result["agreement"] == []
     assert result["r2inspect_only"] == ["rule.one"]
     assert result["specialist_only"] == ["rule.two"]
+
+
+def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        '{"corpus_kind":"real_labeled","provenance":{"source":"x","dataset_version":"1","labeling_method":"review"},"cases":[{"sample":"a","class":"benign","sha256":"'
+        + "a" * 64
+        + '"}]}',
+        encoding="utf-8",
+    )
+    assert _load_manifest(path)["corpus_kind"] == "real_labeled"
