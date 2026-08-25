@@ -13,11 +13,18 @@ from ..domain.formats.compiler import (
 )
 
 
+def _record_error(detector: Any, error: Exception) -> None:
+    recorder = getattr(detector, "_record_analysis_error", None)
+    if callable(recorder):
+        recorder(error)
+
+
 def get_file_format(detector: Any, detect_file_format_fn: Any, logger: Any) -> str:
     try:
         return str(detect_file_format_fn(detector._get_file_info(), logger=logger))
     except Exception as exc:
         logger.debug("Error detecting file format: %s", exc)
+        _record_error(detector, exc)
         return "Unknown"
 
 
@@ -41,6 +48,7 @@ def get_strings(detector: Any, logger: Any) -> list[str]:
         return parse_strings_output(strings_output)
     except Exception as exc:
         logger.error("Error extracting strings: %s", exc)
+        _record_error(detector, exc)
         return []
 
 
@@ -49,6 +57,7 @@ def get_imports(detector: Any, logger: Any) -> list[str]:
         return extract_import_names(detector._get_imports_raw())
     except Exception as exc:
         logger.error("Error getting imports: %s", exc)
+        _record_error(detector, exc)
         return []
 
 
@@ -57,6 +66,7 @@ def get_sections(detector: Any, logger: Any) -> list[str]:
         return extract_section_names(detector._get_sections_raw())
     except Exception as exc:
         logger.error("Error getting sections: %s", exc)
+        _record_error(detector, exc)
         return []
 
 
@@ -65,6 +75,7 @@ def get_symbols(detector: Any, logger: Any) -> list[str]:
         return extract_symbol_names(detector._get_symbols_raw())
     except Exception as exc:
         logger.error("Error getting symbols: %s", exc)
+        _record_error(detector, exc)
         return []
 
 

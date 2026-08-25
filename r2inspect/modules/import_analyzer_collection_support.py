@@ -28,6 +28,7 @@ def collect_imports(
     logger: Any,
 ) -> list[dict[str, Any]]:
     imports_info: list[dict[str, Any]] = []
+    owner = getattr(cmdj, "__self__", None)
 
     try:
         imports = normalize_import_entries(cmdj("iij", []))
@@ -38,10 +39,16 @@ def collect_imports(
                     imports_info.append(analyze_import_fn(imp))
                 except Exception as exc:
                     logger.error("Error analyzing import entry: %s", exc)
+                    recorder = getattr(owner, "_record_analysis_error", None)
+                    if callable(recorder):
+                        recorder(exc)
         else:
             logger.debug("No valid import entries returned by iij")
 
     except Exception as exc:
         logger.error("Error getting imports via iij: %s", exc)
+        recorder = getattr(owner, "_record_analysis_error", None)
+        if callable(recorder):
+            recorder(exc)
 
     return imports_info

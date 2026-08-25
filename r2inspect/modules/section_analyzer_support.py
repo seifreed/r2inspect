@@ -29,6 +29,12 @@ class SectionHost(Protocol):
     def _count_nops_in_section(self, vaddr: int, size: int) -> tuple[int, int]: ...
 
 
+def _record_error(analyzer: Any, error: Exception) -> None:
+    recorder = getattr(analyzer, "_record_analysis_error", None)
+    if callable(recorder):
+        recorder(error)
+
+
 def analyze_single_section(
     analyzer: SectionHost, section: dict[str, Any], *, logger: logging.Logger
 ) -> dict[str, Any]:
@@ -58,6 +64,7 @@ def analyze_single_section(
         analysis["characteristics"] = analyzer._get_section_characteristics(section, analysis)
     except Exception as exc:
         logger.error("Error in single section analysis: %s", exc)
+        _record_error(analyzer, exc)
         analysis["error"] = str(exc)
     return analysis
 
@@ -77,6 +84,7 @@ def get_section_characteristics(
         return build_section_characteristics(name, analysis, code_analysis)
     except Exception as exc:
         logger.error("Error getting section characteristics: %s", exc)
+        _record_error(analyzer, exc)
         return {}
 
 
@@ -130,4 +138,5 @@ def analyze_code_section(
         code_info.update(_nop_stats(analyzer, vaddr, size))
     except Exception as exc:
         logger.error("Error analyzing code section: %s", exc)
+        _record_error(analyzer, exc)
     return code_info
