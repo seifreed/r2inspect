@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import json
 
@@ -76,26 +77,22 @@ def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:
     assert result["findings"] == []
 
 
-def test_specialist_runner_parses_json_command(tmp_path: Path, monkeypatch) -> None:
-    import sys
-
+def test_specialist_runner_parses_json_command(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"sample")
-    monkeypatch.setattr(
-        differential_tools,
-        "TOOL_COMMANDS",
-        {
-            **differential_tools.TOOL_COMMANDS,
-            "capa": (
-                sys.executable,
-                "-c",
-                'import sys; print(\'{"rules": {"rule.one": {}}}\')',
-                "-j",
-            ),
-        },
+    tool = tmp_path / "capa"
+    tool.write_text(
+        "#!/usr/bin/env python3\n"
+        "print('{\"rules\": {\"rule.one\": {}}}')\n",
+        encoding="utf-8",
     )
-    monkeypatch.setattr(differential_tools.shutil, "which", lambda _name: sys.executable)
-    assert differential_tools.run_specialist("capa", sample, timeout=2) == {"rule.one"}
+    tool.chmod(0o755)
+    original_path = os.environ.get("PATH", "")
+    os.environ["PATH"] = f"{tmp_path}{os.pathsep}{original_path}"
+    try:
+        assert differential_tools.run_specialist("capa", sample, timeout=2) == {"rule.one"}
+    finally:
+        os.environ["PATH"] = original_path
 
 
 def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:
