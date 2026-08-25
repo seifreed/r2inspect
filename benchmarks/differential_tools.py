@@ -60,7 +60,11 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
         raise ValueError(f"unsupported differential tool: {tool}")
     if shutil.which(command[0]) is None:
         raise FileNotFoundError(command[0])
-    kwargs: dict[str, Any] = {"capture_output": True, "text": True}
+    kwargs: dict[str, Any] = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+    }
     if os.name == "nt":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else:

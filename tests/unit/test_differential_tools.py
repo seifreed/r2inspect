@@ -76,6 +76,28 @@ def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:
     assert result["findings"] == []
 
 
+def test_specialist_runner_parses_json_command(tmp_path: Path, monkeypatch) -> None:
+    import sys
+
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"sample")
+    monkeypatch.setattr(
+        differential_tools,
+        "TOOL_COMMANDS",
+        {
+            **differential_tools.TOOL_COMMANDS,
+            "capa": (
+                sys.executable,
+                "-c",
+                'import sys; print(\'{"rules": {"rule.one": {}}}\')',
+                "-j",
+            ),
+        },
+    )
+    monkeypatch.setattr(differential_tools.shutil, "which", lambda _name: sys.executable)
+    assert differential_tools.run_specialist("capa", sample, timeout=2) == {"rule.one"}
+
+
 def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:
     path = tmp_path / "manifest.json"
     path.write_text(
