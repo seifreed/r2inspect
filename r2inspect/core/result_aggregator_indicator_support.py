@@ -48,6 +48,37 @@ _SUSPICIOUS_APIS = {
     "SetThreadContext",
 }
 
+_PROCESS_BEHAVIOR_APIS = {
+    "createprocessa",
+    "createprocessw",
+    "openprocess",
+    "openprocesstoken",
+    "createprocessexa",
+    "createprocessinternalw",
+}
+_NETWORK_BEHAVIOR_APIS = {
+    "socket",
+    "connect",
+    "wsastartup",
+    "internetopenA".casefold(),
+    "internetconnectA".casefold(),
+}
+_MAPPING_BEHAVIOR_APIS = {
+    "mapviewoffile",
+    "mapviewoffileex",
+    "openfilemappinga",
+    "createfilemappinga",
+    "createfilemappingw",
+}
+_FILE_BEHAVIOR_APIS = {
+    "createfilea",
+    "createfilew",
+    "findfirstfilea",
+    "findfirstfilew",
+    "movefilea",
+    "deletefilea",
+}
+
 
 def _suspicious_api_indicators(imports: Any) -> list[dict[str, Any]]:
     indicators: list[dict[str, Any]] = []
@@ -64,6 +95,35 @@ def _suspicious_api_indicators(imports: Any) -> list[dict[str, Any]]:
                 }
             )
     return indicators
+
+
+def _behavior_cluster_indicators(imports: Any) -> list[dict[str, Any]]:
+    names = {
+        str(item.get("name")).casefold()
+        for item in coerce_list(imports)
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    clusters: list[tuple[set[str], set[str], str]] = [
+        (
+            _PROCESS_BEHAVIOR_APIS,
+            _NETWORK_BEHAVIOR_APIS,
+            "process creation and network communication",
+        ),
+        (
+            _MAPPING_BEHAVIOR_APIS,
+            _FILE_BEHAVIOR_APIS,
+            "file mapping and file system access",
+        ),
+    ]
+    return [
+        {
+            "type": "Behavior Cluster",
+            "description": f"Combined {description} APIs detected",
+            "severity": "Medium",
+        }
+        for left, right, description in clusters
+        if names & left and names & right
+    ]
 
 
 def _yara_match_indicators(yara_matches: Any) -> list[dict[str, Any]]:
@@ -87,5 +147,6 @@ def generate_indicators(results: dict[str, Any], rules: list[Any]) -> list[dict[
         if predicate(results):
             indicators.append(builder(results))
     indicators.extend(_suspicious_api_indicators(results.get("imports", [])))
+    indicators.extend(_behavior_cluster_indicators(results.get("imports", [])))
     indicators.extend(_yara_match_indicators(results.get("yara_matches", [])))
     return indicators

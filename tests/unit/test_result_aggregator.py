@@ -38,3 +38,21 @@ def test_generate_executive_summary():
     assert summary["file_overview"]["filename"] == "sample"
     assert summary["security_assessment"]["is_signed"] is False
     assert summary["threat_indicators"]["suspicious_sections"] == 1
+
+
+def test_generate_indicators_detects_cross_api_behavior_clusters():
+    indicators = ResultAggregator().generate_indicators(
+        {
+            "imports": [
+                {"name": "CreateProcessA"},
+                {"name": "socket"},
+                {"name": "MapViewOfFile"},
+                {"name": "CreateFileA"},
+            ]
+        }
+    )
+    clusters = [item for item in indicators if item["type"] == "Behavior Cluster"]
+    assert {item["description"] for item in clusters} == {
+        "Combined process creation and network communication APIs detected",
+        "Combined file mapping and file system access APIs detected",
+    }

@@ -63,7 +63,8 @@ def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool
         if len(categories) >= 2:
             return True
         return any(
-            finding.category == "Suspicious API" and finding.severity == "medium"
+            finding.category in {"Suspicious API", "Behavior Cluster"}
+            and finding.severity == "medium"
             for finding in report.findings
         )
     if strategy == "rule_ids":
