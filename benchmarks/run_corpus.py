@@ -122,6 +122,7 @@ def run_corpus(
     selected_profile = profile or str(manifest.get("profile", "standard"))
     evaluated_cases: list[dict[str, Any]] = []
     differential: list[dict[str, Any]] = []
+    differential_timeout = int(os.environ.get("R2INSPECT_DIFFERENTIAL_TIMEOUT_SECONDS", "120"))
     for case in manifest["cases"]:
         report = _run_case(case, corpus_dir, reports_dir, selected_profile, root)
         evaluated_cases.append({**case, "report": report})
@@ -130,7 +131,11 @@ def run_corpus(
                 (output_dir / report).read_text(encoding="utf-8")
             )
             for tool in differential_tools:
-                observation = run_specialist_safe(tool, corpus_dir / str(case["sample"]))
+                observation = run_specialist_safe(
+                    tool,
+                    corpus_dir / str(case["sample"]),
+                    timeout=differential_timeout,
+                )
                 findings = set(observation["findings"])
                 differential.append(
                     {

@@ -25,3 +25,6 @@ The `classification` block is explicit and uses only high or critical
 findings for the binary class score; unknown labels are excluded from the
 denominator. The class score is triage evidence, not a claim that a static
 finding alone proves maliciousness.
+
+Set `R2INSPECT_DIFFERENTIAL_TIMEOUT_SECONDS` to bound specialist execution
+locally; CI keeps the default 120-second limit and records timeout states.
