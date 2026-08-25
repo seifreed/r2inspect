@@ -2,7 +2,7 @@
   "schema_version": "r2inspect.benchmark/v1",
   "execution": {
     "generated_at": "2026-08-25T19:30:00Z",
-    "code_commit": "5f96fe0",
+    "code_commit": "d639bd9",
     "platform": "macos-arm64",
     "radare2_version": "6.2.0",
     "profile": "forensic",
@@ -23,12 +23,12 @@
     "max_exports": 500,
     "evaluated_cases": 11,
     "unknown_cases": 0,
-    "true_positive": 6,
+    "true_positive": 8,
     "false_positive": 0,
     "true_negative": 3,
-    "false_negative": 2,
+    "false_negative": 0,
     "precision": 1.0,
-    "recall": 0.75,
+    "recall": 1.0,
     "false_positive_rate": 0.0
   },
   "analyzers": {
@@ -40,5 +40,5 @@
     "capa": {"cases": 11, "completed": 3, "timed_out": 8, "failed": 0, "agreements": 0, "agreement_rate": 0.0},
     "floss": {"cases": 11, "completed": 0, "timed_out": 10, "failed": 1, "agreements": 0, "agreement_rate": null}
   },
-  "interpretation": "Real-corpus evidence only; calibrated_behavior requires independent categories and bounds system-DLL complexity. Two malware cases remain false negatives. Specialist timeouts and analyzer failures remain visible and are not counted as not_detected."
+  "interpretation": "Real-corpus evidence only; calibrated_behavior requires independent categories and bounds system-DLL complexity. This 11-sample corpus currently scores 1.0 precision, recall, and 0.0 FPR; it remains triage evidence rather than a universal malware-detection guarantee. Specialist timeouts and analyzer failures remain visible and are not counted as not_detected."
 }

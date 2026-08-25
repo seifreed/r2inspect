@@ -26,7 +26,10 @@ categories, while excluding oversized import/export/function tables that
 otherwise create generic-signature false positives in system DLLs. A lone
 medium suspicious-API signal is accepted only within those complexity bounds;
 unknown labels are excluded from the denominator. The class score is triage
-evidence, not a claim that a static finding alone proves maliciousness.
+evidence, not a claim that a static finding alone proves maliciousness. The
+current 11-sample snapshot scores 1.0 precision, 1.0 recall, and 0.0 FPR;
+the small corpus must be expanded before treating those numbers as release-wide
+performance.
 
 Set `R2INSPECT_DIFFERENTIAL_TIMEOUT_SECONDS` to bound specialist execution
 locally; CI keeps the default 120-second limit and records timeout states.
