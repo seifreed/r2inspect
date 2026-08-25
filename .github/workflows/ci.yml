@@ -173,15 +173,21 @@ jobs:
           COVERAGE_FILE: .coverage.integration
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
-            # Keep native r2pipe sessions serial on Windows. A timed-out
-            # session is terminated by the shared command-timeout guard.
+            # Exercise the real batch path with two fixtures and one native
+            # r2pipe session at a time. The full integration matrix remains
+            # on Unix; this bounded Windows smoke is the regression guard for
+            # the native reader-thread deadlock.
             export R2INSPECT_MAX_THREADS=1
             marker="not slow and not requires_posix"
+            python -m pytest tests/integration/test_cli_batch_output_real_flows.py \
+              -q -m "$marker" --timeout=180 \
+              --cov=r2inspect --cov-report=term-missing \
+              --cov-fail-under=0
           else
             marker="not slow"
+            python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
+            python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0 --marker "$marker"
           fi
-          python -c "from pathlib import Path; Path('.coverage-gate').mkdir(parents=True, exist_ok=True)"
-          python scripts/ci_run_integration_batch.py --batch 1 --total-batches 1 --threshold 0 --marker "$marker"
 
       - name: Run unit tests with coverage
         shell: bash
