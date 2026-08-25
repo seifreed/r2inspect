@@ -69,6 +69,8 @@ class CLIArgs:
     version: bool
     profile: str = "standard"
     explain: str | None = None
+    backend: str = "r2"
+    consensus_backend: str = "pe-core"
 
 
 def main(
@@ -120,6 +122,13 @@ def main(
 @click.option("--list-yara", is_flag=True, help="List all available YARA rules and exit")
 @click.option("--version", is_flag=True, help="Show version information and exit")
 @click.option("--explain", help="Explain a finding ID or rule ID from a report JSON file")
+@click.option("--backend", default="r2", show_default=True, help="Analysis backend")
+@click.option(
+    "--consensus-backend",
+    default="pe-core",
+    show_default=True,
+    help="Backend compared in consensus mode",
+)
 @click.option(
     "--profile",
     type=click.Choice(["fast", "standard", "deep", "forensic"], case_sensitive=False),
@@ -144,12 +153,6 @@ def run_cli(
     dispatch_fn: Callable[[CommandContext, CLIArgs], None] | None = None,
     list_yara_fn: Callable[[str | None, str | None], None] | None = None,
 ) -> None:
-    """Primary CLI workflow separated for clarity and testability.
-
-    ``dispatch_fn`` defaults to the real ``_dispatch_command`` and
-    ``list_yara_fn`` to the real ``_execute_list_yara``; tests inject
-    deterministic terminal callables instead of patching the module.
-    """
     if args.version:
         execute_version()
 
@@ -170,8 +173,6 @@ def run_cli(
     )
     if validation_errors:
         if args.output_json:
-            # Raw print (not rich console) so the JSON isn't soft-wrapped into
-            # invalid output, matching how successful -j results are emitted.
             print(json.dumps({"error": "; ".join(validation_errors)}))
         else:
             display_validation_errors(validation_errors)

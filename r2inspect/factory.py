@@ -20,6 +20,8 @@ from .pipeline_composition import default_pipeline_runtime_dependencies
 from .registry.default_registry import create_default_registry
 from .infrastructure.memory import get_global_memory_monitor
 from .error_handling.classifier import initialize_error_handling
+from .backends.consensus import ConsensusInspector
+from .backends.registry import resolve_backend
 
 # Composition root: eagerly initialize cross-cutting concerns once.
 initialize_error_handling()
@@ -50,10 +52,37 @@ def create_inspector(
     verbose: bool = False,
     memory_monitor: MemoryMonitorLike | None = None,
     *,
+    backend: str = "r2",
+    consensus_backend: str = "pe-core",
     session_factory: Callable[[str], Any] | None = None,
     inspector_factory: Callable[..., R2Inspector] | None = None,
 ) -> R2Inspector:
     """Create an R2Inspector with default dependencies."""
+    if backend == "consensus":
+        left = create_inspector(
+            filename,
+            config=config,
+            verbose=verbose,
+            memory_monitor=memory_monitor,
+            backend="r2",
+            session_factory=session_factory,
+            inspector_factory=inspector_factory,
+        )
+        right = create_inspector(
+            filename,
+            config=config,
+            verbose=verbose,
+            memory_monitor=memory_monitor,
+            backend=consensus_backend,
+            session_factory=session_factory,
+            inspector_factory=inspector_factory,
+        )
+        return ConsensusInspector(left, right, "r2", consensus_backend)  # type: ignore[return-value]
+    if backend != "r2":
+        factory = resolve_backend(backend)
+        if factory is None:
+            raise ValueError(f"Unknown backend: {backend}")
+        return factory(filename=filename, config=config, verbose=verbose)  # type: ignore[return-value]
     cfg = config or Config()
     monitor = memory_monitor or get_global_memory_monitor()
     make_session = session_factory if session_factory is not None else R2Session

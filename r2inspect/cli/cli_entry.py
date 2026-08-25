@@ -58,6 +58,8 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
                 "verbose": args.verbose,
                 "quiet": args.quiet,
                 "profile": getattr(args, "profile", "standard"),
+                "backend": getattr(args, "backend", "r2"),
+                "consensus_backend": getattr(args, "consensus_backend", "pe-core"),
             },
         )
     if args.interactive:
@@ -70,6 +72,8 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
                 "xor": args.xor,
                 "verbose": args.verbose,
                 "profile": getattr(args, "profile", "standard"),
+                "backend": getattr(args, "backend", "r2"),
+                "consensus_backend": getattr(args, "consensus_backend", "pe-core"),
             },
         )
     return CommandDispatch(
@@ -85,6 +89,8 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
             "verbose": args.verbose,
             "threads": args.threads,
             "profile": getattr(args, "profile", "standard"),
+            "backend": getattr(args, "backend", "r2"),
+            "consensus_backend": getattr(args, "consensus_backend", "pe-core"),
         },
     )
 

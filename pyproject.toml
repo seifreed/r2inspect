@@ -114,6 +114,7 @@ r2inspect-baseline = "r2inspect.application.report_cli:baseline_main"
 r2inspect-explain = "r2inspect.application.report_cli:explain_main"
 r2inspect-rules-verify = "r2inspect.application.rule_packs:verify_main"
 r2inspect-cluster = "r2inspect.application.clustering:cluster_main"
+r2inspect-consensus = "r2inspect.backends.cli:consensus_main"
 
 [tool.setuptools]
 include-package-data = true

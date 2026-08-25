@@ -27,6 +27,8 @@ class InteractiveCommand(Command):
                 yara=args.get("yara"),
                 xor=args.get("xor"),
                 profile=args.get("profile", "standard"),
+                backend=args.get("backend", "r2"),
+                consensus_backend=args.get("consensus_backend", "pe-core"),
             ) as (inspector, analysis_options):
                 self._run_interactive_mode(inspector, analysis_options)
 
