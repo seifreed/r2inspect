@@ -198,11 +198,6 @@ def _build_context(
     *,
     context_factory: Callable[..., CommandContext] | None = None,
 ) -> CommandContext:
-    """Construct a CommandContext with proper thread safety and logging.
-
-    ``context_factory`` is forwarded to ``build_context`` so tests can record
-    the resolved ``thread_safe`` flag instead of patching the classmethod.
-    """
     return _build_context_impl(verbose, quiet, batch, context_factory=context_factory)
 
 
@@ -211,11 +206,6 @@ def _dispatch_command(
     args: CLIArgs,
     build_dispatch_fn: Callable[[CommandContext, CLIArgs], Any] | None = None,
 ) -> None:
-    """Dispatch to the appropriate command based on CLI arguments.
-
-    ``build_dispatch_fn`` defaults to the real ``build_dispatch``; tests
-    inject a deterministic dispatch builder instead of patching the module.
-    """
     dispatch = (build_dispatch_fn or build_dispatch)(context, args)
     sys.exit(dispatch.command.execute(dispatch.payload))
 
