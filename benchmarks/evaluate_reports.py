@@ -201,16 +201,28 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
         result["classification"] = _classification_metrics(classification_rows, classification)
     differential = manifest.get("differential")
     if isinstance(differential, list):
-        by_tool: dict[str, dict[str, int]] = defaultdict(lambda: {"cases": 0, "agreements": 0})
+        by_tool: dict[str, dict[str, int]] = defaultdict(
+            lambda: {"cases": 0, "completed": 0, "agreements": 0, "timed_out": 0, "failed": 0}
+        )
         for item in differential:
             if not isinstance(item, dict) or not isinstance(item.get("tool"), str):
                 continue
             stats = by_tool[item["tool"]]
             stats["cases"] += 1
-            if item.get("r2inspect_only") == [] and item.get("specialist_only") == []:
+            status = item.get("status", "completed")
+            if status == "completed":
+                stats["completed"] += 1
+            elif status == "timed_out":
+                stats["timed_out"] += 1
+            else:
+                stats["failed"] += 1
+            if status == "completed" and item.get("r2inspect_only") == [] and item.get("specialist_only") == []:
                 stats["agreements"] += 1
         result["differential_tools"] = {
-            tool: {**stats, "agreement_rate": _ratio(stats["agreements"], stats["cases"])}
+            tool: {
+                **stats,
+                "agreement_rate": _ratio(stats["agreements"], stats["completed"]),
+            }
             for tool, stats in sorted(by_tool.items())
         }
     if baseline_manifest is not None:

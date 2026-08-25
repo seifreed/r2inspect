@@ -54,6 +54,21 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
     return _tool_findings(tool, payload)
 
 
+def run_specialist_safe(tool: str, sample: Path, *, timeout: int = 120) -> dict[str, Any]:
+    """Run a specialist without hiding timeout or dependency failures."""
+    try:
+        return {
+            "status": "completed",
+            "findings": sorted(run_specialist(tool, sample, timeout=timeout)),
+        }
+    except FileNotFoundError as exc:
+        return {"status": "dependency_unavailable", "findings": [], "error": str(exc)}
+    except subprocess.TimeoutExpired as exc:
+        return {"status": "timed_out", "findings": [], "error": f"timeout after {exc.timeout}s"}
+    except Exception as exc:
+        return {"status": "failed", "findings": [], "error": str(exc)}
+
+
 def compare_report(report: ReportV1, specialist_findings: set[str]) -> dict[str, Any]:
     report_findings = {finding.rule_id for finding in report.findings}
     return {
@@ -65,4 +80,4 @@ def compare_report(report: ReportV1, specialist_findings: set[str]) -> dict[str,
     }
 
 
-__all__ = ["compare_report", "run_specialist"]
+__all__ = ["compare_report", "run_specialist", "run_specialist_safe"]

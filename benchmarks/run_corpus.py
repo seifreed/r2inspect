@@ -14,10 +14,11 @@ from pathlib import Path
 from typing import Any, cast
 
 from r2inspect.schemas.report_v1 import ReportV1
+
 try:
-    from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist
+    from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist_safe
 except ModuleNotFoundError:  # direct ``python benchmarks/run_corpus.py`` execution
-    from differential_tools import TOOL_COMMANDS, compare_report, run_specialist
+    from differential_tools import TOOL_COMMANDS, compare_report, run_specialist_safe
 
 
 def _sha256(path: Path) -> str:
@@ -129,9 +130,15 @@ def run_corpus(
                 (output_dir / report).read_text(encoding="utf-8")
             )
             for tool in differential_tools:
-                findings = run_specialist(tool, corpus_dir / str(case["sample"]))
+                observation = run_specialist_safe(tool, corpus_dir / str(case["sample"]))
+                findings = set(observation["findings"])
                 differential.append(
-                    {"case": case["id"], "tool": tool, **compare_report(report_model, findings)}
+                    {
+                        "case": case["id"],
+                        "tool": tool,
+                        **observation,
+                        **compare_report(report_model, findings),
+                    }
                 )
 
     evaluation_manifest = {

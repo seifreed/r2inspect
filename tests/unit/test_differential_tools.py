@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from benchmarks.differential_tools import _tool_findings, compare_report
+from benchmarks.differential_tools import _tool_findings, compare_report, run_specialist_safe
 import benchmarks.run_corpus as corpus_runner
 from benchmarks.run_corpus import _load_manifest, run_corpus
 from r2inspect.schemas.report_v1 import FindingV1, ReportV1
@@ -40,6 +40,18 @@ def test_compare_report_exposes_disagreement() -> None:
     assert result["agreement"] == []
     assert result["r2inspect_only"] == ["rule.one"]
     assert result["specialist_only"] == ["rule.two"]
+
+
+def test_specialist_timeout_is_explicit(monkeypatch, tmp_path: Path) -> None:
+    def fail(*_args, **_kwargs):
+        raise __import__("subprocess").TimeoutExpired("capa", 120)
+
+    monkeypatch.setattr("benchmarks.differential_tools.run_specialist", fail)
+
+    result = run_specialist_safe("capa", tmp_path / "sample.bin")
+
+    assert result["status"] == "timed_out"
+    assert result["findings"] == []
 
 
 def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:
