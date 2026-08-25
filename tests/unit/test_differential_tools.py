@@ -22,6 +22,13 @@ def test_specialist_payloads_are_normalized() -> None:
         "floss",
         {"strings": {"static_strings": [{"string": "three", "offset": 1}]}},
     ) == {"three"}
+    assert _tool_findings(
+        "floss",
+        {
+            "metadata": {"language": "C++"},
+            "strings": {"static_strings": [{"encoding": "ASCII", "string": "four"}]},
+        },
+    ) == {"four"}
     assert _tool_findings("yara", "rule.one sample\n") == {"rule.one"}
 
 
@@ -61,6 +68,18 @@ def test_compare_report_uses_tool_specific_domains() -> None:
         "Create Process"
     ]
     assert compare_report(report, {"secret-value"}, tool="floss")["agreement"] == ["Secret Value"]
+
+
+def test_compare_report_matches_capa_rule_to_import_evidence() -> None:
+    report = ReportV1(
+        tool={"version": "test"},
+        analysis={"id": "id", "started_at": "2026-01-01T00:00:00Z", "duration": 0},
+        sample={"size": 1},
+        extras={"imports": [{"name": "CreateProcessA", "description": "Creates a new process"}]},
+    )
+    result = compare_report(report, {"create process on Windows"}, tool="capa")
+    assert result["agreement"] == ["CreateProcessA"]
+    assert result["agreement_details"][0]["match_type"] == "semantic"
 
 
 def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:

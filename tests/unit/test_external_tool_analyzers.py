@@ -64,3 +64,7 @@ def test_report_normalizes_capa_and_floss_results() -> None:
 
     assert report.capabilities[0]["name"] == "send HTTP request"
     assert report.artifacts[0]["value"] == "secret.example"
+
+
+def test_floss_uses_static_string_mode_for_bounded_comparison() -> None:
+    assert FlossAnalyzer.command_args == ("--only", "static", "-j")

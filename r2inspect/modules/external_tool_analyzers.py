@@ -19,6 +19,7 @@ _TEST_EXTERNAL_TOOL_TIMEOUT_SECONDS = 0.2
 
 class ExternalJsonAnalyzer(BaseAnalyzer):
     executable: ClassVar[str]
+    command_args: ClassVar[tuple[str, ...]] = ("-j",)
 
     def __init__(
         self,
@@ -59,7 +60,7 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
             )
             timeout = resolve_timeout(default_timeout)
             completed = run_command(
-                [executable, "-j", str(Path(self.filepath))],
+                [executable, *self.command_args, str(Path(self.filepath))],
                 timeout=timeout,
             )
             if completed.returncode != 0:
@@ -95,6 +96,7 @@ class CapaAnalyzer(ExternalJsonAnalyzer):
 
 class FlossAnalyzer(ExternalJsonAnalyzer):
     executable = "floss"
+    command_args = ("--only", "static", "-j")
 
     def get_name(self) -> str:
         return "floss"
