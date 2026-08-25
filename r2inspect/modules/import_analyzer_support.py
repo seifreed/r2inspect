@@ -40,6 +40,20 @@ __all__ = [
 ]
 
 
+def failed_result(error: Exception, **values: Any) -> dict[str, Any]:
+    return {**values, "status": "failed", "error": str(error)}
+
+
+def attach_nested_errors(result: dict[str, Any]) -> None:
+    errors = [
+        str(value["error"])
+        for value in result.values()
+        if isinstance(value, dict) and value.get("error")
+    ]
+    if errors:
+        result["error"] = "; ".join(dict.fromkeys(errors))
+
+
 def _import_name_value(imp: dict[str, Any]) -> str:
     if "name" not in imp:
         return "unknown"

@@ -28,8 +28,7 @@ from .yara_defaults import DEFAULT_YARA_RULES
 logger = get_logger(__name__)
 
 YARA_COMPILE_TIMEOUT = 30  # seconds
-YARA_MATCH_TIMEOUT = 60  # seconds; bounds a single file's scan so one
-# pathological rule/file cannot hang the whole (batch) run.
+YARA_MATCH_TIMEOUT = 60
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
 
 
@@ -51,7 +50,6 @@ def clear_yara_cache() -> None:
 
 
 class YaraAnalyzer(CommandHelperMixin):
-    """YARA rules analysis"""
 
     def __init__(
         self,
@@ -69,11 +67,9 @@ class YaraAnalyzer(CommandHelperMixin):
         self.last_error: str | None = None
 
     def analyze(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
-        """Unified entry point for pipeline dispatch."""
         return self.scan(custom_rules_path)
 
     def scan(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
-        """Scan file with YARA rules"""
         matches: list[dict[str, Any]] = []
         self.last_status = "completed"
         self.last_error = None
@@ -141,7 +137,6 @@ class YaraAnalyzer(CommandHelperMixin):
         return rules
 
     def _compile_rules(self, rules_path: str) -> Any | None:
-        """Compile YARA rules from a validated file or directory."""
         try:
             if yara is None:
                 logger.warning("python-yara not available; skipping rules compilation")
@@ -238,11 +233,6 @@ class YaraAnalyzer(CommandHelperMixin):
         logger.info("No valid YARA rules found in: %s. Using defaults.", rules_path)
         self.create_default_rules(rules_path)
         try:
-            # Compile every bundled default rule set, not just packer detection:
-            # previously the suspicious-API and crypto rules were silently dropped
-            # on this fallback path, so those matches never fired. Compile from the
-            # in-memory definitions so a pre-existing empty rule file (the very
-            # condition that triggers this fallback) cannot break compilation.
             sources = {
                 Path(filename).stem: content for filename, content in DEFAULT_YARA_RULES.items()
             }
@@ -261,11 +251,9 @@ class YaraAnalyzer(CommandHelperMixin):
         )
 
     def _process_matches(self, yara_matches: list[Any]) -> list[dict[str, Any]]:
-        """Process YARA matches into structured format"""
         return process_matches(yara_matches, logger)
 
     def create_default_rules(self, rules_path: str | None = None) -> None:
-        """Create default YARA rules if none exist"""
         try:
             rules_dir = Path(rules_path or self.rules_path)
             rules_dir.mkdir(parents=True, exist_ok=True)
@@ -277,7 +265,6 @@ class YaraAnalyzer(CommandHelperMixin):
             logger.error("Error creating default rules: %s", e)
 
     def validate_rules(self, rules_path: str) -> dict[str, Any]:
-        """Validate YARA rules syntax"""
         validation_result: dict[str, Any] = {
             "valid": True,
             "errors": [],
@@ -309,7 +296,6 @@ class YaraAnalyzer(CommandHelperMixin):
         return validation_result
 
     def list_available_rules(self, rules_path: str | None = None) -> list[dict[str, Any]]:
-        """List all available YARA rules in the rules directory"""
         rules_path = rules_path or self.rules_path
         return collect_available_rules(
             rules_path,
