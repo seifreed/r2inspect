@@ -63,21 +63,20 @@ jobs:
             "simhash>=2.1.0"
           python -m build --wheel --outdir dist
           python -m pip install dist/*.whl
-      - name: Install Unix native hashing extras
-        if: runner.os != 'Windows'
-        run: python -m pip install "pyimpfuzzy>=0.1.1" "telfhash>=0.9.8"
       - name: Run unit and integration smoke tests
         shell: bash
         run: |
           marker="not slow and not requires_posix"
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            # Windows wheels are validated through portable tests and the CLI;
-            # r2pipe child-process and native fuzzy-hash tests require POSIX.
-            marker="$marker and not requires_r2"
-            python -m pytest tests/unit -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
-          else
-            python -m pytest tests/unit -m "$marker" --timeout=180
-          fi
+          # Keep this matrix focused on the installed wheel contract. The full
+          # analyzer suite, including optional native hash libraries, runs in CI.
+          python -m pytest \
+            tests/unit/product \
+            tests/unit/test_result_semantics.py \
+            tests/unit/test_report_builder.py \
+            tests/unit/test_benchmark_reports.py \
+            tests/unit/test_differential_tools.py \
+            tests/unit/test_backends_consensus.py \
+            -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
           if [ "$RUNNER_OS" != "Windows" ]; then
             python -m pytest tests/integration/test_integration_edge_cases.py -m requires_r2 --timeout=180
           fi
