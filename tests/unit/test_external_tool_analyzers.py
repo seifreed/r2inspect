@@ -24,17 +24,25 @@ def test_external_tools_report_missing_dependencies_explicitly() -> None:
     )
 
 
-def test_external_tools_use_short_timeout_in_test_mode(tmp_path, monkeypatch) -> None:
+def test_external_tools_use_short_timeout_in_test_mode(tmp_path) -> None:
     executable = tmp_path / "slow-tool"
     executable.write_text("#!/usr/bin/env python3\nimport time\ntime.sleep(1)\n")
     executable.chmod(os.stat(executable).st_mode | 0o111)
-    monkeypatch.setenv("R2INSPECT_TEST_MODE", "1")
-    monkeypatch.delenv("R2INSPECT_CMD_TIMEOUT_SECONDS", raising=False)
-
-    started = time.monotonic()
-    result = CapaAnalyzer(
-        filename="sample.exe", executable_lookup=lambda _name: str(executable)
-    ).analyze()
+    original_mode = os.environ.get("R2INSPECT_TEST_MODE")
+    original_timeout = os.environ.pop("R2INSPECT_CMD_TIMEOUT_SECONDS", None)
+    os.environ["R2INSPECT_TEST_MODE"] = "1"
+    try:
+        started = time.monotonic()
+        result = CapaAnalyzer(
+            filename="sample.exe", executable_lookup=lambda _name: str(executable)
+        ).analyze()
+    finally:
+        if original_mode is None:
+            os.environ.pop("R2INSPECT_TEST_MODE", None)
+        else:
+            os.environ["R2INSPECT_TEST_MODE"] = original_mode
+        if original_timeout is not None:
+            os.environ["R2INSPECT_CMD_TIMEOUT_SECONDS"] = original_timeout
 
     assert result["error"] == "command timed out after 0.2 seconds"
     assert time.monotonic() - started < 1

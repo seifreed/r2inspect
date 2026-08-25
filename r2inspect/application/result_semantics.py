@@ -7,6 +7,7 @@ from typing import Any
 
 def normalize_analyzer_results(results: dict[str, Any]) -> dict[str, Any]:
     """Attach explicit status and clear boolean detections on failed analyzers."""
+
     def visit(value: Any) -> None:
         if isinstance(value, dict):
             if value.get("error"):

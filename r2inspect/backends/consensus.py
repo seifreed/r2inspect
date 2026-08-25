@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 
 def compare_results(left: dict[str, Any], right: dict[str, Any]) -> list[dict[str, Any]]:
@@ -55,7 +55,7 @@ class ConsensusInspector:
     def __enter__(self) -> ConsensusInspector:
         return self
 
-    def __exit__(self, *_args: Any) -> bool:
+    def __exit__(self, *_args: Any) -> Literal[False]:
         self.close()
         return False
 

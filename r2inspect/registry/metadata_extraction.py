@@ -61,7 +61,7 @@ def extract_metadata_from_class(
         }
 
     try:
-        temp_instance = object.__new__(analyzer_class)
+        temp_instance: Any = object.__new__(analyzer_class)
         # BaseAnalyzer metadata methods commonly cache values on the instance;
         # seed only those fields without invoking plugin initialization.
         for attribute, value in (

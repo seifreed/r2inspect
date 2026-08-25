@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 def _format(data: bytes) -> str:
@@ -58,7 +58,7 @@ class CoreBackendInspector:
     def __enter__(self) -> CoreBackendInspector:
         return self
 
-    def __exit__(self, *_args: Any) -> bool:
+    def __exit__(self, *_args: Any) -> Literal[False]:
         self.close()
         return False
 

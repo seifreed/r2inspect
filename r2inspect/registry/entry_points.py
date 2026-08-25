@@ -128,22 +128,22 @@ class EntryPointLoader:
         # name; discovery must never construct an analyzer just to inspect it.
         return str(getattr(ep, "name", None) or getattr(obj, "__name__", "analyzer"))
 
-    def _probe_name(self, analyzer_class: type) -> str | None:
+    def _probe_name(self, analyzer_class: type[Any]) -> str | None:
         try:
-            probe = object.__new__(analyzer_class)
+            probe: Any = object.__new__(analyzer_class)
             probe._cached_name = None
             return str(analyzer_class.get_name(probe))
         except Exception:
             return None
 
     def _probe_legacy_metadata(
-        self, analyzer_class: type
+        self, analyzer_class: type[Any]
     ) -> tuple[AnalyzerCategory, set[str], str] | None:
         """Read legacy metadata without invoking plugin ``__init__``."""
         if not self._registry.is_base_analyzer(analyzer_class):
             return None
         try:
-            probe = object.__new__(analyzer_class)
+            probe: Any = object.__new__(analyzer_class)
             probe._cached_name = None
             probe._cached_category = None
             category = self._registry._parse_category(analyzer_class.get_category(probe))

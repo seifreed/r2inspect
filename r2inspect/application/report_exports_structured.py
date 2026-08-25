@@ -121,7 +121,7 @@ def to_stix(value: ReportV1 | dict[str, Any]) -> dict[str, Any]:
             "identity_class": "organization",
         }
     ]
-    for name, value in sorted(report.sample.hashes.items()):
+    for name, hash_value in sorted(report.sample.hashes.items()):
         stix_name = {"md5": "MD5", "sha1": "SHA-1", "sha256": "SHA-256"}.get(name)
         if stix_name:
             ident = uuid.uuid5(uuid.NAMESPACE_URL, f"r2inspect:{seed}:{name}")
@@ -133,7 +133,7 @@ def to_stix(value: ReportV1 | dict[str, Any]) -> dict[str, Any]:
                     "created": valid_from,
                     "modified": valid_from,
                     "name": f"r2inspect {name} indicator",
-                    "pattern": f"[file:hashes.'{stix_name}' = '{value}']",
+                    "pattern": f"[file:hashes.'{stix_name}' = '{hash_value}']",
                     "pattern_type": "stix",
                     "valid_from": valid_from,
                     "created_by_ref": identity_id,

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .adapters.magic_provider import MagicDetectorProvider
 from .adapters.r2pipe_adapter import R2PipeAdapter
@@ -77,12 +77,12 @@ def create_inspector(
             session_factory=session_factory,
             inspector_factory=inspector_factory,
         )
-        return ConsensusInspector(left, right, "r2", consensus_backend)  # type: ignore[return-value]
+        return cast(R2Inspector, ConsensusInspector(left, right, "r2", consensus_backend))
     if backend != "r2":
         factory = resolve_backend(backend)
         if factory is None:
             raise ValueError(f"Unknown backend: {backend}")
-        return factory(filename=filename, config=config, verbose=verbose)  # type: ignore[return-value]
+        return cast(R2Inspector, factory(filename=filename, config=config, verbose=verbose))
     cfg = config or Config()
     monitor = memory_monitor or get_global_memory_monitor()
     make_session = session_factory if session_factory is not None else R2Session

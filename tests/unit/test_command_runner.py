@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pytest
@@ -16,11 +17,17 @@ def test_run_command_passes_arguments_without_a_shell() -> None:
     assert completed.stdout.strip() == argument
 
 
-def test_run_command_honors_process_timeout_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("R2INSPECT_CMD_TIMEOUT_SECONDS", "0.01")
-
-    with pytest.raises(TimeoutError, match="0.01 seconds"):
-        run_command(
-            [sys.executable, "-c", "import time; time.sleep(1)"],
-            timeout=120,
-        )
+def test_run_command_honors_process_timeout_override() -> None:
+    original = os.environ.get("R2INSPECT_CMD_TIMEOUT_SECONDS")
+    os.environ["R2INSPECT_CMD_TIMEOUT_SECONDS"] = "0.01"
+    try:
+        with pytest.raises(TimeoutError, match="0.01 seconds"):
+            run_command(
+                [sys.executable, "-c", "import time; time.sleep(1)"],
+                timeout=120,
+            )
+    finally:
+        if original is None:
+            os.environ.pop("R2INSPECT_CMD_TIMEOUT_SECONDS", None)
+        else:
+            os.environ["R2INSPECT_CMD_TIMEOUT_SECONDS"] = original

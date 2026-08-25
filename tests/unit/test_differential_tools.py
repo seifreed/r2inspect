@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
+import benchmarks.differential_tools as differential_tools
 from benchmarks.differential_tools import _tool_findings, compare_report, run_specialist_safe
 import benchmarks.run_corpus as corpus_runner
 from benchmarks.run_corpus import _load_manifest, run_corpus
@@ -42,13 +43,16 @@ def test_compare_report_exposes_disagreement() -> None:
     assert result["specialist_only"] == ["rule.two"]
 
 
-def test_specialist_timeout_is_explicit(monkeypatch, tmp_path: Path) -> None:
+def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:
     def fail(*_args, **_kwargs):
         raise __import__("subprocess").TimeoutExpired("capa", 120)
 
-    monkeypatch.setattr("benchmarks.differential_tools.run_specialist", fail)
-
-    result = run_specialist_safe("capa", tmp_path / "sample.bin")
+    original_runner = differential_tools.run_specialist
+    differential_tools.run_specialist = fail
+    try:
+        result = run_specialist_safe("capa", tmp_path / "sample.bin")
+    finally:
+        differential_tools.run_specialist = original_runner
 
     assert result["status"] == "timed_out"
     assert result["findings"] == []
@@ -65,7 +69,7 @@ def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:
     assert _load_manifest(path)["corpus_kind"] == "real_labeled"
 
 
-def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path, monkeypatch) -> None:
+def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"real-labeled-sample")
     manifest = tmp_path / "manifest.json"
@@ -109,8 +113,12 @@ def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path, monke
         path.write_text(report.model_dump_json(), encoding="utf-8")
         return f"reports/{path.name}"
 
-    monkeypatch.setattr(corpus_runner, "_run_case", fake_run_case)
-    result = run_corpus(manifest, tmp_path, tmp_path / "out", project_root=tmp_path)
+    original_runner = corpus_runner._run_case
+    corpus_runner._run_case = fake_run_case
+    try:
+        result = run_corpus(manifest, tmp_path, tmp_path / "out", project_root=tmp_path)
+    finally:
+        corpus_runner._run_case = original_runner
     evaluation = json.loads(result.read_text(encoding="utf-8"))
     assert evaluation["corpus_kind"] == "real_labeled"
     assert evaluation["provenance"]["dataset_version"] == "v1"

@@ -15,9 +15,11 @@ def _entrypoint_backends() -> dict[str, BackendFactory]:
     discovered: dict[str, BackendFactory] = {}
     for entrypoint in entry_points(group="r2inspect.backends"):
         try:
-            discovered[entrypoint.name] = entrypoint.load()
+            loaded = entrypoint.load()
         except Exception:
-            continue
+            loaded = None
+        if loaded is not None:
+            discovered[entrypoint.name] = loaded
     return discovered
 
 

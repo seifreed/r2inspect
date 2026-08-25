@@ -24,25 +24,29 @@ def test_clean_result_keeps_not_detected_state() -> None:
     assert results == {"detector": {"detected": False}}
 
 
-def test_legacy_list_analyzer_error_is_exposed_as_outcome(monkeypatch, tmp_path) -> None:
+def test_legacy_list_analyzer_error_is_exposed_as_outcome(tmp_path) -> None:
     class Config:
         def get_yara_rules_path(self) -> str:
             return str(tmp_path / "rules")
 
-    monkeypatch.setattr(yara_module, "yara", None)
-    analyzer = YaraAnalyzer(None, config=Config(), filepath=str(tmp_path / "sample.bin"))
-    assert analyzer.scan() == []
-    outcomes = analyzer_outcomes(
-        {
-            "yara_matches": [],
-            "_analyzer_status": {
-                "yara_analyzer": {
-                    "status": analyzer.last_status,
-                    "error": analyzer.last_error,
-                }
-            },
-        }
-    )
+    original_yara = yara_module.yara
+    yara_module.yara = None
+    try:
+        analyzer = YaraAnalyzer(None, config=Config(), filepath=str(tmp_path / "sample.bin"))
+        assert analyzer.scan() == []
+        outcomes = analyzer_outcomes(
+            {
+                "yara_matches": [],
+                "_analyzer_status": {
+                    "yara_analyzer": {
+                        "status": analyzer.last_status,
+                        "error": analyzer.last_error,
+                    }
+                },
+            }
+        )
+    finally:
+        yara_module.yara = original_yara
     assert outcomes[0].status.value == "dependency_unavailable"
     assert outcomes[0].error == "python-yara dependency unavailable"
 
