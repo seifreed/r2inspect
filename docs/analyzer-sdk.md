@@ -43,9 +43,25 @@ Constructors must accept the runtime dependencies used by the analyzer factory:
 sessions or perform analysis at import time. Return JSON-compatible values and
 preserve extraction errors as explicit unavailable/failed results.
 
+## Independent backends
+
+Backend packages can expose an independent `*-core` implementation through the
+`r2inspect.backends` entry point group. The factory receives `filename` plus
+optional configuration and must return an object with `analyze(**options)` and
+`close()` methods:
+
+```toml
+[project.entry-points."r2inspect.backends"]
+pe-core = "vendor_pe_core:create_backend"
+```
+
+`r2inspect --backend consensus --consensus-backend pe-core sample.bin` runs
+radare2 and the independent backend and preserves field-level disagreements as
+`backend_disagreement` records instead of silently choosing a value.
+
 ## Optional engines
 
-The `deep` profile runs `capa -j` and `floss -j` when those executables are on
+The `deep` and `forensic` profiles run `capa -j` and `floss -j` when those executables are on
 `PATH`. Missing tools produce `dependency_unavailable` analyzer outcomes. capa
 rules are exposed as report capabilities and FLOSS strings as report artifacts;
 their native JSON remains available in `extras`.
