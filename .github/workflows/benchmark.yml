@@ -108,8 +108,26 @@ jobs:
           name: r2inspect-private-benchmark-${{ github.run_id }}
           path: private-benchmark-results/metrics.json
 
+  real-corpus-config:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.config.outputs.enabled }}
+    steps:
+      - id: config
+        env:
+          CORPUS_URL: ${{ secrets.R2INSPECT_REAL_CORPUS_URL }}
+          CORPUS_TOKEN: ${{ secrets.R2INSPECT_REAL_CORPUS_TOKEN }}
+          CORPUS_SHA256: ${{ secrets.R2INSPECT_REAL_CORPUS_SHA256 }}
+        run: |
+          if [ -n "$CORPUS_URL" ] && [ -n "$CORPUS_TOKEN" ] && [ -n "$CORPUS_SHA256" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
   real-labeled-corpus:
-    if: ${{ secrets.R2INSPECT_REAL_CORPUS_URL != '' && secrets.R2INSPECT_REAL_CORPUS_TOKEN != '' && secrets.R2INSPECT_REAL_CORPUS_SHA256 != '' }}
+    needs: real-corpus-config
+    if: needs.real-corpus-config.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
