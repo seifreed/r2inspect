@@ -118,9 +118,13 @@ def floss_artifacts(raw: dict[str, Any]) -> list[dict[str, Any]]:
     strings = payload.get("strings") if isinstance(payload, dict) else None
     if not isinstance(strings, dict):
         return []
-    return [
-        {"source": "floss", "type": str(kind), "value": value}
-        for kind, values in strings.items()
-        if isinstance(values, list)
-        for value in values
-    ]
+    artifacts: list[dict[str, Any]] = []
+    for kind, values in strings.items():
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            if isinstance(value, dict):
+                value = value.get("string")
+            if isinstance(value, str):
+                artifacts.append({"source": "floss", "type": str(kind), "value": value})
+    return artifacts

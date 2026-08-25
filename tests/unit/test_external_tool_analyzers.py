@@ -55,7 +55,12 @@ def test_report_normalizes_capa_and_floss_results() -> None:
             "capa": {"available": True, "result": {"rules": {"send HTTP request": {}}}},
             "floss": {
                 "available": True,
-                "result": {"strings": {"decoded_strings": ["secret.example"]}},
+                "result": {
+                    "strings": {
+                        "decoded_strings": ["secret.example"],
+                        "static_strings": [{"string": "CreateProcessA", "offset": 42}],
+                    }
+                },
             },
         }
     )
@@ -63,7 +68,10 @@ def test_report_normalizes_capa_and_floss_results() -> None:
     report = build_report_v1(result, analysis_id="external", commit="abc", radare2_version="6.1.8")
 
     assert report.capabilities[0]["name"] == "send HTTP request"
-    assert report.artifacts[0]["value"] == "secret.example"
+    assert {artifact["value"] for artifact in report.artifacts} == {
+        "secret.example",
+        "CreateProcessA",
+    }
 
 
 def test_floss_uses_static_string_mode_for_bounded_comparison() -> None:
