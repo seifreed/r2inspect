@@ -80,12 +80,19 @@ def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:
 def test_specialist_runner_parses_json_command(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"sample")
-    tool = tmp_path / "capa"
-    tool.write_text(
-        "#!/usr/bin/env python3\n"
-        "print('{\"rules\": {\"rule.one\": {}}}')\n",
-        encoding="utf-8",
-    )
+    if os.name == "nt":
+        tool = tmp_path / "capa.cmd"
+        tool.write_text(
+            '@echo {"rules": {"rule.one": {}}}\r\n',
+            encoding="utf-8",
+        )
+    else:
+        tool = tmp_path / "capa"
+        tool.write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n' '{\"rules\": {\"rule.one\": {}}}'\n",
+            encoding="utf-8",
+        )
     tool.chmod(0o755)
     original_path = os.environ.get("PATH", "")
     os.environ["PATH"] = f"{tmp_path}{os.pathsep}{original_path}"
