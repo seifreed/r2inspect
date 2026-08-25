@@ -431,7 +431,9 @@ def test_detect_api_obfuscation_keeps_error_path_safe_for_unsized_input():
     finally:
         import_module.detect_api_obfuscation_domain = original  # type: ignore[assignment]
 
-    assert result == {"detected": False, "indicators": [], "score": 0}
+    assert result["detected"] is False
+    assert result["status"] == "failed"
+    assert result["error"] == "boom"
 
 
 # ---------------------------------------------------------------------------

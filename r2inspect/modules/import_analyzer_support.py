@@ -122,4 +122,10 @@ def check_import_forwarding(strings: list[Any], *, logger: logging.Logger) -> di
         }
     except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
         logger.error("Error checking import forwarding: %s", exc)
-        return {"detected": False, "forwards": [], "count": 0}
+        return {
+            "detected": False,
+            "forwards": [],
+            "count": 0,
+            "status": "failed",
+            "error": str(exc),
+        }

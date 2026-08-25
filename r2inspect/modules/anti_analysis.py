@@ -52,6 +52,16 @@ def _error_evidence(detail: str) -> list[dict[str, str]]:
     return [{"type": "Error", "detail": detail}]
 
 
+def _error_result(exc: Exception) -> dict[str, Any]:
+    """Return an explicit failed result instead of a clean false negative."""
+    return {
+        "detected": False,
+        "status": "failed",
+        "error": str(exc),
+        "evidence": _error_evidence(f"Detection error: {exc}"),
+    }
+
+
 def _run_detail_detector(
     label: str,
     detector: Any,
@@ -96,10 +106,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
             _run_detail_detector(
                 "anti-debug detection",
                 lambda: detect_anti_debug(self),
-                lambda exc: {
-                    "detected": False,
-                    "evidence": _error_evidence(f"Detection error: {exc}"),
-                },
+                _error_result,
             ),
         )
 
@@ -110,10 +117,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
             _run_detail_detector(
                 "anti-VM detection",
                 lambda: detect_anti_vm(self),
-                lambda exc: {
-                    "detected": False,
-                    "evidence": _error_evidence(f"Detection error: {exc}"),
-                },
+                _error_result,
             ),
         )
 
@@ -124,10 +128,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
             _run_detail_detector(
                 "anti-sandbox detection",
                 lambda: detect_anti_sandbox(self),
-                lambda exc: {
-                    "detected": False,
-                    "evidence": _error_evidence(f"Detection error: {exc}"),
-                },
+                _error_result,
             ),
         )
 
@@ -156,10 +157,7 @@ class AntiAnalysisDetector(CommandHelperMixin):
             _run_detail_detector(
                 "timing-check detection",
                 lambda: detect_timing_checks(self),
-                lambda exc: {
-                    "detected": False,
-                    "evidence": _error_evidence(f"Detection error: {exc}"),
-                },
+                _error_result,
             ),
         )
 

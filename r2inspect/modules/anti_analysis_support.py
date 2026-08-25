@@ -80,6 +80,18 @@ def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
     anti_analysis["timing_checks"] = _detected_flag(timing_result)
     anti_analysis["detection_details"]["timing_evidence"] = _evidence_list(timing_result)
     anti_analysis["environment_checks"] = detector._detect_environment_checks()
+    errors = [
+        f"{name}: {result['error']}"
+        for name, result in (
+            ("anti_debug", debug_result),
+            ("anti_vm", vm_result),
+            ("anti_sandbox", sandbox_result),
+            ("timing_checks", timing_result),
+        )
+        if isinstance(result, dict) and result.get("error")
+    ]
+    if errors:
+        anti_analysis["error"] = "; ".join(errors)
     return anti_analysis
 
 

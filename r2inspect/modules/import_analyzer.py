@@ -213,7 +213,13 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
                 _safe_len_impl(imports),
                 exc,
             )
-            return {"detected": False, "indicators": [], "score": 0}
+            return {
+                "detected": False,
+                "indicators": [],
+                "score": 0,
+                "status": "failed",
+                "error": str(exc),
+            }
 
     def analyze_dll_dependencies(self, dlls: list[str]) -> dict[str, Any]:
         try:
@@ -239,7 +245,12 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             return _check_import_forwarding_impl(strings, logger=logger)
         except Exception as exc:
             logger.error("Error checking import forwarding from strings: %s", exc)
-            return {"detected": False, "forwards": []}
+            return {
+                "detected": False,
+                "forwards": [],
+                "status": "failed",
+                "error": str(exc),
+            }
 
 
 __all__ = [
