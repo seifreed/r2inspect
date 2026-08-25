@@ -43,6 +43,12 @@ def findings(result: AnalysisResult) -> list[FindingV1]:
 
 
 def _status(value: dict[str, Any]) -> AnalyzerStatus:
+    explicit = value.get("status")
+    if isinstance(explicit, str):
+        try:
+            return AnalyzerStatus(explicit)
+        except ValueError:
+            pass
     error = value.get("error")
     text = str(error).lower() if error else ""
     if error:
@@ -77,6 +83,20 @@ def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
                 error=str(error) if error else None,
             )
         )
+    sidecar = raw.get("_analyzer_status")
+    if isinstance(sidecar, dict):
+        existing = {outcome.analyzer_id for outcome in outcomes}
+        for analyzer_id, value in sorted(sidecar.items()):
+            if analyzer_id in existing or not isinstance(value, dict):
+                continue
+            error = value.get("error")
+            outcomes.append(
+                AnalyzerOutcomeV1(
+                    analyzer_id=str(analyzer_id),
+                    status=_status(value),
+                    error=str(error) if error else None,
+                )
+            )
     return outcomes
 
 

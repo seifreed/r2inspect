@@ -65,6 +65,8 @@ class YaraAnalyzer(CommandHelperMixin):
         self.config = config
         self.rules_path = str(config.get_yara_rules_path())
         self.filepath = filepath  # Store filepath directly to avoid r2 dependency
+        self.last_status = "completed"
+        self.last_error: str | None = None
 
     def analyze(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
         """Unified entry point for pipeline dispatch."""
@@ -73,21 +75,29 @@ class YaraAnalyzer(CommandHelperMixin):
     def scan(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
         """Scan file with YARA rules"""
         matches: list[dict[str, Any]] = []
+        self.last_status = "completed"
+        self.last_error = None
 
         try:
             if yara is None:
                 logger.warning("python-yara not available; skipping YARA scan")
+                self.last_status = "dependency_unavailable"
+                self.last_error = "python-yara dependency unavailable"
                 return matches
             file_path = self._resolve_file_path()
             if not file_path:
+                self.last_status = "not_applicable"
                 return matches
 
             rules_path = self._resolve_rules_path(custom_rules_path)
             if not rules_path:
+                self.last_status = "not_applicable"
                 return matches
 
             rules = self._get_cached_rules(rules_path)
             if not rules:
+                self.last_status = "failed"
+                self.last_error = "YARA rules could not be compiled"
                 return matches
 
             yara_matches = rules.match(file_path, timeout=YARA_MATCH_TIMEOUT)
@@ -95,6 +105,8 @@ class YaraAnalyzer(CommandHelperMixin):
 
         except Exception as e:
             logger.error("Error in YARA scan: %s", e)
+            self.last_status = "failed"
+            self.last_error = str(e)
 
         return matches
 
@@ -145,6 +157,8 @@ class YaraAnalyzer(CommandHelperMixin):
             return self._compile_sources_with_timeout(rules_dict)
         except Exception as e:
             logger.error("Error compiling YARA rules: %s", e)
+            self.last_status = "failed"
+            self.last_error = str(e)
             return None
 
     def _validate_rules_path(self, validator: FileValidator, rules_path: str) -> Path | None:

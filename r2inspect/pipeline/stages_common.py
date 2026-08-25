@@ -22,6 +22,21 @@ from .analysis_pipeline import AnalysisStage
 logger = get_logger(__name__)
 
 
+def _record_analyzer_status(
+    context: dict[str, Any], analyzer_name: str, *, status: str, error: str | None = None
+) -> None:
+    """Keep status for analyzers whose legacy payload is not a mapping."""
+    bucket = _results_bucket(context)
+    statuses = bucket.setdefault("_analyzer_status", {})
+    if not isinstance(statuses, dict):
+        statuses = {}
+        bucket["_analyzer_status"] = statuses
+    payload: dict[str, Any] = {"status": status}
+    if error:
+        payload["error"] = error
+    statuses[analyzer_name] = payload
+
+
 def run_registered_analyzer(
     stage: Any,
     context: dict[str, Any],
@@ -50,6 +65,15 @@ def run_registered_analyzer(
         )
         data = invoke(analyzer)
         _results_bucket(context)[result_key] = data
+        status = getattr(analyzer, "last_status", None)
+        error = getattr(analyzer, "last_error", None)
+        if error or (status and status != "completed"):
+            _record_analyzer_status(
+                context,
+                analyzer_name,
+                status=str(status or "failed"),
+                error=str(error) if error else None,
+            )
         return {result_key: data}
     except Exception as e:
         logger.warning("%s failed: %s", log_label, e)
