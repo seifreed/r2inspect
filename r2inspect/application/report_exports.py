@@ -6,6 +6,7 @@ import html
 from typing import Any
 
 from ..schemas.report_v1 import ReportV1
+from .explain import radare2_commands
 from .report_exports_structured import to_misp, to_sarif, to_stix
 
 
@@ -23,16 +24,17 @@ def to_html(value: ReportV1 | dict[str, Any]) -> str:
             f"<td>{html.escape(finding.severity)}</td>"
             f"<td>{html.escape(finding.title)}</td>"
             f"<td>{finding.confidence:.2f}</td>"
+            f"<td><code>{html.escape('; '.join(radare2_commands(finding)) or 'n/a')}</code></td>"
             "</tr>"
             for finding in report.findings
         )
-        or '<tr><td colspan="4">No findings</td></tr>'
+        or '<tr><td colspan="5">No findings</td></tr>'
     )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>{title}</title>
 <style>body{{font:16px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem}}table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #bbb;padding:.5rem;text-align:left}}th{{background:#eee}}</style>
 </head><body><h1>{title}</h1><p>Profile: <strong>{html.escape(report.analysis.profile)}</strong> · Format: <strong>{html.escape(report.sample.detected_format or "unknown")}</strong></p>
-<table><thead><tr><th>Rule</th><th>Severity</th><th>Finding</th><th>Confidence</th></tr></thead><tbody>{rows}</tbody></table>
+<table><thead><tr><th>Rule</th><th>Severity</th><th>Finding</th><th>Confidence</th><th>radare2</th></tr></thead><tbody>{rows}</tbody></table>
 </body></html>
 """
 

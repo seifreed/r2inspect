@@ -30,6 +30,9 @@ from typing import Any
 
 import click
 
+from pathlib import Path
+
+from .application.explain import explain_file, format_explanation
 from .cli.analysis_runner import handle_main_error
 from .cli.cli_entry import (
     build_context as _build_context_impl,
@@ -65,6 +68,7 @@ class CLIArgs:
     threads: int
     version: bool
     profile: str = "standard"
+    explain: str | None = None
 
 
 def main(
@@ -115,6 +119,7 @@ def main(
 )
 @click.option("--list-yara", is_flag=True, help="List all available YARA rules and exit")
 @click.option("--version", is_flag=True, help="Show version information and exit")
+@click.option("--explain", help="Explain a finding ID or rule ID from a report JSON file")
 @click.option(
     "--profile",
     type=click.Choice(["fast", "standard", "deep"], case_sensitive=False),
@@ -147,6 +152,12 @@ def run_cli(
     """
     if args.version:
         execute_version()
+
+    if args.explain:
+        if not args.filename:
+            raise click.UsageError("--explain requires a report JSON path")
+        print(format_explanation(explain_file(Path(args.filename), args.explain)), end="")
+        return
 
     validation_errors = validate_inputs(
         args.filename,

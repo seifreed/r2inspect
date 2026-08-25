@@ -39,6 +39,7 @@ dependencies = [
     "python-magic>=0.4.27",
     "psutil>=5.9.0",
     "pydantic>=2.5.0",
+    "cryptography>=41.0.0",
     "pyfiglet>=0.8.post1",
 ]
 
@@ -110,6 +111,9 @@ r2inspect = "r2inspect.cli:main"
 r2inspect-export = "r2inspect.application.report_cli:export_main"
 r2inspect-compare = "r2inspect.application.report_cli:compare_main"
 r2inspect-baseline = "r2inspect.application.report_cli:baseline_main"
+r2inspect-explain = "r2inspect.application.report_cli:explain_main"
+r2inspect-rules-verify = "r2inspect.application.rule_packs:verify_main"
+r2inspect-cluster = "r2inspect.application.clustering:cluster_main"
 
 [tool.setuptools]
 include-package-data = true

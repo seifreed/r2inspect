@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .report_compare import compare_reports
+from .explain import explain_file
 from .report_exports import export_report
 from ..schemas.report_v1 import ReportV1
 
@@ -57,4 +58,15 @@ def baseline_main() -> None:
         raise SystemExit(1)
 
 
-__all__ = ["baseline_main", "compare_main", "export_main"]
+def explain_main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Explain a finding from an r2inspect report/v1 file"
+    )
+    parser.add_argument("report", type=Path)
+    parser.add_argument("finding_id")
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    _write(explain_file(args.report, args.finding_id), args.output)
+
+
+__all__ = ["baseline_main", "compare_main", "explain_main", "export_main"]
