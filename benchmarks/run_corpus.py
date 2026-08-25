@@ -153,6 +153,7 @@ def run_corpus(
         "provenance": manifest.get("provenance"),
         "fixture_repository": manifest.get("fixture_repository"),
         "fixture_commit": manifest.get("fixture_commit"),
+        "classification": manifest.get("classification"),
         "profile": selected_profile,
         "cases": evaluated_cases,
     }

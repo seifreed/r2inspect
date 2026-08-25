@@ -80,6 +80,7 @@ def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path, monke
                     "dataset_version": "v1",
                     "labeling_method": "independent-review",
                 },
+                "classification": {"strategy": "any_finding"},
                 "cases": [
                     {
                         "id": "sample-1",
@@ -113,3 +114,4 @@ def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path, monke
     evaluation = json.loads(result.read_text(encoding="utf-8"))
     assert evaluation["corpus_kind"] == "real_labeled"
     assert evaluation["provenance"]["dataset_version"] == "v1"
+    assert evaluation["classification"] == {"strategy": "any_finding"}
