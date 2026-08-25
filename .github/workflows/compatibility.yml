@@ -29,7 +29,10 @@ jobs:
           sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install libmagic ssdeep lld
+        run: |
+          brew install libmagic ssdeep lld
+          echo "CPPFLAGS=-I$(brew --prefix ssdeep)/include ${CPPFLAGS:-}" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-L$(brew --prefix ssdeep)/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
