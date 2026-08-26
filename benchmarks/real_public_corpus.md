@@ -30,9 +30,9 @@ independent severe categories, or a contextual medium `Suspicious API` or
 excluded because they otherwise create generic-signature false positives in
 system DLLs; unknown labels are excluded from the denominator. The class score is triage
 evidence, not a claim that a static finding alone proves maliciousness. The
-current 11-sample snapshot scores 1.0 precision, 1.0 recall, and 0.0 FPR.
-The expanded 15-sample manifest is now the release benchmark target; rerun it
-on the pinned environment before publishing updated aggregate metrics. capa
+expanded 15-sample evidence snapshot scores 1.0 precision, 1.0 recall, and 0.0 FPR; see docs/benchmark-real-public-2026-08-26.json.
+Differential specialist evidence remains scoped to the original 11-case
+calibrated subset. capa
 static analysis explicitly skips samples over 512 KiB as `skipped_by_profile`
 to avoid unbounded system-DLL runs; FLOSS remains static-only and bounded.
 

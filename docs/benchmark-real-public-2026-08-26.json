@@ -1,0 +1,63 @@
+{
+  "schema_version": "r2inspect.benchmark/v1",
+  "execution": {
+    "generated_at": "2026-08-26T00:00:00Z",
+    "code_commit": "b0315d3",
+    "platform": "macos-arm64",
+    "profile": "standard",
+    "evidence_assembly": "11 calibrated reports plus 4 fresh fixture reports",
+    "specialist_scope": "Differential capa/FLOSS evidence remains limited to the original 11-case calibrated subset; the four added fixtures are classification-only."
+  },
+  "corpus": {
+    "corpus_kind": "real_labeled",
+    "corpus_id": "capa-testfiles-pma-kernel32-fixtures-v2",
+    "cases": 15,
+    "malware_cases": 8,
+    "benign_cases": 7,
+    "sources": [
+      {
+        "repository": "https://github.com/mandiant/capa-testfiles",
+        "commit": "4fa9a0448a1453a80bdcbcefb6dff870f6333b64"
+      },
+      {
+        "repository": "https://github.com/seifreed/r2inspect-test-binaries",
+        "commit": "1d8a0ac76d92dfd68587ba30b1c987b78b59009a"
+      }
+    ],
+    "labeling_method": "upstream sample provenance plus manual source review"
+  },
+  "classification": {
+    "strategy": "calibrated_behavior",
+    "max_functions": 1000,
+    "max_imports": 500,
+    "max_exports": 500,
+    "evaluated_cases": 15,
+    "unknown_cases": 0,
+    "true_positive": 8,
+    "false_positive": 0,
+    "true_negative": 7,
+    "false_negative": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_positive_rate": 0.0
+  },
+  "native_analysis": {
+    "cases": 15,
+    "analyzer_statuses": {
+      "completed": 102,
+      "failed": 23
+    },
+    "error_rate": 0.184,
+    "latency_seconds": {
+      "median": 62.72537962498609,
+      "p95": 86.22560241699102,
+      "p99": 86.22560241699102
+    }
+  },
+  "differential_policy": {
+    "capa_large_sample_limit_bytes": 524288,
+    "oversized_status": "skipped_by_profile",
+    "floss_mode": "--only static"
+  },
+  "interpretation": "Expanded labeled-corpus evidence supports triage calibration only; it is not a universal malware-detection guarantee. The explicit capa size policy removes the previous unbounded kernel32_x86 run by recording a profile skip instead of allowing a hang."
+}
