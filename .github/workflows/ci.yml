@@ -148,7 +148,6 @@ jobs:
           PY
 
       - name: Quality gate (format, lint, types, security, audit, policy scans)
-        if: runner.os != 'Windows'
         shell: bash
         run: bash scripts/quality_gate.sh
 
@@ -167,20 +166,17 @@ jobs:
           ssdeep -V
 
       - name: Run integration tests
-        timeout-minutes: 20
+        timeout-minutes: 45
         shell: bash
         env:
           COVERAGE_FILE: .coverage.integration
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
-            # Exercise the real batch path with two fixtures and one native
-            # r2pipe session at a time. The full integration matrix remains
-            # on Unix; this bounded Windows smoke is the regression guard for
-            # the native reader-thread deadlock.
+            # Windows cannot execute tests that require POSIX process
+            # semantics, but it must exercise every other integration flow.
             export R2INSPECT_MAX_THREADS=1
-            marker="not slow and not requires_posix"
-            python -m pytest tests/integration/test_cli_batch_output_real_flows.py \
-              -q -m "$marker" --timeout=180 \
+            python -m pytest tests/integration \
+              -q -m "not requires_posix" --timeout=180 \
               --cov=r2inspect --cov-report=term-missing \
               --cov-fail-under=0
           else
