@@ -6,6 +6,7 @@ import hashlib
 import re
 from typing import Any, Literal, cast
 
+from ..domain.results import TypedAnalyzerResult
 from ..schemas.report_v1 import AnalyzerOutcomeV1, AnalyzerStatus, EvidenceV1, FindingV1
 from ..schemas.results_models import AnalysisResult
 from .technique_mappings import map_techniques
@@ -69,6 +70,26 @@ def _status(value: dict[str, Any]) -> AnalyzerStatus:
 def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
     outcomes = []
     for analyzer_id, value in sorted(raw.items()):
+        if isinstance(value, TypedAnalyzerResult):
+            status = value.status
+            error = value.error
+            if status == "completed" and not error and value.get("error"):
+                status = _status(value)
+                error = str(value.get("error"))
+            try:
+                typed_status = AnalyzerStatus(status)
+            except ValueError:
+                typed_status = _status(value)
+            duration = value.get("execution_time", 0.0)
+            outcomes.append(
+                AnalyzerOutcomeV1(
+                    analyzer_id=analyzer_id,
+                    status=typed_status,
+                    duration=float(duration) if isinstance(duration, (int, float)) else 0.0,
+                    error=error,
+                )
+            )
+            continue
         if not isinstance(value, dict) or not {"available", "error", "execution_time"}.intersection(
             value
         ):

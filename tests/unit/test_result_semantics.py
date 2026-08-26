@@ -4,6 +4,7 @@ from r2inspect.application.options import build_analysis_options
 from r2inspect.application.report_components import analyzer_outcomes
 from r2inspect.application.result_semantics import normalize_analyzer_results
 from r2inspect.application.technique_mappings import map_techniques
+from r2inspect.domain.results import TypedAnalyzerResult
 from r2inspect.modules import yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
 
@@ -49,6 +50,16 @@ def test_legacy_list_analyzer_error_is_exposed_as_outcome(tmp_path) -> None:
         yara_module.yara = original_yara
     assert outcomes[0].status.value == "dependency_unavailable"
     assert outcomes[0].error == "python-yara dependency unavailable"
+
+
+def test_typed_analyzer_payload_is_exposed_as_outcome() -> None:
+    payload = TypedAnalyzerResult({"finding_count": 0}, analyzer_id="typed_analyzer")
+
+    outcomes = analyzer_outcomes({"typed_analyzer": payload})
+
+    assert len(outcomes) == 1
+    assert outcomes[0].analyzer_id == "typed_analyzer"
+    assert outcomes[0].status.value == "completed"
 
 
 def test_forensic_profile_enables_full_evidence() -> None:
