@@ -1,7 +1,7 @@
 {
   "schema_version": "r2inspect.benchmark/v1",
   "execution": {
-    "generated_at": "2026-08-26T00:00:00Z",
+    "generated_at": "2026-08-26T13:53:17Z",
     "code_commit": "b0315d3",
     "platform": "macos-arm64",
     "profile": "standard",
