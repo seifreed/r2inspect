@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,10 @@ def samples_dir(tmp_path: Path) -> Path:
     return fixtures_dir
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="r2pipe can leave a blocking read on malformed PE fixtures on Windows",
+)
 def test_resource_and_rich_header_real_edge_inputs(samples_dir: Path) -> None:
     pe_sample = samples_dir / "hello_pe.exe"
     bad_pe = samples_dir / "edge_bad_pe.bin"
