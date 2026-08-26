@@ -57,7 +57,13 @@
   "differential_policy": {
     "capa_large_sample_limit_bytes": 524288,
     "oversized_status": "skipped_by_profile",
-    "floss_mode": "--only static"
+    "floss_mode": "--only static",
+    "direct_check": {
+      "case": "kernel32_x86",
+      "tool": "capa",
+      "status": "skipped_by_profile",
+      "error": "capa static analysis skipped for samples larger than 524288 bytes"
+    }
   },
   "interpretation": "Expanded labeled-corpus evidence supports triage calibration only; it is not a universal malware-detection guarantee. The explicit capa size policy removes the previous unbounded kernel32_x86 run by recording a profile skip instead of allowing a hang."
 }
