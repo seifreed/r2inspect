@@ -230,7 +230,14 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
     differential = manifest.get("differential")
     if isinstance(differential, list):
         by_tool: dict[str, dict[str, int]] = defaultdict(
-            lambda: {"cases": 0, "completed": 0, "agreements": 0, "timed_out": 0, "failed": 0}
+            lambda: {
+                "cases": 0,
+                "completed": 0,
+                "agreements": 0,
+                "timed_out": 0,
+                "skipped": 0,
+                "failed": 0,
+            }
         )
         for item in differential:
             if not isinstance(item, dict) or not isinstance(item.get("tool"), str):
@@ -242,6 +249,8 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
                 stats["completed"] += 1
             elif status == "timed_out":
                 stats["timed_out"] += 1
+            elif status == "skipped_by_profile":
+                stats["skipped"] += 1
             else:
                 stats["failed"] += 1
             if status == "completed" and item.get("agreement"):

@@ -20,6 +20,11 @@ TOOL_COMMANDS = {
     "yara": ("yara",),
 }
 
+# capa's static backend walks every function and can spend several minutes on
+# system DLLs. Keep the differential benchmark bounded and report this policy
+# explicitly instead of turning resource exhaustion into a timeout failure.
+CAPA_MAX_STATIC_SAMPLE_BYTES = 512 * 1024
+
 _CAPA_STOPWORDS = {
     "a",
     "an",
@@ -122,6 +127,19 @@ def run_specialist(tool: str, sample: Path, *, timeout: int = 120) -> set[str]:
 
 def run_specialist_safe(tool: str, sample: Path, *, timeout: int = 120) -> dict[str, Any]:
     """Run a specialist without hiding timeout or dependency failures."""
+    if tool == "capa":
+        try:
+            if sample.stat().st_size > CAPA_MAX_STATIC_SAMPLE_BYTES:
+                return {
+                    "status": "skipped_by_profile",
+                    "findings": [],
+                    "error": (
+                        "capa static analysis skipped for samples larger than "
+                        f"{CAPA_MAX_STATIC_SAMPLE_BYTES} bytes"
+                    ),
+                }
+        except OSError:
+            pass
     try:
         return {
             "status": "completed",

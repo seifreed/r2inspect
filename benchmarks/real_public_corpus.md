@@ -1,12 +1,13 @@
 # Public real corpus
 
-`real_public_corpus.py` fetches 11 samples from the pinned
+`real_public_corpus.py` fetches 15 independently labeled samples from two pinned
 [`mandiant/capa-testfiles`](https://github.com/mandiant/capa-testfiles) commit
-without checking samples into this repository. Eight samples are the book's
-Practical Malware Analysis lab specimens and are labeled `malware`; the two
-`kernel32` fixtures and `microsocks` upstream ELF are labeled `benign` from
-their source provenance. Every download is checked against a SHA-256 listed in
-the generated manifest.
+and [`r2inspect-test-binaries`](https://github.com/seifreed/r2inspect-test-binaries)
+commits without checking samples into this repository. Eight samples are the
+book's Practical Malware Analysis lab specimens and are labeled `malware`; the
+two `kernel32` fixtures and `microsocks` upstream ELF plus four independently
+maintained hello-world fixtures are labeled `benign`. Every download is checked
+against a SHA-256 listed in the generated manifest.
 
 Run the corpus with specialist differential tools. FLOSS is invoked in bounded
 static-string mode because that is the same evidence domain exposed by the
@@ -30,10 +31,10 @@ excluded because they otherwise create generic-signature false positives in
 system DLLs; unknown labels are excluded from the denominator. The class score is triage
 evidence, not a claim that a static finding alone proves maliciousness. The
 current 11-sample snapshot scores 1.0 precision, 1.0 recall, and 0.0 FPR.
-With official capa 9.4.0 rules on Linux amd64, capa completes 10/11 cases with
-9 agreements; official FLOSS 3.1.1 static mode completes 11/11 with 10
-agreements. The small corpus must be expanded before treating those numbers as
-release-wide performance.
+The expanded 15-sample manifest is now the release benchmark target; rerun it
+on the pinned environment before publishing updated aggregate metrics. capa
+static analysis explicitly skips samples over 512 KiB as `skipped_by_profile`
+to avoid unbounded system-DLL runs; FLOSS remains static-only and bounded.
 
 Set `R2INSPECT_DIFFERENTIAL_TIMEOUT_SECONDS` to bound specialist execution
 locally; CI keeps the default 120-second limit and records timeout states.

@@ -97,6 +97,16 @@ def test_specialist_timeout_is_explicit(tmp_path: Path) -> None:
     assert result["findings"] == []
 
 
+def test_large_capa_sample_is_skipped_by_profile(tmp_path: Path) -> None:
+    sample = tmp_path / "system.dll"
+    sample.write_bytes(b"x" * (differential_tools.CAPA_MAX_STATIC_SAMPLE_BYTES + 1))
+
+    result = run_specialist_safe("capa", sample)
+
+    assert result["status"] == "skipped_by_profile"
+    assert result["findings"] == []
+
+
 def test_specialist_runner_parses_json_command(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(b"sample")
