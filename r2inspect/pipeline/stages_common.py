@@ -16,10 +16,25 @@ from ..interfaces import (
     ResultAggregatorFactoryLike,
 )
 from ..core.analyzer_factory import run_analysis_method
+from ..domain.results import TypedAnalyzerResult
 from .results_bucket import _results_bucket
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
+
+
+def _typed_result(
+    analyzer_name: str, data: Any, *, status: str = "completed", error: str | None = None
+) -> Any:
+    """Attach typed metadata while preserving the legacy mapping contract."""
+    if isinstance(data, TypedAnalyzerResult) or not isinstance(data, dict):
+        return data
+    return TypedAnalyzerResult(
+        data,
+        analyzer_id=analyzer_name,
+        status=status,
+        error=error,
+    )
 
 
 def _record_analyzer_status(
@@ -64,13 +79,19 @@ def run_registered_analyzer(
             filename=stage.filename,
         )
         data = invoke(analyzer)
-        _results_bucket(context)[result_key] = data
         status = getattr(analyzer, "last_status", None)
         error = getattr(analyzer, "last_error", None)
         errors = getattr(analyzer, "_analysis_errors", None)
         if isinstance(errors, list) and errors:
             error = "; ".join(str(item) for item in errors)
             status = "failed"
+        data = _typed_result(
+            analyzer_name,
+            data,
+            status=str(status or "completed"),
+            error=str(error) if error else None,
+        )
+        _results_bucket(context)[result_key] = data
         if error or (status and status != "completed"):
             _record_analyzer_status(
                 context,
@@ -82,6 +103,7 @@ def run_registered_analyzer(
     except Exception as e:
         logger.warning("%s failed: %s", log_label, e)
         fallback = error_default(e)
+        fallback = _typed_result(analyzer_name, fallback, status="failed", error=str(e))
         _results_bucket(context)[result_key] = fallback
         return {result_key: fallback}
 

@@ -3,7 +3,8 @@
 ## Versioned JSON contract
 
 `AnalyzeBinaryUseCase` returns the validated `AnalysisResult` model produced by
-the pipeline result mapper. Individual analyzers still return dictionaries and
+the pipeline result mapper. Pipeline analyzer payloads carry the typed
+`r2inspect.analyzer/v1` metadata envelope while remaining mapping-compatible;
 console/CSV output retains the legacy layout. JSON output from single-file and
 batch analysis is wrapped in the strict `r2inspect.report/v1` model. Unsupported
 objects fail serialization instead of being silently converted to text.

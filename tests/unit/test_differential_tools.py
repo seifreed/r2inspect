@@ -10,6 +10,7 @@ from benchmarks.differential_tools import _tool_findings, compare_report, run_sp
 import benchmarks.run_corpus as corpus_runner
 from benchmarks.run_corpus import _load_manifest, run_corpus
 from r2inspect.schemas.report_v1 import FindingV1, ReportV1
+from r2inspect.domain.results import TypedAnalyzerResult
 
 
 def test_specialist_payloads_are_normalized() -> None:
@@ -105,6 +106,18 @@ def test_large_capa_sample_is_skipped_by_profile(tmp_path: Path) -> None:
 
     assert result["status"] == "skipped_by_profile"
     assert result["findings"] == []
+
+
+def test_typed_analyzer_result_preserves_legacy_mapping() -> None:
+    result = TypedAnalyzerResult(
+        {"available": True, "value": 1}, analyzer_id="example", status="completed"
+    )
+
+    assert isinstance(result, dict)
+    assert result["value"] == 1
+    assert result.to_dict() == {"available": True, "value": 1}
+    assert result.schema_version == "r2inspect.analyzer/v1"
+    assert result.analyzer_id == "example"
 
 
 def test_specialist_runner_parses_json_command(tmp_path: Path) -> None:

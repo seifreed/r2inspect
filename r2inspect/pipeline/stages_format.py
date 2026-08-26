@@ -20,7 +20,7 @@ from .pipeline_runtime_common import (
     default_hash_calculator as _default_hash_calculator,
     detect_via_header_bytes as _detect_via_header_bytes_impl,
 )
-from .stages_common import _results_bucket
+from .stages_common import _results_bucket, _typed_result
 from .stages_format_analysis import FormatAnalysisStage
 
 logger = logging.getLogger(__name__)
@@ -100,6 +100,7 @@ class FileInfoStage(AnalysisStage):
             info.update(hash_info)
         info.update(self._bin_arch_info(self.adapter.get_file_info()))
 
+        info = _typed_result("file_info", info)
         _results_bucket(context)["file_info"] = info
         return {"file_info": info}
 

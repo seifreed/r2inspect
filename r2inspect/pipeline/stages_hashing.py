@@ -9,7 +9,7 @@ from typing import Any
 from ..interfaces import HashingAnalyzerInterface
 from ..registry.analyzer_registry import AnalyzerCategory
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import ConfiguredRegistryStage, _results_bucket
+from .stages_common import ConfiguredRegistryStage, _results_bucket, _typed_result
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,13 @@ class HashingStage(ConfiguredRegistryStage):
                     continue
                 analyzer = self._build_hashing_analyzer(analyzer_class)
                 result = self._run_hashing_analyzer(name, analyzer)
+                result = _typed_result(name, result)
                 self._store_hashing_result(context, results, name, result)
             except Exception as e:
                 logger.warning("Hashing analyzer '%s' failed: %s", name, e)
-                _results_bucket(context)[name] = {"error": str(e)}
+                _results_bucket(context)[name] = _typed_result(
+                    name, {"error": str(e)}, status="failed", error=str(e)
+                )
 
         return results
 

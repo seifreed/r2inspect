@@ -14,7 +14,7 @@ from typing import Any
 from collections.abc import Callable
 
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import ConfiguredRegistryStage, _results_bucket
+from .stages_common import ConfiguredRegistryStage, _results_bucket, _typed_result
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ class FormatAnalysisStage(ConfiguredRegistryStage):
         analyzer = self._run_analyzer("pe_analyzer", include_filename=True)
         if analyzer is not None:
             data = analyzer.analyze()
+            data = _typed_result("pe_analyzer", data)
             self._run_optional_pe_analyzers(data)
             return self._store_result(context, "pe_info", data)
         return None
@@ -83,6 +84,7 @@ class FormatAnalysisStage(ConfiguredRegistryStage):
         analyzer = self._run_analyzer("elf_analyzer")
         if analyzer is not None:
             data = analyzer.analyze()
+            data = _typed_result("elf_analyzer", data)
             return self._store_result(context, "elf_info", data)
         return None
 
@@ -90,6 +92,7 @@ class FormatAnalysisStage(ConfiguredRegistryStage):
         analyzer = self._run_analyzer("macho_analyzer")
         if analyzer is not None:
             data = analyzer.analyze()
+            data = _typed_result("macho_analyzer", data)
             return self._store_result(context, "macho_info", data)
         return None
 

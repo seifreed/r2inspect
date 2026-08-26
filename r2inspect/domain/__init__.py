@@ -27,7 +27,7 @@ from .constants import (
     TEST_R2_OPEN_TIMEOUT,
     VERY_LARGE_FILE_THRESHOLD_MB,
 )
-from .results import AnalyzerResult, HashResult
+from .results import AnalyzerResult, HashResult, TypedAnalyzerResult
 from .entities import (
     AntiAnalysisResult,
     CryptoResult,
@@ -58,6 +58,7 @@ __all__ = [
     "BatchRunResult",
     "AnalyzerResult",
     "HashResult",
+    "TypedAnalyzerResult",
     # Domain entities
     "FileInfo",
     "HashingResult",

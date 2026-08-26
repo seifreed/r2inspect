@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import ConfiguredRegistryStage, _results_bucket
+from .stages_common import ConfiguredRegistryStage, _results_bucket, _typed_result
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,9 @@ def _bucket(context: dict[str, Any], key: str) -> dict[str, Any]:
     value = results.get(key)
     if isinstance(value, dict):
         return value
-    value = {}
+    value = _typed_result(key, {})
     results[key] = value
-    return value
+    return cast(dict[str, Any], value)
 
 
 class SecurityStage(ConfiguredRegistryStage):
@@ -55,6 +55,7 @@ class SecurityStage(ConfiguredRegistryStage):
                     filename=self.filename,
                 )
                 data = analyzer.get_security_features()
+                data = _typed_result("pe_analyzer", data)
                 _bucket(context, "security").update(data)
                 return {"security": data}
             except Exception as e:
@@ -71,6 +72,7 @@ class SecurityStage(ConfiguredRegistryStage):
                     mitigation_class, adapter=self.adapter, config=self.config
                 )
                 mitigations = analyzer.analyze()
+                mitigations = _typed_result("exploit_mitigation", mitigations)
                 _bucket(context, "security").update(mitigations)
             except Exception as e:
                 logger.debug("Mitigation analysis failed: %s", e)
