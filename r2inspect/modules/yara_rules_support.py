@@ -44,16 +44,18 @@ def compile_sources_with_timeout(
     timeout_handler: Any,
     logger: Any,
 ) -> Any | None:
+    signal_api: Any = signal
+    sigalrm = getattr(signal_api, "SIGALRM", None)
     try:
-        if hasattr(signal, "SIGALRM") and threading.current_thread() is threading.main_thread():
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout_seconds)
+        if sigalrm is not None and threading.current_thread() is threading.main_thread():
+            old_handler = signal_api.signal(sigalrm, timeout_handler)
+            signal_api.alarm(timeout_seconds)
             try:
                 compiled_rules = yara_module.compile(sources=rules_dict)
-                signal.alarm(0)
+                signal_api.alarm(0)
                 return compiled_rules
             finally:
-                signal.signal(signal.SIGALRM, old_handler)
+                signal_api.signal(sigalrm, old_handler)
         logger.debug("YARA compilation timeout not available on this platform")
         return yara_module.compile(sources=rules_dict)
     except yara_module.SyntaxError as exc:

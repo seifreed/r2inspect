@@ -59,8 +59,11 @@ def run_command(
                 check=False,
             )
         else:
+            killpg = getattr(os, "killpg", None)
+            sigkill = getattr(signal, "SIGKILL", None)
             with contextlib.suppress(ProcessLookupError):
-                os.killpg(process.pid, signal.SIGKILL)
+                if callable(killpg) and sigkill is not None:
+                    killpg(process.pid, sigkill)
         process.kill()
         process.communicate()
         raise TimeoutError(f"command timed out after {effective_timeout:g} seconds") from exc
