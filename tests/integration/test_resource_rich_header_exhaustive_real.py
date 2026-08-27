@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -134,6 +135,10 @@ def test_resource_analyzer_real_paths(real_pe_adapter) -> None:
     assert pe_path.exists()
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="r2pipe can leave a blocking read on the real PE fixture on Windows",
+)
 def test_rich_header_analyzer_real_paths(
     real_pe_adapter, real_non_pe_path: Path, tmp_path: Path
 ) -> None:
