@@ -204,10 +204,34 @@ jobs:
                   "-k",
                   "not impfuzzy and not telfhash",
               ]
+              args.extend(["--timeout=180", "--cov=r2inspect", "--cov-report=term-missing"])
+              raise SystemExit(pytest.main(args))
           else:
-              args = ["tests/unit", "-m", "not slow"]
-          args.extend(["--timeout=180", "--cov=r2inspect", "--cov-report=term-missing"])
-          raise SystemExit(pytest.main(args))
+              import subprocess
+              from pathlib import Path
+
+              test_files = sorted(str(path) for path in Path("tests/unit").rglob("test_*.py"))
+              batches = [test_files[index::4] for index in range(4)]
+              Path(".coverage.unit").unlink(missing_ok=True)
+              for batch in batches:
+                  result = subprocess.run(
+                      [
+                          sys.executable,
+                          "-m",
+                          "pytest",
+                          *batch,
+                          "-m",
+                          "not slow",
+                          "--timeout=180",
+                          "--cov=r2inspect",
+                          "--cov-report=",
+                          "--cov-fail-under=0",
+                          "--cov-append",
+                      ],
+                      check=False,
+                  )
+                  if result.returncode:
+                      raise SystemExit(result.returncode)
           PY
 
       - name: Export separate and combined coverage
