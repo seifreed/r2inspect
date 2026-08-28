@@ -73,6 +73,9 @@ def test_public_analyzer_entrypoints_return_typed_mapping_payloads() -> None:
         def analyze(self) -> dict[str, object]:
             return {"detected": False}
 
+        def detect_compiler(self) -> dict[str, object]:
+            return {"detected": True}
+
     base_result = BaseDemo().analyze()
     mixin_result = MixinDemo().analyze()
 
@@ -80,6 +83,7 @@ def test_public_analyzer_entrypoints_return_typed_mapping_payloads() -> None:
     assert isinstance(mixin_result, TypedAnalyzerResult)
     assert base_result["detected"] is True
     assert mixin_result["detected"] is False
+    assert isinstance(MixinDemo().detect_compiler(), TypedAnalyzerResult)
 
 
 def test_forensic_profile_enables_full_evidence() -> None:

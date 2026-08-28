@@ -25,7 +25,15 @@ class CommandHelperMixin:
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        for name in ("analyze", "detect", "scan"):
+        for name in (
+            "analyze",
+            "detect",
+            "scan",
+            "analyze_functions",
+            "detect_compiler",
+            "analyze_symbols",
+            "analyze_imports",
+        ):
             method = cls.__dict__.get(name)
             if callable(method):
                 setattr(cls, name, typed_analyzer_entrypoint(method))
