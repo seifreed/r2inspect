@@ -41,7 +41,10 @@ def _evidence_list(result: Any) -> list[Any]:
 
 
 def _detected_flag(result: Any) -> bool:
-    return bool(result.get("detected")) if isinstance(result, dict) else False
+    if not isinstance(result, dict):
+        return False
+    detected = result.get("detected")
+    return detected if isinstance(detected, bool) else False
 
 
 def empty_anti_analysis_report() -> dict[str, Any]:

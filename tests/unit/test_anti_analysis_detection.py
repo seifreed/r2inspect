@@ -72,6 +72,37 @@ def test_timing_apis_alone_do_not_assert_anti_debug():
     assert evidence and all(e.get("weak") is True for e in evidence)
 
 
+def test_malformed_detected_value_does_not_flip_anti_analysis():
+    class _MalformedDetailedDetector:
+        def _detect_anti_debug_detailed(self):
+            return {"detected": "false", "evidence": []}
+
+        def _detect_anti_vm_detailed(self):
+            return {"detected": 0, "evidence": []}
+
+        def _detect_anti_sandbox_detailed(self):
+            return {"detected": [], "evidence": []}
+
+        def _detect_evasion_techniques(self):
+            return []
+
+        def _find_suspicious_apis(self):
+            return []
+
+        def _detect_timing_checks_detailed(self):
+            return {"detected": None, "evidence": []}
+
+        def _detect_environment_checks(self):
+            return []
+
+    result = build_anti_analysis_report(_MalformedDetailedDetector())
+
+    assert result["anti_debug"] is False
+    assert result["anti_vm"] is False
+    assert result["anti_sandbox"] is False
+    assert result["timing_checks"] is False
+
+
 def test_anti_debug_accepts_hex_plt_address():
     detector = _make_detector(
         imports=[{"name": "IsDebuggerPresent", "plt": "0x1000", "libname": "kernel32.dll"}],
