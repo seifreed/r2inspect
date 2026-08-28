@@ -69,6 +69,19 @@ def _status(value: dict[str, Any]) -> AnalyzerStatus:
 
 def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
     outcomes = []
+
+    def outcome_metrics(value: dict[str, Any]) -> dict[str, Any]:
+        metrics: dict[str, Any] = {}
+        detected = value.get("detected")
+        if isinstance(detected, bool):
+            metrics["detected"] = detected
+        for key in ("peak_memory_mb", "memory_mb", "rss_mb"):
+            memory = value.get(key)
+            if isinstance(memory, int | float) and not isinstance(memory, bool):
+                metrics["peak_memory_mb"] = float(memory)
+                break
+        return metrics
+
     for analyzer_id, value in sorted(raw.items()):
         if isinstance(value, TypedAnalyzerResult):
             status = value.status
@@ -85,8 +98,9 @@ def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
                 AnalyzerOutcomeV1(
                     analyzer_id=analyzer_id,
                     status=typed_status,
-                    duration=float(duration) if isinstance(duration, (int, float)) else 0.0,
+                    duration=float(duration) if isinstance(duration, int | float) else 0.0,
                     error=error,
+                    metrics=outcome_metrics(value),
                 )
             )
             continue
@@ -100,8 +114,9 @@ def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
             AnalyzerOutcomeV1(
                 analyzer_id=analyzer_id,
                 status=_status(value),
-                duration=float(duration) if isinstance(duration, (int, float)) else 0.0,
+                duration=float(duration) if isinstance(duration, int | float) else 0.0,
                 error=str(error) if error else None,
+                metrics=outcome_metrics(value),
             )
         )
     sidecar = raw.get("_analyzer_status")

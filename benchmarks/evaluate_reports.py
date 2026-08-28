@@ -109,6 +109,33 @@ def _classification_metrics(
     }
 
 
+def _binary_metrics(rows: list[tuple[str, bool]]) -> dict[str, Any]:
+    """Score analyzer-level binary detections against corpus labels."""
+    tp = fp = tn = fn = 0
+    for expected, predicted in rows:
+        if expected == "unknown":
+            continue
+        if expected == "malware" and predicted:
+            tp += 1
+        elif expected == "benign" and predicted:
+            fp += 1
+        elif expected == "benign":
+            tn += 1
+        elif expected == "malware":
+            fn += 1
+    return {
+        "evaluated_cases": tp + fp + tn + fn,
+        "unknown_cases": sum(expected == "unknown" for expected, _ in rows),
+        "true_positive": tp,
+        "false_positive": fp,
+        "true_negative": tn,
+        "false_negative": fn,
+        "precision": _ratio(tp, tp + fp),
+        "recall": _ratio(tp, tp + fn),
+        "false_positive_rate": _ratio(fp, fp + tn),
+    }
+
+
 def _differential(manifest_path: Path, baseline_path: Path) -> dict[str, Any]:
     def load(path: Path) -> dict[str, tuple[str, ...]]:
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -146,7 +173,15 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
     durations: list[float] = []
     statuses: Counter[str] = Counter()
     analyzer_stats: dict[str, dict[str, Any]] = defaultdict(
-        lambda: {"statuses": Counter(), "durations": []}
+        lambda: {"statuses": Counter(), "durations": [], "memory": [], "classification": []}
+    )
+    platform_stats: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "durations": [],
+            "memory": [],
+            "statuses": Counter(),
+            "classification": [],
+        }
     )
     memory_values: list[float] = []
     platforms: Counter[str] = Counter()
@@ -167,7 +202,14 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
         fn += len(expected - actual)
         durations.append(report.analysis.duration)
         statuses.update(outcome.status.value for outcome in report.analyzers)
-        platforms[str(case.get("platform") or report.extras.get("platform") or "unknown")] += 1
+        platform = str(
+            case.get("platform")
+            or case.get("runner_platform")
+            or report.extras.get("platform")
+            or "unknown"
+        )
+        platforms[platform] += 1
+        platform_stats[platform]["durations"].append(report.analysis.duration)
         radare2_versions[report.tool.radare2_version or "unknown"] += 1
         if isinstance(classification, dict):
             label = case.get("class")
@@ -176,12 +218,25 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             classification_rows.append((str(label), _predicted_malware(report, classification)))
         memory = report.extras.get("memory_stats")
         peak_memory = memory.get("peak_memory_mb") if isinstance(memory, dict) else None
-        if isinstance(peak_memory, (int, float)):
+        if isinstance(peak_memory, int | float):
             memory_values.append(float(peak_memory))
+            platform_stats[platform]["memory"].append(float(peak_memory))
+        label = case.get("class")
+        if isinstance(classification, dict) and label in {"benign", "malware", "unknown"}:
+            platform_stats[platform]["classification"].append(
+                (str(label), _predicted_malware(report, classification))
+            )
         for outcome in report.analyzers:
             stats = analyzer_stats[outcome.analyzer_id]
             stats["statuses"][outcome.status.value] += 1
             stats["durations"].append(outcome.duration)
+            memory = outcome.metrics.get("peak_memory_mb")
+            if isinstance(memory, int | float) and not isinstance(memory, bool):
+                stats["memory"].append(float(memory))
+            detected = outcome.metrics.get("detected")
+            if isinstance(detected, bool) and label in {"benign", "malware", "unknown"}:
+                stats["classification"].append((str(label), detected))
+            platform_stats[platform]["statuses"][outcome.status.value] += 1
 
     total_outcomes = sum(statuses.values())
     failed = sum(statuses[name] for name in ("failed", "timed_out"))
@@ -216,6 +271,10 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
                     sum(stats["statuses"].values()),
                 ),
                 "latency_seconds": _distribution(stats["durations"]),
+                "memory_mb": {
+                    **_distribution(stats["memory"]),
+                    "samples": len(stats["memory"]),
+                },
             }
             for analyzer_id, stats in sorted(analyzer_stats.items())
         },
@@ -224,7 +283,30 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             "platforms": dict(sorted(platforms.items())),
             "radare2_versions": dict(sorted(radare2_versions.items())),
         },
+        "platform_metrics": {},
     }
+    for platform, stats in sorted(platform_stats.items()):
+        total = sum(stats["statuses"].values())
+        platform_metrics: dict[str, Any] = {
+            "cases": platforms[platform],
+            "latency_seconds": _distribution(stats["durations"]),
+            "memory_mb": {
+                **_distribution(stats["memory"]),
+                "samples": len(stats["memory"]),
+            },
+            "analyzer_statuses": dict(sorted(stats["statuses"].items())),
+            "analyzer_error_rate": _ratio(
+                sum(stats["statuses"][name] for name in ("failed", "timed_out")), total
+            ),
+        }
+        if stats["classification"]:
+            platform_metrics["classification"] = _binary_metrics(stats["classification"])
+        result["platform_metrics"][platform] = platform_metrics
+    for analyzer_id, stats in analyzer_stats.items():
+        if stats["classification"]:
+            result["analyzer_metrics"][analyzer_id]["classification"] = _binary_metrics(
+                stats["classification"]
+            )
     if isinstance(classification, dict):
         result["classification"] = _classification_metrics(classification_rows, classification)
     differential = manifest.get("differential")

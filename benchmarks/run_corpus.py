@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform as platform_module
 import subprocess
 import sys
 import time
@@ -125,7 +126,14 @@ def run_corpus(
     differential_timeout = int(os.environ.get("R2INSPECT_DIFFERENTIAL_TIMEOUT_SECONDS", "120"))
     for case in manifest["cases"]:
         report = _run_case(case, corpus_dir, reports_dir, selected_profile, root)
-        evaluated_cases.append({**case, "report": report})
+        evaluated_cases.append(
+            {
+                **case,
+                "report": report,
+                "runner_platform": sys.platform,
+                "runner_os": platform_module.system(),
+            }
+        )
         if differential_tools:
             report_model = ReportV1.model_validate_json(
                 (output_dir / report).read_text(encoding="utf-8")
@@ -157,6 +165,8 @@ def run_corpus(
         "fixture_commits": manifest.get("fixture_commits"),
         "classification": manifest.get("classification"),
         "profile": selected_profile,
+        "runner_platform": sys.platform,
+        "runner_os": platform_module.system(),
         "cases": evaluated_cases,
     }
     if differential:

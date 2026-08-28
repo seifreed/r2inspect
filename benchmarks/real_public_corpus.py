@@ -128,6 +128,34 @@ _SAMPLES = (
         "df350f6cb624bf5a9510e29693cc0142dbd4cfc3bbd0b9eccb9c49def29286ec",
         "fixtures",
     ),
+    (
+        "edge_high_entropy_benign",
+        "edge/edge_high_entropy.bin",
+        "benign",
+        "9053b0f9ae54e451e48aae2a391f6ba9132475e4665faa39a84abcd4c3b13ee1",
+        "fixtures",
+    ),
+    (
+        "edge_packed_benign",
+        "edge/edge_packed.bin",
+        "benign",
+        "aa91ef5653e4c6782ec48e0dec950e8e30cd5ca04c55feeb2ceb2c3ad175fee6",
+        "fixtures",
+    ),
+    (
+        "edge_bad_pe_unknown",
+        "edge/edge_bad_pe.bin",
+        "unknown",
+        "10162bac44ed65caf0b4b8cb1dd6ff78522719e3d26580d9f0c63debeefd44c1",
+        "fixtures",
+    ),
+    (
+        "edge_tiny_unknown",
+        "edge/edge_tiny.bin",
+        "unknown",
+        "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "fixtures",
+    ),
 )
 
 
@@ -135,7 +163,7 @@ def _manifest() -> dict[str, object]:
     return {
         "schema_version": "r2inspect.benchmark/v1",
         "corpus_kind": "real_labeled",
-        "corpus_id": "capa-testfiles-pma-kernel32-fixtures-v2",
+        "corpus_id": "capa-testfiles-pma-kernel32-fixtures-v3",
         "provenance": {
             "source": DATASET_URL,
             "dataset_version": DATASET_COMMIT,

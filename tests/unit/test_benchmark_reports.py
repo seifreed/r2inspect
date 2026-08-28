@@ -93,8 +93,10 @@ def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) ->
     result = evaluate(tmp_path / "manifest.json", baseline_manifest=tmp_path / "baseline.json")
 
     assert result["analyzer_metrics"]["detector"]["latency_seconds"]["median"] == 0.25
+    assert result["analyzer_metrics"]["detector"]["memory_mb"]["samples"] == 0
     assert result["memory_mb"]["median"] == 12.5
     assert result["environment"] == {"platforms": {"linux": 1}, "radare2_versions": {"6.1.8": 1}}
+    assert result["platform_metrics"]["linux"]["memory_mb"]["median"] == 12.5
     assert result["differential"]["changed_cases"] == []
     assert result["corpus_kind"] == "real_labeled"
     assert result["provenance"]["dataset_version"] == "v1"
@@ -153,6 +155,43 @@ def test_evaluate_reports_scores_declared_real_classification(tmp_path: Path) ->
         "precision": 0.5,
         "recall": 1.0,
         "false_positive_rate": 1.0,
+    }
+
+
+def test_evaluate_reports_scores_analyzer_detection_by_label(tmp_path: Path) -> None:
+    reports = []
+    for name, detected, label in (
+        ("malware", True, "malware"),
+        ("benign", False, "benign"),
+    ):
+        report = build_report_v1(
+            build_analysis_result(
+                {
+                    "file_info": {"file_type": "PE"},
+                    "detector": {"available": True, "detected": detected},
+                }
+            ),
+            analysis_id=name,
+        )
+        path = tmp_path / f"{name}.json"
+        path.write_text(report.model_dump_json(), encoding="utf-8")
+        reports.append({"id": name, "report": path.name, "class": label})
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"corpus_kind": "real_labeled", "cases": reports}), encoding="utf-8"
+    )
+
+    result = evaluate(tmp_path / "manifest.json")
+
+    assert result["analyzer_metrics"]["detector"]["classification"] == {
+        "evaluated_cases": 2,
+        "unknown_cases": 0,
+        "true_positive": 1,
+        "false_positive": 0,
+        "true_negative": 1,
+        "false_negative": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "false_positive_rate": 0.0,
     }
 
 
