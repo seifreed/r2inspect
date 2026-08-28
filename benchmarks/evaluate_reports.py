@@ -42,13 +42,14 @@ def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool
     if strategy == "calibrated_behavior":
         extras = report.extras
         functions = extras.get("functions")
-        function_count = functions.get("total_functions", 0) if isinstance(functions, dict) else 0
-        import_count = (
-            len(extras.get("imports", [])) if isinstance(extras.get("imports"), list) else 0
+        raw_function_count = functions.get("total_functions") if isinstance(functions, dict) else 0
+        function_count = (
+            int(raw_function_count) if isinstance(raw_function_count, int | float) else 0
         )
-        export_count = (
-            len(extras.get("exports", [])) if isinstance(extras.get("exports"), list) else 0
-        )
+        imports = extras.get("imports")
+        import_count = len(imports) if isinstance(imports, list) else 0
+        exports = extras.get("exports")
+        export_count = len(exports) if isinstance(exports, list) else 0
         max_functions = int(classification.get("max_functions", 1000))
         max_imports = int(classification.get("max_imports", 500))
         max_exports = int(classification.get("max_exports", 500))
