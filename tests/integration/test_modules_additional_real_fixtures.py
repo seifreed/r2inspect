@@ -11,7 +11,7 @@ from r2inspect.modules.exploit_mitigation_analyzer import ExploitMitigationAnaly
 from r2inspect.modules.overlay_analyzer import OverlayAnalyzer
 from r2inspect.modules.packer_detector import PackerDetector
 
-pytestmark = pytest.mark.requires_r2
+pytestmark = [pytest.mark.requires_r2, pytest.mark.slow]
 
 
 def test_authenticode_and_mitigations_real(samples_dir: Path) -> None:

@@ -14,7 +14,7 @@ from r2inspect.modules.telfhash_analyzer import TelfhashAnalyzer
 from r2inspect.modules.tlsh_analyzer import TLSHAnalyzer
 from r2inspect.testing.fixtures import resolve_fixture_source_root, sync_sample_fixtures
 
-pytestmark = pytest.mark.requires_r2
+pytestmark = [pytest.mark.requires_r2, pytest.mark.slow]
 
 
 @pytest.fixture

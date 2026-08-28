@@ -6,7 +6,7 @@ import pytest
 
 from r2inspect.factory import create_inspector
 
-pytestmark = pytest.mark.requires_r2
+pytestmark = [pytest.mark.requires_r2, pytest.mark.slow]
 
 
 def _assert_dict(value: object) -> None:
