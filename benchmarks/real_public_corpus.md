@@ -31,11 +31,17 @@ independent severe categories, or a contextual medium `Suspicious API` or
 excluded because they otherwise create generic-signature false positives in
 system DLLs; unknown labels are excluded from the denominator. The class score is triage
 evidence, not a claim that a static finding alone proves maliciousness. The
-The previous 15-sample evidence snapshot scores 1.0 precision, 1.0 recall, and
-0.0 FPR; see docs/benchmark-real-public-2026-08-26.json. The four new edge cases
-extend robustness coverage and require a fresh run before their metrics are
-published. Differential specialist evidence remains scoped to the original
-11-case calibrated subset. capa
+previous 15-sample evidence snapshot scores 1.0 precision, 1.0 recall, and
+0.0 FPR; see docs/benchmark-real-public-2026-08-26.json. A fresh 19-case local
+run on macOS ARM64 with radare2 6.2.0 scores the same calibrated classification
+metrics (8 true positives, 9 true negatives, 0 false positives, 0 false
+negatives), with 119 completed and 8 failed analyzer outcomes. The generated
+`metrics.json` keeps those per-analyzer statuses, latency, memory, and platform
+metrics; the failures remain visible instead of being counted as clean results.
+The aggregate finding score is intentionally not treated as detector precision:
+these corpus cases do not declare expected finding rule IDs. Differential
+specialist evidence remains scoped to the original 11-case calibrated subset.
+capa
 static analysis explicitly skips samples over 512 KiB as `skipped_by_profile`
 to avoid unbounded system-DLL runs; FLOSS remains static-only and bounded.
 
