@@ -7,7 +7,7 @@ import os
 import threading
 import time
 from types import MethodType
-from typing import Any
+from typing import Any, cast
 
 from ..domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS, MIN_AA_FUNCTIONS_BEFORE_DEEP
 from .r2_command_timeout import mark_wedged
@@ -23,8 +23,10 @@ def _windows_available_bytes(pipe: Any) -> int | None:
         import msvcrt
 
         available = ctypes.c_ulong()
-        handle = msvcrt.get_osfhandle(pipe.process.stdout.fileno())  # type: ignore[attr-defined]
-        ok = ctypes.windll.kernel32.PeekNamedPipe(  # type: ignore[attr-defined]
+        msvcrt_api = cast(Any, msvcrt)
+        ctypes_api = cast(Any, ctypes)
+        handle = msvcrt_api.get_osfhandle(pipe.process.stdout.fileno())
+        ok = ctypes_api.windll.kernel32.PeekNamedPipe(
             ctypes.c_void_p(handle), None, 0, None, ctypes.byref(available), None
         )
         return int(available.value) if ok else None
