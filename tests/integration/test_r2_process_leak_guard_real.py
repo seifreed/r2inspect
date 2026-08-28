@@ -26,7 +26,7 @@ from r2inspect.cli.batch_workers import process_files_parallel
 from r2inspect.infrastructure.rate_limiter import BatchRateLimiter
 from tests.helpers import env_vars
 
-pytestmark = pytest.mark.requires_r2
+pytestmark = [pytest.mark.requires_r2, pytest.mark.requires_posix]
 
 _FIXTURE = Path("samples/fixtures/hello_pe.exe")
 _FIXTURE_DIR = Path("samples/fixtures")
