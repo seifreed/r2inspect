@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 import logging
 import re
 from typing import Any
@@ -211,8 +211,9 @@ def is_suspicious_section_name(name: str) -> bool:
     return isinstance(name, str) and any(sus_name in name.lower() for sus_name in suspicious_names)
 
 
-def count_imports(imports: list[dict[str, Any]] | None) -> int:
-    return len(imports) if imports else 0
+def count_imports(imports: Iterable[dict[str, Any]] | None) -> int | None:
+    """Return the import count, preserving unavailable data as ``None``."""
+    return None if imports is None else len(list(imports))
 
 
 def overlay_info(
