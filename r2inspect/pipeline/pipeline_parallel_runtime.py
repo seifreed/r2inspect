@@ -173,10 +173,32 @@ def execute_stage_with_timeout(
 ) -> tuple[dict[str, Any], bool]:
     context = ts_context.get_all()
     if stage.timeout:
-        timeout_executor = ThreadPoolExecutor(max_workers=1)
+        outcome: list[dict[str, Any] | BaseException] = []
+
+        def run_stage() -> None:
+            try:
+                outcome.append(stage.execute(context))
+            except BaseException as exc:
+                outcome.append(exc)
+
+        # A timed-out stage may still be running; keep that worker from
+        # preventing the test runner or CLI process from shutting down.
+        timeout_thread = threading.Thread(
+            target=run_stage,
+            daemon=True,
+            name=f"r2inspect-stage-{stage.name}",
+        )
+        timeout_thread.start()
         try:
-            future = timeout_executor.submit(stage.execute, context)
-            result = future.result(timeout=stage.timeout)
+            timeout_thread.join(timeout=stage.timeout)
+            if timeout_thread.is_alive():
+                raise FuturesTimeoutError
+            if not outcome:
+                raise RuntimeError("Stage thread exited without a result")
+            stage_outcome = outcome[0]
+            if isinstance(stage_outcome, BaseException):
+                raise stage_outcome
+            result = stage_outcome
             return result, stage_success(result, stage.name)
         except FuturesTimeoutError:
             logger.error("Stage '%s' timed out after %ss", stage.name, stage.timeout)
@@ -184,13 +206,6 @@ def execute_stage_with_timeout(
         except Exception as exc:
             logger.error("Stage '%s' raised exception: %s", stage.name, exc)
             return error_result(stage.name, str(exc)), False
-        finally:
-            # A `with ThreadPoolExecutor` block would call shutdown(wait=True)
-            # here, blocking until the (possibly hung) stage finishes — which
-            # defeats the timeout entirely. Shut down without waiting so a
-            # runaway stage cannot stall the pipeline; the orphaned worker ends
-            # when its r2 session is closed.
-            timeout_executor.shutdown(wait=False, cancel_futures=True)
     try:
         result = stage.execute(context)
         return result, stage_success(result, stage.name)
