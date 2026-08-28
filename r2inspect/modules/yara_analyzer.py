@@ -146,6 +146,14 @@ class YaraAnalyzer(CommandHelperMixin):
             if not validated_path:
                 return None
             rules_dict = self._collect_rules_sources(validator, validated_path)
+            if validated_path.is_file() and not rules_dict:
+                return None
+            if (
+                validated_path.is_dir()
+                and self._discover_rule_files(validated_path)
+                and not rules_dict
+            ):
+                return None
             if not rules_dict:
                 return self._compile_default_rules(rules_path)
             logger.debug("Successfully loaded %s YARA rule source(s)", len(rules_dict))

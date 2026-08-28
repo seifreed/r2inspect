@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from r2inspect.adapters.r2pipe_adapter import R2PipeAdapter
 from r2inspect.modules.anti_analysis import AntiAnalysisDetector
 from r2inspect.modules.compiler_detector import CompilerDetector
@@ -150,3 +148,20 @@ def test_yara_analyzer_scan(tmp_path):
     matches = analyzer.scan(custom_rules_path=str(rules_dir))
     assert len(matches) == 1
     assert matches[0]["rule"] == "MatchHello"
+
+
+def test_yara_invalid_custom_rules_fail_without_default_matches(tmp_path):
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    (rules_dir / "invalid.yar").write_text("rule broken { condition: ", encoding="utf-8")
+    sample_file = tmp_path / "sample.bin"
+    sample_file.write_text("hello world", encoding="utf-8")
+
+    analyzer = YaraAnalyzer(
+        FakeR2(cmdj_map={"ij": {"core": {"file": str(sample_file)}}}),
+        ConfigStub(yara_path=str(rules_dir)),
+    )
+    matches = analyzer.scan(custom_rules_path=str(rules_dir))
+
+    assert matches == []
+    assert analyzer.last_status == "failed"
