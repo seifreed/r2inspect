@@ -19,11 +19,11 @@ from ..infrastructure.logging import get_logger
 from .yara_rules_support import (
     compile_sources_with_timeout,
     discover_rule_files,
-    list_available_rules as collect_available_rules,
     process_matches,
     YARA_RULE_PATTERNS,
 )
 from .yara_defaults import DEFAULT_YARA_RULES
+from .yara_reporting import available_rules, validate_rules as validate_rule_set
 
 logger = get_logger(__name__)
 
@@ -289,40 +289,7 @@ class YaraAnalyzer(CommandHelperMixin):
             logger.error("Error creating default rules: %s", e)
 
     def validate_rules(self, rules_path: str) -> dict[str, Any]:
-        validation_result: dict[str, Any] = {
-            "valid": True,
-            "errors": [],
-            "warnings": [],
-            "rules_count": 0,
-        }
-        errors = validation_result["errors"]
-        if not isinstance(errors, list):
-            errors = []
-            validation_result["errors"] = errors
-
-        try:
-            rules = self._compile_rules(rules_path)
-            if rules:
-                if os.path.isdir(rules_path):
-                    # Match compilation's recursive, full-extension discovery; a
-                    # non-recursive *.yar/*.yara-only glob undercounted.
-                    found = self._discover_rule_files(Path(rules_path))
-                    validation_result["rules_count"] = len(found)
-                else:
-                    validation_result["rules_count"] = 1
-            else:
-                validation_result["valid"] = False
-                errors.append("Failed to compile rules")
-        except Exception as e:
-            validation_result["valid"] = False
-            errors.append(str(e))
-
-        return validation_result
+        return validate_rule_set(self, rules_path)
 
     def list_available_rules(self, rules_path: str | None = None) -> list[dict[str, Any]]:
-        rules_path = rules_path or self.rules_path
-        return collect_available_rules(
-            rules_path,
-            list(YARA_RULE_PATTERNS),
-            logger,
-        )
+        return available_rules(rules_path or self.rules_path, logger)

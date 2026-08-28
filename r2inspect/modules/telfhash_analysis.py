@@ -89,16 +89,6 @@ def analyze_symbols(
     return results
 
 
-def _magic_rules_out_elf(file_path: Path) -> bool:
-    """True when the file exists but its first bytes are not (or cannot be read as) ELF magic."""
-    if not file_path.exists():
-        return False
-    try:
-        return file_path.read_bytes()[:4] != b"\x7fELF"
-    except OSError:
-        return True
-
-
 def _format_excludes_elf(info_cmd: Any) -> bool:
     """True when bin format/class metadata is present and clearly not ELF."""
     if not isinstance(info_cmd, dict):
@@ -120,8 +110,6 @@ def is_elf_binary(
         if analyzer.adapter is None:
             return False
         if not analyzer.filepath:
-            return False
-        if _magic_rules_out_elf(Path(analyzer.filepath)):
             return False
         if is_elf_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
             return True
