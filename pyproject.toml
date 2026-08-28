@@ -176,6 +176,7 @@ ignore = [
     "E501",  # line too long (handled by black)
     "B008",  # function calls in argument defaults (idiomatic for click/typer/fastapi)
     "UP047", # PEP 695 type parameter syntax (project still supports py3.13 baseline)
+    "UP038", # tuple isinstance syntax remains valid and avoids a broad mechanical rewrite
 ]
 exclude = [
     ".bzr",
