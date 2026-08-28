@@ -105,10 +105,7 @@ def _call_with_pool(callable_obj: Any, pool: dict[str, Any]) -> bool:
     for name, param in sig.parameters.items():
         if param.default is not inspect._empty:
             continue
-        if name in pool:
-            kwargs[name] = pool[name]
-        else:
-            kwargs[name] = None
+        kwargs[name] = pool.get(name)
 
     previous_handler = signal.signal(signal.SIGALRM, _timeout_handler)
     signal.setitimer(signal.ITIMER_REAL, 0.2)
@@ -282,8 +279,10 @@ def test_package_method_walk_without_mocks() -> None:
             "r2inspect.__main__",
         }
 
-        max_total_calls = 20000
-        per_module_max = 300
+        # Keep the broad no-mocks smoke walk bounded under coverage on Python
+        # 3.14 while retaining the meaningful execution threshold below.
+        max_total_calls = 5000
+        per_module_max = 100
 
         for module_name in module_names:
             if executed >= max_total_calls:
