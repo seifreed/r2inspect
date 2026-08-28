@@ -70,8 +70,21 @@ class R2PipeCachedQueryMixin:
                 facade.logger.warning("Invalid or empty response from 'ij' command")
                 return {}
 
-            self._cache["ij"] = validated
-            return cast(dict[str, Any], validated)
+            # radare2's JSON schema exposes the file family as ``bintype``
+            # and the concrete format under ``core.format`` on some builds.
+            # Keep the adapter contract stable for callers that consume
+            # ``bin.format``.
+            validated_dict = cast(dict[str, Any], validated)
+            bin_info = validated_dict.get("bin")
+            core_info = validated_dict.get("core")
+            if isinstance(bin_info, dict) and not bin_info.get("format"):
+                if isinstance(core_info, dict) and core_info.get("format"):
+                    bin_info["format"] = core_info["format"]
+                elif bin_info.get("bintype"):
+                    bin_info["format"] = bin_info["bintype"]
+
+            self._cache["ij"] = validated_dict
+            return validated_dict
         except Exception as exc:
             facade.logger.exception("Error retrieving file info: %s", exc)
             return {}

@@ -26,6 +26,7 @@ def _windows_cmd_process(pipe: Any, command: str) -> str:
         output = bytearray()
         pending = getattr(pipe, "pending", b"")
         pipe.pending = b""
+        first_byte = True
         while True:
             if pending:
                 byte, pending = pending[:1], pending[1:]
@@ -35,6 +36,13 @@ def _windows_cmd_process(pipe: Any, command: str) -> str:
                 if pipe.process.poll() is not None:
                     raise RuntimeError(f"Process terminated while running {command}")
                 continue
+            # The Windows r2pipe transport leaves one startup/frame NUL in
+            # front of the first response; its block reader strips it before
+            # searching for the terminating NUL.
+            if first_byte and byte == b"\x00":
+                first_byte = False
+                continue
+            first_byte = False
             if byte == b"\x00":
                 pipe.pending = pending
                 return output.decode("utf-8", errors="ignore")

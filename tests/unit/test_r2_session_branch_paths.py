@@ -30,7 +30,7 @@ def test_windows_cmd_process_reads_until_nul_without_large_read() -> None:
 
     class _Output:
         def __init__(self) -> None:
-            self.data = iter(b'{"bin":{}}\x00')
+            self.data = iter(b'\x00{"bin":{}}\x00')
 
         def read(self, size: int) -> bytes:
             assert size == 1
