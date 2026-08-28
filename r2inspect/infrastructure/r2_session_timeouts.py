@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from ..domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS, MIN_AA_FUNCTIONS_BEFORE_DEEP
+from .r2_command_timeout import mark_wedged
 from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
 
@@ -80,6 +81,12 @@ def run_cmd_with_timeout(session: Any, command: str, timeout: float, *, logger: 
         completed, result, error = run_with_timeout(lambda: session.r2.cmd(command), timeout)
         if not completed:
             logger.warning("r2 command timed out after %.1fs: %s", timeout, command)
+            # A timed-out synchronous pipe cannot safely accept another command.
+            # Mark it wedged and tear down its child before the caller reopens
+            # in safe mode; otherwise the abandoned worker can retain the pipe
+            # and radare2 process for the rest of the test run.
+            mark_wedged(session.r2)
+            force_close_process(session.r2)
             return False
         if error is not None:
             raise error
