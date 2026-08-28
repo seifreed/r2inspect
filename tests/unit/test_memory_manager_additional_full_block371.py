@@ -113,8 +113,12 @@ def test_memory_manager_globals_and_limits() -> None:
     memory_manager.configure_memory_limits(unknown_key=123)
 
     # File size limit failure
-    memory_manager.configure_memory_limits(max_file_size_mb=0.000001)
-    assert memory_manager.check_memory_limits(file_size_bytes=10_000_000) is False
+    original_limit = memory_manager.global_memory_monitor.limits.max_file_size_mb
+    try:
+        memory_manager.configure_memory_limits(max_file_size_mb=0.000001)
+        assert memory_manager.check_memory_limits(file_size_bytes=10_000_000) is False
+    finally:
+        memory_manager.configure_memory_limits(max_file_size_mb=original_limit)
 
     # Estimated analysis check path
     assert memory_manager.check_memory_limits(file_size_bytes=0, estimated_analysis_mb=0) is True
