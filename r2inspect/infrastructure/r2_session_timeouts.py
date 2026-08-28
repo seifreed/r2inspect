@@ -91,6 +91,11 @@ def _windows_cmd_process(pipe: Any, command: str) -> str:
 def _configure_windows_pipe(r2: Any) -> None:
     """Use the bounded Windows reader around r2pipe's blocking implementation."""
     if os.name == "nt" and hasattr(r2, "process") and hasattr(r2, "_cmd"):
+        available = _windows_available_bytes(r2)
+        if available:
+            first = r2.process.stdout.read(1)
+            if first != b"\x00":
+                r2.pending = first + getattr(r2, "pending", b"")
         r2._cmd = MethodType(_windows_cmd_process, r2)
 
 
