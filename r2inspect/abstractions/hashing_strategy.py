@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from ..domain.results import typed_analyzer_entrypoint
 from .hashing_strategy_support import (
     availability_result as availability_result,
     run_hash_analysis as _run_hash_analysis_impl,
@@ -41,6 +42,7 @@ class HashingStrategy(ABC):
         self.max_file_size = max_file_size
         self.min_file_size = min_file_size
 
+    @typed_analyzer_entrypoint
     def analyze(self) -> dict[str, Any]:
         """
         Template method defining the analysis workflow.

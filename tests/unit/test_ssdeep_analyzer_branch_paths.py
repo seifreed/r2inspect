@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from r2inspect.domain.results import TypedAnalyzerResult
 from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 from r2inspect.modules.ssdeep_analyzer import SSDeepAnalyzer
 
@@ -212,6 +213,7 @@ def test_analyze_returns_valid_result_for_real_file(tmp_path: Path) -> None:
     f.write_bytes(b"Full analyze test content " * 200)
     result = SSDeepAnalyzer(filepath=str(f)).analyze()
     assert isinstance(result, dict)
+    assert isinstance(result, TypedAnalyzerResult)
     assert result["hash_type"] == "ssdeep"
     assert result["available"] is True
     assert result["hash_value"] is not None
@@ -222,6 +224,7 @@ def test_analyze_unavailable_or_available_result_is_dict(tmp_path: Path) -> None
     f.write_bytes(b"A" * 512)
     result = SSDeepAnalyzer(filepath=str(f)).analyze()
     assert isinstance(result, dict)
+    assert isinstance(result, TypedAnalyzerResult)
     if result["available"]:
         assert result.get("hash_value") is not None
     else:
