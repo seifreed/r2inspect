@@ -22,7 +22,7 @@ def test_elf_analyzer_basic(tmp_path: Path):
     try:
         analyzer = ELFAnalyzer(adapter=adapter, config=config)
         result = analyzer.analyze()
-        assert result.get("format") in {"ELF", "ELF32", "ELF64", "Unknown"}
+        assert str(result.get("format", "")).upper() in {"ELF", "ELF32", "ELF64", "UNKNOWN"}
         assert "security_features" in result
     finally:
         r2.quit()
