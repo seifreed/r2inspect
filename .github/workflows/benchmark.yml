@@ -39,11 +39,24 @@ jobs:
           python benchmarks/evaluate_reports.py benchmark-results/manifest.json \
             --output benchmark-results/metrics.json \
             --min-precision 1.0 --min-recall 1.0
+      - name: Run expanded real public corpus
+        run: |
+          python benchmarks/real_public_corpus.py expanded-real-public-corpus
+          python benchmarks/run_corpus.py \
+            expanded-real-public-corpus/manifest.json \
+            --corpus-dir expanded-real-public-corpus \
+            --output-dir expanded-real-public-results --profile fast
+          python benchmarks/evaluate_reports.py \
+            expanded-real-public-results/manifest.json \
+            --output expanded-real-public-results/metrics.json \
+            --max-error-rate 0.2
       - name: Publish benchmark artifact
         uses: actions/upload-artifact@v4
         with:
           name: r2inspect-benchmark-${{ github.run_id }}
-          path: benchmark-results/
+          path: |
+            benchmark-results/
+            expanded-real-public-results/
 
   private-corpus:
     runs-on: ubuntu-latest
