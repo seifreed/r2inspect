@@ -6,12 +6,45 @@ from __future__ import annotations
 import os
 import threading
 import time
+from types import MethodType
 from typing import Any
 
 from ..domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS, MIN_AA_FUNCTIONS_BEFORE_DEEP
 from .r2_command_timeout import mark_wedged
 from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
+
+
+def _windows_cmd_process(pipe: Any, command: str) -> str:
+    """Read Windows r2pipe responses without waiting for a 4096-byte buffer."""
+    lock = getattr(pipe, "_cmd_lock", None)
+    if lock is None:
+        lock = pipe._cmd_lock = threading.Lock()
+    with lock:
+        pipe.process.stdin.write((command.strip().replace("\n", ";") + "\n").encode())
+        pipe.process.stdin.flush()
+        output = bytearray()
+        pending = getattr(pipe, "pending", b"")
+        pipe.pending = b""
+        while True:
+            if pending:
+                byte, pending = pending[:1], pending[1:]
+            else:
+                byte = pipe.process.stdout.read(1)
+            if not byte:
+                if pipe.process.poll() is not None:
+                    raise RuntimeError(f"Process terminated while running {command}")
+                continue
+            if byte == b"\x00":
+                pipe.pending = pending
+                return output.decode("utf-8", errors="ignore")
+            output.extend(byte)
+
+
+def _configure_windows_pipe(r2: Any) -> None:
+    """Use the bounded-byte reader around r2pipe's blocking Windows reader."""
+    if os.name == "nt" and hasattr(r2, "process") and hasattr(r2, "_cmd"):
+        r2._cmd = MethodType(_windows_cmd_process, r2)
 
 
 def _close_orphan_r2(r2: Any, logger: Any) -> None:
@@ -35,6 +68,7 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
     def _runner() -> None:
         try:
             r2 = session._opener(session.filename, flags=flags)
+            _configure_windows_pipe(r2)
             # If we timed out while opening, close the orphan immediately
             if timed_out.is_set():
                 _close_orphan_r2(r2, logger)

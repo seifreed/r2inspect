@@ -7,12 +7,51 @@ import logging
 import os
 import struct
 import time
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
 
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.infrastructure.r2_session_cleanup import _macho_arch_flags
+from r2inspect.infrastructure.r2_session_timeouts import _windows_cmd_process
+
+
+def test_windows_cmd_process_reads_until_nul_without_large_read() -> None:
+    class _Input:
+        def __init__(self) -> None:
+            self.data = b""
+
+        def write(self, data: bytes) -> None:
+            self.data += data
+
+        def flush(self) -> None:
+            pass
+
+    class _Output:
+        def __init__(self) -> None:
+            self.data = iter(b'{"bin":{}}\x00')
+
+        def read(self, size: int) -> bytes:
+            assert size == 1
+            return bytes((next(self.data),))
+
+    class _Process:
+        def __init__(self) -> None:
+            self.stdin = _Input()
+            self.stdout = _Output()
+
+        def poll(self) -> None:
+            return None
+
+    class _Pipe:
+        def __init__(self) -> None:
+            self.process = _Process()
+            self.pending = b""
+
+    pipe = _Pipe()
+    assert _windows_cmd_process(pipe, "ij") == '{"bin":{}}'
+    assert pipe.process.stdin.data == b"ij\n"
 
 
 def test_macho_arch_flags_empty_arches_returns_no_arch_flags():
@@ -190,10 +229,8 @@ def test_open_exception_closes_r2_if_already_set():
 
     session._open_with_timeout = set_r2_then_raise
     # error_handler may return fallback or re-raise depending on recoverability
-    try:
+    with suppress(RuntimeError):
         session.open(0.1)
-    except RuntimeError:
-        pass
     assert closed["called"] is True
 
 
