@@ -50,8 +50,15 @@ def _windows_cmd_process(pipe: Any, command: str) -> str:
 
 
 def _configure_windows_pipe(r2: Any) -> None:
-    """Use the bounded-byte reader around r2pipe's blocking Windows reader."""
+    """Make r2pipe's Windows reader return available bytes immediately."""
     if os.name == "nt" and hasattr(r2, "process") and hasattr(r2, "_cmd"):
+        make_non_blocking = getattr(type(r2), "_open__make_non_blocking", None)
+        if callable(make_non_blocking):
+            try:
+                make_non_blocking(r2.process.stdout.fileno())
+                return
+            except (AttributeError, OSError):
+                pass
         r2._cmd = MethodType(_windows_cmd_process, r2)
 
 
