@@ -121,6 +121,9 @@ def is_elf_binary(
             return False
         if not analyzer.filepath:
             return False
+        path = Path(analyzer.filepath)
+        if _magic_rules_out_elf(path) and path.stat().st_size >= 64:
+            return False
         if is_elf_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
             return True
         if is_pe_file_fn(analyzer.filepath, analyzer.adapter, analyzer.adapter, logger=logger):
