@@ -231,7 +231,19 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             stats = analyzer_stats[outcome.analyzer_id]
             stats["statuses"][outcome.status.value] += 1
             stats["durations"].append(outcome.duration)
-            memory = outcome.metrics.get("peak_memory_mb")
+            memory = next(
+                (
+                    outcome.metrics.get(key)
+                    for key in (
+                        "peak_memory_mb",
+                        "memory_mb",
+                        "rss_mb",
+                        "process_memory_after_mb",
+                    )
+                    if outcome.metrics.get(key) is not None
+                ),
+                None,
+            )
             if isinstance(memory, int | float) and not isinstance(memory, bool):
                 stats["memory"].append(float(memory))
             detected = outcome.metrics.get("detected")

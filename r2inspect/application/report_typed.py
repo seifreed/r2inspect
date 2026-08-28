@@ -19,8 +19,11 @@ def typed_analyzer_statuses(raw: dict[str, Any]) -> dict[str, dict[str, Any]]:
         duration = value.get("execution_time")
         if isinstance(duration, int | float) and not isinstance(duration, bool):
             status["duration"] = float(duration)
+        metrics = dict(value.metrics)
         detected = value.get("detected")
         if isinstance(detected, bool):
-            status["metrics"] = {"detected": detected}
+            metrics["detected"] = detected
+        if metrics:
+            status["metrics"] = metrics
         statuses[analyzer_id] = status
     return statuses
