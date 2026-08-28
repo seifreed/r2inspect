@@ -16,6 +16,7 @@ from .base_analyzer_support import (
     normalize_filepath as _normalize_filepath,
 )
 from ..infrastructure.logging import get_logger
+from ..domain.results import typed_analyzer_entrypoint
 from .result_builder import init_result, mark_unavailable
 
 logger = get_logger(__name__)
@@ -23,6 +24,12 @@ logger = get_logger(__name__)
 
 class BaseAnalyzer(ABC):
     """Abstract base class for analyzers with shared helpers."""
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        method = cls.__dict__.get("analyze")
+        if callable(method):
+            cls.analyze = typed_analyzer_entrypoint(method)  # type: ignore[method-assign]
 
     def __init__(
         self,

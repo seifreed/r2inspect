@@ -10,6 +10,7 @@ from typing import Any, TypeVar, cast
 from ..infrastructure.command_helpers import cmd as cmd_helper
 from ..infrastructure.command_helpers import cmd_list as cmd_list_helper
 from ..infrastructure.command_helpers import cmdj as cmdj_helper
+from ..domain.results import typed_analyzer_entrypoint
 from .coercion_support import coerce_dict_list
 
 _log = logging.getLogger(__name__)
@@ -21,6 +22,13 @@ class CommandHelperMixin:
     """Provide standardized command helper wrappers for adapters/r2 instances."""
 
     adapter: Any
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        for name in ("analyze", "detect", "scan"):
+            method = cls.__dict__.get(name)
+            if callable(method):
+                setattr(cls, name, typed_analyzer_entrypoint(method))
 
     def _record_analysis_error(self, error: Any) -> None:
         """Collect recoverable sub-analyzer failures for pipeline reporting."""

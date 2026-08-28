@@ -4,6 +4,8 @@ from r2inspect.application.options import build_analysis_options
 from r2inspect.application.report_components import analyzer_outcomes
 from r2inspect.application.result_semantics import normalize_analyzer_results
 from r2inspect.application.technique_mappings import map_techniques
+from r2inspect.abstractions.base_analyzer import BaseAnalyzer
+from r2inspect.abstractions.command_helper_mixin import CommandHelperMixin
 from r2inspect.domain.results import TypedAnalyzerResult
 from r2inspect.modules import yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
@@ -60,6 +62,24 @@ def test_typed_analyzer_payload_is_exposed_as_outcome() -> None:
     assert len(outcomes) == 1
     assert outcomes[0].analyzer_id == "typed_analyzer"
     assert outcomes[0].status.value == "completed"
+
+
+def test_public_analyzer_entrypoints_return_typed_mapping_payloads() -> None:
+    class BaseDemo(BaseAnalyzer):
+        def analyze(self) -> dict[str, object]:
+            return {"detected": True}
+
+    class MixinDemo(CommandHelperMixin):
+        def analyze(self) -> dict[str, object]:
+            return {"detected": False}
+
+    base_result = BaseDemo().analyze()
+    mixin_result = MixinDemo().analyze()
+
+    assert isinstance(base_result, TypedAnalyzerResult)
+    assert isinstance(mixin_result, TypedAnalyzerResult)
+    assert base_result["detected"] is True
+    assert mixin_result["detected"] is False
 
 
 def test_forensic_profile_enables_full_evidence() -> None:
