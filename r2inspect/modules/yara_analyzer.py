@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 try:
     import yara
@@ -30,9 +30,9 @@ logger = get_logger(__name__)
 YARA_COMPILE_TIMEOUT = 30  # seconds
 YARA_MATCH_TIMEOUT = 60
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
-YARA_TIMEOUT_ERRORS = (
+YARA_TIMEOUT_ERRORS: tuple[type[BaseException], ...] = (
     TimeoutError,
-    getattr(yara, "TimeoutError", TimeoutError),
+    cast(type[BaseException], getattr(yara, "TimeoutError", TimeoutError)),
 )
 
 

@@ -29,7 +29,7 @@ class BaseAnalyzer(ABC):
         super().__init_subclass__(**kwargs)
         method = cls.__dict__.get("analyze")
         if callable(method):
-            cls.analyze = typed_analyzer_entrypoint(method)  # type: ignore[method-assign]
+            type.__setattr__(cls, "analyze", typed_analyzer_entrypoint(method))
 
     def __init__(
         self,

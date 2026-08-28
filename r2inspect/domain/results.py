@@ -56,7 +56,7 @@ def typed_analyzer_entrypoint(method: Callable[..., T]) -> Callable[..., T | Typ
             error=str(last_error) if last_error else None,
         )
 
-    wrapped._typed_result_wrapper = True  # type: ignore[attr-defined]
+    wrapped.__dict__["_typed_result_wrapper"] = True
     return wrapped
 
 
