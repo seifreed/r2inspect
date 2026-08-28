@@ -260,6 +260,8 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             "statuses": dict(sorted(statuses.items())),
             "error_rate": _ratio(failed, total_outcomes),
             "unknown_rate": _ratio(unknown, total_outcomes),
+            "timeouts": statuses["timed_out"],
+            "timeout_rate": _ratio(statuses["timed_out"], total_outcomes),
         },
         "latency_seconds": _distribution(durations),
         "analyzer_metrics": {
@@ -269,6 +271,10 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
                 "error_rate": _ratio(
                     sum(stats["statuses"][name] for name in ("failed", "timed_out")),
                     sum(stats["statuses"].values()),
+                ),
+                "timeouts": stats["statuses"]["timed_out"],
+                "timeout_rate": _ratio(
+                    stats["statuses"]["timed_out"], sum(stats["statuses"].values())
                 ),
                 "latency_seconds": _distribution(stats["durations"]),
                 "memory_mb": {
@@ -298,6 +304,8 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             "analyzer_error_rate": _ratio(
                 sum(stats["statuses"][name] for name in ("failed", "timed_out")), total
             ),
+            "timeouts": stats["statuses"]["timed_out"],
+            "timeout_rate": _ratio(stats["statuses"]["timed_out"], total),
         }
         if stats["classification"]:
             platform_metrics["classification"] = _binary_metrics(stats["classification"])

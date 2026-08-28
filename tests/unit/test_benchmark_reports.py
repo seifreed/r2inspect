@@ -94,9 +94,12 @@ def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) ->
 
     assert result["analyzer_metrics"]["detector"]["latency_seconds"]["median"] == 0.25
     assert result["analyzer_metrics"]["detector"]["memory_mb"]["samples"] == 0
+    assert result["analyzer_metrics"]["detector"]["timeouts"] == 0
+    assert result["analyzers"]["timeouts"] == 0
     assert result["memory_mb"]["median"] == 12.5
     assert result["environment"] == {"platforms": {"linux": 1}, "radare2_versions": {"6.1.8": 1}}
     assert result["platform_metrics"]["linux"]["memory_mb"]["median"] == 12.5
+    assert result["platform_metrics"]["linux"]["timeouts"] == 0
     assert result["differential"]["changed_cases"] == []
     assert result["corpus_kind"] == "real_labeled"
     assert result["provenance"]["dataset_version"] == "v1"
