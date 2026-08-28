@@ -5,7 +5,7 @@ from __future__ import annotations
 import signal
 import threading
 import stat as stat_module
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +43,9 @@ def compile_sources_with_timeout(
     timeout_seconds: int,
     timeout_handler: Any,
     logger: Any,
+    *,
+    timeout_exception: type[BaseException] | None = None,
+    on_timeout: Callable[[], None] | None = None,
 ) -> Any | None:
     signal_api: Any = signal
     sigalrm = getattr(signal_api, "SIGALRM", None)
@@ -62,6 +65,11 @@ def compile_sources_with_timeout(
         logger.error("YARA syntax error: %s", exc)
         return None
     except Exception as exc:
+        if timeout_exception is not None and isinstance(exc, timeout_exception):
+            if on_timeout is not None:
+                on_timeout()
+            logger.error("YARA compilation timed out: %s", exc)
+            return None
         logger.error("YARA compilation error: %s", exc)
         return None
 

@@ -10,8 +10,6 @@ import pytest
 
 import r2inspect.modules.yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import (
-    YARA_COMPILE_TIMEOUT,
-    YARA_MAX_RULE_SIZE,
     TimeoutException,
     YaraAnalyzer,
     timeout_handler,
@@ -814,7 +812,6 @@ def test_compile_rules_yara_none(tmp_path):
 
 def test_collect_rules_sources_neither_file_nor_dir():
     """Cover lines 171-172: path that is neither file nor directory."""
-    from pathlib import Path
     from r2inspect.security.validators import FileValidator
 
     config = FakeConfig("/tmp/rules")
@@ -901,6 +898,7 @@ def test_compile_sources_timeout_exception():
         analyzer = YaraAnalyzer(FakeAdapter(), config=config)
         result = analyzer._compile_sources_with_timeout({"test": SIMPLE_YARA_RULE})
         assert result is None
+        assert analyzer.last_status == "timed_out"
     finally:
         real_yara.compile = original_compile
 
@@ -1008,8 +1006,6 @@ def test_scan_no_rules_cache_miss(tmp_path):
 
 def test_read_rule_content_validate_path_raises_value_error(tmp_path):
     """Cover lines 213-214: ValueError from validate_path in _read_rule_content."""
-    from r2inspect.security.validators import FileValidator
-
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
 

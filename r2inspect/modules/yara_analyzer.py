@@ -96,6 +96,8 @@ class YaraAnalyzer(CommandHelperMixin):
 
             rules = self._get_cached_rules(rules_path)
             if not rules:
+                if self.last_status == "timed_out":
+                    return matches
                 self.last_status = "failed"
                 self.last_error = "YARA rules could not be compiled"
                 return matches
@@ -264,7 +266,13 @@ class YaraAnalyzer(CommandHelperMixin):
             YARA_COMPILE_TIMEOUT,
             timeout_handler,
             logger,
+            timeout_exception=TimeoutException,
+            on_timeout=lambda: self._set_compile_timeout(),
         )
+
+    def _set_compile_timeout(self) -> None:
+        self.last_status = "timed_out"
+        self.last_error = "YARA compilation timed out"
 
     def _process_matches(self, yara_matches: list[Any]) -> list[dict[str, Any]]:
         return process_matches(yara_matches, logger)
