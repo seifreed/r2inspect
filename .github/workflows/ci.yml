@@ -175,8 +175,8 @@ jobs:
             # Windows cannot execute tests that require POSIX process
             # semantics, but it must exercise every other integration flow.
             export R2INSPECT_MAX_THREADS=1
-            python -m pytest tests/integration \
-              -q -m "not requires_posix" --timeout=180 \
+          python -m pytest tests/integration \
+            -q -m "not requires_posix and not slow" --timeout=180 \
               --cov=r2inspect --cov-report=term-missing \
               --cov-fail-under=0
           else

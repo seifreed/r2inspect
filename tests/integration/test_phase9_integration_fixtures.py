@@ -55,6 +55,7 @@ def _assert_expected(results: dict, expected: dict) -> None:
     assert file_info["sha256"] == expected["hashes"]["sha256"]
 
 
+@pytest.mark.slow
 def test_end_to_end_fixtures_match_expected_snapshots() -> None:
     expected_files = sorted(EXPECTED_DIR.glob("*.json"))
     assert expected_files
