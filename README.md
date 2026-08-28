@@ -171,7 +171,6 @@ and [analyzer SDK](docs/analyzer-sdk.md) documentation for extension details.
 - [Security policy](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
-- [Roadmap](ROADMAP.md)
 
 ---
 
