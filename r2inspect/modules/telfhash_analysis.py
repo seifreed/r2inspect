@@ -27,6 +27,16 @@ class TelfhashHost(Protocol):
     def _normalize_telfhash_value(self, value: Any) -> str | None: ...
 
 
+def _magic_rules_out_elf(file_path: Path) -> bool:
+    """Return whether an existing file is definitively not ELF by magic."""
+    if not file_path.exists():
+        return False
+    try:
+        return file_path.read_bytes()[:4] != b"\x7fELF"
+    except OSError:
+        return True
+
+
 def _telfhash_from_result(telfhash_result: Any, analyzer: TelfhashHost) -> tuple[str | None, Any]:
     """Return (telfhash_value, error_msg) from a telfhash() return value."""
     if isinstance(telfhash_result, list) and telfhash_result:
