@@ -148,6 +148,17 @@ def test_entropy_results_ignores_non_dict_summary():
     assert result["is_packed"] is False
 
 
+def test_scorer_ignores_malformed_evidence_shapes():
+    scorer = PackerEvidenceScorer()
+    scorer.add_entropy_results({"summary": {"high_entropy_sections": "2"}})
+    scorer.add_section_results({"suspicious_sections": "not-a-list"})
+
+    result = scorer.verdict()
+
+    assert result["is_packed"] is False
+    assert result["indicators"] == ["No packing indicators found"]
+
+
 def test_add_signature_ignores_incomplete_signature():
     scorer = PackerEvidenceScorer()
     scorer.add_signature({"signature": "UPX!"})
