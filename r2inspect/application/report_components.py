@@ -126,11 +126,15 @@ def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
             if analyzer_id in existing or not isinstance(value, dict):
                 continue
             error = value.get("error")
+            duration = value.get("duration", 0.0)
+            metrics = value.get("metrics", {})
             outcomes.append(
                 AnalyzerOutcomeV1(
                     analyzer_id=str(analyzer_id),
                     status=_status(value),
+                    duration=float(duration) if isinstance(duration, int | float) else 0.0,
                     error=str(error) if error else None,
+                    metrics=metrics if isinstance(metrics, dict) else {},
                 )
             )
     return outcomes

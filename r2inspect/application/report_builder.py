@@ -10,6 +10,7 @@ from uuid import uuid4
 from pydantic_core import to_jsonable_python
 
 from ..__version__ import __version__
+from ..domain.results import TypedAnalyzerResult
 from ..schemas.report_v1 import (
     AnalysisMetadataV1,
     FormatCommonV1,
@@ -71,7 +72,30 @@ def build_report_v1(
     radare2_version: str | None = None,
 ) -> ReportV1:
     """Build a strict report/v1 envelope while preserving legacy details in extras."""
-    raw = cast(dict[str, Any], to_jsonable_python(_json_safe(result.to_dict())))
+    raw_result = result.to_dict()
+    typed_status: dict[str, dict[str, Any]] = {}
+    for analyzer_id, value in raw_result.items():
+        if not isinstance(value, TypedAnalyzerResult):
+            continue
+        status: dict[str, Any] = {"status": value.status}
+        if value.error:
+            status["error"] = value.error
+        duration = value.get("execution_time")
+        if isinstance(duration, int | float) and not isinstance(duration, bool):
+            status["duration"] = float(duration)
+        metrics: dict[str, Any] = {}
+        detected = value.get("detected")
+        if isinstance(detected, bool):
+            metrics["detected"] = detected
+        if metrics:
+            status["metrics"] = metrics
+        typed_status[analyzer_id] = status
+    raw = cast(dict[str, Any], to_jsonable_python(_json_safe(raw_result)))
+    if typed_status:
+        existing_status = raw.get("_analyzer_status")
+        sidecar = dict(existing_status) if isinstance(existing_status, dict) else {}
+        sidecar.update(typed_status)
+        raw["_analyzer_status"] = sidecar
     file_info = result.file_info
     hashes = {
         name: value

@@ -8,6 +8,7 @@ import pytest
 from pydantic_core import PydanticSerializationError
 
 from r2inspect.application.report_builder import build_report_v1
+from r2inspect.domain.results import TypedAnalyzerResult
 from r2inspect.application.result_mapper import build_analysis_result
 from r2inspect.schemas.report_v1 import AnalyzerStatus, ReportV1
 
@@ -79,6 +80,26 @@ def test_build_report_v1_distinguishes_not_detected_from_unavailable() -> None:
         AnalyzerStatus.NOT_DETECTED,
         AnalyzerStatus.DEPENDENCY_UNAVAILABLE,
     ]
+
+
+def test_build_report_v1_preserves_typed_analyzer_metadata() -> None:
+    result = build_analysis_result(
+        {
+            "file_info": {"file_type": "PE"},
+            "packer": TypedAnalyzerResult(
+                {"detected": True, "execution_time": 0.25},
+                analyzer_id="packer_detector",
+                status="completed",
+            ),
+        }
+    )
+
+    report = build_report_v1(result, analysis_id="typed-metadata")
+
+    outcome = next(item for item in report.analyzers if item.analyzer_id == "packer")
+    assert outcome.status is AnalyzerStatus.COMPLETED
+    assert outcome.duration == 0.25
+    assert outcome.metrics == {"detected": True}
 
 
 def test_build_report_v1_rejects_unknown_legacy_objects() -> None:
