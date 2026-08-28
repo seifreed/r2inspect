@@ -15,6 +15,23 @@ from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
 
 
+def _windows_available_bytes(pipe: Any) -> int | None:
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        import msvcrt
+
+        available = ctypes.c_ulong()
+        handle = msvcrt.get_osfhandle(pipe.process.stdout.fileno())  # type: ignore[attr-defined]
+        ok = ctypes.windll.kernel32.PeekNamedPipe(  # type: ignore[attr-defined]
+            ctypes.c_void_p(handle), None, 0, None, ctypes.byref(available), None
+        )
+        return int(available.value) if ok else None
+    except (AttributeError, OSError, TypeError, ValueError):
+        return None
+
+
 def _windows_cmd_process(pipe: Any, command: str) -> str:
     """Read Windows r2pipe responses without waiting for a 4096-byte buffer."""
     lock = getattr(pipe, "_cmd_lock", None)
@@ -29,36 +46,49 @@ def _windows_cmd_process(pipe: Any, command: str) -> str:
         first_byte = True
         while True:
             if pending:
-                byte, pending = pending[:1], pending[1:]
+                chunk, pending = pending, b""
             else:
-                byte = pipe.process.stdout.read(1)
-            if not byte:
+                available = _windows_available_bytes(pipe)
+                if available is None:
+                    byte = pipe.process.stdout.read(1)
+                    if not byte:
+                        if pipe.process.poll() is not None:
+                            raise RuntimeError(f"Process terminated while running {command}")
+                        continue
+                    if first_byte and byte == b"\x00":
+                        first_byte = False
+                        continue
+                    first_byte = False
+                    if byte == b"\x00":
+                        return output.decode("utf-8", errors="ignore")
+                    output.extend(byte)
+                    continue
+                elif available:
+                    chunk = pipe.process.stdout.read(available)
+                else:
+                    chunk = b""
+            if not chunk:
                 if pipe.process.poll() is not None:
                     raise RuntimeError(f"Process terminated while running {command}")
+                time.sleep(0.001)
                 continue
-            # The Windows r2pipe transport leaves one startup/frame NUL in
-            # front of the first response; its block reader strips it before
-            # searching for the terminating NUL.
-            if first_byte and byte == b"\x00":
+            if first_byte and chunk.startswith(b"\x00"):
                 first_byte = False
-                continue
+                chunk = chunk[1:]
+                if not chunk:
+                    return ""
             first_byte = False
-            if byte == b"\x00":
-                pipe.pending = pending
+            terminator = chunk.find(b"\x00")
+            if terminator >= 0:
+                output.extend(chunk[:terminator])
+                pipe.pending = chunk[terminator + 1 :]
                 return output.decode("utf-8", errors="ignore")
-            output.extend(byte)
+            output.extend(chunk)
 
 
 def _configure_windows_pipe(r2: Any) -> None:
-    """Make r2pipe's Windows reader return available bytes immediately."""
+    """Use the bounded Windows reader around r2pipe's blocking implementation."""
     if os.name == "nt" and hasattr(r2, "process") and hasattr(r2, "_cmd"):
-        make_non_blocking = getattr(type(r2), "_open__make_non_blocking", None)
-        if callable(make_non_blocking):
-            try:
-                make_non_blocking(r2.process.stdout.fileno())
-                return
-            except (AttributeError, OSError):
-                pass
         r2._cmd = MethodType(_windows_cmd_process, r2)
 
 
