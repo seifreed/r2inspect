@@ -90,6 +90,7 @@ def test_build_report_v1_preserves_typed_analyzer_metadata() -> None:
                 {"detected": True, "execution_time": 0.25},
                 analyzer_id="packer_detector",
                 status="completed",
+                metrics={"process_memory_after_mb": 100.0},
             ),
         }
     )
@@ -99,7 +100,7 @@ def test_build_report_v1_preserves_typed_analyzer_metadata() -> None:
     outcome = next(item for item in report.analyzers if item.analyzer_id == "packer")
     assert outcome.status is AnalyzerStatus.COMPLETED
     assert outcome.duration == 0.25
-    assert outcome.metrics == {"detected": True}
+    assert outcome.metrics == {"detected": True, "process_memory_after_mb": 100.0}
 
 
 def test_build_report_v1_rejects_unknown_legacy_objects() -> None:

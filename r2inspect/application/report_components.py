@@ -94,13 +94,15 @@ def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
             except ValueError:
                 typed_status = _status(value)
             duration = value.get("execution_time", 0.0)
+            metrics = dict(value.metrics)
+            metrics.update(outcome_metrics(value))
             outcomes.append(
                 AnalyzerOutcomeV1(
                     analyzer_id=analyzer_id,
                     status=typed_status,
                     duration=float(duration) if isinstance(duration, int | float) else 0.0,
                     error=error,
-                    metrics=outcome_metrics(value),
+                    metrics=metrics,
                 )
             )
             continue
@@ -121,13 +123,18 @@ def analyzer_outcomes(raw: dict[str, Any]) -> list[AnalyzerOutcomeV1]:
         )
     sidecar = raw.get("_analyzer_status")
     if isinstance(sidecar, dict):
-        existing = {outcome.analyzer_id for outcome in outcomes}
+        existing = {outcome.analyzer_id: outcome for outcome in outcomes}
         for analyzer_id, value in sorted(sidecar.items()):
-            if analyzer_id in existing or not isinstance(value, dict):
+            if not isinstance(value, dict):
                 continue
             error = value.get("error")
             duration = value.get("duration", 0.0)
             metrics = value.get("metrics", {})
+            if analyzer_id in existing:
+                outcome = existing[analyzer_id]
+                if isinstance(metrics, dict):
+                    outcome.metrics.update(metrics)
+                continue
             outcomes.append(
                 AnalyzerOutcomeV1(
                     analyzer_id=str(analyzer_id),
