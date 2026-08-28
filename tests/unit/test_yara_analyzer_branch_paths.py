@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
-from pathlib import Path
-
 import pytest
 
-import r2inspect.modules.yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import (
     YARA_MATCH_TIMEOUT,
     YARA_MAX_RULE_SIZE,
@@ -19,10 +14,10 @@ from r2inspect.security.validators import FileValidator
 
 try:
     import yara as _yara_lib
-
-    YARA_AVAILABLE = True
 except Exception:
-    YARA_AVAILABLE = False
+    _yara_lib = None
+
+YARA_AVAILABLE = _yara_lib is not None
 
 pytestmark = pytest.mark.skipif(not YARA_AVAILABLE, reason="python-yara not installed")
 
@@ -115,11 +110,36 @@ def test_scan_passes_match_timeout(tmp_path):
         def _get_cached_rules(self, rules_path):
             return recording
 
-    analyzer = _RecordingAnalyzer(FakeAdapter(), config=FakeConfig(str(tmp_path)), filepath=str(sample))
+    analyzer = _RecordingAnalyzer(
+        FakeAdapter(), config=FakeConfig(str(tmp_path)), filepath=str(sample)
+    )
     result = analyzer.scan()
 
     assert recording.timeout == YARA_MATCH_TIMEOUT
     assert result == []
+
+
+def test_scan_marks_match_timeout_explicitly(tmp_path):
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"hello world binary content")
+
+    class _TimeoutRules:
+        def match(self, file_path: str, timeout: object = None) -> list:
+            raise TimeoutError("match timeout")
+
+    class _TimeoutAnalyzer(YaraAnalyzer):
+        def _resolve_rules_path(self, custom_rules_path=None):
+            return str(tmp_path)
+
+        def _get_cached_rules(self, rules_path):
+            return _TimeoutRules()
+
+    analyzer = _TimeoutAnalyzer(
+        FakeAdapter(), config=FakeConfig(str(tmp_path)), filepath=str(sample)
+    )
+
+    assert analyzer.scan() == []
+    assert analyzer.last_status == "timed_out"
 
 
 def test_scan_returns_empty_for_no_match(tmp_path):
@@ -576,7 +596,7 @@ def test_process_matches_normalizes_iterable_matches(tmp_path):
     compiled = _yara.compile(source=SIMPLE_RULE)
     raw_matches = compiled.match(str(sample))
 
-    result = analyzer._process_matches((match for match in raw_matches))
+    result = analyzer._process_matches(match for match in raw_matches)
 
     assert isinstance(result, list)
     assert len(result) >= 1

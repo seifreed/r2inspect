@@ -30,6 +30,10 @@ logger = get_logger(__name__)
 YARA_COMPILE_TIMEOUT = 30  # seconds
 YARA_MATCH_TIMEOUT = 60
 YARA_MAX_RULE_SIZE = 10 * 1024 * 1024  # 10MB per rule file
+YARA_TIMEOUT_ERRORS = (
+    TimeoutError,
+    getattr(yara, "TimeoutError", TimeoutError),
+)
 
 
 class TimeoutException(Exception):
@@ -99,6 +103,10 @@ class YaraAnalyzer(CommandHelperMixin):
             yara_matches = rules.match(file_path, timeout=YARA_MATCH_TIMEOUT)
             matches = self._process_matches(yara_matches)
 
+        except YARA_TIMEOUT_ERRORS as e:
+            logger.error("YARA scan timed out: %s", e)
+            self.last_status = "timed_out"
+            self.last_error = str(e)
         except Exception as e:
             logger.error("Error in YARA scan: %s", e)
             self.last_status = "failed"
