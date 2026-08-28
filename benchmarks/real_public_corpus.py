@@ -136,9 +136,9 @@ _SAMPLES = (
         "fixtures",
     ),
     (
-        "edge_packed_benign",
+        "edge_packed_unknown",
         "edge/edge_packed.bin",
-        "benign",
+        "unknown",
         "aa91ef5653e4c6782ec48e0dec950e8e30cd5ca04c55feeb2ceb2c3ad175fee6",
         "fixtures",
     ),

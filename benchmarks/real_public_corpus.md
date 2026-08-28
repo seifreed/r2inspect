@@ -6,8 +6,9 @@ and [`r2inspect-test-binaries`](https://github.com/seifreed/r2inspect-test-binar
 commits without checking samples into this repository. Eight samples are the
 book's Practical Malware Analysis lab specimens and are labeled `malware`; the
 two `kernel32` fixtures, `microsocks` upstream ELF, four independently maintained
-hello-world fixtures, and two edge fixtures are labeled `benign`. The malformed
-and tiny edge fixtures are retained as `unknown` robustness cases. Every download
+hello-world fixtures, and the high-entropy edge fixture are labeled `benign`. The
+synthetic packed edge fixture, malformed edge fixture, and tiny edge fixture are
+retained as `unknown` robustness/calibration cases. Every download
 is checked against a SHA-256 listed in the generated manifest.
 
 Run the corpus with specialist differential tools. FLOSS is invoked in bounded
@@ -33,9 +34,10 @@ system DLLs; unknown labels are excluded from the denominator. The class score i
 evidence, not a claim that a static finding alone proves maliciousness. The
 previous 15-sample evidence snapshot scores 1.0 precision, 1.0 recall, and
 0.0 FPR; see docs/benchmark-real-public-2026-08-26.json. A fresh 19-case local
-run on macOS ARM64 with radare2 6.2.0 scores the same calibrated classification
-metrics (8 true positives, 9 true negatives, 0 false positives, 0 false
-negatives), with 119 completed and 8 failed analyzer outcomes. The generated
+run on macOS ARM64 with radare2 6.2.0 scores 1.0 precision, 1.0 recall, and
+0.0 FPR for calibrated classification (8 true positives, 8 true negatives, 0
+false positives, 0 false negatives, and 3 unknown cases), with 119 completed
+and 8 failed analyzer outcomes. The generated
 `metrics.json` keeps those per-analyzer statuses, latency, memory, and platform
 metrics; the failures remain visible instead of being counted as clean results.
 The aggregate finding score is intentionally not treated as detector precision:
