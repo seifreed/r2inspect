@@ -105,6 +105,39 @@ def test_evaluate_reports_exposes_dimensions_and_differential(tmp_path: Path) ->
     assert result["provenance"]["dataset_version"] == "v1"
 
 
+def test_evaluate_reports_keeps_platform_comparison_dimensions(tmp_path: Path) -> None:
+    report = build_report_v1(
+        build_analysis_result(
+            {
+                "file_info": {"file_type": "ELF"},
+                "detector": {"available": True, "detected": False, "execution_time": 0.25},
+                "execution_time": 1.0,
+                "memory_stats": {"peak_memory_mb": 12.5},
+            }
+        ),
+        analysis_id="cross-platform",
+        radare2_version="6.1.8",
+    )
+    (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
+    (tmp_path / "manifest.json").write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {"id": "linux", "report": "report.json", "platform": "linux"},
+                    {"id": "windows", "report": "report.json", "platform": "windows"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = evaluate(tmp_path / "manifest.json")
+
+    assert set(result["platform_metrics"]) == {"linux", "windows"}
+    assert result["platform_metrics"]["linux"]["memory_mb"]["median"] == 12.5
+    assert result["platform_metrics"]["windows"]["timeouts"] == 0
+
+
 def test_evaluate_reports_scores_declared_real_classification(tmp_path: Path) -> None:
     report = build_report_v1(
         build_analysis_result(
