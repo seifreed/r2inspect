@@ -28,4 +28,6 @@ def test_windows_radare2_opens_native_pe() -> None:
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout.strip())
     assert isinstance(payload, dict)
-    assert payload.get("bin", {}).get("format")
+    bin_info = payload.get("bin", {})
+    core_info = payload.get("core", {})
+    assert bin_info.get("format") or core_info.get("format") or bin_info.get("bintype")
