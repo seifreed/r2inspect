@@ -47,6 +47,8 @@ Versioning and keeps unreleased work at the top.
   sandbox prefix and recorded executable, version, binary, and rules provenance.
 - Corrected SARIF file/virtual address semantics and added official SARIF, STIX,
   and PyMISP validation for deterministic exporter fixtures.
+- Added a plugin conformance command for declarative metadata, runtime
+  construction, and optional sample execution checks.
 
 ## 3.0.0
 

@@ -43,6 +43,18 @@ Constructors must accept the runtime dependencies used by the analyzer factory:
 sessions or perform analysis at import time. Return JSON-compatible values and
 preserve extraction errors as explicit unavailable/failed results.
 
+Run the conformance suite against a class or installed entry point before
+publishing a plugin:
+
+```bash
+r2inspect-plugin-check vendor_plugin:ExampleAnalyzer
+r2inspect-plugin-check example --sample ./fixture.exe
+```
+
+The second form constructs the analyzer through the production factory, runs it
+against the sample, and rejects non-mapping or non-JSON output. The command emits
+`r2inspect.plugin-conformance/v1` JSON and exits non-zero on any failed check.
+
 ## Independent backends
 
 Backend packages can expose an independent implementation through the
