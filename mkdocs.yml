@@ -22,6 +22,7 @@ nav:
   - Architecture: architecture.md
   - Report Contract: output-schema.md
   - Reporting Workflows: reporting.md
+  - REST API and Worker: api.md
   - Analyzer SDK: analyzer-sdk.md
   - Detection Methodology: detection-methodology.md
   - Benchmarks: benchmark.md

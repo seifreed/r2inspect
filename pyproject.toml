@@ -126,6 +126,8 @@ r2inspect-rules-verify = "r2inspect.application.rule_packs:verify_main"
 r2inspect-cluster = "r2inspect.application.clustering:cluster_main"
 r2inspect-consensus = "r2inspect.backends.cli:consensus_main"
 r2inspect-plugin-check = "r2inspect.application.plugin_conformance:main"
+r2inspect-api = "r2inspect.application.api:main"
+r2inspect-worker = "r2inspect.application.worker:main"
 
 [tool.setuptools]
 include-package-data = true
