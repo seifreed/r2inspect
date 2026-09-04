@@ -13,7 +13,7 @@ import time
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import psutil
 
@@ -98,7 +98,7 @@ def _terminate(process: subprocess.Popen[Any]) -> None:
             )
     else:
         with contextlib.suppress(ProcessLookupError):
-            getattr(os, "killpg")(process.pid, getattr(signal, "SIGKILL"))
+            cast(Any, os).killpg(process.pid, cast(Any, signal).SIGKILL)
     with contextlib.suppress(ProcessLookupError):
         process.kill()
     with contextlib.suppress(subprocess.TimeoutExpired):
