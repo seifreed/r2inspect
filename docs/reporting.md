@@ -20,6 +20,12 @@ r2inspect-cluster reports/*.json --threshold 0.5
 r2inspect-rules-verify ./rule-pack --public-key analyst-ed25519.pub
 ```
 
+Use `r2inspect --backend consensus --consensus-backend pe-core sample.exe` (or
+the matching ELF/Mach-O core backend) to retain typed field-level disagreements
+between radare2 and the independent parser. Rule packs are managed with
+`r2inspect rules build|sign|verify|install|list|update`; see the analyzer SDK for
+the signed-pack contract.
+
 The exports are deterministic projections of the report contract. They do not
 claim that a finding is malicious; consumers should preserve the source
 analyzer, confidence, evidence, and report provenance. Explanations include

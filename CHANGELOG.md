@@ -16,7 +16,7 @@ Versioning and keeps unreleased work at the top.
 - Corrected analyzer plugin category discovery and packer import error handling.
 - Added explicit POSIX test markers and portable Windows resource checks.
 - Added project architecture, output, SDK, methodology, limitation, benchmark,
-  threat model, security, contribution, and roadmap documentation.
+  threat model, security, and contribution documentation.
 - Added the strict `r2inspect.report/v1` schema and envelope for CLI and batch
   JSON, including normalized format/security fields and analyzer outcomes.
 - Populated report provenance from the running Git checkout and radare2 binary,

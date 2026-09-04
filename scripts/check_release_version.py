@@ -12,16 +12,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _module_version(path: Path) -> str:
+def _module_uses_package_metadata(path: Path) -> bool:
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    for node in tree.body:
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
-            continue
-        if any(
-            isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets
-        ):
-            return str(node.value.value)
-    raise ValueError(f"{path} does not declare __version__")
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "version"
+        and len(node.args) == 1
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == "r2inspect"
+        for node in ast.walk(tree)
+    )
 
 
 def _report_uses_module_version(path: Path) -> bool:
@@ -48,7 +49,11 @@ def declared_versions(root: Path = ROOT) -> dict[str, str]:
         raise ValueError("Dockerfile does not declare R2INSPECT_VERSION")
     if 'LABEL org.opencontainers.image.version="${R2INSPECT_VERSION}"' not in dockerfile:
         raise ValueError("Dockerfile does not expose the r2inspect version label")
-    module = _module_version(root / "r2inspect" / "__version__.py")
+    module = (
+        str(project["version"])
+        if _module_uses_package_metadata(root / "r2inspect" / "__version__.py")
+        else "unwired"
+    )
     report = (
         module
         if _report_uses_module_version(root / "r2inspect" / "application" / "report_builder.py")
