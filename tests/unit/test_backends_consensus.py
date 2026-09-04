@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal, Self
 
+import pytest
+
 from r2inspect.backends.consensus import ConsensusInspector, compare_results
 from r2inspect.backends.core_backend import CoreBackendInspector
 from r2inspect.backends.registry import available_backends
@@ -17,6 +19,34 @@ def test_core_backend_provides_independent_format_metadata(tmp_path: Path) -> No
     assert result["format_detection"]["file_format"] == "ELF"
     assert result["file_info"]["sha256"]
     assert isinstance(CoreBackendInspector(str(sample), "elf-core"), BinaryInspector)
+
+
+def test_pe_core_parses_real_structure() -> None:
+    sample = Path("samples/fixtures/hello_pe.exe")
+    if not sample.exists():
+        pytest.skip("hello_pe.exe fixture missing")
+
+    result = CoreBackendInspector(str(sample), "pe-core").analyze()
+
+    assert "error" not in result
+    assert result["file_info"]["architecture"] == "x86_64"
+    assert result["pe_info"]["entry_point"] == 0x140001400
+    assert len(result["sections"]) == 18
+    assert any(item.get("name") == "Sleep" for item in result["imports"])
+    assert result["security"]["aslr"] is True
+    assert result["security"]["dep"] is True
+    assert result["pe_info"]["overlay"]["size"] > 0
+    assert result["pe_info"]["signature_status"] == "absent"
+
+
+def test_pe_core_reports_truncated_structure(tmp_path: Path) -> None:
+    sample = tmp_path / "truncated.exe"
+    sample.write_bytes(b"MZ" + b"\0" * 62)
+
+    result = CoreBackendInspector(str(sample), "pe-core").analyze()
+
+    assert result["status"] == "failed"
+    assert result["error"].startswith("invalid PE structure:")
 
 
 def test_consensus_marks_backend_disagreements() -> None:

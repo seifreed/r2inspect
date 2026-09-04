@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import mmap
 from pathlib import Path
 from typing import Any, Literal
+
+from .binary_view import BinaryView
+from .pe_core import parse_pe
 
 
 def _format(data: bytes) -> str:
@@ -33,21 +37,46 @@ class CoreBackendInspector:
 
     def analyze(self, **_options: Any) -> dict[str, Any]:
         path = Path(self.filename)
-        data = path.read_bytes()
-        detected = _format(data)
+        size = path.stat().st_size
+        parse_error: str | None = None
+        with path.open("rb") as stream:
+            sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
+            if size:
+                with mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
+                    detected = _format(data[:4])
+                    try:
+                        parsed = (
+                            parse_pe(BinaryView(data))
+                            if self.backend == "pe-core" and detected == "PE"
+                            else None
+                        )
+                    except ValueError as exc:
+                        parsed, parse_error = None, str(exc)
+            else:
+                detected, parsed = "UNKNOWN", None
         expected = {"pe-core": "PE", "elf-core": "ELF", "macho-core": "MACHO"}.get(self.backend)
         result: dict[str, Any] = {
             "backend": self.backend,
             "file_info": {
                 "path": str(path),
                 "name": path.name,
-                "size": len(data),
-                "sha256": hashlib.sha256(data).hexdigest(),
+                "size": size,
+                "sha256": sha256,
                 "file_type": detected,
             },
             "format_detection": {"file_format": detected, "backend": self.backend},
         }
-        if expected and detected not in {expected, "UNKNOWN"}:
+        if parsed is not None:
+            result["pe_info"] = parsed
+            for field in ("architecture", "bits", "endian"):
+                result["file_info"][field] = parsed[field]
+            for field in ("sections", "imports", "exports"):
+                result[field] = parsed[field]
+            result["security"] = parsed["security_features"]
+        if parse_error:
+            result["error"] = f"invalid {detected} structure: {parse_error}"
+            result["status"] = "failed"
+        elif expected and detected not in {expected, "UNKNOWN"}:
             result["error"] = f"unsupported format for {self.backend}: {detected}"
             result["status"] = "unsupported"
         return result
