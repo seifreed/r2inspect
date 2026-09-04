@@ -82,6 +82,7 @@ jobs:
             --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
           cat benchmark-results/dashboard.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publish benchmark artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: r2inspect-benchmark-${{ github.run_id }}
