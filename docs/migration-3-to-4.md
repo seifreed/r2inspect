@@ -36,3 +36,16 @@ Findings now carry stable `rule_id`, severity, confidence, source analyzer,
 method, evidence, locations, and ATT&CK/MBC mappings. Legacy
 `legacy.indicator.*` identifiers are not stable replacements for native rule
 IDs.
+
+## Removal in v5
+
+Version 4 is the complete compatibility window for `--legacy-json`. Version 5
+will remove that option and the unstable legacy payload preserved in `extras`.
+The typed `report/v1` and `batch/v1` contracts remain the migration targets;
+their schema identifiers change only if the wire contract itself breaks.
+
+Before the v5 removal, maintainers must keep the migration mapping above, the
+[schema-validating consumer example](https://github.com/seifreed/r2inspect/blob/main/examples/consume_report.py),
+the CLI deprecation message, and the report/batch schema compatibility tests in
+CI. Consumers should migrate during v4 and must not treat `extras` as a stable
+API.

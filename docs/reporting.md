@@ -42,3 +42,13 @@ analyzer, confidence, evidence, and report provenance. Explanations include
 the evidence, locations, and ready-to-run radare2 seek/disassembly commands.
 Rule packs use a versioned manifest, SHA-256 file hashes, and Ed25519
 signatures; updating a pack means replacing the verified directory atomically.
+
+The executable
+[report/v1 consumer example](https://github.com/seifreed/r2inspect/blob/main/examples/consume_report.py)
+loads the schema shipped in the installed package, validates a report, and
+reads analyzer statuses and finding evidence without using legacy fields:
+
+```bash
+python -m pip install r2inspect jsonschema
+python examples/consume_report.py report.json
+```
