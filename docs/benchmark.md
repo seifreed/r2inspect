@@ -52,7 +52,9 @@ history restored from the previous successful run, plus `dashboard.md`. The
 same dashboard is published in the GitHub Actions run summary. Clustering is
 calibrated separately against independently assigned related-sample labels in
 the real public corpus; its selected threshold and pairwise precision/recall
-are stored in `expanded-real-public-results/clustering.json`.
+are stored in `expanded-real-clustering-results/clustering.json`. The binary
+classification gate keeps its `fast` profile while clustering is calibrated
+from separate `standard` reports that include similarity hashes.
 
 The checked-in calibration uses 19 real public samples and 171 labeled pairs.
 At the default threshold `0.8875`, pairwise precision is 1.0, recall is 0.5,

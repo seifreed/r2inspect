@@ -48,7 +48,7 @@ jobs:
           python benchmarks/run_corpus.py \
             expanded-real-public-corpus/manifest.json \
             --corpus-dir expanded-real-public-corpus \
-            --output-dir expanded-real-public-results --profile standard
+            --output-dir expanded-real-public-results --profile fast
           python benchmarks/evaluate_reports.py \
             expanded-real-public-results/manifest.json \
             --output expanded-real-public-results/metrics.json \
@@ -56,9 +56,13 @@ jobs:
             --min-classification-recall 1.0 \
             --max-execution-failure-rate 0.01 \
             --max-dependency-unavailable-rate 0.0
+          python benchmarks/run_corpus.py \
+            expanded-real-public-corpus/manifest.json \
+            --corpus-dir expanded-real-public-corpus \
+            --output-dir expanded-real-clustering-results --profile standard
           python benchmarks/calibrate_clustering.py \
-            expanded-real-public-results/manifest.json \
-            --output expanded-real-public-results/clustering.json
+            expanded-real-clustering-results/manifest.json \
+            --output expanded-real-clustering-results/clustering.json
       - name: Restore and update benchmark history
         env:
           GH_TOKEN: ${{ github.token }}
@@ -74,7 +78,7 @@ jobs:
             --dashboard benchmark-results/dashboard.md \
             --metric public=benchmark-results/metrics.json \
             --metric real_public=expanded-real-public-results/metrics.json \
-            --clustering expanded-real-public-results/clustering.json \
+            --clustering expanded-real-clustering-results/clustering.json \
             --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
           cat benchmark-results/dashboard.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publish benchmark artifact
@@ -84,6 +88,7 @@ jobs:
           path: |
             benchmark-results/
             expanded-real-public-results/
+            expanded-real-clustering-results/
 
   private-corpus:
     runs-on: ubuntu-latest
@@ -142,7 +147,7 @@ jobs:
             --output private-benchmark-results/metrics.json \
             --min-precision 0.9 --min-recall 0.9
       - name: Publish aggregate private metrics
-        if: steps.config.outputs.enabled == 'true'
+        if: always() && steps.config.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: r2inspect-private-benchmark-${{ github.run_id }}
