@@ -45,10 +45,10 @@ preserve extraction errors as explicit unavailable/failed results.
 
 ## Independent backends
 
-Backend packages can expose an independent `*-core` implementation through the
+Backend packages can expose an independent implementation through the
 `r2inspect.backends` entry point group. The factory receives `filename` plus
-optional configuration and must return an object with `analyze(**options)` and
-`close()` methods:
+optional configuration and must return a `BinaryInspector`: `analyze`, `close`,
+`__enter__`, and `__exit__` are required and checked when the backend loads:
 
 ```toml
 [project.entry-points."r2inspect.backends"]
@@ -57,7 +57,10 @@ pe-core = "vendor_pe_core:create_backend"
 
 `r2inspect --backend consensus --consensus-backend pe-core sample.bin` runs
 radare2 and the independent backend and preserves field-level disagreements as
-`backend_disagreement` records instead of silently choosing a value.
+`backend_disagreement` records instead of silently choosing a value. Each record
+contains the canonical field path, both backend names and values, severity, and
+status. Built-in `pe-core`, `elf-core`, and `macho-core` implementations provide
+this independent structural view without radare2 or optional Python parsers.
 
 ## Optional engines
 

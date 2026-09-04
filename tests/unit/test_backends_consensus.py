@@ -177,5 +177,30 @@ def test_consensus_compares_structure_and_security() -> None:
     }
 
 
+def test_consensus_normalizes_backend_specific_shapes() -> None:
+    left = {
+        "format_detection": {"file_format": "PE"},
+        "file_info": {"architecture": "x86-64"},
+        "sections": [{"name": ".text", "virtual_address": 4096, "virtual_size": 512}],
+        "pe_info": {
+            "overlay": {"overlay_offset": 8192, "overlay_size": 16, "has_overlay": True},
+            "authenticode": {"has_signature": False},
+            "security_features": {"aslr": True},
+        },
+    }
+    right = {
+        "format_detection": {"file_format": "PE"},
+        "file_info": {"architecture": "x86_64"},
+        "sections": [{"name": ".text", "vaddr": 4096, "size": 512}],
+        "pe_info": {
+            "overlay": {"offset": 8192, "size": 16},
+            "signature_status": "absent",
+            "security_features": {"aslr": True},
+        },
+    }
+
+    assert compare_results(left, right) == []
+
+
 def test_builtin_backends_are_discoverable() -> None:
     assert {"r2", "pe-core", "elf-core", "macho-core", "consensus"}.issubset(available_backends())

@@ -35,6 +35,8 @@ Versioning and keeps unreleased work at the top.
 - Added analyzer-owned findings with stable rule IDs, evidence, locations, and
   ATT&CK/MBC mappings for packer, anti-analysis, YARA, and correlated behavior.
 - Added the deprecated `--legacy-json` compatibility option for migration from 3.x.
+- Replaced the minimal core format detectors with bounded PE, ELF, and Mach-O
+  parsers and added typed, normalized backend consensus discrepancies.
 
 ## 3.0.0
 

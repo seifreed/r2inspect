@@ -6,8 +6,9 @@
   representative corpus.
 - `r2inspect.report/v1` preserves analyzer-specific legacy data in `extras`;
   that compatibility object is not a stable sub-schema.
-- radare2 is the production extraction backend. Its parsing and analysis errors
-  can make downstream results incomplete.
+- radare2 is the default full-analysis backend. The core backends independently
+  parse structure and mitigations but do not disassemble code or run behavioral
+  detectors. Parsing errors from either backend can make results incomplete.
 - PE, ELF, and Mach-O analyzers expose different format-specific detail; common
   mitigation normalization is still in progress.
 - Optional YARA and similarity dependencies may be unavailable on a platform.

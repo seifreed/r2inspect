@@ -52,6 +52,22 @@ def _named_items(value: Any) -> tuple[str, ...] | object:
     return tuple(sorted(names))
 
 
+def _architecture(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    normalized = value.lower().replace("-", "_")
+    return {"amd_64": "x86_64", "amd64": "x86_64"}.get(normalized, normalized)
+
+
+def _overlay(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+    return {
+        "offset": value.get("offset", value.get("overlay_offset")),
+        "size": value.get("size", value.get("overlay_size")),
+    }
+
+
 def _consensus_view(result: dict[str, Any]) -> dict[str, Any]:
     view: dict[str, Any] = {}
     aliases = {
@@ -81,7 +97,7 @@ def _consensus_view(result: dict[str, Any]) -> dict[str, Any]:
     for field, paths in aliases.items():
         value = _pick(result, *paths)
         if value is not _MISSING:
-            view[field] = value
+            view[field] = _architecture(value) if field.endswith("architecture") else value
 
     format_name = str(view.get("format.common.format", "")).lower()
     family = next(
@@ -89,10 +105,24 @@ def _consensus_view(result: dict[str, Any]) -> dict[str, Any]:
         "common",
     )
     prefix = f"format.{family}"
-    for name in ("entry_point", "image_base", "overlay", "signature_status", "build_id", "uuid"):
+    for name in ("entry_point", "image_base", "build_id", "uuid"):
         value = _pick(result, (name,), ("file_info", name), (f"{family}_info", name))
         if value is not _MISSING:
             view[f"{prefix}.{name}"] = value
+    overlay = _pick(result, ("overlay",), (f"{family}_info", "overlay"))
+    if overlay is not _MISSING:
+        view[f"{prefix}.overlay"] = _overlay(overlay)
+    signature = _pick(
+        result,
+        ("signature_status",),
+        (f"{family}_info", "signature_status"),
+        (f"{family}_info", "authenticode", "has_signature"),
+        ("authenticode", "has_signature"),
+    )
+    if signature is not _MISSING:
+        view[f"{prefix}.signature_status"] = (
+            ("present" if signature else "absent") if isinstance(signature, bool) else signature
+        )
 
     sections = _pick(result, ("sections",), (f"{family}_info", "sections"))
     if isinstance(sections, list):
@@ -100,8 +130,8 @@ def _consensus_view(result: dict[str, Any]) -> dict[str, Any]:
         boundaries = [
             (
                 str(section.get("name", "")),
-                section.get("vaddr"),
-                section.get("size"),
+                section.get("vaddr", section.get("virtual_address")),
+                section.get("size", section.get("virtual_size")),
             )
             for section in sections
             if isinstance(section, dict)
@@ -111,7 +141,7 @@ def _consensus_view(result: dict[str, Any]) -> dict[str, Any]:
         value = _named_items(_pick(result, (name,), (f"{family}_info", name)))
         if value is not _MISSING:
             view[f"{prefix}.{name}"] = value
-    security = _pick(result, ("security",), (f"{family}_info", "security_features"))
+    security = _pick(result, (f"{family}_info", "security_features"), ("security",))
     if isinstance(security, dict):
         for name, value in security.items():
             view[f"security.{name}"] = value

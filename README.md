@@ -133,11 +133,17 @@ r2inspect --yara /path/to/rules malware.exe
 | `-v, --verbose`     | Verbose output                  |
 | `--quiet`           | Suppress non-critical output    |
 | `--profile`         | `fast`, `standard`, or `deep`   |
+| `--backend`         | `r2`, format core, or consensus |
+| `--consensus-backend` | Core backend used for consensus |
 | `--threads`         | Parallel threads for batch mode |
 
 `fast` limits analysis to format, metadata, security, and hashing stages;
 `standard` is the default detector set; `deep` additionally enables the
 deep-analysis option for analyzers that support it.
+
+Use `--backend pe-core`, `elf-core`, or `macho-core` for dependency-free
+structural parsing. `--backend consensus --consensus-backend pe-core` compares
+that independent result with radare2 and reports typed disagreements.
 
 ---
 
@@ -159,8 +165,10 @@ with create_inspector("malware.exe", config=config) as inspector:
 Use `create_inspector` to build a ready-to-run inspector with adapter, registry, and pipeline wiring. The core depends on interfaces; adapters provide r2pipe-backed data access, while analyzers focus on analysis and domain helpers.
 
 ```
-CLI -> create_inspector -> R2Inspector -> AnalysisPipeline -> analyzers
-                                      -> Adapter (r2pipe) -> radare2
+CLI -> create_inspector -> BinaryInspector
+                       -> R2Inspector -> AnalysisPipeline -> radare2
+                       -> CoreBackendInspector -> PE / ELF / Mach-O parser
+                       -> ConsensusInspector -> r2 + core discrepancies
 ```
 
 See the [architecture](docs/architecture.md), [output contract](docs/output-schema.md),
