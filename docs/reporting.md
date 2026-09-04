@@ -22,6 +22,14 @@ r2inspect-cluster --index similarity.sqlite3 --query SAMPLE_SHA256
 r2inspect-rules-verify ./rule-pack --public-key analyst-ed25519.pub
 ```
 
+Batch runs can persist successful results and resume after interruption. Cache
+entries are keyed by the sample SHA-256 and the effective analysis configuration:
+
+```bash
+r2inspect --batch samples/ -j --cache output/batch-cache.sqlite3
+r2inspect --batch samples/ -j --cache output/batch-cache.sqlite3 --resume
+```
+
 Use `r2inspect --backend consensus --consensus-backend pe-core sample.exe` (or
 the matching ELF/Mach-O core backend) to retain typed field-level disagreements
 between radare2 and the independent parser. Rule packs are managed with

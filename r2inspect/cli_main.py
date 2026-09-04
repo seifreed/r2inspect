@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """Click-based command-line entry point for r2inspect.
 Copyright (C) 2025 Marc Rivero López
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
-
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
@@ -67,6 +64,8 @@ class CLIArgs:
     backend: str = "r2"
     consensus_backend: str = "pe-core"
     legacy_json: bool = False
+    cache: str | None = None
+    resume: bool = False
 
 
 def main(
@@ -99,6 +98,8 @@ def main(
     help="Full output analysis in JSON format",
 )
 @click.option("--legacy-json", is_flag=True, help="Deprecated 3.x JSON (requires --json)")
+@click.option("--cache", type=click.Path(), help="SQLite cache for batch results")
+@click.option("--resume", is_flag=True, help="Reuse valid entries from --cache")
 @click.option("-c", "--csv", "output_csv", is_flag=True, help="Output analysis in CSV format")
 @click.option("-o", "--output", help="Output file path or directory for batch mode")
 @click.option("-x", "--xor", help="Search XORed string")

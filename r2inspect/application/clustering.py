@@ -175,6 +175,3 @@ def cluster_main() -> None:
     if not args.reports:
         raise SystemExit("at least one report is required")
     print(json.dumps(cluster_reports(args.reports, args.threshold), indent=2, sort_keys=True))
-
-
-__all__ = ["cluster_main", "cluster_reports", "index_reports", "query_index"]

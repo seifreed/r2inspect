@@ -14,6 +14,7 @@ from typing import Any
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
+from ..application.batch_cache import BatchCache
 from ..application.report_builder import report_payload_v1
 from ..application.use_cases import AnalyzeBinaryUseCase
 from ..factory import create_inspector
@@ -66,7 +67,10 @@ def process_single_file(
             config=config_obj,
             verbose=False,
         ) as inspector:
-            analysis_options = {**options, "batch_mode": True}
+            analysis_options = {
+                **{key: value for key, value in options.items() if not key.startswith("_batch_")},
+                "batch_mode": True,
+            }
             result = AnalyzeBinaryUseCase().run(inspector, analysis_options)
             results = result.to_dict()
             results["filename"] = str(file_path)
@@ -140,6 +144,25 @@ def process_files_parallel(
     results_lock = threading.Lock()
     progress_lock = threading.Lock()
     effective_threads = _cap_threads_for_execution(threads)
+    cache_path = options.get("_batch_cache")
+    cache = BatchCache(Path(cache_path), options, config_obj) if cache_path else None
+    pending_files = []
+    if cache is not None and options.get("_batch_resume"):
+        for file_path in files_to_process:
+            cached = cache.get(file_path)
+            report = cached.get("_batch_report") if cached else None
+            report_exists = (
+                isinstance(report, dict)
+                and isinstance(report.get("report_path"), str)
+                and (output_path / report["report_path"]).is_file()
+            )
+            if cached is None or (output_json and not report_exists):
+                pending_files.append(file_path)
+                continue
+            file_key = str(file_path)
+            all_results[file_key] = on_result(file_key, cached) if on_result else cached
+    else:
+        pending_files = files_to_process
 
     with Progress(
         TextColumn("[progress.description]{task.description}"),
@@ -148,8 +171,10 @@ def process_files_parallel(
         TimeRemainingColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Processing files...", total=len(files_to_process))
-        completed_count = 0
+        completed_count = len(files_to_process) - len(pending_files)
+        task = progress.add_task(
+            "Processing files...", total=len(files_to_process), completed=completed_count
+        )
 
         with ThreadPoolExecutor(max_workers=effective_threads) as executor:
             future_to_file = {
@@ -163,7 +188,7 @@ def process_files_parallel(
                     output_path,
                     rate_limiter,
                 ): file_path
-                for file_path in files_to_process
+                for file_path in pending_files
             }
 
             for future in as_completed(future_to_file):
@@ -193,6 +218,8 @@ def process_files_parallel(
                             logger.warning("Analysis produced no results for %s", file_path)
                             failed_files.append((str(file_path), "Empty results"))
                         else:
+                            if cache is not None:
+                                cache.put(file_path, results)
                             # Use full path as key to avoid collisions
                             # between files with the same basename in different dirs
                             file_key = str(file_path)

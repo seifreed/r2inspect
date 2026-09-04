@@ -22,8 +22,11 @@ class BatchCommand(Command):
         threads = args.get("threads", 10)
         extensions: str | None = args.get("extensions")
         output: str | None = args.get("output")
+        cache: str | None = args.get("cache")
 
         try:
+            if args.get("resume") and not cache:
+                raise ValueError("--resume requires --cache")
             apply_thread_settings(config, threads)
             recursive, auto_detect, output_dir = self._setup_batch_mode(
                 extensions,
@@ -38,6 +41,9 @@ class BatchCommand(Command):
                 profile=args.get("profile", "standard"),
             )
             analysis_options["legacy_json"] = args.get("legacy_json", False)
+            if cache:
+                analysis_options["_batch_cache"] = cache
+                analysis_options["_batch_resume"] = args.get("resume", False)
             request = BatchRunRequest(
                 batch_dir=batch_dir,
                 options=analysis_options,
