@@ -7,9 +7,6 @@ Coverage target: 100% (currently 17%)
 
 import csv
 import json
-from datetime import datetime
-from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -180,13 +177,12 @@ def test_create_json_batch_summary_structure(tmp_path):
     with open(summary_file) as f:
         data = json.load(f)
 
-    assert "batch_summary" in data
-    assert "results" in data
-    assert "failed_files" in data
-    assert "statistics" in data
-    assert data["batch_summary"]["total_files"] == 2
-    assert data["batch_summary"]["successful_analyses"] == 1
-    assert data["batch_summary"]["failed_analyses"] == 1
+    assert data["schema_version"] == "r2inspect.batch/v1"
+    assert "results" not in data
+    assert data["total"] == 2
+    assert data["completed"] == 1
+    assert data["failed"] == 1
+    assert data["reports"][0]["report_path"] == "file1.exe_analysis.json"
 
 
 def test_create_json_batch_summary_failed_files_structure(tmp_path):
@@ -201,9 +197,9 @@ def test_create_json_batch_summary_failed_files_structure(tmp_path):
     with open(summary_file) as f:
         data = json.load(f)
 
-    assert len(data["failed_files"]) == 2
-    assert data["failed_files"][0]["file"] == "file1.exe"
-    assert data["failed_files"][0]["error"] == "Error 1"
+    assert len(data["errors"]) == 2
+    assert data["errors"][0]["sample"] == "file1.exe"
+    assert data["errors"][0]["message"] == "Error 1"
 
 
 def test_find_files_by_extensions_single_extension(tmp_path):

@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "AnalyzerStatus": {
+      "enum": [
+        "completed",
+        "not_detected",
+        "not_applicable",
+        "unsupported",
+        "dependency_unavailable",
+        "skipped_by_profile",
+        "timed_out",
+        "failed"
+      ],
+      "title": "AnalyzerStatus",
+      "type": "string"
+    },
+    "BatchErrorV1": {
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "sample": {
+          "title": "Sample",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sample",
+        "message"
+      ],
+      "title": "BatchErrorV1",
+      "type": "object"
+    },
+    "BatchReportReferenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Analysis Id"
+        },
+        "report_path": {
+          "title": "Report Path",
+          "type": "string"
+        },
+        "sample": {
+          "title": "Sample",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "status": {
+          "$ref": "#/$defs/AnalyzerStatus"
+        }
+      },
+      "required": [
+        "sample",
+        "status",
+        "report_path"
+      ],
+      "title": "BatchReportReferenceV1",
+      "type": "object"
+    }
+  },
+  "$id": "https://r2inspect.dev/schemas/r2inspect.batch.v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "analysis_id": {
+      "title": "Analysis Id",
+      "type": "string"
+    },
+    "completed": {
+      "minimum": 0,
+      "title": "Completed",
+      "type": "integer"
+    },
+    "errors": {
+      "items": {
+        "$ref": "#/$defs/BatchErrorV1"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "failed": {
+      "minimum": 0,
+      "title": "Failed",
+      "type": "integer"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "profile": {
+      "title": "Profile",
+      "type": "string"
+    },
+    "reports": {
+      "items": {
+        "$ref": "#/$defs/BatchReportReferenceV1"
+      },
+      "title": "Reports",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "r2inspect.batch/v1",
+      "default": "r2inspect.batch/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "total": {
+      "minimum": 0,
+      "title": "Total",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "analysis_id",
+    "profile",
+    "generated_at",
+    "total",
+    "completed",
+    "failed"
+  ],
+  "title": "BatchV1",
+  "type": "object"
+}

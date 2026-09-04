@@ -1,9 +1,10 @@
 from __future__ import annotations
-from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
+import json
 from pathlib import Path
 
 import r2inspect.cli.batch_processing as batch_processing
+from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 from r2inspect.cli.batch_processing import (
     _is_executable_signature,
@@ -189,8 +190,12 @@ def test_batch_processing_support_helpers_cover_output_and_stats(tmp_path: Path,
         "20260131_000000",
     )
     assert summary_name.endswith("individual JSONs")
-    assert (output_dir / "sample.exe_analysis.json").exists()
-    assert (output_dir / "r2inspect_batch_20260131_000000.json").exists()
+    summary_path = output_dir / "r2inspect_batch_20260131_000000.json"
+    assert summary_path.exists()
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["schema_version"] == "r2inspect.batch/v1"
+    assert summary["reports"][0]["report_path"] == "sample.exe_analysis.json"
+    assert not (output_dir / "sample.exe_analysis.json").exists()
 
     stats = {"packers_detected": [], "crypto_patterns": []}
     update_packer_stats(stats, "sample.exe", {"packer": {"is_packed": True, "packer_type": "UPX"}})

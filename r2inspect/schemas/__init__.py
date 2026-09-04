@@ -3,6 +3,7 @@
 
 # Base schemas
 from .base import AnalysisResultBase, FileInfoBase
+from .batch_v1 import BatchErrorV1, BatchReportReferenceV1, BatchV1
 
 # Converters
 from .converters import ResultConverter, dict_to_model, model_to_dict, safe_convert, validate_result
@@ -178,6 +179,9 @@ __all__ = [
     "YaraMatch",
     "from_dict",
     # Stable report contract
+    "BatchErrorV1",
+    "BatchReportReferenceV1",
+    "BatchV1",
     "AnalysisMetadataV1",
     "AnalyzerOutcomeV1",
     "AnalyzerStatus",

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from r2inspect.cli.batch_processing_runtime import BatchRunRequest
 
 import shutil
@@ -50,6 +51,16 @@ def test_batch_output_json_real_flow(tmp_path: Path) -> None:
 
     per_file_json = {path.name for path in output_dir.glob("*_analysis.json")}
     assert {"hello_pe.exe_analysis.json", "hello_elf.elf_analysis.json"}.issubset(per_file_json)
+    reports = {
+        path.name: json.loads(path.read_text(encoding="utf-8"))
+        for path in output_dir.glob("*_analysis.json")
+    }
+    assert all(report["schema_version"] == "r2inspect.report/v1" for report in reports.values())
+
+    summary = json.loads(summary_files[0].read_text(encoding="utf-8"))
+    assert summary["schema_version"] == "r2inspect.batch/v1"
+    assert "results" not in summary
+    assert {reference["report_path"] for reference in summary["reports"]} == set(reports)
 
 
 def test_batch_output_csv_real_flow(tmp_path: Path) -> None:

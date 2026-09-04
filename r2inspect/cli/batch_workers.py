@@ -73,7 +73,8 @@ def process_single_file(
             results["relative_path"] = str(file_path.relative_to(batch_path))
 
             if output_json:
-                formatter = OutputFormatter(report_payload_v1(result, analysis_options))
+                report = report_payload_v1(result, analysis_options)
+                formatter = OutputFormatter(report)
                 json_output = formatter.to_json()
                 json_file = output_path / per_file_json_name(str(results["relative_path"]))
                 # Write atomically: write to temp file then rename to prevent partial files
@@ -90,6 +91,13 @@ def process_single_file(
                     with contextlib.suppress(OSError):
                         tmp_file.unlink(missing_ok=True)
                     raise
+                results["_batch_report"] = {
+                    "analysis_id": report["analysis"]["id"],
+                    "profile": report["analysis"]["profile"],
+                    "sha256": report["sample"]["hashes"].get("sha256"),
+                    "status": "failed" if report["errors"] else "completed",
+                    "report_path": json_file.name,
+                }
 
             rate_limiter.release_success()
             return file_path, results, None

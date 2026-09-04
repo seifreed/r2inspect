@@ -6,8 +6,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ..infrastructure.json_serialization import dump
+from ..schemas.batch_v1 import BatchErrorV1, BatchReportReferenceV1, BatchV1
+from ..schemas.report_v1 import AnalyzerStatus
 
 
 def _json_result(result: dict[str, Any]) -> dict[str, Any]:
@@ -56,18 +59,38 @@ def build_batch_summary_payload(
     *,
     collect_batch_statistics: Any,
 ) -> dict[str, Any]:
-    return {
-        "batch_summary": {
-            "total_files": len(all_results) + len(failed_files),
-            "successful_analyses": len(all_results),
-            "failed_analyses": len(failed_files),
-            "timestamp": datetime.now(UTC).isoformat(),
-            "processed_files": list(all_results.keys()),
-        },
-        "results": {key: _json_result(result) for key, result in all_results.items()},
-        "failed_files": [{"file": f[0], "error": f[1]} for f in failed_files],
-        "statistics": collect_batch_statistics(all_results),
+    del collect_batch_statistics
+    references = [_report_reference(file_key, result) for file_key, result in all_results.items()]
+    profiles = {
+        metadata["profile"]
+        for result in all_results.values()
+        if isinstance((metadata := result.get("_batch_report")), dict)
+        and isinstance(metadata.get("profile"), str)
     }
+    return BatchV1(
+        analysis_id=str(uuid4()),
+        profile=profiles.pop() if len(profiles) == 1 else "standard",
+        generated_at=datetime.now(UTC),
+        total=len(all_results) + len(failed_files),
+        completed=len(all_results),
+        failed=len(failed_files),
+        reports=references,
+        errors=[BatchErrorV1(sample=file, message=error) for file, error in failed_files],
+    ).model_dump(mode="json")
+
+
+def _report_reference(file_key: str, result: dict[str, Any]) -> BatchReportReferenceV1:
+    metadata = result.get("_batch_report")
+    if not isinstance(metadata, dict):
+        metadata = {}
+    relative_path = str(result.get("relative_path") or Path(file_key).name)
+    return BatchReportReferenceV1(
+        sample=relative_path,
+        sha256=str(metadata["sha256"]) if metadata.get("sha256") else None,
+        status=AnalyzerStatus(str(metadata.get("status", "completed"))),
+        report_path=str(metadata.get("report_path") or per_file_json_name(relative_path)),
+        analysis_id=str(metadata["analysis_id"]) if metadata.get("analysis_id") else None,
+    )
 
 
 def determine_csv_file_path(output_path: Path, timestamp: str) -> tuple[Path, str]:
@@ -93,7 +116,6 @@ def create_json_batch_summary(
     *,
     collect_batch_statistics: Any,
 ) -> str:
-    write_individual_json_results(all_results, output_path)
     summary_file = output_path / f"r2inspect_batch_{timestamp}.json"
     with open(summary_file, "w", encoding="utf-8") as f:
         dump(

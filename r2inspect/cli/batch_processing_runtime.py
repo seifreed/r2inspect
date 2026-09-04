@@ -111,6 +111,8 @@ def run_batch_analysis(request: BatchRunRequest, collaborators: BatchRunCollabor
         config_obj=request.config_obj,
         auto_detect=request.auto_detect,
         threads=request.threads,
+        output_json=request.output_json,
+        output_csv=request.output_csv,
         output_path=output_path,
         deps=deps,
     )

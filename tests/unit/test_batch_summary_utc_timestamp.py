@@ -22,7 +22,7 @@ def test_build_batch_summary_payload_timestamp_is_utc() -> None:
         [("bad.bin", "boom")],
         collect_batch_statistics=lambda _results: {"ok": True},
     )
-    raw = payload["batch_summary"]["timestamp"]
+    raw = payload["generated_at"]
     parsed = datetime.fromisoformat(raw)
     assert parsed.tzinfo is not None, "timestamp must carry timezone info"
     assert parsed.utcoffset() == timedelta(0), "timestamp must be UTC"

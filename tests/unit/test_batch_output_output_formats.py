@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
-from datetime import datetime
-from pathlib import Path
 
-import pytest
 
 from r2inspect.cli.batch_output import (
     get_csv_fieldnames,
@@ -164,14 +161,14 @@ def test_create_json_batch_summary_with_failures(tmp_path):
     summary_file = tmp_path / f"r2inspect_batch_{timestamp}.json"
     with open(summary_file) as f:
         data = json.load(f)
-        assert data["batch_summary"]["total_files"] == 3
-        assert data["batch_summary"]["successful_analyses"] == 1
-        assert data["batch_summary"]["failed_analyses"] == 2
-        assert len(data["failed_files"]) == 2
+        assert data["total"] == 3
+        assert data["completed"] == 1
+        assert data["failed"] == 2
+        assert len(data["errors"]) == 2
 
 
-def test_create_json_batch_summary_with_statistics(tmp_path):
-    """Test JSON batch summary includes statistics."""
+def test_create_json_batch_summary_does_not_duplicate_results(tmp_path):
+    """The batch contract only references the per-sample reports."""
     all_results = {"test.exe": {"file_info": {"name": "test.exe", "file_type": "PE32"}}}
     failed_files = []
     timestamp = "20240101_120000"
@@ -181,8 +178,10 @@ def test_create_json_batch_summary_with_statistics(tmp_path):
     summary_file = tmp_path / f"r2inspect_batch_{timestamp}.json"
     with open(summary_file) as f:
         data = json.load(f)
-        assert "statistics" in data
-        assert "batch_summary" in data
+        assert data["schema_version"] == "r2inspect.batch/v1"
+        assert "statistics" not in data
+        assert "results" not in data
+        assert data["reports"][0]["report_path"] == "test.exe_analysis.json"
 
 
 def test_create_batch_summary_csv_only(tmp_path):
