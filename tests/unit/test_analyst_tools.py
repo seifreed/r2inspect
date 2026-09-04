@@ -8,8 +8,10 @@ from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from benchmarks.calibrate_clustering import calibrate
 from r2inspect.application.clustering import cluster_reports, index_reports, query_index
 from r2inspect.application.explain import explain, radare2_commands
+from r2inspect.application.report_similarity import similarity_hashes
 from r2inspect.application.rule_packs import RulePackManifest, verify_rule_pack
 from r2inspect.schemas.report_v1 import (
     EvidenceV1,
@@ -75,7 +77,7 @@ def test_cluster_reports_uses_similarity_hashes(tmp_path: Path) -> None:
     right = _report([]).model_copy(update={"sample": sample})
     (tmp_path / "left.json").write_text(left.model_dump_json(), encoding="utf-8")
     (tmp_path / "right.json").write_text(right.model_dump_json(), encoding="utf-8")
-    assert len(cluster_reports([tmp_path / "left.json", tmp_path / "right.json"])) == 1
+    assert len(cluster_reports([tmp_path / "left.json", tmp_path / "right.json"], 0.5)) == 1
 
 
 def test_similarity_index_persists_and_queries_by_sha256(tmp_path: Path) -> None:
@@ -91,6 +93,34 @@ def test_similarity_index_persists_and_queries_by_sha256(tmp_path: Path) -> None
     assert query_index(database, "a" * 64) == [
         {"sha256": "b" * 64, "report_path": str(paths[1]), "similarity": 1.0}
     ]
+
+
+def test_clustering_threshold_is_calibrated_from_labeled_pairs(tmp_path: Path) -> None:
+    cases = []
+    for name, cluster, rules in (
+        ("a", "family", ["shared"]),
+        ("b", "family", ["shared"]),
+        ("c", "other", ["different"]),
+    ):
+        report_path = tmp_path / f"{name}.json"
+        report_path.write_text(_report(rules).model_dump_json(), encoding="utf-8")
+        cases.append({"id": name, "cluster": cluster, "report": report_path.name})
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"corpus_id": "test", "cases": cases}), encoding="utf-8")
+
+    result = calibrate(manifest)
+    assert result["threshold"] == 1.0
+    assert result["precision"] == result["recall"] == result["f1"] == 1.0
+
+
+def test_similarity_hashes_extracts_analyzer_results() -> None:
+    assert similarity_hashes(
+        {
+            "ssdeep": {"hash_value": "3:abc:def"},
+            "tlsh": {"binary_tlsh": "T123"},
+            "simhash": {"combined_simhash": {"hex": "0x1234"}},
+        }
+    ) == {"ssdeep": "3:abc:def", "tlsh": "T123", "simhash": "0x1234"}
 
 
 def test_verify_signed_rule_pack(tmp_path: Path) -> None:

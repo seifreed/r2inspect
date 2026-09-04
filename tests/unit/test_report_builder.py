@@ -133,6 +133,22 @@ def test_build_report_v1_preserves_non_utf8_binary_evidence() -> None:
     assert report.extras["binary_evidence"] == {"encoding": "hex", "value": "83ff"}
 
 
+def test_build_report_v1_exposes_analyzer_similarity_hashes() -> None:
+    result = build_analysis_result(
+        {
+            "ssdeep": {"hash_value": "3:abc:def"},
+            "simhash": {"combined_simhash": {"hex": "0x1234"}},
+        }
+    )
+
+    report = build_report_v1(result, analysis_id="similarity-hashes")
+
+    assert report.similarity == [
+        {"type": "simhash", "value": "0x1234"},
+        {"type": "ssdeep", "value": "3:abc:def"},
+    ]
+
+
 @pytest.mark.parametrize(
     ("file_type", "detail_key", "features", "expected"),
     [

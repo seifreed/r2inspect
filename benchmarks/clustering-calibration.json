@@ -1,0 +1,18 @@
+{
+  "schema_version": "r2inspect.clustering-calibration/v1",
+  "corpus_id": "capa-testfiles-pma-kernel32-fixtures-v3",
+  "profile": "standard",
+  "radare2_versions": [
+    "radare2 6.2.0 +0 abi:132 @ darwin-arm_64"
+  ],
+  "cases": 19,
+  "pairs": 171,
+  "positive_pairs": 2,
+  "threshold": 0.8875,
+  "precision": 1.0,
+  "recall": 0.5,
+  "f1": 0.6666666666666666,
+  "true_positive": 1,
+  "false_positive": 0,
+  "false_negative": 1
+}

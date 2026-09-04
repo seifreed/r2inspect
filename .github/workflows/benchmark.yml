@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   public-corpus:
@@ -47,7 +48,7 @@ jobs:
           python benchmarks/run_corpus.py \
             expanded-real-public-corpus/manifest.json \
             --corpus-dir expanded-real-public-corpus \
-            --output-dir expanded-real-public-results --profile fast
+            --output-dir expanded-real-public-results --profile standard
           python benchmarks/evaluate_reports.py \
             expanded-real-public-results/manifest.json \
             --output expanded-real-public-results/metrics.json \
@@ -55,6 +56,27 @@ jobs:
             --min-classification-recall 1.0 \
             --max-execution-failure-rate 0.01 \
             --max-dependency-unavailable-rate 0.0
+          python benchmarks/calibrate_clustering.py \
+            expanded-real-public-results/manifest.json \
+            --output expanded-real-public-results/clustering.json
+      - name: Restore and update benchmark history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous_run="$(gh run list --workflow benchmark.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -n "$previous_run" ]; then
+            gh run download "$previous_run" --name "r2inspect-benchmark-$previous_run" --dir previous || true
+            history="$(find previous -name history.json -print -quit)"
+            if [ -n "$history" ]; then cp "$history" benchmark-results/history.json; fi
+          fi
+          python benchmarks/benchmark_history.py \
+            --history benchmark-results/history.json \
+            --dashboard benchmark-results/dashboard.md \
+            --metric public=benchmark-results/metrics.json \
+            --metric real_public=expanded-real-public-results/metrics.json \
+            --clustering expanded-real-public-results/clustering.json \
+            --run-id "${{ github.run_id }}" --commit "${{ github.sha }}"
+          cat benchmark-results/dashboard.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publish benchmark artifact
         uses: actions/upload-artifact@v4
         with:

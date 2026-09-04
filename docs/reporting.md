@@ -16,7 +16,7 @@ Compare two reports by stable finding and analyzer identifiers:
 r2inspect-compare baseline.json candidate.json
 r2inspect-baseline baseline.json candidate.json --fail-on-change
 r2inspect --explain finding-abc123 report.json
-r2inspect-cluster reports/*.json --threshold 0.5
+r2inspect-cluster reports/*.json --threshold 0.8875
 r2inspect-cluster reports/*.json --index similarity.sqlite3
 r2inspect-cluster --index similarity.sqlite3 --query SAMPLE_SHA256
 r2inspect-rules-verify ./rule-pack --public-key analyst-ed25519.pub

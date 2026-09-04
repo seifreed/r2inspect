@@ -29,6 +29,7 @@ from .report_typed import typed_analyzer_statuses
 from .report_provenance import radare2_version as detected_radare2_version
 from .report_provenance import tool_commit
 from .report_security import normalized_security
+from .report_similarity import similarity_hashes
 
 
 def _json_safe(value: Any) -> Any:
@@ -95,8 +96,10 @@ def build_report_v1(
         }.items()
         if value
     }
-    similarity = [
-        {"type": name, "value": value} for name, value in result.hashing.to_dict().items() if value
+    similarity_values = similarity_hashes(raw)
+    similarity_values.update({k: v for k, v in result.hashing.to_dict().items() if v})
+    similarity: list[dict[str, Any]] = [
+        {"type": name, "value": value} for name, value in sorted(similarity_values.items())
     ]
     bits = cast(Literal[32, 64], file_info.bits) if file_info.bits in {32, 64} else None
     raw_endian = {"le": "little", "be": "big"}.get(file_info.endian, file_info.endian)

@@ -47,6 +47,18 @@ Only aggregate metrics are uploaded.
 Benchmark tooling and sanitized manifests are versioned with the report schema
 so release-to-release comparisons remain reproducible.
 
+Each nightly public artifact also contains `history.json`, a rolling 365-run
+history restored from the previous successful run, plus `dashboard.md`. The
+same dashboard is published in the GitHub Actions run summary. Clustering is
+calibrated separately against independently assigned related-sample labels in
+the real public corpus; its selected threshold and pairwise precision/recall
+are stored in `expanded-real-public-results/clustering.json`.
+
+The checked-in calibration uses 19 real public samples and 171 labeled pairs.
+At the default threshold `0.8875`, pairwise precision is 1.0, recall is 0.5,
+and F1 is 0.667. This favors analyst-triage precision; the missed related pair
+is retained in the metrics rather than hidden by relabeling.
+
 ## Reproducible evaluation
 
 Create a manifest next to strict report-v1 files:

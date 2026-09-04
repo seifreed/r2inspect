@@ -167,6 +167,13 @@ _SAMPLE_TYPE_OVERRIDES = {
     "edge_tiny_unknown": "malformed",
 }
 
+_CLUSTERS = {
+    "pma_01_01_dll": "pma_01_01",
+    "pma_01_01_exe": "pma_01_01",
+    "kernel32_x86": "kernel32",
+    "kernel32_x64": "kernel32",
+}
+
 
 def _sample_type(case_id: str, label: str) -> str:
     return _SAMPLE_TYPE_OVERRIDES.get(case_id, "malware" if label == "malware" else "benignware")
@@ -205,6 +212,7 @@ def _manifest() -> dict[str, object]:
                 "sha256": digest,
                 "class": label,
                 "sample_type": _sample_type(case_id, label),
+                "cluster": _CLUSTERS.get(case_id, case_id),
             }
             for case_id, _source_name, label, digest, _source in _SAMPLES
         ],
