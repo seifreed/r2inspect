@@ -20,6 +20,7 @@ from .binary_analyzer import (
 )
 from .core import (
     AnalyzerBackend,
+    BinaryInspector,
     ConfigLike,
     FileValidatorLike,
     MagicDetectorLike,
@@ -54,6 +55,7 @@ __all__ = [
     "StringProvider",
     "TextQueryProvider",
     "AnalyzerBackend",
+    "BinaryInspector",
     "ConfigLike",
     "FileValidatorLike",
     "MagicDetectorLike",

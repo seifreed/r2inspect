@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, cast
 
-from ..interfaces import AnalysisRuntimePort, ResultValidationPort
+from ..interfaces import AnalysisRuntimePort, BinaryInspector, ResultValidationPort
 from ..infrastructure.proxying import LazyProxy
 from .runtime_support import (
     create_default_analysis_runtime,
@@ -47,8 +47,8 @@ class AnalysisService:
     def reset_stats(self) -> None:
         self._runtime.reset()
 
-    def execute(self, inspector: Any, options: dict[str, Any]) -> dict[str, Any]:
-        return cast(dict[str, Any], inspector.analyze(**options))
+    def execute(self, inspector: BinaryInspector, options: dict[str, Any]) -> dict[str, Any]:
+        return inspector.analyze(**options)
 
     def add_statistics(self, results: dict[str, Any]) -> None:
         runtime_stats = self._runtime.collect()

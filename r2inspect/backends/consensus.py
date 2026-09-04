@@ -2,30 +2,153 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 
-def compare_results(left: dict[str, Any], right: dict[str, Any]) -> list[dict[str, Any]]:
-    disagreements: list[dict[str, Any]] = []
-    for field in ("file_info", "format_detection"):
-        left_value = left.get(field, {})
-        right_value = right.get(field, {})
-        keys = set(left_value) | set(right_value)
-        for key in sorted(keys):
-            if left_value.get(key) != right_value.get(key):
-                disagreements.append(
-                    {
-                        "field": f"{field}.{key}",
-                        "left": left_value.get(key),
-                        "right": right_value.get(key),
-                        "status": "backend_disagreement",
-                    }
-                )
+from ..interfaces import BinaryInspector
+
+
+class BackendDisagreement(TypedDict):
+    field: str
+    left_backend: str
+    right_backend: str
+    left: Any
+    right: Any
+    severity: Literal["warning"]
+    status: Literal["backend_disagreement"]
+
+
+_MISSING = object()
+
+
+def _path(data: dict[str, Any], *parts: str) -> Any:
+    value: Any = data
+    for part in parts:
+        if not isinstance(value, dict) or part not in value:
+            return _MISSING
+        value = value[part]
+    return value
+
+
+def _pick(data: dict[str, Any], *paths: tuple[str, ...]) -> Any:
+    for path in paths:
+        value = _path(data, *path)
+        if value is not _MISSING:
+            return value
+    return _MISSING
+
+
+def _named_items(value: Any) -> tuple[str, ...] | object:
+    if not isinstance(value, list):
+        return _MISSING
+    names = []
+    for item in value:
+        if isinstance(item, str):
+            names.append(item)
+        elif isinstance(item, dict):
+            library = item.get("library") or item.get("libname") or ""
+            name = item.get("name") or item.get("symbol") or item.get("ordinal")
+            names.append(f"{library}!{name}" if library else str(name))
+    return tuple(sorted(names))
+
+
+def _consensus_view(result: dict[str, Any]) -> dict[str, Any]:
+    view: dict[str, Any] = {}
+    aliases = {
+        "format.common.format": (
+            ("format_detection", "file_format"),
+            ("file_info", "file_type"),
+        ),
+        "format.common.architecture": (
+            ("file_info", "architecture"),
+            ("pe_info", "architecture"),
+            ("elf_info", "architecture"),
+            ("macho_info", "architecture"),
+        ),
+        "format.common.bits": (
+            ("file_info", "bits"),
+            ("pe_info", "bits"),
+            ("elf_info", "bits"),
+            ("macho_info", "bits"),
+        ),
+        "format.common.endianness": (
+            ("file_info", "endian"),
+            ("pe_info", "endian"),
+            ("elf_info", "endian"),
+            ("macho_info", "endian"),
+        ),
+    }
+    for field, paths in aliases.items():
+        value = _pick(result, *paths)
+        if value is not _MISSING:
+            view[field] = value
+
+    format_name = str(view.get("format.common.format", "")).lower()
+    family = next(
+        (name for name in ("pe", "elf", "macho") if format_name.startswith(name)),
+        "common",
+    )
+    prefix = f"format.{family}"
+    for name in ("entry_point", "image_base", "overlay", "signature_status", "build_id", "uuid"):
+        value = _pick(result, (name,), ("file_info", name), (f"{family}_info", name))
+        if value is not _MISSING:
+            view[f"{prefix}.{name}"] = value
+
+    sections = _pick(result, ("sections",), (f"{family}_info", "sections"))
+    if isinstance(sections, list):
+        view[f"{prefix}.section_count"] = len(sections)
+        boundaries = [
+            (
+                str(section.get("name", "")),
+                section.get("vaddr"),
+                section.get("size"),
+            )
+            for section in sections
+            if isinstance(section, dict)
+        ]
+        view[f"{prefix}.section_boundaries"] = tuple(sorted(boundaries, key=repr))
+    for name in ("imports", "exports"):
+        value = _named_items(_pick(result, (name,), (f"{family}_info", name)))
+        if value is not _MISSING:
+            view[f"{prefix}.{name}"] = value
+    security = _pick(result, ("security",), (f"{family}_info", "security_features"))
+    if isinstance(security, dict):
+        for name, value in security.items():
+            view[f"security.{name}"] = value
+    return view
+
+
+def compare_results(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    left_backend: str = "left",
+    right_backend: str = "right",
+) -> list[BackendDisagreement]:
+    left_view = _consensus_view(left)
+    right_view = _consensus_view(right)
+    disagreements: list[BackendDisagreement] = []
+    for field in sorted(set(left_view) | set(right_view)):
+        left_value = left_view.get(field)
+        right_value = right_view.get(field)
+        if left_value != right_value:
+            disagreements.append(
+                {
+                    "field": field,
+                    "left_backend": left_backend,
+                    "right_backend": right_backend,
+                    "left": left_value,
+                    "right": right_value,
+                    "severity": "warning",
+                    "status": "backend_disagreement",
+                }
+            )
     return disagreements
 
 
 class ConsensusInspector:
-    def __init__(self, left: Any, right: Any, left_name: str, right_name: str) -> None:
+    def __init__(
+        self, left: BinaryInspector, right: BinaryInspector, left_name: str, right_name: str
+    ) -> None:
         self.left = left
         self.right = right
         self.left_name = left_name
@@ -34,7 +157,7 @@ class ConsensusInspector:
     def analyze(self, **options: Any) -> dict[str, Any]:
         left_result = self.left.analyze(**options)
         right_result = self.right.analyze(**options)
-        disagreements = compare_results(left_result, right_result)
+        disagreements = compare_results(left_result, right_result, self.left_name, self.right_name)
         result = dict(left_result)
         result["backend"] = "consensus"
         result["backend_results"] = {
@@ -60,4 +183,4 @@ class ConsensusInspector:
         return False
 
 
-__all__ = ["ConsensusInspector", "compare_results"]
+__all__ = ["BackendDisagreement", "ConsensusInspector", "compare_results"]

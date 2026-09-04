@@ -10,7 +10,7 @@ from ..result_mapper import build_analysis_result
 from ..analysis_service import AnalysisService, default_analysis_service
 
 if TYPE_CHECKING:
-    from ...core.inspector import R2Inspector
+    from ...interfaces import BinaryInspector
     from ...schemas.results_models import AnalysisResult
 
 
@@ -19,14 +19,14 @@ class AnalyzeBinaryRequest:
     """Input model for binary analysis execution.
 
     Attributes:
-        inspector: The R2Inspector instance managing the r2pipe session.
+        inspector: The selected binary inspector implementation.
         options: Analysis options (e.g. detect_packer, custom_yara).
         reset_stats: Whether to reset service statistics before analysis.
         include_statistics: Whether to enrich results with execution stats.
         validate_schemas: Whether to validate output against Pydantic schemas.
     """
 
-    inspector: R2Inspector
+    inspector: BinaryInspector
     options: dict[str, Any]
     reset_stats: bool = True
     include_statistics: bool = True
@@ -51,7 +51,7 @@ class AnalyzeBinaryUseCase:
 
     def run(
         self,
-        inspector: R2Inspector,
+        inspector: BinaryInspector,
         options: dict[str, Any],
         *,
         reset_stats: bool = True,

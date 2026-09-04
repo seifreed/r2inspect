@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from .adapters.magic_provider import MagicDetectorProvider
 from .adapters.r2pipe_adapter import R2PipeAdapter
@@ -15,7 +15,7 @@ from .core.inspector import InspectorDependencies, R2Inspector
 from .core.pipeline_builder import PipelineBuilder
 from .core.result_aggregator import ResultAggregator
 from .infrastructure.r2_session import R2Session
-from .interfaces import MemoryMonitorLike
+from .interfaces import BinaryInspector, MemoryMonitorLike
 from .pipeline_composition import default_pipeline_runtime_dependencies
 from .registry.default_registry import create_default_registry
 from .infrastructure.memory import get_global_memory_monitor
@@ -55,9 +55,9 @@ def create_inspector(
     backend: str = "r2",
     consensus_backend: str = "pe-core",
     session_factory: Callable[[str], Any] | None = None,
-    inspector_factory: Callable[..., R2Inspector] | None = None,
-) -> R2Inspector:
-    """Create an R2Inspector with default dependencies."""
+    inspector_factory: Callable[..., BinaryInspector] | None = None,
+) -> BinaryInspector:
+    """Create an inspector backed by r2, a core parser, or consensus."""
     if backend == "consensus":
         left = create_inspector(
             filename,
@@ -77,12 +77,15 @@ def create_inspector(
             session_factory=session_factory,
             inspector_factory=inspector_factory,
         )
-        return cast(R2Inspector, ConsensusInspector(left, right, "r2", consensus_backend))
+        return ConsensusInspector(left, right, "r2", consensus_backend)
     if backend != "r2":
         factory = resolve_backend(backend)
         if factory is None:
             raise ValueError(f"Unknown backend: {backend}")
-        return cast(R2Inspector, factory(filename=filename, config=config, verbose=verbose))
+        inspector = factory(filename=filename, config=config, verbose=verbose)
+        if not isinstance(inspector, BinaryInspector):
+            raise TypeError(f"Backend {backend} does not implement BinaryInspector")
+        return inspector
     cfg = config or Config()
     monitor = memory_monitor or get_global_memory_monitor()
     make_session = session_factory if session_factory is not None else R2Session

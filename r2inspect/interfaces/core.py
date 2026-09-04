@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Core protocol interfaces for dependency inversion."""
 
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol, Self, runtime_checkable
 
 from .binary_analyzer import BinaryAnalyzerInterface
 
@@ -39,6 +39,19 @@ class R2CommandInterface(Protocol):
 
 class AnalyzerBackend(BinaryAnalyzerInterface, Protocol):
     """Backend interface used by analyzers."""
+
+
+@runtime_checkable
+class BinaryInspector(Protocol):
+    """Common lifecycle contract returned by the inspector factory."""
+
+    def analyze(self, **options: Any) -> dict[str, Any]: ...
+
+    def close(self) -> None: ...
+
+    def __enter__(self) -> Self: ...
+
+    def __exit__(self, *_args: Any) -> Literal[False]: ...
 
 
 class MagicDetectorLike(Protocol):
