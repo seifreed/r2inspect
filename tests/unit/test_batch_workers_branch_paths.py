@@ -190,6 +190,30 @@ def test_process_single_file_json_output_written(tmp_path: Path):
     assert results is not None and results["filename"] == str(local)
 
 
+def test_process_single_file_can_write_legacy_json(tmp_path: Path):
+    sample = _sample_pe()
+    local = tmp_path / sample.name
+    local.write_bytes(sample.read_bytes())
+    output_path = tmp_path / "out"
+    output_path.mkdir()
+
+    rate_limiter = BatchRateLimiter(max_concurrent=1, rate_per_second=100.0, enable_adaptive=False)
+    _, results, error = process_single_file(
+        local,
+        tmp_path,
+        Config(),
+        {"full_analysis": False, "legacy_json": True},
+        True,
+        output_path,
+        rate_limiter,
+    )
+
+    assert error is None
+    payload = json.loads((output_path / f"{local.name}_analysis.json").read_text(encoding="utf-8"))
+    assert "schema_version" not in payload
+    assert results is not None and "_batch_report" in results
+
+
 def test_process_single_file_sets_relative_path(tmp_path: Path):
     sub = tmp_path / "sub"
     sub.mkdir()

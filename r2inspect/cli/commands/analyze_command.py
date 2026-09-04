@@ -48,6 +48,7 @@ class AnalyzeCommand(Command):
                     output_file=args.get("output"),
                     verbose=verbose,
                     csv_delimiter=config.typed_config.output.csv_delimiter,
+                    legacy_json=args.get("legacy_json", False),
                 )
 
             return 0
@@ -69,12 +70,17 @@ class AnalyzeCommand(Command):
         output_file: str | Path | None,
         verbose: bool = False,
         csv_delimiter: str = ",",
+        legacy_json: bool = False,
     ) -> None:
         """Execute analysis and render results."""
         self._print_status_if_needed(output_json, output_csv, output_file)
         result = AnalyzeBinaryUseCase().run(inspector, options)
         results = result.to_dict()
-        output_payload = report_payload_v1(result, options) if output_json else results
+        output_payload = (
+            (results if legacy_json else report_payload_v1(result, options))
+            if output_json
+            else results
+        )
         self._output_results(
             output_payload, output_json, output_csv, output_file, verbose, csv_delimiter
         )

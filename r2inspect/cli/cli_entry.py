@@ -60,6 +60,7 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
                 "profile": getattr(args, "profile", "standard"),
                 "backend": getattr(args, "backend", "r2"),
                 "consensus_backend": getattr(args, "consensus_backend", "pe-core"),
+                "legacy_json": getattr(args, "legacy_json", False),
             },
         )
     if args.interactive:
@@ -91,6 +92,7 @@ def build_dispatch(context: CommandContext, args: Any) -> CommandDispatch:
             "profile": getattr(args, "profile", "standard"),
             "backend": getattr(args, "backend", "r2"),
             "consensus_backend": getattr(args, "consensus_backend", "pe-core"),
+            "legacy_json": getattr(args, "legacy_json", False),
         },
     )
 

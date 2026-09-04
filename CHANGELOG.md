@@ -5,6 +5,8 @@ Versioning and keeps unreleased work at the top.
 
 ## Unreleased
 
+## 4.0.0 - 2026-09-04
+
 ### Changed
 
 - Made CI, distribution smoke tests, and container validation release gates.
@@ -29,6 +31,10 @@ Versioning and keeps unreleased work at the top.
 - Added a golden compatibility projection for PE, ELF, and Mach-O report-v1 output.
 - Required a contextual read/delta/branch pattern before timing observations become
   an anti-analysis verdict.
+- Made `r2inspect.report/v1` and `r2inspect.batch/v1` the default JSON contracts.
+- Added analyzer-owned findings with stable rule IDs, evidence, locations, and
+  ATT&CK/MBC mappings for packer, anti-analysis, YARA, and correlated behavior.
+- Added the deprecated `--legacy-json` compatibility option for migration from 3.x.
 
 ## 3.0.0
 

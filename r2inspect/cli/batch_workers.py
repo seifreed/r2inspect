@@ -74,7 +74,9 @@ def process_single_file(
 
             if output_json:
                 report = report_payload_v1(result, analysis_options)
-                formatter = OutputFormatter(report)
+                formatter = OutputFormatter(
+                    results if analysis_options.get("legacy_json") else report
+                )
                 json_output = formatter.to_json()
                 json_file = output_path / per_file_json_name(str(results["relative_path"]))
                 # Write atomically: write to temp file then rename to prevent partial files

@@ -37,6 +37,7 @@ class BatchCommand(Command):
                 xor=args.get("xor"),
                 profile=args.get("profile", "standard"),
             )
+            analysis_options["legacy_json"] = args.get("legacy_json", False)
             request = BatchRunRequest(
                 batch_dir=batch_dir,
                 options=analysis_options,

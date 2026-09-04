@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""
-r2inspect CLI - Command Line Interface (Refactored with Command Pattern)
-
-This module provides the Click-based CLI entry point for r2inspect.
-Command execution logic has been extracted into modular command classes
-following the Command Pattern for improved testability and maintainability.
-
+"""Click-based command-line entry point for r2inspect.
 Copyright (C) 2025 Marc Rivero López
 
 This program is free software: you can redistribute it and/or modify
@@ -45,6 +39,7 @@ from .cli.display import console, print_banner
 from .cli.validators import (
     display_validation_errors,
     handle_xor_input,
+    validate_legacy_json,
     validate_input_mode,
     validate_inputs,
 )
@@ -71,6 +66,7 @@ class CLIArgs:
     explain: str | None = None
     backend: str = "r2"
     consensus_backend: str = "pe-core"
+    legacy_json: bool = False
 
 
 def main(
@@ -102,6 +98,7 @@ def main(
     is_flag=True,
     help="Full output analysis in JSON format",
 )
+@click.option("--legacy-json", is_flag=True, help="Deprecated 3.x JSON (requires --json)")
 @click.option("-c", "--csv", "output_csv", is_flag=True, help="Output analysis in CSV format")
 @click.option("-o", "--output", help="Output file path or directory for batch mode")
 @click.option("-x", "--xor", help="Search XORed string")
@@ -161,6 +158,8 @@ def run_cli(
             raise click.UsageError("--explain requires a report JSON path")
         print(format_explanation(explain_file(Path(args.filename), args.explain)), end="")
         return
+
+    validate_legacy_json(args.legacy_json, args.output_json)
 
     validation_errors = validate_inputs(
         args.filename,

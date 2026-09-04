@@ -64,3 +64,13 @@ def test_run_analysis_emits_report_v1_but_returns_legacy_data(tmp_path: Path) ->
     assert payload["schema_version"] == "r2inspect.report/v1"
     assert payload["extras"]["file_info"]["name"] == "sample"
     assert results["file_info"]["name"] == "sample"
+
+
+def test_run_analysis_can_emit_deprecated_legacy_json(tmp_path: Path) -> None:
+    output = tmp_path / "analysis.json"
+
+    run_analysis(_FakeInspector(), {}, True, False, output, legacy_json=True)
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert "schema_version" not in payload
+    assert payload["file_info"]["name"] == "sample"

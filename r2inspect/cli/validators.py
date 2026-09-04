@@ -25,6 +25,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import click
 from rich.console import Console
 
 from ..security.validators import FileValidator
@@ -112,6 +113,17 @@ def validate_threads_input(threads: int | None) -> list[str]:
     return _validator_rules.validate_threads_input(threads)
 
 
+def validate_legacy_json(legacy_json: bool, output_json: bool) -> None:
+    if not legacy_json:
+        return
+    if not output_json:
+        raise click.UsageError("--legacy-json requires --json")
+    click.echo(
+        "Warning: --legacy-json is deprecated and will be removed in r2inspect 5.0.",
+        err=True,
+    )
+
+
 def display_validation_errors(validation_errors: list[str]) -> None:
     """
     Display validation errors and exit.
@@ -162,6 +174,7 @@ __all__ = [
     "validate_file_input",
     "validate_input_mode",
     "validate_inputs",
+    "validate_legacy_json",
     "validate_output_input",
     "validate_single_file",
     "validate_threads_input",

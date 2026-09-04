@@ -24,11 +24,14 @@ def run_analysis(
     output_csv: bool,
     output_file: str | Path | None,
     verbose: bool = False,
+    legacy_json: bool = False,
 ) -> dict[str, Any]:
     print_status_if_appropriate(output_json, output_csv, output_file)
     result = AnalyzeBinaryUseCase().run(inspector, options)
     results = result.to_dict()
-    output_payload = report_payload_v1(result, options) if output_json else results
+    output_payload = (
+        (results if legacy_json else report_payload_v1(result, options)) if output_json else results
+    )
     output_results(output_payload, output_json, output_csv, output_file, verbose)
     return results
 

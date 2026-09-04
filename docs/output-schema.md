@@ -9,6 +9,11 @@ console/CSV output retains the legacy layout. JSON output from single-file and
 batch analysis is wrapped in the strict `r2inspect.report/v1` model. Unsupported
 objects fail serialization instead of being silently converted to text.
 
+`--legacy-json` temporarily restores the pre-v4 per-sample JSON shape and must
+be combined with `--json`. It is deprecated and scheduled for removal in v5.
+Batch summaries remain `r2inspect.batch/v1` even when legacy per-sample files
+are requested, so the v3 overwrite behavior is not reintroduced.
+
 Top-level data is organized by pipeline stage and can include file information,
 format-specific PE/ELF/Mach-O data, hashes, security results, detections,
 indicators, errors, and performance statistics. Optional analyzers may omit

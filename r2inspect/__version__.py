@@ -1,6 +1,6 @@
 """Version information for r2inspect."""
 
-__version__ = "3.0.0"
+__version__ = "4.0.0"
 __author__ = "Marc Rivero"
 __author_email__ = "mriverolopez@gmail.com"
 __license__ = "GPL-3.0"

@@ -78,6 +78,22 @@ def test_run_cli_sanitizes_xor_and_dispatches_without_validation_errors(tmp_path
     assert dispatched_args.xor == handle_xor_input("414243")
 
 
+def test_legacy_json_requires_json_and_warns_on_stderr(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(cli_main.click.UsageError, match="requires --json"):
+        cli_main.run_cli(_args(legacy_json=True))
+
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(b"MZ" + b"\x00" * 256)
+    cli_main.run_cli(
+        _args(filename=str(sample), output_json=True, legacy_json=True),
+        dispatch_fn=lambda _context, _args: None,
+    )
+
+    assert "removed in r2inspect 5.0" in capsys.readouterr().err
+
+
 def test_run_cli_displays_validation_errors_and_exits(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         cli_main.run_cli(_args(filename="/nonexistent/zzz_missing_dir/zzz_missing.bin"))
@@ -87,9 +103,10 @@ def test_run_cli_displays_validation_errors_and_exits(capsys: pytest.CaptureFixt
 
 
 def test_dispatch_command_routes_to_analyze_when_not_batch_or_interactive() -> None:
-    dispatch = build_dispatch(_make_context(), _args())
+    dispatch = build_dispatch(_make_context(), _args(legacy_json=True))
     assert isinstance(dispatch.command, AnalyzeCommand)
     assert dispatch.payload["filename"] == "/tmp/sample.bin"
+    assert dispatch.payload["legacy_json"] is True
 
     recording = RecordingCommand()
 

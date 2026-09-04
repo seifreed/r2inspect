@@ -87,8 +87,11 @@ pip install -e .
 # Basic analysis with rich console output
 r2inspect samples/fixtures/hello_pe.exe
 
-# JSON output
+# JSON output (`r2inspect.report/v1`)
 r2inspect -j samples/fixtures/hello_pe.exe
+
+# Temporary 3.x-compatible JSON output
+r2inspect -j --legacy-json samples/fixtures/hello_pe.exe
 
 # CSV output
 r2inspect -c samples/fixtures/hello_pe.exe
@@ -119,7 +122,8 @@ r2inspect --yara /path/to/rules malware.exe
 | Option              | Description                     |
 | ------------------- | ------------------------------- |
 | `-i, --interactive` | Interactive analysis shell      |
-| `-j, --json`        | Output in JSON format           |
+| `-j, --json`        | Output `r2inspect.report/v1`    |
+| `--legacy-json`     | Deprecated 3.x JSON shape       |
 | `-c, --csv`         | Output in CSV format            |
 | `-o, --output`      | Output file or directory        |
 | `--batch`           | Batch mode for directories      |
@@ -160,7 +164,8 @@ CLI -> create_inspector -> R2Inspector -> AnalysisPipeline -> analyzers
 ```
 
 See the [architecture](docs/architecture.md), [output contract](docs/output-schema.md),
-and [analyzer SDK](docs/analyzer-sdk.md) documentation for extension details.
+[3.x migration guide](docs/migration-3-to-4.md), and
+[analyzer SDK](docs/analyzer-sdk.md) documentation for extension details.
 
 ## Project documentation
 
