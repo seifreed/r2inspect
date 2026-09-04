@@ -8,7 +8,6 @@ from typing import Any
 import r2inspect.modules.impfuzzy_analyzer as impfuzzy_module
 from r2inspect.modules.impfuzzy_analyzer import ImpfuzzyAnalyzer
 
-
 # ---------------------------------------------------------------------------
 # Minimal adapter helpers (no unittest.mock)
 # ---------------------------------------------------------------------------
@@ -139,6 +138,7 @@ def test_calculate_hash_returns_error_for_non_pe_file(tmp_path: Path):
     h, method, err = analyzer._calculate_hash()
     assert h is None
     assert err is not None
+    assert analyzer.last_status == "not_applicable"
 
 
 def test_calculate_hash_exception_returns_error_tuple():

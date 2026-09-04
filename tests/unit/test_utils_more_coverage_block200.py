@@ -61,7 +61,10 @@ def test_get_ssdeep_success_and_failure(tmp_path: Path) -> None:
     _install_fake_module(tmp_path, "raise RuntimeError('boom')\n")
     sys.path.insert(0, str(tmp_path))
     try:
-        module = get_ssdeep()
+        def fail_import():
+            raise RuntimeError("boom")
+
+        module = get_ssdeep(importer=fail_import)
         assert module is None
     finally:
         sys.path.remove(str(tmp_path))

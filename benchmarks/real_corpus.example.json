@@ -2,6 +2,7 @@
   "schema_version": "r2inspect.benchmark/v1",
   "corpus_kind": "real_labeled",
   "corpus_id": "replace-with-private-corpus-id",
+  "evaluation_role": "holdout",
   "provenance": {
     "source": "licensed-private-dataset",
     "dataset_version": "pin-a-release-or-commit",
@@ -14,7 +15,8 @@
       "sample": "samples/real-sample-001.bin",
       "sha256": "replace-with-sha256",
       "class": "benign",
-      "expected_rule_ids": []
+      "sample_type": "benignware",
+      "expected_findings": []
     }
   ]
 }

@@ -6,6 +6,7 @@ from typing import Any
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..domain.constants import VERY_LARGE_FILE_THRESHOLD_MB
+from ..domain.results import AnalyzerStatus
 from ..domain.services.function_analysis import (
     build_function_stats,
     extract_mnemonics_from_ops,
@@ -69,6 +70,7 @@ class FunctionAnalyzer(CommandHelperMixin):
                     "machoc_hashes": {},
                     "function_stats": {},
                     "error": "No functions detected",
+                    "status": AnalyzerStatus.NOT_APPLICABLE.value,
                 }
 
             logger.debug("Found %s functions for analysis", len(functions))
@@ -98,6 +100,7 @@ class FunctionAnalyzer(CommandHelperMixin):
                 "machoc_hashes": {},
                 "function_stats": {},
                 "error": f"Function analysis failed: {str(e)}",
+                "status": AnalyzerStatus.FAILED.value,
             }
 
     def _get_functions(self) -> list[dict[str, Any]]:

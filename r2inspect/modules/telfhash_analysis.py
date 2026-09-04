@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+from ..domain.results import AnalyzerStatus
 
 
 class TelfhashHost(Protocol):
@@ -64,13 +65,16 @@ def analyze_symbols(
         "symbols_used": [],
         "error": None,
         "is_elf": False,
+        "status": AnalyzerStatus.COMPLETED.value,
     }
     if not telfhash_available:
+        results["status"] = AnalyzerStatus.DEPENDENCY_UNAVAILABLE.value
         results["error"] = "telfhash library not available"
         logger.error("telfhash library not available")
         return results
     try:
         if not analyzer._is_elf_file():
+            results["status"] = AnalyzerStatus.NOT_APPLICABLE.value
             results["error"] = "File is not an ELF binary"
             logger.warning("File %s is not an ELF binary", analyzer.filepath)
             return results
@@ -88,12 +92,19 @@ def analyze_symbols(
             value, error = _telfhash_from_result(telfhash_result, analyzer)
             results["telfhash"] = value
             if error:
+                results["status"] = (
+                    AnalyzerStatus.FAILED.value
+                    if filtered_symbols
+                    else AnalyzerStatus.NOT_APPLICABLE.value
+                )
                 results["error"] = error
             logger.debug("Telfhash calculated: %s", results["telfhash"])
         except Exception as exc:
+            results["status"] = AnalyzerStatus.FAILED.value
             logger.error("Error calling telfhash function: %s", exc)
             results["error"] = f"Telfhash calculation failed: {exc}"
     except Exception as exc:
+        results["status"] = AnalyzerStatus.FAILED.value
         logger.error("Telfhash analysis failed: %s", exc)
         results["error"] = str(exc)
     return results

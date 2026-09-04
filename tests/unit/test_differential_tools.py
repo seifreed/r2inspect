@@ -151,7 +151,7 @@ def test_specialist_runner_parses_json_command(tmp_path: Path) -> None:
 def test_real_manifest_requires_provenance_and_hashes(tmp_path: Path) -> None:
     path = tmp_path / "manifest.json"
     path.write_text(
-        '{"corpus_kind":"real_labeled","provenance":{"source":"x","dataset_version":"1","labeling_method":"review"},"cases":[{"sample":"a","class":"benign","sha256":"'
+        '{"corpus_kind":"real_labeled","evaluation_role":"holdout","provenance":{"source":"x","dataset_version":"1","labeling_method":"review"},"cases":[{"sample":"a","class":"benign","sample_type":"benignware","sha256":"'
         + "a" * 64
         + '"}]}',
         encoding="utf-8",
@@ -169,6 +169,7 @@ def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path) -> No
                 "schema_version": "r2inspect.benchmark/v1",
                 "corpus_kind": "real_labeled",
                 "corpus_id": "dataset-v1",
+                "evaluation_role": "holdout",
                 "provenance": {
                     "source": "licensed-source",
                     "dataset_version": "v1",
@@ -180,6 +181,7 @@ def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path) -> No
                         "id": "sample-1",
                         "sample": sample.name,
                         "class": "benign",
+                        "sample_type": "benignware",
                         "sha256": "".join([]),
                     }
                 ],
@@ -211,5 +213,6 @@ def test_real_manifest_metadata_is_preserved_in_evaluation(tmp_path: Path) -> No
         corpus_runner._run_case = original_runner
     evaluation = json.loads(result.read_text(encoding="utf-8"))
     assert evaluation["corpus_kind"] == "real_labeled"
+    assert evaluation["evaluation_role"] == "holdout"
     assert evaluation["provenance"]["dataset_version"] == "v1"
     assert evaluation["classification"] == {"strategy": "any_finding"}

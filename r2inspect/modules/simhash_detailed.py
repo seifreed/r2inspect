@@ -8,6 +8,7 @@ from typing import Any
 
 from ..abstractions.result_builder import init_result, mark_unavailable
 from ..domain.services.simhash import build_feature_stats
+from ..domain.results import AnalyzerStatus
 
 
 def _simhash_entry(features: list[str], simhash_cls: Any) -> dict[str, Any]:
@@ -54,7 +55,10 @@ def run_detailed_simhash_analysis(
     """Run the detailed SimHash analysis flow."""
     if not simhash_available:
         result = init_result(
-            additional_fields={"library_available": False},
+            additional_fields={
+                "library_available": False,
+                "status": AnalyzerStatus.DEPENDENCY_UNAVAILABLE.value,
+            },
             include_execution_time=False,
         )
         return mark_unavailable(result, "simhash library not installed")
@@ -75,6 +79,7 @@ def run_detailed_simhash_analysis(
             "analyzed_functions": 0,
             "feature_stats": {},
             "similarity_groups": [],
+            "status": AnalyzerStatus.COMPLETED.value,
         },
         include_execution_time=False,
     )
@@ -86,6 +91,7 @@ def run_detailed_simhash_analysis(
         function_features = extract_function_features()
 
         if not strings_features and not opcodes_features:
+            results["status"] = AnalyzerStatus.NOT_APPLICABLE.value
             results["error"] = no_features_error
             log_debug(no_features_error)
             return results
@@ -115,6 +121,7 @@ def run_detailed_simhash_analysis(
         log_debug(f"Binary SimHash: {combined_hex}")
 
     except Exception as e:
+        results["status"] = AnalyzerStatus.FAILED.value
         log_error(f"SimHash analysis failed: {e}")
         results["error"] = str(e)
 

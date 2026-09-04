@@ -8,6 +8,7 @@ from ..abstractions.hashing_strategy import R2HashingStrategy, availability_resu
 from ..infrastructure.file_type import is_elf_file, is_pe_file
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
+from ..domain.results import AnalyzerStatus
 from .telfhash_analysis import (
     analyze_symbols as _analyze_symbols_impl,
     is_elf_binary as _is_elf_binary_impl,
@@ -67,6 +68,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
         """Return ``(hash_value, method_used, error_message)`` for the ELF file."""
         try:
             if not self._is_elf_file():
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return None, None, "File is not an ELF binary"
 
             telfhash_result = self._telfhash_fn(str(self.filepath))
@@ -77,6 +79,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             hash_value, message = _parse_telfhash_result_impl(telfhash_result)
 
             if message and not hash_value:
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return None, None, message
 
             if hash_value:
@@ -85,6 +88,7 @@ class TelfhashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             return None, None, "Telfhash calculation returned no hash"
 
         except Exception as e:
+            self.last_status = AnalyzerStatus.FAILED.value
             logger.error("Error calculating telfhash: %s", e)
             return None, None, f"Telfhash calculation failed: {str(e)}"
 

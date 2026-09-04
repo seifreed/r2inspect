@@ -37,7 +37,7 @@ class SSDeepAnalyzer(HashingStrategy):
         """Check if the SSDeep Python library is available."""
         return availability_result(
             SSDeepAnalyzer.is_available(),
-            "SSDeep not available. Install with: pip install ssdeep",
+            "SSDeep not available. Install the similarity extra",
         )
 
     def _calculate_hash(
@@ -59,7 +59,7 @@ class SSDeepAnalyzer(HashingStrategy):
             return (
                 None,
                 None,
-                "SSDeep library not available. Install with: pip install ssdeep",
+                "SSDeep library not available. Install the similarity extra",
             )
 
         try:

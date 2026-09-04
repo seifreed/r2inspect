@@ -90,6 +90,7 @@ class HashingStage(ConfiguredRegistryStage):
             "tlsh": "analyze_sections",
             "ccbhash": "analyze_functions",
             "simhash": "analyze_detailed",
+            "telfhash": "analyze_symbols",
         }.get(name)
         if detailed_method is not None:
             method = getattr(analyzer, detailed_method, None)

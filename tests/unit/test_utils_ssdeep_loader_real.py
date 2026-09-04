@@ -10,6 +10,7 @@ import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
 def test_ssdeep_loader_success_and_failure(tmp_path: Path) -> None:
     ssdeep_loader._ssdeep_module = None
     sys.modules.pop("ssdeep", None)
+    sys.modules.pop("ppdeep", None)
 
     module_dir = tmp_path / "fake_ssdeep"
     module_dir.mkdir()
@@ -24,10 +25,12 @@ def test_ssdeep_loader_success_and_failure(tmp_path: Path) -> None:
 
         ssdeep_loader._ssdeep_module = None
         sys.modules.pop("ssdeep", None)
+        sys.modules.pop("ppdeep", None)
         sys.path = []
         assert ssdeep_loader.get_ssdeep() is None
     finally:
         sys.path = old_path
         ssdeep_loader._ssdeep_module = None
         sys.modules.pop("ssdeep", None)
+        sys.modules.pop("ppdeep", None)
         importlib.invalidate_caches()

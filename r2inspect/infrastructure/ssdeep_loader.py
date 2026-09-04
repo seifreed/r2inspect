@@ -22,9 +22,14 @@ warnings.filterwarnings(
 
 
 def _import_ssdeep() -> Any:
-    import ssdeep
+    try:
+        import ssdeep
 
-    return ssdeep
+        return ssdeep
+    except Exception:
+        import ppdeep
+
+        return ppdeep
 
 
 def get_ssdeep(*, importer: Callable[[], Any] | None = None) -> Any | None:

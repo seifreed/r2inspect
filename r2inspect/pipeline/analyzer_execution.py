@@ -19,6 +19,15 @@ from .results_bucket import _results_bucket
 
 logger = get_logger(__name__)
 
+_RECOVERABLE_STATUSES = {
+    AnalyzerStatus.COMPLETED_WITH_WARNINGS,
+    AnalyzerStatus.PARTIAL,
+    AnalyzerStatus.NOT_APPLICABLE,
+    AnalyzerStatus.UNSUPPORTED,
+    AnalyzerStatus.DEPENDENCY_UNAVAILABLE,
+    AnalyzerStatus.SKIPPED_BY_PROFILE,
+}
+
 
 def _typed_result(
     analyzer_name: str, data: Any, *, status: str = "completed", error: str | None = None
@@ -98,6 +107,8 @@ def record_analyzer_execution(
     error: str | None = None,
     duration: float | None = None,
 ) -> AnalyzerExecution[Any]:
+    if error is None and isinstance(data, dict) and data.get("error"):
+        error = str(data["error"])
     typed_status = _status_from(data, status, error)
     analyzer_id = data.analyzer_id if isinstance(data, TypedAnalyzerResult) else analyzer_name
     version, output_schema = _execution_identity(stage, analyzer_name)
@@ -108,7 +119,18 @@ def record_analyzer_execution(
         output_schema=output_schema,
         status=typed_status,
         data=data,
-        errors=[_execution_error(analyzer_id, typed_status, error)] if error else [],
+        errors=(
+            [
+                _execution_error(
+                    analyzer_id,
+                    typed_status,
+                    error,
+                    recoverable=typed_status in _RECOVERABLE_STATUSES,
+                )
+            ]
+            if error
+            else []
+        ),
         duration=(
             float(raw_duration)
             if isinstance(raw_duration, (int, float)) and not isinstance(raw_duration, bool)
@@ -186,7 +208,14 @@ def _store_success(
         typed_status = AnalyzerStatus.COMPLETED_WITH_WARNINGS
     analyzer_id = data.analyzer_id if isinstance(data, TypedAnalyzerResult) else analyzer_name
     if error and not errors:
-        errors = [_execution_error(analyzer_id, typed_status, error, recoverable=True)]
+        errors = [
+            _execution_error(
+                analyzer_id,
+                typed_status,
+                error,
+                recoverable=typed_status in _RECOVERABLE_STATUSES,
+            )
+        ]
     data = _typed_result(analyzer_id, data, status=typed_status.value, error=error)
     _results_bucket(context)[result_key] = data
     version, output_schema = _execution_identity(stage, analyzer_name)

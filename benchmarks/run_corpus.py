@@ -16,6 +16,15 @@ from typing import Any, cast
 
 from r2inspect.schemas.report_v1 import ReportV1
 
+_REAL_SAMPLE_TYPES = {
+    "administrative_tool",
+    "benignware",
+    "malformed",
+    "malware",
+    "system_library",
+    "unknown",
+}
+
 try:
     from benchmarks.differential_tools import TOOL_COMMANDS, compare_report, run_specialist_safe
 except ModuleNotFoundError:  # direct ``python benchmarks/run_corpus.py`` execution
@@ -39,6 +48,8 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         if not isinstance(case, dict) or not isinstance(case.get("sample"), str):
             raise ValueError("each corpus case requires a sample path")
     if manifest.get("corpus_kind") == "real_labeled":
+        if manifest.get("evaluation_role") not in {"calibration", "holdout"}:
+            raise ValueError("real_labeled corpora require calibration or holdout evaluation_role")
         provenance = manifest.get("provenance")
         if not isinstance(provenance, dict) or not all(
             isinstance(provenance.get(key), str) and provenance[key]
@@ -50,6 +61,8 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         for case in cases:
             if case.get("class") not in {"benign", "malware", "unknown"}:
                 raise ValueError("real_labeled cases require benign, malware, or unknown classes")
+            if case.get("sample_type") not in _REAL_SAMPLE_TYPES:
+                raise ValueError("real_labeled cases require a supported sample_type")
             digest = case.get("sha256")
             if not isinstance(digest, str) or len(digest) != 64:
                 raise ValueError("real_labeled cases require SHA-256 hashes")
@@ -158,6 +171,7 @@ def run_corpus(
         "schema_version": manifest.get("schema_version", "r2inspect.benchmark/v1"),
         "corpus_kind": manifest.get("corpus_kind", "synthetic"),
         "corpus_id": manifest.get("corpus_id"),
+        "evaluation_role": manifest.get("evaluation_role"),
         "provenance": manifest.get("provenance"),
         "fixture_repository": manifest.get("fixture_repository"),
         "fixture_commit": manifest.get("fixture_commit"),

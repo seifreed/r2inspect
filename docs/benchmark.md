@@ -13,17 +13,23 @@ The public sanitized corpus is stored in the fixture repository's
 independent of the detector under test. The scheduled workflow runs it nightly
 and stores reports plus aggregate metrics as an artifact.
 
-The scheduled workflow also supports a licensed real-labeled corpus supplied
+The Linux/Python 3.13 pull-request job runs the small public corpus as a required
+gate. The scheduled workflow also supports a licensed real-labeled corpus supplied
 as a private archive through `R2INSPECT_REAL_CORPUS_URL`,
 `R2INSPECT_REAL_CORPUS_SHA256`, and `R2INSPECT_REAL_CORPUS_TOKEN`. Its manifest
-must declare `"corpus_kind": "real_labeled"`, provenance, independent labels,
-and SHA-256 values. Samples are never uploaded; only aggregate metrics are.
+must declare `"corpus_kind": "real_labeled"`, provenance, an
+`evaluation_role` of `calibration` or `holdout`, a `sample_type` for every case,
+independent labels, and SHA-256 values. Samples are never uploaded; only aggregate
+metrics are.
 
 ## Metrics
 
-Each analyzer report will include precision, recall, false-positive and
-false-negative rates, unknown/error/timeout rates, completion rate, latency
-median/P95/P99, peak memory, platform variance, and radare2-version variance.
+Metrics separate execution failures, unavailable dependencies, non-applicable
+analyzers, and timeouts. Finding precision and recall are reported only for cases
+with `expected_rule_ids` or structured `expected_findings`; unlabeled findings are
+not counted as false positives. Results also include per-rule and per-category
+scores, latency median/P95/P99, peak memory, platform variance, and radare2-version
+variance.
 
 Initial release goals are zero crashes or hangs, more than 99 percent completion
 for valid supported binaries, less than 1 percent false positives for
@@ -48,7 +54,12 @@ Create a manifest next to strict report-v1 files:
 ```json
 {
   "cases": [
-    {"report": "reports/sample.json", "expected_rule_ids": ["packer.upx"]}
+    {
+      "report": "reports/sample.json",
+      "expected_findings": [
+        {"rule_id": "packer.upx", "category": "packer"}
+      ]
+    }
   ]
 }
 ```
@@ -63,8 +74,8 @@ python benchmarks/evaluate_reports.py corpus/manifest.json \
 ```
 
 The versioned output reports finding precision/recall, explicit analyzer status
-rates, per-analyzer latency/error rates, peak-memory distribution, platform and
-radare2-version counts, and differential finding changes. A manifest pins the
+rates, per-analyzer latency/failure rates, peak-memory distribution, platform and
+radare2-version metrics, and differential finding changes. A manifest pins the
 exact reports evaluated, so public and private corpora use the same scorer
 without publishing samples.
 

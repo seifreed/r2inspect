@@ -136,7 +136,7 @@ def test_calculate_ssdeep_import_failure(tmp_path: Path) -> None:
     original_import = builtins.__import__
 
     def _fake_import(name: str, *args: object, **kwargs: object) -> object:
-        if name == "ssdeep":
+        if name in {"ssdeep", "ppdeep"}:
             raise ImportError("forced")
         return original_import(name, *args, **kwargs)
 

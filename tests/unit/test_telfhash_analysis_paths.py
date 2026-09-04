@@ -373,3 +373,4 @@ def test_analyze_symbols_with_msg_dict() -> None:
     )
     result = analyzer.analyze_symbols()
     assert "Dict error" in result["error"]
+    assert result["status"] == "not_applicable"

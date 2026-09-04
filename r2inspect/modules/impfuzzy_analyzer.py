@@ -8,6 +8,7 @@ from ..abstractions.hashing_strategy import R2HashingStrategy, availability_resu
 from ..infrastructure.file_type import is_pe_file
 from ..infrastructure.logging import get_logger
 from ..infrastructure.ssdeep_loader import get_ssdeep
+from ..domain.results import AnalyzerStatus
 from .impfuzzy_support import (
     analyze_imports as _analyze_imports_impl,
     calculate_impfuzzy_from_file as _calculate_impfuzzy_from_file_impl,
@@ -77,6 +78,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
         try:
             # Check if file is PE
             if not self._is_pe_file():
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return None, None, "File is not a PE binary"
 
             # Calculate impfuzzy hash directly from file
@@ -86,6 +88,7 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 logger.debug("Impfuzzy hash calculated: %s", impfuzzy_hash)
                 return impfuzzy_hash, "python_library", None
             else:
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return (
                     None,
                     None,
@@ -93,6 +96,11 @@ class ImpfuzzyAnalyzer(CommandHelperMixin, R2HashingStrategy):
                 )
 
         except Exception as e:
+            self.last_status = (
+                AnalyzerStatus.NOT_APPLICABLE.value
+                if e.__class__.__module__ == "pefile" and e.__class__.__name__ == "PEFormatError"
+                else AnalyzerStatus.FAILED.value
+            )
             logger.error("Error calculating impfuzzy hash: %s", e)
             return None, None, f"Impfuzzy calculation failed: {str(e)}"
 

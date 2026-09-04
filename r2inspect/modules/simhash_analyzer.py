@@ -17,6 +17,7 @@ from ..domain.services.simhash import (
     interpret_similarity_distance,
 )
 from ..infrastructure.logging import get_logger
+from ..domain.results import AnalyzerStatus
 from .simhash_data_access_support import (
     extract_ops_from_disasm as _extract_ops_from_disasm_impl,
     get_functions as _get_functions_impl2,
@@ -79,6 +80,7 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
             opcodes_features = self._extract_opcodes_features()
 
             if not strings_features and not opcodes_features:
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return None, None, NO_FEATURES_ERROR
 
             # Combined SimHash (strings + opcodes)
@@ -92,6 +94,7 @@ class SimHashAnalyzer(CommandHelperMixin, HashingStrategy):
             return None, None, "Failed to calculate SimHash from features"
 
         except Exception as e:
+            self.last_status = AnalyzerStatus.FAILED.value
             logger.error("Error calculating SimHash: %s", e)
             return None, None, f"SimHash calculation failed: {str(e)}"
 

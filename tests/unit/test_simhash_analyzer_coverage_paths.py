@@ -101,6 +101,7 @@ def test_simhash_analyzer_calculate_hash_no_features() -> None:
     assert hash_val is None
     assert method is None
     assert "No features" in error
+    assert analyzer.last_status == "not_applicable"
 
 
 @pytest.mark.skipif(not SIMHASH_AVAILABLE, reason="simhash not available")

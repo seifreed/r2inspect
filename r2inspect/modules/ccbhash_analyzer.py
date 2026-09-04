@@ -8,6 +8,7 @@ from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..abstractions.hashing_strategy import R2HashingStrategy, availability_result
 from ..infrastructure.analyzer_runner import run_analyzer_on_file
 from ..infrastructure.logging import get_logger
+from ..domain.results import AnalyzerStatus
 from .ccbhash_support import (
     analyze_functions as build_function_analysis,
     build_canonical_representation as build_cfg_canonical_representation,
@@ -65,12 +66,14 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             # Extract all functions
             functions = self._extract_functions()
             if not functions:
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return None, None, NO_FUNCTIONS_FOUND
 
             # Calculate CCBHash for each function
             function_hashes, _ = build_function_ccbhashes(self, functions)
 
             if not function_hashes:
+                self.last_status = AnalyzerStatus.NOT_APPLICABLE.value
                 return None, None, NO_FUNCTIONS_ANALYZED
 
             # Calculate binary-wide CCBHash
@@ -80,6 +83,7 @@ class CCBHashAnalyzer(CommandHelperMixin, R2HashingStrategy):
             return None, None, "Failed to calculate binary CCBHash"
 
         except Exception as e:
+            self.last_status = AnalyzerStatus.FAILED.value
             logger.error("Error calculating CCBHash: %s", e)
             return None, None, f"CCBHash calculation failed: {str(e)}"
 

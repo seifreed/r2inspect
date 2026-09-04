@@ -51,6 +51,7 @@ yara = ["yara-python>=4.5.0"]
 similarity = [
     "pybloom-live>=4.0.0",
     "simhash>=2.1.0",
+    "ppdeep>=20260221",
     "pyimpfuzzy>=0.1.1; sys_platform != 'win32'",
     "telfhash>=0.9.8; sys_platform != 'win32'",
     "python-tlsh>=4.5.0; sys_platform != 'win32'",
@@ -60,6 +61,7 @@ all = [
     "yara-python>=4.5.0",
     "pybloom-live>=4.0.0",
     "simhash>=2.1.0",
+    "ppdeep>=20260221",
     "pyimpfuzzy>=0.1.1; sys_platform != 'win32'",
     "telfhash>=0.9.8; sys_platform != 'win32'",
     "python-tlsh>=4.5.0; sys_platform != 'win32'",
@@ -82,6 +84,7 @@ dev = [
     "yara-python>=4.5.0",
     "pybloom-live>=4.0.0",
     "simhash>=2.1.0",
+    "ppdeep>=20260221",
     # Native hash libraries the analyzers (and their tests) exercise. They were
     # only in the optional "docker" group, so the documented `.[dev]` test
     # install lacked them and the impfuzzy/telfhash tests failed. pyimpfuzzy

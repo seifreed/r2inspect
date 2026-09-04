@@ -26,6 +26,8 @@ python benchmarks/evaluate_reports.py \
   --output /tmp/r2inspect-real-results/metrics.json
 ```
 
+The manifest declares this corpus as `calibration` and classifies each sample as
+benignware, malware, administrative tool, system library, malformed, or unknown.
 The `classification` block is explicit and requires bounded complexity plus
 independent severe categories, or a contextual medium `Suspicious API` or
 `Behavior Cluster` finding. Oversized import/export/function tables are
@@ -36,12 +38,14 @@ previous 15-sample evidence snapshot scores 1.0 precision, 1.0 recall, and
 0.0 FPR; see docs/benchmark-real-public-2026-08-26.json. A fresh 19-case local
 run on macOS ARM64 with radare2 6.2.0 scores 1.0 precision, 1.0 recall, and
 0.0 FPR for calibrated classification (8 true positives, 8 true negatives, 0
-false positives, 0 false negatives, and 3 unknown cases), with 119 completed
-and 8 failed analyzer outcomes. The generated
-`metrics.json` keeps those per-analyzer statuses, latency, memory, and platform
-metrics; the failures remain visible instead of being counted as clean results.
+false positives, 0 false negatives, and 3 unknown cases), with 248 completed,
+33 not-applicable, 10 not-detected, 152 profile-skipped, and zero failed analyzer
+outcomes. The generated
+`metrics.json` keeps those per-analyzer statuses, latency, memory, platform, and
+radare2-version metrics.
 The aggregate finding score is intentionally not treated as detector precision:
-these corpus cases do not declare expected finding rule IDs. Differential
+these corpus cases do not declare expected findings and are excluded from that
+metric instead of being counted as false positives. Differential
 specialist evidence remains scoped to the original 11-case calibrated subset.
 capa
 static analysis explicitly skips samples over 512 KiB as `skipped_by_profile`

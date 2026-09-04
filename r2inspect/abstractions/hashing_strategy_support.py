@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .validation_support import validate_non_negative, validate_positive
-from ..domain.results import HashResult
+from ..domain.results import AnalyzerStatus, HashResult
 
 
 def availability_result(available: bool, unavailable_message: str) -> tuple[bool, str | None]:
@@ -40,26 +40,33 @@ def validate_strategy_init(filepath: str, max_file_size: int, min_file_size: int
 def run_hash_analysis(strategy: Any) -> dict[str, Any]:
     start_time = time.time()
     result = HashResult(hash_type=strategy._get_hash_type())
+    strategy.last_status = None
     try:
         validation_error = strategy._validate_file()
         if validation_error:
+            strategy.last_status = AnalyzerStatus.FAILED.value
             result.error = validation_error
             result.execution_time = time.time() - start_time
             return result.to_dict()
         result.file_size = strategy._filepath.stat().st_size
         library_available, error_message = strategy._check_library_availability()
         if not library_available:
+            strategy.last_status = AnalyzerStatus.DEPENDENCY_UNAVAILABLE.value
             result.error = error_message or "Required library not available"
             result.execution_time = time.time() - start_time
             return result.to_dict()
         result.available = True
         hash_value, method_used, error = strategy._calculate_hash()
         if error:
+            if not getattr(strategy, "last_status", None):
+                strategy.last_status = AnalyzerStatus.FAILED.value
             result.error = error
         else:
+            strategy.last_status = AnalyzerStatus.COMPLETED.value
             result.hash_value = hash_value
             result.method_used = method_used
     except Exception as exc:
+        strategy.last_status = AnalyzerStatus.FAILED.value
         result.error = f"Unexpected error in {strategy._get_hash_type()} analysis: {str(exc)}"
     finally:
         result.execution_time = time.time() - start_time

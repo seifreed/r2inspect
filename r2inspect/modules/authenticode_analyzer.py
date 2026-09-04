@@ -4,6 +4,7 @@ from ..abstractions.coercion_support import coerce_int, ensure_list_bucket, is_b
 from ..abstractions import BaseAnalyzer
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
+from ..domain.results import AnalyzerStatus
 from .authenticode_parsing_support import (
     get_security_directory as _get_security_directory_impl,
     parse_pkcs7 as _parse_pkcs7_impl,
@@ -29,11 +30,14 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
 
             if not self._has_required_headers():
                 result["available"] = False
+                result["status"] = AnalyzerStatus.NOT_APPLICABLE.value
                 return result
 
+            result["available"] = True
             security_dir = self._get_security_directory()
             if not security_dir or coerce_int(security_dir.get("vaddr", 0)) == 0:
                 result["has_signature"] = False
+                result["status"] = AnalyzerStatus.NOT_DETECTED.value
                 return result
 
             cert_info = self._read_win_certificate(security_dir, result)
@@ -43,6 +47,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             else:
                 result["has_signature"] = False
                 result["signature_valid"] = False
+                result["status"] = AnalyzerStatus.FAILED.value
                 return result
 
             # Check signature validity by computing authenticode hash
@@ -61,6 +66,7 @@ class AuthenticodeAnalyzer(CommandHelperMixin, BaseAnalyzer):
             result["has_signature"] = False
             result["signature_valid"] = False
             result["error"] = str(e)
+            result["status"] = AnalyzerStatus.FAILED.value
             return result
 
     def _has_required_headers(self) -> bool:

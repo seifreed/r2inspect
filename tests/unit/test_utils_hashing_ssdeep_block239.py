@@ -10,7 +10,7 @@ import r2inspect.infrastructure.ssdeep_loader as ssdeep_loader
 
 class BlockSSDeepFinder:
     def find_spec(self, fullname, _path=None, _target=None):
-        if fullname == "ssdeep":
+        if fullname in {"ssdeep", "ppdeep"}:
             raise ImportError("blocked")
         return None
 
@@ -56,6 +56,7 @@ def test_calculate_ssdeep_and_loader(tmp_path: Path):
     original_meta_path = list(sys.meta_path)
     ssdeep_loader._ssdeep_module = None
     sys.modules.pop("ssdeep", None)
+    sys.modules.pop("ppdeep", None)
     sys.meta_path.insert(0, BlockSSDeepFinder())
     try:
         assert ssdeep_loader.get_ssdeep() is None

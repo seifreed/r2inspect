@@ -38,7 +38,9 @@ jobs:
             --corpus-dir test-binaries --output-dir benchmark-results
           python benchmarks/evaluate_reports.py benchmark-results/manifest.json \
             --output benchmark-results/metrics.json \
-            --min-precision 1.0 --min-recall 1.0
+            --min-precision 1.0 --min-recall 1.0 \
+            --max-execution-failure-rate 0.01 \
+            --max-dependency-unavailable-rate 0.0
       - name: Run expanded real public corpus
         run: |
           python benchmarks/real_public_corpus.py expanded-real-public-corpus
@@ -49,7 +51,10 @@ jobs:
           python benchmarks/evaluate_reports.py \
             expanded-real-public-results/manifest.json \
             --output expanded-real-public-results/metrics.json \
-            --max-error-rate 0.2
+            --min-classification-precision 1.0 \
+            --min-classification-recall 1.0 \
+            --max-execution-failure-rate 0.01 \
+            --max-dependency-unavailable-rate 0.0
       - name: Publish benchmark artifact
         uses: actions/upload-artifact@v4
         with:

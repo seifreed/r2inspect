@@ -158,12 +158,26 @@ _SAMPLES = (
     ),
 )
 
+_SAMPLE_TYPE_OVERRIDES = {
+    "kernel32_x86": "system_library",
+    "kernel32_x64": "system_library",
+    "microsocks_elf": "administrative_tool",
+    "edge_packed_unknown": "unknown",
+    "edge_bad_pe_unknown": "malformed",
+    "edge_tiny_unknown": "malformed",
+}
+
+
+def _sample_type(case_id: str, label: str) -> str:
+    return _SAMPLE_TYPE_OVERRIDES.get(case_id, "malware" if label == "malware" else "benignware")
+
 
 def _manifest() -> dict[str, object]:
     return {
         "schema_version": "r2inspect.benchmark/v1",
         "corpus_kind": "real_labeled",
         "corpus_id": "capa-testfiles-pma-kernel32-fixtures-v3",
+        "evaluation_role": "calibration",
         "provenance": {
             "source": DATASET_URL,
             "dataset_version": DATASET_COMMIT,
@@ -182,6 +196,7 @@ def _manifest() -> dict[str, object]:
             "max_functions": 1000,
             "max_imports": 500,
             "max_exports": 500,
+            "detection_analyzers": ["anti_analysis", "packer_detector", "yara_analyzer"],
         },
         "cases": [
             {
@@ -189,7 +204,7 @@ def _manifest() -> dict[str, object]:
                 "sample": f"samples/{case_id}.bin",
                 "sha256": digest,
                 "class": label,
-                "expected_rule_ids": [],
+                "sample_type": _sample_type(case_id, label),
             }
             for case_id, _source_name, label, digest, _source in _SAMPLES
         ],

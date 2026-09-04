@@ -72,6 +72,7 @@ def test_ccbhash_no_functions():
     assert result["available"] is False
     assert result["total_functions"] == 0
     assert result["error"] is not None
+    assert result["status"] == "not_applicable"
 
 
 def test_ccbhash_basic_analysis():

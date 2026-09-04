@@ -12,6 +12,8 @@ from typing import Any
 
 from r2inspect.schemas.report_v1 import ReportV1
 
+_FAILURE_STATUSES = ("failed", "timed_out")
+
 
 def _ratio(numerator: int, denominator: int) -> float | None:
     return numerator / denominator if denominator else None
@@ -29,6 +31,83 @@ def _distribution(values: list[float]) -> dict[str, float | None]:
         "median": _percentile(values, 0.5),
         "p95": _percentile(values, 0.95),
         "p99": _percentile(values, 0.99),
+    }
+
+
+def _status_rates(statuses: Counter[str]) -> dict[str, float | None]:
+    total = sum(statuses.values())
+    return {
+        "execution_failure_rate": _ratio(sum(statuses[name] for name in _FAILURE_STATUSES), total),
+        "dependency_unavailable_rate": _ratio(statuses["dependency_unavailable"], total),
+        "not_applicable_rate": _ratio(statuses["not_applicable"], total),
+    }
+
+
+def _dimension_stats() -> dict[str, Any]:
+    return {
+        "durations": [],
+        "memory": [],
+        "statuses": Counter(),
+        "classification": [],
+    }
+
+
+def _dimension_summary(stats: dict[str, Any], cases: int) -> dict[str, Any]:
+    statuses = stats["statuses"]
+    total = sum(statuses.values())
+    summary: dict[str, Any] = {
+        "cases": cases,
+        "latency_seconds": _distribution(stats["durations"]),
+        "memory_mb": {**_distribution(stats["memory"]), "samples": len(stats["memory"])},
+        "analyzer_statuses": dict(sorted(statuses.items())),
+        **_status_rates(statuses),
+        "timeouts": statuses["timed_out"],
+        "timeout_rate": _ratio(statuses["timed_out"], total),
+    }
+    if stats["classification"]:
+        summary["classification"] = _binary_metrics(stats["classification"])
+    return summary
+
+
+def _finding_labels(case: dict[str, Any]) -> dict[str, str | None] | None:
+    if "expected_findings" in case:
+        labels = case["expected_findings"]
+        if not isinstance(labels, list) or not all(
+            isinstance(item, dict)
+            and isinstance(item.get("rule_id"), str)
+            and isinstance(item.get("category"), str)
+            for item in labels
+        ):
+            raise ValueError("expected_findings requires rule_id and category strings")
+        return {str(item["rule_id"]): str(item["category"]) for item in labels}
+    if "expected_rule_ids" in case:
+        rule_ids = case["expected_rule_ids"]
+        if not isinstance(rule_ids, list) or not all(isinstance(item, str) for item in rule_ids):
+            raise ValueError("expected_rule_ids must be a list of strings")
+        return dict.fromkeys(rule_ids)
+    return None
+
+
+def _update_scores(scores: dict[str, Counter[str]], expected: set[str], actual: set[str]) -> None:
+    for key in expected | actual:
+        if key in expected and key in actual:
+            scores[key]["true_positive"] += 1
+        elif key in actual:
+            scores[key]["false_positive"] += 1
+        else:
+            scores[key]["false_negative"] += 1
+
+
+def _score_summary(counts: Counter[str]) -> dict[str, int | float | None]:
+    tp = counts["true_positive"]
+    fp = counts["false_positive"]
+    fn = counts["false_negative"]
+    return {
+        "true_positive": tp,
+        "false_positive": fp,
+        "false_negative": fn,
+        "precision": _ratio(tp, tp + fp),
+        "recall": _ratio(tp, tp + fn),
     }
 
 
@@ -53,8 +132,10 @@ def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool
         max_functions = int(classification.get("max_functions", 1000))
         max_imports = int(classification.get("max_imports", 500))
         max_exports = int(classification.get("max_exports", 500))
-        if max(function_count, import_count, export_count) > max(
-            max_functions, max_imports, max_exports
+        if (
+            function_count > max_functions
+            or import_count > max_imports
+            or export_count > max_exports
         ):
             return False
         severe = [
@@ -170,37 +251,64 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
     if not isinstance(cases, list) or not cases:
         raise ValueError("manifest must contain a non-empty cases list")
 
-    tp = fp = fn = 0
+    finding_counts: Counter[str] = Counter()
+    finding_rule_scores: dict[str, Counter[str]] = defaultdict(Counter)
+    finding_category_scores: dict[str, Counter[str]] = defaultdict(Counter)
+    finding_cases = category_cases = 0
+    observed_findings = findings_with_evidence = 0
+    high_findings = high_findings_with_locations = 0
+    high_finding_tp = high_finding_fp = 0
     durations: list[float] = []
     statuses: Counter[str] = Counter()
     analyzer_stats: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"statuses": Counter(), "durations": [], "memory": [], "classification": []}
     )
-    platform_stats: dict[str, dict[str, Any]] = defaultdict(
-        lambda: {
-            "durations": [],
-            "memory": [],
-            "statuses": Counter(),
-            "classification": [],
-        }
-    )
+    platform_stats: dict[str, dict[str, Any]] = defaultdict(_dimension_stats)
+    radare2_stats: dict[str, dict[str, Any]] = defaultdict(_dimension_stats)
     memory_values: list[float] = []
     platforms: Counter[str] = Counter()
     radare2_versions: Counter[str] = Counter()
+    sample_types: Counter[str] = Counter()
     classification_rows: list[tuple[str, bool]] = []
     classification = manifest.get("classification")
     if classification is not None and not isinstance(classification, dict):
         raise ValueError("classification must be an object")
+    detection_analyzers: set[str] = set()
+    if isinstance(classification, dict):
+        declared = classification.get("detection_analyzers", [])
+        if not isinstance(declared, list) or not all(isinstance(item, str) for item in declared):
+            raise ValueError("classification.detection_analyzers must be a list of strings")
+        detection_analyzers = set(declared)
     for case in cases:
         if not isinstance(case, dict) or not isinstance(case.get("report"), str):
             raise ValueError("each case requires a report path")
         report_path = manifest_path.parent / case["report"]
         report = ReportV1.model_validate_json(report_path.read_text(encoding="utf-8"))
-        expected = set(case.get("expected_rule_ids", []))
-        actual = {finding.rule_id for finding in report.findings}
-        tp += len(expected & actual)
-        fp += len(actual - expected)
-        fn += len(expected - actual)
+        sample_types[str(case.get("sample_type") or "unspecified")] += 1
+        observed_findings += len(report.findings)
+        findings_with_evidence += sum(bool(finding.evidence) for finding in report.findings)
+        severe_findings = [
+            finding for finding in report.findings if finding.severity in {"high", "critical"}
+        ]
+        high_findings += len(severe_findings)
+        high_findings_with_locations += sum(bool(finding.locations) for finding in severe_findings)
+        expected_findings = _finding_labels(case)
+        if expected_findings is not None:
+            finding_cases += 1
+            expected = set(expected_findings)
+            actual = {finding.rule_id for finding in report.findings}
+            finding_counts["true_positive"] += len(expected & actual)
+            finding_counts["false_positive"] += len(actual - expected)
+            finding_counts["false_negative"] += len(expected - actual)
+            _update_scores(finding_rule_scores, expected, actual)
+            severe_rules = {finding.rule_id for finding in severe_findings}
+            high_finding_tp += len(expected & severe_rules)
+            high_finding_fp += len(severe_rules - expected)
+            if all(category is not None for category in expected_findings.values()):
+                category_cases += 1
+                expected_categories = {str(category) for category in expected_findings.values()}
+                actual_categories = {finding.category for finding in report.findings}
+                _update_scores(finding_category_scores, expected_categories, actual_categories)
         durations.append(report.analysis.duration)
         statuses.update(outcome.status.value for outcome in report.analyzers)
         platform = str(
@@ -210,8 +318,11 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             or "unknown"
         )
         platforms[platform] += 1
-        platform_stats[platform]["durations"].append(report.analysis.duration)
-        radare2_versions[report.tool.radare2_version or "unknown"] += 1
+        radare2_version = report.tool.radare2_version or "unknown"
+        radare2_versions[radare2_version] += 1
+        dimensions = (platform_stats[platform], radare2_stats[radare2_version])
+        for stats in dimensions:
+            stats["durations"].append(report.analysis.duration)
         if isinstance(classification, dict):
             label = case.get("class")
             if label not in {"benign", "malware", "unknown"}:
@@ -221,12 +332,13 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
         peak_memory = memory.get("peak_memory_mb") if isinstance(memory, dict) else None
         if isinstance(peak_memory, int | float):
             memory_values.append(float(peak_memory))
-            platform_stats[platform]["memory"].append(float(peak_memory))
+            for stats in dimensions:
+                stats["memory"].append(float(peak_memory))
         label = case.get("class")
         if isinstance(classification, dict) and label in {"benign", "malware", "unknown"}:
-            platform_stats[platform]["classification"].append(
-                (str(label), _predicted_malware(report, classification))
-            )
+            prediction = (str(label), _predicted_malware(report, classification))
+            for stats in dimensions:
+                stats["classification"].append(prediction)
         for outcome in report.analyzers:
             stats = analyzer_stats[outcome.analyzer_id]
             stats["statuses"][outcome.status.value] += 1
@@ -247,32 +359,51 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             if isinstance(memory, int | float) and not isinstance(memory, bool):
                 stats["memory"].append(float(memory))
             detected = outcome.metrics.get("detected")
-            if isinstance(detected, bool) and label in {"benign", "malware", "unknown"}:
+            if (
+                outcome.analyzer_id in detection_analyzers
+                and isinstance(detected, bool)
+                and label in {"benign", "malware", "unknown"}
+            ):
                 stats["classification"].append((str(label), detected))
-            platform_stats[platform]["statuses"][outcome.status.value] += 1
+            for dimension in dimensions:
+                dimension["statuses"][outcome.status.value] += 1
 
     total_outcomes = sum(statuses.values())
-    failed = sum(statuses[name] for name in ("failed", "timed_out"))
-    unknown = sum(
-        statuses[name] for name in ("unsupported", "dependency_unavailable", "not_applicable")
-    )
+    findings_summary = _score_summary(finding_counts)
     result = {
         "schema_version": "r2inspect.benchmark/v1",
         "corpus_kind": manifest.get("corpus_kind", "synthetic"),
         "corpus_id": manifest.get("corpus_id"),
         "provenance": manifest.get("provenance"),
         "cases": len(cases),
+        "evaluation_role": manifest.get("evaluation_role"),
         "findings": {
-            "true_positive": tp,
-            "false_positive": fp,
-            "false_negative": fn,
-            "precision": _ratio(tp, tp + fp),
-            "recall": _ratio(tp, tp + fn),
+            "evaluated_cases": finding_cases,
+            "unlabeled_cases": len(cases) - finding_cases,
+            **findings_summary,
+            "by_rule": {
+                key: _score_summary(counts) for key, counts in sorted(finding_rule_scores.items())
+            },
+            "by_category": {
+                "evaluated_cases": category_cases,
+                "metrics": {
+                    key: _score_summary(counts)
+                    for key, counts in sorted(finding_category_scores.items())
+                },
+            },
+            "quality": {
+                "observed": observed_findings,
+                "evidence_coverage": _ratio(findings_with_evidence, observed_findings),
+                "high_severity_observed": high_findings,
+                "high_severity_location_rate": _ratio(high_findings_with_locations, high_findings),
+                "high_severity_false_positive_rate": _ratio(
+                    high_finding_fp, high_finding_tp + high_finding_fp
+                ),
+            },
         },
         "analyzers": {
             "statuses": dict(sorted(statuses.items())),
-            "error_rate": _ratio(failed, total_outcomes),
-            "unknown_rate": _ratio(unknown, total_outcomes),
+            **_status_rates(statuses),
             "timeouts": statuses["timed_out"],
             "timeout_rate": _ratio(statuses["timed_out"], total_outcomes),
         },
@@ -281,10 +412,7 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             analyzer_id: {
                 "cases": sum(stats["statuses"].values()),
                 "statuses": dict(sorted(stats["statuses"].items())),
-                "error_rate": _ratio(
-                    sum(stats["statuses"][name] for name in ("failed", "timed_out")),
-                    sum(stats["statuses"].values()),
-                ),
+                **_status_rates(stats["statuses"]),
                 "timeouts": stats["statuses"]["timed_out"],
                 "timeout_rate": _ratio(
                     stats["statuses"]["timed_out"], sum(stats["statuses"].values())
@@ -302,27 +430,16 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
             "platforms": dict(sorted(platforms.items())),
             "radare2_versions": dict(sorted(radare2_versions.items())),
         },
-        "platform_metrics": {},
+        "sample_types": dict(sorted(sample_types.items())),
+        "platform_metrics": {
+            platform: _dimension_summary(stats, platforms[platform])
+            for platform, stats in sorted(platform_stats.items())
+        },
+        "radare2_metrics": {
+            version: _dimension_summary(stats, radare2_versions[version])
+            for version, stats in sorted(radare2_stats.items())
+        },
     }
-    for platform, stats in sorted(platform_stats.items()):
-        total = sum(stats["statuses"].values())
-        platform_metrics: dict[str, Any] = {
-            "cases": platforms[platform],
-            "latency_seconds": _distribution(stats["durations"]),
-            "memory_mb": {
-                **_distribution(stats["memory"]),
-                "samples": len(stats["memory"]),
-            },
-            "analyzer_statuses": dict(sorted(stats["statuses"].items())),
-            "analyzer_error_rate": _ratio(
-                sum(stats["statuses"][name] for name in ("failed", "timed_out")), total
-            ),
-            "timeouts": stats["statuses"]["timed_out"],
-            "timeout_rate": _ratio(stats["statuses"]["timed_out"], total),
-        }
-        if stats["classification"]:
-            platform_metrics["classification"] = _binary_metrics(stats["classification"])
-        result["platform_metrics"][platform] = platform_metrics
     for analyzer_id, stats in analyzer_stats.items():
         if stats["classification"]:
             result["analyzer_metrics"][analyzer_id]["classification"] = _binary_metrics(
@@ -376,7 +493,12 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--min-precision", type=float)
     parser.add_argument("--min-recall", type=float)
-    parser.add_argument("--max-error-rate", type=float)
+    parser.add_argument("--min-classification-precision", type=float)
+    parser.add_argument("--min-classification-recall", type=float)
+    parser.add_argument(
+        "--max-execution-failure-rate", "--max-error-rate", type=float, dest="max_failure_rate"
+    )
+    parser.add_argument("--max-dependency-unavailable-rate", type=float)
     parser.add_argument("--baseline-manifest", type=Path)
     args = parser.parse_args()
     metrics = evaluate(args.manifest, baseline_manifest=args.baseline_manifest)
@@ -387,13 +509,32 @@ def main() -> None:
         print(result, end="")
     precision = metrics["findings"]["precision"]
     recall = metrics["findings"]["recall"]
-    error_rate = metrics["analyzers"]["error_rate"]
+    failure_rate = metrics["analyzers"]["execution_failure_rate"]
+    dependency_rate = metrics["analyzers"]["dependency_unavailable_rate"]
     if args.min_precision is not None and (precision is None or precision < args.min_precision):
         raise SystemExit("benchmark precision is below the configured threshold")
     if args.min_recall is not None and (recall is None or recall < args.min_recall):
         raise SystemExit("benchmark recall is below the configured threshold")
-    if args.max_error_rate is not None and (error_rate is None or error_rate > args.max_error_rate):
-        raise SystemExit("benchmark error rate is above the configured threshold")
+    if args.max_failure_rate is not None and (
+        failure_rate is None or failure_rate > args.max_failure_rate
+    ):
+        raise SystemExit("benchmark execution failure rate is above the configured threshold")
+    if args.max_dependency_unavailable_rate is not None and (
+        dependency_rate is None or dependency_rate > args.max_dependency_unavailable_rate
+    ):
+        raise SystemExit("benchmark dependency unavailable rate is above the configured threshold")
+    classification = metrics.get("classification", {})
+    classification_precision = classification.get("precision")
+    classification_recall = classification.get("recall")
+    if args.min_classification_precision is not None and (
+        classification_precision is None
+        or classification_precision < args.min_classification_precision
+    ):
+        raise SystemExit("benchmark classification precision is below the configured threshold")
+    if args.min_classification_recall is not None and (
+        classification_recall is None or classification_recall < args.min_classification_recall
+    ):
+        raise SystemExit("benchmark classification recall is below the configured threshold")
 
 
 if __name__ == "__main__":

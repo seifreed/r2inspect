@@ -10,6 +10,7 @@ from typing import Any, Protocol, cast
 from ..abstractions.coercion_support import coerce_int
 from ..domain.services.binary_helpers import clean_function_name
 from ..interfaces.binary_analyzer import BinaryAnalyzerInterface
+from ..domain.results import AnalyzerStatus
 from .function_extraction import collect_valid_functions
 
 
@@ -74,16 +75,19 @@ def analyze_functions(
         "similar_functions": [],
         "binary_ccbhash": None,
         "error": None,
+        "status": AnalyzerStatus.COMPLETED.value,
     }
     try:
         functions = analyzer._extract_functions()
         if not functions:
+            results["status"] = AnalyzerStatus.NOT_APPLICABLE.value
             results["error"] = no_functions_found
             logger.debug(no_functions_found)
             return results
         results["total_functions"] = len(functions)
         function_hashes, analyzed_count = build_function_ccbhashes(analyzer, functions)
         if not function_hashes:
+            results["status"] = AnalyzerStatus.NOT_APPLICABLE.value
             results["error"] = no_functions_analyzed
             logger.debug(no_functions_analyzed)
             return results
@@ -95,6 +99,7 @@ def analyze_functions(
         results["similar_functions"] = analyzer._find_similar_functions(function_hashes)
         results["binary_ccbhash"] = analyzer._calculate_binary_ccbhash(function_hashes)
     except Exception as exc:
+        results["status"] = AnalyzerStatus.FAILED.value
         logger.error("CCBHash analysis failed: %s", exc)
         results["error"] = str(exc)
     return results

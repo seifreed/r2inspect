@@ -151,6 +151,17 @@ jobs:
         shell: bash
         run: bash scripts/quality_gate.sh
 
+      - name: Run public benchmark gate
+        if: runner.os == 'Linux' && matrix.python-version == '3.13'
+        run: |
+          python benchmarks/run_corpus.py benchmarks/public_corpus.json \
+            --corpus-dir test-binaries --output-dir public-benchmark-results
+          python benchmarks/evaluate_reports.py public-benchmark-results/manifest.json \
+            --output public-benchmark-results/metrics.json \
+            --min-precision 1.0 --min-recall 1.0 \
+            --max-execution-failure-rate 0.01 \
+            --max-dependency-unavailable-rate 0.0
+
       - name: Test installation (Unix)
         if: runner.os != 'Windows'
         run: |

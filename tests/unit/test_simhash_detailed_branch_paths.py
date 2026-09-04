@@ -8,7 +8,6 @@ from r2inspect.domain.formats.similarity import (
     normalized_difference_similarity,
 )
 
-
 # ----- similarity_scoring tests -----
 
 
@@ -107,6 +106,7 @@ def test_simhash_no_features_returns_error() -> None:
     )
     result = run_detailed_simhash_analysis(**params)
     assert result.get("error") == "No features found"
+    assert result["status"] == "not_applicable"
 
 
 def test_simhash_with_string_features_only() -> None:
