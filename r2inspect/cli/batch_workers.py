@@ -144,7 +144,7 @@ def process_files_parallel(
     results_lock = threading.Lock()
     progress_lock = threading.Lock()
     effective_threads = _cap_threads_for_execution(threads)
-    cache_path = options.get("_batch_cache")
+    cache_path = options.get("_batch_cache") if isinstance(options, dict) else None
     cache = BatchCache(Path(cache_path), options, config_obj) if cache_path else None
     pending_files = []
     if cache is not None and options.get("_batch_resume"):
