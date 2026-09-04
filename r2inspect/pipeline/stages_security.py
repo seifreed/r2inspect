@@ -6,8 +6,15 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+from ..domain.results import AnalyzerStatus
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import ConfiguredRegistryStage, _results_bucket, _typed_result
+from .analyzer_execution import (
+    _typed_result,
+    record_analyzer_execution,
+    record_skipped_execution,
+)
+from .results_bucket import _results_bucket
+from .stages_common import ConfiguredRegistryStage
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +63,28 @@ class SecurityStage(ConfiguredRegistryStage):
                 )
                 data = analyzer.get_security_features()
                 data = _typed_result("pe_analyzer", data)
+                record_analyzer_execution(self, context, "pe_analyzer", data)
                 _bucket(context, "security").update(data)
                 return {"security": data}
             except Exception as e:
                 logger.warning("PE security analysis failed: %s", e)
                 _bucket(context, "security")["error"] = str(e)
+                record_analyzer_execution(
+                    self,
+                    context,
+                    "pe_analyzer",
+                    None,
+                    status=AnalyzerStatus.FAILED,
+                    error=str(e),
+                )
                 return {"security": {"error": str(e)}}
+        record_skipped_execution(
+            self,
+            context,
+            "pe_analyzer",
+            AnalyzerStatus.DEPENDENCY_UNAVAILABLE,
+            "analyzer is not registered",
+        )
         return None
 
     def _analyze_mitigations(self, context: dict[str, Any]) -> dict[str, Any] | None:
@@ -73,9 +96,25 @@ class SecurityStage(ConfiguredRegistryStage):
                 )
                 mitigations = analyzer.analyze()
                 mitigations = _typed_result("exploit_mitigation", mitigations)
+                record_analyzer_execution(self, context, "exploit_mitigation", mitigations)
                 _bucket(context, "security").update(mitigations)
             except Exception as e:
                 logger.debug("Mitigation analysis failed: %s", e)
+                record_analyzer_execution(
+                    self,
+                    context,
+                    "exploit_mitigation",
+                    None,
+                    status=AnalyzerStatus.FAILED,
+                    error=str(e),
+                )
                 return None
             return {"security": _results_bucket(context).get("security", {})}
+        record_skipped_execution(
+            self,
+            context,
+            "exploit_mitigation",
+            AnalyzerStatus.DEPENDENCY_UNAVAILABLE,
+            "analyzer is not registered",
+        )
         return None

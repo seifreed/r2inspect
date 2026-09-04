@@ -15,6 +15,7 @@ from r2inspect.pipeline.pipeline_runtime_common import detected_file_format
 from r2inspect.pipeline.stages_detection import DetectionStage
 from r2inspect.pipeline.stages_format import FileInfoStage, FormatDetectionStage
 from r2inspect.pipeline.stages_hashing import HashingStage
+from r2inspect.domain.results import AnalyzerExecution, AnalyzerStatus
 from r2inspect.registry.analyzer_registry import AnalyzerCategory, AnalyzerRegistry
 
 
@@ -98,6 +99,12 @@ class CryptoAnalyzer:
         return self.detect()
 
 
+class PartialCryptoAnalyzer(CryptoAnalyzer):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._analysis_errors = ["secondary strategy failed"]
+
+
 def test_detection_stage_runs_enabled_detectors_and_yara() -> None:
     registry = AnalyzerRegistry(lazy_loading=False)
     registry.register(
@@ -134,6 +141,14 @@ def test_detection_stage_runs_enabled_detectors_and_yara() -> None:
     assert result["compiler"]["compiler"] == "gcc"
     assert result["yara_matches"][0]["rule"] == "demo"
     assert "crypto" not in result
+    executions = context["results"]["_analyzer_executions"]
+    yara_execution = next(
+        item
+        for item in executions
+        if isinstance(item, AnalyzerExecution) and item.analyzer_id == "yara_analyzer"
+    )
+    assert yara_execution.status is AnalyzerStatus.COMPLETED
+    assert yara_execution.data == [{"rule": "demo"}]
 
 
 def test_detection_stage_respects_disabled_packer_and_enabled_crypto() -> None:
@@ -164,6 +179,47 @@ def test_detection_stage_respects_disabled_packer_and_enabled_crypto() -> None:
 
     assert "packer" not in result
     assert result["crypto"]["algorithms"] == ["AES"]
+    executions = context["results"]["_analyzer_executions"]
+    packer_execution = next(
+        item
+        for item in executions
+        if isinstance(item, AnalyzerExecution) and item.analyzer_id == "packer_detector"
+    )
+    assert packer_execution.status is AnalyzerStatus.SKIPPED_BY_PROFILE
+
+
+def test_detection_stage_marks_recoverable_subanalysis_as_partial() -> None:
+    registry = AnalyzerRegistry(lazy_loading=False)
+    registry.register(
+        "crypto_analyzer",
+        PartialCryptoAnalyzer,
+        AnalyzerCategory.DETECTION,
+        file_formats={"ANY"},
+    )
+    stage = DetectionStage(
+        registry=registry,
+        adapter=FakeAdapter(),
+        config=FakeConfig(),
+        filename="sample.bin",
+        options={
+            "detect_packer": False,
+            "detect_crypto": True,
+            "detect_anti_analysis": False,
+            "detect_compiler": False,
+            "detect_yara": False,
+        },
+    )
+    context = make_stage_context()
+
+    stage._execute(context)
+
+    execution = next(
+        item
+        for item in context["results"]["_analyzer_executions"]
+        if isinstance(item, AnalyzerExecution) and item.analyzer_id == "crypto_analyzer"
+    )
+    assert execution.status is AnalyzerStatus.PARTIAL
+    assert execution.errors[0].recoverable is True
 
 
 def test_file_info_stage_collects_basic_metadata_and_hashes(tmp_path: Path) -> None:

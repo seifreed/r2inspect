@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from ..domain.results import AnalyzerExecution
+
 from .results_summary import (
     analysis_result_to_dict as _analysis_result_to_dict,
     build_summary as _build_summary,
@@ -85,6 +87,7 @@ class AnalysisResult:
     packer: PackerResult = field(default_factory=PackerResult)
     crypto: CryptoResult = field(default_factory=CryptoResult)
     indicators: list[Indicator] = field(default_factory=list)
+    analyzer_executions: list[AnalyzerExecution[Any]] = field(default_factory=list)
     error: str | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     execution_time: float = 0.0

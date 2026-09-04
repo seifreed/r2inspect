@@ -36,6 +36,7 @@ def test_build_report_v1_maps_core_data_findings_and_outcomes() -> None:
             ],
             "yara": {
                 "available": False,
+                "status": "dependency_unavailable",
                 "error": "dependency unavailable",
                 "execution_time": 0.1,
             },
@@ -70,7 +71,7 @@ def test_build_report_v1_distinguishes_not_detected_from_unavailable() -> None:
         {
             "file_info": {"file_type": "ELF64"},
             "one": {"available": True, "detected": False},
-            "two": {"available": False},
+            "two": {"available": False, "status": "dependency_unavailable"},
         }
     )
 

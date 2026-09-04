@@ -9,7 +9,7 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from .results_bucket import _results_bucket
+from .results_bucket import _results_bucket, merge_stage_results
 
 logger = logging.getLogger(__name__)
 
@@ -65,14 +65,21 @@ class AnalysisStage(ABC):
         if not self.should_execute(context):
             logger.debug("Skipping stage '%s' (condition not met)", self.name)
             return {}
+        executions = _results_bucket(context).get("_analyzer_executions")
+        execution_count = len(executions) if isinstance(executions, list) else 0
         try:
             logger.debug("Executing stage '%s'", self.name)
-            return self._execute(context)
+            result = self._execute(context)
         except Exception as e:
             logger.error("Stage '%s' failed: %s", self.name, e)
             # Return error structure under results
             _results_bucket(context)[self.name] = {"error": str(e), "success": False}
-            return {self.name: {"error": str(e), "success": False}}
+            result = {self.name: {"error": str(e), "success": False}}
+        current = _results_bucket(context).get("_analyzer_executions")
+        if isinstance(current, list) and len(current) > execution_count:
+            result["_analyzer_executions"] = current[execution_count:]
+            del current[execution_count:]
+        return result
 
 
 class ThreadSafeContext:
@@ -117,7 +124,7 @@ class ThreadSafeContext:
         if not stage_result:
             return
         with self._lock:
-            _results_bucket(self._data).update(stage_result)
+            merge_stage_results(_results_bucket(self._data), stage_result)
 
     def get_all(self) -> dict[str, Any]:
         """

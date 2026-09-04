@@ -46,8 +46,10 @@ from .results import StringInfo as StringInfoDC
 from .results import YaraMatch, from_dict
 from .report_v1 import (
     AnalysisMetadataV1,
+    AnalyzerErrorV1,
     AnalyzerOutcomeV1,
     AnalyzerStatus,
+    AnalyzerWarningV1,
     EvidenceV1,
     FindingV1,
     FormatCommonV1,
@@ -183,8 +185,10 @@ __all__ = [
     "BatchReportReferenceV1",
     "BatchV1",
     "AnalysisMetadataV1",
+    "AnalyzerErrorV1",
     "AnalyzerOutcomeV1",
     "AnalyzerStatus",
+    "AnalyzerWarningV1",
     "EvidenceV1",
     "FindingV1",
     "FormatCommonV1",

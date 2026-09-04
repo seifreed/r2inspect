@@ -3,6 +3,8 @@
     "AnalyzerStatus": {
       "enum": [
         "completed",
+        "completed_with_warnings",
+        "partial",
         "not_detected",
         "not_applicable",
         "unsupported",

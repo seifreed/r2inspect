@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from tests.helpers import make_stage_context
 
+from r2inspect.domain.results import AnalyzerExecution, AnalyzerStatus
 from r2inspect.pipeline.pipeline_runtime_common import merge_into_plain_context
 from r2inspect.pipeline.stages_common import AnalyzerStage, IndicatorStage
 
@@ -68,6 +69,11 @@ def test_analyzer_stage_uses_available_analysis_method_and_stores_by_result_key(
     assert result["custom"]["detected"] is True
     merge_into_plain_context(context, result)
     assert context["results"]["custom"]["detected"] is True
+    executions = context["results"]["_analyzer_executions"]
+    assert len(executions) == 1
+    assert isinstance(executions[0], AnalyzerExecution)
+    assert executions[0].analyzer_id == "detector"
+    assert executions[0].status is AnalyzerStatus.COMPLETED
 
 
 def test_analyzer_stage_records_error_without_crashing_pipeline() -> None:

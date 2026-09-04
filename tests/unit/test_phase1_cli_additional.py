@@ -136,9 +136,9 @@ def test_batch_output_summary_and_stats(tmp_path):
     assert "r2inspect_batch" in summary_name
 
     summary = summary_file.read_text(encoding="utf-8")
-    assert '"total_files": 3' in summary
-    assert '"successful_analyses": 2' in summary
-    assert '"failed_analyses": 1' in summary
+    assert '"total": 3' in summary
+    assert '"completed": 2' in summary
+    assert '"failed": 1' in summary
 
     stats = batch_output.collect_batch_statistics(all_results)
     assert stats["file_types"]["PE"] == 1

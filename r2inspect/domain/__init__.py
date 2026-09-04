@@ -27,7 +27,15 @@ from .constants import (
     TEST_R2_OPEN_TIMEOUT,
     VERY_LARGE_FILE_THRESHOLD_MB,
 )
-from .results import AnalyzerResult, HashResult, TypedAnalyzerResult
+from .results import (
+    AnalyzerError,
+    AnalyzerExecution,
+    AnalyzerResult,
+    AnalyzerStatus,
+    AnalyzerWarning,
+    HashResult,
+    TypedAnalyzerResult,
+)
 from .entities import (
     AntiAnalysisResult,
     CryptoResult,
@@ -56,7 +64,11 @@ from .analysis import (
 __all__ = [
     "AnalysisRuntimeStats",
     "BatchRunResult",
+    "AnalyzerError",
+    "AnalyzerExecution",
     "AnalyzerResult",
+    "AnalyzerStatus",
+    "AnalyzerWarning",
     "HashResult",
     "TypedAnalyzerResult",
     # Domain entities

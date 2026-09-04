@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Any, cast
 
+from .results_bucket import merge_stage_results as _merge_stage_results
 from .stage_models import ThreadSafeContext
 
 
@@ -41,7 +42,7 @@ def merge_into_plain_context(context: dict[str, Any], stage_result: dict[str, An
     if not stage_result:
         return
     context_results = cast(dict[str, Any], context.get("results", {}))
-    context_results.update(stage_result)
+    _merge_stage_results(context_results, stage_result)
     context["results"] = context_results
 
 

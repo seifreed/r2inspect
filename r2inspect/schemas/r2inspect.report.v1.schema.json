@@ -43,11 +43,45 @@
       "title": "AnalysisMetadataV1",
       "type": "object"
     },
+    "AnalyzerErrorV1": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "component": {
+          "title": "Component",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "recoverable": {
+          "default": false,
+          "title": "Recoverable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "component",
+        "message"
+      ],
+      "title": "AnalyzerErrorV1",
+      "type": "object"
+    },
     "AnalyzerOutcomeV1": {
       "additionalProperties": false,
       "properties": {
         "analyzer_id": {
           "title": "Analyzer Id",
+          "type": "string"
+        },
+        "analyzer_version": {
+          "default": "unknown",
+          "title": "Analyzer Version",
           "type": "string"
         },
         "duration": {
@@ -68,6 +102,13 @@
           "default": null,
           "title": "Error"
         },
+        "errors": {
+          "items": {
+            "$ref": "#/$defs/AnalyzerErrorV1"
+          },
+          "title": "Errors",
+          "type": "array"
+        },
         "metrics": {
           "additionalProperties": {
             "$ref": "#/$defs/JsonValue"
@@ -75,12 +116,24 @@
           "title": "Metrics",
           "type": "object"
         },
+        "output_schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Schema"
+        },
         "status": {
           "$ref": "#/$defs/AnalyzerStatus"
         },
         "warnings": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/AnalyzerWarningV1"
           },
           "title": "Warnings",
           "type": "array"
@@ -96,6 +149,8 @@
     "AnalyzerStatus": {
       "enum": [
         "completed",
+        "completed_with_warnings",
+        "partial",
         "not_detected",
         "not_applicable",
         "unsupported",
@@ -106,6 +161,30 @@
       ],
       "title": "AnalyzerStatus",
       "type": "string"
+    },
+    "AnalyzerWarningV1": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "component": {
+          "title": "Component",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "component",
+        "message"
+      ],
+      "title": "AnalyzerWarningV1",
+      "type": "object"
     },
     "EvidenceV1": {
       "additionalProperties": false,

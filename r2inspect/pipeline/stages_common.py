@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+import time
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -16,96 +17,16 @@ from ..interfaces import (
     ResultAggregatorFactoryLike,
 )
 from ..core.analyzer_factory import run_analysis_method
-from ..domain.results import TypedAnalyzerResult
-from .results_bucket import _results_bucket
+from ..domain.results import (
+    AnalyzerError,
+    AnalyzerExecution,
+    AnalyzerStatus,
+    analyzer_status_from_payload,
+)
+from .analyzer_execution import _record_analyzer_execution
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
-
-
-def _typed_result(
-    analyzer_name: str, data: Any, *, status: str = "completed", error: str | None = None
-) -> Any:
-    """Attach typed metadata while preserving the legacy mapping contract."""
-    if isinstance(data, TypedAnalyzerResult) or not isinstance(data, dict):
-        return data
-    return TypedAnalyzerResult(
-        data,
-        analyzer_id=analyzer_name,
-        status=status,
-        error=error,
-    )
-
-
-def _record_analyzer_status(
-    context: dict[str, Any], analyzer_name: str, *, status: str, error: str | None = None
-) -> None:
-    """Keep status for analyzers whose legacy payload is not a mapping."""
-    bucket = _results_bucket(context)
-    statuses = bucket.setdefault("_analyzer_status", {})
-    if not isinstance(statuses, dict):
-        statuses = {}
-        bucket["_analyzer_status"] = statuses
-    payload: dict[str, Any] = {"status": status}
-    if error:
-        payload["error"] = error
-    statuses[analyzer_name] = payload
-
-
-def run_registered_analyzer(
-    stage: Any,
-    context: dict[str, Any],
-    analyzer_name: str,
-    result_key: str,
-    *,
-    invoke: Callable[[Any], Any],
-    error_default: Callable[[Exception], Any],
-    log_label: str,
-) -> dict[str, Any] | None:
-    """Construct and run a registry analyzer, storing the result under result_key.
-
-    Returns None when the analyzer is not registered. On failure logs a warning
-    and stores ``error_default(exc)`` instead. ``invoke`` produces the result
-    from the constructed analyzer; ``log_label`` is the subject of the warning.
-    """
-    analyzer_class = stage.registry.get_analyzer_class(analyzer_name)
-    if not analyzer_class:
-        return None
-    try:
-        analyzer = stage.analyzer_factory(
-            analyzer_class,
-            adapter=stage.adapter,
-            config=stage.config,
-            filename=stage.filename,
-        )
-        data = invoke(analyzer)
-        status = getattr(analyzer, "last_status", None)
-        error = getattr(analyzer, "last_error", None)
-        errors = getattr(analyzer, "_analysis_errors", None)
-        if isinstance(errors, list) and errors:
-            error = "; ".join(str(item) for item in errors)
-            status = "failed"
-        data = _typed_result(
-            analyzer_name,
-            data,
-            status=str(status or "completed"),
-            error=str(error) if error else None,
-        )
-        _results_bucket(context)[result_key] = data
-        if error or (status and status != "completed"):
-            _record_analyzer_status(
-                context,
-                analyzer_name,
-                status=str(status or "failed"),
-                error=str(error) if error else None,
-            )
-        return {result_key: data}
-    except Exception as e:
-        logger.warning("%s failed: %s", log_label, e)
-        fallback = error_default(e)
-        fallback = _typed_result(analyzer_name, fallback, status="failed", error=str(e))
-        _results_bucket(context)[result_key] = fallback
-        return {result_key: fallback}
 
 
 def _normalize_analyzer_kwargs(
@@ -259,11 +180,12 @@ class AnalyzerStage(AnalysisStage):
         self.analyzer_factory = analyzer_factory
         self.result_key = result_key or name
 
-    def _execute(self, _context: dict[str, Any]) -> dict[str, Any]:
+    def _execute(self, context: dict[str, Any]) -> dict[str, Any]:
         # Pure: returns the flat {result_key: result}; the orchestrator
         # (merge_into_plain_context / ThreadSafeContext.merge_results) owns
         # writing it into context["results"]. Required for the parallel
         # runtime — stages must not mutate the shared context concurrently.
+        started = time.monotonic()
         try:
             analyzer = self.analyzer_factory(
                 self.analyzer_class,
@@ -272,9 +194,38 @@ class AnalyzerStage(AnalysisStage):
                 filename=self.filename,
             )
             result = run_analysis_method(analyzer, ("analyze", "detect", "scan"))
+            get_name = getattr(analyzer, "get_name", None)
+            analyzer_id = str(get_name()) if callable(get_name) else self.name
+            status = analyzer_status_from_payload(result, getattr(analyzer, "last_status", None))
+            error = getattr(analyzer, "last_error", None)
+            _record_analyzer_execution(
+                context,
+                AnalyzerExecution(
+                    analyzer_id=analyzer_id,
+                    analyzer_version=str(getattr(self.analyzer_class, "__version__", "unknown")),
+                    output_schema=getattr(self.analyzer_class, "output_schema", None),
+                    status=status,
+                    data=result,
+                    errors=(
+                        [AnalyzerError(status.value.upper(), analyzer_id, str(error))]
+                        if error
+                        else []
+                    ),
+                    duration=time.monotonic() - started,
+                ),
+            )
             return {self.result_key: result}
         except Exception as e:
             logger.warning("Analyzer %s failed: %s", self.analyzer_class.__name__, e)
+            _record_analyzer_execution(
+                context,
+                AnalyzerExecution(
+                    analyzer_id=self.name,
+                    status=AnalyzerStatus.FAILED,
+                    errors=[AnalyzerError("FAILED", self.name, str(e))],
+                    duration=time.monotonic() - started,
+                ),
+            )
             return {self.result_key: {"error": str(e), "success": False}}
 
 

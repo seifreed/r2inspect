@@ -14,7 +14,13 @@ from typing import Any
 from collections.abc import Callable
 
 from .pipeline_runtime_common import detected_file_format
-from .stages_common import ConfiguredRegistryStage, _results_bucket, _typed_result
+from ..domain.results import AnalyzerStatus
+from .analyzer_execution import (
+    record_analyzer_execution,
+    record_skipped_execution,
+    run_registered_analyzer,
+)
+from .stages_common import ConfiguredRegistryStage
 
 logger = logging.getLogger(__name__)
 
@@ -72,54 +78,66 @@ class FormatAnalysisStage(ConfiguredRegistryStage):
         return self.analyzer_factory(analyzer_class, **kwargs)
 
     def _analyze_pe(self, context: dict[str, Any]) -> dict[str, Any] | None:
-        analyzer = self._run_analyzer("pe_analyzer", include_filename=True)
-        if analyzer is not None:
-            data = analyzer.analyze()
-            data = _typed_result("pe_analyzer", data)
-            self._run_optional_pe_analyzers(data)
-            return self._store_result(context, "pe_info", data)
-        return None
+        result = self._run_format_analyzer(context, "pe_analyzer", "pe_info")
+        if result is not None:
+            self._run_optional_pe_analyzers(result["pe_info"], context)
+        return result
 
     def _analyze_elf(self, context: dict[str, Any]) -> dict[str, Any] | None:
-        analyzer = self._run_analyzer("elf_analyzer")
-        if analyzer is not None:
-            data = analyzer.analyze()
-            data = _typed_result("elf_analyzer", data)
-            return self._store_result(context, "elf_info", data)
-        return None
+        return self._run_format_analyzer(context, "elf_analyzer", "elf_info")
 
     def _analyze_macho(self, context: dict[str, Any]) -> dict[str, Any] | None:
-        analyzer = self._run_analyzer("macho_analyzer")
-        if analyzer is not None:
-            data = analyzer.analyze()
-            data = _typed_result("macho_analyzer", data)
-            return self._store_result(context, "macho_info", data)
-        return None
+        return self._run_format_analyzer(context, "macho_analyzer", "macho_info")
 
-    def _run_optional_pe_analyzers(self, pe_info: dict[str, Any]) -> None:
+    def _run_format_analyzer(
+        self, context: dict[str, Any], analyzer_name: str, result_key: str
+    ) -> dict[str, Any] | None:
+        return run_registered_analyzer(
+            self,
+            context,
+            analyzer_name,
+            result_key,
+            invoke=lambda analyzer: analyzer.analyze(),
+            error_default=lambda exc: {"error": str(exc)},
+            log_label=f"Analyzer '{analyzer_name}'",
+        )
+
+    def _run_optional_pe_analyzers(
+        self, pe_info: dict[str, Any], context: dict[str, Any] | None = None
+    ) -> None:
         """Run optional PE-only analyzers enabled in the current config."""
+        if context is None:
+            context = {"results": {}}
         for config_key, analyzer_name, result_key in PE_OPTIONAL_ANALYZERS:
             if not getattr(self.config, config_key, False):
                 continue
             analyzer = self._run_analyzer(analyzer_name, include_filename=True)
             if analyzer is None:
+                record_skipped_execution(
+                    self,
+                    context,
+                    analyzer_name,
+                    AnalyzerStatus.DEPENDENCY_UNAVAILABLE,
+                    "analyzer is not registered",
+                )
                 continue
             try:
                 pe_info[result_key] = analyzer.analyze()
+                record_analyzer_execution(self, context, analyzer_name, pe_info[result_key])
             except Exception as exc:
                 logger.warning(
                     "Optional PE analyzer %s failed and was skipped: %s",
                     analyzer_name,
                     exc,
                 )
-
-    @staticmethod
-    def _store_result(
-        context: dict[str, Any], result_key: str, data: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Persist a format analysis payload in the shared execution context."""
-        _results_bucket(context)[result_key] = data
-        return {result_key: data}
+                record_analyzer_execution(
+                    self,
+                    context,
+                    analyzer_name,
+                    None,
+                    status=AnalyzerStatus.FAILED,
+                    error=str(exc),
+                )
 
 
 __all__ = ["FormatAnalysisStage"]

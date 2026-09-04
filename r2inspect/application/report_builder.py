@@ -145,7 +145,7 @@ def build_report_v1(
         artifacts=floss_artifacts(raw),
         capabilities=capa_capabilities(raw),
         similarity=similarity,
-        analyzers=analyzer_outcomes(raw),
+        analyzers=analyzer_outcomes(raw, result.analyzer_executions),
         errors=[result.error] if result.error else [],
         warnings=(
             [str(item) for item in raw.get("warnings", [])]

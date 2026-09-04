@@ -5,10 +5,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .stages_common import (
-    OptionsRegistryStage,
-    run_registered_analyzer,
-)
+from ..domain.results import AnalyzerStatus
+from .analyzer_execution import record_skipped_execution, run_registered_analyzer
+from .stages_common import OptionsRegistryStage
 
 
 class MetadataStage(OptionsRegistryStage):
@@ -41,6 +40,14 @@ class MetadataStage(OptionsRegistryStage):
             res = self._extract_functions(context)
             if res is not None:
                 results.update(res)
+        else:
+            record_skipped_execution(
+                self,
+                context,
+                "function_analyzer",
+                AnalyzerStatus.SKIPPED_BY_PROFILE,
+                "analyzer disabled by the selected profile",
+            )
 
         return results
 

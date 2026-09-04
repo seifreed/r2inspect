@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from collections.abc import Iterable
 from typing import Any
 
+from ..domain.results import AnalyzerExecution
 from ..schemas.results_models import AnalysisResult
 from .result_mapper_builders import (
     build_anti_analysis,
@@ -43,6 +44,16 @@ def _build_list(raw_list: Any, builder: Any) -> list[Any]:
     return result
 
 
+def _build_analyzer_executions(raw: Any) -> list[AnalyzerExecution[Any]]:
+    if not isinstance(raw, list):
+        return []
+    return [
+        item if isinstance(item, AnalyzerExecution) else AnalyzerExecution.from_dict(item)
+        for item in raw
+        if isinstance(item, (AnalyzerExecution, dict))
+    ]
+
+
 def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
     """Convert raw pipeline dict to typed AnalysisResult.
 
@@ -54,6 +65,8 @@ def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
     if isinstance(raw, AnalysisResult):
         return raw
 
+    executions = _build_analyzer_executions(raw.get("_analyzer_executions"))
+    legacy_raw = {key: value for key, value in raw.items() if key != "_analyzer_executions"}
     return AnalysisResult(
         file_info=build_file_info(raw.get("file_info")),
         hashing=build_hashing_result(raw.get("hashing")),
@@ -68,6 +81,7 @@ def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
         packer=build_packer_result(raw.get("packer")),
         crypto=build_crypto_result(raw.get("crypto")),
         indicators=_build_list(raw.get("indicators"), build_indicator),
+        analyzer_executions=executions,
         error=raw.get("error"),
         timestamp=(
             raw.get("timestamp", datetime.now(UTC))
@@ -75,5 +89,5 @@ def build_analysis_result(raw: dict[str, Any]) -> AnalysisResult:
             else datetime.fromisoformat(raw["timestamp"])
         ),
         execution_time=raw.get("execution_time", 0.0),
-        _raw=raw,
+        _raw=legacy_raw,
     )

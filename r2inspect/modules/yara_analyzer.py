@@ -114,6 +114,8 @@ class YaraAnalyzer(CommandHelperMixin):
             self.last_status = "failed"
             self.last_error = str(e)
 
+        if self.last_status == "completed" and not matches:
+            self.last_status = "not_detected"
         return matches
 
     def _resolve_file_path(self) -> str | None:

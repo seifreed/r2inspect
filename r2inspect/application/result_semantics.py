@@ -1,35 +1,36 @@
-"""Normalize analyzer error states without turning failures into clean results."""
+"""Apply explicit analyzer execution states to legacy result payloads."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from ..domain.results import AnalyzerExecution, AnalyzerStatus
+
+_INVALID_VERDICT_STATES = {
+    AnalyzerStatus.DEPENDENCY_UNAVAILABLE,
+    AnalyzerStatus.FAILED,
+    AnalyzerStatus.TIMED_OUT,
+    AnalyzerStatus.UNSUPPORTED,
+}
+_VERDICT_FIELDS = {"detected", "is_packed", "anti_debug", "anti_vm"}
+
 
 def normalize_analyzer_results(results: dict[str, Any]) -> dict[str, Any]:
-    """Attach explicit status and clear boolean detections on failed analyzers."""
-
-    def visit(value: Any) -> None:
-        if isinstance(value, dict):
-            if value.get("error"):
-                text = str(value["error"]).lower()
-                if "timeout" in text:
-                    status = "timed_out"
-                elif "unsupported" in text:
-                    status = "unsupported"
-                elif "dependency" in text or value.get("library_available") is False:
-                    status = "dependency_unavailable"
-                else:
-                    status = "failed"
-                value["status"] = status
-                if "detected" in value:
-                    value["detected"] = None
-            for child in value.values():
-                visit(child)
-        elif isinstance(value, list):
-            for child in value:
-                visit(child)
-
-    visit(results)
+    """Clear verdict fields only when an explicit execution state invalidates them."""
+    executions = results.get("_analyzer_executions")
+    if not isinstance(executions, list):
+        return results
+    for execution in executions:
+        if isinstance(execution, dict):
+            execution = AnalyzerExecution.from_dict(execution)
+        if not isinstance(execution, AnalyzerExecution):
+            continue
+        if execution.status not in _INVALID_VERDICT_STATES:
+            continue
+        if isinstance(execution.data, dict):
+            execution.data["status"] = execution.status.value
+            for field in _VERDICT_FIELDS.intersection(execution.data):
+                execution.data[field] = None
     return results
 
 

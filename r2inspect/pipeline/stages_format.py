@@ -20,7 +20,8 @@ from .pipeline_runtime_common import (
     default_hash_calculator as _default_hash_calculator,
     detect_via_header_bytes as _detect_via_header_bytes_impl,
 )
-from .stages_common import _results_bucket, _typed_result
+from .analyzer_execution import _typed_result
+from .results_bucket import _results_bucket
 from .stages_format_analysis import FormatAnalysisStage
 
 logger = logging.getLogger(__name__)

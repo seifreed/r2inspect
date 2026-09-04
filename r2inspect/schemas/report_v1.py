@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
+
+from ..domain.results import AnalyzerStatus
 
 SCHEMA_VERSION: Literal["r2inspect.report/v1"] = "r2inspect.report/v1"
 
@@ -15,17 +16,6 @@ class WireModel(BaseModel):
     """Strict base for the versioned wire contract."""
 
     model_config = ConfigDict(extra="forbid")
-
-
-class AnalyzerStatus(StrEnum):
-    COMPLETED = "completed"
-    NOT_DETECTED = "not_detected"
-    NOT_APPLICABLE = "not_applicable"
-    UNSUPPORTED = "unsupported"
-    DEPENDENCY_UNAVAILABLE = "dependency_unavailable"
-    SKIPPED_BY_PROFILE = "skipped_by_profile"
-    TIMED_OUT = "timed_out"
-    FAILED = "failed"
 
 
 class ToolInfoV1(WireModel):
@@ -108,12 +98,28 @@ class FindingV1(WireModel):
     mbc: list[str] = Field(default_factory=list)
 
 
+class AnalyzerErrorV1(WireModel):
+    code: str
+    component: str
+    message: str
+    recoverable: bool = False
+
+
+class AnalyzerWarningV1(WireModel):
+    code: str
+    component: str
+    message: str
+
+
 class AnalyzerOutcomeV1(WireModel):
     analyzer_id: str
+    analyzer_version: str = "unknown"
+    output_schema: str | None = None
     status: AnalyzerStatus
     duration: float = Field(default=0.0, ge=0.0)
     error: str | None = None
-    warnings: list[str] = Field(default_factory=list)
+    errors: list[AnalyzerErrorV1] = Field(default_factory=list)
+    warnings: list[AnalyzerWarningV1] = Field(default_factory=list)
     metrics: dict[str, JsonValue] = Field(default_factory=dict)
 
 
@@ -143,8 +149,10 @@ class ReportV1(WireModel):
 __all__ = [
     "SCHEMA_VERSION",
     "AnalysisMetadataV1",
+    "AnalyzerErrorV1",
     "AnalyzerOutcomeV1",
     "AnalyzerStatus",
+    "AnalyzerWarningV1",
     "EvidenceV1",
     "FindingV1",
     "FormatCommonV1",

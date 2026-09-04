@@ -5,10 +5,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .stages_common import (
-    OptionsRegistryStage,
-    run_registered_analyzer,
-)
+from ..domain.results import AnalyzerStatus
+from .analyzer_execution import record_skipped_execution, run_registered_analyzer
+from .stages_common import OptionsRegistryStage
 
 
 class DetectionStage(OptionsRegistryStage):
@@ -24,38 +23,61 @@ class DetectionStage(OptionsRegistryStage):
             res = self._run_packer_detection(context)
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "packer_detector")
 
         if self.options.get("detect_crypto", True):
             res = self._run_crypto_detection(context)
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "crypto_analyzer")
 
         if self.options.get("detect_anti_analysis", True):
             res = self._run_anti_analysis_detection(context)
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "anti_analysis")
 
         if self.options.get("detect_compiler", True):
             res = self._run_compiler_detection(context)
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "compiler_detector")
 
         if self.options.get("detect_yara", True):
             res = self._run_yara_analysis(context)
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "yara_analyzer")
 
         if self.options.get("detect_capa", False):
             res = self._run_analyzer(context, "capa", "capa")
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "capa")
 
         if self.options.get("detect_floss", False):
             res = self._run_analyzer(context, "floss", "floss")
             if res is not None:
                 results.update(res)
+        else:
+            self._record_profile_skip(context, "floss")
 
         return results
+
+    def _record_profile_skip(self, context: dict[str, Any], analyzer_name: str) -> None:
+        record_skipped_execution(
+            self,
+            context,
+            analyzer_name,
+            AnalyzerStatus.SKIPPED_BY_PROFILE,
+            "analyzer disabled by the selected profile",
+        )
 
     def _run_analyzer(
         self,
