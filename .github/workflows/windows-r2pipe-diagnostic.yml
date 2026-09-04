@@ -61,6 +61,9 @@ jobs:
 
           try:
               collect("startup", 2)
+              process.stdin.write(b"\x1b[24;80R")
+              process.stdin.flush()
+              collect("cursor-response", 1)
               process.stdin.write(b"ij\n")
               process.stdin.flush()
               collect("ij", 3)
