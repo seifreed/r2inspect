@@ -129,19 +129,25 @@ def test_worker_handles_empty_invalid_and_failed_jobs(tmp_path: Path) -> None:
     assert queue.get(failed["id"])["error"] == "boom"
 
 
-def test_worker_main_validates_poll_interval(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["r2inspect-worker", "--database", "jobs.db", "--sample-root", ".", "--poll-interval", "0"],
-    )
-    with pytest.raises(SystemExit, match="poll-interval must be positive"):
-        worker.main()
+def test_worker_main_validates_poll_interval() -> None:
+    original_argv = sys.argv
+    try:
+        sys.argv = [
+            "r2inspect-worker",
+            "--database",
+            "jobs.db",
+            "--sample-root",
+            ".",
+            "--poll-interval",
+            "0",
+        ]
+        with pytest.raises(SystemExit, match="poll-interval must be positive"):
+            worker.main()
+    finally:
+        sys.argv = original_argv
 
 
-def test_api_and_worker_command_entry_points(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_api_and_worker_command_entry_points(tmp_path: Path) -> None:
     class Server:
         served = closed = False
 
@@ -152,73 +158,54 @@ def test_api_and_worker_command_entry_points(
             self.closed = True
 
     server = Server()
-    monkeypatch.setattr(api, "create_server", lambda *_args, **_kwargs: server)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
+    processed: list[tuple[Path, Path]] = []
+    original_argv = sys.argv
+    original_create_server = api.create_server
+    original_process_next_job = worker.process_next_job
+    original_sleep = worker.time.sleep
+    try:
+        api.create_server = lambda *_args, **_kwargs: server
+        sys.argv = [
             "r2inspect-api",
             "--database",
             str(tmp_path / "jobs.db"),
             "--sample-root",
             str(tmp_path),
-        ],
-    )
-    api.main()
-    assert server.served and server.closed
+        ]
+        api.main()
+        assert server.served and server.closed
 
-    processed: list[tuple[Path, Path]] = []
-    monkeypatch.setattr(
-        worker,
-        "process_next_job",
-        lambda queue, root: processed.append((queue.database, root)) or False,
-    )
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
+        worker.process_next_job = (
+            lambda queue, root: processed.append((queue.database, root)) or False
+        )
+        sys.argv = [
             "r2inspect-worker",
             "--database",
             str(tmp_path / "jobs.db"),
             "--sample-root",
             str(tmp_path),
             "--once",
-        ],
-    )
-    worker.main()
-    assert processed
+        ]
+        worker.main()
+        assert processed
 
-    monkeypatch.setattr(
-        worker.time, "sleep", lambda _delay: (_ for _ in ()).throw(KeyboardInterrupt())
-    )
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
+        worker.time.sleep = lambda _delay: (_ for _ in ()).throw(KeyboardInterrupt())
+        sys.argv = [
             "r2inspect-worker",
             "--database",
             str(tmp_path / "jobs.db"),
             "--sample-root",
             str(tmp_path),
-        ],
-    )
-    worker.main()
+        ]
+        worker.main()
 
-    monkeypatch.setattr(
-        api,
-        "create_server",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("invalid server")),
-    )
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "r2inspect-api",
-            "--database",
-            str(tmp_path / "jobs.db"),
-            "--sample-root",
-            str(tmp_path),
-        ],
-    )
-    with pytest.raises(SystemExit, match="invalid server"):
-        api.main()
+        api.create_server = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ValueError("invalid server")
+        )
+        with pytest.raises(SystemExit, match="invalid server"):
+            api.main()
+    finally:
+        sys.argv = original_argv
+        api.create_server = original_create_server
+        worker.process_next_job = original_process_next_job
+        worker.time.sleep = original_sleep

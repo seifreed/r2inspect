@@ -15,6 +15,7 @@ from r2inspect.pipeline.pipeline_parallel_runtime import (
     get_effective_workers,
 )
 from r2inspect.pipeline.stage_models import ThreadSafeContext
+from tests.helpers import env_vars
 
 
 class _Stage:
@@ -48,9 +49,9 @@ def test_retire_skipped_stages_removes_and_marks_completed() -> None:
     assert completed == {"a"}
 
 
-def test_parallel_helpers_cover_skips_and_execution_failures(monkeypatch) -> None:
-    monkeypatch.delenv("R2INSPECT_MAX_WORKERS", raising=False)
-    assert get_effective_workers(3) == 3
+def test_parallel_helpers_cover_skips_and_execution_failures() -> None:
+    with env_vars(R2INSPECT_MAX_WORKERS=None):
+        assert get_effective_workers(3) == 3
 
     stage_a = _Stage("a")
     stage_b = _Stage("b")

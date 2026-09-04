@@ -126,7 +126,7 @@ def test_yara_analyzer_resolve_file_path_with_filepath():
         assert path == test_file
 
 
-def test_yara_analyzer_resolve_rules_path_nonexistent(tmp_path, monkeypatch):
+def test_yara_analyzer_resolve_rules_path_nonexistent(tmp_path):
     """Test _resolve_rules_path when path doesn't exist."""
     from r2inspect.modules.yara_analyzer import YaraAnalyzer
 
@@ -134,8 +134,9 @@ def test_yara_analyzer_resolve_rules_path_nonexistent(tmp_path, monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = FakeYaraConfig(rules_path=tmpdir)
         analyzer = YaraAnalyzer(adapter=adapter, config=config)
-        monkeypatch.setattr(analyzer, "create_default_rules", lambda _path: None)
-        result = analyzer._resolve_rules_path(str(tmp_path / "missing"))
+        blocked = tmp_path / "blocked"
+        blocked.write_text("file")
+        result = analyzer._resolve_rules_path(str(blocked / "missing"))
         # Should try to create defaults and return None if still nonexistent
         assert result is None
 

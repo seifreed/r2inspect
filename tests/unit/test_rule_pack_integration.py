@@ -26,6 +26,7 @@ from r2inspect.cli.rules_cli import rules_cli
 from r2inspect.modules.yara_analyzer import YaraAnalyzer, clear_yara_cache
 from r2inspect.modules.yara_rule_pack_support import verify_rules_path
 from r2inspect.pipeline.stages_detection import DetectionStage
+from tests.helpers import env_vars
 
 
 def _keys() -> tuple[bytes, bytes]:
@@ -180,7 +181,7 @@ def test_rules_cli_build_sign_verify_install_list_and_update(tmp_path) -> None:
         assert result.exit_code == 0, result.output
 
 
-def test_rule_pack_validation_errors_and_default_root(tmp_path, monkeypatch) -> None:
+def test_rule_pack_validation_errors_and_default_root(tmp_path) -> None:
     empty = tmp_path / "empty"
     empty.mkdir()
     with pytest.raises(ValueError, match="no YARA"):
@@ -213,12 +214,12 @@ def test_rule_pack_validation_errors_and_default_root(tmp_path, monkeypatch) -> 
     with pytest.raises(ValueError, match="already installed"):
         install_rule_pack(source, public, root=root)
 
-    monkeypatch.setenv("R2INSPECT_RULE_PACKS_DIR", str(root))
-    assert default_rule_pack_root() == root
+    with env_vars(R2INSPECT_RULE_PACKS_DIR=str(root)):
+        assert default_rule_pack_root() == root
     assert list_rule_packs(tmp_path / "missing") == []
 
 
-def test_rule_pack_rejects_corruption_and_wrong_keys(tmp_path, monkeypatch, capsys) -> None:
+def test_rule_pack_rejects_corruption_and_wrong_keys(tmp_path, capsys) -> None:
     invalid = tmp_path / "invalid.json"
     invalid.write_text(json.dumps({"files": {"rule.yar": "digest"}}))
     with pytest.raises(ValueError, match="invalid rule pack manifest"):
@@ -262,10 +263,10 @@ def test_rule_pack_rejects_corruption_and_wrong_keys(tmp_path, monkeypatch, caps
 
     public_path = tmp_path / "public.key"
     public_path.write_bytes(public)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["verify-pack", str(source), "--public-key", str(public_path)],
-    )
-    rule_packs.verify_main()
+    original_argv = sys.argv
+    try:
+        sys.argv = ["verify-pack", str(source), "--public-key", str(public_path)]
+        rule_packs.verify_main()
+    finally:
+        sys.argv = original_argv
     assert "demo 1.0.0: verified" in capsys.readouterr().out

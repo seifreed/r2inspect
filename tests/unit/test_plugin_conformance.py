@@ -129,19 +129,20 @@ def test_plugin_conformance_reports_loader_and_runtime_failures(tmp_path: Path) 
 
 def test_plugin_conformance_cli_reports_success_and_failure(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["plugin-check", f"{__name__}:ConformingAnalyzer"])
-    plugin_conformance.main()
+    def run(argv: list[str]) -> None:
+        original_argv = sys.argv
+        try:
+            sys.argv = argv
+            plugin_conformance.main()
+        finally:
+            sys.argv = original_argv
+
+    run(["plugin-check", f"{__name__}:ConformingAnalyzer"])
     assert json.loads(capsys.readouterr().out)["status"] == "passed"
 
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["plugin-check", f"{__name__}:ConformingAnalyzer", "--sample", str(tmp_path)],
-    )
     with pytest.raises(SystemExit) as failed:
-        plugin_conformance.main()
+        run(["plugin-check", f"{__name__}:ConformingAnalyzer", "--sample", str(tmp_path)])
     assert failed.value.code == 1
     assert json.loads(capsys.readouterr().out)["status"] == "failed"

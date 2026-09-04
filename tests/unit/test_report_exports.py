@@ -92,37 +92,32 @@ def test_compare_and_json_round_trip() -> None:
 
 def test_report_command_entry_points(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    def run(entrypoint, argv: list[str]) -> None:
+        original_argv = sys.argv
+        try:
+            sys.argv = argv
+            entrypoint()
+        finally:
+            sys.argv = original_argv
+
     left = tmp_path / "left.json"
     right = tmp_path / "right.json"
     left.write_text(_report().model_dump_json())
     right.write_text(_report("Changed").model_dump_json())
 
     output = tmp_path / "report.html"
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["export", str(left), "--format", "html", "--output", str(output)],
-    )
-    report_cli.export_main()
+    run(report_cli.export_main, ["export", str(left), "--format", "html", "--output", str(output)])
     assert "rule.test" in output.read_text()
 
-    monkeypatch.setattr(sys, "argv", ["compare", str(left), str(right)])
-    report_cli.compare_main()
+    run(report_cli.compare_main, ["compare", str(left), str(right)])
     assert json.loads(capsys.readouterr().out)["status"] == "changed"
 
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["baseline", str(left), str(right), "--fail-on-change"],
-    )
     with pytest.raises(SystemExit) as changed:
-        report_cli.baseline_main()
+        run(report_cli.baseline_main, ["baseline", str(left), str(right), "--fail-on-change"])
     assert changed.value.code == 1
     capsys.readouterr()
 
-    monkeypatch.setattr(sys, "argv", ["explain", str(left), "finding-1"])
-    report_cli.explain_main()
+    run(report_cli.explain_main, ["explain", str(left), "finding-1"])
     assert json.loads(capsys.readouterr().out)["finding_id"] == "finding-1"

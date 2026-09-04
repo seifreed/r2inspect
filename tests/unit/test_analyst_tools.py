@@ -146,40 +146,50 @@ def test_similarity_handles_simhash_and_missing_report_identifiers(tmp_path: Pat
         index_reports([report], tmp_path / "index.sqlite3")
 
 
-def test_similarity_uses_optional_native_comparators(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_similarity_uses_optional_native_comparators() -> None:
     modules = {
         "ssdeep": SimpleNamespace(compare=lambda _left, _right: 50),
         "tlsh": SimpleNamespace(diff=lambda _left, _right: 60),
     }
-    monkeypatch.setattr(report_similarity.importlib, "import_module", modules.__getitem__)
-    assert (
-        feature_similarity(
-            {"rule_ids": set(), "hashes": {"ssdeep": "left"}},
-            {"rule_ids": set(), "hashes": {"ssdeep": "right"}},
+    original_import_module = report_similarity.importlib.import_module
+    try:
+        report_similarity.importlib.import_module = modules.__getitem__
+        assert (
+            feature_similarity(
+                {"rule_ids": set(), "hashes": {"ssdeep": "left"}},
+                {"rule_ids": set(), "hashes": {"ssdeep": "right"}},
+            )
+            == 0.3
         )
-        == 0.3
-    )
-    assert feature_similarity(
-        {"rule_ids": set(), "hashes": {"tlsh": "left"}},
-        {"rule_ids": set(), "hashes": {"tlsh": "right"}},
-    ) == pytest.approx(0.48)
-    monkeypatch.setattr(
-        report_similarity.importlib,
-        "import_module",
-        lambda _name: (_ for _ in ()).throw(ImportError()),
-    )
-    assert (
-        feature_similarity(
-            {"rule_ids": set(), "hashes": {"impfuzzy": "left"}},
-            {"rule_ids": set(), "hashes": {"impfuzzy": "right"}},
+        assert feature_similarity(
+            {"rule_ids": set(), "hashes": {"tlsh": "left"}},
+            {"rule_ids": set(), "hashes": {"tlsh": "right"}},
+        ) == pytest.approx(0.48)
+        report_similarity.importlib.import_module = lambda _name: (_ for _ in ()).throw(
+            ImportError()
         )
-        == 0
-    )
+        assert (
+            feature_similarity(
+                {"rule_ids": set(), "hashes": {"impfuzzy": "left"}},
+                {"rule_ids": set(), "hashes": {"impfuzzy": "right"}},
+            )
+            == 0
+        )
+    finally:
+        report_similarity.importlib.import_module = original_import_module
 
 
 def test_clustering_cli_indexes_queries_and_validates_arguments(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    def run(argv: list[str]) -> None:
+        original_argv = sys.argv
+        try:
+            sys.argv = argv
+            clustering.cluster_main()
+        finally:
+            sys.argv = original_argv
+
     report = _report(["same.rule"]).model_copy(
         update={"sample": SampleInfoV1(size=1, hashes={"sha256": "a" * 64})}
     )
@@ -187,12 +197,10 @@ def test_clustering_cli_indexes_queries_and_validates_arguments(
     path.write_text(report.model_dump_json(), encoding="utf-8")
     database = tmp_path / "index.sqlite3"
 
-    monkeypatch.setattr(sys, "argv", ["cluster", str(path), "--index", str(database)])
-    clustering.cluster_main()
+    run(["cluster", str(path), "--index", str(database)])
     assert json.loads(capsys.readouterr().out)[0][0]["sample"] == "a" * 64
 
-    monkeypatch.setattr(sys, "argv", ["cluster", "--index", str(database), "--query", "a" * 64])
-    clustering.cluster_main()
+    run(["cluster", "--index", str(database), "--query", "a" * 64])
     assert json.loads(capsys.readouterr().out) == []
 
     for argv, message in (
@@ -200,9 +208,8 @@ def test_clustering_cli_indexes_queries_and_validates_arguments(
         (["cluster", "--query", "missing"], "--query requires --index"),
         (["cluster"], "at least one report is required"),
     ):
-        monkeypatch.setattr(sys, "argv", argv)
         with pytest.raises(SystemExit, match=message):
-            clustering.cluster_main()
+            run(argv)
 
 
 def test_verify_signed_rule_pack(tmp_path: Path) -> None:
