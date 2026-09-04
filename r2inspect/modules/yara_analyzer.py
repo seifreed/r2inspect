@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """YARA analysis module."""
 
 from __future__ import annotations
@@ -24,6 +23,7 @@ from .yara_rules_support import (
 )
 from .yara_defaults import DEFAULT_YARA_RULES
 from .yara_reporting import available_rules, validate_rules as validate_rule_set
+from .yara_rule_pack_support import prepare_rules_path, rules_content_digest, update_rule_counts
 
 logger = get_logger(__name__)
 
@@ -37,24 +37,23 @@ YARA_TIMEOUT_ERRORS: tuple[type[BaseException], ...] = (
 
 
 class TimeoutException(Exception):
-    """Exception raised when YARA compilation times out."""
+    pass
 
 
 def timeout_handler(_signum: int, _frame: Any) -> None:
-    """Signal handler for compilation timeout (signal API mandates the args)."""
     raise TimeoutException("YARA compilation timed out")
 
 
 _COMPILED_CACHE: dict[str, Any] = {}
+_CACHE_DIGESTS: dict[str, str] = {}
 
 
 def clear_yara_cache() -> None:
-    """Clear the compiled YARA rules cache (useful for test isolation)."""
     _COMPILED_CACHE.clear()
+    _CACHE_DIGESTS.clear()
 
 
 class YaraAnalyzer(CommandHelperMixin):
-
     def __init__(
         self,
         adapter: Any,
@@ -69,6 +68,7 @@ class YaraAnalyzer(CommandHelperMixin):
         self.filepath = filepath  # Store filepath directly to avoid r2 dependency
         self.last_status = "completed"
         self.last_error: str | None = None
+        self.rule_pack_metadata: dict[str, Any] | None = None
 
     def analyze(self, custom_rules_path: str | None = None) -> list[dict[str, Any]]:
         return self.scan(custom_rules_path)
@@ -91,7 +91,8 @@ class YaraAnalyzer(CommandHelperMixin):
 
             rules_path = self._resolve_rules_path(custom_rules_path)
             if not rules_path:
-                self.last_status = "not_applicable"
+                if self.last_status == "completed":
+                    self.last_status = "not_applicable"
                 return matches
 
             rules = self._get_cached_rules(rules_path)
@@ -134,18 +135,20 @@ class YaraAnalyzer(CommandHelperMixin):
     def _resolve_rules_path(self, custom_rules_path: str | None) -> str | None:
         rules_path = custom_rules_path or self.rules_path or ""
         if os.path.exists(rules_path):
-            return rules_path
+            return rules_path if prepare_rules_path(self, Path(rules_path), logger) else None
         logger.info("YARA rules path not found: %s. Creating defaults.", rules_path)
         self.create_default_rules(rules_path)
         return rules_path if os.path.exists(rules_path) else None
 
     def _get_cached_rules(self, rules_path: str) -> Any | None:
+        digest = getattr(self, "_rule_cache_digest", None) or rules_content_digest(Path(rules_path))
         rules = _COMPILED_CACHE.get(rules_path)
-        if rules:
+        if rules and _CACHE_DIGESTS.get(rules_path) == digest:
             return rules
         rules = self._compile_rules(rules_path)
         if rules:
             _COMPILED_CACHE[rules_path] = rules
+            _CACHE_DIGESTS[rules_path] = digest
         return rules
 
     def _compile_rules(self, rules_path: str) -> Any | None:
@@ -158,6 +161,7 @@ class YaraAnalyzer(CommandHelperMixin):
             if not validated_path:
                 return None
             rules_dict = self._collect_rules_sources(validator, validated_path)
+            update_rule_counts(self.rule_pack_metadata, len(rules_dict))
             if validated_path.is_file() and not rules_dict:
                 return None
             if (
@@ -169,7 +173,10 @@ class YaraAnalyzer(CommandHelperMixin):
             if not rules_dict:
                 return self._compile_default_rules(rules_path)
             logger.debug("Successfully loaded %s YARA rule source(s)", len(rules_dict))
-            return self._compile_sources_with_timeout(rules_dict)
+            compiled = self._compile_sources_with_timeout(rules_dict)
+            if not compiled:
+                update_rule_counts(self.rule_pack_metadata, 0)
+            return compiled
         except Exception as e:
             logger.error("Error compiling YARA rules: %s", e)
             self.last_status = "failed"

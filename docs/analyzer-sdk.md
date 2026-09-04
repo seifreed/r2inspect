@@ -69,3 +69,11 @@ on `PATH`. Deep mode bounds FLOSS to static strings; forensic mode runs full
 FLOSS extraction and preserves exact capa/FLOSS stdout in its evidence bundle.
 Missing tools produce `dependency_unavailable` analyzer outcomes. capa rules
 are exposed as report capabilities and FLOSS strings as report artifacts.
+
+Signed YARA pack directories contain `manifest.json` and are verified before
+any rule is compiled. Use `r2inspect rules build|sign|verify|install|list|update`
+to manage them. Installed packs carry their trusted public key; direct pack
+paths require `R2INSPECT_RULE_PACK_PUBLIC_KEY`. Manifest entries that resolve
+outside the pack directory, including symlink escapes, are rejected. The YARA
+compile cache is invalidated by the verified manifest digest or by a digest of
+the rule contents for unpackaged directories.

@@ -149,6 +149,24 @@ Use `--backend pe-core`, `elf-core`, or `macho-core` for dependency-free
 structural parsing. `--backend consensus --consensus-backend pe-core` compares
 that independent result with radare2 and reports typed disagreements.
 
+### Signed YARA rule packs
+
+```bash
+r2inspect rules build ./rules --pack-id org.example.rules --version 1.0.0
+r2inspect rules sign ./rules --private-key ed25519-private.pem
+r2inspect rules verify ./rules --public-key ed25519-public.pem
+r2inspect rules install ./rules --public-key ed25519-public.pem
+r2inspect rules list
+r2inspect --yara ~/.local/share/r2inspect/rule-packs/org.example.rules/1.0.0 sample.exe
+```
+
+`rules update` atomically replaces an installed pack version after signature
+and checksum verification. Installed packs retain the explicitly trusted public
+key. For a signed pack used directly without installation, set
+`R2INSPECT_RULE_PACK_PUBLIC_KEY` to its public-key path. Reports expose pack ID,
+version, manifest digest, signing key ID, and loaded/failed rule counts in
+`extras.rule_pack`.
+
 ---
 
 ## Python Library

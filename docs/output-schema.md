@@ -58,3 +58,7 @@ the `r2inspect.forensic/v1` chain-of-custody manifest, its SHA-256 digest, and
 the hashed artifacts. The manifest includes UTC timestamps, redacted effective
 configuration, radare2 commands, complete errors and warnings, and bounded byte
 snippets associated with findings.
+
+When YARA uses a verified signed pack, `extras.rule_pack` contains `pack_id`,
+`pack_version`, `manifest_digest`, `signing_key_id`, `rule_count`,
+`loaded_rules`, and `failed_rules`.

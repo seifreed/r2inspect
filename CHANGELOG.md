@@ -40,6 +40,9 @@ Versioning and keeps unreleased work at the top.
 - Made the forensic profile preserve radare2 command provenance, full FLOSS and
   native external-tool output, evidence byte snippets, and hashed
   `r2inspect.forensic/v1` chain-of-custody bundles.
+- Integrated signed Ed25519 YARA packs into scanning with safe manifest paths,
+  content-aware compilation caching, report provenance, and
+  `rules build|sign|verify|install|list|update` commands.
 
 ## 3.0.0
 

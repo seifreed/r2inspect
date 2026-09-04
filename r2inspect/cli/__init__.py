@@ -114,6 +114,13 @@ def main() -> None:  # Entry point shim for console_scripts
     Delegates to the Click-based CLI defined in r2inspect.cli_main.
     This shim avoids import path churn and preserves existing entry points.
     """
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "rules":
+        from .rules_cli import rules_cli
+
+        rules_cli(args=sys.argv[2:], prog_name="r2inspect rules")
+        return
     from ..cli_main import cli as _cli
 
     _cli()

@@ -7,6 +7,7 @@ from typing import Any
 
 from ..domain.results import AnalyzerStatus
 from .analyzer_execution import record_skipped_execution, run_registered_analyzer
+from .results_bucket import _results_bucket
 from .stages_common import OptionsRegistryStage
 
 
@@ -124,10 +125,20 @@ class DetectionStage(OptionsRegistryStage):
 
     def _run_yara_analysis(self, context: dict[str, Any]) -> dict[str, Any] | None:
         custom_rules = self.options.get("custom_yara")
-        return self._run_analyzer(
+
+        def invoke(analyzer: Any) -> Any:
+            matches = analyzer.analyze(custom_rules)
+            metadata = getattr(analyzer, "rule_pack_metadata", None)
+            if isinstance(metadata, dict):
+                _results_bucket(context)["rule_pack"] = metadata
+            return matches
+
+        return run_registered_analyzer(
+            self,
             context,
             "yara_analyzer",
             "yara_matches",
-            analyze_args=(custom_rules,),
-            error_default=[],
+            invoke=invoke,
+            error_default=lambda _exc: [],
+            log_label="Analyzer 'yara_analyzer'",
         )
