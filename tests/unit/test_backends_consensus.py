@@ -56,8 +56,14 @@ def test_elf_core_parses_real_structure() -> None:
     assert "error" not in result
     assert result["file_info"]["architecture"] == "x86_64"
     assert result["file_info"]["bits"] == 64
+    assert result["file_info"]["endian"] == "little"
     assert result["elf_info"]["entry_point"] == 0x125C
+    assert result["elf_info"]["image_base"] == 0
+    assert "build_id" in result["elf_info"]
     assert len(result["sections"]) == 13
+    assert all({"name", "vaddr", "size"}.issubset(section) for section in result["sections"])
+    assert isinstance(result["imports"], list)
+    assert isinstance(result["exports"], list)
     assert len(result["elf_info"]["program_headers"]) == 8
     assert result["security"]["nx"] is True
     assert result["security"]["pie"] is True
@@ -74,9 +80,15 @@ def test_pe_core_parses_real_structure() -> None:
 
     assert "error" not in result
     assert result["file_info"]["architecture"] == "x86_64"
+    assert result["file_info"]["bits"] == 64
+    assert result["file_info"]["endian"] == "little"
     assert result["pe_info"]["entry_point"] == 0x140001400
+    assert result["pe_info"]["image_base"] == 0x140000000
+    assert result["pe_info"]["build_id"].startswith("coff:")
     assert len(result["sections"]) == 18
+    assert all({"name", "vaddr", "size"}.issubset(section) for section in result["sections"])
     assert any(item.get("name") == "Sleep" for item in result["imports"])
+    assert isinstance(result["exports"], list)
     assert result["security"]["aslr"] is True
     assert result["security"]["dep"] is True
     assert result["pe_info"]["overlay"]["size"] > 0
@@ -103,13 +115,17 @@ def test_macho_core_parses_real_structure() -> None:
     assert "error" not in result
     assert result["file_info"]["architecture"] == "arm64"
     assert result["file_info"]["bits"] == 64
+    assert result["file_info"]["endian"] == "little"
     assert result["macho_info"]["entry_point"] == 0x100000460
+    assert result["macho_info"]["image_base"] == 0x100000000
     assert len(result["sections"]) == 5
+    assert all({"name", "vaddr", "size"}.issubset(section) for section in result["sections"])
     assert len(result["macho_info"]["segments"]) == 4
     assert "/usr/lib/libSystem.B.dylib" in result["macho_info"]["libraries"]
     assert any(item["name"] == "_puts" for item in result["imports"])
     assert any(item["name"] == "_main" for item in result["exports"])
     assert result["macho_info"]["uuid"] == "aa700f20-32f3-40f8-bc47-e22ab436ab16"
+    assert result["macho_info"]["build_id"] == result["macho_info"]["uuid"]
     assert result["security"]["pie"] is True
     assert result["security"]["nx"] is True
     assert result["macho_info"]["signature_status"] == "present"
@@ -174,28 +190,49 @@ def test_consensus_marks_backend_disagreements() -> None:
 def test_consensus_compares_structure_and_security() -> None:
     left = {
         "format_detection": {"file_format": "PE"},
+        "file_info": {"architecture": "x86_64", "bits": 64, "endian": "little"},
         "pe_info": {
             "entry_point": 4096,
+            "image_base": 4096,
+            "build_id": "coff:1",
+            "overlay": {"offset": 8192, "size": 16},
+            "signature_status": "present",
             "sections": [{"name": ".text", "vaddr": 4096, "size": 512}],
             "security_features": {"aslr": True},
         },
         "imports": [{"library": "kernel32.dll", "name": "Sleep"}],
+        "exports": [{"name": "run"}],
     }
     right = {
         "format_detection": {"file_format": "PE"},
+        "file_info": {"architecture": "arm64", "bits": 32, "endian": "big"},
         "pe_info": {
             "entry_point": 8192,
+            "image_base": 8192,
+            "build_id": "coff:2",
+            "overlay": {"offset": 8192, "size": 32},
+            "signature_status": "absent",
             "sections": [{"name": ".text", "vaddr": 4096, "size": 1024}],
             "security_features": {"aslr": False},
         },
-        "imports": [{"library": "kernel32.dll", "name": "Sleep"}],
+        "imports": [{"library": "kernel32.dll", "name": "CreateFileW"}],
+        "exports": [{"name": "start"}],
     }
 
     fields = {item["field"] for item in compare_results(left, right)}
 
     assert fields == {
+        "format.common.architecture",
+        "format.common.bits",
+        "format.common.endianness",
+        "format.pe.build_id",
         "format.pe.entry_point",
+        "format.pe.exports",
+        "format.pe.image_base",
+        "format.pe.imports",
+        "format.pe.overlay",
         "format.pe.section_boundaries",
+        "format.pe.signature_status",
         "security.aslr",
     }
 
