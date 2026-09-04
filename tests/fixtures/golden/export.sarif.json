@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "main",
+                  "kind": "function"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "sample.bin"
+                },
+                "region": {
+                  "byteOffset": 42
+                }
+              },
+              "properties": {
+                "virtualAddress": 4198400
+              }
+            }
+          ],
+          "message": {
+            "text": "Finding"
+          },
+          "properties": {
+            "confidence": 0.9,
+            "source_analyzer": "test"
+          },
+          "ruleId": "rule.test"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "r2inspect",
+          "rules": [
+            {
+              "id": "rule.test",
+              "name": "Finding",
+              "properties": {
+                "category": "test"
+              },
+              "shortDescription": {
+                "text": "Finding"
+              }
+            }
+          ],
+          "version": "test"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

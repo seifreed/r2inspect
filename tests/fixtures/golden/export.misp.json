@@ -1,0 +1,31 @@
+{
+  "Event": {
+    "Attribute": [
+      {
+        "category": "Payload delivery",
+        "comment": "r2inspect report/v1 sample hash",
+        "to_ids": true,
+        "type": "sha256",
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "category": "Other",
+        "comment": "Finding",
+        "to_ids": false,
+        "type": "text",
+        "value": "rule.test"
+      }
+    ],
+    "Tag": [
+      {
+        "name": "r2inspect:profile=standard"
+      }
+    ],
+    "analysis": "0",
+    "distribution": "0",
+    "info": "r2inspect analysis analysis",
+    "threat_level_id": "3",
+    "timestamp": "1788480000",
+    "uuid": "11af019e-d904-5dcc-b010-e4c20f3d681b"
+  }
+}

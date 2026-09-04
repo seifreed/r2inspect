@@ -1,0 +1,39 @@
+{
+  "id": "bundle--20c49192-97b3-525c-afc4-57c7a3fab41f",
+  "objects": [
+    {
+      "created": "2026-09-04T00:00:00Z",
+      "id": "identity--7d10d056-e5ea-5429-a375-b8e6b5ef3975",
+      "identity_class": "organization",
+      "modified": "2026-09-04T00:00:00Z",
+      "name": "r2inspect",
+      "spec_version": "2.1",
+      "type": "identity"
+    },
+    {
+      "created": "2026-09-04T00:00:00Z",
+      "created_by_ref": "identity--7d10d056-e5ea-5429-a375-b8e6b5ef3975",
+      "id": "indicator--af90f8f7-7918-5b78-8411-062f1320b9ba",
+      "modified": "2026-09-04T00:00:00Z",
+      "name": "r2inspect sha256 indicator",
+      "pattern": "[file:hashes.'SHA-256' = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']",
+      "pattern_type": "stix",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2026-09-04T00:00:00Z"
+    },
+    {
+      "content": "rule.test: Finding",
+      "created": "2026-09-04T00:00:00Z",
+      "created_by_ref": "identity--7d10d056-e5ea-5429-a375-b8e6b5ef3975",
+      "id": "note--0114e644-10f9-52b7-abc8-6ff50b417f61",
+      "modified": "2026-09-04T00:00:00Z",
+      "object_refs": [
+        "identity--7d10d056-e5ea-5429-a375-b8e6b5ef3975"
+      ],
+      "spec_version": "2.1",
+      "type": "note"
+    }
+  ],
+  "type": "bundle"
+}

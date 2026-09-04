@@ -35,9 +35,11 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
         filename: str | None = None,
         *,
         executable_lookup: Callable[[str], str | None] = shutil.which,
+        command_runner: Callable[..., Any] = run_command,
     ) -> None:
         super().__init__(adapter=adapter, config=config, filepath=filepath or filename)
         self._executable_lookup = executable_lookup
+        self._command_runner = command_runner
 
     def get_category(self) -> str:
         return "detection"
@@ -58,7 +60,7 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 "error": "sample path unavailable",
                 "execution_time": time.monotonic() - started,
             }
-        provenance = tool_provenance(executable, self.executable)
+        provenance = tool_provenance(executable, self.executable, self._command_runner)
         completed: Any = None
         try:
             default_timeout = (
@@ -74,7 +76,7 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
             if self.executable == "capa" and capa_rules:
                 command_args = (*command_args, "-r", str(Path(capa_rules).expanduser().resolve()))
             command = [executable, *command_args, str(Path(self.filepath))]
-            completed = run_command(command, timeout=timeout)
+            completed = self._command_runner(command, timeout=timeout)
             if completed.returncode != 0:
                 raise RuntimeError(completed.stderr.strip() or f"exit code {completed.returncode}")
             payload = load_json_output(completed)

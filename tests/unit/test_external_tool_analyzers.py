@@ -1,11 +1,12 @@
+import hashlib
 import os
 import subprocess
 import time
-import hashlib
 
 from r2inspect.application.report_builder import build_report_v1
 from r2inspect.application.result_mapper import build_analysis_result
 from r2inspect.modules.external_tool_analyzers import CapaAnalyzer, FlossAnalyzer
+from tests.helpers import env_vars
 
 
 def test_external_tools_report_missing_dependencies_explicitly() -> None:
@@ -80,34 +81,38 @@ def test_floss_uses_static_string_mode_for_bounded_comparison() -> None:
     assert FlossAnalyzer.command_args == ("--only", "static", "-j")
 
 
-def test_forensic_floss_uses_full_mode_and_preserves_native_output(tmp_path, monkeypatch) -> None:
+def test_forensic_floss_uses_full_mode_and_preserves_native_output(tmp_path) -> None:
     sample = tmp_path / "sample.exe"
     sample.write_bytes(b"MZ")
     commands = []
 
     def run(command, *, timeout):
         commands.append(command)
+        if "--version" in command:
+            return subprocess.CompletedProcess(command, 0, "floss 3.1", "")
         return subprocess.CompletedProcess(command, 0, '{"strings": {}}\n', "")
 
-    monkeypatch.setattr("r2inspect.modules.external_tool_analyzers.run_command", run)
-
     result = FlossAnalyzer(
-        filename=str(sample), executable_lookup=lambda _name: "/usr/bin/floss"
+        filename=str(sample),
+        executable_lookup=lambda _name: "/usr/bin/floss",
+        command_runner=run,
     ).analyze(forensic=True)
 
-    assert commands == [["/usr/bin/floss", "-j", str(sample)]]
+    assert commands[-1] == ["/usr/bin/floss", "-j", str(sample)]
     assert result["result"] == {"strings": {}}
     assert result["native_output"]["stdout"] == '{"strings": {}}\n'
 
 
-def test_forensic_external_failure_preserves_native_output(monkeypatch) -> None:
+def test_forensic_external_failure_preserves_native_output() -> None:
     def run(command, *, timeout):
+        if "--version" in command:
+            return subprocess.CompletedProcess(command, 0, "capa 9.0", "")
         return subprocess.CompletedProcess(command, 2, "partial", "failed")
 
-    monkeypatch.setattr("r2inspect.modules.external_tool_analyzers.run_command", run)
-
     result = CapaAnalyzer(
-        filename="sample.exe", executable_lookup=lambda _name: "/usr/bin/capa"
+        filename="sample.exe",
+        executable_lookup=lambda _name: "/usr/bin/capa",
+        command_runner=run,
     ).analyze(forensic=True)
 
     assert result["error"] == "failed"
@@ -115,25 +120,23 @@ def test_forensic_external_failure_preserves_native_output(monkeypatch) -> None:
     assert result["native_output"]["stderr"] == "failed"
 
 
-def test_external_tool_reports_binary_version_hash_and_rules(tmp_path, monkeypatch) -> None:
+def test_external_tool_reports_binary_version_hash_and_rules(tmp_path) -> None:
     executable = tmp_path / "capa"
     executable.write_bytes(b"capa-binary")
     rules = tmp_path / "rules"
     rules.mkdir()
     (rules / "rule.yml").write_text("rule")
-    monkeypatch.setenv("R2INSPECT_CAPA_RULES", str(rules))
-    monkeypatch.setattr(
-        "r2inspect.modules.external_tool_support.run_command",
-        lambda command, *, timeout: subprocess.CompletedProcess(command, 0, "capa 9.0", ""),
-    )
-    monkeypatch.setattr(
-        "r2inspect.modules.external_tool_analyzers.run_command",
-        lambda command, *, timeout: subprocess.CompletedProcess(command, 0, "{}", ""),
-    )
 
-    result = CapaAnalyzer(
-        filename="sample.exe", executable_lookup=lambda _name: str(executable)
-    ).analyze()
+    def run(command, *, timeout):
+        output = "capa 9.0" if "--version" in command else "{}"
+        return subprocess.CompletedProcess(command, 0, output, "")
+
+    with env_vars(R2INSPECT_CAPA_RULES=str(rules)):
+        result = CapaAnalyzer(
+            filename="sample.exe",
+            executable_lookup=lambda _name: str(executable),
+            command_runner=run,
+        ).analyze()
 
     assert result["tool"]["version"] == "capa 9.0"
     assert result["tool"]["sha256"] == hashlib.sha256(b"capa-binary").hexdigest()

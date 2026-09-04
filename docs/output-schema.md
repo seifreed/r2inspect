@@ -35,6 +35,11 @@ sample hashes and format, normalized and format-specific security properties,
 findings, evidence locations, artifacts, capabilities, similarity results,
 analyzer outcomes, errors, warnings, and metrics.
 
+`r2inspect-export` emits deterministic SARIF 2.1.0, STIX 2.1, and MISP JSON.
+SARIF maps file offsets to `region.byteOffset`, virtual addresses to location
+properties, and function names to `logicalLocations`. CI validates golden
+exports with the official SARIF JSON Schema, STIX library, and PyMISP.
+
 The CLI detects the current Git commit and `r2 -v` output once per process.
 Packaged builds can set `R2INSPECT_COMMIT` and `R2INSPECT_RADARE2_VERSION` to
 provide immutable build provenance. An absent or unsupported mitigation is

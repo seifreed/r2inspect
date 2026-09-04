@@ -42,9 +42,18 @@ def to_sarif(value: ReportV1 | dict[str, Any]) -> dict[str, Any]:
         locations = []
         for location in finding.locations:
             physical: dict[str, Any] = {"artifactLocation": {"uri": report.sample.path or ""}}
+            if location.offset is not None:
+                physical["region"] = {"byteOffset": location.offset}
+            sarif_location: dict[str, Any] = {"physicalLocation": physical}
             if location.virtual_address is not None:
-                physical["region"] = {"byteOffset": location.virtual_address}
-            locations.append({"physicalLocation": physical})
+                sarif_location["properties"] = {
+                    "virtualAddress": location.virtual_address,
+                }
+            if location.function:
+                sarif_location["logicalLocations"] = [
+                    {"fullyQualifiedName": location.function, "kind": "function"}
+                ]
+            locations.append(sarif_location)
         if locations:
             result["locations"] = locations
         results.append(result)
@@ -98,7 +107,7 @@ def to_misp(value: ReportV1 | dict[str, Any]) -> dict[str, Any]:
             "threat_level_id": (
                 "1" if any(f.severity == "critical" for f in report.findings) else "3"
             ),
-            "timestamp": report.analysis.started_at.isoformat(),
+            "timestamp": str(int(report.analysis.started_at.timestamp())),
             "Tag": [{"name": f"r2inspect:profile={report.analysis.profile}"}],
             "Attribute": attributes,
         }

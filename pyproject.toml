@@ -78,6 +78,9 @@ dev = [
     "bandit>=1.7.0",
     "pip-audit>=2.7.0",
     "mutmut>=2.4.0",
+    "jsonschema>=4.26.0",
+    "stix2>=3.0.2",
+    "pymisp>=2.5.34.2",
     # Transitive via pip-audit -> CacheControl; pin past GHSA-6v7p-g79w-8964.
     "msgpack>=1.2.1",
     "pefile>=2023.2.7",

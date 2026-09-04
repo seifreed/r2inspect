@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -39,14 +40,17 @@ def _path_digest(path: Path) -> str | None:
 
 
 @cache
-def _tool_identity(executable: str, name: str) -> dict[str, Any]:
+def _tool_identity(
+    executable: str, name: str, command_runner: Callable[..., Any]
+) -> dict[str, Any]:
     path = Path(executable).resolve()
     version: str | None = None
     try:
         version_timeout = 0.2 if os.getenv("R2INSPECT_TEST_MODE") == "1" else 5
-        completed = run_command([str(path), "--version"], timeout=version_timeout)
-        output = (completed.stdout or completed.stderr).strip()
-        version = output.splitlines()[0] if output else None
+        completed = command_runner([str(path), "--version"], timeout=version_timeout)
+        if completed.returncode == 0:
+            output = (completed.stdout or completed.stderr).strip()
+            version = output.splitlines()[0] if output else None
         cleanup_command_output(completed)
     except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
         cleanup_command_output(getattr(exc, "result", None))
@@ -58,8 +62,15 @@ def _tool_identity(executable: str, name: str) -> dict[str, Any]:
     }
 
 
-def tool_provenance(executable: str, name: str) -> dict[str, Any]:
-    return {**_tool_identity(executable, name), "rules": rules_provenance(name)}
+def tool_provenance(
+    executable: str,
+    name: str,
+    command_runner: Callable[..., Any] = run_command,
+) -> dict[str, Any]:
+    return {
+        **_tool_identity(executable, name, command_runner),
+        "rules": rules_provenance(name),
+    }
 
 
 def rules_provenance(name: str) -> dict[str, Any] | None:

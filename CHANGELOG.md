@@ -45,6 +45,8 @@ Versioning and keeps unreleased work at the top.
   `rules build|sign|verify|install|list|update` commands.
 - Bounded external-tool output, memory, CPU, and process usage; added an optional
   sandbox prefix and recorded executable, version, binary, and rules provenance.
+- Corrected SARIF file/virtual address semantics and added official SARIF, STIX,
+  and PyMISP validation for deterministic exporter fixtures.
 
 ## 3.0.0
 

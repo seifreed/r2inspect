@@ -159,7 +159,7 @@ elif ! should_run "pip-audit"; then
 else
     # `--strict` makes warnings (e.g. skipped packages) fail the run.
     run_check "pip-audit" "pip-audit (dependency CVEs)" \
-        pip-audit --strict --progress-spinner=off
+        pip-audit . --strict --progress-spinner=off
 fi
 
 # ---- check 6: inline-suppression scan ----------------------------------------

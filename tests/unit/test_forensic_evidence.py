@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from r2inspect.application.forensic import create_forensic_bundle
+from tests.helpers import env_vars
 
 
 class _Config:
@@ -15,10 +16,9 @@ class _Adapter:
         return [{"command": "ij", "status": "completed"}]
 
 
-def test_forensic_bundle_preserves_and_hashes_evidence(tmp_path, monkeypatch) -> None:
+def test_forensic_bundle_preserves_and_hashes_evidence(tmp_path) -> None:
     sample = tmp_path / "sample.bin"
     sample.write_bytes(bytes(range(128)))
-    monkeypatch.setenv("R2INSPECT_EVIDENCE_DIR", str(tmp_path / "evidence"))
     results = {
         "packer": {
             "findings": [
@@ -30,14 +30,15 @@ def test_forensic_bundle_preserves_and_hashes_evidence(tmp_path, monkeypatch) ->
         "yara_matches": [{"rule": "demo"}],
     }
 
-    bundle = create_forensic_bundle(
-        sample=sample,
-        adapter=_Adapter(),
-        config=_Config(),
-        options={"profile": "forensic", "preserve_artifacts": True},
-        results=results,
-        started_at="2026-09-04T00:00:00+00:00",
-    )
+    with env_vars(R2INSPECT_EVIDENCE_DIR=str(tmp_path / "evidence")):
+        bundle = create_forensic_bundle(
+            sample=sample,
+            adapter=_Adapter(),
+            config=_Config(),
+            options={"profile": "forensic", "preserve_artifacts": True},
+            results=results,
+            started_at="2026-09-04T00:00:00+00:00",
+        )
 
     manifest_path = Path(bundle["manifest_path"])
     manifest = json.loads(manifest_path.read_text())
