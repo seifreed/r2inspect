@@ -429,3 +429,48 @@ def test_evaluate_reports_scores_structured_finding_categories(tmp_path: Path) -
     assert findings["by_category"]["metrics"]["anti-analysis"]["precision"] == 1.0
     assert findings["quality"]["high_severity_location_rate"] == 0.0
     assert findings["quality"]["high_severity_false_positive_rate"] == 0.0
+
+
+def test_evaluate_reports_migrates_unique_legacy_finding_labels(tmp_path: Path) -> None:
+    report = build_report_v1(
+        build_analysis_result({"file_info": {"file_type": "PE"}}), analysis_id="legacy-labels"
+    )
+    for rule_id, category in (
+        ("r2inspect.packer.detected.v1", "packer"),
+        ("r2inspect.yara.example.v1", "yara"),
+    ):
+        report.findings.append(
+            FindingV1(
+                finding_id=rule_id,
+                rule_id=rule_id,
+                title=rule_id,
+                category=category,
+                severity="medium",
+                confidence=1.0,
+                source_analyzer=category,
+                method="fixture",
+            )
+        )
+    (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
+    (tmp_path / "manifest.json").write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "report": "report.json",
+                        "expected_findings": [
+                            {"rule_id": "legacy.indicator.packer", "category": "packer"},
+                            {"rule_id": "legacy.indicator.yara.match", "category": "yara"},
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    findings = evaluate(tmp_path / "manifest.json")["findings"]
+
+    assert findings["true_positive"] == 2
+    assert findings["false_positive"] == 0
+    assert findings["false_negative"] == 0

@@ -13,6 +13,10 @@ from typing import Any
 from r2inspect.schemas.report_v1 import ReportV1
 
 _FAILURE_STATUSES = ("failed", "timed_out")
+_LEGACY_FINDING_PREFIXES = {
+    "legacy.indicator.packer": "r2inspect.packer.",
+    "legacy.indicator.yara.match": "r2inspect.yara.",
+}
 
 
 def _ratio(numerator: int, denominator: int) -> float | None:
@@ -96,6 +100,17 @@ def _update_scores(scores: dict[str, Counter[str]], expected: set[str], actual: 
             scores[key]["false_positive"] += 1
         else:
             scores[key]["false_negative"] += 1
+
+
+def _migrate_legacy_labels(
+    expected: dict[str, str | None], actual: set[str]
+) -> dict[str, str | None]:
+    migrated = dict(expected)
+    for legacy_id, prefix in _LEGACY_FINDING_PREFIXES.items():
+        matches = [rule_id for rule_id in actual if rule_id.startswith(prefix)]
+        if legacy_id in migrated and len(matches) == 1:
+            migrated[matches[0]] = migrated.pop(legacy_id)
+    return migrated
 
 
 def _score_summary(counts: Counter[str]) -> dict[str, int | float | None]:
@@ -295,8 +310,9 @@ def evaluate(manifest_path: Path, *, baseline_manifest: Path | None = None) -> d
         expected_findings = _finding_labels(case)
         if expected_findings is not None:
             finding_cases += 1
-            expected = set(expected_findings)
             actual = {finding.rule_id for finding in report.findings}
+            expected_findings = _migrate_legacy_labels(expected_findings, actual)
+            expected = set(expected_findings)
             finding_counts["true_positive"] += len(expected & actual)
             finding_counts["false_positive"] += len(actual - expected)
             finding_counts["false_negative"] += len(expected - actual)
