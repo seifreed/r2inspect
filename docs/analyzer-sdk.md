@@ -4,6 +4,9 @@ External analyzers are discovered from the `r2inspect.analyzers` Python entry
 point group. A plugin may expose a `BaseAnalyzer` subclass or a callable that
 receives the registry.
 
+A complete minimal package is available in the
+[external plugin example](https://github.com/seifreed/r2inspect-plugin-example).
+
 ## Analyzer class
 
 ```python
