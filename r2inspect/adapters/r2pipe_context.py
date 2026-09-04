@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from typing import Any
 
 from ..infrastructure.r2_session_cleanup import force_close_process
+from ..infrastructure.r2_session_timeouts import open_r2pipe_process
 from .r2pipe_adapter import R2PipeAdapter
 
 _logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def open_r2pipe(
 
         opener = r2pipe.open
 
-    r2 = opener(filepath, flags=flags or list(DEFAULT_R2_FLAGS))
+    r2 = open_r2pipe_process(opener, filepath, flags or list(DEFAULT_R2_FLAGS))
     try:
         yield r2
     finally:

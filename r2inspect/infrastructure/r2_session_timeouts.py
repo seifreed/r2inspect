@@ -5,98 +5,32 @@ from __future__ import annotations
 
 import os
 import threading
-import time
-from types import MethodType
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any
 
 from ..domain.constants import ANAL_TIMEOUT_SOFT_MARGIN_SECONDS, MIN_AA_FUNCTIONS_BEFORE_DEEP
 from .r2_command_timeout import mark_wedged
 from .r2_session_cleanup import force_close_process
 from .timeout_runner import run_with_timeout
 
+_r2pipe_open_lock = threading.Lock()
 
-def _windows_available_bytes(pipe: Any) -> int | None:
+
+def open_r2pipe_process(opener: Callable[..., Any], filename: str, flags: list[str]) -> Any:
+    """Spawn r2 without Git Bash's false interactive-terminal signal on Windows."""
     if os.name != "nt":
-        return None
-    try:
-        import ctypes
-        import msvcrt
+        return opener(filename, flags=flags)
 
-        available = ctypes.c_ulong()
-        msvcrt_api = cast(Any, msvcrt)
-        ctypes_api = cast(Any, ctypes)
-        handle = msvcrt_api.get_osfhandle(pipe.process.stdout.fileno())
-        ok = ctypes_api.windll.kernel32.PeekNamedPipe(
-            ctypes.c_void_p(handle), None, 0, None, ctypes.byref(available), None
-        )
-        return int(available.value) if ok else None
-    except (AttributeError, OSError, TypeError, ValueError):
-        return None
-
-
-def _windows_cmd_process(pipe: Any, command: str) -> str:
-    """Read Windows r2pipe responses without waiting for a 4096-byte buffer."""
-    lock = getattr(pipe, "_cmd_lock", None)
-    if lock is None:
-        lock = pipe._cmd_lock = threading.Lock()
-    with lock:
-        pipe.process.stdin.write((command.strip().replace("\n", ";") + "\n").encode())
-        pipe.process.stdin.flush()
-        output = bytearray()
-        pending = getattr(pipe, "pending", b"")
-        pipe.pending = b""
-        first_byte = True
-        while True:
-            if pending:
-                chunk, pending = pending, b""
+    with _r2pipe_open_lock:
+        previous_term = os.environ.get("TERM")
+        os.environ["TERM"] = "dumb"
+        try:
+            return opener(filename, flags=flags)
+        finally:
+            if previous_term is None:
+                os.environ.pop("TERM", None)
             else:
-                available = _windows_available_bytes(pipe)
-                if available is None:
-                    byte = pipe.process.stdout.read(1)
-                    if not byte:
-                        if pipe.process.poll() is not None:
-                            raise RuntimeError(f"Process terminated while running {command}")
-                        continue
-                    if first_byte and byte == b"\x00":
-                        first_byte = False
-                        continue
-                    first_byte = False
-                    if byte == b"\x00":
-                        return output.decode("utf-8", errors="ignore")
-                    output.extend(byte)
-                    continue
-                elif available:
-                    chunk = pipe.process.stdout.read(available)
-                else:
-                    chunk = b""
-            if not chunk:
-                if pipe.process.poll() is not None:
-                    raise RuntimeError(f"Process terminated while running {command}")
-                time.sleep(0.001)
-                continue
-            if first_byte and chunk.startswith(b"\x00"):
-                first_byte = False
-                chunk = chunk[1:]
-                if not chunk:
-                    return ""
-            first_byte = False
-            terminator = chunk.find(b"\x00")
-            if terminator >= 0:
-                output.extend(chunk[:terminator])
-                pipe.pending = chunk[terminator + 1 :]
-                return output.decode("utf-8", errors="ignore")
-            output.extend(chunk)
-
-
-def _configure_windows_pipe(r2: Any) -> None:
-    """Use the bounded Windows reader around r2pipe's blocking implementation."""
-    if os.name == "nt" and hasattr(r2, "process") and hasattr(r2, "_cmd"):
-        available = _windows_available_bytes(r2)
-        if available:
-            first = r2.process.stdout.read(1)
-            if first != b"\x00":
-                r2.pending = first + getattr(r2, "pending", b"")
-        r2._cmd = MethodType(_windows_cmd_process, r2)
+                os.environ["TERM"] = previous_term
 
 
 def _close_orphan_r2(r2: Any, logger: Any) -> None:
@@ -119,8 +53,7 @@ def open_with_timeout(session: Any, flags: list[str], timeout: float, *, logger:
 
     def _runner() -> None:
         try:
-            r2 = session._opener(session.filename, flags=flags)
-            _configure_windows_pipe(r2)
+            r2 = open_r2pipe_process(session._opener, session.filename, flags)
             # If we timed out while opening, close the orphan immediately
             if timed_out.is_set():
                 _close_orphan_r2(r2, logger)
@@ -243,8 +176,3 @@ def perform_initial_analysis(session: Any, file_size_mb: float, *, logger: Any) 
     except Exception as exc:
         logger.warning("Analysis command failed, continuing with basic r2 setup: %s", exc)
         return True
-
-
-__all__ = [
-    "time",
-]

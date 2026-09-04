@@ -233,6 +233,9 @@ def cap_test_resources(tmp_path_factory: pytest.TempPathFactory) -> None:
       - R2_RCFILE (defaults to an empty session rc; radare2 loads this
         instead of ~/.radare2rc)
     """
+    if sys.platform == "win32":
+        os.environ["TERM"] = "dumb"
+
     if "R2_RCFILE" not in os.environ:
         neutral_rc = tmp_path_factory.mktemp("r2rc") / "radare2rc"
         neutral_rc.write_text("")

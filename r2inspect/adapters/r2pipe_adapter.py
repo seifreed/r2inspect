@@ -11,7 +11,6 @@ from ..interfaces import BinaryAnalyzerInterface
 from ..infrastructure.logging import get_logger
 from ..infrastructure.r2_command_timeout import is_wedged, mark_wedged
 from ..infrastructure.r2_helpers import safe_cmd_dict, safe_cmd_list
-from ..infrastructure.r2_session_timeouts import _configure_windows_pipe
 from ..infrastructure.r2_suppress import silent_cmdj
 from .r2pipe_queries import R2PipeQueryMixin
 from .validation import is_valid_r2_response, validate_r2_data
@@ -47,7 +46,6 @@ class R2PipeAdapter(R2PipeQueryMixin):
         if r2_instance is None:
             raise ValueError("r2_instance cannot be None")
 
-        _configure_windows_pipe(r2_instance)
         self._r2 = r2_instance
         self._cache: dict[str, CommandOutput] = {}
         # Separate bounded cache for per-address disasm (pdfj/agj @ addr) so the

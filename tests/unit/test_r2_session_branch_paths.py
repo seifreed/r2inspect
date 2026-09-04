@@ -12,46 +12,24 @@ from pathlib import Path
 
 import pytest
 
+import r2inspect.infrastructure.r2_session_timeouts as session_timeouts
 from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.infrastructure.r2_session_cleanup import _macho_arch_flags
-from r2inspect.infrastructure.r2_session_timeouts import _windows_cmd_process
 
 
-def test_windows_cmd_process_reads_until_nul_without_large_read() -> None:
-    class _Input:
-        def __init__(self) -> None:
-            self.data = b""
+def test_windows_r2pipe_spawn_uses_noninteractive_term(monkeypatch) -> None:
+    observed: dict[str, object] = {}
 
-        def write(self, data: bytes) -> None:
-            self.data += data
+    def opener(filename: str, *, flags: list[str]) -> object:
+        observed.update(filename=filename, flags=flags, term=os.environ.get("TERM"))
+        return observed
 
-        def flush(self) -> None:
-            pass
+    monkeypatch.setattr(session_timeouts.os, "name", "nt")
+    monkeypatch.setenv("TERM", "xterm")
 
-    class _Output:
-        def __init__(self) -> None:
-            self.data = iter(b'\x00{"bin":{}}\x00')
-
-        def read(self, size: int) -> bytes:
-            assert size == 1
-            return bytes((next(self.data),))
-
-    class _Process:
-        def __init__(self) -> None:
-            self.stdin = _Input()
-            self.stdout = _Output()
-
-        def poll(self) -> None:
-            return None
-
-    class _Pipe:
-        def __init__(self) -> None:
-            self.process = _Process()
-            self.pending = b""
-
-    pipe = _Pipe()
-    assert _windows_cmd_process(pipe, "ij") == '{"bin":{}}'
-    assert pipe.process.stdin.data == b"ij\n"
+    assert session_timeouts.open_r2pipe_process(opener, "sample.exe", ["-N"]) is observed
+    assert observed == {"filename": "sample.exe", "flags": ["-N"], "term": "dumb"}
+    assert os.environ["TERM"] == "xterm"
 
 
 def test_macho_arch_flags_empty_arches_returns_no_arch_flags():

@@ -27,6 +27,7 @@ jobs:
           python - <<'PY'
           import ctypes
           import msvcrt
+          import os
           import shutil
           import subprocess
           import sys
@@ -39,6 +40,7 @@ jobs:
               stdin=subprocess.PIPE,
               stdout=subprocess.PIPE,
               bufsize=0,
+              env={**os.environ, "TERM": "dumb"},
           )
           handle = msvcrt.get_osfhandle(process.stdout.fileno())
 
@@ -61,18 +63,9 @@ jobs:
 
           try:
               collect("startup", 2)
-              process.stdin.write(b"\x1b[24;80R")
-              process.stdin.flush()
-              collect("cursor-response", 1)
               process.stdin.write(b"ij\n")
               process.stdin.flush()
               collect("ij", 3)
-              process.stdin.write(b"\x1b[24;80R")
-              process.stdin.flush()
-              collect("ij-response", 3)
-              process.stdin.write(b"\n")
-              process.stdin.flush()
-              collect("blank", 3)
           finally:
               process.terminate()
               process.wait(timeout=5)
