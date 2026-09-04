@@ -4,7 +4,7 @@ r2inspect is a malware analysis framework that automates static inspection of PE
 
 ## Prerequisites
 
-- Python 3.13+ and radare2 in PATH
+- Python 3.11–3.14 (primary: 3.13) and radare2 in PATH
 - `libmagic` (`brew install libmagic` on macOS, `apt install libmagic-dev` on Linux)
 - Active virtualenv (`.venv` or `venv`)
 
@@ -95,7 +95,7 @@ Format set constants (`PE_FORMATS`, `ELF_FORMATS`, `MACHO_FORMATS`) are defined 
 
 ## Key Conventions
 
-**Style:** black + ruff, 100-char line length, target Python 3.13. isort with `profile = "black"`. Google-style docstrings.
+**Style:** black + ruff, 100-char line length, target Python 3.11. isort with `profile = "black"`. Google-style docstrings.
 
 **Interfaces over concrete types:** depend on protocols in `r2inspect/interfaces/core.py` (`ConfigLike`, `FileValidatorLike`, `AnalyzerBackend`, etc.) rather than concrete classes.
 

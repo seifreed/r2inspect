@@ -209,7 +209,7 @@ jobs:
 
           if sys.platform == "win32":
               args = [
-                  "tests/unit/product",
+                  "tests/unit",
                   "-m",
                   "not slow and not requires_posix",
                   "-k",

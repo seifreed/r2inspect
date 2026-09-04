@@ -17,6 +17,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-14, windows-latest]
         python-version: ["3.11", "3.12"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.13"
+          - os: ubuntu-latest
+            python-version: "3.14"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -63,22 +68,37 @@ jobs:
             "simhash>=2.1.0"
           python -m build --wheel --outdir dist
           python -m pip install dist/*.whl
-      - name: Run unit and integration smoke tests
+      - name: Run installed-wheel tests
         shell: bash
         run: |
           marker="not slow and not requires_posix"
-          # Keep this matrix focused on the installed wheel contract. The full
-          # analyzer suite, including optional native hash libraries, runs in CI.
-          python -m pytest \
-            tests/unit/product \
-            tests/unit/test_result_semantics.py \
-            tests/unit/test_report_builder.py \
-            tests/unit/test_benchmark_reports.py \
-            tests/unit/test_differential_tools.py \
-            tests/unit/test_backends_consensus.py \
-            -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            python -m pytest tests/unit \
+              -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
+          else
+            python -m pytest \
+              tests/unit/product \
+              tests/unit/test_result_semantics.py \
+              tests/unit/test_report_builder.py \
+              tests/unit/test_benchmark_reports.py \
+              tests/unit/test_differential_tools.py \
+              tests/unit/test_backends_consensus.py \
+              -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
+          fi
           if [ "$RUNNER_OS" != "Windows" ]; then
             python -m pytest tests/integration/test_integration_edge_cases.py -m requires_r2 --timeout=180
           fi
       - name: Verify installed CLI
-        run: r2inspect --help
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          python - <<'PY'
+          from pathlib import Path
+          import r2inspect
+
+          module_path = Path(r2inspect.__file__).resolve()
+          if not ({"site-packages", "dist-packages"} & set(module_path.parts)):
+              raise SystemExit(f"r2inspect was not imported from the installed wheel: {module_path}")
+          print(module_path)
+          PY
+          r2inspect --help

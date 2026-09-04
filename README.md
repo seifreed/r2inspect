@@ -12,7 +12,7 @@
   <a href="https://pypi.org/project/r2inspect/"><img src="https://img.shields.io/pypi/v/r2inspect?style=flat-square&logo=pypi&logoColor=white" alt="PyPI Version"></a>
   <a href="https://pypi.org/project/r2inspect/"><img src="https://img.shields.io/pypi/pyversions/r2inspect?style=flat-square&logo=python&logoColor=white" alt="Python Versions"></a>
   <a href="https://github.com/seifreed/r2inspect/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square" alt="License"></a>
-  <a href="https://github.com/seifreed/r2inspect/actions"><img src="https://img.shields.io/github/actions/workflow/status/seifreed/r2inspect/test.yml?style=flat-square&logo=github&label=CI" alt="CI Status"></a>
+  <a href="https://github.com/seifreed/r2inspect/actions"><img src="https://img.shields.io/github/actions/workflow/status/seifreed/r2inspect/ci.yml?style=flat-square&logo=github&label=CI" alt="CI Status"></a>
   <a href="https://codecov.io/gh/seifreed/r2inspect"><img src="https://img.shields.io/codecov/c/github/seifreed/r2inspect?style=flat-square" alt="Coverage"></a>
 </p>
 
@@ -75,7 +75,7 @@ pip install -e .
 
 ### Requirements
 
-- Python 3.13+
+- Python 3.11–3.14 (3.13 is the primary development version)
 - radare2 installed and in PATH
 - libmagic (for file type detection)
 
