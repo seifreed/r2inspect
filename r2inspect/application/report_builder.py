@@ -98,20 +98,15 @@ def build_report_v1(
     similarity = [
         {"type": name, "value": value} for name, value in result.hashing.to_dict().items() if value
     ]
-    bits: Literal[32, 64] | None = None
-    if file_info.bits == 32:
-        bits = 32
-    elif file_info.bits == 64:
-        bits = 64
+    bits = cast(Literal[32, 64], file_info.bits) if file_info.bits in {32, 64} else None
     raw_endian = {"le": "little", "be": "big"}.get(file_info.endian, file_info.endian)
     endian: Literal["little", "big"] | None = (
         cast(Literal["little", "big"], raw_endian) if raw_endian in {"little", "big"} else None
     )
     format_family = _format_family(file_info.file_type)
-    if format_family is None:
-        detected = raw.get("format_detection")
-        if isinstance(detected, dict):
-            format_family = _format_family(str(detected.get("file_format", "")))
+    detected = raw.get("format_detection")
+    if format_family is None and isinstance(detected, dict):
+        format_family = _format_family(str(detected.get("file_format", "")))
     return ReportV1(
         tool=ToolInfoV1(
             version=__version__,
