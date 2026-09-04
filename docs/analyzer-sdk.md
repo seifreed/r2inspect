@@ -68,7 +68,20 @@ The `deep` and `forensic` profiles run capa and FLOSS when those executables are
 on `PATH`. Deep mode bounds FLOSS to static strings; forensic mode runs full
 FLOSS extraction and preserves exact capa/FLOSS stdout in its evidence bundle.
 Missing tools produce `dependency_unavailable` analyzer outcomes. capa rules
-are exposed as report capabilities and FLOSS strings as report artifacts.
+are exposed as report capabilities and FLOSS strings as report artifacts. Each
+external-tool result records the executable path, version, SHA-256 digest, and
+rule-source digest when applicable.
+
+External commands use bounded temporary-file capture instead of pipes. The
+defaults limit the captured preview to 4 MiB, each output spool to 256 MiB,
+resident memory to 1 GiB, child processes to 32, CPU time to 120 seconds, and
+wall time to the analyzer timeout. Override them with
+`R2INSPECT_CMD_MAX_OUTPUT_BYTES`, `R2INSPECT_CMD_MAX_SPOOL_BYTES`,
+`R2INSPECT_CMD_MAX_MEMORY_MB`, `R2INSPECT_CMD_MAX_PROCESSES`,
+`R2INSPECT_CMD_CPU_SECONDS`, and `R2INSPECT_CMD_TIMEOUT_SECONDS`. Set
+`R2INSPECT_CMD_OUTPUT_DIR` to relocate temporary output or
+`R2INSPECT_CMD_SANDBOX_PREFIX` to prepend an argv-only sandbox/container
+wrapper. Set `R2INSPECT_CAPA_RULES` to select and fingerprint a capa rules path.
 
 Signed YARA pack directories contain `manifest.json` and are verified before
 any rule is compiled. Use `r2inspect rules build|sign|verify|install|list|update`

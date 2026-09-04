@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+import hashlib
 
 from r2inspect.application.report_builder import build_report_v1
 from r2inspect.application.result_mapper import build_analysis_result
@@ -112,3 +113,29 @@ def test_forensic_external_failure_preserves_native_output(monkeypatch) -> None:
     assert result["error"] == "failed"
     assert result["native_output"]["stdout"] == "partial"
     assert result["native_output"]["stderr"] == "failed"
+
+
+def test_external_tool_reports_binary_version_hash_and_rules(tmp_path, monkeypatch) -> None:
+    executable = tmp_path / "capa"
+    executable.write_bytes(b"capa-binary")
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "rule.yml").write_text("rule")
+    monkeypatch.setenv("R2INSPECT_CAPA_RULES", str(rules))
+    monkeypatch.setattr(
+        "r2inspect.modules.external_tool_support.run_command",
+        lambda command, *, timeout: subprocess.CompletedProcess(command, 0, "capa 9.0", ""),
+    )
+    monkeypatch.setattr(
+        "r2inspect.modules.external_tool_analyzers.run_command",
+        lambda command, *, timeout: subprocess.CompletedProcess(command, 0, "{}", ""),
+    )
+
+    result = CapaAnalyzer(
+        filename="sample.exe", executable_lookup=lambda _name: str(executable)
+    ).analyze()
+
+    assert result["tool"]["version"] == "capa 9.0"
+    assert result["tool"]["sha256"] == hashlib.sha256(b"capa-binary").hexdigest()
+    assert result["tool"]["rules"]["source"] == str(rules)
+    assert result["tool"]["rules"]["digest"]

@@ -279,8 +279,8 @@ exclude_dirs = [
     "env",
     ".venv",
     ".qlty",
-    "r2inspect/infrastructure/command_runner.py",
 ]
+skips = ["B404", "B603"] # subprocess is centralized, argv-only, resolved, and shell=False
 severity = "low"
 confidence = "low"
 

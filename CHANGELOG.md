@@ -43,6 +43,8 @@ Versioning and keeps unreleased work at the top.
 - Integrated signed Ed25519 YARA packs into scanning with safe manifest paths,
   content-aware compilation caching, report provenance, and
   `rules build|sign|verify|install|list|update` commands.
+- Bounded external-tool output, memory, CPU, and process usage; added an optional
+  sandbox prefix and recorded executable, version, binary, and rules provenance.
 
 ## 3.0.0
 

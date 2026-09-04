@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
@@ -41,6 +42,13 @@ def sha256_file(path: Path) -> str:
 def write_artifact(directory: Path, name: str, content: str) -> dict[str, Any]:
     path = directory / name
     path.write_text(content, encoding="utf-8")
+    path.chmod(0o600)
+    return {"name": name, "size": path.stat().st_size, "sha256": sha256_file(path)}
+
+
+def copy_artifact(directory: Path, name: str, source: Path) -> dict[str, Any]:
+    path = directory / name
+    shutil.copyfile(source, path)
     path.chmod(0o600)
     return {"name": name, "size": path.stat().st_size, "sha256": sha256_file(path)}
 
@@ -150,6 +158,7 @@ def evidence_snippets(
 
 __all__ = [
     "collect_messages",
+    "copy_artifact",
     "effective_configuration",
     "evidence_snippets",
     "json_text",

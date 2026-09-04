@@ -12,6 +12,7 @@ from typing import Any
 from ..__version__ import __version__
 from .forensic_support import (
     collect_messages,
+    copy_artifact,
     effective_configuration,
     evidence_snippets,
     json_text,
@@ -29,10 +30,18 @@ def _preserve_native_output(
         if not isinstance(native, dict):
             continue
         stdout = native.get("stdout")
-        if isinstance(stdout, str):
+        stdout_path = native.get("stdout_path")
+        if isinstance(stdout_path, str) and Path(stdout_path).is_file():
+            artifacts.append(copy_artifact(directory, f"{name}.raw.json", Path(stdout_path)))
+            Path(stdout_path).unlink(missing_ok=True)
+        elif isinstance(stdout, str):
             artifacts.append(write_artifact(directory, f"{name}.raw.json", stdout))
         stderr = native.get("stderr")
-        if isinstance(stderr, str) and stderr:
+        stderr_path = native.get("stderr_path")
+        if isinstance(stderr_path, str) and Path(stderr_path).is_file():
+            artifacts.append(copy_artifact(directory, f"{name}.stderr.txt", Path(stderr_path)))
+            Path(stderr_path).unlink(missing_ok=True)
+        elif isinstance(stderr, str) and stderr:
             artifacts.append(write_artifact(directory, f"{name}.stderr.txt", stderr))
     if "yara_matches" in results:
         artifacts.append(
