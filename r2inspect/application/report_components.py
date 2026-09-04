@@ -13,10 +13,34 @@ from .technique_mappings import map_techniques
 
 
 def findings(result: AnalysisResult) -> list[FindingV1]:
-    output: list[FindingV1] = []
+    raw = result.to_dict()
+    native_payloads: list[dict[str, Any]] = []
+    for key in ("packer", "anti_analysis", "import_analysis"):
+        payload = raw.get(key)
+        values = payload.get("findings") if isinstance(payload, dict) else None
+        if isinstance(values, list):
+            native_payloads.extend(item for item in values if isinstance(item, dict))
+    yara_matches = raw.get("yara_matches", raw.get("yara", []))
+    if isinstance(yara_matches, list):
+        native_payloads.extend(
+            finding
+            for match in yara_matches
+            if isinstance(match, dict) and isinstance((finding := match.get("finding")), dict)
+        )
+    output = [FindingV1.model_validate(payload) for payload in native_payloads]
+    native_sources = {item.source_analyzer for item in output}
     aliases = {"info": "informational", "warning": "medium"}
     valid = {"informational", "low", "medium", "high", "critical"}
     for indicator in result.indicators:
+        source = {
+            "Packer": "packer_detector",
+            "Anti-Debug": "anti_analysis",
+            "Anti-VM": "anti_analysis",
+            "Anti-Sandbox": "anti_analysis",
+            "YARA Match": "yara_analyzer",
+        }.get(indicator.type)
+        if indicator.type in {"Suspicious API", "Behavior Cluster"} or source in native_sources:
+            continue
         severity = aliases.get(indicator.severity.lower(), indicator.severity.lower())
         severity = severity if severity in valid else "informational"
         slug = re.sub(r"[^a-z0-9]+", ".", indicator.type.lower()).strip(".") or "unknown"

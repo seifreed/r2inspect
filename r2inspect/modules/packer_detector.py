@@ -8,6 +8,7 @@ from typing import Any, cast
 
 from ..abstractions.command_helper_mixin import CommandHelperMixin
 from ..infrastructure.logging import get_logger
+from ..domain.findings import evidence_locations, native_finding
 from ..domain.services.packer_scoring import (
     analyze_entropy,
     analyze_sections,
@@ -19,6 +20,53 @@ from ..domain.services.packer_scoring import (
 from .search_helpers import search_hex, search_text
 
 logger = get_logger(__name__)
+
+
+def _packer_findings(result: dict[str, Any]) -> list[dict[str, Any]]:
+    if not result.get("is_packed"):
+        return []
+    signature = result.get("signature")
+    entropy = result.get("entropy_analysis")
+    sections = result.get("section_analysis")
+    high_entropy = (
+        {
+            name: details
+            for name, details in entropy.items()
+            if name != "summary" and isinstance(details, dict) and details.get("high_entropy")
+        }
+        if isinstance(entropy, dict)
+        else {}
+    )
+    suspicious_sections = (
+        sections.get("suspicious_sections", []) if isinstance(sections, dict) else []
+    )
+    evidence = [
+        {
+            "kind": "packer_evidence",
+            "value": {
+                "signature": signature,
+                "high_entropy_sections": high_entropy,
+                "suspicious_sections": suspicious_sections,
+                "score_reasons": result.get("indicators", []),
+            },
+            "description": "Signals contributing to the packing verdict",
+        }
+    ]
+    return [
+        native_finding(
+            rule_id="r2inspect.packer.detected.v1",
+            title=f"Packed executable ({result.get('packer_type') or 'unknown packer'})",
+            category="packer",
+            severity="medium",
+            confidence=float(result.get("confidence", 0.0)),
+            source_analyzer="packer_detector",
+            method="weighted_evidence",
+            evidence=evidence,
+            locations=evidence_locations([signature, suspicious_sections]),
+            attack=["T1027"],
+            mbc=["F0001"],
+        )
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -37,10 +85,11 @@ class PackerEvidenceScorer:
     _score: int = field(default=0, init=False)
     _reasons: list[str] = field(default_factory=list, init=False)
     _packer_type: str | None = field(default=None, init=False)
+    _signature: dict[str, Any] | None = field(default=None, init=False)
     _entropy_results: dict[str, Any] = field(default_factory=dict, init=False)
     _section_results: dict[str, Any] = field(default_factory=dict, init=False)
 
-    def add_signature(self, signature: dict[str, str] | None) -> None:
+    def add_signature(self, signature: dict[str, Any] | None) -> None:
         """Register a packer-signature hit (40 points)."""
         if signature:
             signature_type = signature.get("type")
@@ -49,6 +98,7 @@ class PackerEvidenceScorer:
             self._score += 40
             self._reasons.append(f"Packer signature: {signature_type}")
             self._packer_type = signature_type
+            self._signature = signature
 
     def add_entropy_results(self, entropy_results: dict[str, Any]) -> None:
         """Register high-entropy sections (up to 30 points)."""
@@ -95,6 +145,7 @@ class PackerEvidenceScorer:
             "packer_type": packer_type,
             "confidence": confidence,
             "indicators": indicators,
+            "signature": self._signature,
             "entropy_analysis": self._entropy_results,
             "section_analysis": self._section_results,
         }
@@ -142,6 +193,7 @@ class PackerDetector(CommandHelperMixin):
         scorer.add_section_results(self._analyze_sections())
         scorer.add_import_count(self._count_imports())
         result = scorer.verdict()
+        result["findings"] = _packer_findings(result)
         errors = getattr(self, "_analysis_errors", [])
         if errors:
             result["error"] = "; ".join(str(item) for item in errors)

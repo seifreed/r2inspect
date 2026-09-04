@@ -20,7 +20,7 @@ def find_packer_signature(
     search_hex_fn: Callable[[str], str],
     packer_signatures: dict[str, list[bytes]],
     read_bytes_fn: Callable[[int, int], bytes] | None = None,
-) -> dict[str, str] | None:
+) -> dict[str, Any] | None:
     for packer_name, signatures in packer_signatures.items():
         for signature in signatures:
             result = search_hex_fn(signature.hex())
@@ -34,9 +34,11 @@ def find_packer_signature(
                 result, len(signature), read_bytes_fn
             ):
                 continue
+            addresses = parse_search_results(result)
             return {
                 "type": packer_name,
                 "signature": signature.decode("utf-8", errors="ignore"),
+                "address": addresses[0] if addresses else None,
             }
     return None
 
@@ -92,7 +94,7 @@ def _compile_packer_string_patterns(
 def find_packer_string(
     strings_result: list[dict[str, Any]] | None,
     packer_signatures: dict[str, list[bytes]],
-) -> dict[str, str] | None:
+) -> dict[str, Any] | None:
     if not strings_result:
         return None
     compiled = _compile_packer_string_patterns(packer_signatures)
@@ -102,7 +104,11 @@ def find_packer_string(
             continue
         for packer_name, pattern in compiled:
             if pattern.search(string_value):
-                return {"type": packer_name, "signature": string_value}
+                return {
+                    "type": packer_name,
+                    "signature": string_value,
+                    "address": string_info.get("vaddr", string_info.get("paddr")),
+                }
     return None
 
 
@@ -182,27 +188,36 @@ def update_section_info(section_info: dict[str, Any], section: dict[str, Any]) -
     name = section.get("name") or ""
     flags = str(section.get("flags") or "")
     size = coerce_int(section.get("size"))
+    location = {
+        "vaddr": coerce_int(section.get("vaddr")),
+        "paddr": coerce_int(section.get("paddr")),
+    }
 
     if "x" in flags:
         section_info["executable_sections"] += 1
         if "w" in flags:
             section_info["writable_executable"] += 1
             section_info["suspicious_sections"].append(
-                {"name": name, "reason": "Writable and executable", "flags": flags}
+                {
+                    "name": name,
+                    "reason": "Writable and executable",
+                    "flags": flags,
+                    **location,
+                }
             )
 
     if is_suspicious_section_name(name):
         section_info["suspicious_sections"].append(
-            {"name": name, "reason": "Suspicious section name", "flags": flags}
+            {"name": name, "reason": "Suspicious section name", "flags": flags, **location}
         )
 
     if size < 100:
         section_info["suspicious_sections"].append(
-            {"name": name, "reason": "Very small section", "size": size}
+            {"name": name, "reason": "Very small section", "size": size, **location}
         )
     elif size > 10000000:
         section_info["suspicious_sections"].append(
-            {"name": name, "reason": "Very large section", "size": size}
+            {"name": name, "reason": "Very large section", "size": size, **location}
         )
 
 

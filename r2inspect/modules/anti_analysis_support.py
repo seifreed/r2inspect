@@ -16,6 +16,7 @@ from ..domain.formats.anti_analysis import (
     WEAK_ANTI_DEBUG_APIS,
 )
 from ..domain.text_helpers import has_text
+from ..domain.findings import evidence_locations, native_finding
 from .anti_analysis_helpers import (
     add_simple_evidence,
     collect_artifact_strings,
@@ -57,6 +58,7 @@ def empty_anti_analysis_report() -> dict[str, Any]:
         "suspicious_apis": [],
         "timing_checks": False,
         "environment_checks": [],
+        "findings": [],
         "detection_details": {
             "anti_debug_evidence": [],
             "anti_vm_evidence": [],
@@ -83,6 +85,74 @@ def build_anti_analysis_report(detector: Any) -> dict[str, Any]:
     anti_analysis["timing_checks"] = _detected_flag(timing_result)
     anti_analysis["detection_details"]["timing_evidence"] = _evidence_list(timing_result)
     anti_analysis["environment_checks"] = detector._detect_environment_checks()
+    for detected, rule_id, title, severity, confidence, evidence, attack, mbc in (
+        (
+            anti_analysis["anti_debug"],
+            "r2inspect.anti_debug.detected.v1",
+            "Anti-debugging techniques detected",
+            "high",
+            0.85,
+            _evidence_list(debug_result),
+            ["T1622"],
+            ["B0001"],
+        ),
+        (
+            anti_analysis["anti_vm"],
+            "r2inspect.anti_vm.detected.v1",
+            "Virtualization detection techniques detected",
+            "high",
+            0.85,
+            _evidence_list(vm_result),
+            ["T1497.001"],
+            ["B0002"],
+        ),
+        (
+            anti_analysis["anti_sandbox"],
+            "r2inspect.anti_sandbox.detected.v1",
+            "Sandbox evasion techniques detected",
+            "medium",
+            0.75,
+            _evidence_list(sandbox_result),
+            ["T1497.001"],
+            ["B0003"],
+        ),
+        (
+            anti_analysis["timing_checks"],
+            "r2inspect.anti_debug.timing_delta.v1",
+            "Timing-based anti-debugging sequence",
+            "medium",
+            0.84,
+            _evidence_list(timing_result),
+            ["T1622"],
+            ["B0001"],
+        ),
+    ):
+        if not detected:
+            continue
+        normalized_evidence = [
+            {
+                "kind": "anti_analysis_signal",
+                "value": item,
+                "description": str(item.get("detail") or item.get("type") or "Evidence"),
+            }
+            for item in evidence
+            if isinstance(item, dict) and not item.get("weak")
+        ]
+        anti_analysis["findings"].append(
+            native_finding(
+                rule_id=rule_id,
+                title=title,
+                category="anti_analysis",
+                severity=severity,
+                confidence=confidence,
+                source_analyzer="anti_analysis",
+                method="structured_detection",
+                evidence=normalized_evidence,
+                locations=evidence_locations(evidence),
+                attack=attack,
+                mbc=mbc,
+            )
+        )
     errors = [
         f"{name}: {result['error']}"
         for name, result in (

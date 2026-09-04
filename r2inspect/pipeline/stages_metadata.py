@@ -7,6 +7,7 @@ from typing import Any
 
 from ..domain.results import AnalyzerStatus
 from .analyzer_execution import record_skipped_execution, run_registered_analyzer
+from .results_bucket import _results_bucket
 from .stages_common import OptionsRegistryStage
 
 
@@ -78,7 +79,30 @@ class MetadataStage(OptionsRegistryStage):
         )
 
     def _extract_imports(self, context: dict[str, Any]) -> dict[str, Any] | None:
-        return self._run_analyzer_method(context, "import_analyzer", "get_imports", "imports")
+        result = run_registered_analyzer(
+            self,
+            context,
+            "import_analyzer",
+            "import_analysis",
+            invoke=lambda analyzer: (
+                analyzer.analyze()
+                if callable(getattr(analyzer, "analyze", None))
+                else {"imports": analyzer.get_imports(), "findings": []}
+            ),
+            error_default=lambda _e: {"imports": [], "findings": []},
+            log_label="Imports analysis",
+        )
+        if result is None:
+            return None
+        analysis = result.get("import_analysis")
+        if not isinstance(analysis, dict):
+            return {"imports": []}
+        output = {
+            "imports": analysis.get("imports", []),
+            "import_analysis": analysis,
+        }
+        _results_bucket(context)["imports"] = output["imports"]
+        return output
 
     def _extract_exports(self, context: dict[str, Any]) -> dict[str, Any] | None:
         return self._run_analyzer_method(context, "export_analyzer", "get_exports", "exports")

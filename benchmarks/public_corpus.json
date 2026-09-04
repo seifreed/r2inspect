@@ -38,7 +38,10 @@
             "sample": "edge/edge_packed.bin",
             "sha256": "aa91ef5653e4c6782ec48e0dec950e8e30cd5ca04c55feeb2ceb2c3ad175fee6",
             "class": "synthetic_packed",
-            "expected_rule_ids": ["legacy.indicator.packer", "legacy.indicator.yara.match"]
+            "expected_rule_ids": [
+                "r2inspect.packer.detected.v1",
+                "r2inspect.yara.packer.detection.yar.upx.packer.v1"
+            ]
         },
         {
             "id": "edge_high_entropy_unknown",

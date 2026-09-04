@@ -29,8 +29,8 @@ python benchmarks/evaluate_reports.py \
 The manifest declares this corpus as `calibration` and classifies each sample as
 benignware, malware, administrative tool, system library, malformed, or unknown.
 The `classification` block is explicit and requires bounded complexity plus
-independent severe categories, or a contextual medium `Suspicious API` or
-`Behavior Cluster` finding. Oversized import/export/function tables are
+independent severe categories, or a contextual medium `behavior` finding whose
+API references occur in the same function. Oversized import/export/function tables are
 excluded because they otherwise create generic-signature false positives in
 system DLLs; unknown labels are excluded from the denominator. The class score is triage
 evidence, not a claim that a static finding alone proves maliciousness. The

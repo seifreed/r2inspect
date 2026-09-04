@@ -12,6 +12,7 @@ from ..domain.services.import_analysis import (
     detect_import_anomalies as detect_import_anomalies_domain,
 )
 from ..infrastructure.logging import get_logger
+from .import_behavior_support import collect_behavior_findings
 from .import_analyzer_collection_support import (
     collect_imports as _collect_imports_impl,
     safe_len as _safe_len_impl,
@@ -74,6 +75,7 @@ class ImportAnalyzer(CommandHelperMixin, BaseAnalyzer):
             dlls = _collect_import_dlls_impl(imports)
 
             result["imports"] = imports
+            result["findings"] = collect_behavior_findings(self, imports)
             result["dlls"] = dlls
             result["total_imports"] = len(imports)
             result["total_dlls"] = len(dlls)

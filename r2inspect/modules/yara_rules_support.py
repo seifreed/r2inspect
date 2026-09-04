@@ -9,6 +9,8 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
+from .yara_findings import match_finding
+
 _YARA_RULE_SUFFIXES = {".yar", ".yara", ".rule", ".rules"}
 YARA_RULE_PATTERNS = ("*.yar", "*.yara", "*.rule", "*.rules")
 
@@ -134,6 +136,7 @@ def process_matches(yara_matches: list[Any], logger: Any) -> list[dict[str, Any]
         for match in yara_matches:
             match_info = _parse_match(match)
             if match_info is not None:
+                match_info["finding"] = match_finding(match_info)
                 matches.append(match_info)
     except Exception as exc:
         logger.error("Error processing YARA matches: %s", exc)
