@@ -98,7 +98,7 @@ def _terminate(process: subprocess.Popen[Any]) -> None:
             )
     else:
         with contextlib.suppress(ProcessLookupError):
-            os.killpg(process.pid, signal.SIGKILL)
+            getattr(os, "killpg")(process.pid, getattr(signal, "SIGKILL"))
     with contextlib.suppress(ProcessLookupError):
         process.kill()
     with contextlib.suppress(subprocess.TimeoutExpired):
