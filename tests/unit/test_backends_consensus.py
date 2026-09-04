@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 from typing import Literal, Self
 
@@ -67,6 +68,47 @@ def test_pe_core_reports_truncated_structure(tmp_path: Path) -> None:
 
     assert result["status"] == "failed"
     assert result["error"].startswith("invalid PE structure:")
+
+
+def test_macho_core_parses_real_structure() -> None:
+    sample = Path("samples/fixtures/hello_macho")
+    if not sample.exists():
+        pytest.skip("hello_macho fixture missing")
+
+    result = CoreBackendInspector(str(sample), "macho-core").analyze()
+
+    assert "error" not in result
+    assert result["file_info"]["architecture"] == "arm64"
+    assert result["file_info"]["bits"] == 64
+    assert result["macho_info"]["entry_point"] == 0x100000460
+    assert len(result["sections"]) == 5
+    assert len(result["macho_info"]["segments"]) == 4
+    assert "/usr/lib/libSystem.B.dylib" in result["macho_info"]["libraries"]
+    assert any(item["name"] == "_puts" for item in result["imports"])
+    assert any(item["name"] == "_main" for item in result["exports"])
+    assert result["macho_info"]["uuid"] == "aa700f20-32f3-40f8-bc47-e22ab436ab16"
+    assert result["security"]["pie"] is True
+    assert result["security"]["nx"] is True
+    assert result["macho_info"]["signature_status"] == "present"
+    assert result["macho_info"]["overlay"]["size"] == 0
+
+
+def test_macho_core_parses_fat_slice(tmp_path: Path) -> None:
+    thin = Path("samples/fixtures/hello_macho")
+    if not thin.exists():
+        pytest.skip("hello_macho fixture missing")
+    slice_offset = 4096
+    thin_data = thin.read_bytes()
+    header = struct.pack(">IIiiIII", 0xCAFEBABE, 1, 0x0100000C, 0, slice_offset, len(thin_data), 12)
+    sample = tmp_path / "universal.macho"
+    sample.write_bytes(header + bytes(slice_offset - len(header)) + thin_data)
+
+    result = CoreBackendInspector(str(sample), "macho-core").analyze()
+
+    assert "error" not in result
+    assert result["macho_info"]["universal"] is True
+    assert result["macho_info"]["architectures"] == ["arm64"]
+    assert result["file_info"]["architecture"] == "arm64"
 
 
 def test_consensus_marks_backend_disagreements() -> None:

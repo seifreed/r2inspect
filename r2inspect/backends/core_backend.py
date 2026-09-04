@@ -9,9 +9,10 @@ from typing import Any, Literal
 
 from .binary_view import BinaryView
 from .elf_core import parse_elf
+from .macho_core import parse_macho
 from .pe_core import parse_pe
 
-_PARSERS = {"pe-core": parse_pe, "elf-core": parse_elf}
+_PARSERS = {"pe-core": parse_pe, "elf-core": parse_elf, "macho-core": parse_macho}
 
 
 def _format(data: bytes) -> str:
@@ -26,6 +27,8 @@ def _format(data: bytes) -> str:
         b"\xcf\xfa\xed\xfe",
         b"\xca\xfe\xba\xbe",
         b"\xbe\xba\xfe\xca",
+        b"\xca\xfe\xba\xbf",
+        b"\xbf\xba\xfe\xca",
     }:
         return "MACHO"
     return "UNKNOWN"

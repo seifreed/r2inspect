@@ -28,6 +28,10 @@ class BinaryView:
         raw = self.read(offset, min(limit, self.size - offset))
         return raw.split(b"\0", 1)[0].decode("utf-8", errors="replace")
 
+    def subview(self, offset: int, size: int) -> BinaryView:
+        self._check(offset, size)
+        return BinaryView(self.data, base=self.base + offset, size=size)
+
     def _check(self, offset: int, size: int) -> None:
         if offset < 0 or size < 0 or offset + size > self.size:
             raise ValueError(f"binary read outside file at {offset:#x} ({size} bytes)")
