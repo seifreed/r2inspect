@@ -188,7 +188,7 @@ def test_get_yara_rules_path_returns_string(tmp_path: Path):
     cfg = Config(str(tmp_path / "cfg.json"))
     path = cfg.get_yara_rules_path()
     assert isinstance(path, str)
-    assert "rules/yara" in path or path.startswith("/")
+    assert Path(path).parts[-2:] == ("rules", "yara")
 
 
 def test_get_yara_rules_path_absolute_path_used_as_is(tmp_path: Path):
@@ -203,7 +203,7 @@ def test_get_yara_rules_path_relative_path_joined_with_package(tmp_path: Path):
     cfg = Config(str(tmp_path / "cfg.json"))
     cfg.set("yara", "rules_path", "rules/yara")
     result = cfg.get_yara_rules_path()
-    assert result.endswith("rules/yara")
+    assert Path(result).parts[-2:] == ("rules", "yara")
     assert Path(result).is_absolute()
 
 

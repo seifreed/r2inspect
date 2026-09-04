@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from r2inspect.security import validators
 from r2inspect.security.validators import FileValidator
 
 
@@ -21,6 +22,13 @@ def test_file_validator_basic_and_dangerous_chars(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         validator.validate_path("bad;name", check_exists=False)
+
+
+def test_windows_short_path_tilde_is_not_treated_as_shell_input(monkeypatch) -> None:
+    monkeypatch.setattr(validators.os, "name", "nt")
+    checker = FileValidator()._check_dangerous_chars
+    assert checker(r"C:\Users\RUNNER~1\sample.bin") == set()
+    assert checker(r"C:\bad;name") == {";"}
 
 
 @pytest.mark.unit

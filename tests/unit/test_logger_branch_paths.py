@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from r2inspect.infrastructure.logging import (
     configure_batch_logging,
     get_logger,
@@ -146,6 +148,7 @@ def test_setup_logger_error_level() -> None:
         _cleanup_logger(name)
 
 
+@pytest.mark.requires_posix
 def test_setup_logger_fallback_console_only_thread_safe_true() -> None:
     name = "r2inspect.test.bp.fallback_true"
     old_home = os.environ.get("HOME")
@@ -166,6 +169,7 @@ def test_setup_logger_fallback_console_only_thread_safe_true() -> None:
         _cleanup_logger(name)
 
 
+@pytest.mark.requires_posix
 def test_setup_logger_fallback_console_only_thread_safe_false() -> None:
     name = "r2inspect.test.bp.fallback_false"
     old_home = os.environ.get("HOME")

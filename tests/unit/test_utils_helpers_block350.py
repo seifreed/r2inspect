@@ -92,6 +92,7 @@ def test_command_helpers_parsing_and_dispatch() -> None:
     assert command_helpers.cmdj(adapter, None, "pxj 3 @ 0x90", []) == [144, 3]
 
 
+@pytest.mark.requires_posix
 def test_hashing_utils(tmp_path: Path) -> None:
     sample = tmp_path / "sample.bin"
     data = b"hello world"

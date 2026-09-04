@@ -105,6 +105,7 @@ def test_interactive_helpers_output(capsys):
     assert "File Information" in out
 
 
+@pytest.mark.requires_posix
 def test_output_json_csv_results_error_on_directory(tmp_path):
     formatter = OutputFormatter({"file_info": {"name": "sample"}})
     output_dir = tmp_path / "outdir"

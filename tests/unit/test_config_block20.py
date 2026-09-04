@@ -54,7 +54,7 @@ def test_config_load_from_dict_fallback(tmp_path: Path, caplog: pytest.LogCaptur
 def test_config_misc_helpers(tmp_path: Path):
     cfg = Config(str(tmp_path / "config.json"))
     rules_path = cfg.get_yara_rules_path()
-    assert rules_path.endswith("rules/yara")
+    assert Path(rules_path).parts[-2:] == ("rules", "yara")
 
     assert cfg.is_virustotal_enabled() is False
     assert cfg.get_virustotal_api_key() == ""

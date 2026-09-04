@@ -26,6 +26,7 @@ def test_calculate_hashes_missing_file_returns_empty_hashes(tmp_path):
     assert hashes == {"md5": "", "sha1": "", "sha256": "", "sha512": ""}
 
 
+@pytest.mark.requires_posix
 def test_calculate_hashes_existing_unreadable_path_raises(tmp_path):
     with pytest.raises(IsADirectoryError):
         calculate_hashes(str(tmp_path))

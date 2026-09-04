@@ -24,7 +24,6 @@ from r2inspect.modules.yara_analyzer import (
 )
 from tests.helpers.r2_fakes import FakeR2Adapter
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -279,7 +278,7 @@ def test_compile_rules_with_single_file(tmp_path):
 def test_compile_rules_invalid_path(tmp_path):
     """_compile_rules returns None for an invalid path."""
     analyzer = _make_analyzer(tmp_path, filepath="/tmp/test.bin")
-    result = analyzer._compile_rules("/nonexistent/rules/path")
+    result = analyzer._compile_rules(str(tmp_path / "missing"))
     assert result is None
 
 

@@ -97,11 +97,12 @@ def test_yara_analyzer_list_available_rules():
         assert isinstance(rules, list)
 
 
-def test_yara_analyzer_resolve_file_path_from_adapter():
+def test_yara_analyzer_resolve_file_path_from_adapter(tmp_path):
     """Test _resolve_file_path falls back to adapter info."""
     from r2inspect.modules.yara_analyzer import YaraAnalyzer
 
-    adapter = FakeR2Adapter(cmdj_responses={"ij": {"core": {"file": "/nonexistent"}}})
+    missing = str(tmp_path / "missing.bin")
+    adapter = FakeR2Adapter(cmdj_responses={"ij": {"core": {"file": missing}}})
     with tempfile.TemporaryDirectory() as tmpdir:
         config = FakeYaraConfig(rules_path=tmpdir)
         analyzer = YaraAnalyzer(adapter=adapter, config=config, filepath=None)
@@ -125,7 +126,7 @@ def test_yara_analyzer_resolve_file_path_with_filepath():
         assert path == test_file
 
 
-def test_yara_analyzer_resolve_rules_path_nonexistent():
+def test_yara_analyzer_resolve_rules_path_nonexistent(tmp_path, monkeypatch):
     """Test _resolve_rules_path when path doesn't exist."""
     from r2inspect.modules.yara_analyzer import YaraAnalyzer
 
@@ -133,7 +134,8 @@ def test_yara_analyzer_resolve_rules_path_nonexistent():
     with tempfile.TemporaryDirectory() as tmpdir:
         config = FakeYaraConfig(rules_path=tmpdir)
         analyzer = YaraAnalyzer(adapter=adapter, config=config)
-        result = analyzer._resolve_rules_path("/definitely/nonexistent/path")
+        monkeypatch.setattr(analyzer, "create_default_rules", lambda _path: None)
+        result = analyzer._resolve_rules_path(str(tmp_path / "missing"))
         # Should try to create defaults and return None if still nonexistent
         assert result is None
 

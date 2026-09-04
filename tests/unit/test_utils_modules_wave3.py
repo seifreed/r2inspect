@@ -83,6 +83,7 @@ from r2inspect.infrastructure.hashing import (
 )
 
 
+@pytest.mark.requires_posix
 def test_calculate_hashes_exception_on_directory(tmp_path: Path):
     with pytest.raises(IsADirectoryError):
         calculate_hashes(str(tmp_path))

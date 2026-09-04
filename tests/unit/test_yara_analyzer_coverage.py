@@ -182,7 +182,7 @@ def test_get_cached_rules_compile_failure(tmp_path):
     config = FakeConfig(str(tmp_path / "rules"))
     analyzer = YaraAnalyzer(FakeAdapter(), config=config)
     # Use nonexistent path - compile should fail
-    result = analyzer._get_cached_rules("/nonexistent/rules/path")
+    result = analyzer._get_cached_rules(str(tmp_path / "missing"))
     assert result is None
 
 

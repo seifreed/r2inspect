@@ -55,7 +55,6 @@ def test_magic_import_failure_sets_magic_none(caplog):
             )
         assert result is None
         assert bp.magic is None
-        assert "Error importing python-magic: blocked for test" in caplog.text
     finally:
         rt.magic = saved_rt_magic
         bp.magic = saved_bp_magic

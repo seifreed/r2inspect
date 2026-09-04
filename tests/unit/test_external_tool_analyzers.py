@@ -3,6 +3,8 @@ import os
 import subprocess
 import time
 
+import pytest
+
 from r2inspect.application.report_builder import build_report_v1
 from r2inspect.application.result_mapper import build_analysis_result
 from r2inspect.modules.external_tool_analyzers import CapaAnalyzer, FlossAnalyzer
@@ -27,6 +29,7 @@ def test_external_tools_report_missing_dependencies_explicitly() -> None:
     )
 
 
+@pytest.mark.requires_posix
 def test_external_tools_use_short_timeout_in_test_mode(tmp_path) -> None:
     executable = tmp_path / "slow-tool"
     executable.write_text("#!/usr/bin/env python3\nimport time\ntime.sleep(1)\n")

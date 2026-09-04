@@ -15,6 +15,7 @@ class BlockSSDeepFinder:
         return None
 
 
+@pytest.mark.requires_posix
 def test_calculate_hashes_and_imphash(tmp_path: Path):
     file_path = tmp_path / "sample.bin"
     file_path.write_bytes(b"hello")

@@ -26,6 +26,7 @@ from r2inspect.cli.output_formatters import OutputFormatter
 from r2inspect.infrastructure.ssdeep_loader import get_ssdeep
 
 
+@pytest.mark.requires_posix
 def test_hashing_utils_real(tmp_path: Path) -> None:
     data_path = tmp_path / "data.bin"
     data_path.write_bytes(b"abcd" * 10)

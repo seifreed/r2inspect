@@ -104,7 +104,7 @@ def test_config_command_size_format_and_cli_list_yara_real(tmp_path: Path) -> No
     result = run_cli(["--list-yara", "--yara", str(rules_dir)])
     assert result.returncode == 0
     assert "Available YARA Rules" in result.stdout
-    assert "sub/two.yara" in result.stdout
+    assert str(Path("sub") / "two.yara") in result.stdout
 
 
 def test_config_command_relative_display_name_fallback_real(tmp_path: Path) -> None:

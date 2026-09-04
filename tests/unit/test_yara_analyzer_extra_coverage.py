@@ -647,7 +647,7 @@ def test_compile_rules_valid(tmp_path):
 def test_compile_rules_nonexistent(tmp_path):
     """_compile_rules returns None for non-existent path."""
     analyzer = _make_analyzer(tmp_path)
-    compiled = analyzer._compile_rules("/nonexistent/rules/xyz")
+    compiled = analyzer._compile_rules(str(tmp_path / "missing"))
     assert compiled is None
 
 

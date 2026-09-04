@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -43,7 +44,7 @@ def _make_analyzer(
 def test_simhash_analyzer_init() -> None:
     analyzer = _make_analyzer()
     assert analyzer.adapter is not None
-    assert str(analyzer.filepath) == "/fake/path"
+    assert analyzer.filepath == Path("/fake/path")
     assert analyzer.min_string_length == 4
     assert analyzer.max_instructions_per_function == 500
 

@@ -45,7 +45,7 @@ def test_get_yara_rules_path_is_absolute(tmp_path):
     config = Config(str(tmp_path / "config.json"))
     rules_path = config.get_yara_rules_path()
     assert Path(rules_path).is_absolute()
-    assert rules_path.endswith("rules/yara")
+    assert Path(rules_path).parts[-2:] == ("rules", "yara")
 
 
 def test_virustotal_enabled_flag(tmp_path):

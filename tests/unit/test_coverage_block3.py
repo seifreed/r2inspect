@@ -29,6 +29,7 @@ def test_calculate_hashes_success_and_missing(tmp_path: Path) -> None:
     assert all(value == "" for value in missing.values())
 
 
+@pytest.mark.requires_posix
 def test_calculate_hashes_error_path(tmp_path: Path) -> None:
     with pytest.raises(IsADirectoryError):
         hashing.calculate_hashes(str(tmp_path))

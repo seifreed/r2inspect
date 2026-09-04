@@ -23,6 +23,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import os
 from pathlib import Path
 
 from .validator_support import (
@@ -159,7 +160,8 @@ class FileValidator:
         Returns:
             Set of dangerous characters found (empty if safe)
         """
-        return {char for char in self.DANGEROUS_CHARS if char in filepath}
+        dangerous = self.DANGEROUS_CHARS - {"~"} if os.name == "nt" else self.DANGEROUS_CHARS
+        return {char for char in dangerous if char in filepath}
 
     def sanitize_for_subprocess(self, filepath: Path) -> str:
         """

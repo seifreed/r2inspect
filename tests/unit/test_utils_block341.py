@@ -187,6 +187,7 @@ def test_output_formatter_json_and_csv(tmp_path) -> None:
     assert "CSV Export Failed" in csv_text
 
 
+@pytest.mark.requires_posix
 def test_hashing_utils(tmp_path) -> None:
     file_path = tmp_path / "sample.bin"
     file_path.write_bytes(b"abc")

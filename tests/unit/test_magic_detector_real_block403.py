@@ -25,7 +25,7 @@ def test_magic_detector_pe32():
         data += b"\x00" * (0x40 - len(data))
         data += b"PE\x00\x00" + b"\x4c\x01" + b"\x00" * 18  # PE sig + x86 machine type
         f.write(data)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -46,7 +46,7 @@ def test_magic_detector_elf():
         data += b"\x3e\x00"  # x86-64 machine type
         data += b"\x00" * 100
         f.write(data)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -61,7 +61,7 @@ def test_magic_detector_zip():
     with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as f:
         # ZIP header
         f.write(b"PK\x03\x04" + b"\x00" * 100)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -74,7 +74,7 @@ def test_magic_detector_zip():
 def test_magic_detector_pdf():
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
         f.write(b"%PDF-1.4\n" + b"\x00" * 100)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -87,7 +87,7 @@ def test_magic_detector_pdf():
 def test_magic_detector_unknown():
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(b"\xaa" * 100)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -101,7 +101,7 @@ def test_magic_detector_unknown():
 def test_magic_detector_cache():
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(b"MZ" + b"\x00" * 100)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
 
@@ -135,7 +135,7 @@ def test_magic_detector_nonexistent_file():
 def test_magic_detector_fallback_exe_extension():
     with tempfile.NamedTemporaryFile(delete=False, suffix=".exe") as f:
         f.write(b"\xaa" * 100)  # Unknown content
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -149,7 +149,7 @@ def test_magic_detector_fallback_exe_extension():
 def test_detect_file_type_global():
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(b"MZ" + b"\x00" * 100)
-        f.flush()
+        f.close()
 
         result = detect_file_type(f.name)
         assert "file_format" in result
@@ -163,7 +163,7 @@ def test_is_executable_file():
         data += b"\x00" * (0x40 - len(data))
         data += b"PE\x00\x00" + b"\x00" * 20
         f.write(data)
-        f.flush()
+        f.close()
 
         result = is_executable_file(f.name)
         # Result depends on PE validation
@@ -175,7 +175,7 @@ def test_is_executable_file():
 def test_get_file_threat_level():
     with tempfile.NamedTemporaryFile(delete=False, suffix=".exe") as f:
         f.write(b"MZ" + b"\x00" * 100)
-        f.flush()
+        f.close()
 
         threat = get_file_threat_level(f.name)
         assert threat in ["High", "Medium", "Low", "Unknown"]
@@ -190,7 +190,7 @@ def test_magic_detector_elf_architecture():
         data += b"\x3e\x00"  # x86-64
         data += b"\x00" * 100
         f.write(data)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         result = detector.detect_file_type(f.name)
@@ -209,7 +209,7 @@ def test_magic_detector_pe_architecture():
         data += b"PE\x00\x00"
         data += b"\x64\x86" + b"\x00" * 18  # x86-64 machine type
         f.write(data)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         detector.detect_file_type(f.name)
@@ -226,7 +226,7 @@ def test_magic_detector_macho():
         data += b"\x07\x00\x00\x01"  # CPU type x86-64
         data += b"\x00" * 100
         f.write(data)
-        f.flush()
+        f.close()
 
         detector = MagicByteDetector()
         detector.detect_file_type(f.name)

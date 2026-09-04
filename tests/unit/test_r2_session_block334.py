@@ -126,6 +126,7 @@ def test_r2_session_context_and_close() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.requires_posix
 def test_r2_session_open_failure(tmp_path: Path) -> None:
     missing = tmp_path / "missing.bin"
     session = R2Session(str(missing))
