@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      require_real_corpus:
+        description: "Require release-sized private holdout corpora"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -93,6 +100,8 @@ jobs:
 
   private-corpus:
     runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.config.outputs.enabled }}
     steps:
       - name: Check private corpus configuration
         id: config
@@ -142,11 +151,27 @@ jobs:
       - name: Run and score private corpus
         if: steps.config.outputs.enabled == 'true'
         run: |
+          release_args=()
+          quality_args=()
+          if [ "${{ inputs.require_real_corpus }}" = "true" ]; then
+            release_args+=(--release-gate)
+            quality_args+=(
+              --min-classification-precision 0.9
+              --min-classification-recall 0.9
+              --min-evidence-coverage 1.0
+              --min-high-severity-location-rate 0.95
+              --max-high-severity-false-positive-rate 0.01
+            )
+          fi
           python benchmarks/run_corpus.py private-corpus/benchmark/manifest.json \
-            --corpus-dir private-corpus --output-dir private-benchmark-results
+            --corpus-dir private-corpus --output-dir private-benchmark-results \
+            "${release_args[@]}"
           python benchmarks/evaluate_reports.py private-benchmark-results/manifest.json \
             --output private-benchmark-results/metrics.json \
-            --min-precision 0.9 --min-recall 0.9
+            --min-precision 0.9 --min-recall 0.9 \
+            --max-execution-failure-rate 0.01 \
+            --max-dependency-unavailable-rate 0.0 \
+            "${quality_args[@]}"
       - name: Publish aggregate private metrics
         if: always() && steps.config.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
@@ -206,10 +231,49 @@ jobs:
           test "$(python -c 'import json; print(len(json.load(open("real-corpus/benchmark/manifest.json"))["cases"]))')" -ge 10
       - name: Run and score real labeled corpus
         run: |
-          python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json --corpus-dir real-corpus --output-dir real-benchmark-results --differential-tool capa --differential-tool floss
-          python benchmarks/evaluate_reports.py real-benchmark-results/manifest.json --output real-benchmark-results/metrics.json --min-precision 0.9 --min-recall 0.9
+          release_args=()
+          quality_args=()
+          if [ "${{ inputs.require_real_corpus }}" = "true" ]; then
+            release_args+=(--release-gate)
+            quality_args+=(
+              --min-classification-precision 0.9
+              --min-classification-recall 0.9
+              --min-evidence-coverage 1.0
+              --min-high-severity-location-rate 0.95
+              --max-high-severity-false-positive-rate 0.01
+            )
+          fi
+          python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json \
+            --corpus-dir real-corpus --output-dir real-benchmark-results \
+            --differential-tool capa --differential-tool floss \
+            "${release_args[@]}"
+          python benchmarks/evaluate_reports.py real-benchmark-results/manifest.json \
+            --output real-benchmark-results/metrics.json \
+            --min-precision 0.9 --min-recall 0.9 \
+            --max-execution-failure-rate 0.01 \
+            --max-dependency-unavailable-rate 0.0 \
+            "${quality_args[@]}"
       - name: Publish aggregate real metrics
         uses: actions/upload-artifact@v4
         with:
           name: r2inspect-real-benchmark-${{ github.run_id }}
           path: real-benchmark-results/metrics.json
+
+  release-corpus-gate:
+    needs: [public-corpus, private-corpus, real-corpus-config, real-labeled-corpus]
+    if: always() && inputs.require_real_corpus
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release evidence
+        env:
+          PUBLIC_RESULT: ${{ needs.public-corpus.result }}
+          PRIVATE_ENABLED: ${{ needs.private-corpus.outputs.enabled }}
+          PRIVATE_RESULT: ${{ needs.private-corpus.result }}
+          REAL_ENABLED: ${{ needs.real-corpus-config.outputs.enabled }}
+          REAL_RESULT: ${{ needs.real-labeled-corpus.result }}
+        run: |
+          test "$PUBLIC_RESULT" = success
+          test "$PRIVATE_ENABLED" = true
+          test "$PRIVATE_RESULT" = success
+          test "$REAL_ENABLED" = true
+          test "$REAL_RESULT" = success

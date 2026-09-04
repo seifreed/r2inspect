@@ -47,6 +47,16 @@ Only aggregate metrics are uploaded.
 Benchmark tooling and sanitized manifests are versioned with the report schema
 so release-to-release comparisons remain reproducible.
 
+Stable tags and direct PyPI publications also invoke the benchmark workflow as
+a required release gate. Both private archives must be configured, and each
+release manifest must be an independent `real_labeled` holdout with at least
+100 benign and 100 malware cases plus structured finding labels. The gate
+requires at least 0.9 finding and classification precision/recall, complete
+finding evidence, locations on at least 95 percent of high-severity findings,
+less than 1 percent high-severity false positives, less than 1 percent analyzer
+execution failures, and no unavailable required dependencies. TestPyPI remains
+available without private corpus credentials.
+
 Each nightly public artifact also contains `history.json`, a rolling 365-run
 history restored from the previous successful run, plus `dashboard.md`. The
 same dashboard is published in the GitHub Actions run summary. Clustering is
