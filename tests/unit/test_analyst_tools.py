@@ -8,7 +8,7 @@ from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from r2inspect.application.clustering import cluster_reports
+from r2inspect.application.clustering import cluster_reports, index_reports, query_index
 from r2inspect.application.explain import explain, radare2_commands
 from r2inspect.application.rule_packs import RulePackManifest, verify_rule_pack
 from r2inspect.schemas.report_v1 import (
@@ -76,6 +76,21 @@ def test_cluster_reports_uses_similarity_hashes(tmp_path: Path) -> None:
     (tmp_path / "left.json").write_text(left.model_dump_json(), encoding="utf-8")
     (tmp_path / "right.json").write_text(right.model_dump_json(), encoding="utf-8")
     assert len(cluster_reports([tmp_path / "left.json", tmp_path / "right.json"])) == 1
+
+
+def test_similarity_index_persists_and_queries_by_sha256(tmp_path: Path) -> None:
+    paths = [tmp_path / "left.json", tmp_path / "right.json"]
+    for path, digest in zip(paths, ("a" * 64, "b" * 64), strict=True):
+        report = _report(["same.rule"]).model_copy(
+            update={"sample": SampleInfoV1(size=1, hashes={"sha256": digest})}
+        )
+        path.write_text(report.model_dump_json(), encoding="utf-8")
+
+    database = tmp_path / "similarity.sqlite3"
+    assert index_reports(paths, database) == 2
+    assert query_index(database, "a" * 64) == [
+        {"sha256": "b" * 64, "report_path": str(paths[1]), "similarity": 1.0}
+    ]
 
 
 def test_verify_signed_rule_pack(tmp_path: Path) -> None:
