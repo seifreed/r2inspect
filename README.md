@@ -132,14 +132,18 @@ r2inspect --yara /path/to/rules malware.exe
 | `-x, --xor`         | XOR search string               |
 | `-v, --verbose`     | Verbose output                  |
 | `--quiet`           | Suppress non-critical output    |
-| `--profile`         | `fast`, `standard`, or `deep`   |
+| `--profile`         | `fast`, `standard`, `deep`, or `forensic` |
 | `--backend`         | `r2`, format core, or consensus |
 | `--consensus-backend` | Core backend used for consensus |
 | `--threads`         | Parallel threads for batch mode |
 
 `fast` limits analysis to format, metadata, security, and hashing stages;
 `standard` is the default detector set; `deep` additionally enables the
-deep-analysis option for analyzers that support it.
+deep-analysis option for analyzers that support it. `forensic` adds full FLOSS
+extraction and writes a chain-of-custody evidence bundle containing command
+provenance, native capa/FLOSS/YARA output, evidence byte snippets, and artifact
+hashes. Bundles default to `./r2inspect-evidence`; set
+`R2INSPECT_EVIDENCE_DIR` to choose another root.
 
 Use `--backend pe-core`, `elf-core`, or `macho-core` for dependency-free
 structural parsing. `--backend consensus --consensus-backend pe-core` compares

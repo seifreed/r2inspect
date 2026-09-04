@@ -36,7 +36,7 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
     def get_category(self) -> str:
         return "detection"
 
-    def analyze(self) -> dict[str, Any]:
+    def analyze(self, forensic: bool = False) -> dict[str, Any]:
         started = time.monotonic()
         executable = self._executable_lookup(self.executable)
         if not executable:
@@ -52,6 +52,7 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 "error": "sample path unavailable",
                 "execution_time": time.monotonic() - started,
             }
+        native_output: dict[str, Any] | None = None
         try:
             default_timeout = (
                 _TEST_EXTERNAL_TOOL_TIMEOUT_SECONDS
@@ -59,32 +60,47 @@ class ExternalJsonAnalyzer(BaseAnalyzer):
                 else _EXTERNAL_TOOL_TIMEOUT_SECONDS
             )
             timeout = resolve_timeout(default_timeout)
-            completed = run_command(
-                [executable, *self.command_args, str(Path(self.filepath))],
-                timeout=timeout,
-            )
+            command_args = self.command_args
+            if forensic and self.executable == "floss":
+                command_args = ("-j",)
+            command = [executable, *command_args, str(Path(self.filepath))]
+            completed = run_command(command, timeout=timeout)
+            native_output = {
+                "command": command,
+                "stdout": completed.stdout,
+                "stderr": completed.stderr,
+            }
             if completed.returncode != 0:
                 raise RuntimeError(completed.stderr.strip() or f"exit code {completed.returncode}")
             payload = json.loads(completed.stdout)
             if not isinstance(payload, dict):
                 raise ValueError("JSON output must be an object")
-            return {
+            result = {
                 "available": True,
                 "result": payload,
                 "execution_time": time.monotonic() - started,
             }
+            if forensic:
+                result["native_output"] = native_output
+            return result
         except TimeoutError as exc:
-            return {
+            result = {
                 "available": True,
                 "error": str(exc),
                 "execution_time": time.monotonic() - started,
             }
+            if forensic and native_output is not None:
+                result["native_output"] = native_output
+            return result
         except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
-            return {
+            result = {
                 "available": True,
                 "error": str(exc),
                 "execution_time": time.monotonic() - started,
             }
+            if forensic and native_output is not None:
+                result["native_output"] = native_output
+            return result
 
 
 class CapaAnalyzer(ExternalJsonAnalyzer):

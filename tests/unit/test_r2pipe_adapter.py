@@ -44,3 +44,19 @@ def test_execute_command_json_list_accepts_iterable():
     r2 = FakeR2(cmdj_map={"iSj": ({"name": ".text"},)})
     adapter = R2PipeAdapter(r2)
     assert adapter.execute_command("iSj") == [{"name": ".text"}]
+
+
+def test_command_recording_is_opt_in_and_per_run() -> None:
+    adapter = R2PipeAdapter(FakeR2(cmdj_map={"ij": {"arch": "x86"}}, cmd_map={"pd 1": "nop"}))
+    adapter.cmd("pd 1")
+    assert adapter.command_log() == []
+
+    adapter.set_command_recording(True)
+    adapter.cmd("pd 1")
+    adapter.cmdj("ij")
+    log = adapter.command_log()
+    assert [entry["command"] for entry in log] == ["pd 1", "ij"]
+    assert all(entry["status"] == "completed" for entry in log)
+
+    adapter.set_command_recording(False)
+    assert adapter.command_log() == []

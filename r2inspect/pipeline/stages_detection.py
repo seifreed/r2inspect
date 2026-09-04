@@ -55,14 +55,24 @@ class DetectionStage(OptionsRegistryStage):
             self._record_profile_skip(context, "yara_analyzer")
 
         if self.options.get("detect_capa", False):
-            res = self._run_analyzer(context, "capa", "capa")
+            res = self._run_analyzer(
+                context,
+                "capa",
+                "capa",
+                analyze_args=(bool(self.options.get("forensic_evidence")),),
+            )
             if res is not None:
                 results.update(res)
         else:
             self._record_profile_skip(context, "capa")
 
         if self.options.get("detect_floss", False):
-            res = self._run_analyzer(context, "floss", "floss")
+            res = self._run_analyzer(
+                context,
+                "floss",
+                "floss",
+                analyze_args=(bool(self.options.get("forensic_evidence")),),
+            )
             if res is not None:
                 results.update(res)
         else:

@@ -52,3 +52,9 @@ Additive optional fields remain compatible within v1.
 The `extras` object preserves the legacy pipeline result during migration. It is
 JSON-strict but is not itself a stable sub-schema; consumers should prefer the
 typed top-level fields.
+
+For `--profile forensic`, `extras.forensic` references the evidence directory,
+the `r2inspect.forensic/v1` chain-of-custody manifest, its SHA-256 digest, and
+the hashed artifacts. The manifest includes UTC timestamps, redacted effective
+configuration, radare2 commands, complete errors and warnings, and bounded byte
+snippets associated with findings.

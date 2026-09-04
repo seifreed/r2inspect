@@ -64,7 +64,8 @@ this independent structural view without radare2 or optional Python parsers.
 
 ## Optional engines
 
-The `deep` and `forensic` profiles run `capa -j` and `floss -j` when those executables are on
-`PATH`. Missing tools produce `dependency_unavailable` analyzer outcomes. capa
-rules are exposed as report capabilities and FLOSS strings as report artifacts;
-their native JSON remains available in `extras`.
+The `deep` and `forensic` profiles run capa and FLOSS when those executables are
+on `PATH`. Deep mode bounds FLOSS to static strings; forensic mode runs full
+FLOSS extraction and preserves exact capa/FLOSS stdout in its evidence bundle.
+Missing tools produce `dependency_unavailable` analyzer outcomes. capa rules
+are exposed as report capabilities and FLOSS strings as report artifacts.

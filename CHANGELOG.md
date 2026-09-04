@@ -37,6 +37,9 @@ Versioning and keeps unreleased work at the top.
 - Added the deprecated `--legacy-json` compatibility option for migration from 3.x.
 - Replaced the minimal core format detectors with bounded PE, ELF, and Mach-O
   parsers and added typed, normalized backend consensus discrepancies.
+- Made the forensic profile preserve radare2 command provenance, full FLOSS and
+  native external-tool output, evidence byte snippets, and hashed
+  `r2inspect.forensic/v1` chain-of-custody bundles.
 
 ## 3.0.0
 

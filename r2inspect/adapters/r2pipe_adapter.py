@@ -3,7 +3,9 @@
 
 import os
 import threading
+import time
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from typing import Any, Literal, cast
 
 from ..domain.constants import DISASM_CACHE_MAX_ENTRIES, DISASM_CACHE_MAX_FUNCS
@@ -60,6 +62,8 @@ class R2PipeAdapter(R2PipeQueryMixin):
         self._disasm_cache_enabled: bool | None = None
         self._cache_lock = threading.Lock()
         self._fault_injector = fault_injector
+        self._record_commands = False
+        self._command_log: list[dict[str, Any]] = []
         # Memoizes the one-time `aaa` full-analysis pass: every similarity
         # analyzer (binbloom, binlex, bindiff, function extraction) requests it,
         # but the r2 session state is shared, so a single pass suffices.
@@ -85,22 +89,70 @@ class R2PipeAdapter(R2PipeQueryMixin):
         logger.debug("R2PipeAdapter initialized successfully")
 
     def cmd(self, command: str) -> str:
-        # A prior command that timed out abandoned a worker thread still blocked
-        # in this synchronous pipe; any further command would queue behind it and
-        # hang forever. Fast-fail once the instance is marked wedged.
-        if is_wedged(self._r2):
-            mark_wedged(self)
-        if is_wedged(self):
-            return ""
-        result = self._r2.cmd(command)
-        return result if isinstance(result, str) else str(result)
+        started_at = datetime.now(UTC).isoformat()
+        started = time.monotonic()
+        status = "completed"
+        try:
+            # A prior command that timed out abandoned a worker thread still blocked
+            # in this synchronous pipe; any further command would queue behind it and
+            # hang forever. Fast-fail once the instance is marked wedged.
+            if is_wedged(self._r2):
+                mark_wedged(self)
+            if is_wedged(self):
+                status = "skipped_wedged"
+                return ""
+            result = self._r2.cmd(command)
+            return result if isinstance(result, str) else str(result)
+        except Exception:
+            status = "failed"
+            raise
+        finally:
+            self._append_command(command, "text", started_at, started, status)
 
     def cmdj(self, command: str) -> Any:
-        if is_wedged(self._r2):
-            mark_wedged(self)
-        if is_wedged(self):
-            return None
-        return silent_cmdj(self._r2, command, None)
+        started_at = datetime.now(UTC).isoformat()
+        started = time.monotonic()
+        status = "completed"
+        try:
+            if is_wedged(self._r2):
+                mark_wedged(self)
+            if is_wedged(self):
+                status = "skipped_wedged"
+                return None
+            return silent_cmdj(self._r2, command, None)
+        except Exception:
+            status = "failed"
+            raise
+        finally:
+            self._append_command(command, "json", started_at, started, status)
+
+    def set_command_recording(self, enabled: bool) -> None:
+        """Enable per-run command provenance and clear any previous run."""
+        self._record_commands = enabled
+        self._command_log.clear()
+
+    def command_log(self) -> list[dict[str, Any]]:
+        """Return an immutable snapshot of recorded radare2 commands."""
+        return [dict(entry) for entry in self._command_log]
+
+    def _append_command(
+        self,
+        command: str,
+        output_kind: str,
+        started_at: str,
+        started: float,
+        status: str,
+    ) -> None:
+        if self._record_commands:
+            self._command_log.append(
+                {
+                    "command": command,
+                    "output_kind": output_kind,
+                    "started_at": started_at,
+                    "duration_seconds": time.monotonic() - started,
+                    "status": status,
+                }
+            )
 
     @property
     def r2(self) -> Any:

@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 
 from r2inspect.application.report_builder import build_report_v1
@@ -76,3 +77,38 @@ def test_report_normalizes_capa_and_floss_results() -> None:
 
 def test_floss_uses_static_string_mode_for_bounded_comparison() -> None:
     assert FlossAnalyzer.command_args == ("--only", "static", "-j")
+
+
+def test_forensic_floss_uses_full_mode_and_preserves_native_output(tmp_path, monkeypatch) -> None:
+    sample = tmp_path / "sample.exe"
+    sample.write_bytes(b"MZ")
+    commands = []
+
+    def run(command, *, timeout):
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, '{"strings": {}}\n', "")
+
+    monkeypatch.setattr("r2inspect.modules.external_tool_analyzers.run_command", run)
+
+    result = FlossAnalyzer(
+        filename=str(sample), executable_lookup=lambda _name: "/usr/bin/floss"
+    ).analyze(forensic=True)
+
+    assert commands == [["/usr/bin/floss", "-j", str(sample)]]
+    assert result["result"] == {"strings": {}}
+    assert result["native_output"]["stdout"] == '{"strings": {}}\n'
+
+
+def test_forensic_external_failure_preserves_native_output(monkeypatch) -> None:
+    def run(command, *, timeout):
+        return subprocess.CompletedProcess(command, 2, "partial", "failed")
+
+    monkeypatch.setattr("r2inspect.modules.external_tool_analyzers.run_command", run)
+
+    result = CapaAnalyzer(
+        filename="sample.exe", executable_lookup=lambda _name: "/usr/bin/capa"
+    ).analyze(forensic=True)
+
+    assert result["error"] == "failed"
+    assert result["native_output"]["stdout"] == "partial"
+    assert result["native_output"]["stderr"] == "failed"

@@ -10,9 +10,11 @@ import dependency on the R2Inspector class itself.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from ..application.forensic import create_forensic_bundle
 from ..application.result_semantics import normalize_analyzer_results
 
 if TYPE_CHECKING:
@@ -152,6 +154,34 @@ def _collect_memory_stats(initial: dict[str, Any], final: dict[str, Any]) -> dic
     }
 
 
+def _attach_forensic_bundle(
+    inspector: Any,
+    options: dict[str, Any],
+    results: dict[str, Any],
+    started_at: str,
+    _logger: Any,
+) -> None:
+    if not options.get("forensic_evidence"):
+        return
+    try:
+        results["forensic"] = create_forensic_bundle(
+            sample=inspector.filename,
+            adapter=inspector.adapter,
+            config=inspector.config,
+            options=options,
+            results=results,
+            started_at=started_at,
+        )
+    except Exception as exc:
+        message = f"Forensic evidence preservation failed: {exc}"
+        _logger.warning(message)
+        warnings = results.setdefault("warnings", [])
+        if isinstance(warnings, list):
+            warnings.append(message)
+        else:
+            results["warnings"] = [str(warnings), message]
+
+
 def _analyze_impl(
     inspector: Any,
     _logger: Any,
@@ -162,6 +192,10 @@ def _analyze_impl(
     if getattr(inspector, "adapter", None) is None:
         raise RuntimeError("Inspector has been cleaned up — cannot analyze after close()")
 
+    started_at = datetime.now(UTC).isoformat()
+    set_recording = getattr(inspector.adapter, "set_command_recording", None)
+    if callable(set_recording):
+        set_recording(bool(options.get("forensic_evidence")))
     _clear_adapter_cache(inspector.adapter)
 
     initial_memory = inspector.memory_monitor.check_memory(force=True)
@@ -194,19 +228,24 @@ def _analyze_impl(
 
         final_memory = inspector.memory_monitor.check_memory(force=True)
         results["memory_stats"] = _collect_memory_stats(initial_memory, final_memory)
+        _attach_forensic_bundle(inspector, options, results, started_at, _logger)
         return cast(dict[str, Any], results)
 
     except MemoryError:
         _logger.error("Analysis failed due to memory constraints")
         inspector.memory_monitor._trigger_gc(aggressive=True)
-        return {
+        results = {
             "error": "Memory limit exceeded",
             "memory_stats": inspector.memory_monitor.check_memory(force=True),
         }
+        _attach_forensic_bundle(inspector, options, results, started_at, _logger)
+        return results
 
     except Exception as exc:
         _logger.error("Analysis failed: %s", exc)
-        return {
+        results = {
             "error": str(exc),
             "memory_stats": inspector.memory_monitor.check_memory(force=True),
         }
+        _attach_forensic_bundle(inspector, options, results, started_at, _logger)
+        return results
