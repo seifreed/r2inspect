@@ -17,19 +17,27 @@ from r2inspect.infrastructure.r2_session import R2Session
 from r2inspect.infrastructure.r2_session_cleanup import _macho_arch_flags
 
 
-def test_windows_r2pipe_spawn_uses_noninteractive_term(monkeypatch) -> None:
+def test_windows_r2pipe_spawn_uses_noninteractive_term() -> None:
     observed: dict[str, object] = {}
 
     def opener(filename: str, *, flags: list[str]) -> object:
         observed.update(filename=filename, flags=flags, term=os.environ.get("TERM"))
         return observed
 
-    monkeypatch.setattr(session_timeouts.os, "name", "nt")
-    monkeypatch.setenv("TERM", "xterm")
-
-    assert session_timeouts.open_r2pipe_process(opener, "sample.exe", ["-N"]) is observed
-    assert observed == {"filename": "sample.exe", "flags": ["-N"], "term": "dumb"}
-    assert os.environ["TERM"] == "xterm"
+    original_name = session_timeouts.os.name
+    original_term = os.environ.get("TERM")
+    try:
+        session_timeouts.os.name = "nt"
+        os.environ["TERM"] = "xterm"
+        assert session_timeouts.open_r2pipe_process(opener, "sample.exe", ["-N"]) is observed
+        assert observed == {"filename": "sample.exe", "flags": ["-N"], "term": "dumb"}
+        assert os.environ["TERM"] == "xterm"
+    finally:
+        session_timeouts.os.name = original_name
+        if original_term is None:
+            os.environ.pop("TERM", None)
+        else:
+            os.environ["TERM"] = original_term
 
 
 def test_macho_arch_flags_empty_arches_returns_no_arch_flags():
