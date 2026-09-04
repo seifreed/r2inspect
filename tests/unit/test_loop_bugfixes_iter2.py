@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import json
 
-from r2inspect.cli.batch_output_json import per_file_json_name, write_individual_json_results
+from r2inspect.cli.batch_output_json import (
+    _json_result,
+    per_file_json_name,
+    write_individual_json_results,
+)
 
 
 def test_per_file_json_name_disambiguates_by_relative_path() -> None:
@@ -48,3 +52,34 @@ def test_write_individual_json_results_fallback_without_relative_path(tmp_path) 
         {"/x/sample.exe": {"file_info": {"name": "sample.exe"}}}, tmp_path
     )
     assert (tmp_path / "sample.exe_analysis.json").exists()
+
+
+def test_json_result_preserves_supported_yara_match_shapes() -> None:
+    class MappingMatch:
+        def to_dict(self):
+            return {"rule": "mapping"}
+
+    class RuleMatch:
+        rule = "attribute"
+
+    opaque = object()
+    result = _json_result(
+        {
+            "yara_matches": [
+                {"rule": "dict"},
+                None,
+                "string",
+                1,
+                1.5,
+                True,
+                MappingMatch(),
+                RuleMatch(),
+                opaque,
+            ]
+        }
+    )
+    assert result["yara_matches"][-3:] == [
+        {"rule": "mapping"},
+        {"rule": "attribute"},
+        opaque,
+    ]

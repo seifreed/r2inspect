@@ -1,8 +1,16 @@
 import hashlib
 import json
+from enum import Enum
 from pathlib import Path
 
 from r2inspect.application.forensic import create_forensic_bundle
+from r2inspect.application.forensic_support import (
+    collect_messages,
+    copy_artifact,
+    evidence_snippets,
+    json_text,
+    redact,
+)
 from tests.helpers import env_vars
 
 
@@ -55,3 +63,41 @@ def test_forensic_bundle_preserves_and_hashes_evidence(tmp_path) -> None:
         data = (manifest_path.parent / artifact["name"]).read_bytes()
         assert hashlib.sha256(data).hexdigest() == artifact["sha256"]
     assert hashlib.sha256(manifest_path.read_bytes()).hexdigest() == bundle["manifest_sha256"]
+
+
+def test_forensic_helpers_serialize_redact_and_collect_evidence(tmp_path) -> None:
+    class Value(Enum):
+        ITEM = "item"
+
+    class Adapter:
+        def read_bytes(self, address, size):
+            assert (address, size) == (0x401000, 64)
+            return b"virtual"
+
+    sample = tmp_path / "sample.bin"
+    sample.write_bytes(bytes(range(128)))
+    source = tmp_path / "source.txt"
+    source.write_text("artifact")
+    destination = tmp_path / "artifacts"
+    destination.mkdir()
+
+    assert '"item"' in json_text({"enum": Value.ITEM, "path": sample})
+    assert redact({"nested": [{"api_token": "secret"}]})["nested"][0]["api_token"] == "[redacted]"
+    assert collect_messages({"child": [{"warnings": ["notice"]}]}) == [
+        {"path": "$.child[0].warnings", "value": ["notice"]}
+    ]
+    copied = copy_artifact(destination, "copy.txt", source)
+    assert copied["sha256"] == hashlib.sha256(b"artifact").hexdigest()
+
+    snippets = evidence_snippets(
+        sample,
+        Adapter(),
+        {
+            "findings": [
+                {"rule_id": "offset", "locations": [{"offset": 1}]},
+                {"title": "virtual", "locations": [{"virtual_address": 0x401000}]},
+                {"locations": [{"offset": -1}]},
+            ]
+        },
+    )
+    assert [item["finding"] for item in snippets] == ["offset", "virtual"]

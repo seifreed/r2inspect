@@ -1,19 +1,27 @@
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from r2inspect.application.rule_pack_operations import (
     build_rule_pack,
+    default_rule_pack_root,
     install_rule_pack,
     list_rule_packs,
     sign_rule_pack,
 )
-from r2inspect.application.rule_packs import load_verified_manifest, verify_rule_pack
+from r2inspect.application import rule_packs
+from r2inspect.application.rule_packs import (
+    RulePackManifest,
+    load_verified_manifest,
+    verify_rule_pack,
+)
 from r2inspect.cli.rules_cli import rules_cli
 from r2inspect.modules.yara_analyzer import YaraAnalyzer, clear_yara_cache
 from r2inspect.modules.yara_rule_pack_support import verify_rules_path
@@ -170,3 +178,94 @@ def test_rules_cli_build_sign_verify_install_list_and_update(tmp_path) -> None:
     for command in commands:
         result = runner.invoke(rules_cli, command)
         assert result.exit_code == 0, result.output
+
+
+def test_rule_pack_validation_errors_and_default_root(tmp_path, monkeypatch) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    with pytest.raises(ValueError, match="no YARA"):
+        build_rule_pack(empty, pack_id="demo", version="1")
+
+    rule = empty / "demo.yar"
+    rule.write_text("rule demo { condition: true }")
+    with pytest.raises(ValueError, match="invalid pack ID"):
+        build_rule_pack(empty, pack_id="../bad", version="1")
+
+    manifest = empty / "manifest.json"
+    manifest.write_text("[]")
+    with pytest.raises(ValueError, match="invalid rule pack manifest"):
+        RulePackManifest.load(manifest)
+
+    digest = hashlib.sha256(rule.read_bytes()).hexdigest()
+    payload = {"pack_id": "demo", "version": "1", "files": {"demo.yar": digest}}
+    manifest.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="unsigned"):
+        verify_rule_pack(empty)
+    manifest.write_text(json.dumps({**payload, "signature": "invalid"}))
+    with pytest.raises(ValueError, match="public key is required"):
+        verify_rule_pack(empty)
+
+    signed_root = tmp_path / "signed"
+    signed_root.mkdir()
+    source, _private, public = _pack(signed_root)
+    root = tmp_path / "installed"
+    install_rule_pack(source, public, root=root)
+    with pytest.raises(ValueError, match="already installed"):
+        install_rule_pack(source, public, root=root)
+
+    monkeypatch.setenv("R2INSPECT_RULE_PACKS_DIR", str(root))
+    assert default_rule_pack_root() == root
+    assert list_rule_packs(tmp_path / "missing") == []
+
+
+def test_rule_pack_rejects_corruption_and_wrong_keys(tmp_path, monkeypatch, capsys) -> None:
+    invalid = tmp_path / "invalid.json"
+    invalid.write_text(json.dumps({"files": {"rule.yar": "digest"}}))
+    with pytest.raises(ValueError, match="invalid rule pack manifest"):
+        RulePackManifest.load(invalid)
+
+    pack = tmp_path / "pack"
+    pack.mkdir()
+    (pack / "manifest.json").write_text(
+        json.dumps({"pack_id": "demo", "version": "1", "files": {"missing.yar": "x"}})
+    )
+    with pytest.raises(ValueError, match="file is missing"):
+        load_verified_manifest(pack)
+
+    rule = pack / "rule.yar"
+    rule.write_text("rule demo { condition: true }")
+    (pack / "manifest.json").write_text(
+        json.dumps({"pack_id": "demo", "version": "1", "files": {"rule.yar": "bad"}})
+    )
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        load_verified_manifest(pack)
+
+    signed_root = tmp_path / "signed-again"
+    signed_root.mkdir()
+    source, _private, public = _pack(signed_root)
+    wrong_public = (
+        Ed25519PrivateKey.generate()
+        .public_key()
+        .public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    )
+    with pytest.raises(ValueError, match="signature verification failed"):
+        verify_rule_pack(source, public_key=wrong_public)
+
+    rsa_public = rsa.generate_private_key(public_exponent=65537, key_size=2048).public_key()
+    with pytest.raises(ValueError, match="not Ed25519"):
+        rule_packs.public_key_id(
+            rsa_public.public_bytes(
+                serialization.Encoding.PEM,
+                serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+        )
+
+    public_path = tmp_path / "public.key"
+    public_path.write_bytes(public)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["verify-pack", str(source), "--public-key", str(public_path)],
+    )
+    rule_packs.verify_main()
+    assert "demo 1.0.0: verified" in capsys.readouterr().out

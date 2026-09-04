@@ -3,15 +3,19 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from benchmarks.calibrate_clustering import calibrate
+from r2inspect.application import clustering, report_similarity
 from r2inspect.application.clustering import cluster_reports, index_reports, query_index
 from r2inspect.application.explain import explain, radare2_commands
-from r2inspect.application.report_similarity import similarity_hashes
+from r2inspect.application.report_similarity import feature_similarity, similarity_hashes
 from r2inspect.application.rule_packs import RulePackManifest, verify_rule_pack
 from r2inspect.schemas.report_v1 import (
     EvidenceV1,
@@ -121,6 +125,84 @@ def test_similarity_hashes_extracts_analyzer_results() -> None:
             "simhash": {"combined_simhash": {"hex": "0x1234"}},
         }
     ) == {"ssdeep": "3:abc:def", "tlsh": "T123", "simhash": "0x1234"}
+
+
+def test_similarity_handles_simhash_and_missing_report_identifiers(tmp_path: Path) -> None:
+    assert feature_similarity(
+        {"rule_ids": set(), "hashes": {"simhash": "0x0"}},
+        {"rule_ids": set(), "hashes": {"simhash": "0x1"}},
+    ) == pytest.approx(0.45)
+    assert (
+        feature_similarity(
+            {"rule_ids": set(), "hashes": {"simhash": "invalid"}},
+            {"rule_ids": set(), "hashes": {"simhash": "different"}},
+        )
+        == 0
+    )
+
+    report = tmp_path / "missing-sha.json"
+    report.write_text(_report([]).model_dump_json(), encoding="utf-8")
+    with pytest.raises(ValueError, match="no sample SHA-256"):
+        index_reports([report], tmp_path / "index.sqlite3")
+
+
+def test_similarity_uses_optional_native_comparators(monkeypatch: pytest.MonkeyPatch) -> None:
+    modules = {
+        "ssdeep": SimpleNamespace(compare=lambda _left, _right: 50),
+        "tlsh": SimpleNamespace(diff=lambda _left, _right: 60),
+    }
+    monkeypatch.setattr(report_similarity.importlib, "import_module", modules.__getitem__)
+    assert (
+        feature_similarity(
+            {"rule_ids": set(), "hashes": {"ssdeep": "left"}},
+            {"rule_ids": set(), "hashes": {"ssdeep": "right"}},
+        )
+        == 0.3
+    )
+    assert feature_similarity(
+        {"rule_ids": set(), "hashes": {"tlsh": "left"}},
+        {"rule_ids": set(), "hashes": {"tlsh": "right"}},
+    ) == pytest.approx(0.48)
+    monkeypatch.setattr(
+        report_similarity.importlib,
+        "import_module",
+        lambda _name: (_ for _ in ()).throw(ImportError()),
+    )
+    assert (
+        feature_similarity(
+            {"rule_ids": set(), "hashes": {"impfuzzy": "left"}},
+            {"rule_ids": set(), "hashes": {"impfuzzy": "right"}},
+        )
+        == 0
+    )
+
+
+def test_clustering_cli_indexes_queries_and_validates_arguments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    report = _report(["same.rule"]).model_copy(
+        update={"sample": SampleInfoV1(size=1, hashes={"sha256": "a" * 64})}
+    )
+    path = tmp_path / "report.json"
+    path.write_text(report.model_dump_json(), encoding="utf-8")
+    database = tmp_path / "index.sqlite3"
+
+    monkeypatch.setattr(sys, "argv", ["cluster", str(path), "--index", str(database)])
+    clustering.cluster_main()
+    assert json.loads(capsys.readouterr().out)[0][0]["sample"] == "a" * 64
+
+    monkeypatch.setattr(sys, "argv", ["cluster", "--index", str(database), "--query", "a" * 64])
+    clustering.cluster_main()
+    assert json.loads(capsys.readouterr().out) == []
+
+    for argv, message in (
+        (["cluster", "--threshold", "2"], "threshold must be between 0 and 1"),
+        (["cluster", "--query", "missing"], "--query requires --index"),
+        (["cluster"], "at least one report is required"),
+    ):
+        monkeypatch.setattr(sys, "argv", argv)
+        with pytest.raises(SystemExit, match=message):
+            clustering.cluster_main()
 
 
 def test_verify_signed_rule_pack(tmp_path: Path) -> None:

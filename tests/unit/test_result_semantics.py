@@ -11,6 +11,7 @@ from r2inspect.domain.results import (
     AnalyzerError,
     AnalyzerExecution,
     AnalyzerStatus,
+    AnalyzerWarning,
     TypedAnalyzerResult,
 )
 from r2inspect.modules import yara_analyzer as yara_module
@@ -156,3 +157,47 @@ def test_forensic_profile_enables_full_evidence() -> None:
 
 def test_indicator_mapping_is_explicit() -> None:
     assert map_techniques("anti_analysis") == (["T1497", "T1622"], ["B0004"])
+
+
+def test_outcomes_cover_execution_and_legacy_status_metadata() -> None:
+    execution = AnalyzerExecution(
+        analyzer_id="explicit",
+        analyzer_version="1",
+        output_schema="schema/v1",
+        status=AnalyzerStatus.PARTIAL,
+        errors=[AnalyzerError("PART", "explicit", "partial result", True)],
+        warnings=[AnalyzerWarning("WARN", "explicit", "warning")],
+        duration=1.5,
+        metrics={"count": 2},
+    )
+    outcome = analyzer_outcomes({}, [execution])[0]
+    assert outcome.error == "partial result"
+    assert outcome.errors[0].recoverable is True
+    assert outcome.warnings[0].code == "WARN"
+
+    typed = TypedAnalyzerResult(
+        {"error": "failed", "execution_time": "invalid", "memory_mb": 4},
+        analyzer_id="typed",
+    )
+    outcomes = analyzer_outcomes(
+        {
+            "typed": typed,
+            "missing": {"available": False, "execution_time": "invalid"},
+            "dependency": {"library_available": False, "available": True},
+            "_analyzer_status": {
+                "typed": {"metrics": {"extra": 1}},
+                "sidecar": {"status": "not_applicable", "duration": 2},
+                "ignored": "invalid",
+            },
+        }
+    )
+    assert {item.analyzer_id: item.status.value for item in outcomes} == {
+        "dependency": "dependency_unavailable",
+        "missing": "failed",
+        "typed": "failed",
+        "sidecar": "not_applicable",
+    }
+    assert next(item for item in outcomes if item.analyzer_id == "typed").metrics == {
+        "peak_memory_mb": 4.0,
+        "extra": 1,
+    }

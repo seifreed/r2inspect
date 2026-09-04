@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
 import jsonschema
+import pytest
 from pymisp import MISPEvent
 from stix2 import parse
 
 from r2inspect.application.report_compare import compare_reports
+from r2inspect.application import report_cli
 from r2inspect.application.report_exports import to_html, to_misp, to_sarif, to_stix
 from r2inspect.schemas.report_v1 import (
     AnalysisMetadataV1,
@@ -85,3 +88,41 @@ def test_compare_and_json_round_trip() -> None:
     assert result["status"] == "changed"
     assert result["findings"]["added"]
     json.dumps(result)
+
+
+def test_report_command_entry_points(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    left.write_text(_report().model_dump_json())
+    right.write_text(_report("Changed").model_dump_json())
+
+    output = tmp_path / "report.html"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["export", str(left), "--format", "html", "--output", str(output)],
+    )
+    report_cli.export_main()
+    assert "rule.test" in output.read_text()
+
+    monkeypatch.setattr(sys, "argv", ["compare", str(left), str(right)])
+    report_cli.compare_main()
+    assert json.loads(capsys.readouterr().out)["status"] == "changed"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["baseline", str(left), str(right), "--fail-on-change"],
+    )
+    with pytest.raises(SystemExit) as changed:
+        report_cli.baseline_main()
+    assert changed.value.code == 1
+    capsys.readouterr()
+
+    monkeypatch.setattr(sys, "argv", ["explain", str(left), "finding-1"])
+    report_cli.explain_main()
+    assert json.loads(capsys.readouterr().out)["finding_id"] == "finding-1"
