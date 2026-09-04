@@ -269,7 +269,7 @@ def test_detect_anti_sandbox_with_sandbox_strings() -> None:
     assert result["detected"] is True
 
 
-def test_detect_timing_checks_with_rdtsc() -> None:
+def test_detect_timing_checks_rejects_textual_address_proximity() -> None:
     def timing_pattern(pattern: str) -> str:
         return {
             "rdtsc": "0x402000\n0x402100",
@@ -280,9 +280,60 @@ def test_detect_timing_checks_with_rdtsc() -> None:
     adapter = _search_text_adapter(timing_pattern)
     detector = AntiAnalysisDetector(adapter)
     result = detector._detect_timing_checks_detailed()
+    assert result["detected"] is False
+    assert [evidence["type"] for evidence in result["evidence"]] == [
+        "Timing API Calls",
+        "RDTSC Instruction",
+    ]
+    assert result["evidence"][-1]["weak"] is True
+
+
+def test_detect_timing_checks_requires_structured_same_block_dependency() -> None:
+    function_address = 0x401000
+    independent_operations = [
+        {"offset": 0x401000, "opcode": "rdtsc"},
+        {"offset": 0x401002, "opcode": "rdtsc"},
+        {"offset": 0x401004, "opcode": "cmp eax, 0x100"},
+        {"offset": 0x401006, "opcode": "ja 0x401020", "type": "cjmp"},
+    ]
+    dependent_operations = [
+        {"offset": 0x401000, "opcode": "rdtsc"},
+        {"offset": 0x401002, "opcode": "mov ebx, eax"},
+        {"offset": 0x401004, "opcode": "rdtsc"},
+        {"offset": 0x401006, "opcode": "sub eax, ebx"},
+        {"offset": 0x401008, "opcode": "ja 0x401020", "type": "cjmp"},
+    ]
+
+    def adapter_with(operations: list[dict[str, Any]]) -> R2PipeAdapter:
+        return _make_adapter(
+            cmd_map={"/aa rdtsc": "0x401000\n0x401004"},
+            cmdj_map={
+                "aflj": [{"addr": function_address, "size": 0x20, "name": "timing_check"}],
+                f"pdfj @ {function_address}": {"ops": operations},
+                f"agj @ {function_address}": [
+                    {"blocks": [{"addr": function_address, "size": 0x10}]}
+                ],
+            },
+        )
+
+    independent = AntiAnalysisDetector(
+        adapter_with(independent_operations)
+    )._detect_timing_checks_detailed()
+    result = AntiAnalysisDetector(
+        adapter_with(dependent_operations)
+    )._detect_timing_checks_detailed()
+
+    assert independent["detected"] is False
     assert result["detected"] is True
-    types = [e["type"] for e in result["evidence"]]
-    assert "RDTSC Instruction" in types
+    assert result["evidence"] == [
+        {
+            "type": "RDTSC Delta Check",
+            "detail": "Two RDTSC reads feed a comparison and conditional branch in one basic block",
+            "addresses": ["0x401000", "0x401004", "0x401006", "0x401008"],
+            "function": "timing_check",
+            "basic_block": "0x401000",
+        }
+    ]
 
 
 def test_detect_anti_debug_detailed_skips_non_string_search_output() -> None:

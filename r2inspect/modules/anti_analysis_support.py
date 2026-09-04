@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -25,6 +24,27 @@ from .anti_analysis_helpers import (
     detect_obfuscation,
     match_suspicious_api,
 )
+from .disasm_ops_support import extract_pdfj_ops
+
+_CONDITIONAL_BRANCHES = {"ja", "jae", "jb", "jbe", "je", "jg", "jge", "jl", "jle", "jne"}
+_REGISTER_ALIASES = {
+    alias: canonical
+    for canonical, aliases in {
+        "rax": ("rax", "eax", "ax", "al", "ah"),
+        "rbx": ("rbx", "ebx", "bx", "bl", "bh"),
+        "rcx": ("rcx", "ecx", "cx", "cl", "ch"),
+        "rdx": ("rdx", "edx", "dx", "dl", "dh"),
+        "rsi": ("rsi", "esi", "si", "sil"),
+        "rdi": ("rdi", "edi", "di", "dil"),
+        "rbp": ("rbp", "ebp", "bp", "bpl"),
+        "rsp": ("rsp", "esp", "sp", "spl"),
+        **{
+            f"r{index}": (f"r{index}", f"r{index}d", f"r{index}w", f"r{index}b")
+            for index in range(8, 16)
+        },
+    }.items()
+    for alias in aliases
+}
 
 
 def _evidence_list(result: Any) -> list[Any]:
@@ -356,6 +376,131 @@ def find_suspicious_apis(detector: Any) -> list[dict[str, Any]]:
     return suspicious
 
 
+def _operation_parts(operation: dict[str, Any]) -> tuple[str, list[str]]:
+    opcode = coerce_text(operation.get("opcode") or operation.get("disasm")).strip()
+    mnemonic = coerce_text(operation.get("mnemonic")).strip().lower()
+    if not mnemonic and opcode:
+        mnemonic = opcode.split(None, 1)[0].lower()
+    opex = operation.get("opex")
+    operands = opex.get("operands") if isinstance(opex, dict) else None
+    if isinstance(operands, list):
+        structured = [_operand_key(operand) for operand in operands]
+        if any(structured):
+            return mnemonic, structured
+    raw_operands = opcode.split(None, 1)[1] if " " in opcode else ""
+    return mnemonic, [_operand_key(operand) for operand in raw_operands.split(",")]
+
+
+def _operand_key(operand: Any) -> str:
+    if isinstance(operand, dict):
+        if operand.get("type") == "reg":
+            operand = operand.get("value", "")
+        elif operand.get("type") == "mem":
+            return "mem:" + ":".join(
+                str(operand.get(key, "")) for key in ("base", "index", "scale", "disp")
+            )
+        else:
+            operand = operand.get("value", "")
+    text = str(operand).strip().lower().replace("%", "")
+    for prefix in ("byte ", "word ", "dword ", "qword ", "ptr "):
+        text = text.replace(prefix, "")
+    if "[" in text and "]" in text:
+        return "mem:" + text[text.index("[") : text.rindex("]") + 1].replace(" ", "")
+    return _REGISTER_ALIASES.get(text, "")
+
+
+def _dependent_rdtsc_sequence(operations: list[dict[str, Any]]) -> dict[str, Any] | None:
+    rdtsc_indexes = [
+        index
+        for index, operation in enumerate(operations)
+        if _operation_parts(operation)[0] == "rdtsc"
+    ]
+    for first, second in zip(rdtsc_indexes, rdtsc_indexes[1:], strict=False):
+        taint: dict[str, int] = {}
+        comparison_index: int | None = None
+        for index, operation in enumerate(operations[first:], start=first):
+            mnemonic, operands = _operation_parts(operation)
+            if mnemonic == "rdtsc":
+                source = 1 if index == first else 2
+                if index not in {first, second}:
+                    break
+                taint.update({"rax": source, "rdx": source})
+                continue
+            operand_taint = [taint.get(operand, 0) for operand in operands]
+            if mnemonic in {"mov", "movsx", "movsxd", "movzx", "lea"} and operands:
+                taint[operands[0]] = 0
+                for value in operand_taint[1:]:
+                    taint[operands[0]] |= value
+            elif mnemonic == "xor" and len(operands) > 1 and operands[0] == operands[1]:
+                taint[operands[0]] = 0
+            elif (
+                mnemonic in {"add", "and", "imul", "or", "sar", "shl", "shr", "sub", "xor"}
+                and operands
+            ):
+                taint[operands[0]] = 0
+                for value in operand_taint:
+                    taint[operands[0]] |= value
+            if index >= second and mnemonic in {"cmp", "sub"} and sum(operand_taint) >= 3:
+                comparison_index = index
+            if comparison_index is not None and (
+                operation.get("type") == "cjmp" or mnemonic in _CONDITIONAL_BRANCHES
+            ):
+                indexes = (first, second, comparison_index, index)
+                return {
+                    "type": "RDTSC Delta Check",
+                    "detail": "Two RDTSC reads feed a comparison and conditional branch in one basic block",
+                    "addresses": [
+                        hex(coerce_int(operations[position].get("offset", 0)))
+                        for position in indexes
+                    ],
+                }
+    return None
+
+
+def _structured_rdtsc_evidence(detector: Any) -> list[dict[str, Any]]:
+    functions = detector._coerce_dict_list(detector._get_via_adapter("get_functions", "aflj"))
+    for function in functions:
+        function_address = coerce_int(function.get("addr") or function.get("offset", 0))
+        if function_address <= 0:
+            continue
+        operations = detector._coerce_dict_list(extract_pdfj_ops(detector, function_address))
+        cfg = (
+            detector.adapter.get_cfg(function_address)
+            if detector.adapter is not None and hasattr(detector.adapter, "get_cfg")
+            else detector._cmd_list(f"agj @ {function_address}")
+        )
+        graphs = cfg if isinstance(cfg, list) else [cfg]
+        blocks = [
+            block
+            for graph in graphs
+            if isinstance(graph, dict)
+            for block in graph.get("blocks", [])
+            if isinstance(block, dict)
+        ]
+        for block in blocks:
+            block_address = coerce_int(block.get("addr") or block.get("offset", 0))
+            block_size = coerce_int(block.get("size", 0))
+            block_operations = detector._coerce_dict_list(block.get("ops"))
+            if not block_operations and block_size > 0:
+                block_operations = [
+                    operation
+                    for operation in operations
+                    if block_address
+                    <= coerce_int(operation.get("offset", 0))
+                    < block_address + block_size
+                ]
+            sequence = _dependent_rdtsc_sequence(block_operations)
+            if sequence:
+                sequence.update(
+                    {
+                        "function": function.get("name"),
+                        "basic_block": hex(block_address),
+                    }
+                )
+                return [sequence]
+    return []
+
+
 def detect_timing_checks(detector: Any) -> dict[str, Any]:
     result: dict[str, Any] = {"detected": False, "evidence": []}
     imports = detector._get_imports()
@@ -382,38 +527,20 @@ def detect_timing_checks(detector: Any) -> dict[str, Any]:
                     "apis": timing_imports,
                 }
             )
-    rdtsc_usage = detector._search_opcode("rdtsc")
-    if has_text(rdtsc_usage):
-        addresses = rdtsc_usage.strip().split("\n")
-        rdtsc_addresses = _search_addresses(rdtsc_usage)
-        delta_addresses = _search_addresses(detector._search_opcode("sub")) | _search_addresses(
-            detector._search_opcode("cmp")
-        )
-        branch_addresses = set()
-        for opcode in ("je", "jne", "ja", "jb", "jg", "jl"):
-            branch_addresses.update(_search_addresses(detector._search_opcode(opcode)))
-        result["detected"] = any(
-            second > first
-            and second - first <= 0x100
-            and any(first <= address <= second + 0x40 for address in delta_addresses)
-            and any(first <= address <= second + 0x40 for address in branch_addresses)
-            for first in rdtsc_addresses
-            for second in rdtsc_addresses
-        )
-        result["evidence"].append(
-            {
-                "type": "RDTSC Instruction",
-                "detail": f"RDTSC (Read Time-Stamp Counter) at {len(addresses)} locations",
-                "addresses": addresses[:5],
-            }
+    if has_text(detector._search_opcode("rdtsc")):
+        structured_evidence = _structured_rdtsc_evidence(detector)
+        result["detected"] = bool(structured_evidence)
+        result["evidence"].extend(
+            structured_evidence
+            or [
+                {
+                    "type": "RDTSC Instruction",
+                    "detail": "RDTSC present without a verified same-block delta check",
+                    "weak": True,
+                }
+            ]
         )
     return result
-
-
-def _search_addresses(output: Any) -> set[int]:
-    if not isinstance(output, str):
-        return set()
-    return {int(address, 16) for address in re.findall(r"\b0x[0-9a-fA-F]+\b", output)}
 
 
 def detect_environment_fingerprinting(detector: Any) -> list[dict[str, Any]]:
