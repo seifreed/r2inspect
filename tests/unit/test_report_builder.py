@@ -82,6 +82,20 @@ def test_build_report_v1_distinguishes_not_detected_from_unavailable() -> None:
     ]
 
 
+def test_build_report_v1_uses_normalized_format_detection_without_magic() -> None:
+    result = build_analysis_result(
+        {
+            "file_info": {"file_type": None, "architecture": "arm", "bits": 64},
+            "format_detection": {"file_format": "Mach-O"},
+        }
+    )
+
+    report = build_report_v1(result, analysis_id="format-fallback")
+
+    assert report.sample.detected_format == "MACHO"
+    assert report.format.common.format == "MACHO"
+
+
 def test_build_report_v1_preserves_typed_analyzer_metadata() -> None:
     result = build_analysis_result(
         {

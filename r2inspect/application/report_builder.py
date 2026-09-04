@@ -108,6 +108,10 @@ def build_report_v1(
         cast(Literal["little", "big"], raw_endian) if raw_endian in {"little", "big"} else None
     )
     format_family = _format_family(file_info.file_type)
+    if format_family is None:
+        detected = raw.get("format_detection")
+        if isinstance(detected, dict):
+            format_family = _format_family(str(detected.get("file_format", "")))
     return ReportV1(
         tool=ToolInfoV1(
             version=__version__,
