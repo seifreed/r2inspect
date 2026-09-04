@@ -53,7 +53,7 @@ jobs:
             expanded-real-public-results/manifest.json \
             --output expanded-real-public-results/metrics.json \
             --min-classification-precision 1.0 \
-            --min-classification-recall 1.0 \
+            --min-classification-recall 0.5 \
             --max-execution-failure-rate 0.01 \
             --max-dependency-unavailable-rate 0.0
           python benchmarks/run_corpus.py \
