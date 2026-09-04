@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from benchmarks.evaluate_reports import evaluate
+import pytest
+
+from benchmarks.evaluate_reports import evaluate, main
 from r2inspect.application.report_builder import build_report_v1
 from r2inspect.application.result_mapper import build_analysis_result
 from r2inspect.schemas.report_v1 import (
@@ -429,6 +432,42 @@ def test_evaluate_reports_scores_structured_finding_categories(tmp_path: Path) -
     assert findings["by_category"]["metrics"]["anti-analysis"]["precision"] == 1.0
     assert findings["quality"]["high_severity_location_rate"] == 0.0
     assert findings["quality"]["high_severity_false_positive_rate"] == 0.0
+
+
+def test_evaluate_reports_enforces_finding_quality_thresholds(tmp_path: Path) -> None:
+    report = build_report_v1(
+        build_analysis_result({"file_info": {"file_type": "PE"}}), analysis_id="quality"
+    )
+    report.findings.append(
+        FindingV1(
+            finding_id="finding-1",
+            rule_id="rule.unexpected",
+            title="Unexpected",
+            category="test",
+            severity="high",
+            confidence=1.0,
+            source_analyzer="test",
+            method="fixture",
+        )
+    )
+    (tmp_path / "report.json").write_text(report.model_dump_json(), encoding="utf-8")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps({"cases": [{"report": "report.json", "expected_findings": []}]}),
+        encoding="utf-8",
+    )
+    original_argv = sys.argv
+    try:
+        for option, message in (
+            ("--min-evidence-coverage", "evidence coverage"),
+            ("--min-high-severity-location-rate", "location rate"),
+            ("--max-high-severity-false-positive-rate", "false-positive rate"),
+        ):
+            sys.argv = ["evaluate-reports", str(manifest), option, "0.5"]
+            with pytest.raises(SystemExit, match=message):
+                main()
+    finally:
+        sys.argv = original_argv
 
 
 def test_evaluate_reports_migrates_unique_legacy_finding_labels(tmp_path: Path) -> None:

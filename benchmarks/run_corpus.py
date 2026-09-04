@@ -69,6 +69,37 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     return manifest
 
 
+def validate_release_manifest(manifest: dict[str, Any], *, minimum_per_class: int = 100) -> None:
+    """Require an independently labeled holdout large enough for a stable release."""
+    if manifest.get("corpus_kind") != "real_labeled":
+        raise ValueError("release corpus must be real_labeled")
+    if manifest.get("evaluation_role") != "holdout":
+        raise ValueError("release corpus must be an independent holdout")
+    cases = cast(list[dict[str, Any]], manifest["cases"])
+    counts = {
+        label: sum(case.get("class") == label for case in cases) for label in ("benign", "malware")
+    }
+    if any(count < minimum_per_class for count in counts.values()):
+        raise ValueError(
+            f"release corpus requires at least {minimum_per_class} benign and "
+            f"{minimum_per_class} malware cases"
+        )
+    labels = [case.get("expected_findings") for case in cases]
+    if not all(
+        isinstance(expected, list)
+        and all(
+            isinstance(item, dict)
+            and isinstance(item.get("rule_id"), str)
+            and isinstance(item.get("category"), str)
+            for item in expected
+        )
+        for expected in labels
+    ):
+        raise ValueError("release corpus cases require structured expected_findings labels")
+    if not any(labels):
+        raise ValueError("release corpus must contain at least one expected finding")
+
+
 def _run_case(
     case: dict[str, Any],
     corpus_dir: Path,
@@ -128,8 +159,11 @@ def run_corpus(
     profile: str | None = None,
     differential_tools: tuple[str, ...] = (),
     project_root: Path | None = None,
+    release_gate: bool = False,
 ) -> Path:
     manifest = _load_manifest(manifest_path)
+    if release_gate:
+        validate_release_manifest(manifest)
     root = project_root or Path(__file__).resolve().parents[1]
     reports_dir = output_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -200,6 +234,7 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--profile", choices=("fast", "standard", "deep", "forensic"))
     parser.add_argument("--differential-tool", action="append", choices=tuple(TOOL_COMMANDS))
+    parser.add_argument("--release-gate", action="store_true")
     args = parser.parse_args()
     run_corpus(
         args.manifest,
@@ -207,6 +242,7 @@ def main() -> None:
         args.output_dir,
         profile=args.profile,
         differential_tools=tuple(args.differential_tool or ()),
+        release_gate=args.release_gate,
     )
 
 

@@ -515,6 +515,9 @@ def main() -> None:
         "--max-execution-failure-rate", "--max-error-rate", type=float, dest="max_failure_rate"
     )
     parser.add_argument("--max-dependency-unavailable-rate", type=float)
+    parser.add_argument("--min-evidence-coverage", type=float)
+    parser.add_argument("--min-high-severity-location-rate", type=float)
+    parser.add_argument("--max-high-severity-false-positive-rate", type=float)
     parser.add_argument("--baseline-manifest", type=Path)
     args = parser.parse_args()
     metrics = evaluate(args.manifest, baseline_manifest=args.baseline_manifest)
@@ -539,6 +542,25 @@ def main() -> None:
         dependency_rate is None or dependency_rate > args.max_dependency_unavailable_rate
     ):
         raise SystemExit("benchmark dependency unavailable rate is above the configured threshold")
+    quality = metrics["findings"]["quality"]
+    evidence_coverage = quality["evidence_coverage"]
+    location_rate = quality["high_severity_location_rate"]
+    false_positive_rate = quality["high_severity_false_positive_rate"]
+    if args.min_evidence_coverage is not None and (
+        evidence_coverage is None or evidence_coverage < args.min_evidence_coverage
+    ):
+        raise SystemExit("benchmark finding evidence coverage is below the configured threshold")
+    if args.min_high_severity_location_rate is not None and (
+        location_rate is None or location_rate < args.min_high_severity_location_rate
+    ):
+        raise SystemExit("benchmark high-severity location rate is below the configured threshold")
+    if args.max_high_severity_false_positive_rate is not None and (
+        false_positive_rate is None
+        or false_positive_rate > args.max_high_severity_false_positive_rate
+    ):
+        raise SystemExit(
+            "benchmark high-severity false-positive rate is above the configured threshold"
+        )
     classification = metrics.get("classification", {})
     classification_precision = classification.get("precision")
     classification_recall = classification.get("recall")
