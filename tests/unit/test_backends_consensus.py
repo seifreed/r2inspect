@@ -18,7 +18,27 @@ def test_core_backend_provides_independent_format_metadata(tmp_path: Path) -> No
     assert result["backend"] == "elf-core"
     assert result["format_detection"]["file_format"] == "ELF"
     assert result["file_info"]["sha256"]
+    assert result["status"] == "failed"
     assert isinstance(CoreBackendInspector(str(sample), "elf-core"), BinaryInspector)
+
+
+def test_elf_core_parses_real_structure() -> None:
+    sample = Path("samples/fixtures/hello_elf")
+    if not sample.exists():
+        pytest.skip("hello_elf fixture missing")
+
+    result = CoreBackendInspector(str(sample), "elf-core").analyze()
+
+    assert "error" not in result
+    assert result["file_info"]["architecture"] == "x86_64"
+    assert result["file_info"]["bits"] == 64
+    assert result["elf_info"]["entry_point"] == 0x125C
+    assert len(result["sections"]) == 13
+    assert len(result["elf_info"]["program_headers"]) == 8
+    assert result["security"]["nx"] is True
+    assert result["security"]["pie"] is True
+    assert result["security"]["relro"] is True
+    assert result["elf_info"]["overlay"]["size"] == 0
 
 
 def test_pe_core_parses_real_structure() -> None:

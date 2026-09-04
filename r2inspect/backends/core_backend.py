@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 from .binary_view import BinaryView
+from .elf_core import parse_elf
 from .pe_core import parse_pe
+
+_PARSERS = {"pe-core": parse_pe, "elf-core": parse_elf}
 
 
 def _format(data: bytes) -> str:
@@ -39,22 +42,21 @@ class CoreBackendInspector:
         path = Path(self.filename)
         size = path.stat().st_size
         parse_error: str | None = None
+        expected = {"pe-core": "PE", "elf-core": "ELF", "macho-core": "MACHO"}.get(self.backend)
         with path.open("rb") as stream:
             sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
             if size:
                 with mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
                     detected = _format(data[:4])
                     try:
+                        parser = _PARSERS.get(self.backend)
                         parsed = (
-                            parse_pe(BinaryView(data))
-                            if self.backend == "pe-core" and detected == "PE"
-                            else None
+                            parser(BinaryView(data)) if parser and detected == expected else None
                         )
                     except ValueError as exc:
                         parsed, parse_error = None, str(exc)
             else:
                 detected, parsed = "UNKNOWN", None
-        expected = {"pe-core": "PE", "elf-core": "ELF", "macho-core": "MACHO"}.get(self.backend)
         result: dict[str, Any] = {
             "backend": self.backend,
             "file_info": {
@@ -67,7 +69,7 @@ class CoreBackendInspector:
             "format_detection": {"file_format": detected, "backend": self.backend},
         }
         if parsed is not None:
-            result["pe_info"] = parsed
+            result[f"{detected.lower()}_info"] = parsed
             for field in ("architecture", "bits", "endian"):
                 result["file_info"][field] = parsed[field]
             for field in ("sections", "imports", "exports"):
