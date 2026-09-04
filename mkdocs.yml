@@ -1,0 +1,30 @@
+site_name: r2inspect
+site_description: Malware analysis framework built on radare2
+site_url: https://seifreed.github.io/r2inspect/
+repo_url: https://github.com/seifreed/r2inspect
+repo_name: seifreed/r2inspect
+strict: true
+exclude_docs: |
+  CLAUDE.md
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+
+plugins:
+  - search
+
+nav:
+  - Overview: index.md
+  - Architecture: architecture.md
+  - Report Contract: output-schema.md
+  - Reporting Workflows: reporting.md
+  - Analyzer SDK: analyzer-sdk.md
+  - Detection Methodology: detection-methodology.md
+  - Benchmarks: benchmark.md
+  - Threat Model: threat-model.md
+  - Limitations: limitations.md
+  - Migration from v3: migration-3-to-4.md

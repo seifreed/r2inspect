@@ -104,10 +104,14 @@ docker = [
     "pyimpfuzzy>=0.1.1",
     "python-tlsh>=4.5.0",
 ]
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.7.7",
+]
 
 [project.urls]
 Homepage = "https://github.com/seifreed/r2inspect"
-Documentation = "https://github.com/seifreed/r2inspect/blob/main/README.md"
+Documentation = "https://seifreed.github.io/r2inspect/"
 Repository = "https://github.com/seifreed/r2inspect"
 Issues = "https://github.com/seifreed/r2inspect/issues"
 Changelog = "https://github.com/seifreed/r2inspect/releases"

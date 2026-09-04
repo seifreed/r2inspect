@@ -49,6 +49,7 @@ Versioning and keeps unreleased work at the top.
   and PyMISP validation for deterministic exporter fixtures.
 - Added a plugin conformance command for declarative metadata, runtime
   construction, and optional sample execution checks.
+- Added a strict MkDocs site and pinned GitHub Pages publication workflow.
 
 ## 3.0.0
 

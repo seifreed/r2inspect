@@ -27,7 +27,8 @@ The wire contract identifies itself as:
 {"schema_version": "r2inspect.report/v1"}
 ```
 
-The generated [JSON Schema](../r2inspect/schemas/r2inspect.report.v1.schema.json)
+The generated
+[JSON Schema](https://github.com/seifreed/r2inspect/blob/main/r2inspect/schemas/r2inspect.report.v1.schema.json)
 is included in source and wheel distributions.
 
 It contains tool and backend provenance, analysis identity and profile,
