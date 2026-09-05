@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+    inputs:
+      require_real_corpus:
+        description: "Require release-sized private holdout corpora"
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       require_real_corpus:
