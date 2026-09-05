@@ -244,12 +244,15 @@ jobs:
           release_args=()
           quality_args=()
           differential_args=()
+          runner_args=()
           finding_args=(
             --max-execution-failure-rate 0.01
             --max-dependency-unavailable-rate 0.0
           )
           if [ "${{ needs.real-corpus-config.outputs.source }}" != "a1000" ]; then
             differential_args+=(--differential-tool capa --differential-tool floss)
+          else
+            runner_args+=(--workers 4)
           fi
           if [ "${{ inputs.require_real_corpus }}" = "true" ]; then
             release_args+=(--release-gate)
@@ -267,6 +270,7 @@ jobs:
           python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json \
             --corpus-dir real-corpus --output-dir real-benchmark-results \
             "${differential_args[@]}" \
+            "${runner_args[@]}" \
             "${release_args[@]}"
           python benchmarks/calibrate_classification.py \
             real-benchmark-results/manifest.json \

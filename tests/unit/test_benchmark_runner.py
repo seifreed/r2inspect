@@ -41,6 +41,49 @@ def test_run_corpus_rejects_fixture_hash_mismatch(tmp_path: Path) -> None:
         run_corpus(manifest, corpus, tmp_path / "out")
 
 
+def test_run_corpus_supports_parallel_workers(tmp_path: Path, monkeypatch) -> None:
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {"id": "one", "sample": "one.bin"},
+                    {"id": "two", "sample": "two.bin"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "one.bin").write_bytes(b"one")
+    (corpus / "two.bin").write_bytes(b"two")
+    def fake_run_case(case, _corpus_dir, reports_dir, _profile, _project_root):
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        report = reports_dir / f"{case['id']}.json"
+        report.write_text(
+            json.dumps(
+                {
+                    "tool": {"version": "test"},
+                    "analysis": {
+                        "id": case["id"],
+                        "started_at": "2026-01-01T00:00:00Z",
+                        "duration": 1,
+                    },
+                    "sample": {"size": 1},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return f"reports/{report.name}"
+
+    monkeypatch.setattr("benchmarks.run_corpus._run_case", fake_run_case)
+
+    result = run_corpus(manifest, corpus, tmp_path / "out", workers=2)
+
+    assert len(json.loads(result.read_text(encoding="utf-8"))["cases"]) == 2
+
+
 def test_real_manifest_requires_evaluation_role_and_sample_taxonomy(tmp_path: Path) -> None:
     manifest = tmp_path / "manifest.json"
     base = {

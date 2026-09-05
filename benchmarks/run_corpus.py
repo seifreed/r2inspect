@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -160,7 +161,10 @@ def run_corpus(
     differential_tools: tuple[str, ...] = (),
     project_root: Path | None = None,
     release_gate: bool = False,
+    workers: int = 1,
 ) -> Path:
+    if workers < 1:
+        raise ValueError("workers must be at least one")
     manifest = _load_manifest(manifest_path)
     if release_gate:
         validate_release_manifest(manifest)
@@ -171,8 +175,20 @@ def run_corpus(
     evaluated_cases: list[dict[str, Any]] = []
     differential: list[dict[str, Any]] = []
     differential_timeout = int(os.environ.get("R2INSPECT_DIFFERENTIAL_TIMEOUT_SECONDS", "120"))
-    for case in manifest["cases"]:
-        report = _run_case(case, corpus_dir, reports_dir, selected_profile, root)
+    cases = manifest["cases"]
+    if workers == 1:
+        reports = [
+            _run_case(case, corpus_dir, reports_dir, selected_profile, root) for case in cases
+        ]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            reports = list(
+                executor.map(
+                    lambda case: _run_case(case, corpus_dir, reports_dir, selected_profile, root),
+                    cases,
+                )
+            )
+    for case, report in zip(cases, reports, strict=True):
         evaluated_cases.append(
             {
                 **case,
@@ -234,6 +250,7 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--profile", choices=("fast", "standard", "deep", "forensic"))
     parser.add_argument("--differential-tool", action="append", choices=tuple(TOOL_COMMANDS))
+    parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--release-gate", action="store_true")
     args = parser.parse_args()
     run_corpus(
@@ -243,6 +260,7 @@ def main() -> None:
         profile=args.profile,
         differential_tools=tuple(args.differential_tool or ()),
         release_gate=args.release_gate,
+        workers=args.workers,
     )
 
 
