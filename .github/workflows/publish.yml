@@ -21,7 +21,6 @@ jobs:
     secrets: inherit
 
   release-benchmark:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
     uses: ./.github/workflows/benchmark.yml
     with:
       require_real_corpus: true
