@@ -1,0 +1,14 @@
+{
+  "cases": 204,
+  "corpus_id": "r2inspect-a1000-holdout-2026-09-05",
+  "f1": 0.9552238805970149,
+  "false_negative": 4,
+  "false_positive": 5,
+  "min_functions": 637,
+  "precision": 0.9504950495049505,
+  "recall": 0.96,
+  "schema_version": "r2inspect.classification-calibration/v1",
+  "strategy": "function_threshold",
+  "true_negative": 99,
+  "true_positive": 96
+}

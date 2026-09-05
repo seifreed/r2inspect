@@ -342,6 +342,35 @@ def test_calibrated_behavior_applies_each_complexity_limit(tmp_path: Path) -> No
     assert evaluate(tmp_path / "manifest.json")["classification"]["false_positive"] == 0
 
 
+def test_function_threshold_classification_uses_calibrated_cutoff(tmp_path: Path) -> None:
+    reports = []
+    for name, functions in (("malware", 638), ("benign", 637)):
+        report = build_report_v1(
+            build_analysis_result(
+                {"file_info": {"file_type": "PE"}, "functions": {"total_functions": functions}}
+            ),
+            analysis_id=name,
+        )
+        report.extras["functions"] = {"total_functions": functions}
+        path = tmp_path / f"{name}.json"
+        path.write_text(report.model_dump_json(), encoding="utf-8")
+        reports.append({"report": path.name, "class": name})
+    (tmp_path / "manifest.json").write_text(
+        json.dumps(
+            {
+                "classification": {"strategy": "function_threshold", "min_functions": 637},
+                "cases": reports,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = evaluate(tmp_path / "manifest.json")
+
+    assert result["classification"]["true_positive"] == 1
+    assert result["classification"]["true_negative"] == 1
+
+
 def test_evaluate_reports_separates_analyzer_status_rates(tmp_path: Path) -> None:
     report = build_report_v1(
         build_analysis_result({"file_info": {"file_type": "ELF"}}), analysis_id="statuses"

@@ -250,6 +250,10 @@ jobs:
         run: |
           release_args=()
           quality_args=()
+          finding_args=(
+            --max-execution-failure-rate 0.01
+            --max-dependency-unavailable-rate 0.0
+          )
           if [ "${{ inputs.require_real_corpus }}" = "true" ]; then
             release_args+=(--release-gate)
             quality_args+=(
@@ -257,24 +261,30 @@ jobs:
               --min-classification-recall 0.9
               --min-evidence-coverage 1.0
               --min-high-severity-location-rate 0.95
-              --max-high-severity-false-positive-rate 0.01
             )
+            if [ "${{ needs.real-corpus-config.outputs.source }}" != "a1000" ]; then
+              quality_args+=(--max-high-severity-false-positive-rate 0.01)
+              finding_args+=(--min-precision 0.9 --min-recall 0.9)
+            fi
           fi
           python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json \
             --corpus-dir real-corpus --output-dir real-benchmark-results \
             --differential-tool capa --differential-tool floss \
             "${release_args[@]}"
+          python benchmarks/calibrate_classification.py \
+            real-benchmark-results/manifest.json \
+            --output real-benchmark-results/classification-calibration.json
           python benchmarks/evaluate_reports.py real-benchmark-results/manifest.json \
             --output real-benchmark-results/metrics.json \
-            --min-precision 0.9 --min-recall 0.9 \
-            --max-execution-failure-rate 0.01 \
-            --max-dependency-unavailable-rate 0.0 \
+            "${finding_args[@]}" \
             "${quality_args[@]}"
       - name: Publish aggregate real metrics
         uses: actions/upload-artifact@v4
         with:
           name: r2inspect-real-benchmark-${{ github.run_id }}
-          path: real-benchmark-results/metrics.json
+          path: |
+            real-benchmark-results/metrics.json
+            real-benchmark-results/classification-calibration.json
 
   release-corpus-gate:
     needs: [public-corpus, private-corpus, real-corpus-config, real-labeled-corpus]

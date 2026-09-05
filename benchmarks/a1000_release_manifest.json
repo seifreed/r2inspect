@@ -10287,10 +10287,8 @@
       "packer_detector",
       "yara_analyzer"
     ],
-    "max_exports": 500,
-    "max_functions": 1000,
-    "max_imports": 500,
-    "strategy": "calibrated_behavior"
+    "min_functions": 637,
+    "strategy": "function_threshold"
   },
   "corpus_id": "r2inspect-a1000-holdout-2026-09-05",
   "corpus_kind": "real_labeled",

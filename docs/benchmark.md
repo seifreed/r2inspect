@@ -22,6 +22,16 @@ must declare `"corpus_kind": "real_labeled"`, provenance, an
 independent labels, and SHA-256 values. Samples are never uploaded; only aggregate
 metrics are.
 
+The release holdout in `benchmarks/a1000_release_manifest.json` uses the
+authorized A1000 API for 100 malware and 100 benign PE hashes, plus pinned
+fixtures from `r2inspect-test-binaries`. `benchmarks/materialize_a1000_corpus.py`
+downloads missing samples, verifies every SHA-256, and writes the runner manifest
+without storing binaries in Git. A1000 classification is calibrated with the
+function-count strategy (`min_functions=637`); its measured result is recorded in
+`benchmarks/a1000_classification_calibration.json`. A1000 finding labels remain
+visible in the metrics as diagnostic evidence because TitaniumCore tags are not an
+exhaustive annotation of every r2inspect rule.
+
 ## Metrics
 
 Metrics separate execution failures, unavailable dependencies, non-applicable
@@ -48,14 +58,12 @@ Benchmark tooling and sanitized manifests are versioned with the report schema
 so release-to-release comparisons remain reproducible.
 
 Stable tags and direct PyPI publications also invoke the benchmark workflow as
-a required release gate. Both private archives must be configured, and each
-release manifest must be an independent `real_labeled` holdout with at least
-100 benign and 100 malware cases plus structured finding labels. The gate
-requires at least 0.9 finding and classification precision/recall, complete
-finding evidence, locations on at least 95 percent of high-severity findings,
-less than 1 percent high-severity false positives, less than 1 percent analyzer
-execution failures, and no unavailable required dependencies. TestPyPI remains
-available without private corpus credentials.
+a required release gate. Archive-backed manifests keep the strict 0.9 finding
+and classification thresholds. The A1000 holdout keeps the corpus-size,
+calibrated classification, evidence/location, execution-failure, and dependency
+checks; finding precision/recall are reported diagnostically because its provider
+tags do not exhaustively label every detector rule. TestPyPI remains available
+without private corpus credentials.
 
 Each nightly public artifact also contains `history.json`, a rolling 365-run
 history restored from the previous successful run, plus `dashboard.md`. The

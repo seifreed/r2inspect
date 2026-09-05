@@ -133,6 +133,11 @@ def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool
         return bool(report.findings)
     if strategy == "high_or_critical":
         return any(finding.severity in {"high", "critical"} for finding in report.findings)
+    if strategy == "function_threshold":
+        functions = report.extras.get("functions")
+        raw_count = functions.get("total_functions") if isinstance(functions, dict) else 0
+        count = int(raw_count) if isinstance(raw_count, int | float) else 0
+        return count > int(classification.get("min_functions", 0))
     if strategy == "calibrated_behavior":
         extras = report.extras
         functions = extras.get("functions")
@@ -170,7 +175,8 @@ def _predicted_malware(report: ReportV1, classification: dict[str, Any]) -> bool
             raise ValueError("rule_ids classification requires positive_rule_ids")
         return bool({finding.rule_id for finding in report.findings} & set(rule_ids))
     raise ValueError(
-        "classification.strategy must be any_finding, high_or_critical, calibrated_behavior, or rule_ids"
+        "classification.strategy must be any_finding, high_or_critical, function_threshold, "
+        "calibrated_behavior, or rule_ids"
     )
 
 
