@@ -183,17 +183,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       enabled: ${{ steps.config.outputs.enabled }}
+      source: ${{ steps.config.outputs.source }}
     steps:
       - id: config
         env:
           CORPUS_URL: ${{ secrets.R2INSPECT_REAL_CORPUS_URL }}
           CORPUS_TOKEN: ${{ secrets.R2INSPECT_REAL_CORPUS_TOKEN }}
           CORPUS_SHA256: ${{ secrets.R2INSPECT_REAL_CORPUS_SHA256 }}
+          A1000_TOKEN: ${{ secrets.A1000_TOKEN }}
         run: |
           if [ -n "$CORPUS_URL" ] && [ -n "$CORPUS_TOKEN" ] && [ -n "$CORPUS_SHA256" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "source=archive" >> "$GITHUB_OUTPUT"
+          elif [ -n "$A1000_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "source=a1000" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "source=none" >> "$GITHUB_OUTPUT"
           fi
 
   real-labeled-corpus:
@@ -217,7 +224,8 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: Install specialist differential tools
         run: python -m pip install flare-capa floss
-      - name: Fetch licensed real corpus
+      - name: Fetch licensed real corpus archive
+        if: needs.real-corpus-config.outputs.source == 'archive'
         env:
           CORPUS_URL: ${{ secrets.R2INSPECT_REAL_CORPUS_URL }}
           CORPUS_TOKEN: ${{ secrets.R2INSPECT_REAL_CORPUS_TOKEN }}
@@ -229,6 +237,15 @@ jobs:
           tar -xf real-corpus.tar --strip-components=1 --directory real-corpus
           test "$(python -c 'import json; print(json.load(open("real-corpus/benchmark/manifest.json"))["corpus_kind"])')" = real_labeled
           test "$(python -c 'import json; print(len(json.load(open("real-corpus/benchmark/manifest.json"))["cases"]))')" -ge 10
+      - name: Materialize pinned A1000 corpus
+        if: needs.real-corpus-config.outputs.source == 'a1000'
+        env:
+          A1000_HOST: ${{ secrets.A1000_HOST || 'https://a1000.reversinglabs.com' }}
+          A1000_TOKEN: ${{ secrets.A1000_TOKEN }}
+        run: |
+          python benchmarks/materialize_a1000_corpus.py \
+            benchmarks/a1000_release_manifest.json \
+            --output-dir real-corpus
       - name: Run and score real labeled corpus
         run: |
           release_args=()
