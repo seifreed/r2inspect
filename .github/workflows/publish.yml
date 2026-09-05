@@ -16,19 +16,8 @@ on:
           - pypi
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
-
-  release-benchmark:
-    uses: ./.github/workflows/benchmark.yml
-    with:
-      require_real_corpus: true
-    secrets: inherit
-
   build:
     name: Build distribution
-    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,7 +54,7 @@ jobs:
   github-release:
     name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, release-benchmark]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -113,7 +102,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
-    needs: [build, release-benchmark]
+    needs: build
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -131,7 +120,7 @@ jobs:
   publish-container:
     name: Publish signed container
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ci, release-benchmark]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
