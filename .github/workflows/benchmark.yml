@@ -215,6 +215,7 @@ jobs:
       - name: Install package
         run: python -m pip install -e ".[dev]"
       - name: Install specialist differential tools
+        if: needs.real-corpus-config.outputs.source != 'a1000'
         run: python -m pip install flare-capa floss
       - name: Fetch licensed real corpus archive
         if: needs.real-corpus-config.outputs.source == 'archive'
@@ -242,10 +243,14 @@ jobs:
         run: |
           release_args=()
           quality_args=()
+          differential_args=()
           finding_args=(
             --max-execution-failure-rate 0.01
             --max-dependency-unavailable-rate 0.0
           )
+          if [ "${{ needs.real-corpus-config.outputs.source }}" != "a1000" ]; then
+            differential_args+=(--differential-tool capa --differential-tool floss)
+          fi
           if [ "${{ inputs.require_real_corpus }}" = "true" ]; then
             release_args+=(--release-gate)
             quality_args+=(
@@ -261,7 +266,7 @@ jobs:
           fi
           python benchmarks/run_corpus.py real-corpus/benchmark/manifest.json \
             --corpus-dir real-corpus --output-dir real-benchmark-results \
-            --differential-tool capa --differential-tool floss \
+            "${differential_args[@]}" \
             "${release_args[@]}"
           python benchmarks/calibrate_classification.py \
             real-benchmark-results/manifest.json \
