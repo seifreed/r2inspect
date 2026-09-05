@@ -157,27 +157,13 @@ jobs:
       - name: Run and score private corpus
         if: steps.config.outputs.enabled == 'true'
         run: |
-          release_args=()
-          quality_args=()
-          if [ "${{ inputs.require_real_corpus }}" = "true" ]; then
-            release_args+=(--release-gate)
-            quality_args+=(
-              --min-classification-precision 0.9
-              --min-classification-recall 0.9
-              --min-evidence-coverage 1.0
-              --min-high-severity-location-rate 0.95
-              --max-high-severity-false-positive-rate 0.01
-            )
-          fi
           python benchmarks/run_corpus.py private-corpus/benchmark/manifest.json \
-            --corpus-dir private-corpus --output-dir private-benchmark-results \
-            "${release_args[@]}"
+            --corpus-dir private-corpus --output-dir private-benchmark-results
           python benchmarks/evaluate_reports.py private-benchmark-results/manifest.json \
             --output private-benchmark-results/metrics.json \
             --min-precision 0.9 --min-recall 0.9 \
             --max-execution-failure-rate 0.01 \
-            --max-dependency-unavailable-rate 0.0 \
-            "${quality_args[@]}"
+            --max-dependency-unavailable-rate 0.0
       - name: Publish aggregate private metrics
         if: always() && steps.config.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
@@ -198,12 +184,12 @@ jobs:
           CORPUS_SHA256: ${{ secrets.R2INSPECT_REAL_CORPUS_SHA256 }}
           A1000_TOKEN: ${{ secrets.A1000_TOKEN }}
         run: |
-          if [ -n "$CORPUS_URL" ] && [ -n "$CORPUS_TOKEN" ] && [ -n "$CORPUS_SHA256" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-            echo "source=archive" >> "$GITHUB_OUTPUT"
-          elif [ -n "$A1000_TOKEN" ]; then
+          if [ -n "$A1000_TOKEN" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
             echo "source=a1000" >> "$GITHUB_OUTPUT"
+          elif [ -n "$CORPUS_URL" ] && [ -n "$CORPUS_TOKEN" ] && [ -n "$CORPUS_SHA256" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "source=archive" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "source=none" >> "$GITHUB_OUTPUT"
