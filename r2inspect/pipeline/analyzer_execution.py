@@ -84,7 +84,7 @@ def _has_usable_data(data: Any) -> bool:
 
 
 def _execution_identity(stage: Any, analyzer_name: str) -> tuple[str, str | None]:
-    get_metadata = getattr(stage.registry, "get_metadata", None)
+    get_metadata = getattr(getattr(stage, "registry", None), "get_metadata", None)
     metadata = get_metadata(analyzer_name) if callable(get_metadata) else None
     if metadata is None:
         return "unknown", None

@@ -17,13 +17,8 @@ from ..interfaces import (
     ResultAggregatorFactoryLike,
 )
 from ..core.analyzer_factory import run_analysis_method
-from ..domain.results import (
-    AnalyzerError,
-    AnalyzerExecution,
-    AnalyzerStatus,
-    analyzer_status_from_payload,
-)
-from .analyzer_execution import _record_analyzer_execution
+from ..domain.results import AnalyzerStatus
+from .analyzer_execution import record_analyzer_execution
 from .analysis_pipeline import AnalysisStage
 
 logger = get_logger(__name__)
@@ -194,36 +189,28 @@ class AnalyzerStage(AnalysisStage):
                 filename=self.filename,
             )
             result = run_analysis_method(analyzer, ("analyze", "detect", "scan"))
-            analyzer_id = self.name
-            status = analyzer_status_from_payload(result, getattr(analyzer, "last_status", None))
+            status = getattr(analyzer, "last_status", None)
             error = getattr(analyzer, "last_error", None)
-            _record_analyzer_execution(
+            record_analyzer_execution(
+                self,
                 context,
-                AnalyzerExecution(
-                    analyzer_id=analyzer_id,
-                    analyzer_version=str(getattr(self.analyzer_class, "__version__", "unknown")),
-                    output_schema=getattr(self.analyzer_class, "output_schema", None),
-                    status=status,
-                    data=result,
-                    errors=(
-                        [AnalyzerError(status.value.upper(), analyzer_id, str(error))]
-                        if error
-                        else []
-                    ),
-                    duration=time.monotonic() - started,
-                ),
+                self.name,
+                result,
+                status=status,
+                error=str(error) if error else None,
+                duration=time.monotonic() - started,
             )
             return {self.result_key: result}
         except Exception as e:
             logger.warning("Analyzer %s failed: %s", self.analyzer_class.__name__, e)
-            _record_analyzer_execution(
+            record_analyzer_execution(
+                self,
                 context,
-                AnalyzerExecution(
-                    analyzer_id=self.name,
-                    status=AnalyzerStatus.FAILED,
-                    errors=[AnalyzerError("FAILED", self.name, str(e))],
-                    duration=time.monotonic() - started,
-                ),
+                self.name,
+                None,
+                status=AnalyzerStatus.FAILED,
+                error=str(e),
+                duration=time.monotonic() - started,
             )
             return {self.result_key: {"error": str(e), "success": False}}
 
