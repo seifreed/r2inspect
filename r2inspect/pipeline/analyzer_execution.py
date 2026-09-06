@@ -136,7 +136,7 @@ def record_analyzer_execution(
     duration: float | None = None,
 ) -> AnalyzerExecution[Any]:
     typed_status = _status_from(data, status, error)
-    analyzer_id = data.analyzer_id if isinstance(data, TypedAnalyzerResult) else analyzer_name
+    analyzer_id = analyzer_name
     version, output_schema = _execution_identity(stage, analyzer_name)
     structured_errors, structured_warnings = _structured_issues(analyzer_id, data)
     if error:
@@ -233,7 +233,7 @@ def _store_success(
     typed_status = _status_from(data, status, error)
     if typed_status == AnalyzerStatus.COMPLETED and warnings:
         typed_status = AnalyzerStatus.COMPLETED_WITH_WARNINGS
-    analyzer_id = data.analyzer_id if isinstance(data, TypedAnalyzerResult) else analyzer_name
+    analyzer_id = analyzer_name
     if error and not errors:
         errors = [
             _execution_error(

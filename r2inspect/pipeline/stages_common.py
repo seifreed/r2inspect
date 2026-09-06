@@ -194,8 +194,7 @@ class AnalyzerStage(AnalysisStage):
                 filename=self.filename,
             )
             result = run_analysis_method(analyzer, ("analyze", "detect", "scan"))
-            get_name = getattr(analyzer, "get_name", None)
-            analyzer_id = str(get_name()) if callable(get_name) else self.name
+            analyzer_id = self.name
             status = analyzer_status_from_payload(result, getattr(analyzer, "last_status", None))
             error = getattr(analyzer, "last_error", None)
             _record_analyzer_execution(

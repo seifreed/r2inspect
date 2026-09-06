@@ -152,6 +152,24 @@ def test_execution_envelope_preserves_structured_issues() -> None:
     assert execution.warnings[0].code == "LOW_CONFIDENCE"
 
 
+def test_execution_envelope_uses_registered_analyzer_id() -> None:
+    class Registry:
+        def get_metadata(self, _name):
+            return None
+
+    class Stage:
+        registry = Registry()
+
+    execution = record_analyzer_execution(
+        Stage(),
+        {"results": {}},
+        "pe_analyzer",
+        TypedAnalyzerResult({"detected": True}, analyzer_id="PEAnalyzer"),
+    )
+
+    assert execution.analyzer_id == "pe_analyzer"
+
+
 def test_analysis_result_keeps_execution_envelope_out_of_legacy_payload() -> None:
     execution = AnalyzerExecution(
         analyzer_id="yara_analyzer",
