@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
-import re
-from typing import Any, Literal, cast
+from typing import Any
 
-from ..schemas.report_v1 import EvidenceV1, FindingV1
+from ..schemas.report_v1 import FindingV1
 from ..schemas.results_models import AnalysisResult
 from .report_analyzers import analyzer_outcomes
-from .technique_mappings import map_techniques
 
 
 def findings(result: AnalysisResult) -> list[FindingV1]:
@@ -28,42 +25,6 @@ def findings(result: AnalysisResult) -> list[FindingV1]:
             if isinstance(match, dict) and isinstance((finding := match.get("finding")), dict)
         )
     output = [FindingV1.model_validate(payload) for payload in native_payloads]
-    native_sources = {item.source_analyzer for item in output}
-    aliases = {"info": "informational", "warning": "medium"}
-    valid = {"informational", "low", "medium", "high", "critical"}
-    for indicator in result.indicators:
-        source = {
-            "Packer": "packer_detector",
-            "Anti-Debug": "anti_analysis",
-            "Anti-VM": "anti_analysis",
-            "Anti-Sandbox": "anti_analysis",
-            "YARA Match": "yara_analyzer",
-        }.get(indicator.type)
-        if indicator.type in {"Suspicious API", "Behavior Cluster"} or source in native_sources:
-            continue
-        severity = aliases.get(indicator.severity.lower(), indicator.severity.lower())
-        severity = severity if severity in valid else "informational"
-        slug = re.sub(r"[^a-z0-9]+", ".", indicator.type.lower()).strip(".") or "unknown"
-        rule_id = f"legacy.indicator.{slug}"
-        digest = hashlib.sha256(f"{rule_id}\0{indicator.description}".encode()).hexdigest()[:16]
-        attack, mbc = map_techniques(indicator.type, rule_id)
-        output.append(
-            FindingV1(
-                finding_id=f"finding-{digest}",
-                rule_id=rule_id,
-                title=indicator.description or indicator.type or "Security indicator",
-                category=indicator.type or "security",
-                severity=cast(
-                    Literal["informational", "low", "medium", "high", "critical"], severity
-                ),
-                confidence=0.5,
-                source_analyzer="result_aggregator",
-                method="legacy_indicator",
-                evidence=[EvidenceV1(kind="description", value=indicator.description)],
-                attack=attack,
-                mbc=mbc,
-            )
-        )
     return output
 
 

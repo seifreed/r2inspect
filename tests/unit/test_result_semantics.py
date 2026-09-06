@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from r2inspect.application.options import build_analysis_options
+from r2inspect.application.report_builder import build_report_v1
 from r2inspect.application.result_mapper import build_analysis_result
 from r2inspect.application.report_components import analyzer_outcomes
 from r2inspect.application.result_semantics import normalize_analyzer_results
@@ -166,6 +167,25 @@ def test_forensic_profile_enables_full_evidence() -> None:
 
 def test_indicator_mapping_is_explicit() -> None:
     assert map_techniques("anti_analysis") == (["T1497", "T1622"], ["B0004"])
+
+
+def test_report_findings_do_not_promote_legacy_indicators() -> None:
+    result = build_analysis_result(
+        {
+            "file_info": {"file_type": "PE"},
+            "indicators": [
+                {
+                    "type": "Suspicious API",
+                    "severity": "high",
+                    "description": "VirtualAlloc imported",
+                }
+            ],
+        }
+    )
+
+    report = build_report_v1(result, analysis_id="native-only")
+
+    assert report.findings == []
 
 
 def test_outcomes_cover_execution_and_legacy_status_metadata() -> None:

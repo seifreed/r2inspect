@@ -499,7 +499,7 @@ def test_evaluate_reports_enforces_finding_quality_thresholds(tmp_path: Path) ->
         sys.argv = original_argv
 
 
-def test_evaluate_reports_migrates_unique_legacy_finding_labels(tmp_path: Path) -> None:
+def test_evaluate_reports_scores_analyzer_owned_finding_labels(tmp_path: Path) -> None:
     report = build_report_v1(
         build_analysis_result({"file_info": {"file_type": "PE"}}), analysis_id="legacy-labels"
     )
@@ -527,8 +527,8 @@ def test_evaluate_reports_migrates_unique_legacy_finding_labels(tmp_path: Path) 
                     {
                         "report": "report.json",
                         "expected_findings": [
-                            {"rule_id": "legacy.indicator.packer", "category": "packer"},
-                            {"rule_id": "legacy.indicator.yara.match", "category": "yara"},
+                            {"rule_id": "r2inspect.packer.detected.v1", "category": "packer"},
+                            {"rule_id": "r2inspect.yara.example.v1", "category": "yara"},
                         ],
                     }
                 ]
