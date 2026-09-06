@@ -18,6 +18,7 @@ from r2inspect.domain.results import (
 )
 from r2inspect.modules import yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
+from r2inspect.pipeline.analyzer_execution import record_analyzer_execution
 
 
 def test_failed_detection_is_not_reported_as_not_detected() -> None:
@@ -111,6 +112,44 @@ def test_list_payload_without_matches_has_analyzer_outcome() -> None:
     assert outcomes[0].analyzer_version == "1"
     assert outcomes[0].output_schema == "r2inspect.yara/v1"
     assert outcomes[0].status is AnalyzerStatus.NOT_DETECTED
+
+
+def test_execution_envelope_preserves_structured_issues() -> None:
+    class Registry:
+        def get_metadata(self, _name):
+            return None
+
+    class Stage:
+        registry = Registry()
+
+    execution = record_analyzer_execution(
+        Stage(),
+        {"results": {}},
+        "detector",
+        {
+            "status": "partial",
+            "errors": [
+                {
+                    "code": "SECONDARY_FAILED",
+                    "component": "detector.secondary",
+                    "message": "secondary strategy failed",
+                    "recoverable": True,
+                }
+            ],
+            "warnings": [
+                {
+                    "code": "LOW_CONFIDENCE",
+                    "component": "detector",
+                    "message": "evidence is incomplete",
+                }
+            ],
+        },
+    )
+
+    assert execution.status is AnalyzerStatus.PARTIAL
+    assert execution.errors[0].code == "SECONDARY_FAILED"
+    assert execution.errors[0].recoverable is True
+    assert execution.warnings[0].code == "LOW_CONFIDENCE"
 
 
 def test_analysis_result_keeps_execution_envelope_out_of_legacy_payload() -> None:

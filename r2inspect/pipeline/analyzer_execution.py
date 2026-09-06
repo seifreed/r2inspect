@@ -97,6 +97,34 @@ def _execution_error(
     return AnalyzerError(status.value.upper(), analyzer_id, message, recoverable)
 
 
+def _structured_issues(
+    analyzer_id: str, data: Any
+) -> tuple[list[AnalyzerError], list[AnalyzerWarning]]:
+    """Read wire-shaped issues without depending on the payload data type."""
+    if not isinstance(data, dict):
+        return [], []
+    errors = [
+        AnalyzerError(
+            code=str(item.get("code", "ANALYZER_ERROR")),
+            component=str(item.get("component", analyzer_id)),
+            message=str(item.get("message", "Analyzer error")),
+            recoverable=bool(item.get("recoverable", False)),
+        )
+        for item in data.get("errors", [])
+        if isinstance(item, dict)
+    ]
+    warnings = [
+        AnalyzerWarning(
+            code=str(item.get("code", "ANALYZER_WARNING")),
+            component=str(item.get("component", analyzer_id)),
+            message=str(item.get("message", "Analyzer warning")),
+        )
+        for item in data.get("warnings", [])
+        if isinstance(item, dict)
+    ]
+    return errors, warnings
+
+
 def record_analyzer_execution(
     stage: Any,
     context: dict[str, Any],
@@ -110,6 +138,17 @@ def record_analyzer_execution(
     typed_status = _status_from(data, status, error)
     analyzer_id = data.analyzer_id if isinstance(data, TypedAnalyzerResult) else analyzer_name
     version, output_schema = _execution_identity(stage, analyzer_name)
+    structured_errors, structured_warnings = _structured_issues(analyzer_id, data)
+    if error:
+        structured_errors.insert(
+            0,
+            _execution_error(
+                analyzer_id,
+                typed_status,
+                error,
+                recoverable=typed_status in _RECOVERABLE_STATUSES,
+            ),
+        )
     raw_duration = data.get("execution_time") if isinstance(data, dict) else None
     execution: AnalyzerExecution[Any] = AnalyzerExecution(
         analyzer_id=analyzer_id,
@@ -117,18 +156,8 @@ def record_analyzer_execution(
         output_schema=output_schema,
         status=typed_status,
         data=data,
-        errors=(
-            [
-                _execution_error(
-                    analyzer_id,
-                    typed_status,
-                    error,
-                    recoverable=typed_status in _RECOVERABLE_STATUSES,
-                )
-            ]
-            if error
-            else []
-        ),
+        errors=structured_errors,
+        warnings=structured_warnings,
         duration=(
             float(raw_duration)
             if isinstance(raw_duration, (int, float)) and not isinstance(raw_duration, bool)
