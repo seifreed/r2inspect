@@ -184,6 +184,21 @@ def test_create_json_batch_summary_does_not_duplicate_results(tmp_path):
         assert data["reports"][0]["report_path"] == "test.exe_analysis.json"
 
 
+def test_create_json_batch_summary_does_not_overwrite_report_v1(tmp_path):
+    report_path = tmp_path / "test.exe_analysis.json"
+    report_payload = {
+        "schema_version": "r2inspect.report/v1",
+        "findings": [{"rule_id": "native.rule.v1"}],
+    }
+    report_path.write_text(json.dumps(report_payload), encoding="utf-8")
+
+    create_json_batch_summary(
+        {"test.exe": {"relative_path": "test.exe"}}, [], tmp_path, "20240101_120000"
+    )
+
+    assert json.loads(report_path.read_text(encoding="utf-8")) == report_payload
+
+
 def test_create_batch_summary_csv_only(tmp_path):
     """Test creating batch summary with CSV only."""
     all_results = {"test.exe": {"file_info": {"name": "test.exe"}}}
