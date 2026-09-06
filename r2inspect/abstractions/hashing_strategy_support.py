@@ -38,7 +38,7 @@ def validate_strategy_init(filepath: str, max_file_size: int, min_file_size: int
 
 
 def run_hash_analysis(strategy: Any) -> dict[str, Any]:
-    start_time = time.time()
+    start_time = time.perf_counter()
     result = HashResult(hash_type=strategy._get_hash_type())
     strategy.last_status = None
     try:
@@ -46,14 +46,14 @@ def run_hash_analysis(strategy: Any) -> dict[str, Any]:
         if validation_error:
             strategy.last_status = AnalyzerStatus.FAILED.value
             result.error = validation_error
-            result.execution_time = time.time() - start_time
+            result.execution_time = time.perf_counter() - start_time
             return result.to_dict()
         result.file_size = strategy._filepath.stat().st_size
         library_available, error_message = strategy._check_library_availability()
         if not library_available:
             strategy.last_status = AnalyzerStatus.DEPENDENCY_UNAVAILABLE.value
             result.error = error_message or "Required library not available"
-            result.execution_time = time.time() - start_time
+            result.execution_time = time.perf_counter() - start_time
             return result.to_dict()
         result.available = True
         hash_value, method_used, error = strategy._calculate_hash()
@@ -69,7 +69,7 @@ def run_hash_analysis(strategy: Any) -> dict[str, Any]:
         strategy.last_status = AnalyzerStatus.FAILED.value
         result.error = f"Unexpected error in {strategy._get_hash_type()} analysis: {str(exc)}"
     finally:
-        result.execution_time = time.time() - start_time
+        result.execution_time = time.perf_counter() - start_time
     return result.to_dict()
 
 
