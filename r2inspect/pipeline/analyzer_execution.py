@@ -63,8 +63,8 @@ def _record_analyzer_execution(context: dict[str, Any], execution: AnalyzerExecu
 
 def _status_from(data: Any, explicit: Any = None, error: Any = None) -> AnalyzerStatus:
     typed_explicit = data.status if isinstance(data, TypedAnalyzerResult) else explicit
-    status = analyzer_status_from_payload(data, typed_explicit)
-    return AnalyzerStatus.FAILED if error and status == AnalyzerStatus.COMPLETED else status
+    del error
+    return analyzer_status_from_payload(data, typed_explicit)
 
 
 def _has_usable_data(data: Any) -> bool:
@@ -107,8 +107,6 @@ def record_analyzer_execution(
     error: str | None = None,
     duration: float | None = None,
 ) -> AnalyzerExecution[Any]:
-    if error is None and isinstance(data, dict) and data.get("error"):
-        error = str(data["error"])
     typed_status = _status_from(data, status, error)
     analyzer_id = data.analyzer_id if isinstance(data, TypedAnalyzerResult) else analyzer_name
     version, output_schema = _execution_identity(stage, analyzer_name)

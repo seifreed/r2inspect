@@ -28,7 +28,7 @@ class AnalyzerStatus(StrEnum):
 
 def analyzer_status_from_payload(value: Any, explicit: Any = None) -> AnalyzerStatus:
     """Resolve status from structured fields only; human messages are never parsed."""
-    if explicit and str(explicit) != AnalyzerStatus.COMPLETED.value:
+    if explicit is not None:
         try:
             return AnalyzerStatus(str(explicit))
         except ValueError:
@@ -42,7 +42,7 @@ def analyzer_status_from_payload(value: Any, explicit: Any = None) -> AnalyzerSt
                 return AnalyzerStatus.FAILED
         if value.get("library_available") is False:
             return AnalyzerStatus.DEPENDENCY_UNAVAILABLE
-        if value.get("available") is False or value.get("error"):
+        if value.get("available") is False:
             return AnalyzerStatus.FAILED
         if value.get("detected") is False:
             return AnalyzerStatus.NOT_DETECTED

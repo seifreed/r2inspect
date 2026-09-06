@@ -13,6 +13,7 @@ from r2inspect.domain.results import (
     AnalyzerStatus,
     AnalyzerWarning,
     TypedAnalyzerResult,
+    analyzer_status_from_payload,
 )
 from r2inspect.modules import yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
@@ -47,6 +48,14 @@ def test_error_text_does_not_infer_analyzer_status() -> None:
         "error": "dependency timeout unsupported",
         "detected": False,
     }
+
+
+def test_error_text_does_not_infer_execution_status() -> None:
+    assert analyzer_status_from_payload({"error": "dependency timeout"}) is AnalyzerStatus.COMPLETED
+    assert (
+        analyzer_status_from_payload({"error": "dependency timeout"}, "completed")
+        is AnalyzerStatus.COMPLETED
+    )
 
 
 def test_clean_result_keeps_not_detected_state() -> None:
@@ -194,7 +203,7 @@ def test_outcomes_cover_execution_and_legacy_status_metadata() -> None:
     assert {item.analyzer_id: item.status.value for item in outcomes} == {
         "dependency": "dependency_unavailable",
         "missing": "failed",
-        "typed": "failed",
+        "typed": "completed",
         "sidecar": "not_applicable",
     }
     assert next(item for item in outcomes if item.analyzer_id == "typed").metrics == {

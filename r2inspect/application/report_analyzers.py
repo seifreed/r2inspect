@@ -22,7 +22,7 @@ def _status(value: dict[str, Any]) -> AnalyzerStatus:
             pass
     if value.get("library_available") is False:
         return AnalyzerStatus.DEPENDENCY_UNAVAILABLE
-    if value.get("error") or value.get("available") is False:
+    if value.get("available") is False:
         return AnalyzerStatus.FAILED
     return (
         AnalyzerStatus.NOT_DETECTED if value.get("detected") is False else AnalyzerStatus.COMPLETED
@@ -72,9 +72,6 @@ def _execution_outcomes(
 def _typed_outcome(analyzer_id: str, value: TypedAnalyzerResult) -> AnalyzerOutcomeV1:
     status = value.status
     error = value.error
-    if status == "completed" and not error and value.get("error"):
-        status = _status(value).value
-        error = str(value.get("error"))
     try:
         typed_status = AnalyzerStatus(status)
     except ValueError:
