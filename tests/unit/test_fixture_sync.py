@@ -121,3 +121,4 @@ def test_ensure_expected_snapshots_creates_json_payloads(tmp_path: Path) -> None
 
     payload = (fixtures_dir / "expected" / "hello_pe.json").read_text(encoding="utf-8")
     assert '"file_format": "PE"' in payload
+    assert '"path": "samples/fixtures/hello_pe.exe"' in payload

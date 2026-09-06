@@ -9,7 +9,7 @@
   },
   "file_info": {
     "name": "edge_high_entropy.bin",
-    "path": "/Users/seifreed/tools/malware/r2inspect/samples/fixtures/edge_high_entropy.bin",
+    "path": "samples/fixtures/edge_high_entropy.bin",
     "size": 65536,
     "md5": "699dca930cfec796bbc01842e16c0444",
     "sha1": "08c0eadab3cfbb62881d7c8a04614d22fccc92b8",

@@ -83,7 +83,7 @@ def _build_expected_payload(path: Path) -> dict[str, object]:
         "hashes": {"md5": md5, "sha1": sha1, "sha256": sha256},
         "file_info": {
             "name": path.name,
-            "path": str(path),
+            "path": f"samples/fixtures/{path.name}",
             "size": path.stat().st_size,
             "md5": md5,
             "sha1": sha1,

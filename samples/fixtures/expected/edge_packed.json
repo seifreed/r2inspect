@@ -9,7 +9,7 @@
   },
   "file_info": {
     "name": "edge_packed.bin",
-    "path": "/Users/seifreed/tools/malware/r2inspect/samples/fixtures/edge_packed.bin",
+    "path": "samples/fixtures/edge_packed.bin",
     "size": 1090,
     "md5": "8b3b297c69965f31f17892a0c8db17a3",
     "sha1": "0710c39fe1607718b727b9fb55bee20bc54df5c4",

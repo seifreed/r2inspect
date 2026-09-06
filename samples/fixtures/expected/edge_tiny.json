@@ -9,7 +9,7 @@
   },
   "file_info": {
     "name": "edge_tiny.bin",
-    "path": "/Users/seifreed/tools/malware/r2inspect/samples/fixtures/edge_tiny.bin",
+    "path": "samples/fixtures/edge_tiny.bin",
     "size": 32,
     "md5": "70bc8f4b72a86921468bf8e8441dce51",
     "sha1": "de8a847bff8c343d69b853a215e6ee775ef2ef96",
