@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import re
 from typing import Any
-
 
 REQUIRED_AUDIT_SECTIONS = (
     "## Scope",
@@ -15,6 +14,7 @@ REQUIRED_AUDIT_SECTIONS = (
 REQUIREMENT_ID_PATTERN = re.compile(r"^[A-Z]+-[0-9]{2,}$")
 REQUIREMENTS_ALLOWED_STATUSES = {"Pending", "In Progress", "Complete", "Blocked"}
 PHASE_ID_PATTERN = re.compile(r"^[0-9]+(?:\.[0-9]+)?$")
+TIMESTAMP_SKEW_TOLERANCE = timedelta(seconds=1)
 COVERAGE_MATRIX_SCHEMA_VERSION = "coverage_matrix.v1"
 COVERAGE_CAUSE_ORDER = (
     "unmapped_requirement",
@@ -77,8 +77,8 @@ def _parse_iso_utc(value: str) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _ordered_failure_groups(
@@ -614,17 +614,18 @@ def evaluate_milestone_governance_gate(
         )
     else:
         stale_reasons: list[str] = []
+        stale_cutoff = audited_at + TIMESTAMP_SKEW_TOLERANCE
         state_path = planning_root / "STATE.md"
         if state_path.exists():
             state_frontmatter = _parse_frontmatter(state_path.read_text(encoding="utf-8"))
             state_updated = _parse_iso_utc(state_frontmatter.get("last_updated", ""))
-            if state_updated and state_updated > audited_at:
+            if state_updated and state_updated > stale_cutoff:
                 stale_reasons.append("STATE.md last_updated is newer than audit timestamp")
 
         roadmap_path = planning_root / "ROADMAP.md"
         if roadmap_path.exists():
-            roadmap_updated = datetime.fromtimestamp(roadmap_path.stat().st_mtime, tz=timezone.utc)
-            if roadmap_updated > audited_at:
+            roadmap_updated = datetime.fromtimestamp(roadmap_path.stat().st_mtime, tz=UTC)
+            if roadmap_updated > stale_cutoff:
                 stale_reasons.append("ROADMAP.md modification time is newer than audit timestamp")
 
         if stale_reasons:

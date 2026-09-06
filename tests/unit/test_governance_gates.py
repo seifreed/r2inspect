@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import time
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 MODULE_PATH = Path(__file__).resolve().parents[2] / "scripts" / "governance_gates.py"
 SPEC = importlib.util.spec_from_file_location("governance_gates", MODULE_PATH)
@@ -1106,6 +1108,20 @@ def test_gate_fails_when_audit_is_stale_against_state_or_roadmap(tmp_path: Path)
     assert result["passed"] is False
     assert "stale_audit" in result["failure_groups"]
     assert result["failure_groups"]["stale_audit"][0]["code"] == "stale_audit"
+
+
+def test_gate_tolerates_filesystem_timestamp_skew(tmp_path: Path) -> None:
+    planning_root = tmp_path / ".planning"
+    planning_root.mkdir(parents=True)
+    audited = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    _write_audit(planning_root, version="v1.1", audited=audited)
+    roadmap = _write_roadmap(planning_root)
+    skewed_mtime = time.time() + 0.5
+    os.utime(roadmap, (skewed_mtime, skewed_mtime))
+
+    result = evaluate_milestone_governance_gate(planning_root, "v1.1")
+
+    assert result["passed"] is True
 
 
 def test_gate_groups_multiple_failures_in_deterministic_order(tmp_path: Path) -> None:
