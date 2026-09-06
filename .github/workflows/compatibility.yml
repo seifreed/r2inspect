@@ -75,19 +75,11 @@ jobs:
         shell: bash
         run: |
           marker="not slow and not requires_posix"
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            python -m pytest tests/unit \
-              -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
-          else
-            python -m pytest \
-              tests/unit/product \
-              tests/unit/test_result_semantics.py \
-              tests/unit/test_report_builder.py \
-              tests/unit/test_benchmark_reports.py \
-              tests/unit/test_differential_tools.py \
-              tests/unit/test_backends_consensus.py \
-              -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
-          fi
+          # Run the complete unit suite on every platform. The shared pytest
+          # configuration skips only tests that assert POSIX or direct-r2pipe
+          # semantics unavailable on Windows.
+          python -m pytest tests/unit \
+            -m "$marker" -k "not impfuzzy and not telfhash" --timeout=180
           if [ "$RUNNER_OS" != "Windows" ]; then
             python -m pytest tests/integration/test_integration_edge_cases.py -m requires_r2 --timeout=180
           fi
