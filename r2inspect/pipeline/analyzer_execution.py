@@ -245,6 +245,9 @@ def _store_success(
         ]
     data = _typed_result(analyzer_id, data, status=typed_status.value, error=error)
     _results_bucket(context)[result_key] = data
+    structured_errors, structured_warnings = _structured_issues(analyzer_id, data)
+    errors = [*errors, *structured_errors]
+    warnings = [*warnings, *structured_warnings]
     version, output_schema = _execution_identity(stage, analyzer_name)
     raw_duration = data.get("execution_time") if isinstance(data, dict) else None
     execution: AnalyzerExecution[Any] = AnalyzerExecution(

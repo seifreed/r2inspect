@@ -18,7 +18,7 @@ from r2inspect.domain.results import (
 )
 from r2inspect.modules import yara_analyzer as yara_module
 from r2inspect.modules.yara_analyzer import YaraAnalyzer
-from r2inspect.pipeline.analyzer_execution import record_analyzer_execution
+from r2inspect.pipeline.analyzer_execution import record_analyzer_execution, run_registered_analyzer
 
 
 def test_failed_detection_is_not_reported_as_not_detected() -> None:
@@ -168,6 +168,59 @@ def test_execution_envelope_uses_registered_analyzer_id() -> None:
     )
 
     assert execution.analyzer_id == "pe_analyzer"
+
+
+def test_registered_analyzer_carries_structured_issues_into_envelope() -> None:
+    class Analyzer:
+        def analyze(self):
+            return {
+                "status": "partial",
+                "errors": [
+                    {
+                        "code": "SECONDARY_FAILED",
+                        "component": "detector.secondary",
+                        "message": "secondary strategy failed",
+                        "recoverable": True,
+                    }
+                ],
+                "warnings": [
+                    {
+                        "code": "LOW_CONFIDENCE",
+                        "component": "detector",
+                        "message": "evidence is incomplete",
+                    }
+                ],
+            }
+
+    class Registry:
+        def get_analyzer_class(self, _name):
+            return Analyzer
+
+        def get_metadata(self, _name):
+            return None
+
+    class Stage:
+        registry = Registry()
+        adapter = None
+        config = None
+        filename = "sample.bin"
+        analyzer_factory = staticmethod(lambda _cls, **_kwargs: Analyzer())
+
+    context = {"results": {}}
+    run_registered_analyzer(
+        Stage(),
+        context,
+        "detector",
+        "detector",
+        invoke=lambda analyzer: analyzer.analyze(),
+        error_default=lambda _exc: {},
+        log_label="detector",
+    )
+
+    execution = context["results"]["_analyzer_executions"][0]
+    assert execution.status is AnalyzerStatus.PARTIAL
+    assert execution.errors[0].code == "SECONDARY_FAILED"
+    assert execution.warnings[0].code == "LOW_CONFIDENCE"
 
 
 def test_analysis_result_keeps_execution_envelope_out_of_legacy_payload() -> None:
