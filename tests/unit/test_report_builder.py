@@ -27,13 +27,20 @@ def test_build_report_v1_maps_core_data_findings_and_outcomes() -> None:
             },
             "hashing": {"ssdeep": "3:abc"},
             "security": {"aslr": True, "dep": True, "guard_cf": False},
-            "indicators": [
-                {
-                    "type": "suspicious_import",
-                    "description": "Creates a process",
-                    "severity": "High",
-                }
-            ],
+            "import_analysis": {
+                "findings": [
+                    {
+                        "finding_id": "finding-1",
+                        "rule_id": "import.suspicious_process.v1",
+                        "title": "Creates a process",
+                        "category": "behavior",
+                        "severity": "high",
+                        "confidence": 0.9,
+                        "source_analyzer": "import_analyzer",
+                        "method": "import_context",
+                    }
+                ]
+            },
             "yara": {
                 "available": False,
                 "status": "dependency_unavailable",
