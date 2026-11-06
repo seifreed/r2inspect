@@ -1,26 +1,54 @@
 #!/usr/bin/env python3
-"""Thread-safe logging utilities for r2inspect infrastructure."""
+"""Central configuration facade for r2inspect logging."""
 
 from __future__ import annotations
 
 import logging
 import logging.handlers
+import os
 import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from .logging_context import (
+    ContextFilter,
+    bind_log_context,
+    command_name,
+    current_log_context,
+    parse_traceparent,
+    redact,
+    sanitize_text,
+)
+from .logging_formatters import JsonFormatter, SafeFormatter
+
+TRACE = 5
+logging.addLevelName(TRACE, "TRACE")
+
 _logger_lock = threading.Lock()
 _loggers_initialized: set[str] = set()
 
 
+class _PrivateRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """Keep every active log file private across rollover."""
+
+    def _open(self):  # type: ignore[no-untyped-def]
+        stream = super()._open()
+        try:
+            os.chmod(self.baseFilename, 0o600)
+        except OSError:
+            stream.close()
+            raise
+        return stream
+
+
 def _handler_is_closed(handler: logging.Handler) -> bool:
     stream = getattr(handler, "stream", None)
-    return bool(stream is not None and getattr(stream, "closed", False))
+    return bool(getattr(handler, "_closed", False) or (stream and getattr(stream, "closed", False)))
 
 
 def _reuse_existing_handlers(logger: logging.Logger, name: str) -> logging.Logger | None:
-    """Return the logger when its handlers are reusable, else clear closed ones and return None."""
+    """Return the logger when its handlers are reusable, else clear closed ones."""
     if not logger.handlers:
         return None
     if any(_handler_is_closed(handler) for handler in logger.handlers):
@@ -36,7 +64,7 @@ def _reuse_existing_handlers(logger: logging.Logger, name: str) -> logging.Logge
 
 
 def _build_file_handler(
-    log_dir: Path,
+    log_file: Path,
     *,
     thread_safe: bool,
     file_handler_factory: Callable[[], logging.Handler] | None,
@@ -44,95 +72,180 @@ def _build_file_handler(
     if file_handler_factory is not None:
         return file_handler_factory()
     if thread_safe:
-        return logging.handlers.RotatingFileHandler(
-            log_dir / "r2inspect.log",
-            maxBytes=10 * 1024 * 1024,
-            backupCount=5,
+        return _PrivateRotatingFileHandler(
+            log_file,
+            maxBytes=max(int(os.getenv("R2INSPECT_LOG_MAX_BYTES", str(10 * 1024 * 1024))), 1),
+            backupCount=max(int(os.getenv("R2INSPECT_LOG_BACKUP_COUNT", "5")), 1),
+            encoding="utf-8",
         )
-    return logging.FileHandler(log_dir / "r2inspect.log")
+    handler = logging.FileHandler(log_file, encoding="utf-8")
+    try:
+        log_file.chmod(0o600)
+    except OSError:
+        handler.close()
+        raise
+    return handler
 
 
-def _standard_formatter(thread_safe: bool) -> logging.Formatter:
-    if thread_safe:
-        return logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - [%(thread)d] - %(message)s"
+def _formatter(format_name: str, thread_safe: bool) -> logging.Formatter:
+    if format_name == "json":
+        return JsonFormatter(
+            service=os.getenv("R2INSPECT_SERVICE", "r2inspect"),
+            environment=os.getenv("R2INSPECT_ENVIRONMENT", "development"),
         )
-    return logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    suffix = " [%(thread)d]" if thread_safe else ""
+    return SafeFormatter(
+        f"%(asctime)sZ %(levelname)s %(name)s{suffix} %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+
+
+def _configured_level(level: int | str) -> int:
+    configured = os.getenv("R2INSPECT_LOG_LEVEL")
+    candidate: int | str = configured if configured else level
+    if isinstance(candidate, int):
+        return candidate
+    normalized = candidate.strip().upper()
+    if normalized == "TRACE":
+        return TRACE
+    resolved = logging.getLevelName(normalized)
+    if isinstance(resolved, int):
+        return resolved
+    raise ValueError(f"invalid log level: {candidate}")
 
 
 def setup_logger(
     name: str = "r2inspect",
-    level: int = logging.INFO,
+    level: int | str = logging.INFO,
     thread_safe: bool = True,
     *,
     file_handler_factory: Callable[[], logging.Handler] | None = None,
+    format_name: str | None = None,
+    destination: str | None = None,
+    log_file: str | Path | None = None,
 ) -> logging.Logger:
-    """Setup a logger with console and file handlers."""
+    """Configure a logger from explicit values or ``R2INSPECT_LOG_*`` environment variables."""
     with _logger_lock:
         logger = logging.getLogger(name)
-        logger.setLevel(level)
+        configured_level = _configured_level(level)
+        logger.setLevel(configured_level)
+        logger.propagate = False
 
         reused = _reuse_existing_handlers(logger, name)
         if reused is not None:
+            for handler in reused.handlers:
+                if not isinstance(handler, logging.FileHandler):
+                    handler.setLevel(configured_level)
             return reused
 
-        console_handler = logging.StreamHandler(sys.stderr)
-        console_handler.setLevel(level)
-        # The handler keeps its default reentrant lock. It must stay reentrant:
-        # Handler.handle() holds the lock while StreamHandler.emit() calls
-        # flush(), which re-acquires it on the same thread -- a plain Lock would
-        # self-deadlock and wedge every batch worker the first time it logs.
+        selected_format = (format_name or os.getenv("R2INSPECT_LOG_FORMAT") or "text").lower()
+        if selected_format not in {"json", "text"}:
+            raise ValueError("log format must be 'json' or 'text'")
+        selected_destination = (
+            destination or os.getenv("R2INSPECT_LOG_DESTINATION") or "both"
+        ).lower()
+        if selected_destination not in {"stderr", "file", "both"}:
+            raise ValueError("log destination must be 'stderr', 'file', or 'both'")
 
-        try:
-            log_dir = Path.home() / ".r2inspect" / "logs"
-            log_dir.mkdir(parents=True, exist_ok=True)
-
-            file_handler = _build_file_handler(
-                log_dir, thread_safe=thread_safe, file_handler_factory=file_handler_factory
-            )
-            file_handler.setLevel(logging.DEBUG)
-
-            formatter = _standard_formatter(thread_safe)
+        formatter = _formatter(selected_format, thread_safe)
+        context_filter = ContextFilter()
+        if selected_destination in {"stderr", "both"}:
+            console_handler = logging.StreamHandler(sys.stderr)
+            console_handler.setLevel(configured_level)
             console_handler.setFormatter(formatter)
-            file_handler.setFormatter(formatter)
+            console_handler.addFilter(context_filter)
             logger.addHandler(console_handler)
-            logger.addHandler(file_handler)
 
-        except Exception:
-            formatter = logging.Formatter(
-                "%(levelname)s - [%(thread)d] - %(message)s"
-                if thread_safe
-                else "%(levelname)s - %(message)s"
-            )
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
+        if selected_destination in {"file", "both"}:
+            try:
+                path = Path(
+                    log_file
+                    or os.getenv("R2INSPECT_LOG_FILE", "")
+                    or Path.home() / ".r2inspect" / "logs" / "r2inspect.log"
+                ).expanduser()
+                path.parent.mkdir(parents=True, exist_ok=True)
+                file_handler = _build_file_handler(
+                    path,
+                    thread_safe=thread_safe,
+                    file_handler_factory=file_handler_factory,
+                )
+                file_handler.setLevel(TRACE)
+                file_handler.setFormatter(formatter)
+                file_handler.addFilter(context_filter)
+                logger.addHandler(file_handler)
+            except Exception as exc:
+                if not logger.handlers:
+                    console_handler = logging.StreamHandler(sys.stderr)
+                    console_handler.setLevel(configured_level)
+                    console_handler.setFormatter(formatter)
+                    console_handler.addFilter(context_filter)
+                    logger.addHandler(console_handler)
+                logger.warning(
+                    "File logging unavailable; using stderr",
+                    extra={
+                        "event_name": "logging.file_unavailable",
+                        "error_type": type(exc).__name__,
+                        "outcome": "degraded",
+                    },
+                )
 
         _loggers_initialized.add(name)
         return logger
 
 
 def get_logger(name: str = "r2inspect") -> logging.Logger:
-    """Get an existing logger instance."""
+    """Return a standard logger; children propagate to the configured r2inspect logger."""
     return logging.getLogger(name)
 
 
+def flush_logging() -> None:
+    """Best-effort flush for controlled shutdown boundaries."""
+    for logger_name in tuple(_loggers_initialized):
+        for handler in logging.getLogger(logger_name).handlers:
+            try:
+                handler.flush()
+            except Exception:
+                continue
+
+
+_MANAGED_LOGGERS = (
+    "r2inspect",
+    "r2inspect.core",
+    "r2inspect.pipeline",
+    "r2inspect.modules",
+    "r2inspect.infrastructure",
+    "r2inspect.utils",
+)
+
+
 def configure_batch_logging() -> None:
-    """Configure logging for batch processing to reduce noise."""
+    """Reduce per-item batch noise while preserving warnings and failures."""
     with _logger_lock:
-        logging.getLogger("r2inspect").setLevel(logging.WARNING)
-        logging.getLogger("r2inspect.core").setLevel(logging.WARNING)
-        logging.getLogger("r2inspect.pipeline").setLevel(logging.WARNING)
-        logging.getLogger("r2inspect.modules").setLevel(logging.WARNING)
-        logging.getLogger("r2inspect.infrastructure").setLevel(logging.WARNING)
-        logging.getLogger("r2inspect.utils").setLevel(logging.WARNING)
+        for logger_name in _MANAGED_LOGGERS:
+            logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 
 def reset_logging_levels() -> None:
-    """Reset logging levels to normal."""
+    """Reset managed logger levels to the configured operational default."""
     with _logger_lock:
-        logging.getLogger("r2inspect").setLevel(logging.INFO)
-        logging.getLogger("r2inspect.core").setLevel(logging.INFO)
-        logging.getLogger("r2inspect.pipeline").setLevel(logging.INFO)
-        logging.getLogger("r2inspect.modules").setLevel(logging.INFO)
-        logging.getLogger("r2inspect.infrastructure").setLevel(logging.INFO)
-        logging.getLogger("r2inspect.utils").setLevel(logging.INFO)
+        level = _configured_level(logging.INFO)
+        for logger_name in _MANAGED_LOGGERS:
+            logging.getLogger(logger_name).setLevel(level)
+
+
+__all__ = [
+    "JsonFormatter",
+    "SafeFormatter",
+    "TRACE",
+    "bind_log_context",
+    "command_name",
+    "configure_batch_logging",
+    "current_log_context",
+    "flush_logging",
+    "get_logger",
+    "parse_traceparent",
+    "redact",
+    "reset_logging_levels",
+    "sanitize_text",
+    "setup_logger",
+]

@@ -139,7 +139,10 @@ def test_validate_existing_path_socket_raises():
     sock_path = Path(short_dir) / "s.sock"
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        sock.bind(str(sock_path))
+        try:
+            sock.bind(str(sock_path))
+        except PermissionError:
+            pytest.skip("sandbox denies AF_UNIX bind")
         v = FileValidator()
         with pytest.raises(ValueError, match="not a regular file or directory"):
             v.validate_path(str(sock_path), check_exists=True)

@@ -121,23 +121,34 @@ def terminate_radare2_processes(
 ) -> None:
     iterator = process_iter if process_iter is not None else psutil.process_iter
     terminated: list[Any] = []
-    for proc in iterator(["name", "cmdline"]):
-        try:
-            info = proc.info
-            if info.get("name") != "radare2":
+    try:
+        for proc in iterator(["name", "cmdline"]):
+            try:
+                info = proc.info
+                if info.get("name") != "radare2":
+                    continue
+                cmdline = info.get("cmdline") or []
+                # Match the filename as a whole argv element, not a substring:
+                # r2pipe passes session.filename verbatim as its own argv entry, so
+                # a substring test would also kill unrelated radare2 sessions whose
+                # path merely contains this one (e.g. "a.bin" inside "a.bin.packed"
+                # or "lib.so" inside "mylib.so").
+                if any(filename == part for part in cmdline):
+                    proc.terminate()
+                    terminated.append(proc)
+            except Exception as exc:
+                _log.debug("Failed to inspect/terminate radare2 process: %s", exc)
                 continue
-            cmdline = info.get("cmdline") or []
-            # Match the filename as a whole argv element, not a substring:
-            # r2pipe passes session.filename verbatim as its own argv entry, so
-            # a substring test would also kill unrelated radare2 sessions whose
-            # path merely contains this one (e.g. "a.bin" inside "a.bin.packed"
-            # or "lib.so" inside "mylib.so").
-            if any(filename == part for part in cmdline):
-                proc.terminate()
-                terminated.append(proc)
-        except Exception as exc:
-            _log.debug("Failed to inspect/terminate radare2 process: %s", exc)
-            continue
+    except (PermissionError, psutil.AccessDenied) as exc:
+        _log.warning(
+            "Unable to enumerate radare2 processes",
+            extra={
+                "event_name": "r2.cleanup_process_scan_unavailable",
+                "error_type": type(exc).__name__,
+                "outcome": "degraded",
+            },
+        )
+        return
     for proc in terminated:
         _escalate_kill(proc, kill_timeout)
 

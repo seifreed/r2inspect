@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import shlex
 import shutil
@@ -16,6 +17,10 @@ from pathlib import Path
 from typing import Any, cast
 
 import psutil
+
+from .logging import command_name, get_logger
+
+logger = get_logger(__name__)
 
 _CAPTURE_BYTES = 4 * 1024 * 1024
 _SPOOL_BYTES = 256 * 1024 * 1024
@@ -111,7 +116,10 @@ def _resource_violation(process: subprocess.Popen[Any], stdout: Path, stderr: Pa
         return f"external command output exceeded {max_spool} bytes"
     try:
         root = psutil.Process(process.pid)
-        processes = [root, *root.children(recursive=True)]
+        processes = [root]
+        # The root process remains enforceable in restricted macOS sandboxes.
+        with contextlib.suppress(PermissionError, psutil.AccessDenied):
+            processes.extend(root.children(recursive=True))
         if len(processes) > _env_int("R2INSPECT_CMD_MAX_PROCESSES", _MAX_PROCESSES):
             return "external command process limit exceeded"
         memory = sum(item.memory_info().rss for item in processes)
@@ -122,7 +130,7 @@ def _resource_violation(process: subprocess.Popen[Any], stdout: Path, stderr: Pa
         max_cpu = _env_int("R2INSPECT_CMD_CPU_SECONDS", 120)
         if cpu > max_cpu:
             return f"external command CPU limit exceeded ({cpu:.2f} > {max_cpu})"
-    except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
+    except (PermissionError, psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
         pass
     return None
 
@@ -253,20 +261,64 @@ def run_command(command: Sequence[str], *, cwd: str | None = None, timeout: floa
     """Run an argv-only command with bounded capture and resource limits."""
     if not command:
         raise ValueError("command must not be empty")
-    argv = _argv(command)
-    effective_timeout = resolve_timeout(timeout)
-    output_dir = os.environ.get("R2INSPECT_CMD_OUTPUT_DIR")
-    with _output_files(output_dir) as output_files:
-        stdout_handle, stderr_handle, stdout_path, stderr_path = output_files
-        return _run_process(
-            argv,
-            cwd,
-            effective_timeout,
-            stdout_handle,
-            stderr_handle,
-            stdout_path,
-            stderr_path,
+    executable = command_name(Path(str(command[0])).name)
+    started = time.monotonic()
+    try:
+        argv = _argv(command)
+        effective_timeout = resolve_timeout(timeout)
+        output_dir = os.environ.get("R2INSPECT_CMD_OUTPUT_DIR")
+        with _output_files(output_dir) as output_files:
+            stdout_handle, stderr_handle, stdout_path, stderr_path = output_files
+            result = _run_process(
+                argv,
+                cwd,
+                effective_timeout,
+                stdout_handle,
+                stderr_handle,
+                stdout_path,
+                stderr_path,
+            )
+    except (CommandTimeout, CommandResourceError) as exc:
+        logger.warning(
+            "External command constrained",
+            extra={
+                "event_name": "external_command.constrained",
+                "operation": "execute_external_command",
+                "command": executable,
+                "duration_ms": round((time.monotonic() - started) * 1000, 3),
+                "outcome": "failed",
+                "error_type": type(exc).__name__,
+            },
         )
+        raise
+    except Exception as exc:
+        logger.debug(
+            "External command unavailable: %s",
+            type(exc).__name__,
+            exc_info=True,
+            extra={
+                "event_name": "external_command.failed",
+                "operation": "execute_external_command",
+                "command": executable,
+                "duration_ms": round((time.monotonic() - started) * 1000, 3),
+                "outcome": "failed",
+                "error_type": type(exc).__name__,
+            },
+        )
+        raise
+    logger.log(
+        logging.DEBUG if result.returncode == 0 else logging.WARNING,
+        "External command completed",
+        extra={
+            "event_name": "external_command.completed",
+            "operation": "execute_external_command",
+            "command": executable,
+            "duration_ms": round((time.monotonic() - started) * 1000, 3),
+            "status": result.returncode,
+            "outcome": "success" if result.returncode == 0 else "failed",
+        },
+    )
+    return result
 
 
 __all__ = [

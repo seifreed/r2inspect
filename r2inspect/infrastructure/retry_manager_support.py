@@ -7,9 +7,37 @@ import json
 import random
 import time
 from collections.abc import Callable
-from typing import Any
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, TypedDict
 
 _secure_rng = random.SystemRandom()
+
+
+class RetryStats(TypedDict):
+    total_retries: int
+    successful_retries: int
+    failed_after_retries: int
+    commands_retried: dict[str, int]
+    error_types_retried: dict[str, int]
+
+
+class RetryStrategy(Enum):
+    FIXED_DELAY = "fixed_delay"
+    EXPONENTIAL_BACKOFF = "exponential_backoff"
+    LINEAR_BACKOFF = "linear_backoff"
+    RANDOM_JITTER = "random_jitter"
+
+
+@dataclass
+class RetryConfig:
+    max_attempts: int = 3
+    base_delay: float = 0.1
+    max_delay: float = 5.0
+    strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF
+    jitter: bool = True
+    backoff_multiplier: float = 2.0
+    timeout: float | None = None
 
 
 class RetryableError(Exception): ...

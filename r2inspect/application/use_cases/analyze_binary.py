@@ -4,10 +4,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 from typing import TYPE_CHECKING, Any
+import uuid
 
+from ...infrastructure.logging import bind_log_context, current_log_context, get_logger
 from ..result_mapper import build_analysis_result
 from ..analysis_service import AnalysisService, default_analysis_service
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from ...interfaces import BinaryInspector
@@ -40,14 +45,41 @@ class AnalyzeBinaryUseCase:
         self._analysis_service = analysis_service or default_analysis_service
 
     def execute(self, request: AnalyzeBinaryRequest) -> AnalysisResult:
-        if request.reset_stats:
-            self._analysis_service.reset_stats()
-        results = self._analysis_service.execute(request.inspector, request.options)
-        if request.include_statistics:
-            self._analysis_service.add_statistics(results)
-        if request.validate_schemas:
-            self._analysis_service.validate_results(results)
-        return build_analysis_result(results)
+        correlation_id = current_log_context().get("correlation_id") or uuid.uuid4().hex
+        started = time.perf_counter()
+        with bind_log_context(correlation_id=correlation_id, operation="analyze_binary"):
+            logger.debug(
+                "Binary analysis started",
+                extra={"event_name": "analysis.started", "profile": request.options.get("profile")},
+            )
+            try:
+                if request.reset_stats:
+                    self._analysis_service.reset_stats()
+                results = self._analysis_service.execute(request.inspector, request.options)
+                if request.include_statistics:
+                    self._analysis_service.add_statistics(results)
+                if request.validate_schemas:
+                    self._analysis_service.validate_results(results)
+                result = build_analysis_result(results)
+            except Exception:
+                logger.exception(
+                    "Binary analysis failed",
+                    extra={
+                        "event_name": "analysis.failed",
+                        "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                        "outcome": "failed",
+                    },
+                )
+                raise
+            logger.info(
+                "Binary analysis completed",
+                extra={
+                    "event_name": "analysis.completed",
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                    "outcome": "success",
+                },
+            )
+            return result
 
     def run(
         self,

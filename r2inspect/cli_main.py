@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Click-based command-line entry point for r2inspect.
-Copyright (C) 2025 Marc Rivero López
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-"""
+"""Click-based command-line entry point for r2inspect."""
 
 import json
 import sys
@@ -40,6 +28,7 @@ from .cli.validators import (
     validate_input_mode,
     validate_inputs,
 )
+from .infrastructure.logging import flush_logging
 
 
 @dataclass
@@ -85,6 +74,8 @@ def main(
 
     except Exception as e:
         (error_handler_fn or handle_main_error)(e, args.verbose if args else False)
+    finally:
+        flush_logging()
 
 
 @click.command()

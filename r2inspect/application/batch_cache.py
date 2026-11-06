@@ -8,6 +8,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from ..infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def _digest_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -54,6 +58,14 @@ class BatchCache:
                 "SELECT result_json FROM batch_results WHERE sha256 = ? AND config_digest = ?",
                 (self._sample_digest(path), self.config_digest),
             ).fetchone()
+        logger.debug(
+            "Batch cache lookup completed",
+            extra={
+                "event_name": "batch_cache.lookup",
+                "operation": "cache_get",
+                "outcome": "hit" if row else "miss",
+            },
+        )
         return json.loads(row[0]) if row else None
 
     def put(self, path: Path, result: dict[str, Any]) -> None:
@@ -67,6 +79,14 @@ class BatchCache:
                     json.dumps(result, default=str, sort_keys=True),
                 ),
             )
+        logger.debug(
+            "Batch cache entry stored",
+            extra={
+                "event_name": "batch_cache.stored",
+                "operation": "cache_put",
+                "outcome": "success",
+            },
+        )
 
 
 __all__ = ["BatchCache"]

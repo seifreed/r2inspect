@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 import copy
 import logging
 import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -67,14 +68,42 @@ class AnalysisStage(ABC):
             return {}
         executions = _results_bucket(context).get("_analyzer_executions")
         execution_count = len(executions) if isinstance(executions, list) else 0
+        started = time.perf_counter()
         try:
             logger.debug("Executing stage '%s'", self.name)
             result = self._execute(context)
         except Exception as e:
-            logger.error("Stage '%s' failed: %s", self.name, e)
+            logger.exception(
+                "Stage '%s' failed: %s",
+                self.name,
+                e,
+                extra={
+                    "event_name": "pipeline.stage_failed",
+                    "stage": self.name,
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                    "outcome": "failed",
+                },
+            )
             # Return error structure under results
             _results_bucket(context)[self.name] = {"error": str(e), "success": False}
             result = {self.name: {"error": str(e), "success": False}}
+        else:
+            entry = result.get(self.name)
+            succeeded = not (isinstance(entry, dict) and entry.get("success") is False)
+            logger.log(
+                logging.DEBUG if succeeded else logging.WARNING,
+                "Stage '%s' completed with outcome %s",
+                self.name,
+                "success" if succeeded else "failed",
+                extra={
+                    "event_name": (
+                        "pipeline.stage_completed" if succeeded else "pipeline.stage_failed"
+                    ),
+                    "stage": self.name,
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                    "outcome": "success" if succeeded else "failed",
+                },
+            )
         current = _results_bucket(context).get("_analyzer_executions")
         if isinstance(current, list) and len(current) > execution_count:
             result["_analyzer_executions"] = current[execution_count:]

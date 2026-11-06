@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from concurrent.futures import as_completed
+from contextvars import copy_context
 from typing import TYPE_CHECKING, Any, cast
 
 from .pipeline_runtime_common import (
@@ -121,7 +123,8 @@ def submit_ready_stages(
 ) -> dict[Future[tuple[dict[str, Any], bool]], AnalysisStage]:
     future_to_stage: dict[Future[tuple[dict[str, Any], bool]], AnalysisStage] = {}
     for stage in ready_stages:
-        future = executor.submit(stage_executor, stage, ts_context)
+        context = copy_context()
+        future = executor.submit(context.run, stage_executor, stage, ts_context)
         future_to_stage[future] = stage
     return future_to_stage
 
@@ -154,9 +157,9 @@ def collect_futures(
                 logger.debug("Stage '%s' completed successfully", stage.name)
             else:
                 failed_count += 1
-                logger.warning("Stage '%s' failed", stage.name)
+                logger.debug("Stage '%s' returned a failed result", stage.name)
         except Exception as exc:
-            logger.error("Unexpected error executing stage '%s': %s", stage.name, exc)
+            logger.exception("Unexpected error executing stage '%s': %s", stage.name, exc)
             with completed_lock:
                 completed.add(stage.name)
                 failed.add(stage.name)
@@ -183,8 +186,10 @@ def execute_stage_with_timeout(
 
         # A timed-out stage may still be running; keep that worker from
         # preventing the test runner or CLI process from shutting down.
+        log_context = copy_context()
         timeout_thread = threading.Thread(
-            target=run_stage,
+            target=log_context.run,
+            args=(run_stage,),
             daemon=True,
             name=f"r2inspect-stage-{stage.name}",
         )
@@ -318,18 +323,34 @@ def execute_parallel_pipeline(
 ) -> dict[str, Any]:
     pipeline._execution_count += 1
     execution_id = pipeline._execution_count
-    logger.info(
+    started = time.perf_counter()
+    logger.debug(
         "Starting parallel pipeline execution #%s with %s stages",
         execution_id,
         len(pipeline.stages),
+        extra={
+            "event_name": "pipeline.started",
+            "execution_id": execution_id,
+            "execution_mode": "parallel",
+        },
     )
     ts_context = build_threadsafe_context(options, execution_id)
     counts = _run_parallel_rounds(pipeline, ts_context)
-    logger.info(
+    logger.debug(
         "Parallel pipeline execution #%s complete: %s succeeded, %s failed, %s skipped",
         execution_id,
         counts["executed"],
         counts["failed"],
         counts["skipped"],
+        extra={
+            "event_name": "pipeline.completed",
+            "execution_id": execution_id,
+            "execution_mode": "parallel",
+            "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+            "succeeded_count": counts["executed"],
+            "failed_count": counts["failed"],
+            "skipped_count": counts["skipped"],
+            "outcome": "partial" if counts["failed"] else "success",
+        },
     )
     return cast(dict[str, Any], ts_context.get("results", {}))

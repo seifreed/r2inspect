@@ -12,6 +12,8 @@ from collections.abc import Callable
 from enum import Enum
 from typing import Any, TypedDict
 
+from .logging import command_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -118,6 +120,13 @@ class CircuitBreaker:
                 self.name,
                 self.state.value,
                 new_state.value,
+                extra={
+                    "event_name": "circuit_breaker.transition",
+                    "operation": self.name,
+                    "previous_state": self.state.value,
+                    "state": new_state.value,
+                    "outcome": "open" if new_state == CircuitState.OPEN else "recovering",
+                },
             )
             self.state = new_state
             self.state_changes += 1
@@ -196,7 +205,12 @@ class R2CommandCircuitBreaker:
             return None if command.endswith("j") else ""
         except Exception as exc:
             self._record_command_stats(command_type, False, time.time() - start_time)
-            logger.error("r2 command '%s' (type=%s) failed: %s", command, command_type, exc)
+            logger.error(
+                "r2 command '%s' (type=%s) failed: %s",
+                command_name(command),
+                command_type,
+                exc,
+            )
             return None if command.endswith("j") else ""
 
     def _record_command_stats(

@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from ..__version__ import __version__
+from ..infrastructure.logging import get_logger
 from .forensic_support import (
     collect_messages,
     copy_artifact,
@@ -19,6 +21,8 @@ from .forensic_support import (
     sha256_file,
     write_artifact,
 )
+
+logger = get_logger(__name__)
 
 
 def _preserve_native_output(
@@ -59,6 +63,7 @@ def create_forensic_bundle(
     started_at: str,
 ) -> dict[str, Any]:
     """Persist analysis provenance and return its report-side reference."""
+    started = time.perf_counter()
     sample_path = Path(sample).resolve()
     sample_sha256 = sha256_file(sample_path)
     root = Path(os.environ.get("R2INSPECT_EVIDENCE_DIR", "r2inspect-evidence")).resolve()
@@ -97,6 +102,16 @@ def create_forensic_bundle(
     }
     manifest_path = directory / "chain-of-custody.json"
     manifest_record = write_artifact(directory, manifest_path.name, json_text(manifest))
+    logger.info(
+        "Forensic evidence bundle created",
+        extra={
+            "event_name": "forensic.bundle_created",
+            "operation": "create_forensic_bundle",
+            "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+            "artifact_count": len(artifacts),
+            "outcome": "success",
+        },
+    )
     return {
         "evidence_directory": str(directory),
         "manifest_path": str(manifest_path),

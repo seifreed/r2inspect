@@ -1,15 +1,12 @@
-"""Retry manager facade."""
-
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 
-from .logging import get_logger
+from .logging import command_name, get_logger
 from .retry_manager_support import (
     calculate_delay as _calculate_delay_impl,
     check_timeout as _check_timeout_impl,
@@ -19,8 +16,11 @@ from .retry_manager_support import (
     is_retryable_command as _is_retryable_command_impl,
     is_retryable_error as _is_retryable_error_impl,
     NonRetryableError,
+    RetryConfig,
     retry_on_failure_decorator as _retry_on_failure_decorator_impl,
     RetryableError,
+    RetryStats,
+    RetryStrategy,
     RETRYABLE_EXCEPTIONS,
     RETRYABLE_ERROR_MESSAGES,
     UNSTABLE_COMMANDS,
@@ -30,30 +30,8 @@ from .retry_manager_support import (
 logger = get_logger(__name__)
 
 
-class RetryStats(TypedDict):
-    total_retries: int
-    successful_retries: int
-    failed_after_retries: int
-    commands_retried: dict[str, int]
-    error_types_retried: dict[str, int]
-
-
-class RetryStrategy(Enum):
-    FIXED_DELAY = "fixed_delay"
-    EXPONENTIAL_BACKOFF = "exponential_backoff"
-    LINEAR_BACKOFF = "linear_backoff"
-    RANDOM_JITTER = "random_jitter"
-
-
-@dataclass
-class RetryConfig:
-    max_attempts: int = 3
-    base_delay: float = 0.1
-    max_delay: float = 5.0
-    strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF
-    jitter: bool = True
-    backoff_multiplier: float = 2.0
-    timeout: float | None = None
+def _log_retry(level: int, event_name: str, message: str, *args: Any, **fields: Any) -> None:
+    logger.log(level, message, *args, extra={"event_name": event_name, **fields})
 
 
 class RetryManager:
@@ -125,7 +103,14 @@ class RetryManager:
         if attempt > 1:
             with self.lock:
                 self.retry_stats["successful_retries"] += 1
-                logger.debug("Operation succeeded on attempt %s", attempt)
+                _log_retry(
+                    logging.DEBUG,
+                    "retry.succeeded",
+                    "Operation succeeded on attempt %s",
+                    attempt,
+                    attempt=attempt,
+                    outcome="success",
+                )
 
     def _handle_retry_exception(
         self, exc: Exception, attempt: int, config: RetryConfig, kwargs: dict[str, Any]
@@ -137,14 +122,30 @@ class RetryManager:
         if attempt >= config.max_attempts:
             with self.lock:
                 self.retry_stats["failed_after_retries"] += 1
-            logger.warning("Operation failed after %s attempts: %s", config.max_attempts, exc)
+            _log_retry(
+                logging.WARNING,
+                "retry.exhausted",
+                "Operation failed after %s attempts: %s",
+                config.max_attempts,
+                exc,
+                attempt=attempt,
+                max_attempts=config.max_attempts,
+                error_type=type(exc).__name__,
+                outcome="failed",
+            )
             raise exc
-        logger.debug(
+        _log_retry(
+            logging.DEBUG,
+            "retry.scheduled",
             "Retryable error on attempt %s/%s, retrying: %s: %s",
             attempt,
             config.max_attempts,
             type(exc).__name__,
             exc,
+            attempt=attempt,
+            max_attempts=config.max_attempts,
+            error_type=type(exc).__name__,
+            outcome="retrying",
         )
         self._wait_for_retry(attempt, config)
         return True
@@ -153,9 +154,9 @@ class RetryManager:
         with self.lock:
             if attempt == 1:
                 self.retry_stats["total_retries"] += 1
-                command_name = kwargs.get("command", "unknown")
-                self.retry_stats["commands_retried"][command_name] = (
-                    self.retry_stats["commands_retried"].get(command_name, 0) + 1
+                operation = command_name(str(kwargs.get("command", "unknown")))
+                self.retry_stats["commands_retried"][operation] = (
+                    self.retry_stats["commands_retried"].get(operation, 0) + 1
                 )
                 error_type = type(exc).__name__
                 self.retry_stats["error_types_retried"][error_type] = (

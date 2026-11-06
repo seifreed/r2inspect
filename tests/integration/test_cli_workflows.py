@@ -25,7 +25,7 @@ def _signal_group(proc: subprocess.Popen, sig: int) -> None:
 
 def _run_cli(args, input_data=None, timeout=60):
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(ROOT)
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, (str(ROOT), env.get("PYTHONPATH"))))
     cmd = [
         sys.executable,
         "-c",
@@ -83,7 +83,7 @@ def test_cli_batch_json_output(tmp_path):
 
     output_dir = tmp_path / "out"
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(ROOT)
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, (str(ROOT), env.get("PYTHONPATH"))))
     cmd = [
         sys.executable,
         "-c",

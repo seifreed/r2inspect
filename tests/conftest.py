@@ -387,7 +387,7 @@ def cleanup_r2_processes():
 
         try:
             children = psutil.Process().children(recursive=True)
-        except psutil.NoSuchProcess:
+        except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
             return
         for proc in children:
             try:
@@ -406,9 +406,8 @@ def _reset_global_state():
     Several process-global caches are mutated by tests without restoration
     and poison later, ordering-dependent runs:
 
-    - ``configure_batch_logging()`` lowers the six ``r2inspect.*`` logger
-      levels to WARNING; many callers never call ``reset_logging_levels()``,
-      breaking later ``caplog.at_level(DEBUG)`` tests.
+    - Logging tests and CLI entry points mutate levels, propagation and
+      handlers, breaking later ``caplog`` tests.
     - ``ssdeep_loader._ssdeep_module`` is a lazy module cache tests swap to
       fakes/``None``.
     - ``ResultConverterImpl._schema_registry`` is a class dict tests
@@ -442,7 +441,14 @@ def _reset_global_state():
         "r2inspect.infrastructure",
         "r2inspect.utils",
     )
-    _saved_levels = {name: _logging.getLogger(name).level for name in _logger_names}
+    _saved_loggers = {
+        name: (
+            _logging.getLogger(name).level,
+            _logging.getLogger(name).propagate,
+            tuple(_logging.getLogger(name).handlers),
+        )
+        for name in _logger_names
+    }
 
     try:
         import r2inspect.infrastructure.ssdeep_loader as _ssdeep_loader
@@ -493,8 +499,17 @@ def _reset_global_state():
     if _saved_cwd is not None:
         with suppress(OSError):
             _os.chdir(_saved_cwd)
-    for _name, _level in _saved_levels.items():
-        _logging.getLogger(_name).setLevel(_level)
+    for _name, (_level, _propagate, _handlers) in _saved_loggers.items():
+        _logger = _logging.getLogger(_name)
+        for _handler in tuple(_logger.handlers):
+            if _handler not in _handlers:
+                _handler.close()
+                _logger.removeHandler(_handler)
+        for _handler in _handlers:
+            if _handler not in _logger.handlers:
+                _logger.addHandler(_handler)
+        _logger.setLevel(_level)
+        _logger.propagate = _propagate
     if _ssdeep_loader is not None:
         _ssdeep_loader._ssdeep_module = _saved_ssdeep
     if _ssdeep_in_modules:

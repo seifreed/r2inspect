@@ -4,7 +4,18 @@
 from .circuit_breaker import CircuitBreaker, CircuitBreakerError, CircuitState, r2_circuit_breaker
 from .command_helpers import cmd, cmd_list, cmdj
 from .hashing import calculate_hashes, calculate_ssdeep
-from .logging import configure_batch_logging, get_logger, reset_logging_levels, setup_logger
+from .logging import (
+    TRACE,
+    bind_log_context,
+    command_name,
+    configure_batch_logging,
+    current_log_context,
+    flush_logging,
+    get_logger,
+    parse_traceparent,
+    reset_logging_levels,
+    setup_logger,
+)
 from .magic_detector import (
     MagicByteDetector,
     detect_file_type,
@@ -37,12 +48,17 @@ __all__ = [
     "RetryManager",
     "RetryStrategy",
     "TokenBucket",
+    "TRACE",
+    "bind_log_context",
+    "command_name",
     "cmd",
     "cmd_list",
     "cmdj",
     "calculate_hashes",
     "calculate_ssdeep",
     "configure_batch_logging",
+    "current_log_context",
+    "flush_logging",
     "MagicByteDetector",
     "MAGIC_PATTERNS",
     "detect_file_type",
@@ -53,6 +69,7 @@ __all__ = [
     "get_file_threat_level",
     "is_executable_file",
     "r2_circuit_breaker",
+    "parse_traceparent",
     "reset_logging_levels",
     "setup_logger",
 ]

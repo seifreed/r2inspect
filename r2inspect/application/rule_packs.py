@@ -11,6 +11,10 @@ from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
+from ..infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass(frozen=True)
 class RulePackManifest:
@@ -105,13 +109,15 @@ def verify_rule_pack(
     public_key: bytes | None = None,
     require_signature: bool = True,
 ) -> RulePackManifest:
-    manifest = load_verified_manifest(directory)
-    if require_signature and not manifest.signature:
-        raise ValueError("rule pack manifest is unsigned")
-    if manifest.signature:
-        if public_key is None:
-            raise ValueError("a public key is required to verify the rule pack signature")
-        try:
+    verifying_signature = False
+    try:
+        manifest = load_verified_manifest(directory)
+        if require_signature and not manifest.signature:
+            raise ValueError("rule pack manifest is unsigned")
+        if manifest.signature:
+            if public_key is None:
+                raise ValueError("a public key is required to verify the rule pack signature")
+            verifying_signature = True
             key = _load_public_key(public_key)
             key_id = public_key_id(public_key)
             if manifest.signing_key_id and manifest.signing_key_id != key_id:
@@ -119,8 +125,28 @@ def verify_rule_pack(
             key.verify(
                 base64.b64decode(manifest.signature, validate=True), manifest.signing_payload()
             )
-        except Exception as exc:
+    except Exception as exc:
+        logger.warning(
+            "Rule pack verification failed",
+            extra={
+                "event_name": "rule_pack.verification_failed",
+                "error_type": type(exc).__name__,
+                "outcome": "rejected",
+            },
+        )
+        if verifying_signature:
             raise ValueError("rule pack signature verification failed") from exc
+        raise
+    logger.info(
+        "Rule pack verified",
+        extra={
+            "event_name": "rule_pack.verified",
+            "pack_id": manifest.pack_id,
+            "pack_version": manifest.version,
+            "signing_key_id": manifest.signing_key_id,
+            "outcome": "success",
+        },
+    )
     return manifest
 
 

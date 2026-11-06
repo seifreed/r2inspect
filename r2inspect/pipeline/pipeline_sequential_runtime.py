@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 
@@ -34,11 +35,17 @@ def execute_sequential_pipeline(
 ) -> dict[str, Any]:
     pipeline._execution_count += 1
     execution_id = pipeline._execution_count
+    started = time.perf_counter()
 
-    logger.info(
+    logger.debug(
         "Starting sequential pipeline execution #%s with %s stages",
         execution_id,
         len(pipeline.stages),
+        extra={
+            "event_name": "pipeline.started",
+            "execution_id": execution_id,
+            "execution_mode": "sequential",
+        },
     )
     context = build_context(options, execution_id)
     executed_count = 0
@@ -76,12 +83,22 @@ def execute_sequential_pipeline(
                 executed_count += 1
         else:
             skipped_count += 1
-    logger.info(
+    logger.debug(
         "Sequential pipeline execution #%s complete: %s succeeded, %s failed, %s skipped",
         execution_id,
         executed_count,
         failed_count,
         skipped_count,
+        extra={
+            "event_name": "pipeline.completed",
+            "execution_id": execution_id,
+            "execution_mode": "sequential",
+            "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+            "succeeded_count": executed_count,
+            "failed_count": failed_count,
+            "skipped_count": skipped_count,
+            "outcome": "partial" if failed_count else "success",
+        },
     )
     return cast(dict[str, Any], context.get("results", {}))
 

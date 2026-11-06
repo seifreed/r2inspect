@@ -12,7 +12,7 @@ from typing import Any
 
 from ..domain.constants import SUBPROCESS_TIMEOUT_SECONDS
 from ..interfaces import R2CommandInterface
-from .logging import get_logger
+from .logging import command_name, get_logger
 
 logger = get_logger(__name__)
 
@@ -66,7 +66,7 @@ def _run_with_timeout(
         try:
             result["value"] = operation()
         except Exception as exc:
-            logger.debug("r2 cmd failed for %s: %s", command, exc)
+            logger.debug("r2 cmd failed for %s: %s", command_name(command), exc)
             result["value"] = default if error_default is _USE_DEFAULT else error_default
         finally:
             result["completed_at"] = time.monotonic()
@@ -87,7 +87,7 @@ def _run_with_timeout(
 
     completed_at = result["completed_at"]
     if not result["done"] or not isinstance(completed_at, float) or completed_at > deadline:
-        logger.warning("r2 command timed out: %s", command)
+        logger.warning("r2 command timed out: %s", command_name(command))
         mark_wedged(r2_instance)
         _terminate_wedged_process(r2_instance)
         return default

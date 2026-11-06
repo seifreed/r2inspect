@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from pathlib import Path
@@ -12,31 +13,53 @@ from r2inspect.infrastructure.command_runner import (
 from tests.helpers import env_vars
 
 
-def test_run_command_passes_arguments_without_a_shell() -> None:
-    argument = "literal;$(exit 9)"
+def test_run_command_passes_arguments_without_a_shell(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    argument = "literal;$(exit 9);token=argument-secret"
 
-    completed = run_command(
-        [sys.executable, "-c", "import sys; print(sys.argv[1])", argument], timeout=2
-    )
+    with caplog.at_level(logging.DEBUG, logger="r2inspect.infrastructure.command_runner"):
+        completed = run_command(
+            [sys.executable, "-c", "import sys; print(sys.argv[1])", argument], timeout=2
+        )
 
     assert completed.returncode == 0
     assert completed.stdout.strip() == argument
+    event = next(
+        record
+        for record in caplog.records
+        if getattr(record, "event_name", None) == "external_command.completed"
+    )
+    assert event.command == Path(sys.executable).name
+    assert event.outcome == "success"
+    assert event.status == 0
+    assert event.duration_ms >= 0
+    assert "argument-secret" not in event.getMessage()
 
 
-def test_run_command_honors_process_timeout_override() -> None:
+def test_run_command_honors_process_timeout_override(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     original = os.environ.get("R2INSPECT_CMD_TIMEOUT_SECONDS")
     os.environ["R2INSPECT_CMD_TIMEOUT_SECONDS"] = "0.01"
     try:
-        with pytest.raises(TimeoutError, match="0.01 seconds"):
-            run_command(
-                [sys.executable, "-c", "import time; time.sleep(1)"],
-                timeout=120,
-            )
+        with (
+            caplog.at_level(logging.WARNING, logger="r2inspect.infrastructure.command_runner"),
+            pytest.raises(TimeoutError, match="0.01 seconds"),
+        ):
+            run_command([sys.executable, "-c", "import time; time.sleep(1)"], timeout=120)
     finally:
         if original is None:
             os.environ.pop("R2INSPECT_CMD_TIMEOUT_SECONDS", None)
         else:
             os.environ["R2INSPECT_CMD_TIMEOUT_SECONDS"] = original
+    event = next(
+        record
+        for record in caplog.records
+        if getattr(record, "event_name", None) == "external_command.constrained"
+    )
+    assert event.error_type == "CommandTimeout"
+    assert event.outcome == "failed"
 
 
 def test_run_command_spills_large_output_and_keeps_bounded_preview() -> None:
