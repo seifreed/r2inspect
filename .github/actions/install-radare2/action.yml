@@ -80,8 +80,8 @@ runs:
           Remove-Item -Path $subdirs[0].FullName -Recurse -Force
         }
         $bin = Join-Path $prefix 'bin'
-        if (-not (Test-Path (Join-Path $bin 'r2.exe'))) {
-          throw 'Downloaded radare2 package does not contain bin/r2.exe'
+        if (-not (Test-Path (Join-Path $bin 'radare2.exe'))) {
+          throw 'Downloaded radare2 package does not contain bin/radare2.exe'
         }
         $bin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-        & (Join-Path $bin 'r2.exe') -v
+        & (Join-Path $bin 'radare2.exe') -v
