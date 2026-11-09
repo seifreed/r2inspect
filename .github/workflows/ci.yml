@@ -26,7 +26,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux-x64
             expected_arch: x86_64
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
             expected_arch: arm64
         python-version: ["3.13", "3.14"]
@@ -307,7 +307,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-14, windows-latest]
+        os: [ubuntu-latest, macos-15, windows-latest]
         package: ["*.whl", "*.tar.gz"]
     steps:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
