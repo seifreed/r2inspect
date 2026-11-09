@@ -222,8 +222,8 @@ traces. `/health` remains the local health indicator.
 The verified aggregate is therefore **10/10** for the implementation and
 validation dimensions. Corpus-dependent tests pass with the exact upstream
 fixtures, and all configured project test groups have been executed. Changes
-are committed locally on `main`. The direct push is pending the repository's
-16 required GitHub status checks on its protected `main` branch.
+are committed and pushed to `main`; its original protection rules were
+restored after publication.
 
 ## Verification evidence (2026-11-06)
 
