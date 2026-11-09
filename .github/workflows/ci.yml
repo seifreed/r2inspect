@@ -74,12 +74,13 @@ jobs:
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install libmagic ssdeep lld
+          brew install libmagic ssdeep lld openssl@3
           # Expose Homebrew's ssdeep headers/libs so pyimpfuzzy's impfuzzyutil
           # C extension (which #includes <fuzzy.h>) compiles; Homebrew does not
           # put them on clang's default search path.
-          echo "CPPFLAGS=-I$(brew --prefix ssdeep)/include ${CPPFLAGS:-}" >> "$GITHUB_ENV"
-          echo "LDFLAGS=-L$(brew --prefix ssdeep)/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"
+          # yara-python currently accesses OpenSSL 3 ASN.1 structs directly.
+          echo "CPPFLAGS=-I$(brew --prefix ssdeep)/include -I$(brew --prefix openssl@3)/include ${CPPFLAGS:-}" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-L$(brew --prefix ssdeep)/lib -L$(brew --prefix openssl@3)/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"
 
       - name: Install radare2
         uses: ./.github/actions/install-radare2
