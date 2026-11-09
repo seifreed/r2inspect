@@ -16,15 +16,21 @@ runs:
         set -euo pipefail
         [[ "$R2_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
         arch="$(dpkg --print-architecture)"
-        base="https://github.com/radareorg/radare2/releases/download/${R2_VERSION}"
-        cd "$RUNNER_TEMP"
         for package in "radare2_${R2_VERSION}_${arch}.deb" "radare2-dev_${R2_VERSION}_${arch}.deb"; do
-          curl --fail --silent --show-error --location \
-            --retry 6 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
-            "$base/$package" --output "$package"
+          for attempt in {1..5}; do
+            if gh release download "$R2_VERSION" --repo radareorg/radare2 \
+              --pattern "$package" --dir "$RUNNER_TEMP" --clobber; then
+              break
+            fi
+            if [[ "$attempt" -eq 5 ]]; then
+              echo "Failed to download $package after retries" >&2
+              exit 1
+            fi
+            sleep "$((attempt * 2))"
+          done
         done
-        sudo dpkg -i "radare2_${R2_VERSION}_${arch}.deb"
-        sudo dpkg -i "radare2-dev_${R2_VERSION}_${arch}.deb"
+        sudo dpkg -i "$RUNNER_TEMP/radare2_${R2_VERSION}_${arch}.deb"
+        sudo dpkg -i "$RUNNER_TEMP/radare2-dev_${R2_VERSION}_${arch}.deb"
         r2 -v
 
     - name: Install radare2 on macOS
@@ -39,11 +45,20 @@ runs:
           arm64|aarch64) arch=arm64 ;;
           *) arch=x64 ;;
         esac
-        url="https://github.com/radareorg/radare2/releases/download/${R2_VERSION}/radare2-${arch}-${R2_VERSION}.pkg"
         pkg="$RUNNER_TEMP/radare2.pkg"
-        curl --fail --silent --show-error --location \
-          --retry 6 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
-          "$url" --output "$pkg"
+        asset="radare2-${arch}-${R2_VERSION}.pkg"
+        for attempt in {1..5}; do
+          if gh release download "$R2_VERSION" --repo radareorg/radare2 \
+            --pattern "$asset" --dir "$RUNNER_TEMP" --clobber; then
+            mv "$RUNNER_TEMP/$asset" "$pkg"
+            break
+          fi
+          if [[ "$attempt" -eq 5 ]]; then
+            echo "Failed to download $asset after retries" >&2
+            exit 1
+          fi
+          sleep "$((attempt * 2))"
+        done
         sudo installer -pkg "$pkg" -target /
         rm -f "$pkg"
         r2 -v
@@ -63,15 +78,19 @@ runs:
           'x86' { 'w32' }
           default { 'w64' }
         }
-        $url = "https://github.com/radareorg/radare2/releases/download/$env:R2_VERSION/radare2-$env:R2_VERSION-$arch.zip"
         $zip = Join-Path $env:RUNNER_TEMP 'radare2.zip'
         $prefix = Join-Path $env:RUNNER_TEMP 'radare2'
-        & curl.exe --fail --silent --show-error --location `
-          --retry 6 --retry-all-errors --retry-delay 2 --retry-max-time 300 `
-          $url --output $zip
-        if ($LASTEXITCODE -ne 0) {
-          throw "Failed to download radare2 after retries (curl exit $LASTEXITCODE)"
+        $asset = "radare2-$env:R2_VERSION-$arch.zip"
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+          & gh release download $env:R2_VERSION --repo radareorg/radare2 `
+            --pattern $asset --dir $env:RUNNER_TEMP --clobber
+          if ($LASTEXITCODE -eq 0) { break }
+          if ($attempt -eq 5) {
+            throw "Failed to download $asset after retries (gh exit $LASTEXITCODE)"
+          }
+          Start-Sleep -Seconds (2 * $attempt)
         }
+        Move-Item -Path (Join-Path $env:RUNNER_TEMP $asset) -Destination $zip -Force
         if (Test-Path $prefix) { Remove-Item -Path $prefix -Recurse -Force }
         Expand-Archive -Path $zip -DestinationPath $prefix -Force
         $subdirs = @(Get-ChildItem -Path $prefix -Directory)
