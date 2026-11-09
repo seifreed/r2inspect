@@ -5,6 +5,32 @@ Versioning and keeps unreleased work at the top.
 
 ## Unreleased
 
+## 4.1.0 - 2026-11-09
+
+### Added
+
+- Added centralized production logging and observability with structured events,
+  correlation context, secret redaction, and lifecycle instrumentation across
+  analysis, pipelines, APIs, jobs, external commands, retries, cache, and rule packs.
+- Added explicit analyzer execution states and carried structured analyzer issues
+  through registered analyzers and report envelopes, including standalone stages
+  and canonical analyzer IDs.
+
+### Changed
+
+- Prevented batch reports from overwriting existing output files.
+- Measured hash durations with a monotonic clock and made governance gates tolerate
+  filesystem clock skew.
+- Expanded observability, architecture, and validation documentation.
+
+### Fixed
+
+- Removed legacy indicator findings and corrected report findings to use native
+  structured issues.
+- Expanded Windows test coverage and removed machine-specific fixture paths.
+- Hardened container dependencies and made CI downloads resilient across Windows,
+  macOS, and Linux, including supported macOS runners and OpenSSL 3 for YARA builds.
+
 ## 4.0.0 - 2026-09-04
 
 ### Changed
