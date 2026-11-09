@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a
+ARG BASE_IMAGE=python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
 ARG R2INSPECT_VERSION=4.0.0
 ARG RADARE2_VERSION=6.1.8
 ARG RADARE2_COMMIT=d904d02e1157b45135c6e61651d890bac8abe873
@@ -9,11 +9,13 @@ FROM ${BASE_IMAGE} AS builder
 # Package versions are fixed by the immutable Debian snapshot above.
 # hadolint ignore=DL3008
 RUN sed -i \
-        -e 's|http://deb.debian.org/debian$|http://snapshot.debian.org/archive/debian/20260803T000000Z|' \
-        -e 's|http://deb.debian.org/debian-security$|http://snapshot.debian.org/archive/debian-security/20260803T000000Z|' \
+        -e 's|http://deb.debian.org/debian$|http://snapshot.debian.org/archive/debian/20261109T000000Z|' \
+        -e 's|http://deb.debian.org/debian-security$|http://snapshot.debian.org/archive/debian-security/20261109T000000Z|' \
         -e '/Signed-By:/a Check-Valid-Until: no' \
         /etc/apt/sources.list.d/debian.sources \
-    && apt-get update && apt-get install -y --no-install-recommends \
+    && apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
         build-essential \
         git \
         libfuzzy-dev \
@@ -54,11 +56,13 @@ LABEL org.opencontainers.image.version="${R2INSPECT_VERSION}"
 # Package versions are fixed by the immutable Debian snapshot above.
 # hadolint ignore=DL3008
 RUN sed -i \
-        -e 's|http://deb.debian.org/debian$|http://snapshot.debian.org/archive/debian/20260803T000000Z|' \
-        -e 's|http://deb.debian.org/debian-security$|http://snapshot.debian.org/archive/debian-security/20260803T000000Z|' \
+        -e 's|http://deb.debian.org/debian$|http://snapshot.debian.org/archive/debian/20261109T000000Z|' \
+        -e 's|http://deb.debian.org/debian-security$|http://snapshot.debian.org/archive/debian-security/20261109T000000Z|' \
         -e '/Signed-By:/a Check-Valid-Until: no' \
         /etc/apt/sources.list.d/debian.sources \
-    && apt-get update && apt-get install -y --no-install-recommends \
+    && apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
         ca-certificates \
         file \
         libfuzzy2 \
