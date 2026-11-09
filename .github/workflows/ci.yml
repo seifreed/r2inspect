@@ -91,10 +91,15 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $zipUrl = "https://github.com/ssdeep-project/ssdeep/releases/download/release-2.14.1/ssdeep-2.14.1-win32-binary.zip"
-          $zipPath = "$env:RUNNER_TEMP\ssdeep-win32.zip"
+          $asset = "ssdeep-2.14.1-win32-binary.zip"
+          $zipPath = Join-Path $env:RUNNER_TEMP $asset
           $extractRoot = "$env:RUNNER_TEMP\ssdeep"
-          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            & gh release download release-2.14.1 --repo ssdeep-project/ssdeep --pattern $asset --dir $env:RUNNER_TEMP --clobber
+            if ($LASTEXITCODE -eq 0 -and (Test-Path $zipPath)) { break }
+            if ($attempt -eq 5) { throw "Failed to download $asset after $attempt attempts" }
+            Start-Sleep -Seconds ([Math]::Min(2 * $attempt, 10))
+          }
           Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
           $binDir = Join-Path $extractRoot "ssdeep-2.14.1"
           "$binDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
