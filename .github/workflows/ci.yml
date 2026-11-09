@@ -90,6 +90,8 @@ jobs:
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = "Stop"
           $asset = "ssdeep-2.14.1-win32-binary.zip"
