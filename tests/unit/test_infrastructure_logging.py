@@ -5,11 +5,15 @@ from __future__ import annotations
 import json
 import io
 import logging
+import os
 import stat
 import threading
 from pathlib import Path
 
+from tests.helpers import env_vars
+
 from r2inspect.infrastructure.logging import (
+    _flush_handler,
     _handler_is_closed,
     TRACE,
     bind_log_context,
@@ -157,19 +161,21 @@ def test_trace_context_and_sanitizers_reject_unsafe_input() -> None:
     assert command_name("") == "unknown"
 
 
-def test_environment_controls_level_format_and_destination(tmp_path: Path, monkeypatch) -> None:
+def test_environment_controls_level_format_and_destination(tmp_path: Path) -> None:
     path = tmp_path / "configured.jsonl"
-    monkeypatch.setenv("R2INSPECT_LOG_LEVEL", "TRACE")
-    monkeypatch.setenv("R2INSPECT_LOG_FORMAT", "json")
-    monkeypatch.setenv("R2INSPECT_LOG_DESTINATION", "file")
-    monkeypatch.setenv("R2INSPECT_LOG_FILE", str(path))
-    logger = setup_logger("r2inspect.test.environment")
-    try:
-        logger.log(TRACE, "trace event")
-        for handler in logger.handlers:
-            handler.flush()
-    finally:
-        _close_logger(logger)
+    with env_vars(
+        R2INSPECT_LOG_LEVEL="TRACE",
+        R2INSPECT_LOG_FORMAT="json",
+        R2INSPECT_LOG_DESTINATION="file",
+        R2INSPECT_LOG_FILE=str(path),
+    ):
+        logger = setup_logger("r2inspect.test.environment")
+        try:
+            logger.log(TRACE, "trace event")
+            for handler in logger.handlers:
+                handler.flush()
+        finally:
+            _close_logger(logger)
 
     assert logger.level == TRACE
     assert json.loads(path.read_text(encoding="utf-8"))["level"] == "TRACE"
@@ -198,49 +204,56 @@ def test_text_logging_includes_correlation_and_escapes_injection(tmp_path: Path)
     assert len(rendered.splitlines()) == 1
 
 
-def test_rotating_file_retention_is_bounded(tmp_path: Path, monkeypatch) -> None:
+def test_rotating_file_retention_is_bounded(tmp_path: Path) -> None:
     path = tmp_path / "rotating.log"
-    monkeypatch.setenv("R2INSPECT_LOG_MAX_BYTES", "256")
-    monkeypatch.setenv("R2INSPECT_LOG_BACKUP_COUNT", "2")
-    logger = setup_logger(
-        "r2inspect.test.rotation",
-        destination="file",
-        log_file=path,
-        thread_safe=True,
-    )
-    try:
-        for sequence in range(100):
-            logger.warning("rotation event %s %s", sequence, "x" * 40)
-        for handler in logger.handlers:
-            handler.flush()
-    finally:
-        _close_logger(logger)
+    with env_vars(R2INSPECT_LOG_MAX_BYTES="256", R2INSPECT_LOG_BACKUP_COUNT="2"):
+        logger = setup_logger(
+            "r2inspect.test.rotation",
+            destination="file",
+            log_file=path,
+            thread_safe=True,
+        )
+        try:
+            for sequence in range(100):
+                logger.warning("rotation event %s %s", sequence, "x" * 40)
+            for handler in logger.handlers:
+                handler.flush()
+        finally:
+            _close_logger(logger)
 
     assert path.is_file()
     assert path.with_name("rotating.log.1").is_file()
     assert path.with_name("rotating.log.2").is_file()
     assert not path.with_name("rotating.log.3").exists()
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    assert stat.S_IMODE(path.with_name("rotating.log.1").stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+        assert stat.S_IMODE(path.with_name("rotating.log.1").stat().st_mode) == 0o600
 
 
 def test_rotation_limits_cannot_be_disabled_with_negative_values(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path,
 ) -> None:
-    monkeypatch.setenv("R2INSPECT_LOG_MAX_BYTES", "-1")
-    monkeypatch.setenv("R2INSPECT_LOG_BACKUP_COUNT", "-1")
-    logger = setup_logger(
-        "r2inspect.test.rotation_limits",
-        destination="file",
-        log_file=tmp_path / "bounded.log",
-    )
-    try:
-        handler = logger.handlers[0]
-        assert isinstance(handler, logging.handlers.RotatingFileHandler)
-        assert handler.maxBytes == 1
-        assert handler.backupCount == 1
-    finally:
-        _close_logger(logger)
+    with env_vars(R2INSPECT_LOG_MAX_BYTES="-1", R2INSPECT_LOG_BACKUP_COUNT="-1"):
+        logger = setup_logger(
+            "r2inspect.test.rotation_limits",
+            destination="file",
+            log_file=tmp_path / "bounded.log",
+        )
+        try:
+            handler = logger.handlers[0]
+            assert isinstance(handler, logging.handlers.RotatingFileHandler)
+            assert handler.maxBytes == 1
+            assert handler.backupCount == 1
+        finally:
+            _close_logger(logger)
+
+
+def test_flush_failure_is_best_effort() -> None:
+    class BrokenFlushHandler(logging.Handler):
+        def flush(self) -> None:
+            raise OSError("destination unavailable")
+
+    assert _flush_handler(BrokenFlushHandler()) is False
 
 
 def test_runtime_destination_failure_does_not_escape() -> None:

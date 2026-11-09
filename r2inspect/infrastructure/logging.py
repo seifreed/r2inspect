@@ -9,7 +9,9 @@ import os
 import sys
 import threading
 from collections.abc import Callable
+from io import TextIOWrapper
 from pathlib import Path
+from typing import Any
 
 from .logging_context import (
     ContextFilter,
@@ -32,7 +34,7 @@ _loggers_initialized: set[str] = set()
 class _PrivateRotatingFileHandler(logging.handlers.RotatingFileHandler):
     """Keep every active log file private across rollover."""
 
-    def _open(self):  # type: ignore[no-untyped-def]
+    def _open(self) -> TextIOWrapper[Any]:
         stream = super()._open()
         try:
             os.chmod(self.baseFilename, 0o600)
@@ -202,10 +204,15 @@ def flush_logging() -> None:
     """Best-effort flush for controlled shutdown boundaries."""
     for logger_name in tuple(_loggers_initialized):
         for handler in logging.getLogger(logger_name).handlers:
-            try:
-                handler.flush()
-            except Exception:
-                continue
+            _flush_handler(handler)
+
+
+def _flush_handler(handler: logging.Handler) -> bool:
+    try:
+        handler.flush()
+    except Exception:
+        return False
+    return True
 
 
 _MANAGED_LOGGERS = (
