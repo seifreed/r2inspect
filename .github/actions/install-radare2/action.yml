@@ -1,0 +1,87 @@
+name: Install radare2
+description: Install a pinned radare2 release with retries for transient release-download failures
+inputs:
+  version:
+    description: Radare2 release version without a v prefix
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install radare2 on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      env:
+        R2_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        [[ "$R2_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        arch="$(dpkg --print-architecture)"
+        base="https://github.com/radareorg/radare2/releases/download/${R2_VERSION}"
+        cd "$RUNNER_TEMP"
+        for package in "radare2_${R2_VERSION}_${arch}.deb" "radare2-dev_${R2_VERSION}_${arch}.deb"; do
+          curl --fail --silent --show-error --location \
+            --retry 6 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
+            "$base/$package" --output "$package"
+        done
+        sudo dpkg -i "radare2_${R2_VERSION}_${arch}.deb"
+        sudo dpkg -i "radare2-dev_${R2_VERSION}_${arch}.deb"
+        r2 -v
+
+    - name: Install radare2 on macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        R2_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        [[ "$R2_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        case "$(uname -m)" in
+          arm64|aarch64) arch=arm64 ;;
+          *) arch=x64 ;;
+        esac
+        url="https://github.com/radareorg/radare2/releases/download/${R2_VERSION}/radare2-${arch}-${R2_VERSION}.pkg"
+        pkg="$RUNNER_TEMP/radare2.pkg"
+        curl --fail --silent --show-error --location \
+          --retry 6 --retry-all-errors --retry-delay 2 --retry-max-time 300 \
+          "$url" --output "$pkg"
+        sudo installer -pkg "$pkg" -target /
+        rm -f "$pkg"
+        r2 -v
+
+    - name: Install radare2 on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        R2_VERSION: ${{ inputs.version }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        if ($env:R2_VERSION -notmatch '^\d+\.\d+\.\d+$') {
+          throw "Invalid radare2 version: $env:R2_VERSION"
+        }
+        $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+          'ARM64' { 'w64-arm64' }
+          'x86' { 'w32' }
+          default { 'w64' }
+        }
+        $url = "https://github.com/radareorg/radare2/releases/download/$env:R2_VERSION/radare2-$env:R2_VERSION-$arch.zip"
+        $zip = Join-Path $env:RUNNER_TEMP 'radare2.zip'
+        $prefix = Join-Path $env:RUNNER_TEMP 'radare2'
+        & curl.exe --fail --silent --show-error --location `
+          --retry 6 --retry-all-errors --retry-delay 2 --retry-max-time 300 `
+          $url --output $zip
+        if ($LASTEXITCODE -ne 0) {
+          throw "Failed to download radare2 after retries (curl exit $LASTEXITCODE)"
+        }
+        if (Test-Path $prefix) { Remove-Item -Path $prefix -Recurse -Force }
+        Expand-Archive -Path $zip -DestinationPath $prefix -Force
+        $subdirs = @(Get-ChildItem -Path $prefix -Directory)
+        if ($subdirs.Count -eq 1) {
+          Get-ChildItem -Path $subdirs[0].FullName | Move-Item -Destination $prefix -Force
+          Remove-Item -Path $subdirs[0].FullName -Recurse -Force
+        }
+        $bin = Join-Path $prefix 'bin'
+        if (-not (Test-Path (Join-Path $bin 'r2.exe'))) {
+          throw 'Downloaded radare2 package does not contain bin/r2.exe'
+        }
+        $bin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+        & (Join-Path $bin 'r2.exe') -v

@@ -35,7 +35,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
       - name: Install radare2
-        uses: radareorg/github-actions@v2
+        uses: ./.github/actions/install-radare2
         with:
           version: "6.1.8"
       - name: Install package
@@ -134,7 +134,7 @@ jobs:
           sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
       - name: Install radare2
         if: steps.config.outputs.enabled == 'true'
-        uses: radareorg/github-actions@v2
+        uses: ./.github/actions/install-radare2
         with:
           version: "6.1.8"
       - name: Install package
@@ -209,7 +209,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libmagic-dev ssdeep libfuzzy-dev lld
       - name: Install radare2
-        uses: radareorg/github-actions@v2
+        uses: ./.github/actions/install-radare2
         with:
           version: "6.1.8"
       - name: Install package

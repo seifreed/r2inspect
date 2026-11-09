@@ -82,7 +82,7 @@ jobs:
           echo "LDFLAGS=-L$(brew --prefix ssdeep)/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"
 
       - name: Install radare2
-        uses: radareorg/github-actions@v2
+        uses: ./.github/actions/install-radare2
         with:
           version: '6.1.8'
 
